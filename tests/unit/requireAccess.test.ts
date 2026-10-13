@@ -160,6 +160,20 @@ describe("requireAccess", () => {
     expect(await status("parent", NGUYEN, "consent:read")).toBe(200);
   });
 
+  it("inquiry actions: parent and tutor in scope ok, student 403, out of scope 404 (S2)", async () => {
+    for (const action of ["inquiries:read", "inquiries:assign", "activities:event"] as const) {
+      expect(await status("parent", AN, action)).toBe(200);
+      expect(await status("parent", NGUYEN, action)).toBe(200);
+      expect(await status("tutorAn", AN, action)).toBe(200);
+      expect(await status("tutorAn", NGUYEN, action)).toBe(404);
+      expect(await status("tutorExpired", AN, action)).toBe(404);
+      expect(await status("studentAn", AN, action)).toBe(403);
+      expect(await status("studentAn", NGUYEN, action)).toBe(404);
+      expect(await status("otherParent", AN, action)).toBe(404);
+      expect(await status(null, AN, action)).toBe(401);
+    }
+  });
+
   it("returns the member and learner on success", async () => {
     const grant = await requireAccess({ id: "u-tutorAn" }, AN, "learner:read", deps);
     expect(grant.member.role).toBe("tutor");

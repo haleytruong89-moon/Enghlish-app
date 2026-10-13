@@ -172,8 +172,10 @@ export const messages = {
 
 // ---------- Lỗi API (trả về JSON, có thể hiện cho người dùng) ------------------------------
 export const apiErrors = {
+  400: "Thông tin gửi lên chưa đúng. Bạn kiểm tra lại nhé.",
   401: "Bạn cần đăng nhập lại.",
   403: "Tài khoản này không làm được việc đó.",
   404: "Không tìm thấy.",
+  409: "Yêu cầu này bị trùng với một yêu cầu trước đó.",
   500: "Có lỗi xảy ra. Bạn thử lại sau ít phút.",
 } as const;
