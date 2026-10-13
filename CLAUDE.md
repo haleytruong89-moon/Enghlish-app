@@ -51,11 +51,14 @@ Next.js (App Router) + TypeScript strict + Tailwind · Supabase (Postgres + Auth
 ```bash
 npm run dev · npm run typecheck · npm run lint · npm test
 npm run db:apply          # áp migration chưa có (cần DATABASE_URL)
-npm run db:seed-dev       # gia đình THỬ (An (thử), Nguyên (thử))
+npm run db:seed-dev       # gia đình THỬ (An (thử), Nguyên (thử)) + gán A-v1 / B-v1
+npm run gen:config        # sinh db/migrations/0006 từ content/*.json (-- --check: báo lệch)
 ```
 
 ## Current status
 
-- S0 (nền) xong trên máy — chờ phụ huynh tạo repo/Supabase/Vercel (xem `docs/PROGRESS.md`).
-- Tiếp theo theo thứ tự ưu tiên để 2 em dùng sớm: **S1 → S2 → S4 → S5 (+ phần câu hỏi đọc/bài dạng đề của S3)**.
+- Repo: `haleytruong89-moon/Enghlish-app` (private). S0 đã push, CI xanh. **S1 (cấu hình: track, danh mục, ngưỡng, bộ kỹ năng A-v1/B-v1, trang "Kỹ năng đang theo dõi") code xong trên nhánh `feature/s1-config`**, chờ review + phụ huynh áp `0005`, `0006` (xem `docs/PROGRESS.md`).
+- Chờ phụ huynh: Supabase (schema `english`, tắt sign-up, áp 0001–0006), Vercel, khóa sao lưu + GitHub Secrets (xem `docs/PROGRESS.md`).
+- Tiếp theo theo thứ tự ưu tiên để 2 em dùng sớm: **S2 → S4 → S5 (+ phần câu hỏi đọc/bài dạng đề của S3)**.
+- Seed cấu hình sinh tự động: sửa `content/*.json` rồi `npm run gen:config` (CI chạy `--check`); không sửa tay `0006`.
 - Pilot thủ công cả 2 em chạy song song từ 17–19/10/2026 (Pilot Kit A/B v0.2 trong hub).
