@@ -6,6 +6,17 @@ import { loadContentItems, type InquiryTemplateItem } from "../../lib/config/ver
 import { buildSeedSql } from "../../scripts/lib/configSql";
 import { createAuthUser, createTestDb, errorAs, migrate, rowsAs, seed, type Seeded, type TestDb } from "./helpers";
 
+// All dates are relative to "today in Asia/Ho_Chi_Minh" (what the database uses), so the suite keeps passing
+// whenever it runs: assignment and reschedule dates must lie in [today - 7, today + 120].
+const DAY_MS = 86_400_000;
+const addDays = (iso: string, n: number) => new Date(Date.parse(`${iso}T00:00:00Z`) + n * DAY_MS).toISOString().slice(0, 10);
+const TODAY = new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
+const FROM = addDays(TODAY, 20);
+const STEP1 = addDays(TODAY, 21);
+const D4 = addDays(TODAY, 23);
+const D6 = addDays(TODAY, 25);
+const DUE = addDays(TODAY, 26);
+
 const content = loadContentItems();
 const catalogueItem = content.catalogues[0];
 if (!catalogueItem) throw new Error("no catalogue in content/");
@@ -24,7 +35,7 @@ function miniTemplate(id: string, version = 1, title = "Test inquiry"): InquiryT
     big_question_en: "Why is the sky blue?",
     big_question_vi: "Vì sao bầu trời xanh?",
     week: 9,
-    dates: { from: "2026-12-01", to: "2026-12-07" },
+    dates: { from: FROM, to: DUE },
     domain_bucket: "science",
     target_ids: isA ? ["A-T1-TEXT-R", "A-L3-CAUSE-W"] : ["B-T1-EXAM-R"],
     sources: [
@@ -41,7 +52,7 @@ function miniTemplate(id: string, version = 1, title = "Test inquiry"): InquiryT
         prompt_en: "Read the text, then reply.",
         prompt_vi: "SECRET-NOTE: đáp án gợi ý cho bố mẹ: scattering.",
         time_min: 10,
-        planned_date: "2026-12-02",
+        planned_date: STEP1,
         items: [
           { id: `${id}-q1`, kind: "mcq", stem: "What makes the sky blue?", options: ["a) rain", "b) scattering"], answer: "b", explanation_vi: "SECRET-EXPLAIN: do tán xạ", target_id: isA ? "A-T1-TEXT-R" : "B-T1-EXAM-R" },
           { id: `${id}-q2`, kind: "open", stem: "Explain in one sentence.", options: [], answer: "SECRET-MODEL: Light scatters.", explanation_vi: "", target_id: null },
@@ -140,9 +151,9 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
     s = await seed(db.client);
     // Hand-made templates, seeded through the generator's own SQL.
     await db.client.query(seedSql(miniTemplate("A-W9-TEST"), miniTemplate("B-W9-TEST")));
-    const a = await db.client.query<{ id: string }>(assignSql, [s.learners.an, "A-W9-TEST", 1, "2026-12-07", s.members.parent, "req-an-0001"]);
+    const a = await db.client.query<{ id: string }>(assignSql, [s.learners.an, "A-W9-TEST", 1, DUE, s.members.parent, "req-an-0001"]);
     anInstance = (a.rows[0] as { id: string }).id;
-    const b = await db.client.query<{ id: string }>(assignSql, [s.learners.nguyen, "B-W9-TEST", 1, "2026-12-07", s.members.tutorNguyen, "req-ng-0001"]);
+    const b = await db.client.query<{ id: string }>(assignSql, [s.learners.nguyen, "B-W9-TEST", 1, DUE, s.members.tutorNguyen, "req-ng-0001"]);
     nguyenInstance = (b.rows[0] as { id: string }).id;
     anActivities = (
       await db.client.query<{ id: string }>("select id from english.activity_instances where inquiry_instance_id = $1 order by step_no", [anInstance])
@@ -332,17 +343,17 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
       const inst = (await db.client.query("select * from english.inquiry_instances where id = $1", [anInstance])).rows[0];
       expect(inst).toMatchObject({ learner_id: s.learners.an, template_id: "A-W9-TEST", template_version: 1, assigned_by: s.members.parent, client_request_id: "req-an-0001" });
       const due = (await db.client.query("select due_on::text as d from english.inquiry_instances where id = $1", [anInstance])).rows[0].d;
-      expect(due).toBe("2026-12-07");
+      expect(due).toBe(DUE);
       const tpl = (await db.client.query("select steps, sources, target_ids from english.inquiry_templates where id = 'A-W9-TEST'")).rows[0];
       expect(inst.snapshot.steps).toEqual(tpl.steps);
       expect(inst.snapshot.sources).toEqual(tpl.sources);
       expect(inst.snapshot.target_ids).toEqual(tpl.target_ids);
-      expect(inst.snapshot.template).toMatchObject({ id: "A-W9-TEST", version: 1, track_id: "A", title_vi: "Test inquiry", week: 9, date_from: "2026-12-01", date_to: "2026-12-07", catalogue_version: catalogueItem!.id });
+      expect(inst.snapshot.template).toMatchObject({ id: "A-W9-TEST", version: 1, track_id: "A", title_vi: "Test inquiry", week: 9, date_from: FROM, date_to: DUE, catalogue_version: catalogueItem!.id });
       expect(JSON.stringify(inst.snapshot)).not.toMatch(/SECRET|"answer"|explanation_vi|prompt_vi/);
 
       const acts = (await db.client.query("select step_no, activity_type, mode, purpose, target_ids, scheduled_for::text as d from english.activity_instances where inquiry_instance_id = $1 order by step_no", [anInstance])).rows;
       expect(acts).toEqual([
-        { step_no: 1, activity_type: "ACT-SOURCE-QA", mode: "INDEPENDENT_CHECK", purpose: [], target_ids: ["A-T1-TEXT-R"], d: "2026-12-02" },
+        { step_no: 1, activity_type: "ACT-SOURCE-QA", mode: "INDEPENDENT_CHECK", purpose: [], target_ids: ["A-T1-TEXT-R"], d: STEP1 },
         { step_no: 2, activity_type: "ACT-WRITE", mode: "PRACTICE", purpose: ["checkpoint"], target_ids: ["A-L3-CAUSE-W"], d: null },
       ]);
 
@@ -361,7 +372,7 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
       try {
         const snap = (await db.client.query("select snapshot->'template'->>'title_vi' as t, snapshot->'template'->>'version' as v from english.inquiry_instances where id = $1", [anInstance])).rows[0];
         expect(snap).toEqual({ t: "Test inquiry", v: "1" });
-        const r = await svc(assignSql, [s.learners.an, "A-W9-TEST", 2, "2026-12-07", s.members.parent, "req-an-v2-001"]);
+        const r = await svc(assignSql, [s.learners.an, "A-W9-TEST", 2, DUE, s.members.parent, "req-an-v2-001"]);
         expect(r.err).toBeNull();
       } finally {
         // keep the shared database small for the other tests: v2 stays (published rows cannot be deleted), nothing else to undo
@@ -370,7 +381,7 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
     });
 
     it("rejects a template of the other track, an unpublished or unknown template", async () => {
-      const wrongTrack = await svc(assignSql, [s.learners.an, "B-W9-TEST", 1, "2026-12-07", s.members.parent, "req-wrong-001"]);
+      const wrongTrack = await svc(assignSql, [s.learners.an, "B-W9-TEST", 1, DUE, s.members.parent, "req-wrong-001"]);
       expect(wrongTrack.err?.code).toBe("23514");
       expect(wrongTrack.err?.message).toMatch(/another track/);
       // a draft row (never published)
@@ -379,9 +390,9 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
          values ('A-W8-DRAFT', 1, 'A', 'draft', 'q', 'q', 8, '2026-12-01', '2026-12-07', 'science', '{A-T1-TEXT-R}', $1::jsonb, '[]'::jsonb, $2, 'h')`,
         [JSON.stringify(toSafeSteps(miniTemplate("A-W9-TEST"))), catalogueItem!.id],
       );
-      const draft = await svc(assignSql, [s.learners.an, "A-W8-DRAFT", 1, "2026-12-07", s.members.parent, "req-draft-001"]);
+      const draft = await svc(assignSql, [s.learners.an, "A-W8-DRAFT", 1, DUE, s.members.parent, "req-draft-001"]);
       expect(draft.err?.code).toBe("P0002");
-      const unknown = await svc(assignSql, [s.learners.an, "A-W0-NOPE", 1, "2026-12-07", s.members.parent, "req-nope-0001"]);
+      const unknown = await svc(assignSql, [s.learners.an, "A-W0-NOPE", 1, DUE, s.members.parent, "req-nope-0001"]);
       expect(unknown.err?.code).toBe("P0002");
     });
 
@@ -394,12 +405,12 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
       ];
       for (const [label, by, learner, code] of cases) {
         const tpl = learner === s.learners.an ? "A-W9-TEST" : "B-W9-TEST";
-        const r = await svc(assignSql, [learner, tpl, 1, "2026-12-07", by, `req-actor-${label.length}`]);
+        const r = await svc(assignSql, [learner, tpl, 1, DUE, by, `req-actor-${label.length}`]);
         expect(r.err?.code, label).toBe(code);
       }
-      const own = await svc(assignSql, [s.learners.an, "A-W9-TEST", 1, "2026-12-07", s.members.tutorAn, "req-tutor-an-1"]);
+      const own = await svc(assignSql, [s.learners.an, "A-W9-TEST", 1, DUE, s.members.tutorAn, "req-tutor-an-1"]);
       expect(own.err).toBeNull();
-      const parentNguyen = await svc(assignSql, [s.learners.nguyen, "B-W9-TEST", 1, "2026-12-07", s.members.parent, "req-parent-ng-1"]);
+      const parentNguyen = await svc(assignSql, [s.learners.nguyen, "B-W9-TEST", 1, DUE, s.members.parent, "req-parent-ng-1"]);
       expect(parentNguyen.err).toBeNull();
     });
 
@@ -408,33 +419,33 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
       try {
         await db.client.query("update english.relationships set valid_from = now() - interval '10 days' where member_id = $1", [s.members.tutorAn]);
         await db.client.query("update english.relationships set valid_to = now() - interval '1 day' where member_id = $1", [s.members.tutorAn]);
-        await expect(db.client.query(assignSql, [s.learners.an, "A-W9-TEST", 1, "2026-12-07", s.members.tutorAn, "req-expired-01"])).rejects.toThrow(/may not assign/);
+        await expect(db.client.query(assignSql, [s.learners.an, "A-W9-TEST", 1, DUE, s.members.tutorAn, "req-expired-01"])).rejects.toThrow(/may not assign/);
       } finally {
         await db.client.query("rollback");
       }
     });
 
     it("is idempotent per (learner, client_request_id): same id → same instance, no second copy", async () => {
-      const again = await db.client.query<{ id: string }>(assignSql, [s.learners.an, "A-W9-TEST", 1, "2026-12-07", s.members.parent, "req-an-0001"]);
+      const again = await db.client.query<{ id: string }>(assignSql, [s.learners.an, "A-W9-TEST", 1, DUE, s.members.parent, "req-an-0001"]);
       expect(again.rows[0]?.id).toBe(anInstance);
       expect(await count("select count(*)::int as n from english.activity_instances where inquiry_instance_id = $1", [anInstance])).toBe(2);
       // the same request id for a different template is a client bug, not a silent success
-      const clash = await svc(assignSql, [s.learners.an, "A-W9-TEST", 2, "2026-12-07", s.members.parent, "req-an-0001"]);
+      const clash = await svc(assignSql, [s.learners.an, "A-W9-TEST", 2, DUE, s.members.parent, "req-an-0001"]);
       expect(clash.err?.code).toBe("23505");
       // the id is scoped to the learner
-      const other = await svc(assignSql, [s.learners.nguyen, "B-W9-TEST", 1, "2026-12-07", s.members.parent, "req-an-0001"]);
+      const other = await svc(assignSql, [s.learners.nguyen, "B-W9-TEST", 1, DUE, s.members.parent, "req-an-0001"]);
       expect(other.err).toBeNull();
     });
 
     it("validates its arguments", async () => {
-      expect((await svc(assignSql, [s.learners.an, "A-W9-TEST", 1, "2026-12-07", s.members.parent, "short"])).err?.code).toBe("22023");
+      expect((await svc(assignSql, [s.learners.an, "A-W9-TEST", 1, DUE, s.members.parent, "short"])).err?.code).toBe("22023");
       expect((await svc(assignSql, [s.learners.an, "A-W9-TEST", 1, null, s.members.parent, "req-null-due1"])).err?.code).toBe("22004");
-      expect((await svc(assignSql, ["00000000-0000-4000-8000-0000000000aa", "A-W9-TEST", 1, "2026-12-07", s.members.parent, "req-no-learner"])).err?.code).toBe("P0002");
+      expect((await svc(assignSql, ["00000000-0000-4000-8000-0000000000aa", "A-W9-TEST", 1, DUE, s.members.parent, "req-no-learner"])).err?.code).toBe("P0002");
     });
 
     it("only the service role can call it (authenticated and anon cannot)", async () => {
       for (const [role, user] of [["authenticated", s.users.parent], ["anon", null]] as const) {
-        const e1 = await errorAs(db.client, role, user, assignSql, [s.learners.an, "A-W9-TEST", 1, "2026-12-07", s.members.parent, "req-priv-0001"]);
+        const e1 = await errorAs(db.client, role, user, assignSql, [s.learners.an, "A-W9-TEST", 1, DUE, s.members.parent, "req-priv-0001"]);
         expect(e1?.code, role).toBe("42501");
         const e2 = await errorAs(db.client, role, user, eventSql, [anActivities[0], "skip", null, "no reason needed", s.members.parent]);
         expect(e2?.code, role).toBe("42501");
@@ -451,12 +462,12 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
       await db.client.query("begin");
       try {
         const first = activityId(0);
-        await db.client.query(eventSql, [first, "reschedule", "2026-12-04", "Con ốm hôm đó", s.members.parent]);
+        await db.client.query(eventSql, [first, "reschedule", D4, "Con ốm hôm đó", s.members.parent]);
         await db.client.query(eventSql, [first, "skip", null, "Gia đình đi xa", s.members.tutorAn]);
         await db.client.query(eventSql, [first, "unskip", null, "Đã về sớm", s.members.parent]);
-        await db.client.query(eventSql, [first, "reschedule", "2026-12-06", "Dời thêm lần nữa", s.members.parent]);
+        await db.client.query(eventSql, [first, "reschedule", D6, "Dời thêm lần nữa", s.members.parent]);
         const rows = (await db.client.query("select kind, new_date::text as d, reason, by_member from english.activity_instance_events where activity_instance_id = $1 order by at, id", [first])).rows;
-        expect(rows.map((r) => [r.kind, r.d])).toEqual([["reschedule", "2026-12-04"], ["skip", null], ["unskip", null], ["reschedule", "2026-12-06"]]);
+        expect(rows.map((r) => [r.kind, r.d])).toEqual([["reschedule", D4], ["skip", null], ["unskip", null], ["reschedule", D6]]);
         expect(rows[0].reason).toBe("Con ốm hôm đó");
         expect(rows[1].by_member).toBe(s.members.tutorAn);
         const audit = (await db.client.query("select action from english.audit_log where learner_id = $1 and action like 'activity.%' order by id", [s.learners.an])).rows;
@@ -476,9 +487,9 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
       const a = () => activityId(0);
       expect((await ev("skip", null, "", s.members.parent, a)).err?.code).toBe("23514");
       expect((await ev("skip", null, "  ab ", s.members.parent, a)).err?.code).toBe("23514");
-      expect((await ev("reschedule", "2026-12-04", "", s.members.parent, a)).err?.code).toBe("23514");
+      expect((await ev("reschedule", D4, "", s.members.parent, a)).err?.code).toBe("23514");
       expect((await ev("reschedule", null, "đổi ngày", s.members.parent, a)).err?.code).toBe("23514");
-      expect((await ev("skip", "2026-12-04", "bỏ bước", s.members.parent, a)).err?.code).toBe("23514");
+      expect((await ev("skip", D4, "bỏ bước", s.members.parent, a)).err?.code).toBe("23514");
       expect((await ev("unskip", null, "hoàn lại", s.members.parent, a)).err?.code).toBe("23514");
       expect((await ev("explode", null, "không có kiểu này", s.members.parent, a)).err?.code).toBe("22023");
       await db.client.query("begin");
@@ -573,13 +584,39 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
     const rows = <R extends Record<string, unknown>>(role: "authenticated" | "anon", user: string | null, sql: string, params: unknown[] = []) =>
       rowsAs<R>(db.client, role, user, sql, params);
 
-    it("the student reads only their own instances, steps and events", async () => {
-      const mine = await rows<{ id: string }>("authenticated", s.users.studentAn, "select id from english.inquiry_instances");
-      expect(mine.map((r) => r.id)).toEqual([anInstance]);
-      const acts = await rows("authenticated", s.users.studentAn, "select id from english.activity_instances");
-      expect(acts).toHaveLength(2);
-      const other = await rows("authenticated", s.users.studentNguyen, "select id from english.inquiry_instances");
-      expect(other.map((r) => r.id)).toEqual([nguyenInstance]);
+    it("staff read instances, steps and events of their own learners only; the snapshot is intact for them", async () => {
+      const parent = await rows<{ id: string }>("authenticated", s.users.parent, "select id from english.inquiry_instances");
+      expect(new Set(parent.map((r) => r.id))).toEqual(new Set([anInstance, nguyenInstance]));
+      const tutorAn = await rows<{ id: string; snapshot: { steps: unknown[] } }>("authenticated", s.users.tutorAn, "select id, snapshot from english.inquiry_instances");
+      expect(tutorAn.map((r) => r.id)).toEqual([anInstance]);
+      expect(tutorAn[0]?.snapshot.steps).toHaveLength(2);
+      expect(await rows("authenticated", s.users.tutorAn, "select id from english.activity_instances")).toHaveLength(2);
+      const tutorNg = await rows<{ id: string }>("authenticated", s.users.tutorNguyen, "select id from english.inquiry_instances");
+      expect(tutorNg.map((r) => r.id)).toEqual([nguyenInstance]);
+    });
+
+    it("a student cannot SELECT the raw snapshot, the step rows or the schedule events — not their own, not anyone's", async () => {
+      await db.client.query("begin");
+      try {
+        await db.client.query(eventSql, [anActivities[0], "reschedule", D4, "để thử đọc sự kiện", s.members.parent]);
+        await db.client.query("set local role authenticated");
+        for (const student of [s.users.studentAn, s.users.studentNguyen]) {
+          await db.client.query("select set_config('request.jwt.claim.sub', $1, true)", [student]);
+          for (const sql of [
+            "select * from english.inquiry_instances",
+            "select snapshot from english.inquiry_instances",
+            `select snapshot -> 'steps' from english.inquiry_instances where id = '${anInstance}'`,
+            "select * from english.activity_instances",
+            "select * from english.activity_instance_events",
+          ]) {
+            expect((await db.client.query(sql)).rows, `${student}: ${sql}`).toEqual([]);
+          }
+        }
+      } finally {
+        await db.client.query("rollback");
+      }
+      // positive control: the same rows exist and the parent reads them
+      expect(await count("select count(*)::int as n from english.inquiry_instances where id = $1", [anInstance])).toBe(1);
     });
 
     it("students and anon can NOT read any key table (RLS for students, no privilege for anon)", async () => {
@@ -607,13 +644,6 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
           expect(await rows("authenticated", student, `select * from english.${table}`), `${table} / student`).toEqual([]);
         }
       }
-    });
-
-    it("the instance snapshot a student can read has no answers", async () => {
-      const inst = await rows("authenticated", s.users.studentAn, "select snapshot from english.inquiry_instances");
-      const text = JSON.stringify(inst);
-      expect(inst.length).toBeGreaterThan(0);
-      for (const secret of ["SECRET-", '"answer":', "explanation_vi", "prompt_vi", "transcript"]) expect(text, secret).not.toContain(secret);
     });
 
     it("anon reads no inquiry table at all", async () => {
@@ -753,6 +783,141 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
           expect(err?.code, `${t}: ${sql}`).toBe("42501");
         }
       }
+    });
+  });
+
+  describe("released steps: what a student may read (eng_my_released_steps)", () => {
+    const TPL = "A-W9-REL";
+    const releaseTemplate = (): InquiryTemplate => {
+      const mk = (n: number, planned: string, extra: Partial<InquiryTemplate["steps"][number]> = {}): InquiryTemplate["steps"][number] => ({
+        step_no: n,
+        activity_type: "ACT-SOURCE-QA",
+        mode: "INDEPENDENT_CHECK",
+        purpose: [],
+        target_ids: ["A-T1-TEXT-R"],
+        prompt_en: `PROMPT-S${n} read and answer`,
+        prompt_vi: `SECRET-NOTE-S${n}`,
+        time_min: 5,
+        planned_date: planned,
+        items: [
+          { id: `rel-q${n}`, kind: "mcq", stem: `STEM-S${n} which one?`, options: ["a) one", "b) two"], answer: "a", explanation_vi: `SECRET-EXPLAIN-S${n}`, target_id: "A-T1-TEXT-R" },
+        ],
+        self_check_vi: [`SELFCHECK-S${n}`],
+        ...extra,
+      });
+      return {
+        ...miniTemplate(TPL, 1, "Release test"),
+        sources: [],
+        dates: { from: addDays(TODAY, -3), to: addDays(TODAY, 3) },
+        steps: [
+          mk(1, addDays(TODAY, -3)),
+          mk(2, TODAY),
+          mk(3, addDays(TODAY, 1)),
+          mk(4, addDays(TODAY, 3)),
+          mk(5, addDays(TODAY, -2)),
+        ],
+      };
+    };
+
+    let relInstance = "";
+    let relActs: Record<number, string> = {};
+    const ev = (n: number, kind: string, date: string | null, reason = "lý do rõ ràng") =>
+      db.client.query(eventSql, [relActs[n], kind, date, reason, s.members.parent]);
+
+    beforeAll(async () => {
+      await db.client.query(seedSql(releaseTemplate()));
+      const r = await db.client.query<{ id: string }>(assignSql, [s.learners.an, TPL, 1, addDays(TODAY, 3), s.members.parent, "req-release-01"]);
+      relInstance = (r.rows[0] as { id: string }).id;
+      const acts = await db.client.query<{ id: string; step_no: number }>("select id, step_no from english.activity_instances where inquiry_instance_id = $1", [relInstance]);
+      relActs = Object.fromEntries(acts.rows.map((a) => [a.step_no, a.id]));
+    });
+
+    type Released = { instance_id: string; title_vi: string; big_question_en: string; big_question_vi: string; due_on: string; steps: Array<{ step_no: number; planned_date: string; prompt_en: string; items: Array<{ stem: string }> }> } | null;
+    /** Call the function as `user` (a role switch inside a transaction that is always rolled back); `setup` runs first as owner. */
+    const released = async (user: string | null, instance: string, setup?: () => Promise<unknown>): Promise<Released> => {
+      await db.client.query("begin");
+      try {
+        if (setup) await setup();
+        await db.client.query("set local role authenticated");
+        await db.client.query("select set_config('request.jwt.claim.sub', $1, true)", [user ?? ""]);
+        const res = await db.client.query<{ r: Released }>("select english.eng_my_released_steps($1) as r", [instance]);
+        return res.rows[0]?.r ?? null;
+      } finally {
+        await db.client.query("rollback");
+      }
+    };
+    const stepNos = (r: Released) => (r?.steps ?? []).map((x) => x.step_no);
+
+    it("returns the header and only the steps whose date has come: before/on today yes, tomorrow and later no", async () => {
+      const r = await released(s.users.studentAn, relInstance);
+      expect(r).toMatchObject({ instance_id: relInstance, title_vi: "Release test", big_question_en: "Why is the sky blue?", big_question_vi: "Vì sao bầu trời xanh?", due_on: addDays(TODAY, 3) });
+      expect(stepNos(r)).toEqual([1, 2, 5]);
+      expect(r?.steps.map((x) => x.planned_date)).toEqual([addDays(TODAY, -3), TODAY, addDays(TODAY, -2)]);
+    });
+
+    it("nothing of an unreleased step leaks: not its prompt, items, self-check, nor any answer, explanation or tutor note", async () => {
+      const text = JSON.stringify(await released(s.users.studentAn, relInstance));
+      for (const n of [1, 2, 5]) expect(text).toContain(`PROMPT-S${n}`);
+      expect(text).toContain("STEM-S1");
+      for (const leak of ["PROMPT-S3", "STEM-S3", "SELFCHECK-S3", "PROMPT-S4", "STEM-S4", "SELFCHECK-S4", "SECRET", '"answer"', "explanation_vi", "prompt_vi", "rel-q3", "rel-q4"]) {
+        expect(text, leak).not.toContain(leak);
+      }
+    });
+
+    it("the effective date counts: a step rescheduled into the past opens, one moved to the future closes", async () => {
+      const r = await released(s.users.studentAn, relInstance, async () => {
+        await ev(4, "reschedule", addDays(TODAY, -1)); // planned +3 → yesterday: opens
+        await ev(2, "reschedule", addDays(TODAY, 1)); // planned today → tomorrow: closes
+        await ev(1, "reschedule", addDays(TODAY, 2));
+        await ev(1, "reschedule", addDays(TODAY, -3)); // the latest event wins: back in the past
+      });
+      expect(stepNos(r)).toEqual([1, 4, 5]);
+      expect(r?.steps.find((x) => x.step_no === 4)?.planned_date).toBe(addDays(TODAY, -1));
+      expect(JSON.stringify(r)).toContain("STEM-S4");
+      expect(JSON.stringify(r)).not.toContain("STEM-S2");
+    });
+
+    it("a skipped step is never released, even when its date is in the past; unskip brings it back", async () => {
+      const skipped = await released(s.users.studentAn, relInstance, async () => {
+        await ev(5, "skip", null);
+        await ev(1, "skip", null);
+        await ev(1, "reschedule", addDays(TODAY, -1)); // rescheduling does not undo a skip
+      });
+      expect(stepNos(skipped)).toEqual([2]);
+      const back = await released(s.users.studentAn, relInstance, async () => {
+        await ev(5, "skip", null);
+        await ev(5, "unskip", null);
+      });
+      expect(stepNos(back)).toEqual([1, 2, 5]);
+    });
+
+    it("a step without a date stays closed until it is given one", async () => {
+      // A-W9-TEST step 2 has no planned date, step 1 is planned in the future
+      expect(stepNos(await released(s.users.studentAn, anInstance))).toEqual([]);
+      const r = await released(s.users.studentAn, anInstance, async () => {
+        // (the append-only test above left a skip event on this step: lift it first)
+        const skipped = await count("select count(*)::int as n from english.activity_instance_events where activity_instance_id = $1 and kind = 'skip'", [anActivities[1]]);
+        if ((skipped ?? 0) > 0) await db.client.query(eventSql, [anActivities[1], "unskip", null, "bỏ trạng thái bỏ bước", s.members.parent]);
+        await db.client.query(eventSql, [anActivities[1], "reschedule", TODAY, "xếp ngày cho bước chưa có ngày", s.members.parent]);
+      });
+      expect(stepNos(r)).toEqual([2]);
+    });
+
+    it("nobody else gets anything: the other student, the parent, a tutor, a stranger id → null; anon cannot call it", async () => {
+      expect(await released(s.users.studentNguyen, relInstance)).toBeNull();
+      expect(await released(s.users.studentNguyen, anInstance)).toBeNull();
+      for (const staff of [s.users.parent, s.users.tutorAn, s.users.tutorNguyen]) expect(await released(staff, relInstance), "staff").toBeNull();
+      expect(await released(s.users.studentAn, "00000000-0000-4000-8000-0000000000aa")).toBeNull();
+      expect(await released(s.users.studentAn, nguyenInstance)).toBeNull(); // another learner's instance
+      const err = await errorAs(db.client, "anon", null, "select english.eng_my_released_steps($1)", [relInstance]);
+      expect(err?.code).toBe("42501");
+    });
+
+    it("only authenticated may execute it (not anon); staff still read the whole snapshot", async () => {
+      const staffSnapshot = await rowsAs<{ snapshot: { steps: Array<{ step_no: number }> } }>(db.client, "authenticated", s.users.tutorAn, "select snapshot from english.inquiry_instances where id = $1", [relInstance]);
+      expect(staffSnapshot[0]?.snapshot.steps.map((x) => x.step_no)).toEqual([1, 2, 3, 4, 5]);
+      const fn = (await db.client.query("select has_function_privilege('authenticated', 'english.eng_my_released_steps(uuid)', 'execute') as a, has_function_privilege('anon', 'english.eng_my_released_steps(uuid)', 'execute') as n")).rows[0];
+      expect(fn).toEqual({ a: true, n: false });
     });
   });
 });

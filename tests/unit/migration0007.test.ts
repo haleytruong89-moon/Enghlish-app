@@ -51,6 +51,9 @@ describe("0007_inquiries.sql", () => {
       expect(sql).toContain(`revoke execute on function english.${fn} from public, anon, authenticated;`);
       expect(sql).toContain(`grant execute on function english.${fn} to service_role;`);
     }
+    // the one function a student may call: authenticated only, never anon/public
+    expect(sql).toContain("revoke execute on function english.eng_my_released_steps(uuid) from public, anon;");
+    expect(sql).toContain("grant execute on function english.eng_my_released_steps(uuid) to authenticated;");
     const defs = sql.match(/create or replace function english\.\w+\([\s\S]*?\n\$\$;/g) ?? [];
     expect(defs.length).toBeGreaterThanOrEqual(8);
     for (const d of defs) {

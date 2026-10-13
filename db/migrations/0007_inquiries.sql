@@ -6,8 +6,12 @@
 -- Nguyên tắc an toàn:
 --  * Học sinh KHÔNG BAO GIỜ đọc được đáp án / lời giải / kịch bản của gia sư — kể cả gọi REST trực tiếp:
 --    những thứ đó nằm ở bảng riêng (template_item_keys, instance_item_keys, source_transcripts) chỉ
---    phụ huynh / gia sư đọc được; phần học sinh đọc được (steps, snapshot) bị CHECK chặn không cho
+--    phụ huynh / gia sư đọc được; phần chứa câu hỏi (steps, snapshot) bị CHECK chặn không cho
 --    chứa các khóa answer / explanation_vi / prompt_vi.
+--  * Học sinh cũng KHÔNG đọc trực tiếp mẫu, nguồn, snapshot hay lịch (bước sau có thể lộ đáp án bước trước):
+--    chỉ qua english.eng_my_released_steps, trả các bước đã đến ngày của CHÍNH bài của em.
+--  * Mẫu / nguồn / khóa đáp án của mẫu: phụ huynh hoặc gia sư chỉ đọc phần thuộc track của một em trong phạm vi
+--    của mình (eng_staff_has_track).
 --  * Mẫu và nguồn đã công bố thì bất biến; bài đã giao (instances) chỉ thêm, không sửa.
 --  * Ghi dữ liệu chỉ qua eng_assign_inquiry / eng_activity_event (service role sau requireAccess).
 -- Không đụng schema public. Idempotent. Grant theo từng bảng.
@@ -834,27 +838,91 @@ create policy template_item_keys_select on english.template_item_keys
   for select to authenticated
   using (english.eng_staff_may_read_template(template_id, template_version));
 
--- Bài đã giao: ai đọc được learner thì đọc được (học sinh: chỉ của mình).
+-- Bài đã giao (snapshot, từng bước, sự kiện đổi lịch): CHỈ phụ huynh / gia sư của learner đó đọc được bảng.
+-- Học sinh KHÔNG đọc trực tiếp: snapshot chứa câu hỏi của cả tuần, mà lời nhắc / gợi ý của bước sau có thể
+-- lộ đáp án bước trước (bài kiểm tra tự làm). Học sinh chỉ nhận các bước đã đến ngày qua
+-- english.eng_my_released_steps (bên dưới).
 drop policy if exists inquiry_instances_select on english.inquiry_instances;
 create policy inquiry_instances_select on english.inquiry_instances
   for select to authenticated
-  using (english.eng_can_read_learner(learner_id));
+  using (english.eng_is_staff_of(learner_id));
 
 drop policy if exists activity_instances_select on english.activity_instances;
 create policy activity_instances_select on english.activity_instances
   for select to authenticated
-  using (english.eng_can_read_learner(learner_id));
+  using (english.eng_is_staff_of(learner_id));
 
 drop policy if exists activity_instance_events_select on english.activity_instance_events;
 create policy activity_instance_events_select on english.activity_instance_events
   for select to authenticated
-  using (english.eng_can_read_learner(learner_id));
+  using (english.eng_is_staff_of(learner_id));
 
 -- Khóa đáp án của bài đã giao: CHỈ phụ huynh / gia sư của learner đó. Học sinh và anon: không bao giờ.
 drop policy if exists instance_item_keys_select on english.instance_item_keys;
 create policy instance_item_keys_select on english.instance_item_keys
   for select to authenticated
   using (english.eng_is_staff_of(learner_id));
+
+-- Đường đọc DUY NHẤT của học sinh: bài được giao cho CHÍNH em, chỉ các bước đã mở --------------------------
+-- Bước đã mở = ngày hiệu lực (ngày kế hoạch, hoặc ngày của lần đổi ngày mới nhất) <= hôm nay (giờ Việt Nam)
+-- và bước không đang ở trạng thái "bỏ". Bước chưa có ngày: chưa mở (cho đến khi được xếp ngày). Trả null khi
+-- bài không phải của người gọi (người gọi không phải học sinh, học sinh khác, id không tồn tại).
+-- Chỉ trả phần học sinh được thấy (snapshot không có đáp án); mỗi bước mang ngày hiệu lực ở planned_date.
+create or replace function english.eng_my_released_steps(p_instance uuid) returns jsonb
+language sql stable security definer set search_path = ''
+as $$
+  with me as (
+    select m.id from english.members m where m.user_id = auth.uid() and m.role = 'student'
+  ),
+  inst as (
+    select i.id, i.snapshot, i.due_on
+    from english.inquiry_instances i
+    join english.learners l on l.id = i.learner_id
+    join me on l.member_id = me.id
+    where i.id = p_instance
+  ),
+  eff as (
+    select
+      a.step_no,
+      coalesce(
+        (select e.new_date from english.activity_instance_events e
+          where e.activity_instance_id = a.id and e.kind = 'reschedule'
+          order by e.at desc, e.id desc limit 1),
+        a.scheduled_for) as eff_date,
+      coalesce(
+        (select e.kind = 'skip' from english.activity_instance_events e
+          where e.activity_instance_id = a.id and e.kind in ('skip', 'unskip')
+          order by e.at desc, e.id desc limit 1),
+        false) as skipped
+    from english.activity_instances a
+    join inst on a.inquiry_instance_id = inst.id
+  ),
+  released as (
+    select eff.step_no, eff.eff_date
+    from eff
+    where not eff.skipped
+      and eff.eff_date is not null
+      and eff.eff_date <= (now() at time zone 'Asia/Ho_Chi_Minh')::date
+  )
+  select pg_catalog.jsonb_build_object(
+    'instance_id', inst.id,
+    'title_vi', inst.snapshot -> 'template' ->> 'title_vi',
+    'big_question_en', inst.snapshot -> 'template' ->> 'big_question_en',
+    'big_question_vi', inst.snapshot -> 'template' ->> 'big_question_vi',
+    'due_on', inst.due_on,
+    'steps', coalesce((
+      select pg_catalog.jsonb_agg(st.s || pg_catalog.jsonb_build_object('planned_date', r.eff_date) order by r.step_no)
+      from released r
+      join lateral (
+        select x as s from pg_catalog.jsonb_array_elements(inst.snapshot -> 'steps') as x
+        where (x ->> 'step_no')::int = r.step_no
+      ) st on true
+    ), '[]'::jsonb))
+  from inst
+$$;
+
+revoke execute on function english.eng_my_released_steps(uuid) from public, anon;
+grant execute on function english.eng_my_released_steps(uuid) to authenticated;
 
 -- Grant theo từng bảng (không dùng "on all tables") -----------------------------------------------------
 grant select on
