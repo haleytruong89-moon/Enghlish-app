@@ -299,7 +299,11 @@ begin
         using errcode = '23514';
     end if;
 
-    -- Danh sách "bài được tính" của danh mục (có thể ghi kèm chú thích trong ngoặc: "ACT-SOURCE-QA (reading)").
+    -- Danh sách "bài được tính" (evidence_tasks) của danh mục. Cách đọc một dòng (cùng luật với
+    -- lib/config/inquiries.ts, parseEvidenceTask):
+    --   "ACT-SOURCE-QA (reading)"                 → ACT-SOURCE-QA (bỏ chú thích trong ngoặc)
+    --   "ACT-SOURCE-QA -> ACT-WRITE"              → ACT-WRITE (chuỗi: tính theo hoạt động CUỐI)
+    --   "any activity tagged as transfer check"   → mọi hoạt động, nhưng chỉ ở bước có purpose transfer_check
     select (s ->> 'step_no') || ': ' || (s ->> 'activity_type') || ' / ' || x into v_bad
     from jsonb_array_elements(new.steps) as s, jsonb_array_elements_text(s -> 'target_ids') as x
     where exists (select 1 from english.targets t
@@ -307,7 +311,10 @@ begin
       and not exists (
         select 1 from english.targets t, jsonb_array_elements_text(t.raw -> 'evidence_tasks') as e
         where t.id = x and t.descriptor_version = v_desc
-          and substring(e from '^ACT-[A-Z0-9-]+') = s ->> 'activity_type')
+          and (
+            substring(regexp_replace(e, '\s*\([^)]*\)', '', 'g') from '.*(ACT-[A-Z0-9-]+)') = s ->> 'activity_type'
+            or (e ~* '^\s*any activity tagged as transfer check'
+                and coalesce(s -> 'purpose', '[]'::jsonb) @> '"transfer_check"'::jsonb)))
     limit 1;
     if v_bad is not null then
       raise exception 'inquiry template %/%: step % is not an evidence task of that target in the catalogue',

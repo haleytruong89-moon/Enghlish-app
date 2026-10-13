@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { CONTENT_DIR } from "@/lib/config/content";
 import {
+  evidenceEntryAllows,
   evidenceTaskId,
+  parseEvidenceTask,
   noteItemId,
   resolveMcqAnswer,
   toKeyRows,
@@ -145,6 +147,26 @@ describe("evidenceTaskId / resolveMcqAnswer", () => {
     expect(evidenceTaskId("something else")).toBeNull();
   });
 
+  it("parses chained, suffixed and 'any transfer' catalogue entries", () => {
+    expect(parseEvidenceTask("ACT-SOURCE-QA -> ACT-WRITE")).toEqual({ kind: "activity", id: "ACT-WRITE" });
+    expect(parseEvidenceTask("ACT-CANVAS-BASIC -> ACT-SPEAK-MONO")).toEqual({ kind: "activity", id: "ACT-SPEAK-MONO" });
+    expect(parseEvidenceTask("ACT-CANVAS-ADV (evidence table)")).toEqual({ kind: "activity", id: "ACT-CANVAS-ADV" });
+    expect(parseEvidenceTask("ACT-WRITE (experience text, 'what has changed' observation log)")).toEqual({ kind: "activity", id: "ACT-WRITE" });
+    expect(parseEvidenceTask("ACT-SOURCE-QA (reading) -> ACT-WRITE (summary)")).toEqual({ kind: "activity", id: "ACT-WRITE" });
+    expect(parseEvidenceTask("any activity tagged as transfer check")).toEqual({ kind: "any_transfer" });
+    expect(parseEvidenceTask("nothing here")).toBeNull();
+  });
+
+  it("a chain counts through its LAST activity only; 'any transfer' needs the transfer_check purpose", () => {
+    expect(evidenceEntryAllows("ACT-SOURCE-QA -> ACT-WRITE", "ACT-WRITE", [])).toBe(true);
+    expect(evidenceEntryAllows("ACT-SOURCE-QA -> ACT-WRITE", "ACT-SOURCE-QA", [])).toBe(false);
+    expect(evidenceEntryAllows("ACT-CANVAS-ADV (evidence table)", "ACT-CANVAS-ADV", [])).toBe(true);
+    expect(evidenceEntryAllows("ACT-CANVAS-ADV (evidence table)", "ACT-SOURCE-QA", [])).toBe(false);
+    expect(evidenceEntryAllows("any activity tagged as transfer check", "ACT-SELF-REVIEW", ["transfer_check"])).toBe(true);
+    expect(evidenceEntryAllows("any activity tagged as transfer check", "ACT-SELF-REVIEW", ["checkpoint"])).toBe(false);
+    expect(evidenceEntryAllows("any activity tagged as transfer check", "ACT-WRITE", [])).toBe(false);
+  });
+
   it("resolves labelled, positional and literal answers; refuses anything else", () => {
     const labelled = ["a) one", "b) two", "c) three"];
     expect(resolveMcqAnswer(labelled, "b")).toBe(1);
@@ -186,6 +208,38 @@ describe("validateInquiryTemplate catches what the plan lists", () => {
     if (!step) throw new Error("fixture step missing");
     step.activity_type = "ACT-SPEAK-MONO"; // A-L3-CAUSE-W is evidenced by writing only
     expect(rules(t)).toContain("whitelist");
+  });
+
+  it("whitelist against the real catalogue: chained, suffixed and 'any transfer check' entries", () => {
+    // Build one step on top of a clean template and look only at the whitelist verdict.
+    const verdict = (target: string, activity: string, purpose: string[] = []) => {
+      const t = base();
+      const step = structuredClone(t.steps[0]);
+      if (!step) throw new Error("fixture step missing");
+      t.steps = [{ ...step, step_no: 1, activity_type: activity as typeof step.activity_type, purpose: purpose as typeof step.purpose, target_ids: [target], items: [] }];
+      return rules(t).includes("whitelist");
+    };
+    // A-L7-SUMMARY-W: only "ACT-SOURCE-QA -> ACT-WRITE" → the LAST activity counts
+    expect(verdict("A-L7-SUMMARY-W", "ACT-WRITE")).toBe(false);
+    expect(verdict("A-L7-SUMMARY-W", "ACT-SOURCE-QA")).toBe(true);
+    // A-L1-COMP-W: "ACT-WRITE (comparison paragraph)" + "ACT-CANVAS-BASIC -> ACT-WRITE"
+    expect(verdict("A-L1-COMP-W", "ACT-WRITE")).toBe(false);
+    expect(verdict("A-L1-COMP-W", "ACT-CANVAS-BASIC")).toBe(true);
+    // Track B: "ACT-CANVAS-ADV (evidence table)" → ACT-CANVAS-ADV
+    const b = (target: string, activity: string) => {
+      const t = clone("B-W0-BASELINE");
+      const step = structuredClone(t.steps[0]);
+      if (!step) throw new Error("fixture step missing");
+      t.steps = [{ ...step, step_no: 1, activity_type: activity as typeof step.activity_type, purpose: ["baseline"], target_ids: [target], items: [] }];
+      return rules(t).includes("whitelist");
+    };
+    expect(b("B-T5-SOURCE", "ACT-CANVAS-ADV")).toBe(false);
+    expect(b("B-T5-SOURCE", "ACT-SOURCE-QA")).toBe(true);
+    // "any activity tagged as transfer check": any activity type, only with purpose transfer_check
+    expect(verdict("A-A5-REUSE", "ACT-SELF-REVIEW", ["transfer_check"])).toBe(false);
+    expect(verdict("A-A5-REUSE", "ACT-SPEAK-LIVE", ["transfer_check"])).toBe(false);
+    expect(verdict("A-A5-REUSE", "ACT-SELF-REVIEW", [])).toBe(true);
+    expect(verdict("A-A5-REUSE", "ACT-WRITE", ["checkpoint"])).toBe(true);
   });
 
   it("an aggregate indicator may be named as a diagnostic target and is not whitelist-checked", () => {

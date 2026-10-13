@@ -27,9 +27,35 @@ export type Violation = {
   message: string;
 };
 
-/** "ACT-SOURCE-QA (reading)" → "ACT-SOURCE-QA" (the catalogue lists some evidence tasks with a qualifier). */
+/**
+ * One entry of a catalogue target's `evidence_tasks`, reduced to what counts:
+ *  - "ACT-SOURCE-QA (reading)"            → activity ACT-SOURCE-QA (parenthetical qualifier dropped)
+ *  - "ACT-SOURCE-QA -> ACT-WRITE"          → activity ACT-WRITE (a chain counts through its LAST activity:
+ *                                            the evidence is what the learner produces at the end)
+ *  - "any activity tagged as transfer check" → any activity, but only in a step whose purpose has `transfer_check`
+ * Anything else → null (matches nothing). The SQL check in 0007 (`eng_check_inquiry_template`) does the same.
+ */
+export type EvidenceEntry = { kind: "activity"; id: string } | { kind: "any_transfer" };
+
+export function parseEvidenceTask(entry: string): EvidenceEntry | null {
+  if (/^\s*any activity tagged as transfer check/i.test(entry)) return { kind: "any_transfer" };
+  const stripped = entry.replace(/\s*\([^)]*\)/g, "");
+  const ids = stripped.match(/ACT-[A-Z0-9-]+/g);
+  const last = ids?.[ids.length - 1];
+  return last ? { kind: "activity", id: last } : null;
+}
+
+/** Does `entry` make a step with this activity type and purpose count as evidence? */
+export function evidenceEntryAllows(entry: string, activityType: string, purpose: readonly string[]): boolean {
+  const e = parseEvidenceTask(entry);
+  if (!e) return false;
+  return e.kind === "any_transfer" ? purpose.includes("transfer_check") : e.id === activityType;
+}
+
+/** The activity id an entry names (null for "any transfer check" and for unrecognised text). */
 export function evidenceTaskId(entry: string): string | null {
-  return /^ACT-[A-Z0-9-]+/.exec(entry)?.[0] ?? null;
+  const e = parseEvidenceTask(entry);
+  return e?.kind === "activity" ? e.id : null;
 }
 
 const LABEL_RE = /^([a-z])[.)]\s/i;
@@ -96,15 +122,13 @@ export function validateInquiryTemplate(t: InquiryTemplate, catalogue: Catalogue
       const target = targets.get(id);
       if (!target) continue; // an aggregate: no evidence-task list, never a mastery gate
       const rawTasks = (target as { evidence_tasks?: unknown }).evidence_tasks;
-      const tasks = Array.isArray(rawTasks)
-        ? rawTasks.flatMap((e) => (typeof e === "string" ? [evidenceTaskId(e)] : [])).filter((e): e is string => e !== null)
-        : [];
-      if (!tasks.includes(step.activity_type)) {
+      const entries = Array.isArray(rawTasks) ? rawTasks.filter((e): e is string => typeof e === "string") : [];
+      if (!entries.some((e) => evidenceEntryAllows(e, step.activity_type, step.purpose))) {
         add({
           rule: "whitelist",
           stepNo: step.step_no,
           itemId: null,
-          message: `step ${step.step_no}: ${step.activity_type} is not an evidence task of ${id} (catalogue allows: ${tasks.join(", ") || "none"})`,
+          message: `step ${step.step_no}: ${step.activity_type} is not an evidence task of ${id} (catalogue allows: ${entries.join("; ") || "none"})`,
         });
       }
     }

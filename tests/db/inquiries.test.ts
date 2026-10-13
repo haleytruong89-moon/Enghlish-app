@@ -265,6 +265,44 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
       expect(e3?.message).toMatch(/has no answer key row/);
     });
 
+    it("publishing reads the catalogue's evidence_tasks like the TypeScript check: chains by last activity, suffixes dropped, 'any transfer check' needs the purpose", async () => {
+      const publishStep = async (target: string, activity: string, purpose: string[]) => {
+        const steps = [{ step_no: 1, activity_type: activity, mode: "PRACTICE", purpose, target_ids: [target], prompt_en: "p", time_min: 5, planned_date: null, items: [], self_check_vi: [] }];
+        return withTx(async () => {
+          await insertTemplate(base({ id: "A-W7-EV", steps: JSON.stringify(steps) }));
+          await db.client.query("update english.inquiry_templates set status = 'published', published_at = now() where id = 'A-W7-EV'");
+        });
+      };
+      const rejected = /not an evidence task of that target/;
+      // chain "ACT-SOURCE-QA -> ACT-WRITE": the last activity counts, the first does not
+      expect(await publishStep("A-L7-SUMMARY-W", "ACT-WRITE", [])).toBeNull();
+      expect((await publishStep("A-L7-SUMMARY-W", "ACT-SOURCE-QA", []))?.message).toMatch(rejected);
+      // chain + suffix on the same target: "ACT-WRITE (comparison paragraph)", "ACT-CANVAS-BASIC -> ACT-WRITE"
+      expect(await publishStep("A-L1-COMP-W", "ACT-WRITE", [])).toBeNull();
+      expect((await publishStep("A-L1-COMP-W", "ACT-CANVAS-BASIC", []))?.message).toMatch(rejected);
+      // "any activity tagged as transfer check": any activity, but only with the purpose
+      expect(await publishStep("A-A5-REUSE", "ACT-SELF-REVIEW", ["transfer_check"])).toBeNull();
+      expect(await publishStep("A-A5-REUSE", "ACT-SPEAK-LIVE", ["transfer_check"])).toBeNull();
+      expect((await publishStep("A-A5-REUSE", "ACT-SELF-REVIEW", []))?.message).toMatch(rejected);
+      expect((await publishStep("A-A5-REUSE", "ACT-WRITE", ["checkpoint"]))?.message).toMatch(rejected);
+    });
+
+    it("a suffixed entry of Track B ('ACT-CANVAS-ADV (evidence table)') accepts ACT-CANVAS-ADV and refuses ACT-SOURCE-QA", async () => {
+      const publishStep = async (activity: string) => {
+        const steps = [{ step_no: 1, activity_type: activity, mode: "PRACTICE", purpose: [], target_ids: ["B-T5-SOURCE"], prompt_en: "p", time_min: 5, planned_date: null, items: [], self_check_vi: [] }];
+        return withTx(async () => {
+          await db.client.query(
+            `insert into english.inquiry_templates(id, version, track_id, title_vi, big_question_en, big_question_vi, week, date_from, date_to, domain_bucket, target_ids, steps, sources, catalogue_version, source_hash)
+             values ('B-W7-EV', 1, 'B', 't', 'q', 'q', 7, '2026-12-01', '2026-12-07', 'science', '{B-T5-SOURCE}', $1::jsonb, '[]'::jsonb, $2, 'h')`,
+            [JSON.stringify(steps), catalogueItem!.id],
+          );
+          await db.client.query("update english.inquiry_templates set status = 'published', published_at = now() where id = 'B-W7-EV'");
+        });
+      };
+      expect(await publishStep("ACT-CANVAS-ADV")).toBeNull();
+      expect((await publishStep("ACT-SOURCE-QA"))?.message).toMatch(/not an evidence task of that target/);
+    });
+
     it("published templates, their sources, transcripts and keys are immutable (also TRUNCATE)", async () => {
       for (const [label, sql] of [
         ["update template", "update english.inquiry_templates set title_vi = 'x' where id = 'A-W9-TEST'"],
