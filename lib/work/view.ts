@@ -42,3 +42,12 @@ export function wordsOf(s: string): number {
 export function nonEmptyAnswers(answers: Record<string, string>): Record<string, string> {
   return Object.fromEntries(Object.entries(answers).filter(([, v]) => v.trim() !== ""));
 }
+
+/**
+ * Source titles in the content carry a staff note in a trailing bracket ("… (bài đọc VOL-R)", "… (cloze passage, MINI-20 Q10-15)").
+ * A child sees the plain title only.
+ */
+export function sourceTitle(title: string): string {
+  const cleaned = title.replace(/\s*\((?=[^)]*(?:bài đọc|bài nghe|file |MINI-|cloze|reading|listening script|exam-style))[^)]*\)\s*$/i, "");
+  return cleaned.trim() === "" ? title : cleaned;
+}

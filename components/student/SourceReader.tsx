@@ -1,5 +1,6 @@
 import { safeExternalUrl } from "@/lib/inquiries/format";
 import { work } from "@/lib/copy/vi";
+import { sourceTitle } from "@/lib/work/view";
 import type { SourceView } from "@/lib/work/types";
 
 const TITLES = { text: work.readingTitle, audio: work.listeningTitle, video: work.videoTitle } as const;
@@ -24,7 +25,7 @@ export function SourceReader({ sources }: { sources: SourceView[] }) {
           >
             <h2 className="text-sm font-semibold text-muted">{TITLES[s.modality]}</h2>
             <p id={`src-${s.id}`} lang="en" className="text-[17px] font-semibold leading-snug">
-              {s.title}
+              {sourceTitle(s.title)}
             </p>
             {s.author ? <p className="text-[13px] text-muted">{work.byAuthor(s.author)}</p> : null}
             {s.modality === "text" && s.text ? (
@@ -49,6 +50,7 @@ export function SourceReader({ sources }: { sources: SourceView[] }) {
                 {OPEN[s.modality]}
               </a>
             ) : null}
+            {s.modality !== "text" && !href ? <p className="text-sm text-muted">{work.noLink}</p> : null}
             {s.rightsNote ? <p className="text-xs text-muted">{s.rightsNote}</p> : null}
           </section>
         );

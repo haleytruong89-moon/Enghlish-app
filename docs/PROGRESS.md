@@ -225,3 +225,71 @@ Cách gỡ (chọn một cho mỗi loại vấn đề): (a) đổi loại hoạt
 - **S3 (trang học sinh):** học sinh đọc bài **chỉ qua `english.eng_my_released_steps(instance_id)`** (không SELECT bảng). Còn thiếu cho S3: (a) hàm liệt kê bài của chính em (id + tiêu đề + hạn) — hiện học sinh chưa có cách biết `instance_id`; (b) đường phát bài đọc (`sources.body`) cho học sinh theo ngày bước tương ứng — bảng `sources` giờ chỉ nhân viên đọc được. Câu hỏi đóng tự chấm bằng `instance_item_keys` (kind `answer`) **ở server**, không bao giờ gửi khóa xuống trình duyệt học sinh.
 - Khóa kind `sealed` (đáp án mẫu câu mở) và `note` (kịch bản gia sư): S2 chỉ lưu. S5 phải chỉ cho gia sư xem `sealed` **sau** khi em đã làm. **Lưu ý (Kit FIXLIST #1):** việc "gia sư chưa được xem ý chính / đáp án mẫu *trước khi em nói*" mới được **thực thi ở giao diện từ S5**; ở S2 phụ huynh/gia sư có thể đọc `sealed` và `note` ngay qua bảng (RLS chỉ chặn học sinh và người ngoài track/gia đình).
 - Lịch hiệu lực của một bước = sự kiện mới nhất trong `activity_instance_events` (xếp theo `at`, `id`); bước "bỏ" vẫn còn trong lịch sử, không bị xóa.
+
+## S4 (+ phần đọc/nghe/viết của S3) — Em làm bài trên app và nộp bài có biên nhận (14/10/2026)
+
+**Trạng thái:** code xong, test xanh (225 unit + 173 DB = 398; E2E 47 test chạy trong CI trên nhánh, xanh). **Chờ phụ huynh** áp 1 file SQL mới (bên dưới) rồi mới thử trên preview. Nhánh `feature/s4-student-work`, chưa mở PR. Kế hoạch: `docs/plans/s4-student-work.md`.
+
+### Em làm được gì bây giờ
+
+An và Nguyên đăng nhập và thấy:
+
+- **"Việc tiếp theo"** (việc đầu tiên đã đến ngày, chưa nộp, làm được trên app) và danh sách **"Chủ đề tuần này"** với 3 trạng thái: đã xong / bây giờ / chưa làm. Chỉ hiện các bước **đã đến ngày** (theo lịch sau khi đổi ngày/bỏ bước ở S2).
+- **Đọc bài** (chữ hiện ngay trên trang) hoặc **bài nghe/video** (chỉ là đường dẫn mở trang mới; xem "Cần phụ huynh xác nhận" #2), **trả lời câu hỏi** (chọn đáp án / gõ chữ / ô viết dài) hoặc **viết đoạn văn** (đếm từ, tự lưu mỗi ~5 giây và khi rời ô gõ: "Đã tự lưu lúc 14:32"; mở lại trang vẫn còn bản nháp).
+- **Khai báo gợi ý đã dùng** trước khi nộp (không dùng / xem ghi chép / tra từ điển hoặc dịch / hỏi người khác / hỏi AI ngoài app). Dán chữ từ chỗ khác vào ô gõ → app tự đánh dấu "dán" và không cho bỏ dấu; mỗi lựa chọn là một dòng "gợi ý đã khai báo" cho gia sư/phụ huynh.
+- **Nộp bài** → màn hình "Đã nộp lúc HH:MM" + "Đã nộp! Cô sẽ xem và gửi góp ý cho bạn." **Không có điểm, không có đúng/sai, không có đáp án** trên màn hình, trong HTML hay trong API trả về cho em.
+- **Bài luyện tập** có thể "Làm lại" (lần nộp thứ 2, 3… cùng một "gia đình học tập"); **bài tự làm** chỉ nộp được **một lần** (nộp lại → 409, trang không còn nút nộp).
+- Bước app chưa làm được hiện nhãn trung tính, **không có nút nộp**: "Làm cùng thầy/cô trong buổi học" (nói trực tiếp) và "Sắp có trên app — làm theo phiếu" (sơ đồ ý, tự nói, tự xem lại, sửa bài).
+
+### Còn trên giấy / chưa có (đúng phạm vi plan)
+
+Xem điểm và góp ý (S5/S6), hộp duyệt và chấm của gia sư/phụ huynh (S5), sửa bài (S6, `REVISION` bị từ chối ở DB), sơ đồ ý (S3b), tự nói (S10), AI (S11+), mở lời thoại bài nghe (không có đường nào cho em), làm bài khi mất mạng.
+
+### Đã làm
+
+| Việc | Ở đâu |
+|---|---|
+| Bảng mới (schema `english`): `working_drafts` (bảng **duy nhất** được sửa đè), `attempts`, `artifact_versions`, `assistance_events`, `exposure_log`, `episodes`, `attempt_auto_checks`, `template_step_sources`. Mọi bảng bài nộp **chỉ thêm** (`eng_forbid_mutation` + chặn truncate) và có trong đường xóa dữ liệu một em | `db/migrations/0009_student_work.sql` |
+| `eng_purge_learner` viết lại từ bản `0007`, **chỉ thêm** lệnh xóa (con trước, cha sau). Có test so từng dòng: mọi dòng của bản `0007` vẫn còn nguyên, đúng thứ tự | `tests/unit/migration0009.test.ts` |
+| Hàm của học sinh (security definer, `search_path=''`, `auth.uid()` phải là chính em; chỉ `authenticated` chạy được): `eng_save_draft`, `eng_submit_attempt`, và 4 hàm đọc `eng_my_inquiries`, `eng_my_home`, `eng_my_activity`, `eng_my_step_sources`. Không ai (kể cả service role, phụ huynh, gia sư) ghi trực tiếp vào các bảng này | `0009` |
+| **Nộp bài trong 1 transaction:** khóa dòng bước → kiểm hợp lệ → `attempts` (`attempt_no`, `learning_family_id` = lần đầu của bước, `mode`, hash sha256 của nội dung) → bản nội dung nguyên gốc → tự chấm → gợi ý đã khai báo → lần tiếp xúc (`practice`/`retry`) → episode → xóa nháp → ghi `audit_log` → trả biên nhận `{attempt_id, attempt_no, submitted_at, hash}`. Gửi lại **cùng** `client_submission_id` + cùng nội dung → **cùng biên nhận**, không tạo dòng mới (4 yêu cầu đồng thời chỉ ra 1 dòng); cùng id mà khác nội dung/khác bước → 409 | `0009` |
+| Luật đếm theo DESIGN §8: `is_first_attempt = (attempt_no = 1) và mode ≠ REVISION`; facet `baseline`/`checkpoint`/`delayed_check`/`transfer_check` lấy từ `purpose` của bước; `observed_directly = false` cho bài làm trên app. Chưa chấm điểm gì ở lát này | `0009` |
+| **Tự chấm câu đóng, phía server, chỉ gia sư/phụ huynh thấy** (bảng `attempt_auto_checks`): trắc nghiệm/điền chỗ trống có phương án = đúng phương án (chữ cái hoặc chữ, bỏ khoảng trắng/hoa thường — cùng luật với `resolveMcqAnswer` của TypeScript, có test đối chiếu trên **mọi** câu đóng thật của 6 mẫu); điền chữ tự do = khớp không phân biệt hoa thường/khoảng trắng với một trong các đáp án cách nhau bởi " / "; **transform / short / open = "cần người chấm"**. Không bao giờ ra điểm 0–4 | `0009` |
+| 4 route: `GET /api/student/home`, `GET /api/student/activities/:id`, `PUT /api/drafts/:activityId`, `POST /api/attempts`. Chưa đăng nhập 401; **gia sư/phụ huynh 403** (không nộp thay em được); em khác/ngoài phạm vi/chưa đến ngày 404; body sai 400; trùng id khác nội dung hoặc nộp lần 2 bài tự làm 409. Trả về chỉ qua danh sách trường cho phép (zod) — khóa, kết quả tự chấm, lời thoại, `prompt_vi`, ghi chú, mã kỹ năng không thể lọt ra | `lib/work/`, `app/api/` |
+| Trang chủ của em (`/`) và trang làm bài (`/activities/[id]`), theo mockup Main/Studio: nền #F4F5F0, xanh #2B5D4F, thẻ trắng viền #D9DCD3 bo 16, ô bấm ≥ 44px, chạy tốt ở 390px. Mọi chữ qua `lib/copy/vi.ts` (mục `work`), xưng "bạn" | `app/page.tsx`, `app/activities/[id]/page.tsx`, `components/student/` |
+| Dev seed bắt đầu tuần của em THỬ từ **3 ngày trước** → An có bước 1–7 của A-W1 đã mở, Nguyên có đủ 6 bước B-W0; để preview và CI có việc để làm | `scripts/lib/seed.ts` (`devDueOn`) |
+
+### Đối chiếu với plan — chỗ khác và vì sao
+
+| Plan nói | Đã làm | Lý do |
+|---|---|---|
+| `attempts.auto_checks jsonb`, học sinh không đọc cột này | Bảng riêng `attempt_auto_checks` (chỉ nhân viên đọc) | Postgres không cho "cột chỉ vai trò này đọc" khi cùng bảng mà học sinh vẫn SELECT được `attempts`; bảng riêng là cách duy nhất chắc chắn học sinh không đọc được qua REST |
+| Học sinh SELECT được `assistance_events` của mình | `assistance_events` chỉ nhân viên đọc | Cột `affects_target_keys` chứa mã kỹ năng (học sinh không thấy mã). Học sinh chỉ đọc `attempts`/`artifact_versions` của mình, và hai bảng này không có kết quả nào |
+| `client_submission_id` unique | Unique **theo từng em** `(learner_id, client_submission_id)` | Id do trình duyệt sinh; unique toàn cục cho phép em này "đốt" id của em kia hoặc đoán ra sự tồn tại |
+| (không nói) | Bảng `template_step_sources` nối (mẫu, bước) → bài đọc/nghe | Mẫu chủ đề chỉ liệt kê nguồn của **cả tuần**, không ghi nguồn nào cho bước nào. Xem "Cần phụ huynh xác nhận" #1 |
+| Route đọc dùng quyền gì | Cả 4 route dùng action `work:submit` của `requireAccess` | Các route này là của học sinh; gia sư/phụ huynh gọi nhầm nhận 403 thay vì nhìn thấy dữ liệu em qua đường này (xem dữ liệu em là việc của S5) |
+| Nháp chỉ `text`/`answers` | Nháp còn nhớ ô "dán" và các gợi ý đã tick | Mở lại trang không mất khai báo |
+
+### Cần phụ huynh xác nhận (builder đã chọn mặc định an toàn — "đóng khi thiếu")
+
+1. **Bước nào dùng bài đọc/nghe nào** (bảng `template_step_sources`, 16 dòng, seed trong `0009`). Mặc định builder suy ra từ chuỗi "Nghe…/Đọc…" của đề: A-W0 bước 1→bài đọc, 2→bài nghe; A-W1 bước 2→**nghe**, 3→**đọc** (bài nghe tự làm không kèm bài đọc); A-W2 2→nghe, 4→đọc; A-W3 2→đọc, 4→nghe; A-W4 2→nghe, 4→đọc; B-W0 1→2 bài (S1, S2), 2→S3, 3→S4, 4→S5, 6→S6. **Bước nào không có dòng → em không nhận nguồn nào.** B-W1…B-W4 chưa có (mẫu còn nháp). Xem lại bảng này trước khi cho em thật dùng; sửa = thêm migration mới (bảng chỉ thêm, không sửa).
+2. **Bài nghe chưa có link/tệp** trong dữ liệu (`url = null` cho cả 5 bài nghe; tên tệp như `A_VOL_L` chỉ nằm trong tiêu đề). Hiện em thấy "Bài này chưa có đường dẫn trong app. Bạn nhờ thầy/cô mở giúp nhé." Quyết: (a) thầy/cô phát tệp trong buổi (như Pilot Kit), hoặc (b) đưa tệp lên một nơi riêng và điền `url` (nghĩa là có migration nội dung mới). **Âm thanh không đi qua app trong cả hai cách.**
+3. **A-W0 bước 13, câu điền chữ tự do** (`BL-G1…`): tự chấm hiện so chữ không phân biệt hoa thường/khoảng trắng và đáp án nhiều cách cách nhau " / ". Câu cần người xem (đáp án mở) được đánh dấu "cần người chấm". Nếu kit muốn luật khác, nói trước S5.
+4. **Tiêu đề bài đọc/nghe** trong nội dung có ghi chú nhân viên trong ngoặc ("(bài đọc VOL-R)", "(cloze passage, MINI-20 Q10-15)"): app cắt phần ngoặc đó khi hiện cho em. Nên chỉnh nội dung ở lần soạn sau.
+5. **Nhãn chữ mới** (`work` trong `lib/copy/vi.ts`: "Bạn đã dùng gợi ý nào?", "Mình hỏi AI ngoài app"…) do builder đặt theo giọng UX guide — nhờ phụ huynh/Opus xem lại câu chữ.
+
+### Phụ huynh cần làm
+
+1. **Áp 1 file SQL** (`npm run db:apply`, hoặc dán vào SQL Editor và bấm Run): `db/migrations/0009_student_work.sql`. (Chạy lại lần 2 không đổi gì.)
+2. **Kiểm tra:** `select version from english.schema_migrations order by 1;` → thêm `0009`. `select count(*) from english.template_step_sources;` → **16**.
+3. **Xem thử trên preview:** `npm run db:seed-dev` rồi đăng nhập An (thử): thấy "Việc tiếp theo". Mở bước đọc, trả lời, chọn "Mình không dùng gợi ý nào", bấm "Nộp bài" → "Đã nộp lúc …", không có điểm/đúng/sai. Về trang chủ → bước ấy "Đã xong". Gia sư/phụ huynh gọi các route của em nhận 403 (chưa có màn xem bài nộp — S5). Mở thẳng địa chỉ `/activities/<id>` của An bằng tài khoản Nguyên → "Không tìm thấy".
+4. Dọn dữ liệu em THỬ khi cần: đường xóa dữ liệu một em (`english.eng_purge_learner`, S0) đã gồm các bảng mới của S4.
+
+### Ghi chú cho S5 và các lát sau
+
+- **Seed kế tiếp là `0010`** (S4 đã dùng `0009`): phần "Cách gỡ" của B-W1…B-W4 ở S2 nói `0009` thì đọc là `0010`.
+- S5 (hộp duyệt/chấm): đọc `attempts` + `artifact_versions` + `attempt_auto_checks` + `assistance_events` + `episodes` của em. Bài nộp là bản **nguyên gốc** (`is_raw = true`); điểm AI / người chấm / quyết định là 3 lớp riêng, bảng mới (`reviews`…) — đừng thêm cột vào các bảng append-only. Chấm mù, `sealed`/`note` của khóa đáp án, tin nhắn "Đã nhận bài. Góp ý sẽ có sau." (`messages.aiPendingStudent`) đều là việc của S5.
+- Câu `transform`/`short`/`open` đang là `needs_person`: S5 cần giao diện cho gia sư chấm.
+- Episode đã có `is_first_attempt`, facet và `context_id` (id mẫu) nhưng **chưa có điểm**; "Bài làm được tính" (đủ điều kiện làm bằng chứng) và trạng thái dẫn xuất chưa tính — S5/S6.
+- Mẫu B-W1…B-W4 khi công bố cần thêm dòng `template_step_sources` (migration cùng số với seed mẫu).
+- `exposure_log` đã ghi `source = 'practice' | 'retry'`; các nguồn khác (`delayed`, `transfer`…) thêm khi có các lát tương ứng.

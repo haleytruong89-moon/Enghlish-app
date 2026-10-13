@@ -279,6 +279,7 @@ export const work = {
   openAudio: "Mở bài nghe (trang mới)",
   openVideo: "Mở video (trang mới)",
   openLink: "Mở bài (trang mới)",
+  noLink: `Bài này chưa có đường dẫn trong app. Bạn nhờ ${tutorHonorific} mở giúp nhé.`,
   byAuthor: (author: string) => `Tác giả: ${author}`,
   questionsTitle: "Câu hỏi",
   questionLabel: (n: number) => `Câu ${n}`,

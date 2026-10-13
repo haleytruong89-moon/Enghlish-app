@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { SourceReader } from "@/components/student/SourceReader";
 import { StudentHome } from "@/components/student/StudentHome";
 import { activityLabels, tutorHonorific, weekdayNames, work } from "@/lib/copy/vi";
-import { formatHm, nonEmptyAnswers, todayLine, unsupportedLabel, wordsOf } from "@/lib/work/view";
+import { formatHm, nonEmptyAnswers, sourceTitle, todayLine, unsupportedLabel, wordsOf } from "@/lib/work/view";
 import type { HomeView, SourceView } from "@/lib/work/types";
 
 const home: HomeView = {
@@ -56,6 +56,18 @@ describe("student copy", () => {
     expect(formatHm("garbage")).toBe("");
     expect(todayLine(new Date("2026-10-14T08:00:00Z"))).toBe(`${weekdayNames[3]} 14/10`);
     expect(todayLine(new Date("2026-10-14T20:00:00Z"))).toBe(`${weekdayNames[4]} 15/10`);
+  });
+});
+
+describe("source titles", () => {
+  it("drop the staff note in the trailing bracket, keep real brackets", () => {
+    expect(sourceTitle("Why Do Volcanoes Erupt? (bài đọc VOL-R)")).toBe("Why Do Volcanoes Erupt?");
+    expect(sourceTitle("Dr Linh, volcano scientist (bài nghe VOL-L, file A_VOL_L)")).toBe("Dr Linh, volcano scientist");
+    expect(sourceTitle("Volunteering (cloze passage, MINI-20 Q10-15)")).toBe("Volunteering");
+    expect(sourceTitle("Water refill stations (listening script)")).toBe("Water refill stations");
+    expect(sourceTitle("Source A — We Are Running Out of Evening")).toBe("Source A — We Are Running Out of Evening");
+    expect(sourceTitle("Mars (the red planet)")).toBe("Mars (the red planet)");
+    expect(sourceTitle("(bài đọc)")).toBe("(bài đọc)");
   });
 });
 
@@ -120,6 +132,17 @@ describe("SourceReader", () => {
     expect(html).toContain("Para one.");
     expect(html).toContain("&lt;b&gt;tags&lt;/b&gt;");
     expect(html).not.toContain("<b>tags</b>");
+  });
+
+  it("an audio source without a link says to ask the tutor, and shows no technical title", () => {
+    const h = renderToStaticMarkup(
+      createElement(SourceReader, {
+        sources: [{ id: "S9", title: "Mars (bài nghe PLA-L, file A_PLA_L)", author: null, rightsNote: null, modality: "audio", url: null, text: null }],
+      }),
+    );
+    expect(h).toContain(work.noLink);
+    expect(h).toContain(">Mars<");
+    expect(h).not.toContain("A_PLA_L");
   });
 
   it("audio and video are links that open in a new page, never a transcript, never an unsafe link", () => {
