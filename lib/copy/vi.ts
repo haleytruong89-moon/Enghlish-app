@@ -4,6 +4,15 @@
  * Học sinh: xưng "bạn", câu ngắn, không điểm, không mã (D28).
  */
 
+// ---------- Cách gọi gia sư ---------------------------------------------------------
+/**
+ * Cách gọi gia sư trong chữ dành cho phụ huynh / gia sư (UX guide §2: "Cô/thầy", cấu hình được). Chưa có cài đặt
+ * theo gia đình nên dùng một hằng số trung tính ở MỘT chỗ — đổi ở đây là đổi cả màn hình dành cho nhân viên.
+ */
+export const tutorHonorific = "thầy/cô";
+/** Cùng cách gọi, viết hoa chữ đầu (đầu câu). */
+export const tutorHonorificCap = tutorHonorific.charAt(0).toUpperCase() + tutorHonorific.slice(1);
+
 // ---------- Chung ---------------------------------------------------------------
 export const app = {
   name: "Learning OS",
@@ -29,7 +38,7 @@ export const auth = {
 // ---------- Trang chủ theo vai trò (S0: placeholder) -------------------------------
 export const home = {
   studentGreeting: (alias: string) => `Chào ${alias}!`,
-  studentEmpty: "Hôm nay chưa có việc mới. Cô sẽ giao bài sớm thôi.",
+  studentEmpty: `Hôm nay chưa có việc mới. ${tutorHonorificCap} sẽ giao bài sớm thôi.`,
   tutorTitle: "Học sinh của cô/thầy",
   tutorEmpty: "Chưa có học sinh nào được giao cho cô/thầy.",
   parentTitle: "Các con",
@@ -193,11 +202,6 @@ export const inquiriesPage = {
   techInfoCodes: "Mã bước và kỹ năng",
 } as const;
 
-/**
- * Cách gọi gia sư trong chữ dành cho phụ huynh / gia sư (UX guide §2: "Cô/thầy", cấu hình được). Chưa có cài đặt
- * theo gia đình nên dùng một hằng số trung tính ở MỘT chỗ — đổi ở đây là đổi cả màn hình dành cho nhân viên.
- */
-export const tutorHonorific = "thầy/cô";
 
 /** Nhãn bước theo loại hoạt động (UX guide chưa liệt kê — đặt cùng giọng với §3.3). Mã chỉ hiện trong "Thông tin kỹ thuật". */
 export const activityLabels: Record<string, string> = {
@@ -230,7 +234,7 @@ export const trackingNames: Record<string, string> = {
 
 // ---------- §5 Thông điệp mẫu -----------------------------------------------------------
 export const messages = {
-  submitted: "Đã nộp! Cô sẽ xem và gửi góp ý cho bạn.",
+  submitted: `Đã nộp! ${tutorHonorificCap} sẽ xem và gửi góp ý cho bạn.`,
   aiPendingStudent: "Đã nhận bài. Góp ý sẽ có sau.",
   aiPendingStaff: "AI chưa xem được bài này — cần cô xem.",
   offline: "Mất mạng — bài vẫn đang được giữ trên máy. Đừng đóng trang nhé.",
@@ -261,7 +265,7 @@ export const work = {
   nextTitle: "Việc tiếp theo",
   start: "Bắt đầu",
   minutes: (n: number) => `khoảng ${n} phút`,
-  allDone: "Hôm nay bạn đã làm hết việc được giao. Cô sẽ giao thêm sớm thôi.",
+  allDone: `Hôm nay bạn đã làm hết việc được giao. ${tutorHonorificCap} sẽ giao thêm sớm thôi.`,
   topicTitle: (title: string) => `${concepts.inquiry.student}: ${title}`,
   /** Chỉ đếm bước làm được trong app; bước làm theo phiếu / với thầy/cô tính riêng (offApp). */
   progress: (done: number, total: number) => `Xong ${done}/${total} bước`,
@@ -298,7 +302,7 @@ export const work = {
   wordCount: (n: number) => (n === 1 ? "1 từ" : `${n} từ`),
   selfCheckTitle: "Trước khi nộp, tự kiểm nhé",
   helpTitle: "Bạn đã dùng gợi ý nào?",
-  helpHint: "Bạn chọn theo những gì bạn thật sự đã làm. Dùng gợi ý cũng không sao, cô chỉ cần biết để hiểu bạn đang ở đâu.",
+  helpHint: `Bạn chọn theo những gì bạn thật sự đã làm. Dùng gợi ý cũng không sao, ${tutorHonorific} chỉ cần biết để hiểu bạn đang ở đâu.`,
   help: {
     none: "Mình không dùng gợi ý nào",
     notes: "Mình xem ghi chép",
@@ -307,7 +311,7 @@ export const work = {
     ai_outside: "Mình hỏi AI ngoài app",
   },
   pastedLabel: "Mình có dán chữ từ chỗ khác vào",
-  pastedNote: "Bạn vừa dán chữ vào. Cô sẽ biết đoạn đó không phải bạn tự gõ.",
+  pastedNote: `Bạn vừa dán chữ vào. ${tutorHonorificCap} sẽ biết đoạn đó không phải bạn tự gõ.`,
   submit: "Nộp bài",
   submitting: "Đang nộp…",
   submitAgain: "Nộp lần nữa",
@@ -320,7 +324,7 @@ export const work = {
   alreadySubmitted: (hhmm: string) => `Bạn đã nộp bài này lúc ${hhmm}.`,
   mayRetry: "Bạn có thể làm lại để luyện thêm.",
   retry: "Làm lại",
-  checkOnce: "Bài này chỉ làm một lần. Cô sẽ xem và gửi góp ý cho bạn.",
+  checkOnce: `Bài này chỉ làm một lần. ${tutorHonorificCap} sẽ xem và gửi góp ý cho bạn.`,
   savedAt: (hhmm: string) => `Đã tự lưu lúc ${hhmm}`,
   saving: "Đang lưu…",
   notSaved: "Chưa lưu được. Bài vẫn còn trên màn hình, bạn đừng đóng trang nhé.",
