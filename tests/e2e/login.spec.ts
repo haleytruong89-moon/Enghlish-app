@@ -14,7 +14,7 @@ test.describe("login page", () => {
 
   test("wrong password shows the Vietnamese error and stays on /login", async ({ page }) => {
     await submitLogin(page, emailFor("studentAn"), "definitely-not-the-password");
-    await expect(page.getByRole("alert")).toHaveText(auth.errorInvalid);
+    await expect(page.locator("#login-error")).toHaveText(auth.errorInvalid);
     await expect(page).toHaveURL(/\/login/);
   });
 
@@ -22,6 +22,6 @@ test.describe("login page", () => {
     await page.goto("/login");
     await page.getByLabel(auth.email).fill(emailFor("studentAn"));
     await page.getByRole("button", { name: auth.submit, exact: true }).click();
-    await expect(page.getByRole("alert")).toHaveText(auth.errorMissing);
+    await expect(page.locator("#login-error")).toHaveText(auth.errorMissing);
   });
 });
