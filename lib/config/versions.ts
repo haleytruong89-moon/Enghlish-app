@@ -139,7 +139,33 @@ export function loadContentItems(dir: string = CONTENT_DIR): ContentItems {
       throw new Error(`inquiry template ${t.id} needs catalogue ${t.data.catalogue_version}, but no such catalogue file exists`);
     }
   }
+  assertSourceIdsUnique([...inquiryTemplates, ...draftInquiryTemplates]);
   return { catalogues, policies, targetSets, inquiryTemplates, draftInquiryTemplates };
+}
+
+/**
+ * A source row is keyed (id, version) and its version is the template's version, so two different
+ * templates that use the same source id would collide (or silently share a row). Source ids must be unique
+ * across templates; several versions of the SAME template may keep the same ids.
+ */
+export function assertSourceIdsUnique(templates: readonly InquiryTemplateItem[]): void {
+  const owner = new Map<string, InquiryTemplateItem>();
+  for (const item of templates) {
+    const seenHere = new Set<string>();
+    for (const src of item.data.sources) {
+      if (seenHere.has(src.id)) {
+        throw new Error(`source id ${src.id} is used twice in inquiry template ${item.id} (${item.file})`);
+      }
+      seenHere.add(src.id);
+      const first = owner.get(src.id);
+      if (first && first.data.id !== item.data.id) {
+        throw new Error(
+          `source id ${src.id} is used by two inquiry templates: ${first.id} (${first.file}) and ${item.id} (${item.file}) — source ids must be unique across templates`,
+        );
+      }
+      if (!first) owner.set(src.id, item);
+    }
+  }
 }
 
 export function readLock(dir: string = CONTENT_DIR): ConfigLock {

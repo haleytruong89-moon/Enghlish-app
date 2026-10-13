@@ -131,6 +131,35 @@ describe("inquiry templates in the version lock", () => {
     expect(() => loadContentItems(paths.contentDir)).toThrow(/needs catalogue 9\.9/);
   });
 
+  it("two different templates may not share a source id; the error names both, loading and the generator stop", async () => {
+    const clash = structuredClone(readTpl("A-W1-VOLCANOES"));
+    clash.id = "A-W6-CLASH"; // keeps A-W1's source ids on purpose
+    clash.status = "published";
+    writeTpl("A-W6-CLASH", clash);
+    const message = /source id A-W1-VOLCANOES-S1 is used by two inquiry templates: A-W1-VOLCANOES@1 .* and A-W6-CLASH@1 .*/;
+    expect(() => loadContentItems(paths.contentDir)).toThrow(message);
+    await expect(checkConfig(paths)).rejects.toThrow(message);
+    await expect(generateNew(paths)).rejects.toThrow(message);
+    // a draft counts too (it is the same namespace)
+    clash.status = "draft";
+    writeTpl("A-W6-CLASH", clash);
+    expect(() => loadContentItems(paths.contentDir)).toThrow(message);
+  });
+
+  it("the same source id twice inside one template is refused; a new version of the same template may keep its ids", () => {
+    const dup = structuredClone(readTpl("A-W1-VOLCANOES"));
+    dup.sources = [...dup.sources, structuredClone(dup.sources[0])!];
+    writeTpl("A-W1-VOLCANOES", dup);
+    expect(() => loadContentItems(paths.contentDir)).toThrow(/source id A-W1-VOLCANOES-S1 is used twice in inquiry template A-W1-VOLCANOES@1/);
+
+    const original = JSON.parse(readFileSync(path.join(CONTENT_DIR, "inquiries", "A-W1-VOLCANOES.json"), "utf8")) as InquiryTemplate;
+    writeTpl("A-W1-VOLCANOES", original);
+    const v2 = structuredClone(original);
+    v2.version = 2;
+    writeFileSync(path.join(paths.contentDir, "inquiries", "A-W1-VOLCANOES.v2.json"), JSON.stringify(v2, null, 2));
+    expect(() => loadContentItems(paths.contentDir)).not.toThrow();
+  });
+
   it("the generated SQL fills children before it publishes the parent and guards against a second run", () => {
     const items = loadContentItems(paths.contentDir);
     const first = items.inquiryTemplates[1];
