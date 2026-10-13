@@ -31,7 +31,7 @@ describe("doctor DB checks", () => {
     expect(r.detail).toBe(`còn thiếu: ${versions.join(", ")}`);
   });
 
-  it("after 0001–0004 every DB check is ok", async () => {
+  it("after all migrations every DB check is ok", async () => {
     await migrate(db.client);
     const h = handle(db);
     expect((await checkDbConnect(h, "x")).status).toBe("ok");
@@ -69,10 +69,10 @@ describe("doctor DB checks", () => {
     expect((await checkMigrations(handle(db), versions)).status).toBe("ok");
   });
 
-  it("a future file version (0005) not yet applied is reported", async () => {
-    const r = await checkMigrations(handle(db), [...versions, "0005"]);
+  it("a future file version not yet applied is reported", async () => {
+    const r = await checkMigrations(handle(db), [...versions, "9999"]);
     expect(r.status).toBe("fail");
-    expect(r.detail).toBe("còn thiếu: 0005");
+    expect(r.detail).toBe("còn thiếu: 9999");
   });
 
   it("eng_ function or our table in public → fails", async () => {
