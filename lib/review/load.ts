@@ -3,16 +3,17 @@ import { allowRealLearners } from "@/lib/env";
 import { loadTargetsView } from "@/lib/targets/loadTargets";
 import { parseEpisode, parseInbox, parseNotes } from "./shape";
 import { createSupabaseReviewStore } from "./supabaseStore";
-import type { InboxItem, LessonNoteView, ReviewEpisodeView } from "./types";
+import { PAGE_SIZE } from "./inbox";
+import type { InboxCursor, InboxFilter, InboxPage, LessonNoteView, ReviewEpisodeView } from "./types";
 
-/** Inbox for the signed-in staff member (the database scopes it; ALLOW_REAL_LEARNERS filters on top). Call authorizeStaffPage first. */
-export async function loadInbox(): Promise<InboxItem[]> {
-  return parseInbox(await createSupabaseReviewStore().inbox(allowRealLearners()));
+/** One page of the inbox for the signed-in staff member (the database filters, orders and pages; ALLOW_REAL_LEARNERS filters on top). Call authorizeStaffPage first. */
+export async function loadInbox(filter: InboxFilter = "todo", after: InboxCursor | null = null, limit = PAGE_SIZE): Promise<InboxPage> {
+  return parseInbox(await createSupabaseReviewStore().inbox({ allowReal: allowRealLearners(), filter, limit, after }));
 }
 
 /** How many pieces of work this person still has to decide (skills left to score, and allowed to). */
-export function countToDecide(items: InboxItem[]): number {
-  return items.filter((i) => i.canDecide && i.targetsDecided < i.targetsTotal).length;
+export async function countToDecide(): Promise<number> {
+  return (await loadInbox("todo", null, 1)).counts.toDecide;
 }
 
 /** One piece of work for review, or null (outside scope). The learner is looked up first so requireAccess can decide. */

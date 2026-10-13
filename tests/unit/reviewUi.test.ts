@@ -6,16 +6,10 @@ import { ScoringPanel, type PanelTarget } from "@/components/review/ScoringPanel
 import { WorkPanel } from "@/components/review/WorkPanel";
 import { concepts, formatScore, notesPage, offlineForm, reviewPage, scoreLabels, tutorHonorific, weekdayNames } from "@/lib/copy/vi";
 import { formatWhen, skillLabel } from "@/lib/review/format";
-import { filterInbox, inboxCounts, isDone, parseFilter } from "@/lib/review/inbox";
-import type { InboxItem, ReviewDecision, ReviewEpisodeView } from "@/lib/review/types";
+import { cursorToParam, parseCursor, parseFilter } from "@/lib/review/inbox";
+import type { ReviewDecision, ReviewEpisodeView } from "@/lib/review/types";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
-
-const item = (over: Partial<InboxItem>): InboxItem => ({
-  episodeId: "e1", attemptId: "a1", learnerId: "l1", alias: "An (thử)", isTest: true, titleVi: "Núi lửa", stepNo: 6, activityType: "ACT-WRITE", mode: "PRACTICE",
-  purpose: [], provenance: "in_app", attemptNo: 1, isFirstAttempt: true, submittedAt: "2026-10-14T01:00:00Z", restricted: false, category: "practice",
-  targetsTotal: 2, targetsDecided: 0, canDecide: true, ...over,
-});
 
 const dec = (over: Partial<ReviewDecision>): ReviewDecision => ({
   id: "d1", decision: "AGREE", finalScore: 3, finalNotObserved: false, validatorRole: "tutor", validatorName: "Cô của An (thử)", reason: null, supersedesId: null,
@@ -68,21 +62,14 @@ describe("S5 copy", () => {
   });
 });
 
-describe("S5 inbox helpers", () => {
-  const items = [
-    item({ episodeId: "a", submittedAt: "2026-10-14T03:00:00Z", category: "tutor", restricted: true, canDecide: false }),
-    item({ episodeId: "b", submittedAt: "2026-10-14T01:00:00Z", category: "independent" }),
-    item({ episodeId: "c", submittedAt: "2026-10-14T02:00:00Z", category: "baseline", targetsDecided: 2 }),
-    item({ episodeId: "d", submittedAt: "2026-10-14T04:00:00Z", category: "practice", targetsDecided: 1 }),
-  ];
-  it("default view = not fully decided, oldest first; categories and 'done' split the rest", () => {
-    expect(filterInbox(items, "todo").map((i) => i.episodeId)).toEqual(["b", "a", "d"]);
-    expect(filterInbox(items, "tutor").map((i) => i.episodeId)).toEqual(["a"]);
-    expect(filterInbox(items, "independent").map((i) => i.episodeId)).toEqual(["b"]);
-    expect(filterInbox(items, "baseline")).toEqual([]);
-    expect(filterInbox(items, "done").map((i) => i.episodeId)).toEqual(["c"]);
-    expect(inboxCounts(items)).toEqual({ todo: 3, tutor: 1, independent: 1, baseline: 0, practice: 1, done: 1 });
-    expect(isDone(items[2]!)).toBe(true);
+describe("S5 inbox helpers (the filtering and paging are done by the database)", () => {
+  const ID = "6f1b0c7e-3a54-4a52-9e0e-0d9d5b1b7c11";
+  it("the cursor survives the URL and a bad one means the first page", () => {
+    const c = { at: "2026-10-14T04:35:03.123456+00:00", id: ID };
+    expect(parseCursor(cursorToParam(c))).toEqual(c);
+    for (const bad of [undefined, "", "x", `2026-10-14|${ID}`, `nonsense|${ID}`, "2026-10-14T04:35:03+00:00|not-a-uuid", `2026-10-14T04:35:03+00:00|${ID}|extra`]) {
+      expect(parseCursor(bad), String(bad)).toBeNull();
+    }
   });
   it("an unknown filter falls back to the default", () => {
     expect(parseFilter("nonsense")).toBe("todo");

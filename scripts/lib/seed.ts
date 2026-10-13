@@ -231,7 +231,7 @@ export async function seedDevReviewWork(client: ClientBase, seeded: SeedResult, 
   const fns = await client.query<{ ok: boolean }>(
     `select to_regprocedure('english.eng_assign_inquiry(uuid,text,integer,date,uuid,text)') is not null
         and to_regprocedure('english.eng_submit_attempt(uuid,uuid,jsonb,text[],text)') is not null
-        and to_regprocedure('english.eng_review_inbox(boolean)') is not null as ok`,
+        and to_regprocedure('english.eng_review_inbox(boolean,text,integer,timestamptz,uuid)') is not null as ok`,
   );
   if (!fns.rows[0]?.ok) return { instanceId: null, attemptId: null, skipped: "migration 0010 is not applied" };
   const tpl = await client.query<{ date_from: string; date_to: string }>(

@@ -137,7 +137,7 @@ describe("0010_review.sql", () => {
       expect(sql, fn).toContain(`grant execute on function english.${fn} to service_role;`);
       expect(sql, fn).toMatch(new RegExp(`revoke execute on function english\\.${fn.replace(/[()[\]]/g, "\\$&")} from public, anon, authenticated`));
     }
-    for (const fn of ["eng_review_inbox(boolean)", "eng_review_episode(uuid)"]) {
+    for (const fn of ["eng_review_inbox(boolean, text, int, timestamptz, uuid)", "eng_review_episode(uuid)"]) {
       expect(sql).toContain(`grant execute on function english.${fn} to authenticated;`);
     }
     expect(sql).not.toMatch(/grant execute on function [^;]* to (anon|public)\b/i);

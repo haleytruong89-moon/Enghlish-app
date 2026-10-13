@@ -114,7 +114,23 @@ describe("S5 review: scores per skill, D15 routing, work outside the app, lesson
       o.actions ?? ["Do one more"], o.practised ?? [], o.published ?? false, o.supersedes ?? null, by, o.clientId ?? randomUUID(),
     ]);
   const viewAs = (userId: string, episode: string) => rpcAs<EpisodeView | null>(userId, "select english.eng_review_episode($1) as r", [episode]);
-  const inboxAs = (userId: string, allowReal = false) => rpcAs<InboxRow[]>(userId, "select english.eng_review_inbox($1) as r", [allowReal]);
+  type InboxPage = { items: InboxRow[]; next: { at: string; id: string } | null; counts: Record<string, number> };
+  const inboxPageAs = (userId: string, allowReal = false, filter = "todo", limit = 100, after: { at: string; id: string } | null = null) =>
+    rpcAs<InboxPage>(userId, "select english.eng_review_inbox($1, $2, $3, $4, $5) as r", [allowReal, filter, limit, after?.at ?? null, after?.id ?? null]);
+  /** Everything in the inbox (open items and finished ones), oldest first - the two filters walked page by page. */
+  const inboxAs = async (userId: string, allowReal = false) => {
+    const out: InboxRow[] = [];
+    for (const filter of ["todo", "done"]) {
+      let after: { at: string; id: string } | null = null;
+      do {
+        const page: InboxPage = await inboxPageAs(userId, allowReal, filter, 100, after);
+        out.push(...page.items);
+        after = page.next;
+      } while (after);
+    }
+    const t = new Map((await q1<{ id: string; at: string }>("select e.id, a.submitted_at::text as at from english.episodes e join english.attempts a on a.id = e.attempt_id")).map((r) => [r.id, r.at]));
+    return out.sort((x, y) => (t.get(x.episode_id) ?? "").localeCompare(t.get(y.episode_id) ?? "") || x.episode_id.localeCompare(y.episode_id));
+  };
   const fail = async (p: Promise<unknown>, code: string, re?: RegExp) => {
     const err = await p.then(() => null, (e: unknown) => e as { code?: string; message?: string });
     expect(err, "expected an error").not.toBeNull();

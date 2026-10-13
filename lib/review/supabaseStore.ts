@@ -31,9 +31,15 @@ export function createSupabaseReviewStore(): ReviewStore {
       return learnerOf("attempts", id);
     },
 
-    async inbox(allowReal) {
+    async inbox({ allowReal, filter, limit, after }) {
       const db = await createUserClient();
-      const { data, error } = await db.rpc("eng_review_inbox", { p_allow_real: allowReal });
+      const { data, error } = await db.rpc("eng_review_inbox", {
+        p_allow_real: allowReal,
+        p_filter: filter,
+        p_limit: limit,
+        p_after_at: after?.at ?? null,
+        p_after_id: after?.id ?? null,
+      });
       if (error) dbError("eng_review_inbox", error);
       return data;
     },

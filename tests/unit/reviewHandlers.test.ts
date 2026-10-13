@@ -50,7 +50,7 @@ function makeStore(over: Partial<ReviewStore> = {}) {
     getDecisionLearnerId: vi.fn(async (id: string) => (id === DEC_AN ? AN : null)),
     getAttemptLearnerId: vi.fn(async (id: string) => (id === ATT_AN ? AN : null)),
     getActivityLearnerId: vi.fn(async (id: string) => (id === ACT_AN ? AN : id === ACT_NGUYEN ? NGUYEN : null)),
-    inbox: vi.fn(async () => []),
+    inbox: vi.fn(async (_args: Parameters<ReviewStore["inbox"]>[0]) => ({ items: [], next: null, counts: { todo: 0, tutor: 0, independent: 0, baseline: 0, practice: 0, done: 0, to_decide: 0 } })),
     episode: vi.fn(async () => null),
     listNotes: vi.fn(async () => []),
     recordReviews: vi.fn(async () => [{ target_key: "A-L3-CAUSE-W", observation_id: "o1", decision_id: "d1", replayed: false }]),
@@ -148,16 +148,31 @@ describe("S5 handlers: inbox and review view", () => {
       mode: "PRACTICE", purpose: [], provenance: "in_app", attempt_no: 1, is_first_attempt: true, submitted_at: "2026-10-14T01:00:00Z",
       restricted: false, category: "practice", targets_total: 2, targets_decided: 0, can_decide: true, secret: "x",
     };
-    const s = makeStore({ inbox: vi.fn(async () => [row]) });
+    const counts = { todo: 1, tutor: 0, independent: 0, baseline: 0, practice: 1, done: 0, to_decide: 1 };
+    const s = makeStore({ inbox: vi.fn(async () => ({ items: [row], next: null, counts })) });
     const r = await handleInbox(deps("parent", s));
     expect(r.status).toBe(200);
-    expect(s.inbox).toHaveBeenCalledWith(false);
-    const items = (r.body as { items: { episodeId: string }[] }).items;
-    expect(items).toHaveLength(1);
-    expect(items[0]?.episodeId).toBe(EP_AN);
-    expect(JSON.stringify(items)).not.toContain("secret");
+    expect(s.inbox).toHaveBeenCalledWith({ allowReal: false, filter: "todo", limit: 50, after: null });
+    const body = r.body as { items: { episodeId: string }[]; next: unknown; counts: { toDecide: number; todo: number } };
+    expect(body.items).toHaveLength(1);
+    expect(body.items[0]?.episodeId).toBe(EP_AN);
+    expect(body.counts).toMatchObject({ todo: 1, toDecide: 1 });
+    expect(body.next).toBeNull();
+    expect(JSON.stringify(body)).not.toContain("secret");
     await handleInbox(deps("parent", s, true));
-    expect(s.inbox).toHaveBeenLastCalledWith(true);
+    expect(s.inbox).toHaveBeenLastCalledWith({ allowReal: true, filter: "todo", limit: 50, after: null });
+  });
+
+  it("the inbox passes the filter, the page size and the cursor to the database, and refuses nonsense with 400", async () => {
+    const s = makeStore();
+    const cursor = { after_at: "2026-10-14T04:35:03.123456+00:00", after_id: "6f1b0c7e-3a54-4a52-9e0e-0d9d5b1b7c11" };
+    expect((await handleInbox(deps("tutorAn", s), { filter: "done", limit: "20", ...cursor })).status).toBe(200);
+    expect(s.inbox).toHaveBeenLastCalledWith({ allowReal: false, filter: "done", limit: 20, after: { at: cursor.after_at, id: cursor.after_id } });
+    vi.mocked(s.inbox).mockClear();
+    for (const bad of [{ filter: "everything" }, { limit: "0" }, { limit: "101" }, { limit: "abc" }, { after_at: cursor.after_at }, { after_id: cursor.after_id }, { ...cursor, after_id: "x" }]) {
+      expect((await handleInbox(deps("tutorAn", s), bad)).status, JSON.stringify(bad)).toBe(400);
+    }
+    expect(s.inbox).not.toHaveBeenCalled();
   });
 
   it("the review view is 404 when the database says null (not staff of the child)", async () => {
@@ -195,7 +210,7 @@ describe("S5 handlers: inbox and review view", () => {
   });
 
   it("parseInbox / parseNotes tolerate empty and compute 'current' for notes", () => {
-    expect(parseInbox(null)).toEqual([]);
+    expect(parseInbox(null)).toMatchObject({ items: [], next: null, counts: { todo: 0, toDecide: 0 } });
     const n = (id: string, sup: string | null, date: string) => ({
       id, learner_id: AN, tutor_member_id: "m", session_date: date, goals: "g", observed: null, support_level: "light", next_actions: [], practised_target_ids: [],
       published: true, supersedes_id: sup, created_at: `${date}T10:00:0${id === "b" ? 5 : 0}Z`,

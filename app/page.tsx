@@ -5,7 +5,7 @@ import { StudentHome } from "@/components/student/StudentHome";
 import Link from "next/link";
 import { home, reviewPage } from "@/lib/copy/vi";
 import { loadHome } from "@/lib/home/loadHome";
-import { countToDecide, loadInbox } from "@/lib/review/load";
+import { countToDecide } from "@/lib/review/load";
 import { safeColor } from "@/lib/home/visible";
 import { loadStudentHome } from "@/lib/work/load";
 
@@ -56,7 +56,7 @@ export default async function HomePage() {
   // How much work waits for this person. A failed lookup must not take the whole home page down: show the link without a number.
   let toDecide: number | null = null;
   try {
-    toDecide = countToDecide(await loadInbox());
+    toDecide = await countToDecide();
   } catch {
     toDecide = null;
   }

@@ -29,6 +29,14 @@ export type InboxItem = {
   canDecide: boolean;
 };
 
+/** Inbox filters (applied in SQL). `todo` = not fully decided yet (the default); `done` = every skill decided. */
+export const INBOX_FILTERS = ["todo", "tutor", "independent", "baseline", "practice", "done"] as const;
+export type InboxFilter = (typeof INBOX_FILTERS)[number];
+/** Cursor = the last row of the previous page. */
+export type InboxCursor = { at: string; id: string };
+export type InboxCounts = Record<InboxFilter, number> & { toDecide: number };
+export type InboxPage = { items: InboxItem[]; next: InboxCursor | null; counts: InboxCounts };
+
 export type ReviewDecision = {
   id: string;
   decision: "AGREE" | "MODIFY" | "INSUFFICIENT" | "REQUEST_MORE";

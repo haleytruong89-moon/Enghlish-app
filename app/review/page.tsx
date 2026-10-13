@@ -4,14 +4,14 @@ import { AppHeader } from "@/components/AppHeader";
 import { activityLabels, modeLabels, provenanceLabels, reviewPage, type Mode } from "@/lib/copy/vi";
 import { authorizeStaffPage } from "@/lib/review/access";
 import { formatWhen } from "@/lib/review/format";
-import { FILTERS, filterInbox, inboxCounts, parseFilter } from "@/lib/review/inbox";
+import { cursorToParam, FILTERS, parseCursor, parseFilter } from "@/lib/review/inbox";
 import { loadInbox } from "@/lib/review/load";
 import { createUserClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 /** Inbox of submitted work — parent and tutor only (students and outsiders get a plain 404). */
-export default async function ReviewInboxPage({ searchParams }: { searchParams: Promise<{ f?: string | string[] }> }) {
+export default async function ReviewInboxPage({ searchParams }: { searchParams: Promise<{ f?: string | string[]; after?: string | string[] }> }) {
   const supabase = await createUserClient();
   const {
     data: { user },
@@ -20,11 +20,13 @@ export default async function ReviewInboxPage({ searchParams }: { searchParams: 
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();
 
-  const filter = parseFilter((await searchParams).f);
-  const all = await loadInbox();
-  const counts = inboxCounts(all);
-  const items = filterInbox(all, filter);
-  const anyTest = all.some((i) => i.isTest);
+  const sp = await searchParams;
+  const filter = parseFilter(sp.f);
+  const after = parseCursor(sp.after);
+  // The database filters, orders (oldest first) and pages; the counts on the filter chips come from it too.
+  const { items, next, counts } = await loadInbox(filter, after);
+  const anyTest = items.some((i) => i.isTest);
+  const base = filter === "todo" ? "/review" : `/review?f=${filter}`;
 
   return (
     <>
@@ -88,6 +90,25 @@ export default async function ReviewInboxPage({ searchParams }: { searchParams: 
             ))}
           </ul>
         )}
+
+        {after || next ? (
+          <nav aria-label={reviewPage.pagesLabel} className="mt-6 flex flex-wrap items-center gap-3">
+            {after ? (
+              <Link href={base} data-testid="inbox-first-page" className="inline-flex min-h-11 items-center rounded-lg border border-line bg-white px-4 text-sm hover:border-accent">
+                {reviewPage.firstPage}
+              </Link>
+            ) : null}
+            {next ? (
+              <Link
+                href={`${base}${filter === "todo" ? "?" : "&"}after=${encodeURIComponent(cursorToParam(next))}`}
+                data-testid="inbox-next-page"
+                className="inline-flex min-h-11 items-center rounded-lg border border-accent px-4 text-sm font-semibold text-accent hover:bg-accent hover:text-white"
+              >
+                {reviewPage.nextPage}
+              </Link>
+            ) : null}
+          </nav>
+        ) : null}
       </main>
     </>
   );

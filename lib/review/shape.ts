@@ -4,7 +4,7 @@
  * rather than showing a half-right score.
  */
 import { z } from "zod";
-import type { InboxItem, LessonNoteView, ReviewEpisodeView, ReviewTarget } from "./types";
+import type { InboxCounts, InboxItem, InboxPage, LessonNoteView, ReviewEpisodeView, ReviewTarget } from "./types";
 
 const text = z.string();
 const nullableText = z.string().nullable().optional().transform((v) => v ?? null);
@@ -34,31 +34,46 @@ const inboxRow = z.object({
   can_decide: z.boolean(),
 });
 
-export function parseInbox(raw: unknown): InboxItem[] {
-  return z
-    .array(inboxRow)
-    .parse(raw ?? [])
-    .map((r) => ({
-      episodeId: r.episode_id,
-      attemptId: r.attempt_id,
-      learnerId: r.learner_id,
-      alias: r.alias,
-      isTest: r.is_test,
-      titleVi: r.title_vi,
-      stepNo: r.step_no,
-      activityType: r.activity_type,
-      mode: r.mode,
-      purpose: r.purpose,
-      provenance: r.provenance,
-      attemptNo: r.attempt_no,
-      isFirstAttempt: r.is_first_attempt,
-      submittedAt: r.submitted_at,
-      restricted: r.restricted,
-      category: r.category,
-      targetsTotal: r.targets_total,
-      targetsDecided: r.targets_decided,
-      canDecide: r.can_decide,
-    }));
+const count = z.number().int().min(0);
+const inboxPage = z.object({
+  items: z.array(inboxRow),
+  next: z.object({ at: text, id: text }).nullable().optional().transform((v) => v ?? null),
+  counts: z.object({
+    todo: count, tutor: count, independent: count, baseline: count, practice: count, done: count, to_decide: count,
+  }),
+});
+
+const EMPTY_COUNTS: InboxCounts = { todo: 0, tutor: 0, independent: 0, baseline: 0, practice: 0, done: 0, toDecide: 0 };
+
+/** One page of the inbox ({items, next, counts}) as the database returns it. null → an empty inbox. */
+export function parseInbox(raw: unknown): InboxPage {
+  if (raw === null || raw === undefined) return { items: [], next: null, counts: EMPTY_COUNTS };
+  const r = inboxPage.parse(raw);
+  return {
+    next: r.next,
+    counts: { todo: r.counts.todo, tutor: r.counts.tutor, independent: r.counts.independent, baseline: r.counts.baseline, practice: r.counts.practice, done: r.counts.done, toDecide: r.counts.to_decide },
+    items: r.items.map((x): InboxItem => ({
+      episodeId: x.episode_id,
+      attemptId: x.attempt_id,
+      learnerId: x.learner_id,
+      alias: x.alias,
+      isTest: x.is_test,
+      titleVi: x.title_vi,
+      stepNo: x.step_no,
+      activityType: x.activity_type,
+      mode: x.mode,
+      purpose: x.purpose,
+      provenance: x.provenance,
+      attemptNo: x.attempt_no,
+      isFirstAttempt: x.is_first_attempt,
+      submittedAt: x.submitted_at,
+      restricted: x.restricted,
+      category: x.category,
+      targetsTotal: x.targets_total,
+      targetsDecided: x.targets_decided,
+      canDecide: x.can_decide,
+    })),
+  };
 }
 
 const decision = z.object({

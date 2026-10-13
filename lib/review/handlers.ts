@@ -29,8 +29,9 @@ import {
   type OfflineBody,
   type SupportBody,
 } from "./schemas";
+import { isCursor, PAGE_SIZE } from "./inbox";
 import { parseEpisode, parseInbox, parseNotes } from "./shape";
-import type { InboxItem, LessonNoteView, ReviewEpisodeView } from "./types";
+import { INBOX_FILTERS, type InboxCursor, type InboxFilter, type InboxPage, type LessonNoteView, type ReviewEpisodeView } from "./types";
 
 export class ReviewDbError extends Error {
   constructor(
@@ -50,7 +51,7 @@ export interface ReviewStore {
   getAttemptLearnerId(attemptId: string): Promise<string | null>;
   getActivityLearnerId(activityId: string): Promise<string | null>;
   /** english.eng_review_inbox / eng_review_episode as the signed-in user (they check auth.uid() themselves). */
-  inbox(allowReal: boolean): Promise<unknown>;
+  inbox(args: { allowReal: boolean; filter: InboxFilter; limit: number; after: InboxCursor | null }): Promise<unknown>;
   episode(episodeId: string): Promise<unknown>;
   /** Lesson notes of one learner as the signed-in user (RLS decides which versions are visible). */
   listNotes(learnerId: string): Promise<unknown>;
@@ -131,15 +132,31 @@ function fromDbError(err: unknown): HandlerResult {
   throw err;
 }
 
-export async function handleInbox(deps: HandlerDeps): Promise<HandlerResult<{ items: InboxItem[] } | unknown>> {
+/** Query of GET /api/review/inbox: ?filter=todo|tutor|independent|baseline|practice|done &limit=1..100 &after_at=<time> &after_id=<episode id>. */
+export type InboxQuery = { filter?: string | null; limit?: string | null; after_at?: string | null; after_id?: string | null };
+
+export async function handleInbox(deps: HandlerDeps, query: InboxQuery = {}): Promise<HandlerResult<InboxPage | unknown>> {
   try {
     await requireStaff(deps.user, deps.access);
   } catch (err) {
     if (err instanceof AccessError) return fail(err.status, err.message);
     throw err;
   }
+  const filter = query.filter ?? "todo";
+  if (!(INBOX_FILTERS as readonly string[]).includes(filter)) return fail(400, "invalid_query");
+  let limit = PAGE_SIZE;
+  if (query.limit !== undefined && query.limit !== null) {
+    if (!/^\d{1,3}$/.test(query.limit) || Number(query.limit) < 1 || Number(query.limit) > 100) return fail(400, "invalid_query");
+    limit = Number(query.limit);
+  }
+  let after: InboxCursor | null = null;
+  if (query.after_at || query.after_id) {
+    const c = { at: query.after_at, id: query.after_id };
+    if (!isCursor(c)) return fail(400, "invalid_query");
+    after = c;
+  }
   const allowReal = deps.access?.allowRealLearners ?? allowRealLearners();
-  return { status: 200, body: { items: parseInbox(await deps.store.inbox(allowReal)) } };
+  return { status: 200, body: parseInbox(await deps.store.inbox({ allowReal, filter: filter as InboxFilter, limit, after })) };
 }
 
 export async function handleEpisode(deps: HandlerDeps, episodeId: string): Promise<HandlerResult<{ review: ReviewEpisodeView } | unknown>> {

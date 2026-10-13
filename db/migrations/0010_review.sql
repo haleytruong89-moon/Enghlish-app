@@ -1069,58 +1069,112 @@ grant execute on function english.eng_record_offline_attempt(uuid, text, text, i
 grant execute on function english.eng_write_lesson_note(uuid, date, text, text, text, text[], text[], boolean, uuid, uuid, text) to service_role;
 
 -- Đường ĐỌC của phụ huynh / gia sư (người gọi nhận diện bằng auth.uid(); học sinh và người ngoài nhận NULL / rỗng) -------------------
--- Hộp duyệt: mọi bài đã nộp (trong app hoặc ngoài app) của các em trong phạm vi, có ít nhất một kỹ năng chấm được. Mới nhất ở cuối
--- (cũ nhất lên đầu). p_allow_real = false → chỉ em THỬ (ALLOW_REAL_LEARNERS=false trên preview).
-create or replace function english.eng_review_inbox(p_allow_real boolean default false) returns jsonb
-language sql stable security definer set search_path = ''
+-- Hộp duyệt: mọi bài đã nộp (trong app hoặc ngoài app) của các em trong phạm vi, có ít nhất một kỹ năng chấm được. LỌC và PHÂN TRANG Ở ĐÂY
+-- (không cắt cứng rồi lọc ở route): bộ lọc 'todo' (mặc định = chưa duyệt xong hết kỹ năng) / 'tutor' / 'independent' / 'baseline' /
+-- 'practice' (cũng chỉ bài chưa duyệt xong) / 'done' (đã duyệt xong); cũ nhất lên đầu; con trỏ (p_after_at, p_after_id) = dòng cuối của trang
+-- trước. Trả {items, next, counts}: next = null khi hết; counts = số bài của TỪNG bộ lọc + to_decide (chưa duyệt xong và người gọi được duyệt).
+-- p_allow_real = false → chỉ em THỬ (ALLOW_REAL_LEARNERS=false trên preview).
+create or replace function english.eng_review_inbox(
+  p_allow_real boolean default false,
+  p_filter text default 'todo',
+  p_limit int default 50,
+  p_after_at timestamptz default null,
+  p_after_id uuid default null
+) returns jsonb
+language plpgsql stable security definer set search_path = ''
 as $$
-  select coalesce(pg_catalog.jsonb_agg(r.obj order by r.submitted_at, r.episode_id), '[]'::jsonb)
-  from (
-    select e.id as episode_id, at.submitted_at,
-      pg_catalog.jsonb_build_object(
-        'episode_id', e.id,
-        'attempt_id', at.id,
-        'learner_id', l.id,
-        'alias', l.alias,
-        'is_test', l.is_test,
-        'title_vi', i.snapshot -> 'template' ->> 'title_vi',
-        'step_no', a.step_no,
-        'activity_type', a.activity_type,
-        'mode', a.mode,
-        'purpose', pg_catalog.to_jsonb(a.purpose),
-        'provenance', at.provenance,
-        'attempt_no', at.attempt_no,
-        'is_first_attempt', e.is_first_attempt,
-        'submitted_at', at.submitted_at,
-        'restricted', x.restricted,
-        'category', case
+declare
+  v_limit int := least(greatest(coalesce(p_limit, 50), 1), 100);
+  v_me uuid := english.eng_current_member_id();
+begin
+  if p_filter is null or p_filter not in ('todo', 'tutor', 'independent', 'baseline', 'practice', 'done') then
+    raise exception 'eng_review_inbox: unknown filter' using errcode = '22023';
+  end if;
+  if (p_after_at is null) <> (p_after_id is null) then
+    raise exception 'eng_review_inbox: the cursor needs both a time and an id' using errcode = '22023';
+  end if;
+
+  return (
+    with base as (
+      select e.id as episode_id, at.submitted_at,
+        x.total, x.decided,
+        (x.decided >= x.total) as is_done,
+        case
           when x.restricted then 'tutor'
           when coalesce((e.facets ->> 'baseline')::boolean, false) then 'baseline'
           when a.mode = 'INDEPENDENT_CHECK' then 'independent'
-          else 'practice' end,
-        'targets_total', x.total,
-        'targets_decided', x.decided,
-        'can_decide', english.eng_review_role(e.id, english.eng_current_member_id()) is not null
-      ) as obj
-    from english.episodes e
-    join english.learners l on l.id = e.learner_id
-    join english.attempts at on at.id = e.attempt_id
-    join english.activity_instances a on a.id = at.activity_instance_id
-    join english.inquiry_instances i on i.id = a.inquiry_instance_id
-    cross join lateral (
-      select count(*) filter (where t.scorable)::int as total,
-             count(*) filter (where t.scorable and exists (
-               select 1 from english.validation_decisions d
-               where d.episode_id = e.id and d.target_key = t.target_key and d.supersedes_id is null))::int as decided,
-             (coalesce((e.facets ->> 'checkpoint')::boolean, false) or e.observed_directly) as restricted
-      from english.eng_episode_targets(e.id) t
-    ) x
-    where english.eng_is_staff_of(e.learner_id)
-      and (p_allow_real or l.is_test)
-      and x.total > 0
-    order by at.submitted_at, e.id
-    limit 500
-  ) r
+          else 'practice' end as category,
+        english.eng_review_role(e.id, v_me) is not null as can_decide,
+        pg_catalog.jsonb_build_object(
+          'episode_id', e.id,
+          'attempt_id', at.id,
+          'learner_id', l.id,
+          'alias', l.alias,
+          'is_test', l.is_test,
+          'title_vi', i.snapshot -> 'template' ->> 'title_vi',
+          'step_no', a.step_no,
+          'activity_type', a.activity_type,
+          'mode', a.mode,
+          'purpose', pg_catalog.to_jsonb(a.purpose),
+          'provenance', at.provenance,
+          'attempt_no', at.attempt_no,
+          'is_first_attempt', e.is_first_attempt,
+          'submitted_at', at.submitted_at,
+          'restricted', x.restricted,
+          'targets_total', x.total,
+          'targets_decided', x.decided) as obj
+      from english.episodes e
+      join english.learners l on l.id = e.learner_id
+      join english.attempts at on at.id = e.attempt_id
+      join english.activity_instances a on a.id = at.activity_instance_id
+      join english.inquiry_instances i on i.id = a.inquiry_instance_id
+      cross join lateral (
+        select count(*) filter (where t.scorable)::int as total,
+               count(*) filter (where t.scorable and exists (
+                 select 1 from english.validation_decisions d
+                 where d.episode_id = e.id and d.target_key = t.target_key and d.supersedes_id is null))::int as decided,
+               (coalesce((e.facets ->> 'checkpoint')::boolean, false) or e.observed_directly) as restricted
+        from english.eng_episode_targets(e.id) t
+      ) x
+      where english.eng_is_staff_of(e.learner_id)
+        and (p_allow_real or l.is_test)
+        and x.total > 0
+    ),
+    counts as (
+      select pg_catalog.jsonb_build_object(
+        'todo', count(*) filter (where not b.is_done),
+        'tutor', count(*) filter (where not b.is_done and b.category = 'tutor'),
+        'independent', count(*) filter (where not b.is_done and b.category = 'independent'),
+        'baseline', count(*) filter (where not b.is_done and b.category = 'baseline'),
+        'practice', count(*) filter (where not b.is_done and b.category = 'practice'),
+        'done', count(*) filter (where b.is_done),
+        'to_decide', count(*) filter (where not b.is_done and b.can_decide)) as c
+      from base b
+    ),
+    picked as (
+      select b.*
+      from base b
+      where (case p_filter
+               when 'done' then b.is_done
+               when 'todo' then not b.is_done
+               else not b.is_done and b.category = p_filter end)
+        and (p_after_at is null or (b.submitted_at, b.episode_id) > (p_after_at, p_after_id))
+      order by b.submitted_at, b.episode_id
+      limit v_limit + 1
+    ),
+    page as (
+      select p.*, row_number() over (order by p.submitted_at, p.episode_id) as rn from picked p
+    )
+    select pg_catalog.jsonb_build_object(
+      'items', coalesce((select pg_catalog.jsonb_agg(
+                           pg_catalog.jsonb_build_object('category', p.category, 'can_decide', p.can_decide) || p.obj
+                           order by p.rn)
+                         from page p where p.rn <= v_limit), '[]'::jsonb),
+      'next', (select pg_catalog.jsonb_build_object('at', p.submitted_at, 'id', p.episode_id)
+               from page p where p.rn = v_limit and exists (select 1 from page q where q.rn = v_limit + 1)),
+      'counts', (select c from counts))
+  );
+end
 $$;
 
 -- Một bài để duyệt: bài làm gốc, đề, kết quả máy chấm, khóa đáp án / ý chính / kịch bản (chỉ hiện từ khi em đã làm), rubric từng kỹ năng,
@@ -1263,9 +1317,9 @@ begin
 end
 $$;
 
-revoke execute on function english.eng_review_inbox(boolean) from public, anon, service_role;
+revoke execute on function english.eng_review_inbox(boolean, text, int, timestamptz, uuid) from public, anon, service_role;
 revoke execute on function english.eng_review_episode(uuid) from public, anon, service_role;
-grant execute on function english.eng_review_inbox(boolean) to authenticated;
+grant execute on function english.eng_review_inbox(boolean, text, int, timestamptz, uuid) to authenticated;
 grant execute on function english.eng_review_episode(uuid) to authenticated;
 
 -- Purge: thêm các bảng của S5. Thân hàm = bản của 0009 + các dòng S5 (chỉ THÊM dòng, không bỏ dòng nào; có test đối chiếu từng dòng).

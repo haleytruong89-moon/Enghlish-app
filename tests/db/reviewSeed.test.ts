@@ -31,7 +31,7 @@ describe("S5 dev seed: something to review on a preview", () => {
 
   it("the test tutor and the test parent find it in the inbox, to score; Nguyên's tutor does not", async () => {
     const inbox = async (uid: string) =>
-      as(db.client, "authenticated", uid, async (q) => ((await q("select english.eng_review_inbox(false) as r")).rows[0] as { r: { learner_id: string; targets_total: number; targets_decided: number; can_decide: boolean; category: string }[] }).r);
+      as(db.client, "authenticated", uid, async (q) => ((await q("select english.eng_review_inbox(false) as r")).rows[0] as { r: { items: { learner_id: string; targets_total: number; targets_decided: number; can_decide: boolean; category: string }[] } }).r.items);
     for (const uid of [s.users.tutorAn, s.users.parent]) {
       const rows = await inbox(uid);
       expect(rows).toHaveLength(1);
