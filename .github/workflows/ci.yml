@@ -95,10 +95,13 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 2.120.0
+      # PostgREST is configured with db-schemas=public,english but `english` does not exist
+      # until db:apply runs, so its health check cannot pass yet — hence --ignore-health-check
+      # here and an explicit wait for the API after the migrations (below).
       - name: Start local Supabase (auth + PostgREST + Postgres only; config in supabase/config.toml)
         run: |
           set -o pipefail
-          supabase start 2>&1 | tee -a "$RUNNER_TEMP/e2e.log"
+          supabase start --ignore-health-check 2>&1 | tee -a "$RUNNER_TEMP/e2e.log"
 
       - name: Apply our migrations on real Supabase Postgres (twice — 2nd must be a no-op)
         run: |
@@ -122,6 +125,21 @@ jobs:
             echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
             echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
+
+      - name: Wait until Auth and PostgREST serve schema english
+        run: |
+          set -euo pipefail
+          exec > >(tee -a "$RUNNER_TEMP/e2e.log") 2>&1
+          psql "$DATABASE_URL" -qc "notify pgrst, 'reload schema'"
+          for i in $(seq 1 60); do
+            auth=$(curl -s -o /dev/null -w '%{http_code}' "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/health" -H "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY" || true)
+            # 406 = "Invalid schema: english" (schema cache not loaded yet); anything else means english is exposed.
+            rest=$(curl -s -o /dev/null -w '%{http_code}' "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/learners?select=id&limit=1" -H "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY" -H "Accept-Profile: english" || true)
+            echo "attempt $i: auth=$auth rest=$rest"
+            if [ "$auth" = "200" ] && [ "$rest" != "406" ] && [ "$rest" != "000" ] && [ "$rest" != "503" ]; then exit 0; fi
+            sleep 2
+          done
+          echo "Supabase did not become ready"; exit 1
 
       - name: Seed the TEST family (real Auth Admin API)
         run: |
