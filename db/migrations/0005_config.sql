@@ -124,16 +124,19 @@ create table if not exists english.target_set_definitions (
   unique (track_id, version)
 );
 
--- target_sets: learner nào đang theo bộ nào (append-only; hiện hành = dòng mới nhất) -------
+-- target_sets: learner nào đang theo bộ nào (append-only).
+-- Bộ HIỆN HÀNH = dòng có (effective_from desc, seq desc) đầu tiên. `seq` tăng đơn điệu nên hai lần gán
+-- trong CÙNG một transaction vẫn có thứ tự rõ ràng (now() đứng yên trong transaction, clock_timestamp() thì không).
 create table if not exists english.target_sets (
   id uuid primary key default gen_random_uuid(),
+  seq bigint generated always as identity,
   learner_id uuid not null references english.learners(id),
   definition_id text not null references english.target_set_definitions(id),
-  effective_from timestamptz not null default now(),
+  effective_from timestamptz not null default clock_timestamp(),
   assigned_by uuid,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default clock_timestamp()
 );
-create index if not exists target_sets_learner_idx on english.target_sets(learner_id, effective_from desc);
+create index if not exists target_sets_learner_idx on english.target_sets(learner_id, effective_from desc, seq desc);
 
 -- learners.track_id → tracks (expand: giữ nguyên check cũ) -------------------------------
 do $$
@@ -243,8 +246,9 @@ begin
 end
 $$;
 
--- Kiểm tra một target set khi tạo: target thuộc đúng track + descriptor_version, không trùng,
--- mục "theo dõi" có thật. (Không có khóa ngoại cho mảng nên kiểm bằng trigger.)
+-- Kiểm tra một target set khi tạo/sửa: danh mục của nó đã công bố (nếu bộ được công bố), target thuộc
+-- đúng track + descriptor_version, không trùng, mục "theo dõi" có thật.
+-- (Không có khóa ngoại cho mảng nên kiểm bằng trigger.)
 create or replace function english.eng_check_target_set_definition() returns trigger
 language plpgsql
 set search_path = ''
@@ -252,6 +256,14 @@ as $$
 declare
   v_bad text;
 begin
+  if new.published_at is not null and not exists (
+    select 1 from english.catalogue_versions cv
+    where cv.version = new.catalogue_version and cv.published_at is not null
+  ) then
+    raise exception 'target set %: catalogue version % is not published yet', new.id, new.catalogue_version
+      using errcode = '23514';
+  end if;
+
   if (select count(distinct x) from unnest(new.target_ids) as x) <> cardinality(new.target_ids) then
     raise exception 'target set %: duplicate target ids', new.id using errcode = '23514';
   end if;
@@ -297,8 +309,31 @@ revoke execute on function english.eng_check_target_set_definition() from public
 
 drop trigger if exists target_set_definitions_check on english.target_set_definitions;
 create trigger target_set_definitions_check
-  before insert on english.target_set_definitions
+  before insert or update on english.target_set_definitions
   for each row execute function english.eng_check_target_set_definition();
+
+-- Đổi track của một em sau khi đã gán bộ kỹ năng: chưa hỗ trợ trong pilot -------------------------
+create or replace function english.eng_forbid_track_change_after_assignment() returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if exists (select 1 from english.target_sets ts where ts.learner_id = new.id) then
+    raise exception 'learner %: track change after a target set was assigned is not supported in the pilot — create a new learner for the other track and assign its set instead',
+      new.id using errcode = '23514';
+  end if;
+  return new;
+end
+$$;
+
+revoke execute on function english.eng_forbid_track_change_after_assignment() from public, anon, authenticated;
+
+drop trigger if exists learners_track_change on english.learners;
+create trigger learners_track_change
+  before update of track_id on english.learners
+  for each row when (old.track_id is distinct from new.track_id)
+  execute function english.eng_forbid_track_change_after_assignment();
 
 -- target_sets: append-only (theo hướng dẫn đầu 0004) ------------------------------------------
 drop trigger if exists target_sets_forbid_mutation on english.target_sets;
@@ -349,15 +384,15 @@ begin
 
   select ts.id, ts.definition_id into v_current_id, v_current_def
   from english.target_sets ts
-  where ts.learner_id = p_learner and ts.effective_from <= now()
-  order by ts.effective_from desc, ts.created_at desc
+  where ts.learner_id = p_learner and ts.effective_from <= pg_catalog.clock_timestamp()
+  order by ts.effective_from desc, ts.seq desc
   limit 1;
   if v_current_id is not null and v_current_def = p_set then
     return v_current_id;
   end if;
 
-  insert into english.target_sets(learner_id, definition_id, assigned_by)
-  values (p_learner, p_set, v_actor)
+  insert into english.target_sets(learner_id, definition_id, assigned_by, effective_from, created_at)
+  values (p_learner, p_set, v_actor, pg_catalog.clock_timestamp(), pg_catalog.clock_timestamp())
   returning id into v_id;
 
   select m.role into v_actor_role from english.members m where m.user_id = v_actor;

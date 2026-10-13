@@ -187,6 +187,52 @@ describe("S1 configuration (DESIGN §4, §8)", () => {
     });
   });
 
+  describe("target set definition integrity (insert AND update)", () => {
+    it("the checks also run on UPDATE of an unpublished definition", async () => {
+      await db.client.query("begin");
+      try {
+        await db.client.query(
+          `insert into english.target_set_definitions(id, track_id, version, descriptor_version, catalogue_version, target_ids, source_hash)
+           values ('T-draft', 'A', 98, '${cfg.catalogue.meta.descriptor_version}', '${CV}', '{A-X1-TURN}', 'h')`,
+        );
+        await expect(
+          db.client.query("update english.target_set_definitions set target_ids = '{A-DOES-NOT-EXIST}' where id = 'T-draft'"),
+        ).rejects.toThrow(/does not exist/);
+      } finally {
+        await db.client.query("rollback");
+      }
+    });
+
+    it("a definition cannot be published against an unpublished catalogue version", async () => {
+      await db.client.query("begin");
+      try {
+        await db.client.query(
+          `insert into english.catalogue_versions(version, descriptor_version, assessment_policy_version, source_hash, meta)
+           values ('9.8-draft', '${cfg.catalogue.meta.descriptor_version}', 'AP-0.2-pilot', 'h', '{}')`,
+        );
+        // as a draft it is fine ...
+        await db.client.query(
+          `insert into english.target_set_definitions(id, track_id, version, descriptor_version, catalogue_version, target_ids, source_hash)
+           values ('T-draft', 'A', 97, '${cfg.catalogue.meta.descriptor_version}', '9.8-draft', '{A-X1-TURN}', 'h')`,
+        );
+        // ... publishing it is not
+        await db.client.query("savepoint s0");
+        await expect(
+          db.client.query("update english.target_set_definitions set published_at = now() where id = 'T-draft'"),
+        ).rejects.toThrow(/catalogue version 9\.8-draft is not published yet/);
+        await db.client.query("rollback to savepoint s0");
+        await expect(
+          db.client.query(
+            `insert into english.target_set_definitions(id, track_id, version, descriptor_version, catalogue_version, target_ids, source_hash, published_at)
+             values ('T-pub', 'A', 96, '${cfg.catalogue.meta.descriptor_version}', '9.8-draft', '{A-X1-TURN}', 'h', now())`,
+          ),
+        ).rejects.toThrow(/not published yet/);
+      } finally {
+        await db.client.query("rollback");
+      }
+    });
+  });
+
   describe("RLS and grants", () => {
     const reads = (user: string, table: string) =>
       rowsAs(db.client, "authenticated", user, `select * from english.${table}`);
@@ -248,7 +294,7 @@ describe("S1 configuration (DESIGN §4, §8)", () => {
       for (const table of CONFIG_TABLES) {
         for (const role of ["authenticated", "service_role"] as const) {
           for (const sql of [
-            `insert into english.${table} select * from english.${table} limit 0`,
+            `insert into english.${table} default values`,
             `update english.${table} set ${table === "assessment_policies" || table === "catalogue_versions" ? "version" : "id"} = null`,
             `delete from english.${table}`,
             `truncate english.${table}`,
@@ -292,6 +338,36 @@ describe("S1 configuration (DESIGN §4, §8)", () => {
       const err = await ownerError(
         `insert into english.learners(family_id, alias, track_id) values ($1, 'X', 'C')`, [s.familyId]);
       expect(err?.code).toMatch(/^23(503|514)$/);
+    });
+  });
+
+  describe("learners.track_id after a target set was assigned", () => {
+    it("cannot be changed once the learner has a target_sets row", async () => {
+      const err = await ownerError("update english.learners set track_id = 'B' where id = $1", [s.learners.an]);
+      expect(err?.code).toBe("23514");
+      expect(err?.message).toMatch(/track change after a target set was assigned is not supported/);
+    });
+
+    it("can still be changed (and set to the same value) for a learner without any target set", async () => {
+      await db.client.query("begin");
+      try {
+        const id = (await db.client.query<{ id: string }>(
+          "insert into english.learners(family_id, alias, track_id) values ($1, 'Em mới', 'A') returning id", [s.familyId])).rows[0]?.id;
+        await db.client.query("update english.learners set track_id = 'B' where id = $1", [id]);
+        await db.client.query("update english.learners set track_id = 'B' where id = $1", [id]);
+        expect((await db.client.query("select track_id from english.learners where id = $1", [id])).rows).toEqual([{ track_id: "B" }]);
+      } finally {
+        await db.client.query("rollback");
+      }
+    });
+
+    it("an update that does not touch track_id is fine for a learner with a set", async () => {
+      await db.client.query("begin");
+      try {
+        await db.client.query("update english.learners set track_id = track_id where id = $1", [s.learners.an]);
+      } finally {
+        await db.client.query("rollback");
+      }
     });
   });
 
@@ -341,6 +417,36 @@ describe("S1 configuration (DESIGN §4, §8)", () => {
         const rows = await db.client.query(
           "select definition_id from english.target_sets where learner_id = $1 order by effective_from desc, created_at desc", [s.learners.an]);
         expect(rows.rows.map((r) => r.definition_id)).toEqual(["A-v2", "A-v1"]);
+      } finally {
+        await db.client.query("rollback");
+      }
+    });
+
+    it("two assignments in ONE transaction: the second is the current set (deterministic order)", async () => {
+      await db.client.query("begin");
+      try {
+        await db.client.query(
+          `insert into english.target_set_definitions(id, track_id, version, descriptor_version, catalogue_version, target_ids, tracking_only, source_hash, published_at)
+           select 'B-v2-test', track_id, 2, descriptor_version, catalogue_version, target_ids[1:11], tracking_only, 'h', now()
+           from english.target_set_definitions where id = 'B-v1'`,
+        );
+        const current = async () =>
+          (await db.client.query<{ definition_id: string }>(
+            "select definition_id from english.target_sets where learner_id = $1 order by effective_from desc, seq desc limit 1",
+            [s.learners.nguyen])).rows[0]?.definition_id;
+        await db.client.query("select english.eng_assign_target_set($1, 'B-v2-test')", [s.learners.nguyen]);
+        expect(await current()).toBe("B-v2-test");
+        // going back to B-v1 inside the same transaction is a real change (not "already current") and wins
+        await db.client.query("select english.eng_assign_target_set($1, 'B-v1')", [s.learners.nguyen]);
+        expect(await current()).toBe("B-v1");
+        // and assigning B-v1 again is idempotent even though now() has not moved
+        const n = await count("select count(*)::int as n from english.target_sets");
+        await db.client.query("select english.eng_assign_target_set($1, 'B-v1')", [s.learners.nguyen]);
+        expect(await count("select count(*)::int as n from english.target_sets")).toBe(n);
+        const seqs = (await db.client.query<{ seq: string }>(
+          "select seq from english.target_sets where learner_id = $1 order by seq", [s.learners.nguyen])).rows.map((r) => Number(r.seq));
+        expect(new Set(seqs).size).toBe(seqs.length);
+        expect(seqs).toEqual([...seqs].sort((a, b) => a - b));
       } finally {
         await db.client.query("rollback");
       }

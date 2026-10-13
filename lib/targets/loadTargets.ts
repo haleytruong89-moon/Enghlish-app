@@ -10,7 +10,7 @@ import {
   type TargetsView,
 } from "./view";
 
-type AssignmentRow = { definition_id: string; effective_from: string; created_at: string };
+type AssignmentRow = { definition_id: string; effective_from: string; seq: number };
 type DefinitionRow = {
   id: string;
   version: number;
@@ -32,7 +32,7 @@ export async function loadTargetsView(learnerId: string, now: Date = new Date())
 
   const { data: assignments, error: aErr } = await db
     .from("target_sets")
-    .select("definition_id, effective_from, created_at")
+    .select("definition_id, effective_from, seq")
     .eq("learner_id", learnerId)
     .returns<AssignmentRow[]>();
   if (aErr) throw new Error(`target_sets lookup failed: ${aErr.code}`);
@@ -41,7 +41,7 @@ export async function loadTargetsView(learnerId: string, now: Date = new Date())
     (assignments ?? []).map((r) => ({
       definitionId: r.definition_id,
       effectiveFrom: new Date(r.effective_from),
-      createdAt: new Date(r.created_at),
+      seq: Number(r.seq),
     })),
     now,
   );

@@ -35,20 +35,21 @@ describe("pickCurrentAssignment", () => {
 
   it("takes the latest effective_from that is not in the future", () => {
     const rows = [
-      { definitionId: "A-v1", effectiveFrom: d("2026-10-13T00:00:00Z"), createdAt: d("2026-10-13T00:00:00Z") },
-      { definitionId: "A-v2", effectiveFrom: d("2026-10-30T00:00:00Z"), createdAt: d("2026-10-30T00:00:00Z") },
-      { definitionId: "A-v3", effectiveFrom: d("2026-12-01T00:00:00Z"), createdAt: d("2026-10-31T00:00:00Z") },
+      { definitionId: "A-v1", effectiveFrom: d("2026-10-13T00:00:00Z"), seq: 1 },
+      { definitionId: "A-v2", effectiveFrom: d("2026-10-30T00:00:00Z"), seq: 2 },
+      { definitionId: "A-v3", effectiveFrom: d("2026-12-01T00:00:00Z"), seq: 3 },
     ];
     expect(pickCurrentAssignment(rows, now)?.definitionId).toBe("A-v2");
   });
 
-  it("breaks ties by creation time, and returns null when nothing is effective yet", () => {
+  it("breaks ties by seq (insert order), and returns null when nothing is effective yet", () => {
     const same = d("2026-10-13T00:00:00Z");
     const rows = [
-      { definitionId: "old", effectiveFrom: same, createdAt: d("2026-10-13T00:00:00Z") },
-      { definitionId: "new", effectiveFrom: same, createdAt: d("2026-10-13T00:00:01Z") },
+      { definitionId: "old", effectiveFrom: same, seq: 7 },
+      { definitionId: "new", effectiveFrom: same, seq: 8 },
     ];
     expect(pickCurrentAssignment(rows, now)?.definitionId).toBe("new");
+    expect(pickCurrentAssignment([...rows].reverse(), now)?.definitionId).toBe("new"); // input order is irrelevant
     expect(pickCurrentAssignment(rows, d("2026-01-01T00:00:00Z"))).toBeNull();
     expect(pickCurrentAssignment([], now)).toBeNull();
   });

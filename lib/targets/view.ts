@@ -5,14 +5,14 @@
  */
 import { levelLabels, skillNames } from "@/lib/copy/vi";
 
-export type TargetSetAssignment = { definitionId: string; effectiveFrom: Date; createdAt: Date };
+export type TargetSetAssignment = { definitionId: string; effectiveFrom: Date; seq: number };
 
-/** Current set = latest `effective_from <= now` (ties broken by creation time). */
+/** Current set = latest `effective_from <= now`; ties broken by `seq` (the DB's monotonic insert order). */
 export function pickCurrentAssignment<T extends TargetSetAssignment>(rows: T[], now: Date): T | null {
   const eligible = rows.filter((r) => r.effectiveFrom.getTime() <= now.getTime());
   eligible.sort(
     (a, b) =>
-      b.effectiveFrom.getTime() - a.effectiveFrom.getTime() || b.createdAt.getTime() - a.createdAt.getTime(),
+      b.effectiveFrom.getTime() - a.effectiveFrom.getTime() || b.seq - a.seq,
   );
   return eligible[0] ?? null;
 }
