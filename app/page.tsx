@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { LearnerCard } from "@/components/LearnerCard";
+import { StudentHome } from "@/components/student/StudentHome";
 import { home } from "@/lib/copy/vi";
 import { loadHome } from "@/lib/home/loadHome";
 import { safeColor } from "@/lib/home/visible";
+import { loadStudentHome } from "@/lib/work/load";
 
 export const dynamic = "force-dynamic";
 
@@ -28,15 +30,22 @@ export default async function HomePage() {
   if (data.kind === "student") {
     const me = data.learners[0];
     const alias = me?.alias ?? data.displayName;
+    const color = safeColor(me?.color);
+    const work = await loadStudentHome();
+    if (work.kind === "login") redirect("/login");
     return (
       <>
         <AppHeader showTestBadge={anyTest} />
-        <main className="mx-auto max-w-xl px-4 py-12">
-          <h1 className="text-4xl font-bold" style={{ color: safeColor(me?.color) }}>
-            {home.studentGreeting(alias)}
-          </h1>
-          <p className="mt-4 text-lg">{home.studentEmpty}</p>
-        </main>
+        {work.kind === "ok" ? (
+          <StudentHome alias={alias} color={color} data={work.home} />
+        ) : (
+          <main className="mx-auto max-w-xl px-5 py-12">
+            <h1 className="text-4xl font-bold" style={{ color }}>
+              {home.studentGreeting(alias)}
+            </h1>
+            <p className="mt-4 text-lg">{home.studentEmpty}</p>
+          </main>
+        )}
       </>
     );
   }
