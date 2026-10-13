@@ -313,3 +313,70 @@ Ghi chú cho S5 và các lát sau (đã biết, chủ ý):
 - Episode đã có `is_first_attempt`, facet và `context_id` (id mẫu) nhưng **chưa có điểm**; "Bài làm được tính" (đủ điều kiện làm bằng chứng) và trạng thái dẫn xuất chưa tính — S5/S6.
 - Mẫu B-W1…B-W4 khi công bố cần thêm dòng `template_step_sources` (migration cùng số với seed mẫu).
 - `exposure_log` đã ghi `source = 'practice' | 'retry'`; các nguồn khác (`delayed`, `transfer`…) thêm khi có các lát tương ứng.
+
+## S5 — Hộp duyệt, chấm theo từng kỹ năng, ai được duyệt (D15), bài làm ngoài app, ghi chú buổi học (14/10/2026)
+
+**Trạng thái:** code xong, test xanh (271 unit + 224 DB = 495; E2E chạy trong CI trên nhánh). **Chờ phụ huynh** áp 1 file SQL mới (bên dưới) rồi mới thử trên preview. Nhánh `feature/s5-review`, chưa mở PR (cần review Opus trước). Kế hoạch: `docs/plans/s5-review.md`. **Học sinh không thấy gì mới ở lát này** (không điểm, không quyết định, không ghi chú, không khóa đáp án).
+
+### Gia sư và phụ huynh làm được gì bây giờ
+
+- **Trang chủ** có nút **"Bài cần duyệt (n)"**; n = số bài còn kỹ năng chưa chấm mà người đang đăng nhập được phép chấm.
+- **Hộp "Bài chờ xem"** (`/review`): lọc "Chưa duyệt xong" (mặc định, bài cũ nhất lên đầu) / "Cần thầy/cô duyệt" / "Bài tự làm" / "Bài đầu vào" / "Bài luyện" / "Đã duyệt xong". Mỗi dòng: tên em, bước, giờ nộp, nộp trong app hay ghi ngoài app, "Đã chấm x/y kỹ năng".
+- **Trang duyệt một bài** (`/review/<bài>`): bài làm của em ở trên/bên trái (câu đóng có "x/y câu đúng (máy chấm)" + ✓/✗ từng câu, chỉ nhân viên thấy), gợi ý em đã khai báo, khóa/ghi chú kín của bước **chỉ hiện sau khi em đã nộp**; bên cạnh là từng kỹ năng của bước với yêu cầu để đạt 3/4 và **6 nút có chữ**: "0/4 Chưa thể hiện" … "4/4 Vững, rõ ràng" và "Bài này không có cơ hội thể hiện" (không phải số 0). Nút Lưu chỉ sáng khi mọi kỹ năng đã chọn; ghi chú từng kỹ năng không bắt buộc.
+- **Sửa quyết định:** bấm "Sửa quyết định" → chọn mức khác + **lý do (≥ 3 chữ)** → bản mới thay bản cũ, **bản cũ vẫn nằm trong "Lịch sử quyết định"** (ai, lúc nào, lý do). Không xóa, không ghi đè.
+- **Hỗ trợ quan sát được:** trên trang duyệt, người duyệt có thể thêm "tôi thấy em được giúp thế này" (một dòng riêng, không đổi điểm).
+- **"Ghi bài làm ngoài app"** (trang Giao bài của từng em, mỗi bước): gia sư ghi bài nói **nghe trực tiếp trong buổi**; phụ huynh hoặc gia sư ghi **bài trên giấy**. Chỉ gõ/dán chữ, **không âm thanh**. Bài ghi xong vào cùng hộp duyệt và được đếm đúng như bài nộp trong app (lần thứ mấy, "lần đầu", bài đầu vào/kiểm tra).
+- **Ghi chú buổi học** (`/learners/<em>/notes`, link trên thẻ từng em): ngày, mục tiêu, điều thấy được, mức hỗ trợ, **tối đa 3 việc tiếp theo**, kỹ năng đã luyện trong buổi (mỗi kỹ năng thành một dòng "tiếp xúc" nguồn `lesson`), tick "Chia sẻ với bố mẹ". Chỉ gia sư viết; phụ huynh chỉ đọc ghi chú đã chia sẻ của con mình. Sửa = bản mới, bản cũ giữ.
+
+### Ai được duyệt bài nào (D15), nói đơn giản
+
+| Bài | Gia sư của em | Phụ huynh của em | Học sinh |
+|---|---|---|---|
+| Bài kiểm tra trong buổi (checkpoint) | Chấm | **Chỉ xem** ("Chờ thầy/cô duyệt") | Không thấy |
+| Bài gia sư nghe/xem trực tiếp (ghi ngoài app, "trực tiếp") | Chấm | **Chỉ xem** | Không thấy |
+| Mọi bài còn lại (luyện tập, bài đầu vào, bài tự làm, bài giấy ghi sau) | Chấm | Chấm | Không thấy |
+
+Quy tắc nằm **trong cơ sở dữ liệu** (hàm `eng_review_role`), không chỉ ở màn hình: phụ huynh gọi thẳng API để chấm bài chỉ-gia-sư nhận 403 `tutor_only`; gia sư của em khác, gia sư hết hạn, học sinh đều bị từ chối. Điểm luôn hiện cho nhân viên dạng "3/4 · Đạt yêu cầu"; "không có cơ hội thể hiện" là câu riêng, **không bao giờ là 0**.
+
+### Đã làm
+
+| Việc | Ở đâu |
+|---|---|
+| Bảng mới (schema `english`, chỉ thêm): `observations` (một người chấm một kỹ năng của một bài: 0–4 **hoặc** không có cơ hội), `validation_decisions` (quyết định: AGREE, hoặc MODIFY có `supersedes_id` + lý do; quyết định hiện hành = bản không bị thay thế, có chỉ mục duy nhất để chuỗi không rẽ nhánh), `lesson_notes`. Mỗi bảng gắn `eng_forbid_mutation` + chặn truncate, SELECT chỉ cho nhân viên đúng phạm vi (RLS), học sinh 0 dòng | `db/migrations/0010_review.sql` |
+| Hàm ghi (security definer, `search_path=''`, **chỉ service_role chạy được**, kiểm lại người ghi trong SQL): `eng_record_review(s)`, `eng_modify_decision`, `eng_record_observed_support`, `eng_record_offline_attempt`, `eng_write_lesson_note`; hàm đọc `eng_review_inbox`, `eng_review_episode` (cho `authenticated`, theo `auth.uid()`) | `0010` |
+| **Dùng lại luật đếm của S4**: tách `eng_attempt_slot` và `eng_record_attempt_effects` ra khỏi `eng_submit_attempt`; bài ghi ngoài app đi qua đúng hai hàm này. Hành vi S4 không đổi (toàn bộ test S4 giữ nguyên và xanh) | `0010` |
+| `eng_purge_learner` viết lại từ bản `0009`, **chỉ thêm** lệnh xóa (quyết định → quan sát → ghi chú, con trước cha sau). Test so từng dòng: mọi dòng của bản `0009` còn nguyên, đúng thứ tự; test xóa thật chứng minh biên lai đếm đủ | `tests/unit/migration0010.test.ts`, `tests/db/review.test.ts` |
+| 7 route: `GET /api/review/inbox`, `GET /api/review/episodes/:id`, `POST /api/review/episodes/:id/decisions`, `POST /api/review/decisions/:id/modify`, `POST /api/review/attempts/:id/support`, `POST /api/learners/:id/offline-attempts`, `GET|POST /api/learners/:id/lesson-notes`. Chưa đăng nhập 401; ngoài phạm vi 404; học sinh 403/404; body sai 400; trùng id khác nội dung 409; bài chỉ-gia-sư với phụ huynh 403 `tutor_only`. Mọi POST có `client_id` nên gửi lại không tạo dòng mới | `lib/review/`, `app/api/review/`, `app/api/learners/[id]/` |
+| Trang: hộp duyệt, trang duyệt, ghi ngoài app, ghi chú buổi học, nút trang chủ. Mọi chữ qua `lib/copy/vi.ts` (khối `reviewPage`, `offlineForm`, `notesPage`, nhãn nguồn bài/gợi ý/hỗ trợ). Mã kỹ năng/bước chỉ nằm trong khối "Thông tin kỹ thuật" gập | `app/review/`, `app/learners/[id]/notes/`, `components/review/` |
+| Dữ liệu thử: `seed-dev` giao cho An chủ đề **A-W4-PLANETS** và để An nộp sẵn bước 7 (viết, luyện tập) → hộp duyệt của gia sư An có 1 bài ngay trên preview | `scripts/lib/seed.ts` (`seedDevReviewWork`) |
+
+### Đối chiếu với plan — chỗ khác và vì sao
+
+| Plan nói | Đã làm | Lý do |
+|---|---|---|
+| Seed hộp duyệt: "nộp sẵn một bài A-W1 của An" | Giao thêm **A-W4-PLANETS** cho An và nộp bước 7 | Test S2/S4 (đếm bài giao, và spec học sinh nộp bước 3, 6 của A-W1) sẽ vỡ nếu seed A-W1 đổi; cách này không đụng gì của S2/S4 |
+| Bài ghi ngoài app chỉ `tutor_live` / `manual_import` | Thêm giá trị khai báo gợi ý **`unknown`** ("không rõ") cho bài giấy ghi sau | Phụ huynh ghi bài giấy thường không biết em đã dùng gợi ý gì; ép chọn "không dùng" là ghi sai bằng chứng. Vẫn là một dòng hỗ trợ riêng, không đổi điểm |
+| Học sinh không thấy gì mới | Học sinh thấy bài ghi ngoài app như một lần làm (nhãn "ngoài app") và bước một-lần chuyển sang "Đã xong" | Cùng luật đếm với bài nộp trong app (đúng tinh thần S4); không có điểm/nội dung/ghi chú nào đi kèm |
+| Hàm `eng_record_review(…)` 1 kỹ năng | Thêm `eng_record_reviews` (cả bài trong **một** transaction) | Lưu 2 kỹ năng không được dở dang (có kỹ năng chấm, có kỹ năng không) |
+| Kỹ năng nào cũng chấm được | Kỹ năng mà **mọi tiêu chí đều cần quan sát trực tiếp** chỉ chấm được khi bài là "nghe/xem trực tiếp"; chỉ số tổng như `AGG-B-EXAM-MOCK` (không phải kỹ năng) bị khóa và có chữ giải thích | Giữ đúng hợp đồng đo: không chấm điều không quan sát được; chỉ số không phải kỹ năng |
+
+### Cần phụ huynh xác nhận / đã biết
+
+1. **Câu chữ mới** (`reviewPage`, `offlineForm`, `notesPage`, nhãn mức hỗ trợ "Hỗ trợ ít/vừa/nhiều") do builder đặt theo giọng UX guide — nhờ xem lại.
+2. **Gia sư hết hạn** (`valid_to` đã qua) không chấm, không ghi bài, không viết ghi chú được, và hộp duyệt/trang duyệt trống với người đó; bản chấm cũ giữ nguyên. Có test.
+3. **Rút lại một ghi chú đã chia sẻ:** gia sư lưu một bản mới không tick "Chia sẻ" → phụ huynh chỉ thấy bản hiện hành nên không còn thấy nữa; bản cũ vẫn nằm trong bảng (gia sư thấy được trong "Bản cũ"). Nếu muốn xóa hẳn nội dung đã lỡ chia sẻ thì cần quyết định riêng.
+4. Chưa có trạng thái năng lực/đề xuất bậc (S7), chưa có góp ý gửi em và sửa bài (S6), chưa có điểm AI/hiệu chỉnh (S11+), chưa có báo cáo cho phụ huynh (S9), chưa có phòng nói (S10).
+
+### Phụ huynh cần làm
+
+1. **Áp 1 file SQL** (`npm run db:apply`, hoặc dán vào SQL Editor và bấm Run): `db/migrations/0010_review.sql`. (Chạy lại lần 2 không đổi gì.)
+2. **Kiểm tra:** `select version from english.schema_migrations order by 1;` → thêm `0010`. `select count(*) from information_schema.tables where table_schema='english' and table_name in ('observations','validation_decisions','lesson_notes');` → **3**.
+3. **Xem thử trên preview:** `npm run db:seed-dev`; đăng nhập gia sư của An (thử) → "Bài cần duyệt (1)" → mở bài → bấm mức cho 2 kỹ năng (thử cả "Bài này không có cơ hội thể hiện") → Lưu → "Đã duyệt". Bấm "Sửa quyết định", đổi mức, nhập lý do → mở "Lịch sử quyết định" thấy cả hai. Vào trang Giao bài của An → "Ghi bài làm ngoài app" ở bước 6 (chọn "nghe trực tiếp") → mở bài → đăng nhập phụ huynh: trang chỉ xem, không có nút chấm. Đăng nhập An (thử) hoặc Nguyên (thử): không có nút "Bài cần duyệt", gõ thẳng `/review` → "Không tìm thấy".
+4. Dọn dữ liệu em THỬ khi cần: `english.eng_purge_learner` đã gồm các bảng của S5.
+
+### Ghi chú cho S6, S7 và các lát sau
+
+- **Seed cấu hình kế tiếp là `0011`** (S5 dùng `0010`): `npm run gen:config -- --new` sẽ tự sinh số đó; phần "Cách gỡ" của B-W1…B-W4 ghi `0009`/`0010` thì đọc là `0011`.
+- S6 (góp ý, sửa bài): quyết định hiện hành của một (bài, kỹ năng) lấy qua `validation_decisions` không bị thay thế (view/hàm `eng_review_episode` đã làm). Góp ý gửi em là bảng/đường riêng — đừng đưa điểm 0–4 ra học sinh.
+- S7 (trạng thái, đề xuất bậc): bằng chứng đủ điều kiện = `observations` + quyết định hiện hành + `episodes` (facet, `is_first_attempt`, `observed_directly`). Bảng `exposure_log` đã có nguồn `lesson` (ghi chú buổi học). Chưa có gì tính trạng thái; cột `blind` của `observations` đã ghi sẵn cho hiệu chỉnh D16.
+- Bài ghi ngoài app có `provenance` = `tutor_live` | `manual_import` (đang hiển thị cho nhân viên); nếu S10 (phòng nói) thêm đường ghi chữ nói thì dùng chung `eng_record_attempt_effects`.
