@@ -81,6 +81,11 @@
 | 3 | O-F1 quy tắc video | Trước S2 | Chỉ link YouTube/nguồn mở, không tải video lên |
 | 4 | Ngày đề thử tuần 4 của Nguyên | Trước 14/11 | 21/11 |
 | 5 | **B-W1…B-W4 (4 mẫu Track B) còn nháp, chưa seed, chưa giao được** — vài bước vi phạm luật danh mục (bảng ở mục S2 "Quyết định đang chờ phụ huynh"). Cách gỡ: (a) đổi loại hoạt động của bước, (b) bỏ kỹ năng đó khỏi bước, hoặc (c) thêm phiên bản danh mục cho phép | **Trước 19/10** (B-W1 bắt đầu tuần của Nguyên; B-W0 đầu vào giao được ngay) | Phụ huynh chọn (a)/(b)/(c) cho từng loại vấn đề (sửa bài ACT-REVISE; đọc-hiểu nguồn cho B-T5-SOURCE). Builder không tự sửa nội dung |
+| 6 | **Ghi bài ngoài app ở bài kiểm tra trong buổi và bài nói trực tiếp**: chỉ thầy/cô ghi; phụ huynh không ghi được (màn hình hiện "Chỉ thầy/cô ghi bài này"). Bài nói trực tiếp chỉ ghi dạng "thầy/cô nghe trực tiếp" | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới**: nếu muốn phụ huynh ghi được bài giấy của bước kiểm tra, nói để nới sau |
+| 7 | **Bài do người lớn ghi giúp (bài giấy, bài nói trong buổi)**: học sinh không đọc được nội dung, người ghi hay gợi ý đi kèm; em chỉ thấy một dòng "bài này đã làm cùng thầy/cô hoặc trên giấy, đã ghi lại rồi" | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới**: nếu muốn em xem lại chữ thầy/cô đã ghi, nói để nới sau |
+| 8 | **Ngày ghi bài ngoài app** không được sớm hơn lần làm gần nhất của bước đó (kể cả bài em nộp trong app), và bước phải đã mở vào ngày ghi | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới**: nếu hay phải ghi bù theo thứ tự khác, nói để nới sau |
+| 9 | **Tiêu chí "thầy/cô nghe trực tiếp"** (vd. nói trôi chảy): chỉ tick được khi bài là bài thầy/cô nghe trực tiếp; bài khác chấm theo các tiêu chí còn lại | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới** |
+| 10 | **Ghi chú gợi ý quan sát được** tối đa 300 ký tự (một giới hạn ở mọi lớp: ô nhập, API, cơ sở dữ liệu) | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới** nếu thấy ngắn quá |
 
 ## Nền vận hành (13/10/2026, đêm)
 
@@ -218,7 +223,7 @@ Thêm test: học sinh chỉ thấy bước N từ đúng ngày của nó (kể 
 | B-W4-AI-HOMEWORK | 7 | như B-W1 bước 8 |
 | B-W4-AI-HOMEWORK | 9 | ACT-SOURCE-QA không được tính cho B-T5-SOURCE |
 
-Cách gỡ (chọn một cho mỗi loại vấn đề): (a) đổi loại hoạt động của bước (vd bước sửa bài → loại được tính), (b) bỏ kỹ năng đó khỏi bước (bước vẫn làm nhưng không tính cho kỹ năng đó), hoặc (c) sửa danh mục (thêm phiên bản danh mục mới cho phép loại đó — việc lớn hơn). Sau khi quyết: sửa file, bỏ `status`/`review_note` ở bước, đổi mẫu thành `published`, `npm run gen:config -- --new` → `0009`. **Lưu ý thời gian:** B-W1 bắt đầu tuần của Nguyên; B-W0 (đầu vào) giao được ngay.
+Cách gỡ (chọn một cho mỗi loại vấn đề): (a) đổi loại hoạt động của bước (vd bước sửa bài → loại được tính), (b) bỏ kỹ năng đó khỏi bước (bước vẫn làm nhưng không tính cho kỹ năng đó), hoặc (c) sửa danh mục (thêm phiên bản danh mục mới cho phép loại đó — việc lớn hơn). Sau khi quyết: sửa file, bỏ `status`/`review_note` ở bước, đổi mẫu thành `published`, `npm run gen:config -- --new` → số seed kế tiếp là **`0011`** (S4 dùng `0009`, S5 dùng `0010`; công cụ tự sinh đúng số). **Lưu ý thời gian:** B-W1 bắt đầu tuần của Nguyên; B-W0 (đầu vào) giao được ngay.
 
 ### Ghi chú cho các lát sau
 
@@ -298,6 +303,22 @@ Ghi chú cho S5 và các lát sau (đã biết, chủ ý):
 4. **Tiêu đề bài đọc/nghe** trong nội dung có ghi chú nhân viên trong ngoặc ("(bài đọc VOL-R)", "(cloze passage, MINI-20 Q10-15)"): app cắt phần ngoặc đó khi hiện cho em. Nên chỉnh nội dung ở lần soạn sau.
 5. **Nhãn chữ mới** (`work` trong `lib/copy/vi.ts`: "Bạn đã dùng gợi ý nào?", "Mình hỏi AI ngoài app"…) do builder đặt theo giọng UX guide — nhờ phụ huynh/Opus xem lại câu chữ.
 
+### Sau review Opus (14/10/2026) — đã sửa
+
+| Mục | Đã làm | Test |
+|---|---|---|
+| **Chặn:** ghi bài ngoài app ở bước kiểm tra trong buổi hoặc bước nói trực tiếp | Chỉ gia sư còn quan hệ hiệu lực; bước nói trực tiếp chỉ nhận "nghe trực tiếp". Kiểm trong `eng_record_offline_attempt`, route trả 403 `tutor_only`, phụ huynh thấy câu "Chỉ thầy/cô ghi bài này" thay cho form | A-W0 bước 8 và A-W1 bước 8: phụ huynh bị từ chối, gia sư ghi được |
+| Hộp duyệt >500 bài | Lọc/sắp xếp/chia trang bằng con trỏ trong SQL; số đếm từ SQL; bài mới luôn hiện ở trang đầu của "Chưa duyệt xong" | 520 bài sinh bằng SQL: đi hết các trang không sót, không lặp; bài mới nằm ở trang đầu khi bài cũ đã duyệt |
+| Ghi bài lùi ngày | Không sớm hơn lần làm gần nhất của bước (kể cả bài em nộp trong app); bước phải đã mở vào ngày ghi. Báo lỗi bằng câu rõ trong form | Có test cả hai luật |
+| Học sinh đọc bài người lớn ghi | RLS `attempts` / `artifact_versions` (tạo lại trong `0010`): học sinh chỉ đọc `in_app`/`pasted` | SELECT trực tiếp bằng quyền học sinh; màn hình em chỉ nhận số lần, giờ và loại |
+| Tiêu chí "nghe trực tiếp" | `eng_record_review` từ chối khi bài không quan sát trực tiếp; kỹ năng vẫn chấm được bằng tiêu chí còn lại; form không có ô tick cho tiêu chí đó | B-L4-EXPLAIN-S |
+| Ghi chú hỗ trợ | Một giới hạn 300 ký tự ở ô nhập, API, cơ sở dữ liệu; câu báo lỗi riêng | 301 ký tự ở từng lớp |
+| Danh sách tiêu chí | Chỉ gửi tiêu chí **người chấm đã chạm vào**: tick = đúng, tick rồi bỏ = sai (ghi rõ); chưa chạm = không ghi ("chưa đánh giá", không phải sai); không chạm gì = không ghi `criteria_results`. Ô tick cao ≥ 44px. Chọn 3–4 mà chưa tick đủ (hoặc ngược lại) → **cảnh báo, không chặn** | `tests/unit/reviewNits.test.ts` |
+| Vặt khác | Sửa quyết định không biến "không có cơ hội" thành 0 và không chọn sẵn nút nào; ẩn "ghi thêm gợi ý" khi người xem không chấm được bài; "Sửa" ghi chú buổi học chỉ hiện cho gia sư đã viết; mọi nhãn lạ rơi về chữ trung tính ("Kỹ năng khác", "Hoạt động khác"…), không bao giờ hiện mã (có test quét mã nguồn); `eng_lesson_note_is_current` tự kiểm phạm vi và không còn mở cho service_role | |
+| Đua nhau (2 kết nối thật) | Hai người chấm lần đầu cùng một kỹ năng → một người thắng, người kia nhận 409; học sinh nộp và người lớn ghi cùng lúc một bài một-lần → đúng 1 lần làm, 1 episode | `tests/db/reviewHardening.test.ts` |
+
+**Việc phải xem lại ở S6/S7:** chỉ mục `validation_decisions_first_once` (mỗi bài, mỗi kỹ năng chỉ một quyết định đầu) đúng khi quyết định đầu luôn là AGREE. Khi thêm `INSUFFICIENT` / `REQUEST_MORE` ("chưa đủ bằng chứng", "xin thêm bài"), chúng cũng là quyết định không thay ai nên sẽ bị chỉ mục này chặn quyết định thứ hai. Phải thiết kế lại chuỗi quyết định **trước** khi thêm chúng (đã ghi chú ngay trong `0010`).
+
 ### Phụ huynh cần làm
 
 1. **Áp 1 file SQL** (`npm run db:apply`, hoặc dán vào SQL Editor và bấm Run): `db/migrations/0009_student_work.sql`. (Chạy lại lần 2 không đổi gì.)
@@ -307,7 +328,7 @@ Ghi chú cho S5 và các lát sau (đã biết, chủ ý):
 
 ### Ghi chú cho S5 và các lát sau
 
-- **Seed kế tiếp là `0010`** (S4 đã dùng `0009`): phần "Cách gỡ" của B-W1…B-W4 ở S2 nói `0009` thì đọc là `0010`.
+- **Seed cấu hình kế tiếp là `0011`** (S4 dùng `0009`, S5 dùng `0010`): phần "Cách gỡ" của B-W1…B-W4 ở S2 chỉ cần chạy `npm run gen:config -- --new`, công cụ tự sinh `0011`.
 - S5 (hộp duyệt/chấm): đọc `attempts` + `artifact_versions` + `attempt_auto_checks` + `assistance_events` + `episodes` của em. Bài nộp là bản **nguyên gốc** (`is_raw = true`); điểm AI / người chấm / quyết định là 3 lớp riêng, bảng mới (`reviews`…) — đừng thêm cột vào các bảng append-only. Chấm mù, `sealed`/`note` của khóa đáp án, tin nhắn "Đã nhận bài. Góp ý sẽ có sau." (`messages.aiPendingStudent`) đều là việc của S5.
 - Câu `transform`/`short`/`open` đang là `needs_person`: S5 cần giao diện cho gia sư chấm.
 - Episode đã có `is_first_attempt`, facet và `context_id` (id mẫu) nhưng **chưa có điểm**; "Bài làm được tính" (đủ điều kiện làm bằng chứng) và trạng thái dẫn xuất chưa tính — S5/S6.
@@ -316,12 +337,12 @@ Ghi chú cho S5 và các lát sau (đã biết, chủ ý):
 
 ## S5 — Hộp duyệt, chấm theo từng kỹ năng, ai được duyệt (D15), bài làm ngoài app, ghi chú buổi học (14/10/2026)
 
-**Trạng thái:** code xong, test xanh (271 unit + 224 DB = 495; E2E chạy trong CI trên nhánh). **Chờ phụ huynh** áp 1 file SQL mới (bên dưới) rồi mới thử trên preview. Nhánh `feature/s5-review`, chưa mở PR (cần review Opus trước). Kế hoạch: `docs/plans/s5-review.md`. **Học sinh không thấy gì mới ở lát này** (không điểm, không quyết định, không ghi chú, không khóa đáp án).
+**Trạng thái:** code xong, đã sửa theo review của Opus (mục "Sau review Opus" bên dưới), test xanh (unit + DB = 527; E2E chạy trong CI trên nhánh). **Chờ phụ huynh** áp 1 file SQL mới (bên dưới) rồi mới thử trên preview. Nhánh `feature/s5-review`, chưa mở PR (cần review Opus trước). Kế hoạch: `docs/plans/s5-review.md`. **Học sinh không thấy gì mới ở lát này** (không điểm, không quyết định, không ghi chú, không khóa đáp án; bài do người lớn ghi giúp chỉ hiện là một dòng trạng thái).
 
 ### Gia sư và phụ huynh làm được gì bây giờ
 
 - **Trang chủ** có nút **"Bài cần duyệt (n)"**; n = số bài còn kỹ năng chưa chấm mà người đang đăng nhập được phép chấm.
-- **Hộp "Bài chờ xem"** (`/review`): lọc "Chưa duyệt xong" (mặc định, bài cũ nhất lên đầu) / "Cần thầy/cô duyệt" / "Bài tự làm" / "Bài đầu vào" / "Bài luyện" / "Đã duyệt xong". Mỗi dòng: tên em, bước, giờ nộp, nộp trong app hay ghi ngoài app, "Đã chấm x/y kỹ năng".
+- **Hộp "Bài chờ xem"** (`/review`): lọc và chia trang **ngay trong cơ sở dữ liệu** (50 bài một trang, nút "Xem các bài tiếp theo"; số trên từng bộ lọc cũng do cơ sở dữ liệu đếm, nên bài mới nộp không bao giờ bị cắt mất dù có hàng trăm bài cũ): lọc "Chưa duyệt xong" (mặc định, bài cũ nhất lên đầu) / "Cần thầy/cô duyệt" / "Bài tự làm" / "Bài đầu vào" / "Bài luyện" / "Đã duyệt xong". Mỗi dòng: tên em, bước, giờ nộp, nộp trong app hay ghi ngoài app, "Đã chấm x/y kỹ năng".
 - **Trang duyệt một bài** (`/review/<bài>`): bài làm của em ở trên/bên trái (câu đóng có "x/y câu đúng (máy chấm)" + ✓/✗ từng câu, chỉ nhân viên thấy), gợi ý em đã khai báo, khóa/ghi chú kín của bước **chỉ hiện sau khi em đã nộp**; bên cạnh là từng kỹ năng của bước với yêu cầu để đạt 3/4 và **6 nút có chữ**: "0/4 Chưa thể hiện" … "4/4 Vững, rõ ràng" và "Bài này không có cơ hội thể hiện" (không phải số 0). Nút Lưu chỉ sáng khi mọi kỹ năng đã chọn; ghi chú từng kỹ năng không bắt buộc.
 - **Sửa quyết định:** bấm "Sửa quyết định" → chọn mức khác + **lý do (≥ 3 chữ)** → bản mới thay bản cũ, **bản cũ vẫn nằm trong "Lịch sử quyết định"** (ai, lúc nào, lý do). Không xóa, không ghi đè.
 - **Hỗ trợ quan sát được:** trên trang duyệt, người duyệt có thể thêm "tôi thấy em được giúp thế này" (một dòng riêng, không đổi điểm).
@@ -356,7 +377,7 @@ Quy tắc nằm **trong cơ sở dữ liệu** (hàm `eng_review_role`), không 
 |---|---|---|
 | Seed hộp duyệt: "nộp sẵn một bài A-W1 của An" | Giao thêm **A-W4-PLANETS** cho An và nộp bước 7 | Test S2/S4 (đếm bài giao, và spec học sinh nộp bước 3, 6 của A-W1) sẽ vỡ nếu seed A-W1 đổi; cách này không đụng gì của S2/S4 |
 | Bài ghi ngoài app chỉ `tutor_live` / `manual_import` | Thêm giá trị khai báo gợi ý **`unknown`** ("không rõ") cho bài giấy ghi sau | Phụ huynh ghi bài giấy thường không biết em đã dùng gợi ý gì; ép chọn "không dùng" là ghi sai bằng chứng. Vẫn là một dòng hỗ trợ riêng, không đổi điểm |
-| Học sinh không thấy gì mới | Học sinh thấy bài ghi ngoài app như một lần làm (nhãn "ngoài app") và bước một-lần chuyển sang "Đã xong" | Cùng luật đếm với bài nộp trong app (đúng tinh thần S4); không có điểm/nội dung/ghi chú nào đi kèm |
+| Học sinh không thấy gì mới | Học sinh thấy bài ghi ngoài app chỉ như một dòng trạng thái trung tính ("đã làm cùng thầy/cô hoặc trên giấy, đã ghi lại rồi"; số lần và giờ), bước một-lần chuyển sang "Đã xong". Gọi thẳng REST, học sinh **không đọc được** dòng `attempts`/`artifact_versions` loại `tutor_live`/`manual_import` (chữ, người ghi, gợi ý) | Cùng luật đếm với bài nộp trong app (đúng tinh thần S4); không có điểm/nội dung/ghi chú nào đi kèm |
 | Hàm `eng_record_review(…)` 1 kỹ năng | Thêm `eng_record_reviews` (cả bài trong **một** transaction) | Lưu 2 kỹ năng không được dở dang (có kỹ năng chấm, có kỹ năng không) |
 | Kỹ năng nào cũng chấm được | Kỹ năng mà **mọi tiêu chí đều cần quan sát trực tiếp** chỉ chấm được khi bài là "nghe/xem trực tiếp"; chỉ số tổng như `AGG-B-EXAM-MOCK` (không phải kỹ năng) bị khóa và có chữ giải thích | Giữ đúng hợp đồng đo: không chấm điều không quan sát được; chỉ số không phải kỹ năng |
 
@@ -376,7 +397,7 @@ Quy tắc nằm **trong cơ sở dữ liệu** (hàm `eng_review_role`), không 
 
 ### Ghi chú cho S6, S7 và các lát sau
 
-- **Seed cấu hình kế tiếp là `0011`** (S5 dùng `0010`): `npm run gen:config -- --new` sẽ tự sinh số đó; phần "Cách gỡ" của B-W1…B-W4 ghi `0009`/`0010` thì đọc là `0011`.
+- **Seed cấu hình kế tiếp là `0011`** (S5 dùng `0010`): `npm run gen:config -- --new` sẽ tự sinh số đó. Phần "Cách gỡ" của B-W1…B-W4 (mục S2) đã sửa thành `0011`.
 - S6 (góp ý, sửa bài): quyết định hiện hành của một (bài, kỹ năng) lấy qua `validation_decisions` không bị thay thế (view/hàm `eng_review_episode` đã làm). Góp ý gửi em là bảng/đường riêng — đừng đưa điểm 0–4 ra học sinh.
 - S7 (trạng thái, đề xuất bậc): bằng chứng đủ điều kiện = `observations` + quyết định hiện hành + `episodes` (facet, `is_first_attempt`, `observed_directly`). Bảng `exposure_log` đã có nguồn `lesson` (ghi chú buổi học). Chưa có gì tính trạng thái; cột `blind` của `observations` đã ghi sẵn cho hiệu chỉnh D16.
 - Bài ghi ngoài app có `provenance` = `tutor_live` | `manual_import` (đang hiển thị cho nhân viên); nếu S10 (phòng nói) thêm đường ghi chữ nói thì dùng chung `eng_record_attempt_effects`.
