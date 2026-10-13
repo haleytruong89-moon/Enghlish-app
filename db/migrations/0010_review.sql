@@ -115,6 +115,9 @@ create table if not exists english.validation_decisions (
   constraint validation_decisions_modify_reason check (decision <> 'MODIFY' or pg_catalog.length(pg_catalog.btrim(coalesce(reason, ''))) >= 3)
 );
 -- Chuỗi tuyến tính: mỗi quyết định chỉ bị thay MỘT lần; mỗi (episode, kỹ năng) chỉ có MỘT quyết định đầu.
+-- LƯU Ý CHO LÁT SAU (S6/S7): validation_decisions_first_once chỉ đúng khi quyết định đầu LUÔN là AGREE (S5 chỉ có AGREE → MODIFY).
+-- Khi INSUFFICIENT / REQUEST_MORE xuất hiện ("chưa đủ bằng chứng", "xin thêm bài") chúng cũng có supersedes_id null và cùng (episode, kỹ năng):
+-- chỉ mục này sẽ chặn quyết định thứ hai. Phải xem lại (vd. cho phép nhiều dòng đầu khác loại, hoặc dùng supersedes_id cho cả chuỗi) TRƯỚC khi thêm chúng.
 create unique index if not exists validation_decisions_supersedes_once on english.validation_decisions(supersedes_id) where supersedes_id is not null;
 create unique index if not exists validation_decisions_first_once on english.validation_decisions(episode_id, target_key) where supersedes_id is null;
 create unique index if not exists validation_decisions_client_once on english.validation_decisions(episode_id, target_key, client_id) where client_id is not null;
@@ -245,9 +248,14 @@ as $$
   group by u.k
 $$;
 
+-- Chỉ dùng trong chính sách đọc ghi chú buổi học (lesson_notes_select). Người gọi phải có quyền execute (chính sách chạy với quyền của họ),
+-- nên hàm TỰ kiểm phạm vi: ghi chú nằm ngoài phạm vi của người gọi → false (không lộ "ghi chú này đã bị thay chưa" cho người ngoài).
 create or replace function english.eng_lesson_note_is_current(p_id uuid) returns boolean
 language sql stable security definer set search_path = ''
-as $$ select not exists (select 1 from english.lesson_notes n where n.supersedes_id = p_id) $$;
+as $$
+  select exists (select 1 from english.lesson_notes n where n.id = p_id and english.eng_is_staff_of(n.learner_id))
+         and not exists (select 1 from english.lesson_notes n2 where n2.supersedes_id = p_id)
+$$;
 
 revoke execute on function english.eng_today_vn() from public, anon, authenticated, service_role;
 revoke execute on function english.eng_session_ts(date) from public, anon, authenticated, service_role;
@@ -257,8 +265,8 @@ revoke execute on function english.eng_attempt_slot(uuid, text, uuid, text) from
 revoke execute on function english.eng_record_attempt_effects(uuid, uuid, text[], text[], text, int, boolean, timestamptz, boolean) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_review_role(uuid, uuid) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_episode_targets(uuid) from public, anon, authenticated, service_role;
-revoke execute on function english.eng_lesson_note_is_current(uuid) from public, anon;
-grant execute on function english.eng_lesson_note_is_current(uuid) to authenticated, service_role;
+revoke execute on function english.eng_lesson_note_is_current(uuid) from public, anon, service_role;
+grant execute on function english.eng_lesson_note_is_current(uuid) to authenticated;
 
 -- Nộp bài (S4) viết lại chỉ để dùng chung luật đếm; hành vi không đổi (test S4 vẫn xanh).
 create or replace function english.eng_submit_attempt(
@@ -1043,7 +1051,7 @@ begin
     if v_prev.tutor_member_id <> p_by then
       raise exception 'eng_write_lesson_note: only the author may edit a note' using errcode = '42501';
     end if;
-    if not english.eng_lesson_note_is_current(p_supersedes) then
+    if exists (select 1 from english.lesson_notes n where n.supersedes_id = p_supersedes) then
       raise exception 'eng_write_lesson_note: the note was already replaced by a newer version' using errcode = '23505';
     end if;
     if not (v_prev.practised_target_ids <@ v_practised) then

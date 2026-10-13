@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { ScoringPanel, type PanelTarget } from "@/components/review/ScoringPanel";
 import { SupportForm } from "@/components/review/SupportForm";
 import { WorkPanel } from "@/components/review/WorkPanel";
-import { activityLabels, app, inquiriesPage, learnerWithTrack, modeLabels, provenanceLabels, purposeLabels, reviewPage, type Mode } from "@/lib/copy/vi";
+import { activityLabels, app, fallbackLabels, inquiriesPage, learnerWithTrack, modeLabels, provenanceLabels, purposeLabels, reviewPage, type Mode } from "@/lib/copy/vi";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { formatWhen, skillLabel } from "@/lib/review/format";
 import { findEpisodeLearner, loadEpisode } from "@/lib/review/load";
@@ -50,7 +50,7 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
         <header className="mt-2 flex flex-col gap-2">
           <p className="text-sm text-muted">
             {learnerWithTrack(learner.alias, learner.trackId)} · {inquiriesPage.stepLabel(view.activity.stepNo)} ·{" "}
-            {activityLabels[view.activity.activityType] ?? view.activity.activityType}
+            {activityLabels[view.activity.activityType] ?? fallbackLabels.activity}
           </p>
           <h1 className="text-2xl font-bold">
             {view.inquiry.titleVi}
@@ -63,11 +63,11 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
           </h1>
           <ul className="flex flex-wrap gap-2 text-sm">
             {[
-              modeLabels[mode]?.staff ?? view.attempt.mode,
+              modeLabels[mode]?.staff ?? fallbackLabels.mode,
               reviewPage.attemptNo(view.attempt.attemptNo),
-              provenanceLabels[view.attempt.provenance] ?? view.attempt.provenance,
+              provenanceLabels[view.attempt.provenance] ?? fallbackLabels.provenance,
               reviewPage.submittedAt(formatWhen(view.attempt.submittedAt)),
-              ...view.activity.purpose.map((p) => purposeLabels[p] ?? p),
+              ...view.activity.purpose.map((p) => purposeLabels[p] ?? fallbackLabels.purpose),
               ...(view.episode.observedDirectly && !checkpoint ? [reviewPage.liveTag] : []),
               ...(view.episode.isFirstAttempt ? [reviewPage.firstAttemptTag] : []),
               ...(checkpoint ? [reviewPage.blindNote] : []),
@@ -82,7 +82,7 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <div className="flex flex-col gap-4">
             <WorkPanel view={view} />
-            {scorable.length > 0 ? <SupportForm attemptId={view.attempt.id} skills={scorable.map((t) => ({ key: t.key, label: t.label }))} /> : null}
+            {scorable.length > 0 && view.viewer.canDecide ? <SupportForm attemptId={view.attempt.id} skills={scorable.map((t) => ({ key: t.key, label: t.label }))} /> : null}
           </div>
           <ScoringPanel
             episodeId={view.episode.id}

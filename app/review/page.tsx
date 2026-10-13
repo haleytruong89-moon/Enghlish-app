@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
-import { activityLabels, modeLabels, provenanceLabels, reviewPage, type Mode } from "@/lib/copy/vi";
+import { activityLabels, fallbackLabels, modeLabels, provenanceLabels, reviewPage, type Mode } from "@/lib/copy/vi";
 import { authorizeStaffPage } from "@/lib/review/access";
 import { formatWhen } from "@/lib/review/format";
 import { cursorToParam, FILTERS, parseCursor, parseFilter } from "@/lib/review/inbox";
@@ -65,13 +65,13 @@ export default async function ReviewInboxPage({ searchParams }: { searchParams: 
               <li key={i.episodeId} className="rounded-xl border border-line bg-white px-5 py-4" data-testid={`inbox-item-${i.episodeId}`}>
                 <p className="text-xs font-bold text-an">{reviewPage.stepOf(i.alias, i.stepNo)}</p>
                 <p className="mt-1 font-semibold">
-                  {i.titleVi} · {activityLabels[i.activityType] ?? i.activityType}
+                  {i.titleVi} · {activityLabels[i.activityType] ?? fallbackLabels.activity}
                 </p>
                 <p className="mt-1 text-sm text-muted">
                   {reviewPage.submittedAt(formatWhen(i.submittedAt))} · {reviewPage.attemptNo(i.attemptNo)} ·{" "}
-                  {modeLabels[i.mode as Mode]?.staff ?? i.mode}
+                  {modeLabels[i.mode as Mode]?.staff ?? fallbackLabels.mode}
                 </p>
-                <p className="mt-1 text-sm text-muted">{provenanceLabels[i.provenance] ?? i.provenance}</p>
+                <p className="mt-1 text-sm text-muted">{provenanceLabels[i.provenance] ?? fallbackLabels.provenance}</p>
                 <p className="mt-2 text-sm">
                   <span data-testid="progress">{reviewPage.progress(i.targetsDecided, i.targetsTotal)}</span>
                   {!i.canDecide ? (

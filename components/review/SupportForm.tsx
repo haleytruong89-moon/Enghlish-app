@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { reviewPage, supportKindLabels } from "@/lib/copy/vi";
+import { fallbackLabels, reviewPage, supportKindLabels } from "@/lib/copy/vi";
 import { SUPPORT_KINDS, SUPPORT_NOTE_MAX } from "@/lib/review/types";
 
 /** Add support the reviewer saw (a separate fact; it never changes a score). */
@@ -74,7 +74,7 @@ export function SupportForm({ attemptId, skills, initialOpen = false }: { attemp
         <select id="support-kind" value={kind} onChange={(e) => setKind(e.target.value)} className="min-h-11 rounded-lg border border-line px-3">
           {SUPPORT_KINDS.map((k) => (
             <option key={k} value={k}>
-              {supportKindLabels[k] ?? k}
+              {supportKindLabels[k] ?? fallbackLabels.supportKind}
             </option>
           ))}
         </select>

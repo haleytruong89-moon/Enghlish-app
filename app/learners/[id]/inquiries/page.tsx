@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { AssignForm } from "@/components/inquiries/AssignForm";
 import { StepActions } from "@/components/inquiries/StepActions";
 import { OfflineForm } from "@/components/review/OfflineForm";
-import { activityLabels, app, inquiriesPage, learnerWithTrack, modeLabels, purposeLabels, type Mode } from "@/lib/copy/vi";
+import { activityLabels, app, fallbackLabels, inquiriesPage, learnerWithTrack, modeLabels, purposeLabels, type Mode } from "@/lib/copy/vi";
 import { authorizeInquiriesPage } from "@/lib/inquiries/access";
 import { addDays, dateWindow, defaultDueOn, todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi, safeExternalUrl } from "@/lib/inquiries/format";
@@ -91,7 +91,7 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
                         const href = s.modality === "video" ? safeExternalUrl(s.url) : null;
                         return (
                           <li key={s.id}>
-                            {inquiriesPage.sourceModality[s.modality] ?? s.modality}: {s.title}
+                            {inquiriesPage.sourceModality[s.modality] ?? fallbackLabels.modality}: {s.title}
                             {href ? (
                               <>
                                 {" · "}
@@ -111,12 +111,12 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
                   {q.steps.map((s) => (
                     <li key={s.activityId} className="rounded-lg border border-line px-4 py-3" data-testid={`step-${q.templateId}-${s.stepNo}`}>
                       <p className="font-medium">
-                        {inquiriesPage.stepLabel(s.stepNo)} · {activityLabels[s.activityType] ?? s.activityType}
+                        {inquiriesPage.stepLabel(s.stepNo)} · {activityLabels[s.activityType] ?? fallbackLabels.activity}
                       </p>
                       <p className="mt-1 text-sm text-muted">
-                        {modeLabels[s.mode as Mode]?.staff ?? s.mode}
+                        {modeLabels[s.mode as Mode]?.staff ?? fallbackLabels.mode}
                         {s.timeMin ? ` · ${inquiriesPage.minutes(s.timeMin)}` : ""}
-                        {s.purpose.length ? ` · ${s.purpose.map((p) => purposeLabels[p] ?? p).join(", ")}` : ""}
+                        {s.purpose.length ? ` · ${s.purpose.map((p) => purposeLabels[p] ?? fallbackLabels.purpose).join(", ")}` : ""}
                       </p>
                       <p className="mt-1 text-sm">
                         {s.schedule.date ? inquiriesPage.scheduledFor(formatDateVi(s.schedule.date)) : inquiriesPage.noDate}

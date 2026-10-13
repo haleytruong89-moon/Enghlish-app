@@ -5,7 +5,7 @@ import { ScoreButtons } from "@/components/review/ScoreButtons";
 import { ScoringPanel, type PanelTarget } from "@/components/review/ScoringPanel";
 import { SupportForm } from "@/components/review/SupportForm";
 import { WorkPanel } from "@/components/review/WorkPanel";
-import { concepts, formatScore, notesPage, offlineForm, reviewPage, scoreLabels, tutorHonorific, weekdayNames } from "@/lib/copy/vi";
+import { concepts, fallbackLabels, formatScore, notesPage, offlineForm, reviewPage, scoreLabels, tutorHonorific, weekdayNames } from "@/lib/copy/vi";
 import { formatWhen, skillLabel } from "@/lib/review/format";
 import { cursorToParam, parseCursor, parseFilter } from "@/lib/review/inbox";
 import { SUPPORT_NOTE_MAX, type ReviewDecision, type ReviewEpisodeView } from "@/lib/review/types";
@@ -107,7 +107,7 @@ describe("S5 inbox helpers (the filtering and paging are done by the database)",
     expect(formatWhen("x")).toBe("x");
     expect(skillLabel("A-L3-CAUSE-W", "Tên trong danh mục")).toBe('Viết "vì sao – nên"');
     expect(skillLabel("B-L1-COMPLEX-W", "Câu phức")).toBe("Câu phức");
-    expect(skillLabel("X", null)).toBe("X");
+    expect(skillLabel("X", null)).toBe(fallbackLabels.skill);
   });
 });
 

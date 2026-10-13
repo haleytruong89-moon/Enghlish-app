@@ -204,6 +204,24 @@ export const inquiriesPage = {
 
 
 // ---------- S5: duyệt bài, chấm từng kỹ năng, bài ngoài app, ghi chú buổi học — chỉ phụ huynh/gia sư ------------------------
+/**
+ * Neutral words for a code the labels do not know yet. Staff screens never print a raw code (activity type, skill id, mode...)
+ * outside the collapsed "Thông tin kỹ thuật" block.
+ */
+export const fallbackLabels = {
+  skill: "Kỹ năng khác",
+  activity: "Hoạt động khác",
+  mode: "Kiểu bài khác",
+  provenance: "Cách ghi bài khác",
+  purpose: "Mục đích khác",
+  supportKind: "Gợi ý khác",
+  help: "Gợi ý khác",
+  keyKind: "Ghi chú",
+  role: "Người duyệt",
+  modality: "Tài liệu khác",
+  autoResult: "Cần người xem",
+} as const;
+
 /** Nhãn nguồn của một bài (provenance). Học sinh không thấy các nhãn này. */
 export const provenanceLabels: Record<string, string> = {
   in_app: "Làm trong app",
@@ -300,6 +318,11 @@ export const reviewPage = {
   criteriaTitle: "Để đạt 3/4 cần:",
   criteriaMachine: "máy kiểm tra được",
   criteriaPerson: "cần người xem",
+  criteriaWarnings: {
+    ticks_missing_for_pass: "Bạn chọn từ 3/4 trở lên nhưng chưa tick đủ các điều kiện ở trên. Bạn vẫn lưu được; hãy xem lại cho chắc.",
+    all_ticked_below_pass: "Bạn đã tick đủ các điều kiện ở trên nhưng chọn dưới 3/4. Bạn vẫn lưu được; hãy xem lại cho chắc.",
+    ticked_but_no_opportunity: "Bạn đã tick một điều kiện nhưng chọn \"không có cơ hội thể hiện\". Bạn vẫn lưu được; hãy xem lại cho chắc.",
+  } as Record<string, string>,
   criteriaLive: `${tutorHonorific} nghe trực tiếp`,
   criteriaLiveLocked: `chỉ ghi được khi ${tutorHonorific} nghe trực tiếp`,
   levelsDetails: "Mô tả từng mức",

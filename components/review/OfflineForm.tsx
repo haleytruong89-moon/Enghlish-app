@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { offlineForm } from "@/lib/copy/vi";
+import { fallbackLabels, offlineForm } from "@/lib/copy/vi";
 import { OFFLINE_ASSISTANCE } from "@/lib/review/types";
 
 /**
@@ -179,7 +179,7 @@ export function OfflineForm({
         {OFFLINE_ASSISTANCE.map((h) => (
           <label key={h} className="flex min-h-11 items-center gap-2 text-sm">
             <input type="checkbox" data-testid={`offline-help-${activityId}-${h}`} className="size-4" checked={help.includes(h)} onChange={(e) => toggleHelp(h, e.target.checked)} />
-            {offlineForm.helpOptions[h] ?? h}
+            {offlineForm.helpOptions[h] ?? fallbackLabels.help}
           </label>
         ))}
       </fieldset>

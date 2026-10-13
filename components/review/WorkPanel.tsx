@@ -1,4 +1,4 @@
-import { assistanceLabels, reviewPage, supportKindLabels, verificationLabels } from "@/lib/copy/vi";
+import { assistanceLabels, fallbackLabels, reviewPage, supportKindLabels, verificationLabels } from "@/lib/copy/vi";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { formatWhen } from "@/lib/review/format";
 import type { ReviewEpisodeView } from "@/lib/review/types";
@@ -59,12 +59,12 @@ export function WorkPanel({ view }: { view: ReviewEpisodeView }) {
                   <p lang="en" className="mt-1 text-sm">
                     {reviewPage.itemGiven(alias)}: <b>{given && given.trim() ? given : reviewPage.itemBlank}</b>
                     {res ? (
-                      <span className="ml-2 rounded-full border border-line px-2 py-0.5 text-xs">{reviewPage.autoResult[res] ?? res}</span>
+                      <span className="ml-2 rounded-full border border-line px-2 py-0.5 text-xs">{reviewPage.autoResult[res] ?? fallbackLabels.autoResult}</span>
                     ) : null}
                   </p>
                   {key && (key.answer || key.explanationVi) ? (
                     <p lang="en" className="mt-1 text-xs text-muted">
-                      {reviewPage.keyKinds[key.kind] ?? key.kind}: {key.answer ?? ""}
+                      {reviewPage.keyKinds[key.kind] ?? fallbackLabels.keyKind}: {key.answer ?? ""}
                       {key.explanationVi ? ` · ${key.explanationVi}` : ""}
                     </p>
                   ) : null}
@@ -89,7 +89,7 @@ export function WorkPanel({ view }: { view: ReviewEpisodeView }) {
               .filter((k) => k.kind !== "answer" || k.answer)
               .map((k) => (
                 <li key={k.itemId} lang="en">
-                  {reviewPage.keyKinds[k.kind] ?? k.kind}: {k.answer ?? ""}
+                  {reviewPage.keyKinds[k.kind] ?? fallbackLabels.keyKind}: {k.answer ?? ""}
                   {k.explanationVi ? ` · ${k.explanationVi}` : ""}
                 </li>
               ))}
@@ -111,7 +111,7 @@ export function WorkPanel({ view }: { view: ReviewEpisodeView }) {
           <ul className="mt-1 flex flex-col gap-1 text-sm">
             {view.assistance.map((a) => (
               <li key={String(a.id)}>
-                {a.detail ? (assistanceLabels[a.detail] ?? a.detail) : (supportKindLabels[a.kind] ?? a.kind)}
+                {a.detail ? (assistanceLabels[a.detail] ?? fallbackLabels.help) : (supportKindLabels[a.kind] ?? fallbackLabels.supportKind)}
                 {" · "}
                 {a.verification === "declared"
                   ? verificationLabels.declared(alias)

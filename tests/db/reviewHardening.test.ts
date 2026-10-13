@@ -301,6 +301,32 @@ describe("S5 hardening (Opus review)", () => {
   });
 
   // -------------------------------------------------------------------------------------------------------------
+  describe("lesson notes: the helper used by the read policy does not leak outside the caller's scope", () => {
+    const note = (by: string, supersedes: string | null = null) =>
+      svc<{ id: string }>("select english.eng_write_lesson_note($1, $2::date, 'Goal', 'Seen', 'light', '{\"Next\"}'::text[], '{}'::text[], true, $3, $4, $5) as r", [s.learners.an, TODAY, supersedes, by, randomUUID()]);
+    const isCurrent = (uid: string | null, role: "authenticated" | "anon", id: string) =>
+      as(db.client, role, uid, async (q) => ((await q("select english.eng_lesson_note_is_current($1) as r", [id])).rows[0] as { r: boolean }).r);
+
+    it("true for a current note in scope, false once replaced, false for anyone outside the child's circle; anon and service_role cannot call it", async () => {
+      const n1 = await note(M().tutorAn);
+      expect(await isCurrent(s.users.tutorAn, "authenticated", n1.id)).toBe(true);
+      expect(await isCurrent(s.users.parent, "authenticated", n1.id)).toBe(true);
+      const n2 = await note(M().tutorAn, n1.id);
+      expect(await isCurrent(s.users.tutorAn, "authenticated", n1.id)).toBe(false);
+      expect(await isCurrent(s.users.tutorAn, "authenticated", n2.id)).toBe(true);
+      for (const uid of [s.users.studentAn, s.users.tutorNguyen]) {
+        expect(await isCurrent(uid, "authenticated", n1.id)).toBe(false);
+        expect(await isCurrent(uid, "authenticated", n2.id)).toBe(false);
+      }
+      await expect(isCurrent(null, "anon", n2.id)).rejects.toMatchObject({ code: "42501" });
+      await expect(as(db.client, "service_role", null, async (q) => q("select english.eng_lesson_note_is_current($1)", [n2.id]))).rejects.toMatchObject({ code: "42501" });
+      // the parent reads the current published version only
+      const rows = await as(db.client, "authenticated", s.users.parent, async (q) => (await q("select id from english.lesson_notes order by created_at")).rows as { id: string }[]);
+      expect(rows.map((r) => r.id)).toEqual([n2.id]);
+    });
+  });
+
+  // -------------------------------------------------------------------------------------------------------------
   describe("the inbox is filtered and paged in SQL, so new work always shows up (more than 500 items)", () => {
     const BULK = 520;
     let practiceStep: string;

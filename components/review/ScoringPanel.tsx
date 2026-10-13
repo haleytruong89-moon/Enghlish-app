@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { app, formatScore, reviewPage, scoreLabels, type Score } from "@/lib/copy/vi";
+import { app, fallbackLabels, formatScore, reviewPage, scoreLabels, type Score } from "@/lib/copy/vi";
+import { criteriaToSend, criteriaWarning } from "@/lib/review/criteria";
 import { formatWhen } from "@/lib/review/format";
 import type { ReviewDecision, ReviewTarget } from "@/lib/review/types";
 import { ModifyForm } from "./ModifyForm";
@@ -55,12 +56,12 @@ export function ScoringPanel({
     try {
       const items = open.map((t) => {
         const c = choices[t.key] as Choice;
-        const crit = criteria[t.key];
+        const crit = criteriaToSend(criteria[t.key]); // touched criteria only - see lib/review/criteria.ts
         const note = (notes[t.key] ?? "").trim();
         return {
           target_id: t.key,
           ...choiceToScore(c),
-          ...(crit && Object.keys(crit).length ? { criteria: crit } : {}),
+          ...(crit ? { criteria: crit } : {}),
           ...(note ? { rationale: note } : {}),
         };
       });
@@ -123,11 +124,11 @@ export function ScoringPanel({
                   <div className="flex flex-col gap-1">
                     <p className="text-xs font-semibold text-muted">{reviewPage.criteriaTitle}</p>
                     {t.criteria.map((c) => (
-                      <label key={c.id} className="flex items-start gap-2 text-sm">
+                      <label key={c.id} className="flex min-h-11 items-center gap-2 py-1 text-sm">
                         {canDecide && decided === null && !(c.method === "tutor_live" && !observedDirectly) ? (
                           <input
                             type="checkbox"
-                            className="mt-1 size-4"
+                            className="size-5 shrink-0"
                             checked={criteria[t.key]?.[c.id] ?? false}
                             onChange={(e) => setCriteria((p) => ({ ...p, [t.key]: { ...p[t.key], [c.id]: e.target.checked } }))}
                           />
@@ -159,6 +160,14 @@ export function ScoringPanel({
                 {decided === null && canDecide ? (
                   <>
                     <ScoreButtons label={t.label} testKey={t.key} value={choice} onChange={(v) => setChoices((p) => ({ ...p, [t.key]: v }))} />
+                    {(() => {
+                      const w = criteriaWarning(choice, t.criteria, criteria[t.key], observedDirectly);
+                      return w ? (
+                        <p role="status" className="rounded-lg bg-[#FBF1DC] px-3 py-2 text-sm text-[#6B4600]" data-testid={`criteria-warning-${t.key}`}>
+                          {reviewPage.criteriaWarnings[w]}
+                        </p>
+                      ) : null;
+                    })()}
                     <p className={`text-base font-bold ${choice === undefined || choice === "na" ? "text-[#8A3B0B]" : "text-accent"}`} data-testid={`result-${t.key}`}>
                       {choice === undefined ? reviewPage.notChosen : chosenText(formatScore(choice === "na" ? null : choice))}
                     </p>
@@ -183,7 +192,7 @@ export function ScoringPanel({
                     <p className="text-base font-bold text-accent" data-testid={`decided-${t.key}`}>
                       {reviewPage.decided(
                         show(decided),
-                        decided.validatorName ?? reviewPage.decidedBy[decided.validatorRole] ?? decided.validatorRole,
+                        decided.validatorName ?? reviewPage.decidedBy[decided.validatorRole] ?? fallbackLabels.role,
                         formatWhen(decided.at),
                       )}
                     </p>
@@ -196,7 +205,7 @@ export function ScoringPanel({
                             <li key={d.id} className="rounded-lg border border-line px-3 py-2" data-testid={`history-item-${t.key}`}>
                               <p>
                                 <b>{d.supersedesId ? reviewPage.historyModified : reviewPage.historyFirst}</b>: {show(d)} ·{" "}
-                                {d.validatorName ?? reviewPage.decidedBy[d.validatorRole]}, {formatWhen(d.at)} ·{" "}
+                                {d.validatorName ?? reviewPage.decidedBy[d.validatorRole] ?? fallbackLabels.role}, {formatWhen(d.at)} ·{" "}
                                 {d.current ? reviewPage.historyCurrent : reviewPage.historyReplaced}
                               </p>
                               {d.reason ? <p className="text-muted">{reviewPage.historyReason(d.reason)}</p> : null}

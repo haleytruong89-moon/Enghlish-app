@@ -37,7 +37,7 @@ export default async function NotesPage({ params }: { params: Promise<{ id: stri
         <h1 className="mt-2 text-2xl font-bold">{notesPage.title(learner.alias)}</h1>
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
         <p className="mt-4 text-muted">{canWrite ? notesPage.intro : notesPage.introParent}</p>
-        <LessonNotes learnerId={learner.id} notes={notes} targets={targets} canWrite={canWrite} today={today} minDate={addDays(today, -120)} />
+        <LessonNotes learnerId={learner.id} notes={notes} targets={targets} canWrite={canWrite} memberId={member.id} today={today} minDate={addDays(today, -120)} />
       </main>
     </>
   );

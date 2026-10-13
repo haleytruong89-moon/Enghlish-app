@@ -12,22 +12,26 @@ export function ModifyForm({
   testKey,
   currentScore,
   currentNotObserved,
+  initialOpen = false,
 }: {
   decisionId: string;
   skill: string;
   testKey: string;
   currentScore: number | null;
   currentNotObserved: boolean;
+  initialOpen?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [choice, setChoice] = useState<Choice | undefined>(undefined);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const clientId = useRef<string>(crypto.randomUUID());
 
-  const current: Choice = currentNotObserved ? "na" : ((currentScore ?? 0) as Choice);
+  // "No opportunity to show it" (NULL) is its own choice, never 0; and no button starts selected, so a change is always deliberate.
+  const isNull = currentNotObserved || currentScore === null;
+  const current: Choice = isNull ? "na" : (currentScore as Choice);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,7 +79,7 @@ export function ModifyForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-3 rounded-lg border border-line bg-white p-3" data-testid={`modify-form-${testKey}`}>
       <p className="text-sm">
-        {reviewPage.currentDecision(formatScore(currentNotObserved ? null : (currentScore as 0 | 1 | 2 | 3 | 4)))}
+        {reviewPage.currentDecision(formatScore(isNull ? null : (currentScore as 0 | 1 | 2 | 3 | 4)))}
       </p>
       <ScoreButtons label={skill} testKey={`${testKey}-new`} value={choice} onChange={setChoice} />
       <div className="flex flex-col gap-1">

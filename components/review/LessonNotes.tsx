@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { notesPage } from "@/lib/copy/vi";
+import { fallbackLabels, notesPage } from "@/lib/copy/vi";
 import { formatDateVi } from "@/lib/inquiries/format";
 import type { LessonNoteView } from "@/lib/review/types";
 import { LessonNoteForm } from "./LessonNoteForm";
@@ -12,6 +12,7 @@ export function LessonNotes({
   notes,
   targets,
   canWrite,
+  memberId,
   today,
   minDate,
 }: {
@@ -19,6 +20,8 @@ export function LessonNotes({
   notes: LessonNoteView[];
   targets: { id: string; title: string }[];
   canWrite: boolean;
+  /** The signed-in member: only the author of a note may edit it (the database also refuses anyone else). */
+  memberId: string;
   today: string;
   minDate: string;
 }) {
@@ -59,10 +62,10 @@ export function LessonNotes({
               ) : null}
               {n.practisedTargetIds.length > 0 ? (
                 <p className="mt-2 text-sm text-muted">
-                  {notesPage.practisedTitle}: {n.practisedTargetIds.map((k) => titleOf.get(k) ?? k).join("; ")}
+                  {notesPage.practisedTitle}: {n.practisedTargetIds.map((k) => titleOf.get(k) ?? fallbackLabels.skill).join("; ")}
                 </p>
               ) : null}
-              {canWrite ? (
+              {canWrite && n.tutorMemberId === memberId ? (
                 <button type="button" data-testid={`note-edit-${n.id}`} onClick={() => setEditing(n)} className="mt-2 min-h-11 rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent">
                   {notesPage.edit}
                 </button>

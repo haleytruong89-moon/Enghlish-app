@@ -166,6 +166,7 @@ test.describe.serial("S5 review", () => {
     await expect(page.getByTestId("work-text")).toContainText("gravity");
     await expect(page.getByTestId("read-only-note")).toContainText(reviewPage.readOnlyTutorOnly);
     await expect(page.getByTestId("scoring-panel").locator('[data-testid^="score-"]')).toHaveCount(0);
+    await expect(page.getByTestId("support-open")).toHaveCount(0); // a parent who cannot decide is not offered "add support" either
     await expect(page.getByTestId("save-review")).toHaveCount(0);
 
     await page.goto("/review?f=tutor");

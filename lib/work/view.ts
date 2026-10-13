@@ -1,4 +1,4 @@
-import { activityLabels, weekdayNames, work } from "@/lib/copy/vi";
+import { activityLabels, fallbackLabels, weekdayNames, work } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { isDoneInApp } from "./types";
 
@@ -25,7 +25,7 @@ export function unsupportedLabel(activityType: string): string {
 
 /** Row text for the checklist. */
 export function stepTitle(activityType: string): string {
-  return activityLabels[activityType] ?? activityType;
+  return activityLabels[activityType] ?? fallbackLabels.activity;
 }
 
 export function doableInApp(activityType: string, mode: string): boolean {

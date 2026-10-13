@@ -1,4 +1,4 @@
-import { skillNames, weekdayNames } from "@/lib/copy/vi";
+import { fallbackLabels, skillNames, weekdayNames } from "@/lib/copy/vi";
 
 const VN_OFFSET_MS = 7 * 3_600_000;
 
@@ -14,7 +14,7 @@ export function formatWhen(iso: string): string {
   return `${weekdayNames[d.getUTCDay()]} ${dd}/${mm}, ${hh}:${mi}`;
 }
 
-/** Skill name for staff: UX guide §3.4 when it has one, else the catalogue's Vietnamese title, else the code. */
+/** Skill name for staff: UX guide §3.4 when it has one, else the catalogue's Vietnamese title, else a neutral word (never the code). */
 export function skillLabel(key: string, titleVi: string | null): string {
-  return skillNames[key]?.staff ?? titleVi ?? key;
+  return skillNames[key]?.staff ?? titleVi ?? fallbackLabels.skill;
 }
