@@ -75,6 +75,9 @@ test.describe("An (thử): reading step, writing step, receipts", () => {
 
     const receipt = page.getByTestId("receipt");
     await expect(receipt).toBeVisible();
+    // the receipt stays on screen (no background refresh swaps the form away from under it)
+    await page.waitForLoadState("networkidle");
+    await expect(receipt).toBeVisible();
     await expect(receipt.getByRole("status")).toHaveText(/^Đã nộp lúc \d{2}:\d{2}$/);
     await expect(receipt).toContainText(messages.submitted);
     // no right / wrong / score anywhere on the screen or in the markup

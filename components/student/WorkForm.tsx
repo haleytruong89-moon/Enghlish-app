@@ -144,7 +144,8 @@ export function WorkForm({ activity }: { activity: SupportedActivityView }) {
       pending.current = null;
       setReceipt(json.receipt);
       setAttemptCount((n) => n + (json.receipt.replayed ? 0 : 1));
-      router.refresh();
+      // No router.refresh() here: for a one-time check the page would re-render without this form and the receipt would vanish
+      // a moment after it appeared. The home page is dynamic (fetched fresh on navigation); a retry refreshes in again().
     } catch {
       setProblem(work.submitError);
     } finally {
@@ -159,6 +160,7 @@ export function WorkForm({ activity }: { activity: SupportedActivityView }) {
     setReceipt(null);
     setProblem(null);
     setSaveState("idle");
+    router.refresh(); // bring the list of earlier attempts up to date for the next try
   }
 
   if (receipt) {
