@@ -209,7 +209,7 @@ export function WorkForm({ activity }: { activity: SupportedActivityView }) {
     >
       {last && attemptCount > 0 ? (
         <p role="status" className="rounded-xl bg-[#E3ECE8] px-3.5 py-3 text-sm leading-snug text-[#1F4439]" data-testid="already-submitted">
-          {work.alreadySubmitted(formatHm(last.submittedAt))} {work.mayRetry}
+          {last.provenance === "offline" ? work.doneOffline : work.alreadySubmitted(formatHm(last.submittedAt))} {work.mayRetry}
         </p>
       ) : null}
 

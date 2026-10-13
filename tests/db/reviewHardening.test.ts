@@ -176,6 +176,57 @@ describe("S5 hardening (Opus review)", () => {
   });
 
   // -------------------------------------------------------------------------------------------------------------
+  describe("a student reads only their own work, never what an adult recorded for them", () => {
+    it("direct SELECTs as the student return the in-app attempt and its text, but no tutor_live / manual_import row, text or author", async () => {
+      const aW2 = (await q1<{ id: string }>("select id from english.inquiry_instances where template_id = 'A-W2-WATERCYCLE'"))[0] as { id: string };
+      const write = await activity(aW2.id, 7); // attempt 1 in the app (the student), attempt 2 on paper (the tutor)
+      const asStudent = <R extends Record<string, unknown>>(sql: string, params: unknown[] = []) =>
+        as(db.client, "authenticated", s.users.studentAn, async (q) => (await q(sql, params)).rows as R[]);
+
+      expect(await q1("select attempt_no, provenance from english.attempts where activity_instance_id = $1 order by attempt_no", [write])).toEqual([
+        { attempt_no: 1, provenance: "in_app" }, { attempt_no: 2, provenance: "manual_import" },
+      ]);
+      const mine = await asStudent<{ attempt_no: number; provenance: string }>("select attempt_no, provenance from english.attempts where activity_instance_id = $1 order by attempt_no", [write]);
+      expect(mine).toEqual([{ attempt_no: 1, provenance: "in_app" }]);
+      const art = await asStudent<{ content: { text?: string }; created_by: string }>(
+        "select v.content, v.created_by from english.artifact_versions v join english.attempts t on t.id = v.attempt_id where t.activity_instance_id = $1", [write]);
+      expect(art).toHaveLength(1);
+      expect(art[0]?.content.text).toMatch(/Water rises/);
+
+      // across the whole child: nothing recorded by an adult is readable, by any route
+      expect(await asStudent("select 1 from english.attempts where provenance in ('tutor_live', 'manual_import')")).toEqual([]);
+      expect(await asStudent("select 1 from english.artifact_versions v where v.created_by in ($1, $2)", [M().tutorAn, M().parent])).toEqual([]);
+      expect(await asStudent("select 1 from english.artifact_versions v join english.attempts t on t.id = v.attempt_id where t.provenance <> 'in_app' and t.provenance <> 'pasted'")).toEqual([]);
+      expect(await asStudent("select 1 from english.artifact_versions where content::text like '%Paper rewrite%'")).toEqual([]);
+      expect(await asStudent("select 1 from english.assistance_events")).toEqual([]);
+      expect(await asStudent("select 1 from english.episodes")).toEqual([]);
+
+      // the adults still read everything
+      for (const uid of [s.users.tutorAn, s.users.parent]) {
+        const rows = await as(db.client, "authenticated", uid, async (q) => (await q("select provenance from english.attempts where activity_instance_id = $1", [write])).rows);
+        expect(rows).toHaveLength(2);
+      }
+      // the other child's student reads none of An's
+      expect(await as(db.client, "authenticated", s.users.studentNguyen, async (q) => (await q("select 1 from english.attempts")).rows)).toEqual([]);
+    });
+
+    it("the student's own screens show an offline record only as a neutral status: kind and time, no text, no author, no help", async () => {
+      const aW2 = (await q1<{ id: string }>("select id from english.inquiry_instances where template_id = 'A-W2-WATERCYCLE'"))[0] as { id: string };
+      const talk = await activity(aW2.id, 6); // only offline records (tutor_live)
+      const view = await rpcAs<{ attempts: Record<string, unknown>[] } | null>(s.users.studentAn, "select english.eng_my_activity($1) as r", [talk]);
+      // a speaking step is not an app step: the student gets a label and nothing else
+      expect(JSON.stringify(view)).not.toMatch(/Retold|tutor|created_by|assist|recorded/i);
+      const home = await rpcAs<{ inquiries: { instance_id: string; steps: { step_no: number; attempts: number }[] }[] }>(s.users.studentAn, "select english.eng_my_home() as r");
+      expect(home.inquiries.find((i) => i.instance_id === aW2.id)?.steps.find((st) => st.step_no === 6)?.attempts).toBe(3);
+
+      const write = await activity(aW2.id, 7);
+      const w = await rpcAs<{ attempts: Record<string, unknown>[] }>(s.users.studentAn, "select english.eng_my_activity($1) as r", [write]);
+      expect(w.attempts.map((a) => Object.keys(a).sort())).toEqual([["attempt_no", "provenance", "submitted_at"], ["attempt_no", "provenance", "submitted_at"]]);
+      expect(JSON.stringify(w)).not.toMatch(/Paper rewrite|recorded_by|created_by|declared|assist/i);
+    });
+  });
+
+  // -------------------------------------------------------------------------------------------------------------
   describe("the inbox is filtered and paged in SQL, so new work always shows up (more than 500 items)", () => {
     const BULK = 520;
     let practiceStep: string;

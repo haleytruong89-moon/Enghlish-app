@@ -1519,6 +1519,29 @@ create policy lesson_notes_select on english.lesson_notes
     and (english.eng_member_role() = 'tutor' or (published and english.eng_lesson_note_is_current(id)))
   );
 
+-- Học sinh KHÔNG đọc được bài do gia sư / phụ huynh ghi giúp (tutor_live, manual_import): chữ của người lớn ghi lại, hỗ trợ họ quan sát,
+-- người ghi. Học sinh chỉ thấy bài CỦA MÌNH (in_app, pasted) qua REST; bài ghi ngoài app chỉ hiện cho em như một trạng thái trung tính
+-- "đã làm cùng thầy/cô / trên giấy" (eng_my_home / eng_my_activity trả số lần và loại, không có chữ). Phụ huynh / gia sư đọc như cũ.
+-- (Thay chính sách của 0009; 0009 giữ nguyên.)
+drop policy if exists attempts_select on english.attempts;
+create policy attempts_select on english.attempts
+  for select to authenticated
+  using (
+    english.eng_can_read_learner(learner_id)
+    and (provenance in ('in_app', 'pasted') or english.eng_is_staff_of(learner_id))
+  );
+
+drop policy if exists artifact_versions_select on english.artifact_versions;
+create policy artifact_versions_select on english.artifact_versions
+  for select to authenticated
+  using (
+    english.eng_can_read_learner(learner_id)
+    and (
+      english.eng_is_staff_of(learner_id)
+      or exists (select 1 from english.attempts t where t.id = attempt_id and t.provenance in ('in_app', 'pasted'))
+    )
+  );
+
 -- Grant theo từng bảng (không dùng "on all tables") ------------------------------------------------------------------------------------
 grant select on english.observations, english.validation_decisions, english.lesson_notes to authenticated;
 

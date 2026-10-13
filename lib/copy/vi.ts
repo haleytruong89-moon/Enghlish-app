@@ -530,6 +530,8 @@ export const work = {
   submitConflict: "Bài này đã được nộp rồi. Bạn mở lại trang chủ để xem nhé.",
   submittedAt: (hhmm: string) => `Đã nộp lúc ${hhmm}`,
   alreadySubmitted: (hhmm: string) => `Bạn đã nộp bài này lúc ${hhmm}.`,
+  /** Bài do người lớn ghi giúp (làm cùng thầy/cô hoặc trên giấy): chỉ một dòng trạng thái, không có nội dung. */
+  doneOffline: `Bài này bạn đã làm cùng ${tutorHonorific} hoặc trên giấy, và đã được ghi lại rồi.`,
   mayRetry: "Bạn có thể làm lại để luyện thêm.",
   retry: "Làm lại",
   checkOnce: `Bài này chỉ làm một lần. ${tutorHonorificCap} sẽ xem và gửi góp ý cho bạn.`,

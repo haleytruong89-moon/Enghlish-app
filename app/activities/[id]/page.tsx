@@ -79,7 +79,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
         ) : (
           <section data-testid="already-submitted" className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-4">
             <p role="status" className="text-[15px] font-semibold text-accent">
-              {last ? work.alreadySubmitted(formatHm(last.submittedAt)) : ""}
+              {last ? (last.provenance === "offline" ? work.doneOffline : work.alreadySubmitted(formatHm(last.submittedAt))) : ""}
             </p>
             <p className="text-sm text-muted">{work.checkOnce}</p>
             <Link href="/" className="flex min-h-12 items-center self-start rounded-xl bg-accent px-5 text-base font-bold text-white">
