@@ -75,8 +75,8 @@ npm run doctor            # kiểm tra cài đặt cloud 1 lần: bảng ✓/✗
 
 ## Current status
 
-- Repo: `haleytruong89-moon/Enghlish-app` (private). S0 đã push, CI xanh. **S1 (cấu hình: track, danh mục, ngưỡng, bộ kỹ năng A-v1/B-v1, trang "Kỹ năng đang theo dõi") code xong trên nhánh `feature/s1-config`**, chờ review + phụ huynh áp `0005`, `0006` (xem `docs/PROGRESS.md`).
-- Chờ phụ huynh: Supabase (schema `english`, tắt sign-up, áp 0001–0006), Vercel, khóa sao lưu + GitHub Secrets (xem `docs/PROGRESS.md`).
-- Tiếp theo theo thứ tự ưu tiên để 2 em dùng sớm: **S2 → S4 → S5 (+ phần câu hỏi đọc/bài dạng đề của S3)**.
-- Seed cấu hình sinh tự động và **khóa phiên bản**: bản đã công bố (danh mục 0.2.1-draft, ngưỡng AP-0.2-pilot, bộ A-v1/B-v1) nằm trong `content/config.lock.json` — KHÔNG sửa nội dung của chúng (CI báo đỏ). Muốn đổi = thêm phiên bản mới (file mới, id mới như `B-v2`) rồi `npm run gen:config -- --new` để sinh migration kế tiếp (0007…); không sửa tay các migration seed.
+- Repo: `haleytruong89-moon/Enghlish-app` (private). S0 đã push, CI xanh. **S1 (cấu hình: track, danh mục, ngưỡng, bộ kỹ năng A-v1/B-v1, trang "Kỹ năng đang theo dõi") code xong trên nhánh `feature/s1-config`**, chờ review + phụ huynh áp `0005`, `0006` (xem `docs/PROGRESS.md`). **S2 (mẫu chủ đề + tài liệu + giao bài có snapshot, trang "Giao bài" cho phụ huynh/gia sư) code xong trên nhánh `feature/s2-inquiries`**, chờ review Opus + phụ huynh áp `0007`, `0008`; 4 mẫu Track B (B-W1…W4) còn nháp vì vi phạm luật danh mục, chờ phụ huynh quyết (xem `docs/PROGRESS.md`).
+- Chờ phụ huynh: Supabase (schema `english`, tắt sign-up, áp 0001–0008), Vercel, khóa sao lưu + GitHub Secrets (xem `docs/PROGRESS.md`).
+- Tiếp theo theo thứ tự ưu tiên để 2 em dùng sớm: **S4 → S5 (+ phần câu hỏi đọc/bài dạng đề của S3)**.
+- Seed cấu hình sinh tự động và **khóa phiên bản**: bản đã công bố (danh mục 0.2.1-draft, ngưỡng AP-0.2-pilot, bộ A-v1/B-v1) nằm trong `content/config.lock.json` — KHÔNG sửa nội dung của chúng (CI báo đỏ). Muốn đổi = thêm phiên bản mới (file mới, id mới như `B-v2`) rồi `npm run gen:config -- --new` để sinh migration kế tiếp (số kế tiếp, hiện là 0009…); không sửa tay các migration seed.
 - Pilot thủ công cả 2 em chạy song song từ 17–19/10/2026 (Pilot Kit A/B v0.2 trong hub).

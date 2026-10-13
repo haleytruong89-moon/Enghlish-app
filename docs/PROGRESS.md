@@ -148,3 +148,62 @@ Reviewer (Opus) soát S1, đã sửa xong các điểm sau (chưa áp DB thật 
 5. **E2E** `tests/e2e/targets.spec.ts`: phụ huynh mở trang của An và Nguyên (12 dòng + mục theo dõi thêm); gia sư chỉ vào được trang của em mình, trang em kia 404; học sinh không có link, gõ địa chỉ trang của mình hoặc của em kia đều 404.
 
 **Câu hỏi mở cho S7 (chưa quyết, cần phụ huynh/Opus):** mẫu số coverage đang tính theo **12 mã target** của bộ, nhưng target có kênh ra "any" sẽ giữ **một trạng thái cho mỗi kênh** (nói / viết). Khi tính "số kỹ năng đã Tự làm được / số đang theo dõi", một target "any" tính là 1 (khi cả hai kênh đạt? khi một kênh đạt?) hay là 2 ô? Cần quyết trước khi viết engine ở S7.
+
+---
+
+## S2 — Mẫu chủ đề, tài liệu, giao bài có "ảnh chụp" (14/10/2026)
+
+**Trạng thái:** code xong, test xanh (173 unit + 123 DB = 296; E2E 8 test mới trong CI). **Chờ phụ huynh** áp 2 file SQL mới (bên dưới) rồi mới thử trên preview. Nhánh `feature/s2-inquiries`, chưa mở PR (chờ review Opus).
+
+### Đã làm
+
+| Việc | Ở đâu |
+|---|---|
+| 10 mẫu chủ đề (A-W0…W4, B-W0…W4) chuyển từ bản nháp của Pilot Kit thành file có kiểm tra bằng zod; bản nháp gốc giữ nguyên ở `drafts/` (không seed) | `content/inquiries/*.json` |
+| Luật kiểm tra theo danh mục: mọi kỹ năng có thật và đúng track; loại hoạt động của bước phải nằm trong danh sách "bài được tính" của từng kỹ năng; câu đóng phải có đáp án; đáp án trắc nghiệm phải nằm trong phương án; id câu không trùng; bài đầu vào (baseline) mọi bước mang nhãn `baseline` | `lib/config/inquiries.ts`, `tests/unit/inquiries.test.ts` |
+| Bảng mới trong schema `english`: `sources`, `source_transcripts`, `inquiry_templates`, `template_item_keys`, `inquiry_instances`, `activity_instances`, `instance_item_keys`, `activity_instance_events`. RLS bật hết; grant theo từng bảng; không ai ghi được từ app trừ qua 2 hàm bên dưới | `db/migrations/0007_inquiries.sql` |
+| **Học sinh không đọc được đáp án, kể cả qua REST:** phần học sinh thấy (`steps`, `snapshot`) không có đáp án/lời giải/kịch bản gia sư (có CHECK ở DB chặn); đáp án, đáp án mẫu câu mở, kịch bản gia sư và lời thoại bài nghe nằm ở bảng riêng, chỉ phụ huynh/gia sư đọc được | `0007` |
+| Mẫu đã công bố thì **không sửa được** (cùng mẫu khóa phiên bản của S1). Đổi mẫu = version mới | trigger trong `0007` |
+| `english.eng_assign_inquiry`: giao bài trong **một transaction** — chụp ảnh (snapshot) mẫu, tạo từng bước, chụp khóa đáp án, ghi biên nhận; kiểm lại người giao (phụ huynh của gia đình hoặc gia sư còn quan hệ hiệu lực), đúng track, mẫu đã công bố; chạy lại cùng `client_request_id` không nhân đôi | `0007` |
+| `english.eng_activity_event`: đổi ngày / bỏ bước / làm lại bước — **bắt buộc có lý do** (≥ 3 ký tự); lịch hiệu lực = sự kiện mới nhất | `0007` |
+| Bài đã giao, từng bước, khóa đáp án chụp và sự kiện: chỉ thêm, không sửa/xóa; nằm trong đường xóa dữ liệu một em (`eng_purge_learner`, giữ nguyên mọi câu lệnh của bản `0005`, chỉ thêm — có test chứng minh) | `0007` |
+| Seed 6 mẫu đã công bố (A-W0…W4, B-W0) + tài liệu + khóa đáp án (file **sinh tự động**, vào khóa phiên bản như S1) | `db/migrations/0008_seed_inquiries_pilot_v1.sql`, `content/config.lock.json` |
+| `npm run db:seed-dev` giao A-W1 cho An (thử) và B-W0 cho Nguyên (thử); chạy lại không nhân đôi | `scripts/lib/seed.ts` |
+| 4 route cho phụ huynh/gia sư: `GET /api/learners/:id/templates`, `POST /api/learners/:id/inquiries`, `GET /api/learners/:id/inquiries`, `POST /api/activities/:id/events`. Ngoài phạm vi → 404, học sinh → 403, chưa đăng nhập → 401, body sai → 400. **Không route nào đọc được khóa đáp án** (có test quét mã nguồn) | `app/api/…`, `lib/inquiries/` |
+| Trang **"Giao bài"** (link trên thẻ từng em, cho phụ huynh và gia sư): "Bài có thể giao" (chọn hạn, mặc định ngày kết thúc tuần) và "Đã giao" (từng bước: loại việc, kiểu bài, ngày làm, "Đổi ngày"/"Bỏ bước"/"Làm lại bước" đều đòi lý do). Học sinh và người ngoài phạm vi → 404 | `app/learners/[id]/inquiries/` |
+
+### Giả định đã chọn (phụ huynh có thể đổi)
+
+- **O-F1 — video chỉ là liên kết** (mặc định của PRD §6.3): tài liệu video chỉ hiện thành link "Mở video ở trang ngoài", app **không** nhúng trình phát, không tải video lên. Nếu muốn khác, nói lại trước S3 (trang học sinh).
+- Mẫu chủ đề là **nội dung trong repo**, không soạn trên giao diện (Family Edition). Muốn mẫu mới/bản mới: thêm file trong `content/inquiries/`, `npm run gen:config -- --new`.
+- Nhãn tiếng Việt cho 8 loại việc (`activityLabels` trong `lib/copy/vi.ts`) do builder đặt cùng giọng với UX guide §3.3 vì guide chưa có — nhờ phụ huynh/Opus xem lại câu chữ.
+
+### Phụ huynh cần làm
+
+1. **Áp 2 file SQL, đúng thứ tự** (`npm run db:apply`, hoặc dán từng file vào SQL Editor và bấm Run; `0008` lớn ~170 KB nên dùng `db:apply` nếu SQL Editor chậm):
+   1. `db/migrations/0007_inquiries.sql`
+   2. `db/migrations/0008_seed_inquiries_pilot_v1.sql`
+2. **Kiểm tra:** `select version from english.schema_migrations order by 1;` → thêm `0007`, `0008`. `select id, version, status from english.inquiry_templates order by 1;` → **6 dòng** `published`.
+3. **Xem thử trên preview:** chạy lại `npm run db:seed-dev` (giao bài mẫu cho em THỬ). Đăng nhập phụ huynh thử → thẻ từng em có link "Giao bài" → trang có "Bài có thể giao" và "Đã giao". Thử giao một mẫu khác, rồi "Đổi ngày" (để trống lý do → báo lỗi, không lưu). Gia sư của An: chỉ mở được trang của An. Học sinh: không có link; gõ địa chỉ trang → "Không tìm thấy".
+4. **Giao bài cho em thật:** trang "Giao bài" của em đó (cần `ALLOW_REAL_LEARNERS=true`). Chọn mẫu, chọn hạn, bấm "Giao bài".
+
+### Quyết định đang chờ phụ huynh (B-W1…B-W4 chưa giao được)
+
+4 mẫu Track B giữ **nháp**, chưa seed, vì có bước vi phạm luật "loại hoạt động phải thuộc danh sách bài được tính của kỹ năng" trong danh mục v0.2.1. Builder **không đổi nội dung** (đây không phải lỗi gõ nhầm). Mỗi bước có `status: "needs_review"` + ghi chú trong file:
+
+| Mẫu | Bước | Vấn đề |
+|---|---|---|
+| B-W1-HOMEWORK | 8 | ACT-REVISE không được tính cho B-T7-ARGUE, B-T11-QUALIFY, B-L2-PRECISE |
+| B-W2-PHONES | 4 | ACT-SOURCE-QA không được tính cho B-T5-SOURCE |
+| B-W2-PHONES | 8 | như B-W1 bước 8 |
+| B-W3-TRANSPORT | 8 | như B-W1 bước 8 |
+| B-W4-AI-HOMEWORK | 7 | như B-W1 bước 8 |
+| B-W4-AI-HOMEWORK | 9 | ACT-SOURCE-QA không được tính cho B-T5-SOURCE |
+
+Cách gỡ (chọn một cho mỗi loại vấn đề): (a) đổi loại hoạt động của bước (vd bước sửa bài → loại được tính), (b) bỏ kỹ năng đó khỏi bước (bước vẫn làm nhưng không tính cho kỹ năng đó), hoặc (c) sửa danh mục (thêm phiên bản danh mục mới cho phép loại đó — việc lớn hơn). Sau khi quyết: sửa file, bỏ `status`/`review_note` ở bước, đổi mẫu thành `published`, `npm run gen:config -- --new` → `0009`. **Lưu ý thời gian:** B-W1 bắt đầu tuần của Nguyên; B-W0 (đầu vào) giao được ngay.
+
+### Ghi chú cho các lát sau
+
+- S3 (trang học sinh) đọc `inquiry_instances.snapshot` + `activity_instances` (học sinh đọc được đúng của mình); câu hỏi đóng tự chấm bằng `instance_item_keys` (kind `answer`) **ở server**, không bao giờ gửi khóa xuống trình duyệt học sinh.
+- Khóa kind `sealed` (đáp án mẫu câu mở) và `note` (kịch bản gia sư): S2 chỉ lưu. S5 phải chỉ cho gia sư xem `sealed` **sau** khi em đã làm.
+- Lịch hiệu lực của một bước = sự kiện mới nhất trong `activity_instance_events` (xếp theo `at`, `id`); bước "bỏ" vẫn còn trong lịch sử, không bị xóa.
