@@ -49,6 +49,8 @@ jwt_expiry = 3600
 enable_signup = false
 enable_anonymous_sign_ins = false
 
+# Email + password provider ON (that is how the family logs in). [auth] enable_signup = false
+# above is the global "Allow new users to sign up" switch.
 [auth.email]
-enable_signup = false
+enable_signup = true
 enable_confirmations = false
