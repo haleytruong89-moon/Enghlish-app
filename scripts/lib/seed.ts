@@ -141,3 +141,51 @@ export async function seedTestFamily(client: ClientBase, users: SeedUsers): Prom
     throw err;
   }
 }
+
+/**
+ * Inquiries handed to the TEST learners by the dev seed (S2). Fixed client_request_ids make it idempotent:
+ * running the seed again returns the same instances. Nguyên gets the baseline: it is the only Track B
+ * template published so far (the weekly ones wait for a content decision, see docs/PROGRESS.md).
+ */
+export const DEV_INQUIRIES = [
+  { learner: "an", template: "A-W1-VOLCANOES", version: 1, requestId: "seed-dev:A-W1-VOLCANOES:1" },
+  { learner: "nguyen", template: "B-W0-BASELINE", version: 1, requestId: "seed-dev:B-W0-BASELINE:1" },
+] as const;
+
+export type DevInquiryResult = { template: string; learner: string; instanceId: string | null; skipped?: string };
+
+/**
+ * Assign DEV_INQUIRIES to the test learners as the test parent. Skips (does not fail) when migrations
+ * 0007/0008 are not applied yet or a template is not published, so an older database can still be seeded.
+ */
+export async function assignDevInquiries(client: ClientBase, seeded: SeedResult): Promise<DevInquiryResult[]> {
+  const fn = await client.query<{ ok: boolean }>(
+    "select to_regprocedure('english.eng_assign_inquiry(uuid,text,integer,date,uuid,text)') is not null as ok",
+  );
+  const out: DevInquiryResult[] = [];
+  for (const d of DEV_INQUIRIES) {
+    if (!fn.rows[0]?.ok) {
+      out.push({ template: d.template, learner: d.learner, instanceId: null, skipped: "migration 0007 is not applied" });
+      continue;
+    }
+    const tpl = await client.query<{ due: string }>(
+      "select date_to::text as due from english.inquiry_templates where id = $1 and version = $2 and published_at is not null",
+      [d.template, d.version],
+    );
+    const due = tpl.rows[0]?.due;
+    if (!due) {
+      out.push({ template: d.template, learner: d.learner, instanceId: null, skipped: "template not published (apply 0008)" });
+      continue;
+    }
+    const res = await client.query<{ id: string }>("select english.eng_assign_inquiry($1, $2, $3, $4, $5, $6) as id", [
+      seeded.learners[d.learner],
+      d.template,
+      d.version,
+      due,
+      seeded.members.parent,
+      d.requestId,
+    ]);
+    out.push({ template: d.template, learner: d.learner, instanceId: (res.rows[0] as { id: string }).id });
+  }
+  return out;
+}

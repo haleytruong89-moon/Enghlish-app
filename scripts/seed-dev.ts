@@ -12,7 +12,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { Client } from "pg";
 import { pgConfigFromUrl, requireEnv } from "./lib/pg";
-import { SEED_ACCOUNTS, seedTestFamily, type SeedUsers } from "./lib/seed";
+import { assignDevInquiries, SEED_ACCOUNTS, seedTestFamily, type SeedUsers } from "./lib/seed";
 
 const domain = process.env.SEED_EMAIL_DOMAIN || "example.com";
 const emailFor = (local: string) => `eng-test-${local}@${domain}`;
@@ -84,6 +84,13 @@ async function main() {
     const users = mode === "stub" ? await stubUsers(db) : await supabaseUsers();
     const result = await seedTestFamily(db, users);
     console.log("Đã tạo gia đình THỬ:", result.familyId);
+    for (const r of await assignDevInquiries(db, result)) {
+      console.log(
+        r.instanceId
+          ? `  Đã giao ${r.template} cho em thử (${r.learner})`
+          : `  Chưa giao ${r.template} (${r.skipped ?? "bỏ qua"})`,
+      );
+    }
     for (const key of keys) {
       console.log(`  ${SEED_ACCOUNTS[key].role.padEnd(7)} ${emailFor(SEED_ACCOUNTS[key].emailLocal)}`);
     }

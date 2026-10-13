@@ -154,14 +154,22 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
 
   describe("templates and sources", () => {
     it("the generator SQL publishes template, sources, transcript and keys; running it again changes nothing", async () => {
-      expect(await count("select count(*)::int as n from english.inquiry_templates where published_at is not null")).toBe(2);
-      expect(await count("select count(*)::int as n from english.sources where published_at is not null")).toBe(4);
-      expect(await count("select count(*)::int as n from english.source_transcripts")).toBe(2);
-      // keys: 2 items + 1 note for A (step 2 has no script), same for B
-      expect(await count("select count(*)::int as n from english.template_item_keys where template_id = 'A-W9-TEST'")).toBe(3);
+      const mine = {
+        templates: "select count(*)::int as n from english.inquiry_templates where id like '%-W9-TEST' and published_at is not null",
+        sources: "select count(*)::int as n from english.sources where id like '%-W9-TEST-S_' and published_at is not null",
+        transcripts: "select count(*)::int as n from english.source_transcripts where source_id like '%-W9-TEST-S_'",
+        keys: "select count(*)::int as n from english.template_item_keys where template_id like '%-W9-TEST'",
+      };
+      const snapshot = async () => ({
+        templates: await count(mine.templates),
+        sources: await count(mine.sources),
+        transcripts: await count(mine.transcripts),
+        keys: await count(mine.keys),
+      });
+      // keys: 2 items + 1 tutor note per template (step 2 has no script)
+      expect(await snapshot()).toEqual({ templates: 2, sources: 4, transcripts: 2, keys: 6 });
       await db.client.query(seedSql(miniTemplate("A-W9-TEST"), miniTemplate("B-W9-TEST")));
-      expect(await count("select count(*)::int as n from english.template_item_keys")).toBe(6);
-      expect(await count("select count(*)::int as n from english.inquiry_templates")).toBe(2);
+      expect(await snapshot()).toEqual({ templates: 2, sources: 4, transcripts: 2, keys: 6 });
     });
 
     it("the stored template keeps exactly the student-safe steps; keys equal the content's keys", async () => {
