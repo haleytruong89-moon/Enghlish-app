@@ -114,24 +114,25 @@ describe("0008 seed: the pilot inquiry templates (S2)", () => {
     for (const r of rows) expect(r.purpose).toContain("baseline");
   });
 
-  it("students read the reading texts but never a transcript, an answer, an explanation or a tutor script", async () => {
-    const student = s.users.studentAn;
-    const visible = {
-      templates: await rowsAs(db.client, "authenticated", student, "select * from english.inquiry_templates"),
-      sources: await rowsAs(db.client, "authenticated", student, "select * from english.sources"),
-      instances: await rowsAs(db.client, "authenticated", student, "select * from english.inquiry_instances"),
-      activities: await rowsAs(db.client, "authenticated", student, "select * from english.activity_instances"),
-    };
-    expect(visible.templates).toHaveLength(6);
-    expect(visible.instances).toHaveLength(1);
-    const text = JSON.stringify(visible);
+  it("students read no template, source, key or transcript table; staff read the texts but a tutor only of their child's track", async () => {
+    for (const student of [s.users.studentAn, s.users.studentNguyen]) {
+      for (const table of ["inquiry_templates", "sources", "template_item_keys", "instance_item_keys", "source_transcripts"]) {
+        expect(await rowsAs(db.client, "authenticated", student, `select * from english.${table}`), `${table} / student`).toEqual([]);
+      }
+    }
+    // the parent (both tracks) reads everything: 6 templates, all their sources, keys and transcripts
+    const parent = s.users.parent;
+    expect(await rowsAs(db.client, "authenticated", parent, "select id from english.inquiry_templates")).toHaveLength(6);
+    expect((await rowsAs(db.client, "authenticated", parent, "select id from english.sources")).length).toBeGreaterThan(0);
+    for (const table of ["template_item_keys", "instance_item_keys", "source_transcripts"]) {
+      expect((await rowsAs(db.client, "authenticated", parent, `select * from english.${table}`)).length, table).toBeGreaterThan(0);
+    }
+    // what staff can read in the student-safe columns still holds no answer and no tutor script
+    const text = JSON.stringify({
+      templates: await rowsAs(db.client, "authenticated", parent, "select * from english.inquiry_templates"),
+      sources: await rowsAs(db.client, "authenticated", parent, "select * from english.sources"),
+    });
     for (const key of ['"answer":', '"explanation_vi"', '"prompt_vi"', '"transcript"', '"review_note"']) expect(text, key).not.toContain(key);
-
-    // positive control: the probe below does find text that IS readable (a reading passage)
-    const reading = published[1]?.data.sources.find((x) => x.modality === "text");
-    expect(text.includes(JSON.stringify(reading?.text ?? "").slice(1, 80))).toBe(true);
-
-    // every audio transcript and every tutor script of the content is absent from what the student can read
     for (const p of published) {
       for (const src of p.data.sources.filter((x) => x.modality === "audio")) {
         expect(text.includes(JSON.stringify(src.text).slice(1, 80)), `transcript of ${src.id}`).toBe(false);
@@ -140,10 +141,12 @@ describe("0008 seed: the pilot inquiry templates (S2)", () => {
         expect(text.includes(JSON.stringify(st.prompt_vi).slice(1, 60)), `${p.id}#${st.step_no} script`).toBe(false);
       }
     }
-    // and the key tables are empty for them, while they are full for the parent
-    for (const table of ["template_item_keys", "instance_item_keys", "source_transcripts"]) {
-      expect(await rowsAs(db.client, "authenticated", student, `select * from english.${table}`), table).toEqual([]);
-      expect((await rowsAs(db.client, "authenticated", s.users.parent, `select * from english.${table}`)).length, table).toBeGreaterThan(0);
-    }
+    // positive control: the parent does see a reading passage
+    const reading = published[1]?.data.sources.find((x) => x.modality === "text");
+    expect(text.includes(JSON.stringify(reading?.text ?? "").slice(1, 80))).toBe(true);
+    // Track A tutor: five Track A templates, none of Track B
+    const tutor = await rowsAs<{ id: string }>(db.client, "authenticated", s.users.tutorAn, "select id from english.inquiry_templates order by id");
+    expect(tutor.map((r) => r.id).every((id) => id.startsWith("A-"))).toBe(true);
+    expect(tutor).toHaveLength(5);
   });
 });

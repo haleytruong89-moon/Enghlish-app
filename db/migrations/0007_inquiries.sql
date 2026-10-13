@@ -65,8 +65,36 @@ as $$
 $$;
 revoke execute on function english.eng_actor_may_manage(uuid, uuid) from public, anon, authenticated;
 
+-- Phạm vi theo track: người gọi là phụ huynh (của gia đình) hoặc gia sư (quan hệ còn hiệu lực) của ÍT NHẤT MỘT
+-- learner thuộc track này. Dùng cho RLS của mẫu / nguồn / khóa đáp án của mẫu: gia sư của một em Track A không
+-- đọc được khóa, lời thoại hay bài đọc của mẫu Track B (và ngược lại); phụ huynh gia đình khác thì không đọc gì.
+-- Học sinh: không bao giờ.
+create or replace function english.eng_staff_has_track(p_track text) returns boolean
+language sql stable security definer set search_path = ''
+as $$
+  select exists (
+    select 1
+    from english.members m
+    join english.learners l on l.track_id = p_track
+    where m.user_id = auth.uid()
+      and (
+        (m.role = 'parent' and l.family_id = m.family_id)
+        or (m.role = 'tutor' and exists (
+          select 1 from english.relationships r
+          where r.member_id = m.id
+            and r.learner_id = l.id
+            and r.valid_from <= now()
+            and (r.valid_to is null or r.valid_to > now())))
+      )
+  )
+$$;
+
+revoke execute on function english.eng_staff_has_track(text) from public, anon;
+grant execute on function english.eng_staff_has_track(text) to authenticated, service_role;
+
 -- sources: bất biến theo (id, version) -------------------------------------------------------
--- body: chữ học sinh được đọc (bài đọc). Bài nghe: lời thoại nằm ở source_transcripts (chỉ phụ huynh/gia sư).
+-- body: bài đọc (chỉ phụ huynh/gia sư đọc được qua bảng này; học sinh nhận bài đọc ở S3 qua đường phát hành theo ngày).
+-- Bài nghe: lời thoại nằm ở source_transcripts (chỉ phụ huynh/gia sư).
 -- Video: chỉ là liên kết (O-F1 mặc định) — app không nhúng trình phát.
 create table if not exists english.sources (
   id text not null check (id ~ '^[A-Za-z0-9_.-]+$'),
@@ -746,6 +774,33 @@ $$;
 revoke execute on function english.eng_purge_learner(uuid, uuid) from public, anon, authenticated;
 grant execute on function english.eng_purge_learner(uuid, uuid) to service_role;
 
+-- Mẫu đã công bố, thuộc track nằm trong phạm vi của người gọi.
+create or replace function english.eng_staff_may_read_template(p_id text, p_version int) returns boolean
+language sql stable security definer set search_path = ''
+as $$
+  select exists (
+    select 1 from english.inquiry_templates t
+    where t.id = p_id and t.version = p_version
+      and t.published_at is not null
+      and english.eng_staff_has_track(t.track_id))
+$$;
+
+-- Nguồn được một mẫu đã công bố (track trong phạm vi) dùng đến. Nguồn không thuộc mẫu nào: không ai đọc.
+create or replace function english.eng_staff_may_read_source(p_id text, p_version int) returns boolean
+language sql stable security definer set search_path = ''
+as $$
+  select exists (
+    select 1 from english.inquiry_templates t
+    where t.published_at is not null
+      and t.sources @> pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object('id', p_id, 'version', p_version))
+      and english.eng_staff_has_track(t.track_id))
+$$;
+
+revoke execute on function english.eng_staff_may_read_template(text, int) from public, anon;
+revoke execute on function english.eng_staff_may_read_source(text, int) from public, anon;
+grant execute on function english.eng_staff_may_read_template(text, int) to authenticated, service_role;
+grant execute on function english.eng_staff_may_read_source(text, int) to authenticated, service_role;
+
 -- RLS ---------------------------------------------------------------------------------------------------
 alter table english.sources enable row level security;
 alter table english.source_transcripts enable row level security;
@@ -756,39 +811,28 @@ alter table english.activity_instances enable row level security;
 alter table english.instance_item_keys enable row level security;
 alter table english.activity_instance_events enable row level security;
 
--- Nội dung đã công bố: mọi thành viên app đọc được (phần học sinh được thấy).
+-- Mẫu, nguồn, lời thoại, khóa đáp án của mẫu: CHỈ phụ huynh / gia sư, và chỉ mẫu thuộc track của một em
+-- trong phạm vi của họ (eng_staff_has_track). Học sinh KHÔNG đọc mẫu: các bước của mẫu chứa câu hỏi của
+-- cả tuần, nên học sinh chỉ nhận bước đã đến ngày qua english.eng_my_released_steps (không đọc tắt được).
 drop policy if exists sources_select on english.sources;
 create policy sources_select on english.sources
   for select to authenticated
-  using (published_at is not null and english.eng_current_member_id() is not null);
+  using (published_at is not null and english.eng_staff_may_read_source(id, version));
 
 drop policy if exists inquiry_templates_select on english.inquiry_templates;
 create policy inquiry_templates_select on english.inquiry_templates
   for select to authenticated
-  using (published_at is not null and english.eng_current_member_id() is not null);
+  using (published_at is not null and english.eng_staff_has_track(track_id));
 
--- CHỈ phụ huynh / gia sư: lời thoại bài nghe, khóa đáp án của mẫu.
 drop policy if exists source_transcripts_select on english.source_transcripts;
 create policy source_transcripts_select on english.source_transcripts
   for select to authenticated
-  using (
-    english.eng_is_staff()
-    and exists (
-      select 1 from english.sources s
-      where s.id = source_transcripts.source_id and s.version = source_transcripts.source_version
-        and s.published_at is not null)
-  );
+  using (english.eng_staff_may_read_source(source_id, source_version));
 
 drop policy if exists template_item_keys_select on english.template_item_keys;
 create policy template_item_keys_select on english.template_item_keys
   for select to authenticated
-  using (
-    english.eng_is_staff()
-    and exists (
-      select 1 from english.inquiry_templates t
-      where t.id = template_item_keys.template_id and t.version = template_item_keys.template_version
-        and t.published_at is not null)
-  );
+  using (english.eng_staff_may_read_template(template_id, template_version));
 
 -- Bài đã giao: ai đọc được learner thì đọc được (học sinh: chỉ của mình).
 drop policy if exists inquiry_instances_select on english.inquiry_instances;

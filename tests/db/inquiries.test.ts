@@ -4,7 +4,7 @@ import { toKeyRows, toSafeSteps } from "../../lib/config/inquiries";
 import type { InquiryTemplate } from "../../lib/config/schemas";
 import { loadContentItems, type InquiryTemplateItem } from "../../lib/config/versions";
 import { buildSeedSql } from "../../scripts/lib/configSql";
-import { createTestDb, errorAs, migrate, rowsAs, seed, type Seeded, type TestDb } from "./helpers";
+import { createAuthUser, createTestDb, errorAs, migrate, rowsAs, seed, type Seeded, type TestDb } from "./helpers";
 
 const content = loadContentItems();
 const catalogueItem = content.catalogues[0];
@@ -595,13 +595,24 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
       expect(await rows("authenticated", s.users.studentAn, "select * from english.instance_item_keys where inquiry_instance_id = $1", [anInstance])).toEqual([]);
     });
 
-    it("what students may read has no answers: template steps, source texts, instance snapshots", async () => {
-      const t = await rows<{ steps: unknown; sources: unknown }>("authenticated", s.users.studentAn, "select steps, sources from english.inquiry_templates");
-      const src = await rows("authenticated", s.users.studentAn, "select * from english.sources");
-      const inst = await rows("authenticated", s.users.studentAn, "select snapshot from english.inquiry_instances");
-      const text = JSON.stringify({ t, src, inst });
+    it("what staff may read in the content tables has no answers; students read none of those tables", async () => {
+      const t = await rows<{ steps: unknown; sources: unknown }>("authenticated", s.users.parent, "select steps, sources from english.inquiry_templates");
+      const src = await rows("authenticated", s.users.parent, "select * from english.sources");
+      const text = JSON.stringify({ t, src });
       expect(t.length).toBeGreaterThan(0);
-      expect(text).toContain("SKY-TEXT"); // the reading text is meant to be readable
+      expect(text).toContain("SKY-TEXT"); // the reading text is staff-readable
+      for (const secret of ["SECRET-", '"answer":', "explanation_vi", "prompt_vi", "transcript"]) expect(text, secret).not.toContain(secret);
+      for (const student of [s.users.studentAn, s.users.studentNguyen]) {
+        for (const table of ["inquiry_templates", "sources"]) {
+          expect(await rows("authenticated", student, `select * from english.${table}`), `${table} / student`).toEqual([]);
+        }
+      }
+    });
+
+    it("the instance snapshot a student can read has no answers", async () => {
+      const inst = await rows("authenticated", s.users.studentAn, "select snapshot from english.inquiry_instances");
+      const text = JSON.stringify(inst);
+      expect(inst.length).toBeGreaterThan(0);
       for (const secret of ["SECRET-", '"answer":', "explanation_vi", "prompt_vi", "transcript"]) expect(text, secret).not.toContain(secret);
     });
 
@@ -626,10 +637,98 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
       expect(new Set(tutorAn.map((r) => r.inquiry_instance_id))).toEqual(new Set([anInstance]));
       const tutorNg = await rows<{ inquiry_instance_id: string }>("authenticated", s.users.tutorNguyen, "select inquiry_instance_id from english.instance_item_keys");
       expect(new Set(tutorNg.map((r) => r.inquiry_instance_id))).toEqual(new Set([nguyenInstance]));
-      const tplKeys = await rows("authenticated", s.users.tutorAn, "select item_id from english.template_item_keys");
+      const tplKeys = await rows<{ template_id: string }>("authenticated", s.users.tutorAn, "select template_id from english.template_item_keys");
       expect(tplKeys.length).toBeGreaterThan(0);
+      expect(tplKeys.every((k) => k.template_id.startsWith("A-"))).toBe(true); // Track A only
       const transcripts = await rows<{ transcript: string }>("authenticated", s.users.parent, "select transcript from english.source_transcripts");
       expect(transcripts.map((r) => r.transcript).join()).toContain("SECRET-TRANSCRIPT");
+    });
+
+    describe("templates, sources, transcripts and template keys follow track + family", () => {
+      const tables: Array<[string, string]> = [
+        ["inquiry_templates", "id"],
+        ["sources", "id"],
+        ["source_transcripts", "source_id"],
+        ["template_item_keys", "template_id"],
+      ];
+      const perTrack = async (user: string) => {
+        const out: Record<string, { A: number; B: number }> = {};
+        for (const [table, col] of tables) {
+          const r = await rows<{ track: string; n: number }>(
+            "authenticated",
+            user,
+            `select left(${col}, 1) as track, count(*)::int as n from english.${table} group by 1`,
+          );
+          const byTrack = new Map(r.map((x) => [x.track, x.n]));
+          out[table] = { A: byTrack.get("A") ?? 0, B: byTrack.get("B") ?? 0 };
+        }
+        return out;
+      };
+
+      it("An's tutor reads Track A content only, Nguyên's tutor Track B only; the parent of both reads both", async () => {
+        const tutorAn = await perTrack(s.users.tutorAn);
+        const tutorNg = await perTrack(s.users.tutorNguyen);
+        const parent = await perTrack(s.users.parent);
+        for (const [table] of tables) {
+          expect(tutorAn[table]?.A, `${table} / tutor An / A`).toBeGreaterThan(0);
+          expect(tutorAn[table]?.B, `${table} / tutor An / B`).toBe(0);
+          expect(tutorNg[table]?.B, `${table} / tutor Nguyên / B`).toBeGreaterThan(0);
+          expect(tutorNg[table]?.A, `${table} / tutor Nguyên / A`).toBe(0);
+          expect(parent[table]?.A, `${table} / parent / A`).toBeGreaterThan(0);
+          expect(parent[table]?.B, `${table} / parent / B`).toBeGreaterThan(0);
+        }
+        // the Track B answers are among the rows An's tutor cannot see (probe by a known secret)
+        expect(await rows("authenticated", s.users.tutorAn, "select 1 from english.template_item_keys where template_id = 'B-W9-TEST'")).toEqual([]);
+        expect((await rows("authenticated", s.users.tutorNguyen, "select 1 from english.template_item_keys where template_id = 'B-W9-TEST'")).length).toBeGreaterThan(0);
+        expect(await rows("authenticated", s.users.tutorAn, "select 1 from english.source_transcripts where transcript like '%SECRET-TRANSCRIPT%' and source_id like 'B-%'")).toEqual([]);
+        expect(await rows("authenticated", s.users.tutorAn, "select 1 from english.sources where id like 'B-%'")).toEqual([]);
+      });
+
+      /** Run `sql` as the parent of ANOTHER family (optionally with one Track B learner); rolled back. */
+      const asOtherFamily = async (withLearnerOfTrack: "A" | "B" | null, sql: string) => {
+        await db.client.query("begin");
+        try {
+          const user = await createAuthUser(db.client, `other-parent-${withLearnerOfTrack ?? "none"}@test.local`);
+          const fam = (await db.client.query<{ id: string }>("insert into english.families(name) values ('Other family') returning id")).rows[0]?.id;
+          await db.client.query("insert into english.members(user_id, family_id, role, display_name) values ($1, $2, 'parent', 'Other parent')", [user, fam]);
+          if (withLearnerOfTrack) {
+            await db.client.query("insert into english.learners(family_id, alias, track_id) values ($1, 'Other kid', $2)", [fam, withLearnerOfTrack]);
+          }
+          await db.client.query("set local role authenticated");
+          await db.client.query("select set_config('request.jwt.claim.sub', $1, true)", [user]);
+          return (await db.client.query(sql)).rows;
+        } finally {
+          await db.client.query("rollback");
+        }
+      };
+
+      it("the parent of another family reads nothing; with only a Track B learner, Track B content and no Track A", async () => {
+        for (const [table] of tables) {
+          expect(await asOtherFamily(null, `select * from english.${table}`), `${table} / no learner`).toEqual([]);
+        }
+        expect(await asOtherFamily(null, "select * from english.instance_item_keys")).toEqual([]);
+        for (const [table, col] of tables) {
+          expect(await asOtherFamily("B", `select 1 from english.${table} where ${col} like 'A-%'`), `${table} / B family sees A`).toEqual([]);
+          expect((await asOtherFamily("B", `select 1 from english.${table} where ${col} like 'B-%'`)).length, `${table} / B family sees B`).toBeGreaterThan(0);
+        }
+        // and never another family's instance keys
+        expect(await asOtherFamily("B", "select * from english.instance_item_keys")).toEqual([]);
+      });
+
+      it("a tutor whose relationship ended reads no template, source or key", async () => {
+        await db.client.query("begin");
+        try {
+          await db.client.query("update english.relationships set valid_from = now() - interval '10 days' where member_id = $1", [s.members.tutorAn]);
+          await db.client.query("update english.relationships set valid_to = now() - interval '1 day' where member_id = $1", [s.members.tutorAn]);
+          await db.client.query("set local role authenticated");
+          await db.client.query("select set_config('request.jwt.claim.sub', $1, true)", [s.users.tutorAn]);
+          for (const [table] of tables) {
+            expect((await db.client.query(`select * from english.${table}`)).rows, table).toEqual([]);
+          }
+        } finally {
+          await db.client.query("rollback");
+        }
+      });
     });
 
     it("a tutor whose relationship has ended reads no keys any more", async () => {
