@@ -80,6 +80,7 @@
 | 2 | Xóa dữ liệu một em có xóa luôn tài khoản đăng nhập | Trước pilot thật | Xóa dữ liệu app trước; tài khoản phụ huynh tự xóa trên Supabase |
 | 3 | O-F1 quy tắc video | Trước S2 | Chỉ link YouTube/nguồn mở, không tải video lên |
 | 4 | Ngày đề thử tuần 4 của Nguyên | Trước 14/11 | 21/11 |
+| 5 | **B-W1…B-W4 (4 mẫu Track B) còn nháp, chưa seed, chưa giao được** — vài bước vi phạm luật danh mục (bảng ở mục S2 "Quyết định đang chờ phụ huynh"). Cách gỡ: (a) đổi loại hoạt động của bước, (b) bỏ kỹ năng đó khỏi bước, hoặc (c) thêm phiên bản danh mục cho phép | **Trước 19/10** (B-W1 bắt đầu tuần của Nguyên; B-W0 đầu vào giao được ngay) | Phụ huynh chọn (a)/(b)/(c) cho từng loại vấn đề (sửa bài ACT-REVISE; đọc-hiểu nguồn cho B-T5-SOURCE). Builder không tự sửa nội dung |
 
 ## Nền vận hành (13/10/2026, đêm)
 
@@ -153,7 +154,7 @@ Reviewer (Opus) soát S1, đã sửa xong các điểm sau (chưa áp DB thật 
 
 ## S2 — Mẫu chủ đề, tài liệu, giao bài có "ảnh chụp" (14/10/2026)
 
-**Trạng thái:** code xong, test xanh (173 unit + 123 DB = 296; E2E 8 test mới trong CI). **Chờ phụ huynh** áp 2 file SQL mới (bên dưới) rồi mới thử trên preview. Nhánh `feature/s2-inquiries`, chưa mở PR (chờ review Opus).
+**Trạng thái:** code xong và đã sửa theo review Opus (14/10/2026), test xanh (185 unit + 141 DB = 326; E2E chạy trong CI). **Chờ phụ huynh** áp 2 file SQL mới (bên dưới) rồi mới thử trên preview. Nhánh `feature/s2-inquiries`, chưa mở PR.
 
 ### Đã làm
 
@@ -162,15 +163,32 @@ Reviewer (Opus) soát S1, đã sửa xong các điểm sau (chưa áp DB thật 
 | 10 mẫu chủ đề (A-W0…W4, B-W0…W4) chuyển từ bản nháp của Pilot Kit thành file có kiểm tra bằng zod; bản nháp gốc giữ nguyên ở `drafts/` (không seed) | `content/inquiries/*.json` |
 | Luật kiểm tra theo danh mục: mọi kỹ năng có thật và đúng track; loại hoạt động của bước phải nằm trong danh sách "bài được tính" của từng kỹ năng; câu đóng phải có đáp án; đáp án trắc nghiệm phải nằm trong phương án; id câu không trùng; bài đầu vào (baseline) mọi bước mang nhãn `baseline` | `lib/config/inquiries.ts`, `tests/unit/inquiries.test.ts` |
 | Bảng mới trong schema `english`: `sources`, `source_transcripts`, `inquiry_templates`, `template_item_keys`, `inquiry_instances`, `activity_instances`, `instance_item_keys`, `activity_instance_events`. RLS bật hết; grant theo từng bảng; không ai ghi được từ app trừ qua 2 hàm bên dưới | `db/migrations/0007_inquiries.sql` |
-| **Học sinh không đọc được đáp án, kể cả qua REST:** phần học sinh thấy (`steps`, `snapshot`) không có đáp án/lời giải/kịch bản gia sư (có CHECK ở DB chặn); đáp án, đáp án mẫu câu mở, kịch bản gia sư và lời thoại bài nghe nằm ở bảng riêng, chỉ phụ huynh/gia sư đọc được | `0007` |
+| **Học sinh không đọc được đáp án, kể cả qua REST:** `steps`/`snapshot` không chứa đáp án/lời giải/kịch bản gia sư (CHECK ở DB chặn); đáp án, đáp án mẫu câu mở, kịch bản gia sư và lời thoại bài nghe nằm ở bảng riêng, chỉ phụ huynh/gia sư đọc được. (Sau review: học sinh còn không đọc trực tiếp mẫu/snapshot nữa — xem "Sau review Opus".) | `0007` |
 | Mẫu đã công bố thì **không sửa được** (cùng mẫu khóa phiên bản của S1). Đổi mẫu = version mới | trigger trong `0007` |
 | `english.eng_assign_inquiry`: giao bài trong **một transaction** — chụp ảnh (snapshot) mẫu, tạo từng bước, chụp khóa đáp án, ghi biên nhận; kiểm lại người giao (phụ huynh của gia đình hoặc gia sư còn quan hệ hiệu lực), đúng track, mẫu đã công bố; chạy lại cùng `client_request_id` không nhân đôi | `0007` |
-| `english.eng_activity_event`: đổi ngày / bỏ bước / làm lại bước — **bắt buộc có lý do** (≥ 3 ký tự); lịch hiệu lực = sự kiện mới nhất | `0007` |
+| `english.eng_activity_event`: đổi ngày / bỏ bước / khôi phục bước — **bắt buộc có lý do** (≥ 3 ký tự); lịch hiệu lực = sự kiện mới nhất | `0007` |
 | Bài đã giao, từng bước, khóa đáp án chụp và sự kiện: chỉ thêm, không sửa/xóa; nằm trong đường xóa dữ liệu một em (`eng_purge_learner`, giữ nguyên mọi câu lệnh của bản `0005`, chỉ thêm — có test chứng minh) | `0007` |
 | Seed 6 mẫu đã công bố (A-W0…W4, B-W0) + tài liệu + khóa đáp án (file **sinh tự động**, vào khóa phiên bản như S1) | `db/migrations/0008_seed_inquiries_pilot_v1.sql`, `content/config.lock.json` |
 | `npm run db:seed-dev` giao A-W1 cho An (thử) và B-W0 cho Nguyên (thử); chạy lại không nhân đôi | `scripts/lib/seed.ts` |
 | 4 route cho phụ huynh/gia sư: `GET /api/learners/:id/templates`, `POST /api/learners/:id/inquiries`, `GET /api/learners/:id/inquiries`, `POST /api/activities/:id/events`. Ngoài phạm vi → 404, học sinh → 403, chưa đăng nhập → 401, body sai → 400. **Không route nào đọc được khóa đáp án** (có test quét mã nguồn) | `app/api/…`, `lib/inquiries/` |
-| Trang **"Giao bài"** (link trên thẻ từng em, cho phụ huynh và gia sư): "Bài có thể giao" (chọn hạn, mặc định ngày kết thúc tuần) và "Đã giao" (từng bước: loại việc, kiểu bài, ngày làm, "Đổi ngày"/"Bỏ bước"/"Làm lại bước" đều đòi lý do). Học sinh và người ngoài phạm vi → 404 | `app/learners/[id]/inquiries/` |
+| Trang **"Giao bài"** (link trên thẻ từng em, cho phụ huynh và gia sư): "Bài có thể giao" (chọn hạn, mặc định ngày kết thúc tuần) và "Đã giao" (từng bước: loại việc, kiểu bài, ngày làm, "Đổi ngày"/"Bỏ bước"/"Khôi phục bước" đều đòi lý do). Học sinh và người ngoài phạm vi → 404 | `app/learners/[id]/inquiries/` |
+
+### Sau review Opus (14/10/2026) — đã sửa
+
+`0007` được **sửa trực tiếp** (chưa áp ở đâu, chưa ai chạy). `0008` và `content/config.lock.json` **không đổi**: nội dung 6 mẫu và bộ sinh không đổi nên mã băm giữ nguyên, `npm run gen:config -- --check` xanh. (Nếu sau này phải đổi mẫu đã khóa mà `0008` vẫn chưa áp ở đâu, có thể sinh lại `0008` và băm lại 6 dòng khóa của mẫu — chỉ vì `0008` chưa từng được áp.)
+
+| # | Lỗi review | Đã sửa thế nào |
+|---|---|---|
+| 1 | **Học sinh đọc trước:** lời nhắc / gợi ý tự kiểm của bước sau có thể lộ đáp án bước trước (bài kiểm tra tự làm) | Học sinh **không còn SELECT được** `inquiry_templates`, `sources`, `inquiry_instances` (kể cả `snapshot`), `activity_instances`, `activity_instance_events` (RLS chỉ phụ huynh/gia sư). Đường đọc duy nhất: `english.eng_my_released_steps(p_instance)` — chỉ cho học sinh sở hữu bài; trả tiêu đề, câu hỏi lớn, hạn và **chỉ các bước đã đến ngày** (ngày hiệu lực sau đổi ngày ≤ hôm nay giờ Việt Nam, không tính bước đã bỏ). Bước chưa có ngày thì chưa mở cho đến khi được xếp ngày. Người khác gọi (học sinh khác, phụ huynh, gia sư, id lạ) nhận `null`; `anon` bị từ chối |
+| 2 | Khóa đáp án / lời thoại / bài đọc của mẫu chỉ kiểm "là nhân viên" | Chỉ đọc được khi người gọi là phụ huynh của gia đình, hoặc gia sư có quan hệ còn hiệu lực, của **ít nhất một em cùng track với mẫu** (`eng_staff_has_track`). Gia sư của An không đọc gì của Track B; phụ huynh gia đình khác không đọc gì |
+| 3 | Luật "loại hoạt động phải nằm trong danh sách bài được tính" hiểu sai các dòng của danh mục | Dòng dạng chuỗi `ACT-SOURCE-QA -> ACT-WRITE` tính theo hoạt động **cuối**; bỏ chú thích trong ngoặc (`ACT-CANVAS-ADV (evidence table)`); dòng `any activity tagged as transfer check` khớp mọi loại hoạt động nếu bước có `purpose: transfer_check`. Cùng luật ở TypeScript và SQL (`0007`). 6 mẫu đã công bố vẫn hợp lệ; 4 mẫu nháp vẫn vi phạm đúng như bảng bên dưới |
+| 4 | Giao muộn làm lệch lịch; hạn/ngày đổi không bị chặn | Khi giao, **mọi ngày kế hoạch dịch đi (hạn giao − ngày kết thúc của mẫu) ngày** (giữ lịch tương đối). Snapshot lưu cửa sổ ngày thực, kèm ngày gốc của mẫu và số ngày dịch. Hạn giao và ngày đổi phải nằm trong **[hôm nay − 7, hôm nay + 120]** (giờ Việt Nam) — kiểm ở SQL, zod, ô chọn ngày. Trang "Giao bài" gợi ý hạn = ngày kết thúc của mẫu, hoặc (nếu tuần của mẫu đã qua) một tuần cùng độ dài bắt đầu từ hôm nay |
+| 5 | Hai mẫu có thể trùng id tài liệu | `loadContentItems` báo lỗi nêu tên **cả hai mẫu** (bộ sinh và CI dừng); id lặp trong một mẫu cũng lỗi. Các phiên bản của cùng một mẫu được giữ id |
+| nit | Form giao bài | Mã yêu cầu (`client_request_id`) đổi mỗi khi đổi hạn và sau khi giao xong; giao xong thì hiện "Đã giao bài." và nút bị khóa cho tới khi đổi hạn |
+| nit | Chữ giao diện | "Làm lại bước" → **"Khôi phục bước"**; "cô" cứng trong nhãn → hằng số `tutorHonorific` ("thầy/cô") ở `lib/copy/vi.ts` (UX guide §2 chưa có cài đặt theo gia đình) |
+| nit | Snapshot | Thêm `descriptor_version` và `assessment_policy_version` (theo bộ kỹ năng hiện hành của em; nếu chưa có thì theo danh mục của mẫu) |
+
+Thêm test: học sinh chỉ thấy bước N từ đúng ngày của nó (kể cả sau đổi ngày / bỏ / khôi phục); không SELECT được snapshot; học sinh khác nhận gì; nhân viên không bị ảnh hưởng; gia sư/phụ huynh đúng track; chuỗi / hậu tố / "any transfer" ở cả TypeScript và SQL; dịch lịch; cửa sổ ngày ở SQL, zod; 4 yêu cầu giao **đồng thời** cùng `client_request_id` chỉ tạo 1 dòng. Test DB dùng ngày tương đối so với hôm nay nên không hỏng theo thời gian.
 
 ### Giả định đã chọn (phụ huynh có thể đổi)
 
@@ -189,7 +207,7 @@ Reviewer (Opus) soát S1, đã sửa xong các điểm sau (chưa áp DB thật 
 
 ### Quyết định đang chờ phụ huynh (B-W1…B-W4 chưa giao được)
 
-4 mẫu Track B giữ **nháp**, chưa seed, vì có bước vi phạm luật "loại hoạt động phải thuộc danh sách bài được tính của kỹ năng" trong danh mục v0.2.1. Builder **không đổi nội dung** (đây không phải lỗi gõ nhầm). Mỗi bước có `status: "needs_review"` + ghi chú trong file:
+4 mẫu Track B giữ **nháp**, chưa seed, vì có bước vi phạm luật "loại hoạt động phải thuộc danh sách bài được tính của kỹ năng" trong danh mục v0.2.1. Builder **không đổi nội dung** (đây không phải lỗi gõ nhầm). Mỗi bước có `status: "needs_review"` + ghi chú trong file. (Sau khi sửa cách đọc danh mục ở review #3, kiểm tra lại: **đúng các bước dưới đây vẫn vi phạm, không thêm không bớt**.)
 
 | Mẫu | Bước | Vấn đề |
 |---|---|---|
@@ -204,6 +222,6 @@ Cách gỡ (chọn một cho mỗi loại vấn đề): (a) đổi loại hoạt
 
 ### Ghi chú cho các lát sau
 
-- S3 (trang học sinh) đọc `inquiry_instances.snapshot` + `activity_instances` (học sinh đọc được đúng của mình); câu hỏi đóng tự chấm bằng `instance_item_keys` (kind `answer`) **ở server**, không bao giờ gửi khóa xuống trình duyệt học sinh.
-- Khóa kind `sealed` (đáp án mẫu câu mở) và `note` (kịch bản gia sư): S2 chỉ lưu. S5 phải chỉ cho gia sư xem `sealed` **sau** khi em đã làm.
+- **S3 (trang học sinh):** học sinh đọc bài **chỉ qua `english.eng_my_released_steps(instance_id)`** (không SELECT bảng). Còn thiếu cho S3: (a) hàm liệt kê bài của chính em (id + tiêu đề + hạn) — hiện học sinh chưa có cách biết `instance_id`; (b) đường phát bài đọc (`sources.body`) cho học sinh theo ngày bước tương ứng — bảng `sources` giờ chỉ nhân viên đọc được. Câu hỏi đóng tự chấm bằng `instance_item_keys` (kind `answer`) **ở server**, không bao giờ gửi khóa xuống trình duyệt học sinh.
+- Khóa kind `sealed` (đáp án mẫu câu mở) và `note` (kịch bản gia sư): S2 chỉ lưu. S5 phải chỉ cho gia sư xem `sealed` **sau** khi em đã làm. **Lưu ý (Kit FIXLIST #1):** việc "gia sư chưa được xem ý chính / đáp án mẫu *trước khi em nói*" mới được **thực thi ở giao diện từ S5**; ở S2 phụ huynh/gia sư có thể đọc `sealed` và `note` ngay qua bảng (RLS chỉ chặn học sinh và người ngoài track/gia đình).
 - Lịch hiệu lực của một bước = sự kiện mới nhất trong `activity_instance_events` (xếp theo `at`, `id`); bước "bỏ" vẫn còn trong lịch sử, không bị xóa.
