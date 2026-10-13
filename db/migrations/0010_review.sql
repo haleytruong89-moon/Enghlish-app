@@ -789,6 +789,7 @@ declare
   v_learner english.learners%rowtype;
   v_snapshot jsonb;
   v_assigned date;
+  v_last_date date;
   v_assist text[];
   v_content jsonb;
   v_hash text;
@@ -876,6 +877,16 @@ begin
   from english.inquiry_instances i where i.id = v_act.inquiry_instance_id;
   if p_session_date > english.eng_today_vn() or p_session_date < v_assigned - 1 then
     raise exception 'eng_record_offline_attempt: the date must be from the day before the inquiry was assigned until today' using errcode = '23514';
+  end if;
+  -- Ngày của buổi phải khớp với bước: bước đã mở vào ngày đó (ngày hiệu lực của bước <= ngày ghi) ...
+  if english.eng_step_effective_date(p_activity) > p_session_date then
+    raise exception 'eng_record_offline_attempt: the step was not open on that date (step_not_open_on_date)' using errcode = '23514';
+  end if;
+  -- ... và không được lùi trước lần làm gần nhất của chính bước này (kể cả bài em nộp trong app): thứ tự lần làm phải theo thời gian thật,
+  -- vì "≥ 14 ngày kể từ lần luyện gần nhất" và số lần dựa vào đó.
+  select (max(t.submitted_at) at time zone 'Asia/Ho_Chi_Minh')::date into v_last_date from english.attempts t where t.activity_instance_id = p_activity;
+  if v_last_date is not null and p_session_date < v_last_date then
+    raise exception 'eng_record_offline_attempt: the date is earlier than the last recorded attempt of this step (date_before_last_attempt)' using errcode = '23514';
   end if;
 
   select s.o_no, s.o_parent, s.o_family, s.o_first into v_no, v_parent, v_family, v_first

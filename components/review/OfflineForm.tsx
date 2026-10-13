@@ -74,7 +74,12 @@ export function OfflineForm({
         }),
       });
       if (res.status === 403) return setError(offlineForm.errorForbidden);
-      if (!res.ok) return setError(offlineForm.error);
+      if (!res.ok) {
+        const code = ((await res.json().catch(() => null)) as { error?: string } | null)?.error;
+        return setError(
+          code === "date_before_last_attempt" ? offlineForm.errorDateBeforeLast : code === "step_not_open_on_date" ? offlineForm.errorStepNotOpen : offlineForm.error,
+        );
+      }
       const body = (await res.json()) as { episode_id?: string };
       setEpisodeId(body.episode_id ?? null);
       clientId.current = crypto.randomUUID();

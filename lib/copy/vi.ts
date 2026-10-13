@@ -370,6 +370,8 @@ export const offlineForm = {
   openReview: "Mở bài để chấm",
   error: "Chưa ghi được. Bước này có thể chưa mở, đã làm xong (bài tự làm chỉ một lần) hoặc ngày chưa hợp lệ.",
   errorForbidden: `Chỉ ${tutorHonorific} ghi được bài do ${tutorHonorific} trực tiếp nghe hoặc xem.`,
+  errorDateBeforeLast: "Ngày này sớm hơn lần làm gần nhất của bước này. Bạn chọn ngày bằng hoặc sau ngày đó nhé.",
+  errorStepNotOpen: "Bước này chưa mở vào ngày bạn chọn. Bạn chọn ngày từ lúc bước mở nhé.",
   /** Shown to a parent instead of the form on a checkpoint step or a live-speaking step (D15, stricter for now). */
   tutorOnlyNote: `Chỉ ${tutorHonorific} ghi bài này.`,
 } as const;

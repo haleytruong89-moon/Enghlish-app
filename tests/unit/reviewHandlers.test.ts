@@ -322,6 +322,15 @@ describe("S5 handlers: writes", () => {
     const denied = await handleOffline(deps("parent", tutorOnly), AN, goodOffline);
     expect(denied.status).toBe(403);
     expect((denied.body as { error: string }).error).toBe("tutor_only");
+    // the two date rules get their own answers so the form can say what to change
+    for (const [token, code] of [["date_before_last_attempt", "date_before_last_attempt"], ["step_not_open_on_date", "step_not_open_on_date"]] as const) {
+      const st = makeStore({ recordOffline: vi.fn(async () => { throw new ReviewDbError("23514", `eng_record_offline_attempt: x (${token})`); }) });
+      const r = await handleOffline(deps("tutorAn", st), AN, goodOffline);
+      expect(r.status).toBe(400);
+      expect((r.body as { error: string }).error).toBe(code);
+    }
+    const other = makeStore({ recordOffline: vi.fn(async () => { throw new ReviewDbError("23514", "this step is not open"); }) });
+    expect(((await handleOffline(deps("tutorAn", other), AN, goodOffline)).body as { error: string }).error).toBe("invalid");
   });
 
   it("lesson note: at most 3 actions of 200 characters, levels from a fixed list, edits carry supersedes_id", async () => {

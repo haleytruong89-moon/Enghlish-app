@@ -123,6 +123,10 @@ function fromDbError(err: unknown): HandlerResult {
       case "23505":
         return fail(409, "conflict");
       case "23514":
+        // Two date rules of work recorded outside the app get their own answer so the form can say what to change.
+        if (/\(date_before_last_attempt\)/.test(err.detail)) return fail(400, "date_before_last_attempt");
+        if (/\(step_not_open_on_date\)/.test(err.detail)) return fail(400, "step_not_open_on_date");
+        return fail(400, "invalid");
       case "22023":
       case "22004":
       case "22P02":

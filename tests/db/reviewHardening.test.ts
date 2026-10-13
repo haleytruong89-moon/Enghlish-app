@@ -13,9 +13,15 @@ import { as, asCommit, createTestDb, migrate, seed, type Seeded, type TestDb } f
  * (The broad S5 behaviour is in review.test.ts; this file has its own database so it can add many rows.)
  */
 const TODAY = todayVn();
+const YESTERDAY = addDays(TODAY, -1);
 
 const template = (id: string): InquiryTemplate =>
   JSON.parse(readFileSync(path.join(CONTENT_DIR, "inquiries", `${id}.json`), "utf8")) as InquiryTemplate;
+function dueReleasing(id: string, stepNo: number): string {
+  const planned = template(id).steps[stepNo - 1]?.planned_date;
+  if (!planned) throw new Error("step has no planned date");
+  return addDays(TODAY, daysBetween(planned, template(id).dates.to));
+}
 function dueReleasingAll(id: string): string {
   const t = template(id);
   const last = t.steps.map((s) => s.planned_date ?? "").sort().at(-1) ?? "";
@@ -30,9 +36,9 @@ describe("S5 hardening (Opus review)", () => {
   const q1 = async <R extends Record<string, unknown>>(sql: string, params: unknown[] = []) => (await db.client.query<R>(sql, params)).rows;
   const count = async (sql: string, params: unknown[] = []) => ((await q1<{ n: number }>(sql, params))[0] as { n: number }).n;
   let seq = 0;
-  async function assign(who: "an" | "nguyen", templateId: string): Promise<string> {
+  async function assign(who: "an" | "nguyen", templateId: string, due = dueReleasingAll(templateId)): Promise<string> {
     const r = await q1<{ id: string }>("select english.eng_assign_inquiry($1, $2, 1, $3, $4, $5) as id", [
-      s.learners[who], templateId, dueReleasingAll(templateId), s.members.parent, `s5h-${(seq += 1)}-${templateId}`,
+      s.learners[who], templateId, due, s.members.parent, `s5h-${(seq += 1)}-${templateId}`,
     ]);
     return (r[0] as { id: string }).id;
   }
@@ -67,6 +73,12 @@ describe("S5 hardening (Opus review)", () => {
     } while (after);
     return { rows, pages, counts };
   }
+  type Receipt = { attempt_id: string; attempt_no: number };
+  const submitAs = (userId: string, activityId: string, content: unknown, assistance: string[] = ["none"]) =>
+    asCommit(db.client, "authenticated", userId, async (q) => {
+      const r = await q("select english.eng_submit_attempt($1, $2, $3::jsonb, $4::text[], 'in_app') as r", [activityId, randomUUID(), JSON.stringify(content), assistance]);
+      return (r.rows[0] as { r: Receipt }).r;
+    });
   const fail = async (p: Promise<unknown>, code: string, re?: RegExp) => {
     const err = await p.then(() => null, (e: unknown) => e as { code?: string; message?: string });
     expect(err, "expected an error").not.toBeNull();
@@ -130,6 +142,40 @@ describe("S5 hardening (Opus review)", () => {
   });
 
   // -------------------------------------------------------------------------------------------------------------
+  describe("a record made afterwards keeps the real order of the work", () => {
+    it("cannot be dated before the last attempt of the step - including the student's own submission today", async () => {
+      const aW2 = await assign("an", "A-W2-WATERCYCLE");
+      const write = await activity(aW2, 7); // ACT-WRITE practice, also doable in the app
+      await submitAs(s.users.studentAn, write, { text: "Water rises because the sun heats it." });
+      await fail(offline(M().tutorAn, write, "manual_import", "Paper rewrite", { date: YESTERDAY }), "23514", /date_before_last_attempt/);
+      expect(await count("select count(*)::int as n from english.attempts where activity_instance_id = $1", [write])).toBe(1);
+      const sameDay = await offline(M().tutorAn, write, "manual_import", "Paper rewrite", { date: TODAY });
+      expect(sameDay.attempt_no).toBe(2);
+    });
+
+    it("an earlier date is fine for the first record; the same day is fine again; going back after a later record is refused", async () => {
+      const aW2 = await q1<{ id: string }>("select id from english.inquiry_instances where template_id = 'A-W2-WATERCYCLE'");
+      const talk = await activity((aW2[0] as { id: string }).id, 6); // ACT-SPEAK-MONO practice, nothing recorded yet
+      const first = await offline(M().tutorAn, talk, "tutor_live", "Retold the water cycle", { date: YESTERDAY });
+      expect(first.attempt_no).toBe(1);
+      expect((await offline(M().tutorAn, talk, "tutor_live", "Retold it again", { date: YESTERDAY })).attempt_no).toBe(2);
+      expect((await offline(M().tutorAn, talk, "tutor_live", "Retold it a third time", { date: TODAY })).attempt_no).toBe(3);
+      await fail(offline(M().tutorAn, talk, "tutor_live", "Forgot to write this one down", { date: YESTERDAY }), "23514", /date_before_last_attempt/);
+      expect(await count("select count(*)::int as n from english.attempts where activity_instance_id = $1", [talk])).toBe(3);
+    });
+
+    it("the step must have been open on the date of the record, not only today", async () => {
+      const planned = template("A-W3-EARTHQUAKES").steps[6]?.planned_date; // step 7
+      expect(planned).toBeTruthy();
+      const aW3 = await assign("an", "A-W3-EARTHQUAKES", dueReleasing("A-W3-EARTHQUAKES", 7));
+      const step = await activity(aW3, 7); // ACT-WRITE practice that opens today
+      expect(await q1("select english.eng_step_effective_date($1)::text as d", [step])).toEqual([{ d: TODAY }]);
+      await fail(offline(M().tutorAn, step, "manual_import", "Paper work", { date: YESTERDAY }), "23514", /step_not_open_on_date/);
+      expect((await offline(M().tutorAn, step, "manual_import", "Paper work", { date: TODAY })).attempt_no).toBe(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------------------------------------------
   describe("the inbox is filtered and paged in SQL, so new work always shows up (more than 500 items)", () => {
     const BULK = 520;
     let practiceStep: string;
@@ -189,7 +235,7 @@ describe("S5 hardening (Opus review)", () => {
       );
       const todo = await inboxPage(s.users.tutorAn);
       expect(todo.counts.done).toBe(BULK);
-      expect(todo.items.length).toBeLessThan(10);
+      expect(todo.items.length).toBeLessThan(20);
       expect(todo.next).toBeNull();
       expect(todo.items.some((r) => r.category === "practice" && r.targets_decided === 0)).toBe(true);
       const done = await walk(s.users.tutorAn, "done", 100);
