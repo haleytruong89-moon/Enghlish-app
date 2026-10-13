@@ -67,7 +67,11 @@ test.describe("An (thử): reading step, writing step, receipts", () => {
     await page.getByRole("button", { name: work.submit, exact: true }).click();
     await expect(page.getByTestId("problem")).toHaveText(work.needHelp);
     await page.getByLabel(work.help.none).check();
-    await page.getByRole("button", { name: work.submit, exact: true }).click();
+    const [sent] = await Promise.all([
+      page.waitForResponse((r) => r.url().includes("/api/attempts") && r.request().method() === "POST"),
+      page.getByRole("button", { name: work.submit, exact: true }).click(),
+    ]);
+    expect(sent.status(), `POST /api/attempts answered: ${await sent.text()}`).toBe(201);
 
     const receipt = page.getByTestId("receipt");
     await expect(receipt).toBeVisible();
