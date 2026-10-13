@@ -47,6 +47,20 @@ as $$
     false)
 $$;
 
+-- Bước nào học sinh làm được trong app (S4): đọc/nghe + trả lời, viết; không phải sửa bài.
+create or replace function english.eng_step_supported(p_activity_type text, p_mode text) returns boolean
+language sql immutable set search_path = ''
+as $$
+  select p_activity_type in ('ACT-SOURCE-QA', 'ACT-WRITE') and p_mode <> 'REVISION'
+$$;
+
+-- Nhãn trung tính cho bước chưa làm trong app: khóa chữ (lib/copy/vi.ts), không phải nội dung bước.
+create or replace function english.eng_step_status_label(p_activity_type text, p_mode text) returns text
+language sql immutable set search_path = ''
+as $$
+  select case when p_activity_type = 'ACT-SPEAK-LIVE' then 'with_tutor' else 'on_paper' end
+$$;
+
 -- Chọn đáp án nào trong danh sách? Cùng luật với resolveMcqAnswer (lib/config/inquiries.ts): đúng nguyên văn lựa chọn
 -- (bỏ khoảng trắng đầu/cuối, không phân biệt hoa thường); hoặc một chữ cái — nhãn "b)" / "h." nếu MỌI lựa chọn đều có nhãn,
 -- không thì thứ tự chữ cái (D → lựa chọn thứ 4). Trả vị trí (từ 0) hoặc NULL.
@@ -267,6 +281,8 @@ $$;
 
 revoke execute on function english.eng_step_effective_date(uuid) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_activity_released(uuid) from public, anon, authenticated, service_role;
+revoke execute on function english.eng_step_supported(text, text) from public, anon, authenticated, service_role;
+revoke execute on function english.eng_step_status_label(text, text) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_resolve_option(jsonb, text) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_norm_answer(text) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_step_shape(jsonb) from public, anon, authenticated, service_role;
@@ -495,7 +511,7 @@ begin
   if not found or not english.eng_activity_released(p_activity) then
     raise exception 'eng_save_draft: activity not found' using errcode = 'P0002';
   end if;
-  if v_act.activity_type not in ('ACT-SOURCE-QA', 'ACT-WRITE') or v_act.mode = 'REVISION' then
+  if not english.eng_step_supported(v_act.activity_type, v_act.mode) then
     raise exception 'eng_save_draft: this step cannot be done in the app yet' using errcode = '22023';
   end if;
   if v_act.mode = 'INDEPENDENT_CHECK'
@@ -618,7 +634,7 @@ begin
   if not english.eng_activity_released(p_activity) then
     raise exception 'eng_submit_attempt: activity not found' using errcode = 'P0002';
   end if;
-  if v_act.activity_type not in ('ACT-SOURCE-QA', 'ACT-WRITE') or v_act.mode = 'REVISION' then
+  if not english.eng_step_supported(v_act.activity_type, v_act.mode) then
     raise exception 'eng_submit_attempt: this step cannot be done in the app yet' using errcode = '22023';
   end if;
 
@@ -780,6 +796,23 @@ begin
   if not found or not english.eng_activity_released(p_activity) then return null; end if;
 
   select * into v_inst from english.inquiry_instances i where i.id = v_act.inquiry_instance_id;
+
+  -- Bước app chưa làm được (nói với thầy/cô, vẽ, tự xem lại, sửa bài…): chỉ trả mã bước + nhãn trung tính. KHÔNG trả đề, câu hỏi,
+  -- gợi ý tự kiểm, lần nộp hay nháp — học sinh không nhận gì của bước đó qua app.
+  if not english.eng_step_supported(v_act.activity_type, v_act.mode) then
+    return pg_catalog.jsonb_build_object(
+      'activity_id', v_act.id,
+      'instance_id', v_inst.id,
+      'step_no', v_act.step_no,
+      'activity_type', v_act.activity_type,
+      'mode', v_act.mode,
+      'supported', false,
+      'can_submit', false,
+      'date', english.eng_step_effective_date(v_act.id),
+      'title_vi', v_inst.snapshot -> 'template' ->> 'title_vi',
+      'status_label_key', english.eng_step_status_label(v_act.activity_type, v_act.mode));
+  end if;
+
   select x into v_step
   from pg_catalog.jsonb_array_elements(v_inst.snapshot -> 'steps') as x
   where (x ->> 'step_no')::int = v_act.step_no;
@@ -808,9 +841,8 @@ begin
     'big_question_en', v_inst.snapshot -> 'template' ->> 'big_question_en',
     'big_question_vi', v_inst.snapshot -> 'template' ->> 'big_question_vi',
     'shape', english.eng_step_shape(v_step),
-    'supported', v_act.activity_type in ('ACT-SOURCE-QA', 'ACT-WRITE') and v_act.mode <> 'REVISION',
-    'can_submit', v_act.activity_type in ('ACT-SOURCE-QA', 'ACT-WRITE') and v_act.mode <> 'REVISION'
-                  and (v_act.mode = 'PRACTICE' or v_count = 0),
+    'supported', true,
+    'can_submit', v_act.mode = 'PRACTICE' or v_count = 0,
     'step', pg_catalog.jsonb_build_object(
       'prompt_en', v_step ->> 'prompt_en',
       'time_min', (v_step ->> 'time_min')::int,
@@ -845,6 +877,16 @@ begin
   where a.id = p_activity and l.member_id = v_member;
   if not found or not english.eng_activity_released(p_activity) then return null; end if;
 
+  -- Bước app chưa làm được: không phát nguồn nào, chỉ mã bước + nhãn trung tính (cùng nội dung với eng_my_activity).
+  if not english.eng_step_supported(v_act.activity_type, v_act.mode) then
+    return pg_catalog.jsonb_build_object(
+      'activity_id', v_act.id,
+      'activity_type', v_act.activity_type,
+      'mode', v_act.mode,
+      'supported', false,
+      'status_label_key', english.eng_step_status_label(v_act.activity_type, v_act.mode));
+  end if;
+
   select * into v_inst from english.inquiry_instances i where i.id = v_act.inquiry_instance_id;
 
   return (
@@ -867,6 +909,72 @@ begin
             pg_catalog.jsonb_build_object('id', ss.source_id, 'version', ss.source_version)));
 end
 $$;
+
+-- Đường đọc cũ của S2 (0007) trả NGUYÊN bước trong snapshot — kể cả mã kỹ năng (target_ids, target_id của câu hỏi) và mục đích bước
+-- (purpose: baseline / checkpoint…) — và cho cả bước app chưa làm được. Học sinh không được thấy những thứ đó (kể cả khi gọi thẳng RPC).
+-- Thay bằng bản chỉ trả: phần đầu bài + các bước ĐÃ MỞ, mỗi bước chỉ có mã bước, loại, chế độ, ngày hiệu lực, cờ "supported"; riêng bước
+-- app làm được (đọc/nghe + trả lời, viết) mới kèm đề (prompt_en, thời lượng, gợi ý tự kiểm, câu hỏi: id/loại/đề/lựa chọn — không đáp án,
+-- không mã kỹ năng, không mục đích). Bước chưa làm được trong app: không có đề, câu hỏi hay gợi ý nào, chỉ nhãn trung tính.
+-- Phụ huynh / gia sư không dùng hàm này (họ đọc thẳng snapshot, RLS theo learner) nên không mất gì.
+create or replace function english.eng_my_released_steps(p_instance uuid) returns jsonb
+language sql stable security definer set search_path = ''
+as $$
+  with me as (
+    select m.id from english.members m where m.user_id = auth.uid() and m.role = 'student'
+  ),
+  inst as (
+    select i.id, i.snapshot, i.due_on
+    from english.inquiry_instances i
+    join english.learners l on l.id = i.learner_id
+    join me on l.member_id = me.id
+    where i.id = p_instance
+  ),
+  released as (
+    select a.id as activity_id, a.step_no, a.activity_type, a.mode,
+           english.eng_step_effective_date(a.id) as eff_date,
+           english.eng_step_supported(a.activity_type, a.mode) as supported
+    from english.activity_instances a
+    join inst on a.inquiry_instance_id = inst.id
+    where english.eng_activity_released(a.id)
+  )
+  select pg_catalog.jsonb_build_object(
+    'instance_id', inst.id,
+    'title_vi', inst.snapshot -> 'template' ->> 'title_vi',
+    'big_question_en', inst.snapshot -> 'template' ->> 'big_question_en',
+    'big_question_vi', inst.snapshot -> 'template' ->> 'big_question_vi',
+    'due_on', inst.due_on,
+    'steps', coalesce((
+      select pg_catalog.jsonb_agg(
+        pg_catalog.jsonb_build_object(
+          'activity_id', r.activity_id,
+          'step_no', r.step_no,
+          'activity_type', r.activity_type,
+          'mode', r.mode,
+          'planned_date', r.eff_date,
+          'supported', r.supported)
+        || case
+             when r.supported then (
+               select pg_catalog.jsonb_build_object(
+                 'prompt_en', st.x ->> 'prompt_en',
+                 'time_min', (st.x ->> 'time_min')::int,
+                 'self_check_vi', coalesce(st.x -> 'self_check_vi', '[]'::jsonb),
+                 'items', (select coalesce(pg_catalog.jsonb_agg(
+                             pg_catalog.jsonb_build_object(
+                               'id', it ->> 'id', 'kind', it ->> 'kind', 'stem', it ->> 'stem',
+                               'options', coalesce(it -> 'options', '[]'::jsonb))
+                             order by o), '[]'::jsonb)
+                           from pg_catalog.jsonb_array_elements(coalesce(st.x -> 'items', '[]'::jsonb)) with ordinality as t(it, o)))
+               from (select x from pg_catalog.jsonb_array_elements(inst.snapshot -> 'steps') as x
+                     where (x ->> 'step_no')::int = r.step_no) st)
+             else pg_catalog.jsonb_build_object('status_label_key', english.eng_step_status_label(r.activity_type, r.mode))
+           end
+        order by r.step_no)
+      from released r
+    ), '[]'::jsonb))
+  from inst
+$$;
+revoke execute on function english.eng_my_released_steps(uuid) from public, anon;
+grant execute on function english.eng_my_released_steps(uuid) to authenticated;
 
 -- Quyền thực thi: CHỈ authenticated (người gọi được nhận diện bằng auth.uid() bên trong hàm); không anon, không public.
 revoke execute on function english.eng_save_draft(uuid, jsonb, int) from public, anon, service_role;

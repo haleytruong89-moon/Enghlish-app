@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { messages, work } from "@/lib/copy/vi";
-import { ASSISTANCE_VALUES, type ActivityView, type Assistance, type DraftContent, type ItemView, type Receipt } from "@/lib/work/types";
+import { ASSISTANCE_VALUES, type SupportedActivityView, type Assistance, type DraftContent, type ItemView, type Receipt } from "@/lib/work/types";
 import { formatHm, nonEmptyAnswers, wordsOf } from "@/lib/work/view";
 
 const AUTOSAVE_MS = 5000;
@@ -19,7 +19,7 @@ const isChoice = (it: ItemView) => it.options.length > 0 && ["mcq", "gap", "word
  * answer never creates a second attempt) and changed content gets a new id. The reply is a receipt: nothing here ever
  * shows whether an answer was right.
  */
-export function WorkForm({ activity }: { activity: ActivityView }) {
+export function WorkForm({ activity }: { activity: SupportedActivityView }) {
   const router = useRouter();
   const { shape, step, draft } = activity;
   const initial: DraftContent = draft?.content ?? {};

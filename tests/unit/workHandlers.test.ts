@@ -194,6 +194,50 @@ describe("S4 route handlers: reads", () => {
     });
   });
 
+  it("a step the app cannot do yet: only the neutral status goes out, sources are not even requested, extra keys are stripped", async () => {
+    const s = makeStore({
+      getActivity: vi.fn(async () => ({
+        supported: false,
+        activity_id: ACT_AN,
+        instance_id: "44444444-4444-4444-8444-444444444444",
+        step_no: 1,
+        activity_type: "ACT-SPEAK-LIVE",
+        mode: "INDEPENDENT_CHECK",
+        date: "2026-10-14",
+        title_vi: "Núi lửa",
+        status_label_key: "with_tutor",
+        // things that must never come through even if the database sent them
+        big_question_en: "Why do volcanoes erupt?",
+        step: { prompt_en: "SECRET PROMPT", items: [{ id: "q1", kind: "mcq", stem: "SECRET STEM", options: ["a"] }], self_check_vi: ["SECRET CHECK"] },
+        sources: rpcSources,
+        purpose: ["baseline"],
+        attempts: [{ attempt_no: 1 }],
+      })),
+    });
+    const r = await handleStudentActivity(deps("studentAn", s), ACT_AN);
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({
+      activity: {
+        supported: false,
+        activityId: ACT_AN,
+        instanceId: "44444444-4444-4444-8444-444444444444",
+        stepNo: 1,
+        activityType: "ACT-SPEAK-LIVE",
+        mode: "INDEPENDENT_CHECK",
+        date: "2026-10-14",
+        titleVi: "Núi lửa",
+        statusLabelKey: "with_tutor",
+      },
+    });
+    expect(JSON.stringify(r.body)).not.toMatch(/SECRET|Magma|baseline|Why do/);
+    expect(s.getSources).not.toHaveBeenCalled();
+  });
+
+  it("an unknown status label key is an error, never a guess", async () => {
+    const bad = { supported: false, activity_id: ACT_AN, instance_id: "i", step_no: 1, activity_type: "ACT-SPEAK-LIVE", mode: "PRACTICE", date: "2026-10-14", title_vi: "x", status_label_key: "secret" };
+    await expect(handleStudentActivity(deps("studentAn", makeStore({ getActivity: vi.fn(async () => bad) })), ACT_AN)).rejects.toThrow();
+  });
+
   it("an unreleased step looks exactly like a missing one (404)", async () => {
     const s = makeStore({ getActivity: vi.fn(async () => null) });
     expect((await handleStudentActivity(deps("studentAn", s), ACT_AN)).status).toBe(404);

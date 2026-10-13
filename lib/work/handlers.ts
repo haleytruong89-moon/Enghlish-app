@@ -123,7 +123,9 @@ export async function handleStudentActivity(deps: HandlerDeps, activityId: strin
   if (!g.ok) return g.result;
   const raw = await deps.store.getActivity(activityId);
   if (!raw) return fail(404, "not_found"); // not released yet: indistinguishable from "does not exist"
-  const sources = await deps.store.getSources(activityId);
+  // A step the app cannot do yet gets a neutral status only: its sources are not even requested.
+  const supported = !!raw && typeof raw === "object" && (raw as { supported?: unknown }).supported === true;
+  const sources = supported ? await deps.store.getSources(activityId) : null;
   return { status: 200, body: { activity: toActivityView(raw, sources) } };
 }
 

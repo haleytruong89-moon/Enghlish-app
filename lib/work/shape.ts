@@ -65,7 +65,8 @@ const draftContent = z.object({
   assistance: z.array(z.enum(ASSISTANCE_VALUES)).optional(),
 });
 
-const activitySchema = z.object({
+const supportedActivitySchema = z.object({
+  supported: z.literal(true),
   activity_id: z.string(),
   instance_id: z.string(),
   step_no: z.number().int(),
@@ -77,7 +78,6 @@ const activitySchema = z.object({
   big_question_en: text,
   big_question_vi: text,
   shape: z.enum(["text", "answers"]),
-  supported: z.boolean(),
   can_submit: z.boolean(),
   step: z.object({
     prompt_en: text,
@@ -100,6 +100,22 @@ const activitySchema = z.object({
     .transform((v) => v ?? null),
 });
 
+// An unsupported step is parsed with a schema that has NO place for a prompt, items or sources: even if the database
+// ever returned them they would be stripped here.
+const unsupportedActivitySchema = z.object({
+  supported: z.literal(false),
+  activity_id: z.string(),
+  instance_id: z.string(),
+  step_no: z.number().int(),
+  activity_type: text,
+  mode,
+  date: text,
+  title_vi: text,
+  status_label_key: z.enum(["with_tutor", "on_paper"]),
+});
+
+const activitySchema = z.discriminatedUnion("supported", [supportedActivitySchema, unsupportedActivitySchema]);
+
 const sourcesSchema = z.array(
   z.object({
     id: text,
@@ -113,7 +129,9 @@ const sourcesSchema = z.array(
 );
 
 export function toSourceViews(raw: unknown): SourceView[] {
-  return sourcesSchema.parse(raw ?? []).map((s) => ({
+  // A step that is not supported in the app gets an object (status label only) from the database, never sources.
+  if (!Array.isArray(raw)) return [];
+  return sourcesSchema.parse(raw).map((s) => ({
     id: s.id,
     title: s.title,
     author: s.author,
@@ -127,7 +145,21 @@ export function toSourceViews(raw: unknown): SourceView[] {
 
 export function toActivityView(rawActivity: unknown, rawSources: unknown): ActivityView {
   const a = activitySchema.parse(rawActivity);
+  if (!a.supported) {
+    return {
+      supported: false,
+      activityId: a.activity_id,
+      instanceId: a.instance_id,
+      stepNo: a.step_no,
+      activityType: a.activity_type,
+      mode: a.mode,
+      date: a.date,
+      titleVi: a.title_vi,
+      statusLabelKey: a.status_label_key,
+    };
+  }
   return {
+    supported: true,
     activityId: a.activity_id,
     instanceId: a.instance_id,
     stepNo: a.step_no,
@@ -139,7 +171,6 @@ export function toActivityView(rawActivity: unknown, rawSources: unknown): Activ
     bigQuestionEn: a.big_question_en,
     bigQuestionVi: a.big_question_vi,
     shape: a.shape,
-    supported: a.supported,
     canSubmit: a.can_submit,
     step: {
       promptEn: a.step.prompt_en,

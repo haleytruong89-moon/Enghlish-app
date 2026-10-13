@@ -177,6 +177,13 @@ test.describe("An (thử): reading step, writing step, receipts", () => {
     await page.goto(`/activities/${step4.activityId}`);
     await expect(page.getByTestId("not-in-app")).toHaveText(work.noAppYet);
     await expect(page.getByRole("button", { name: work.submit })).toHaveCount(0);
+    // only the neutral label: no prompt, questions, sources or self-check on the page or in the API
+    await expect(page.getByTestId("source-text")).toHaveCount(0);
+    await expect(page.getByTestId("mode-banner")).toHaveCount(0);
+    const raw = await (await page.request.get(`/api/student/activities/${step4.activityId}`)).text();
+    expect(JSON.parse(raw).activity).toMatchObject({ supported: false, statusLabelKey: "on_paper", activityType: "ACT-CANVAS-BASIC" });
+    for (const k of ["promptEn", "prompt_en", "items", "selfCheck", "sources", "bigQuestion", "attempts", "draft", "purpose"]) expect(raw, k).not.toContain(k);
+    expectNoResults(raw);
     const res = await page.request.post("/api/attempts", {
       data: { activity_id: step4.activityId, client_submission_id: "aeaeaeae-aeae-4eae-8eae-aeaeaeaeaeae", content: { text: "x" }, assistance: ["none"], provenance: "in_app" },
     });
@@ -200,6 +207,10 @@ test.describe("Nguyên (thử)", () => {
     const live = (await homeSteps(page, NGUYEN_TITLE)).get(6)!;
     await page.goto(`/activities/${live.activityId}`);
     await expect(page.getByTestId("not-in-app")).toHaveText(work.withTutor);
+    // the baseline reading turned over (live speaking) hands over no text through the API either
+    const raw = await (await page.request.get(`/api/student/activities/${live.activityId}`)).text();
+    expect(JSON.parse(raw).activity).toMatchObject({ supported: false, statusLabelKey: "with_tutor" });
+    for (const k of ["promptEn", "items", "selfCheck", "sources", "text"]) expect(raw, k).not.toContain(k);
   });
 });
 

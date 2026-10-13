@@ -71,6 +71,20 @@ describe("0009_student_work.sql", () => {
     expect(sql).not.toMatch(/grant execute on function [^;]* to (anon|public)\b/i);
   });
 
+  it("replaces eng_my_released_steps (0007) with a version that names no skill code, purpose or answer, and keeps its grants", () => {
+    const start = sql.indexOf("create or replace function english.eng_my_released_steps(");
+    expect(start).toBeGreaterThan(0);
+    const end = sql.indexOf("\n$$;", start);
+    const body = sql.slice(start, end);
+    expect(body).toMatch(/security definer set search_path = ''/);
+    for (const bad of ["target_id", "'purpose'", "a.purpose", "answer", "explanation", "prompt_vi", "review_note", "transcript"]) {
+      expect(body, bad).not.toContain(bad);
+    }
+    expect(body).toContain("eng_step_supported");
+    expect(sql).toContain("revoke execute on function english.eng_my_released_steps(uuid) from public, anon;");
+    expect(sql).toContain("grant execute on function english.eng_my_released_steps(uuid) to authenticated;");
+  });
+
   it("the learner tables are append-only (trigger + truncate trigger) and only working_drafts is mutable", () => {
     for (const t of ["attempts", "artifact_versions", "assistance_events", "exposure_log", "episodes", "attempt_auto_checks"]) {
       expect(sql, t).toMatch(new RegExp(`'${t}'`));

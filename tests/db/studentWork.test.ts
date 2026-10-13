@@ -207,10 +207,95 @@ describe("S4 student work (DESIGN §5, §6, §8, §9)", () => {
       expect(everything).not.toContain(audio.text.slice(0, 60));
       for (const bad of FORBIDDEN) expect(everything, bad).not.toContain(bad);
 
-      // a step without a mapping gets no source (fail closed); other children and staff get null
-      expect(await rpcAs(an(), "select english.eng_my_step_sources($1) as r", [await activity(x1, 1)])).toEqual([]);
+      // a supported step without a mapping gets no source (fail closed); other children and staff get null
+      expect(await rpcAs(an(), "select english.eng_my_step_sources($1) as r", [await activity(x2, 6)])).toEqual([]);
       expect(await rpcAs(nguyen(), "select english.eng_my_step_sources($1) as r", [await activity(x1, 3)])).toBeNull();
       expect(await rpcAs(s.users.parent, "select english.eng_my_step_sources($1) as r", [await activity(x1, 3)])).toBeNull();
+    });
+
+    it("a step the app cannot do yet gives the student only a neutral status: no prompt, items, sources or self-check (API-level RPCs)", async () => {
+      const keysOf = (o: unknown) => Object.keys(o as object).sort();
+      const MINIMAL_ACTIVITY = ["activity_id", "activity_type", "can_submit", "date", "instance_id", "mode", "status_label_key", "step_no", "supported", "title_vi"];
+      const MINIMAL_SOURCES = ["activity_id", "activity_type", "mode", "status_label_key", "supported"];
+      const leaks = (text: string, promptEn: string) => {
+        for (const bad of [...FORBIDDEN, "prompt_en", "self_check", "items", "stem", "options", '"text"', '"url"']) expect(text, bad).not.toContain(bad);
+        expect(text).not.toContain(promptEn.slice(0, 40));
+      };
+
+      // B-W0 step 6 is the baseline reading turned over (SPEAK-LIVE, with the tutor), as Nguyên
+      const b0t = template("B-W0-BASELINE");
+      const step6 = await activity(b0, 6);
+      expect(stepOf(b0t, 6).activity_type).toBe("ACT-SPEAK-LIVE");
+      const act = await rpcAs<Record<string, unknown>>(nguyen(), "select english.eng_my_activity($1) as r", [step6]);
+      const src = await rpcAs<Record<string, unknown>>(nguyen(), "select english.eng_my_step_sources($1) as r", [step6]);
+      expect(keysOf(act)).toEqual(MINIMAL_ACTIVITY);
+      expect(act).toMatchObject({ activity_type: "ACT-SPEAK-LIVE", mode: "INDEPENDENT_CHECK", supported: false, can_submit: false, status_label_key: "with_tutor" });
+      expect(keysOf(src)).toEqual(MINIMAL_SOURCES);
+      expect(src).toMatchObject({ supported: false, status_label_key: "with_tutor" });
+      leaks(JSON.stringify([act, src]), stepOf(b0t, 6).prompt_en);
+      // the text of the step-6 source (the short passage) never comes down either
+      const passage = (await q1<{ body: string }>("select s.body from english.sources s where s.id = 'B-W0-BASELINE-S6'"))[0]?.body;
+      expect(passage?.length).toBeGreaterThan(40);
+      expect(JSON.stringify([act, src])).not.toContain(passage!.slice(0, 40));
+
+      // every other kind of step the app does not do: canvas, mono speaking, self-review, revise (and live speaking in Track A)
+      const tpl = template("A-W1-VOLCANOES");
+      for (const [stepNo, label] of [[1, "with_tutor"], [4, "on_paper"], [5, "on_paper"], [7, "on_paper"], [13, "on_paper"]] as const) {
+        const id = await activity(x3, stepNo);
+        const a = await rpcAs<Record<string, unknown>>(an(), "select english.eng_my_activity($1) as r", [id]);
+        const so = await rpcAs<Record<string, unknown>>(an(), "select english.eng_my_step_sources($1) as r", [id]);
+        expect(keysOf(a), `step ${stepNo}`).toEqual(MINIMAL_ACTIVITY);
+        expect(a, `step ${stepNo}`).toMatchObject({ supported: false, can_submit: false, status_label_key: label });
+        expect(keysOf(so), `step ${stepNo}`).toEqual(MINIMAL_SOURCES);
+        leaks(JSON.stringify([a, so]), stepOf(tpl, stepNo).prompt_en);
+      }
+      // the supported steps still get everything (nothing was lost for the real work)
+      const full = await rpcAs<{ supported: boolean; step: { prompt_en: string } }>(an(), "select english.eng_my_activity($1) as r", [await activity(x3, 3)]);
+      expect(full.supported).toBe(true);
+      expect(full.step.prompt_en).toBe(stepOf(tpl, 3).prompt_en);
+    });
+
+    it("eng_my_released_steps hands the student no skill codes and no purpose flags; unsupported steps carry no text", async () => {
+      const walkKeys = (v: unknown, out: string[] = []): string[] => {
+        if (Array.isArray(v)) v.forEach((x) => walkKeys(x, out));
+        else if (v && typeof v === "object") {
+          for (const [k, x] of Object.entries(v)) {
+            out.push(k);
+            walkKeys(x, out);
+          }
+        }
+        return out;
+      };
+      type Released = { instance_id: string; steps: { step_no: number; activity_id: string; activity_type: string; mode: string; planned_date: string; supported: boolean; prompt_en?: string; items?: { id: string }[] }[] };
+      for (const [who, instance, templateId, total] of [[an, x3, "A-W1-VOLCANOES", 13], [nguyen, b0, "B-W0-BASELINE", 6]] as const) {
+        const r = await rpcAs<Released>(who(), "select english.eng_my_released_steps($1) as r", [instance]);
+        expect(r.steps).toHaveLength(total);
+        const text = JSON.stringify(r);
+        const keys = walkKeys(r);
+        for (const k of keys) expect(k, `key ${k}`).not.toMatch(/target|purpose|answer|explanation|prompt_vi|review_note|transcript/);
+        // no skill / template code (A-T1-TEXT-R, B-L2-CLOZE, A-W1-…). The header text is the template's own title and question: the
+        // Track B baseline's question says \"B-v1\" (content wording, shown on the home page too), so the bare-prefix check is An's.
+        expect(text).not.toMatch(/\b[AB]-[A-Z]+\d/);
+        if (who === an) expect(text).not.toMatch(/\b[AB]-/);
+        expect(text).not.toMatch(/AGG-|baseline|checkpoint|delayed_check|transfer_check/);
+        const tpl = template(templateId);
+        for (const st of r.steps) {
+          const src = stepOf(tpl, st.step_no);
+          expect(st.activity_type).toBe(src.activity_type);
+          const supported = ["ACT-SOURCE-QA", "ACT-WRITE"].includes(st.activity_type) && st.mode !== "REVISION";
+          expect(st.supported).toBe(supported);
+          if (supported) {
+            expect(st.prompt_en).toBe(src.prompt_en);
+            expect((st.items ?? []).map((i) => i.id)).toEqual(src.items.map((i) => i.id));
+          } else {
+            expect(Object.keys(st).sort()).toEqual(["activity_id", "activity_type", "mode", "planned_date", "status_label_key", "step_no", "supported"]);
+            expect(text).not.toContain(src.prompt_en.slice(0, 40));
+          }
+        }
+      }
+      // the same rules for who may call it as before (null for outsiders)
+      expect(await rpcAs(nguyen(), "select english.eng_my_released_steps($1) as r", [x3])).toBeNull();
+      expect(await rpcAs(s.users.parent, "select english.eng_my_released_steps($1) as r", [x3])).toBeNull();
     });
 
     it("the step-to-source table matches the prompts: 'Listen…' steps carry the audio, 'Read…' steps the text", async () => {

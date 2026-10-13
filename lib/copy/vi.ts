@@ -269,6 +269,11 @@ export const work = {
   stateLater: "Chưa làm",
   noAppYet: "Sắp có trên app — làm theo phiếu",
   withTutor: `Làm cùng ${tutorHonorific} trong buổi học`,
+  /** Khóa nhãn trung tính do máy chủ trả cho bước app chưa làm được. */
+  statusLabels: {
+    with_tutor: `Làm cùng ${tutorHonorific} trong buổi học`,
+    on_paper: "Sắp có trên app — làm theo phiếu",
+  },
   // trang làm bài
   back: (title: string) => `‹ ${title}`,
   homeLink: "Về trang chủ",

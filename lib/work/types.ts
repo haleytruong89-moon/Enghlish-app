@@ -63,7 +63,24 @@ export type SourceView = {
 
 export type ItemView = { id: string; kind: ItemKind; stem: string; options: string[] };
 
-export type ActivityView = {
+/** Neutral label keys the server sends for a step the app cannot do yet (see work.statusLabels). */
+export type StatusLabelKey = "with_tutor" | "on_paper";
+
+/** A step the app cannot do yet: no prompt, items, sources, self-check, attempts or draft - only a neutral status label. */
+export type UnsupportedActivityView = {
+  supported: false;
+  activityId: string;
+  instanceId: string;
+  stepNo: number;
+  activityType: string;
+  mode: Mode;
+  date: string;
+  titleVi: string;
+  statusLabelKey: StatusLabelKey;
+};
+
+export type SupportedActivityView = {
+  supported: true;
   activityId: string;
   instanceId: string;
   stepNo: number;
@@ -75,13 +92,14 @@ export type ActivityView = {
   bigQuestionEn: string;
   bigQuestionVi: string;
   shape: "text" | "answers";
-  supported: boolean;
   canSubmit: boolean;
   step: { promptEn: string; timeMin: number | null; selfCheckVi: string[]; items: ItemView[] };
   attempts: { attemptNo: number; submittedAt: string; provenance: Provenance }[];
   draft: { content: DraftContent; revision: number; updatedAt: string } | null;
   sources: SourceView[];
 };
+
+export type ActivityView = SupportedActivityView | UnsupportedActivityView;
 
 export type Receipt = { attemptId: string; attemptNo: number; submittedAt: string; hash: string; replayed: boolean };
 export type DraftReceipt = { revision: number; savedAt: string; otherTabChanged: boolean };
