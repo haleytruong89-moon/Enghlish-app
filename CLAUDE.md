@@ -1,0 +1,61 @@
+# Learning OS — Family Edition
+
+Web app (Next.js) giúp **2 con học tiếng Anh trên cùng một nền tảng**: Track A (An, lớp 6, A2→B1, chủ đề khoa học) và Track B (Nguyên, lớp 9, B2→C1, đến kỳ thi vào 10 thì pha trộn ~60% bám đề + ~40% tư duy–lập luận). App **đo tiến bộ bằng bằng chứng** (bài làm gốc, mức hỗ trợ, gia sư/phụ huynh duyệt), không phải app bài tập hay chatbot.
+
+Chủ dự án là phụ huynh, **không phải dev** — giải thích bằng tiếng Việt đơn giản; mỗi PR có hướng dẫn thử trên preview.
+
+## Đọc trước khi làm bất cứ việc gì
+
+1. `docs/PRD_FAMILY_EDITION.md` — phạm vi (§2, §2.1), quyết định D11–D28, target set (§3.1, §3.2), 8 loại hoạt động (§4), **lát build (§8)**.
+2. `docs/DESIGN.md` — kiến trúc, schema `english`, RLS, engine, hàng đợi, STT trên máy, AI, sao lưu, **mục KHÔNG tự quyết (§17)**.
+3. `docs/UX_COPY_GUIDE.md` — **mọi chữ giao diện** lấy từ `lib/copy/vi.ts` theo file này; không tự đặt nhãn.
+4. `content/catalogue_v0.2.json` — danh mục năng lực (seed), đọc bằng code.
+5. Tham chiếu gốc: MVP PRD v1.0 + Master Architecture v1.0 (nằm trong hub; file PRD Family thắng khi mâu thuẫn).
+6. `docs/PROGRESS.md` — lát nào xong, việc phụ huynh cần làm, SQL cần áp.
+
+## Tech stack
+
+Next.js (App Router) + TypeScript strict + Tailwind · Supabase (Postgres + Auth) **dùng chung project với Study Launcher, mọi thứ trong schema `english`** · Vercel · Vitest (+ Postgres local cho test DB) · zod · STT chạy trong trình duyệt · Claude API từ server.
+
+## Conventions
+
+- Code, comment, commit: tiếng Anh. Chữ giao diện: tiếng Việt qua `lib/copy/vi.ts`. Xưng "bạn" với học sinh.
+- Track là **cấu hình**: không viết `if (track === 'A')` trong logic nghiệp vụ (lint đang chặn).
+- Mỗi lát = 1 nhánh `feature/sN-<ten>` = 1 PR. Mô tả PR (tiếng Việt): làm gì · cách thử trên preview · **SQL cần phụ huynh áp** · tiêu chí đạt/chưa.
+- Migration: file `db/migrations/NNNN_*.sql`, idempotent, kết thúc bằng insert vào `english.schema_migrations`. Áp bằng `npm run db:apply` hoặc SQL Editor. **Không** dùng `supabase db push`. Không sửa migration đã áp.
+- Bảng append-only mới phải gắn `english.eng_forbid_mutation` (xem header `0004_append_only.sql`). Không `grant … on all tables`.
+- Test: `npm run typecheck && npm run lint && npm test` phải xanh trước khi mở PR.
+
+## Key decisions (tóm tắt — chi tiết PRD Family §1)
+
+- Audio **không bao giờ** rời máy; server chỉ nhận chữ + chỉ số.
+- Evidence append-only; 3 lớp điểm riêng (AI · người chấm · quyết định); trạng thái là dữ liệu dẫn xuất, rebuild được.
+- Engine chỉ **đề xuất**; người duyệt xác nhận. Không tự hạ bậc. Bài kiểm tra trong buổi chỉ gia sư duyệt; phần còn lại gia sư hoặc phụ huynh.
+- Học sinh không thấy điểm số; phụ huynh/gia sư thấy điểm dạng "3/4 · Đạt yêu cầu".
+- AI: Reviewer + Coach cho cả 2 track; Clarifier/Challenger cho Track B từ hè 2027. Trần $10/tháng; hết trần → làm thủ công.
+- Ngưỡng nằm trong `assessment_policies` (AP-0.2-pilot), không hard-code. Delayed check: ≥14 ngày từ lần luyện gần nhất **của target đó trên cùng chủ đề/nguồn**.
+- `ALLOW_REAL_LEARNERS=false` trên preview: chỉ dùng learner thử.
+
+## Warnings — KHÔNG được làm
+
+- Không tạo/sửa gì trong schema `public` (của Launcher). Không dùng `supabase db push`, không `db reset --linked`.
+- Không đưa audio ra khỏi máy (kể cả Web Speech API, STT cloud).
+- Không dùng `service_role`/`ANTHROPIC_API_KEY` ở client. Không commit secret.
+- Không cho AI tự xác nhận/đổi bậc; không cho học sinh thấy điểm thô; không chép đề thi chính thức.
+- Không thêm streak, bảng xếp hạng, chat mở với AI, dịch vụ trả phí hay bên thứ ba nhận dữ liệu của con.
+- Không bật build đêm tự động trừ khi phụ huynh yêu cầu.
+- Thấy spec thiếu/mâu thuẫn → dừng, ghi vào PR + `docs/PROGRESS.md`, hỏi phụ huynh.
+
+## Lệnh
+
+```bash
+npm run dev · npm run typecheck · npm run lint · npm test
+npm run db:apply          # áp migration chưa có (cần DATABASE_URL)
+npm run db:seed-dev       # gia đình THỬ (An (thử), Nguyên (thử))
+```
+
+## Current status
+
+- S0 (nền) xong trên máy — chờ phụ huynh tạo repo/Supabase/Vercel (xem `docs/PROGRESS.md`).
+- Tiếp theo theo thứ tự ưu tiên để 2 em dùng sớm: **S1 → S2 → S4 → S5 (+ phần câu hỏi đọc/bài dạng đề của S3)**.
+- Pilot thủ công cả 2 em chạy song song từ 17–19/10/2026 (Pilot Kit A/B v0.2 trong hub).
