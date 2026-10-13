@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { toKeyRows, toSafeSteps, toSources } from "../../lib/config/inquiries";
 import { loadContentItems } from "../../lib/config/versions";
-import { addDays, daysBetween, defaultDueOn } from "../../lib/inquiries/dates";
-import { assignDevInquiries, DEV_INQUIRIES } from "../../scripts/lib/seed";
+import { addDays, daysBetween } from "../../lib/inquiries/dates";
+import { assignDevInquiries, DEV_INQUIRIES, devDueOn } from "../../scripts/lib/seed";
 import { createTestDb, migrate, rowsAs, seed, type Seeded, type TestDb } from "./helpers";
 
 const content = loadContentItems();
@@ -101,7 +101,7 @@ describe("0008 seed: the pilot inquiry templates (S2)", () => {
     const an = (await q("select i.template_id, i.assigned_by, i.due_on::text as due, (select count(*)::int from english.activity_instances a where a.inquiry_instance_id = i.id) as steps from english.inquiry_instances i where learner_id = $1", [s.learners.an]))[0];
     const volcanoes = published.find((p) => p.id === "A-W1-VOLCANOES@1")?.data;
     if (!volcanoes) throw new Error("A-W1 missing");
-    const due = defaultDueOn(volcanoes.dates.from, volcanoes.dates.to);
+    const due = devDueOn(volcanoes.dates.from, volcanoes.dates.to);
     expect(an).toEqual({ template_id: "A-W1-VOLCANOES", assigned_by: s.members.parent, due, steps: 13 });
     const ng = (await q("select i.template_id, (select count(*)::int from english.activity_instances a where a.inquiry_instance_id = i.id) as steps from english.inquiry_instances i where learner_id = $1", [s.learners.nguyen]))[0];
     expect(ng).toEqual({ template_id: "B-W0-BASELINE", steps: 6 });

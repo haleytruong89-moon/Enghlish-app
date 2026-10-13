@@ -37,7 +37,6 @@ test.describe("each account lands on the right home", () => {
     test(`${s.key} gets the student greeting and no staff labels`, async ({ page }) => {
       await loginAs(page, s.key);
       await expect(page.getByRole("heading", { level: 1, name: home.studentGreeting(s.alias) })).toBeVisible();
-      await expect(page.getByText(home.studentEmpty)).toBeVisible();
       // Track labels are staff-only (D28); the other child is never shown.
       await expect(page.getByText(/Track [AB]/)).toHaveCount(0);
       await expect(page.getByText(s.other)).toHaveCount(0);

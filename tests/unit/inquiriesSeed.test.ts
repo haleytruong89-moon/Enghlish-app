@@ -86,11 +86,11 @@ describe("inquiry templates in the version lock", () => {
     const before = await checkConfig(paths);
     expect(before.unlocked).toEqual(["inquiry template A-W5-NEWWEEK@1"]);
     const res = await generateNew(paths);
-    expect(res).toEqual({ file: "0009_seed_a_w5_newweek_1.sql", ids: ["A-W5-NEWWEEK@1"] });
-    const sql = readFileSync(path.join(paths.migrationsDir, "0009_seed_a_w5_newweek_1.sql"), "utf8");
+    expect(res).toEqual({ file: "0010_seed_a_w5_newweek_1.sql", ids: ["A-W5-NEWWEEK@1"] });
+    const sql = readFileSync(path.join(paths.migrationsDir, "0010_seed_a_w5_newweek_1.sql"), "utf8");
     expect(sql).toContain("Inquiry template A-W5-NEWWEEK v1");
     expect(sql).not.toContain("A-W1-VOLCANOES");
-    expect(sql.trim().endsWith("values ('0009') on conflict do nothing;")).toBe(true);
+    expect(sql.trim().endsWith("values ('0010') on conflict do nothing;")).toBe(true);
     expect(await checkConfig(paths)).toEqual({ problems: [], unlocked: [] });
     expect(migrations().filter((f) => f.startsWith("0008"))).toEqual(["0008_seed_inquiries_pilot_v1.sql"]);
   });
@@ -99,7 +99,7 @@ describe("inquiry templates in the version lock", () => {
     addTemplate("A-W5-NEWWEEK");
     await expect(generateNew(paths, undefined, "Bad Name!")).rejects.toThrow(/--name/);
     const res = await generateNew(paths, undefined, "week5");
-    expect(res?.file).toBe("0009_seed_week5.sql");
+    expect(res?.file).toBe("0010_seed_week5.sql");
   });
 
   it("a published template that breaks the evidence-task whitelist is a generator error and a check error", async () => {
@@ -111,7 +111,7 @@ describe("inquiry templates in the version lock", () => {
     const { problems } = await checkConfig(paths);
     expect(problems.some((p) => p.includes("A-W6-BADTASK@1") && p.includes("is not an evidence task of A-L3-CAUSE-W"))).toBe(true);
     await expect(generateNew(paths)).rejects.toThrow(/breaks catalogue rules[\s\S]*not an evidence task of A-L3-CAUSE-W/);
-    expect(migrations()).not.toContain("0009_seed_a_w6_badtask_1.sql");
+    expect(migrations()).not.toContain("0010_seed_a_w6_badtask_1.sql");
     // …the same content as a draft is just a draft: no error, never seeded
     const t = readTpl("A-W6-BADTASK");
     t.status = "draft";

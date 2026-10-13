@@ -83,10 +83,11 @@ describe("migrations", () => {
     expect(rows.map((r) => r.relname).sort()).toEqual(
       [
         "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
-        "app_errors", "assessment_policies", "audit_log", "catalogue_versions", "consents", "dimensions",
+        "app_errors", "artifact_versions", "assessment_policies", "assistance_events", "attempt_auto_checks",
+        "attempts", "audit_log", "catalogue_versions", "consents", "dimensions", "episodes", "exposure_log",
         "families", "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "members",
         "relationships", "schema_migrations", "source_transcripts", "sources", "target_set_definitions",
-        "target_sets", "targets", "template_item_keys", "tracks",
+        "target_sets", "targets", "template_item_keys", "template_step_sources", "tracks", "working_drafts",
       ],
     );
     for (const r of rows) expect(r.relrowsecurity, r.relname).toBe(true);
@@ -114,10 +115,11 @@ describe("migrations", () => {
     const readable = rows.filter((r) => r.s).map((r) => r.relname);
     expect(readable).toEqual([
       "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
-      "assessment_policies", "audit_log", "catalogue_versions", "consents", "dimensions", "families",
+      "artifact_versions", "assessment_policies", "assistance_events", "attempt_auto_checks", "attempts",
+      "audit_log", "catalogue_versions", "consents", "dimensions", "episodes", "exposure_log", "families",
       "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "members", "relationships",
       "source_transcripts", "sources", "target_set_definitions", "target_sets", "targets",
-      "template_item_keys", "tracks",
+      "template_item_keys", "template_step_sources", "tracks", "working_drafts",
     ]);
     expect(rows.some((r) => r.w)).toBe(false);
   });
