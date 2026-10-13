@@ -153,15 +153,19 @@ export const DEV_INQUIRIES = [
   { learner: "nguyen", template: "B-W0-BASELINE", version: 1, requestId: "seed-dev:B-W0-BASELINE:1" },
 ] as const;
 
+/** The test learners' dev week started this many days ago, so the first steps of each inquiry are already released. */
+export const DEV_WEEK_STARTED_DAYS_AGO = 3;
+
 /**
- * Due date for the dev inquiries: the test learners' week STARTS today (same length as the template's), so the
- * first steps are released and the student screens (S4) have work to show on a preview and in CI. The database
- * moves every step by (due - template end date). Always inside the window it accepts.
+ * Due date for the dev inquiries: the template's own week, moved so that it STARTED DEV_WEEK_STARTED_DAYS_AGO days
+ * ago. Steps planned in the first days are then released, so the student screens (S4) have work to show on a
+ * preview and in CI, while the later ones (e.g. the second week-end steps) are still ahead. The database moves every
+ * step by (due - template end date). Always inside the window it accepts.
  */
 export function devDueOn(dateFrom: string, dateTo: string, now: Date = new Date()): string {
   const today = todayVn(now);
   const { min, max } = dateWindow(now);
-  const due = addDays(today, Math.max(0, daysBetween(dateFrom, dateTo)));
+  const due = addDays(addDays(today, -DEV_WEEK_STARTED_DAYS_AGO), Math.max(0, daysBetween(dateFrom, dateTo)));
   return due < min ? min : due > max ? max : due;
 }
 

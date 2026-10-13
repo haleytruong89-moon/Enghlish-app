@@ -112,6 +112,13 @@ describe("0008 seed: the pilot inquiry templates (S2)", () => {
     expect(dates.map((r) => r.d)).toEqual(volcanoes.steps.map((st) => (st.planned_date ? addDays(st.planned_date, shift) : null)));
   });
 
+  it("the dev week has already started: the first steps are released today (An 7 of 13, Nguyên all 6), the rest are still ahead", async () => {
+    const released = async (learner: string) =>
+      (await q<{ step_no: number }>("select step_no from english.activity_instances where learner_id = $1 and english.eng_activity_released(id) order by step_no", [learner])).map((r) => r.step_no);
+    expect(await released(s.learners.an)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(await released(s.learners.nguyen)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
   it("baseline steps carry purpose 'baseline' all the way into the learner's activity rows", async () => {
     const rows = await q<{ purpose: string[] }>("select a.purpose from english.activity_instances a where a.learner_id = $1", [s.learners.nguyen]);
     expect(rows).toHaveLength(6);
