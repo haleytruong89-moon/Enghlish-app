@@ -96,13 +96,15 @@ jobs:
         with:
           version: 2.120.0
       - name: Start local Supabase (auth + PostgREST + Postgres only; config in supabase/config.toml)
-        run: supabase start
+        run: |
+          set -o pipefail
+          supabase start 2>&1 | tee -a "$RUNNER_TEMP/e2e.log"
 
       - name: Apply our migrations on real Supabase Postgres (twice — 2nd must be a no-op)
         run: |
           set -euo pipefail
-          npm run db:apply
-          npm run db:apply | tee /tmp/second.txt
+          npm run db:apply 2>&1 | tee -a "$RUNNER_TEMP/e2e.log"
+          npm run db:apply 2>&1 | tee -a "$RUNNER_TEMP/e2e.log" | tee /tmp/second.txt
           grep -q "nothing to apply" /tmp/second.txt
 
       - name: Read local Supabase keys
@@ -122,7 +124,9 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Seed the TEST family (real Auth Admin API)
-        run: npm run db:seed-dev
+        run: |
+          set -o pipefail
+          npm run db:seed-dev 2>&1 | tee -a "$RUNNER_TEMP/e2e.log"
 
       - name: Build and start the app (ALLOW_REAL_LEARNERS=false)
         env:
@@ -140,18 +144,23 @@ jobs:
       - run: npx playwright install --with-deps chromium
 
       - name: Run Playwright
-        run: npm run test:e2e
+        run: |
+          set -o pipefail
+          npm run test:e2e 2>&1 | tee -a "$RUNNER_TEMP/e2e.log"
 
-      - name: App log (on failure)
-        if: failure()
-        run: cat "$RUNNER_TEMP/next.log" || true
-
-      - name: Supabase container logs (on failure)
+      - name: Diagnostics (failure only)
         if: failure()
         run: |
-          for c in $(docker ps -a --format '{{.Names}}' | grep -E 'auth|rest'); do
-            echo "=== $c ==="; docker logs --tail 40 "$c" 2>&1 || true
-          done
+          {
+            echo "=== next.log ==="; tail -n 40 "$RUNNER_TEMP/next.log" 2>&1 || true
+            for c in $(docker ps -a --format '{{.Names}}' | grep -E 'auth|rest|db' || true); do
+              echo "=== container $c ==="; docker logs --tail 25 "$c" 2>&1 || true
+            done
+          } > "$RUNNER_TEMP/diag.log" 2>&1
+          cat "$RUNNER_TEMP/diag.log"
+          # Raw run logs are not always downloadable, so also surface them as annotations.
+          .github/scripts/annotate-log.sh "$RUNNER_TEMP/e2e.log" "step output" 60
+          .github/scripts/annotate-log.sh "$RUNNER_TEMP/diag.log" "app and container logs" 80
 
       - uses: actions/upload-artifact@v4
         if: failure()
