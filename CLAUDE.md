@@ -54,8 +54,24 @@ npm run db:apply          # áp migration chưa có (cần DATABASE_URL)
 npm run db:seed-dev       # gia đình THỬ (An (thử), Nguyên (thử))
 ```
 
+## Quay lại khi hỏng (rollback)
+
+| Tình huống | Cách quay lại | Mất tối đa |
+|---|---|---|
+| Code hỏng sau khi deploy | Vercel → Deployments → chọn bản trước → **Promote to Production** (tức thì). Sau đó `git revert` PR lỗi để main sạch. | 0 dữ liệu |
+| Database lỗi / xóa nhầm | Tải artifact sao lưu đêm (GitHub Actions, giữ 30 ngày) → `age -d` bằng khóa offline → `pg_restore` vào project thử, đối chiếu, rồi mới khôi phục schema `english`. Migration chỉ thêm (expand/contract) nên không có bước "down". **Chưa gồm `auth.users`** — chờ phụ huynh quyết (PROGRESS). | ≤ ~24 giờ |
+| Ai quyết | **Phụ huynh** quyết và bấm. Claude chỉ chuẩn bị lệnh/kiểm tra; không tự khôi phục, không tự xóa dữ liệu. | — |
+
+## Phân vai model (`.claude/agents/`)
+
+- `reviewer` (Opus): review diff cuối mỗi lát — bắt buộc trước khi mở PR cho phụ huynh.
+- `builder` (Sonnet): code từng bước theo kế hoạch lát; sai 2 lần cùng chỗ → dừng, chuyển Opus.
+- `chore` (Haiku): việc cơ học (đổi tên, format).
+- Kế hoạch mỗi lát (Opus) ghi vào `docs/plans/sN-<ten>.md` trước khi code.
+
 ## Current status
 
-- S0 (nền) xong trên máy — chờ phụ huynh tạo repo/Supabase/Vercel (xem `docs/PROGRESS.md`).
+- Repo: `haleytruong89-moon/Enghlish-app` (private). S0 đã push, CI xanh.
+- Chờ phụ huynh: Supabase (schema `english`, tắt sign-up, áp 0001–0004), Vercel, khóa sao lưu + GitHub Secrets (xem `docs/PROGRESS.md`).
 - Tiếp theo theo thứ tự ưu tiên để 2 em dùng sớm: **S1 → S2 → S4 → S5 (+ phần câu hỏi đọc/bài dạng đề của S3)**.
 - Pilot thủ công cả 2 em chạy song song từ 17–19/10/2026 (Pilot Kit A/B v0.2 trong hub).

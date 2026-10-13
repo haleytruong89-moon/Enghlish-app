@@ -24,7 +24,7 @@
 
 ### Phụ huynh cần làm (theo thứ tự)
 
-1. **GitHub:** tạo repo **riêng tư** (private), ví dụ `learning-os`, rồi push code này lên. Bật Actions.
+1. ~~**GitHub:** tạo repo riêng tư, push code.~~ ✓ 13/10 — `haleytruong89-moon/Enghlish-app`, CI chạy xanh. *Lưu ý: 2 job hằng ngày (sao lưu 02:17, ping 08:41) sẽ báo đỏ cho tới khi xong bước 11 — bình thường.*
 2. **Supabase:** dùng **chung project với Study Launcher** (D14). Nếu chưa có project: tạo mới, chọn region **Singapore (ap-southeast-1)**. (Region chỉ chọn được lúc tạo.)
 3. **Mở schema `english` cho API:** Supabase Dashboard → Project Settings → **Data API** → *Exposed schemas* → thêm `english` (giữ `public`). Bấm Save.
 4. **Tắt tự đăng ký:** Authentication → Sign In / Providers → tắt *Allow new users to sign up*. Tài khoản do phụ huynh tạo.
@@ -59,6 +59,7 @@
 | Test chéo ID 2 em đạt | ✓ trên máy/CI (test DB + test `requireAccess`) |
 | Consent ghi được | Bảng có sẵn; màn/route ghi consent → làm cùng S1 hoặc lát quản trị |
 | Backup + khôi phục thử OK | Chờ bước 10–12 |
+| Câu trả lời rollback trong `CLAUDE.md` | ✓ (trừ `auth.users` — chờ quyết định) |
 | Không có audio lên server | ✓ (chưa có tính năng nói; không có cột audio) |
 
 ### Ghi chú cho các lát sau
@@ -66,3 +67,12 @@
 - Bảng append-only mới: gắn trigger `english.eng_forbid_mutation('learner_id')` theo hướng dẫn ở đầu `0004_append_only.sql`, và thêm lệnh xóa bảng đó vào `english.eng_purge_learner`.
 - Migration mới **không** dùng `grant … on all tables` (sẽ cấp lại quyền sửa/xóa đã thu hồi); grant theo từng bảng.
 - `track_id` đang là chữ `'A'|'B'`; S1 thêm bảng `english.tracks` và khóa ngoại.
+
+## Quyết định đang chờ phụ huynh
+
+| # | Việc | Hạn | Đề xuất |
+|---|---|---|---|
+| 1 | Sao lưu có kèm `auth.users` (mã hóa riêng) không | Trước G0 | Có — nếu không, khôi phục phải mời lại mọi tài khoản |
+| 2 | Xóa dữ liệu một em có xóa luôn tài khoản đăng nhập | Trước pilot thật | Xóa dữ liệu app trước; tài khoản phụ huynh tự xóa trên Supabase |
+| 3 | O-F1 quy tắc video | Trước S2 | Chỉ link YouTube/nguồn mở, không tải video lên |
+| 4 | Ngày đề thử tuần 4 của Nguyên | Trước 14/11 | 21/11 |
