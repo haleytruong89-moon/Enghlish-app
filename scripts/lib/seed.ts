@@ -71,9 +71,9 @@ export async function seedTestFamily(client: ClientBase, users: SeedUsers): Prom
       members[key] = (ins.rows[0] as { id: string }).id;
     }
 
-    const learners: [string, string, string, string, string][] = [
-      [TEST_LEARNER_AN_ID, members.studentAn, "An (thử)", "A", "skillgrow:child:an:test"],
-      [TEST_LEARNER_NGUYEN_ID, members.studentNguyen, "Nguyên (thử)", "B", "skillgrow:child:nguyen:test"],
+    const learners: [string, string, string, string, string, string][] = [
+      [TEST_LEARNER_AN_ID, members.studentAn, "An (thử)", "A", "skillgrow:child:an:test", "A-v1"],
+      [TEST_LEARNER_NGUYEN_ID, members.studentNguyen, "Nguyên (thử)", "B", "skillgrow:child:nguyen:test", "B-v1"],
     ];
     for (const [id, memberId, alias, track, ref] of learners) {
       await client.query(
@@ -82,6 +82,11 @@ export async function seedTestFamily(client: ClientBase, users: SeedUsers): Prom
          on conflict (id) do update set is_test = true`,
         [id, TEST_FAMILY_ID, memberId, alias, track, ref],
       );
+    }
+
+    // Target set per learner (S1). Idempotent: the function does nothing when the set is already current.
+    for (const [id, , , , , targetSet] of learners) {
+      await client.query("select english.eng_assign_target_set($1, $2)", [id, targetSet]);
     }
 
     const rels: [string, string, "parent" | "tutor"][] = [

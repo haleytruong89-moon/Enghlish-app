@@ -16,7 +16,8 @@
     "test:unit": "vitest run --project unit",
     "test:db": "vitest run --project db",
     "db:apply": "tsx --env-file-if-exists=.env.local scripts/db-apply.ts",
-    "db:seed-dev": "tsx --env-file-if-exists=.env.local scripts/seed-dev.ts"
+    "db:seed-dev": "tsx --env-file-if-exists=.env.local scripts/seed-dev.ts",
+    "gen:config": "tsx scripts/gen-config-sql.ts"
   },
   "dependencies": {
     "@fontsource/be-vietnam-pro": "^5.3.0",
