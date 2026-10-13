@@ -160,3 +160,115 @@ export type TargetKey = {
   outputModality: Exclude<Target["output_modality"], "any">;
   assessmentPolicyVersion: string;
 };
+
+// ---------- Inquiry templates (S2; PRD §4, DESIGN §4) -----------------------------------------
+export const ACTIVITY_TYPE_IDS = [
+  "ACT-SOURCE-QA",
+  "ACT-CANVAS-BASIC",
+  "ACT-CANVAS-ADV",
+  "ACT-SPEAK-MONO",
+  "ACT-SPEAK-LIVE",
+  "ACT-WRITE",
+  "ACT-REVISE",
+  "ACT-SELF-REVIEW",
+] as const;
+export const MODES = ["PRACTICE", "INDEPENDENT_CHECK", "REVISION"] as const;
+export const STEP_PURPOSES = ["baseline", "checkpoint", "delayed_check", "transfer_check"] as const;
+/** Closed items have exactly one expected answer (auto-checkable in S3); short/open items have a model answer. */
+export const CLOSED_ITEM_KINDS = ["mcq", "gap", "word_form", "transform"] as const;
+export const ITEM_KINDS = [...CLOSED_ITEM_KINDS, "short", "open"] as const;
+export const SOURCE_MODALITIES = ["text", "audio", "video"] as const;
+
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((s) => !Number.isNaN(Date.parse(`${s}T00:00:00Z`)) && new Date(`${s}T00:00:00Z`).toISOString().startsWith(s), "not a calendar date");
+
+export const inquiryItemSchema = z.strictObject({
+  id: z.string().regex(/^[A-Za-z0-9_.-]+$/, "item ids use letters, digits, . _ -"),
+  kind: z.enum(ITEM_KINDS),
+  stem: nonEmpty,
+  options: z.array(nonEmpty),
+  /** Expected answer or model answer. NEVER copied into the student-visible snapshot. */
+  answer: z.string(),
+  explanation_vi: z.string(),
+  /** A target id or an aggregate-indicator id of the catalogue; null for pure diagnostics. */
+  target_id: nonEmpty.nullable(),
+});
+export type InquiryItem = z.infer<typeof inquiryItemSchema>;
+
+export const inquiryStepSchema = z.strictObject({
+  step_no: z.number().int().positive(),
+  activity_type: z.enum(ACTIVITY_TYPE_IDS),
+  mode: z.enum(MODES),
+  purpose: z.array(z.enum(STEP_PURPOSES)),
+  target_ids: z.array(nonEmpty),
+  prompt_en: nonEmpty,
+  /** Tutor/parent script, schedule and hints (may contain answer hints) → staff-only, never in the snapshot. */
+  prompt_vi: z.string(),
+  time_min: z.number().int().nonnegative(),
+  /** Default day for this step (already inside the week); staff can reschedule with a reason. */
+  planned_date: isoDate.nullable(),
+  items: z.array(inquiryItemSchema),
+  self_check_vi: z.array(z.string()),
+  /** `needs_review`: the content breaks a validation rule and waits for the parent's decision. */
+  status: z.literal("needs_review").optional(),
+  review_note: nonEmpty.optional(),
+});
+export type InquiryStep = z.infer<typeof inquiryStepSchema>;
+
+export const inquirySourceSchema = z.strictObject({
+  id: z.string().regex(/^[A-Za-z0-9_.-]+$/),
+  title: nonEmpty,
+  /** External link. Video is link-only (O-F1 default): the app never embeds a player. */
+  url: z
+    .string()
+    .regex(/^https?:\/\/\S+$/)
+    .nullable(),
+  author: nonEmpty,
+  rights_note: nonEmpty,
+  modality: z.enum(SOURCE_MODALITIES),
+  /** text → the reading text; audio → the transcript (staff-only); video → must be empty. */
+  text: z.string(),
+});
+export type InquirySource = z.infer<typeof inquirySourceSchema>;
+
+export const inquiryTemplateSchema = z
+  .strictObject({
+    format: z.literal("inquiry-template/1"),
+    id: z.string().regex(/^[AB]-W\d+-[A-Z0-9-]+$/, "id looks like A-W1-VOLCANOES"),
+    version: z.number().int().positive(),
+    track: trackIdSchema,
+    status: z.enum(["draft", "published"]),
+    catalogue_version: nonEmpty,
+    title_vi: nonEmpty,
+    big_question_en: nonEmpty,
+    big_question_vi: nonEmpty,
+    week: z.number().int().nonnegative(),
+    dates: z.strictObject({ from: isoDate, to: isoDate }),
+    domain_bucket: nonEmpty,
+    target_ids: z.array(nonEmpty).min(1),
+    sources: z.array(inquirySourceSchema),
+    steps: z.array(inquiryStepSchema).min(1),
+  })
+  .superRefine((t, ctx) => {
+    const issue = (message: string) => ctx.addIssue({ code: "custom", message });
+    if (t.id[0] !== t.track) issue(`template ${t.id}: id prefix does not match track ${t.track}`);
+    if (t.dates.to < t.dates.from) issue(`template ${t.id}: dates.to is before dates.from`);
+    t.steps.forEach((s, i) => {
+      if (s.step_no !== i + 1) issue(`template ${t.id}: step_no must run 1..n without gaps (got ${s.step_no} at position ${i + 1})`);
+      if (s.status === "needs_review" && !s.review_note) issue(`template ${t.id} step ${s.step_no}: needs_review requires review_note`);
+      if (t.id.endsWith("-BASELINE") && !s.purpose.includes("baseline")) {
+        issue(`template ${t.id} step ${s.step_no}: baseline templates carry purpose "baseline" on every step`);
+      }
+    });
+    if (t.status === "published" && t.steps.some((s) => s.status === "needs_review")) {
+      issue(`template ${t.id}: a template with needs_review steps must stay draft`);
+    }
+    for (const s of t.sources) {
+      if (s.modality === "video" && !s.url) issue(`source ${s.id}: a video source needs a link (link-only)`);
+      if (s.modality === "video" && s.text.trim()) issue(`source ${s.id}: a video source carries no text`);
+      if (s.modality !== "video" && !s.text.trim()) issue(`source ${s.id}: ${s.modality} source needs text/transcript`);
+    }
+  });
+export type InquiryTemplate = z.infer<typeof inquiryTemplateSchema>;

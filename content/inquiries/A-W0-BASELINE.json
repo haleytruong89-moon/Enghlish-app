@@ -1,0 +1,833 @@
+{
+  "format": "inquiry-template/1",
+  "id": "A-W0-BASELINE",
+  "version": 1,
+  "track": "A",
+  "status": "draft",
+  "catalogue_version": "0.2.1-draft",
+  "title_vi": "Baseline A v0.2.1 - hồ sơ xuất phát (2 buổi x 45 phút)",
+  "big_question_en": "What can An already do in English?",
+  "big_question_vi": "An đã làm được gì bằng tiếng Anh? (không phải bài thi; không tính vào 'Tự làm được')",
+  "week": 0,
+  "dates": {
+    "from": "2026-10-18",
+    "to": "2026-10-19"
+  },
+  "domain_bucket": "science",
+  "target_ids": [
+    "A-T1-TEXT-R",
+    "A-T1-TEXT-L",
+    "A-L3-CAUSE-S",
+    "A-L2-COMPENSATE-S",
+    "A-X1-TURN",
+    "A-L1-PAST-W",
+    "A-L3-CAUSE-W",
+    "A-L3-PARA-W",
+    "A-T4-CAUSE"
+  ],
+  "sources": [
+    {
+      "id": "A-W0-BASELINE-S1",
+      "title": "Why Do Leaves Change Colour? (bài đọc baseline)",
+      "url": null,
+      "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi",
+      "rights_note": "Tự soạn, không sao chép. Đã đối chiếu (kit mục 2.11): USDA Forest Service (https://fs.usda.gov/Internet/FSE_DOCUMENTS/stelprd3817419.pdf); RSC (https://edu.rsc.org/everyday-chemistry/the-chemistry-behind-leaves-changing-colour-and-falling-from-trees/4018155.article); Britannica (https://britannica.com/story/why-do-leaves-fall-in-autumn); câu cây bàng Hà Nội lá đỏ vào mùa đông: VietNamNet (https://vietnamnet.vn/ngam-ha-noi-dep-nhu-tranh-trong-mua-la-bang-do-ruc-214928.html).",
+      "modality": "text",
+      "text": "Why Do Leaves Change Colour?\n\nIn many countries, green leaves turn yellow, orange or red in autumn, and then they fall. Why does this happen?\n\nA leaf is green because it has a green material called chlorophyll. Chlorophyll helps the tree to make food from sunlight, air and water. In spring and summer, the tree makes a lot of chlorophyll, so the green colour covers the other colours in the leaf.\n\nIn autumn, the days get shorter and the nights get longer. With less sunlight, the tree stops making new chlorophyll. The old chlorophyll slowly breaks down, and the green colour disappears. Now we can see yellow and orange. These colours were in the leaf all summer, but the green colour hid them.\n\nSome trees, like maples, also make a new red colour in autumn. Their leaves are brightest after sunny days and cool nights.\n\nNext, a thin wall grows where the leaf joins the branch, and the leaf falls. Thin leaves full of water could freeze in a cold winter, so the tree drops them.\n\nIn Hanoi, the big leaves of the Indian almond tree (cây bàng) turn red in winter. I think these red leaves are the most beautiful thing in our city."
+    },
+    {
+      "id": "A-W0-BASELINE-S2",
+      "title": "How Do Bats Find Food in the Dark? (bài nghe baseline, file A_BL_L)",
+      "url": null,
+      "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi",
+      "rights_note": "Tự soạn, đọc bằng một giọng TTS cố định, tốc độ 0,9x. Đã đối chiếu: Cleveland Zoological Society (https://www.clevelandzoosociety.org/Z/2024/06/20/ask-the-expert-do-all-bats-use-echolocation), National Geographic 2014 (https://www.nationalgeographic.com/science/phenomena/2014/12/04/fruit-bats-have-sonar-too-but-its-not-very-good/). Chưa kiểm được: \"âm thanh quá cao để người nghe thấy\" và \"thời gian tiếng vang cho biết khoảng cách\" (trang NPS về dơi chưa mở được); phụ huynh kiểm trước 17/10.",
+      "modality": "audio",
+      "text": "How Do Bats Find Food in the Dark?\n\nHello! Today's question is: how can a bat catch insects at night, when it is too dark to see well?\n\nMany bats use sound. While a bat is flying, it makes very high sounds. Most of these sounds are too high for people to hear. When a sound hits an insect, it bounces back to the bat. This returning sound is called an echo.\n\nThe bat listens to the echo carefully. The echo tells the bat where the insect is. The bat also notices how long the echo takes to come back. This tells it how far away the insect is. Then the bat flies quickly and catches its dinner.\n\nFinding things with echoes like this is called echolocation. But not all bats do it. Some big fruit bats find their food mainly with their eyes and their good sense of smell.\n\nSo next time you see a bat at night, remember: it is listening to the dark!"
+    }
+  ],
+  "steps": [
+    {
+      "step_no": 1,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [
+        "A-T1-TEXT-R"
+      ],
+      "prompt_en": "Read the text (5 minutes). Then answer the 8 questions (10 minutes). You may look back at the text.",
+      "prompt_vi": "CN 18/10 - Đọc. Không từ điển. Xem lại bài khi trả lời là bình thường của kỹ năng đọc: không ghi source_open (kit mục 1.3). Chấm: câu 1 = ý chính; câu 2-5 = 4 chi tiết (cần 4/4); câu 6-8 chẩn đoán.",
+      "time_min": 15,
+      "planned_date": "2026-10-18",
+      "items": [
+        {
+          "id": "BL-R1",
+          "kind": "mcq",
+          "stem": "What is the text mainly about?",
+          "options": [
+            "a) how trees make food",
+            "b) why leaves change colour and fall",
+            "c) the trees in Hanoi",
+            "d) why maple trees are red"
+          ],
+          "answer": "b",
+          "explanation_vi": "Ý chính: lá đổi màu và rụng. Chấm c1 của Đọc hiểu.",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "BL-R2",
+          "kind": "short",
+          "stem": "What does chlorophyll help the tree to do?",
+          "options": [],
+          "answer": "Make food (from sunlight, air and water).",
+          "explanation_vi": "Chi tiết 1/4.",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "BL-R3",
+          "kind": "short",
+          "stem": "Why does the tree stop making new chlorophyll in autumn?",
+          "options": [],
+          "answer": "There is less sunlight / the days get shorter (the nights get longer).",
+          "explanation_vi": "Chi tiết 2/4 (nhân quả có trong bài).",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "BL-R4",
+          "kind": "short",
+          "stem": "Where were the yellow and orange colours in summer?",
+          "options": [],
+          "answer": "In the leaf already; the green colour hid them.",
+          "explanation_vi": "Chi tiết 3/4.",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "BL-R5",
+          "kind": "short",
+          "stem": "Put in order: (A) the green colour disappears (B) the days get shorter (C) we can see yellow and orange (D) the tree stops making new chlorophyll",
+          "options": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "answer": "B, D, A, C",
+          "explanation_vi": "Chi tiết 4/4 (trình tự). Đọc hiểu cần 4/4 chi tiết (80%).",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "BL-R6",
+          "kind": "open",
+          "stem": "In October, Nam finds a leaf that is half green and half yellow. Did the yellow colour come into the leaf in October? Explain, using the text.",
+          "options": [],
+          "answer": "No. The yellow was in the leaf all summer; the green chlorophyll is breaking down, so now the yellow shows.",
+          "explanation_vi": "CHẨN ĐOÁN (suy luận, không ghi dòng kỹ năng). Cần nêu dấu hiệu trong bài (\"These colours were in the leaf all summer\").",
+          "target_id": "A-T2-INFER-R"
+        },
+        {
+          "id": "BL-R7",
+          "kind": "short",
+          "stem": "\"...the green colour hid them.\" What does 'hid' mean here?",
+          "options": [],
+          "answer": "Covered them so we could not see them (che, giấu).",
+          "explanation_vi": "CHẨN ĐOÁN (nghĩa từ theo ngữ cảnh).",
+          "target_id": "A-T2-INFER-R"
+        },
+        {
+          "id": "BL-R8",
+          "kind": "open",
+          "stem": "Look at these two sentences. (A) In autumn, the days get shorter and the nights get longer. (B) I think these red leaves are the most beautiful thing in our city. Which one is an opinion? How do you know?",
+          "options": [],
+          "answer": "(B). It says what the writer feels ('I think', 'the most beautiful') and nobody can check it. (A) can be checked, so it is a fact.",
+          "explanation_vi": "CHẨN ĐOÁN (sự thật/ý kiến). Chỉ có 1 câu nên A-T5-FACTOP-R là NULL, không ghi dòng kỹ năng.",
+          "target_id": "A-T5-FACTOP-R"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 2,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [
+        "A-T1-TEXT-L"
+      ],
+      "prompt_en": "Read the questions first (2 minutes). Listen (first time). Answer. Listen (second time). Finish.",
+      "prompt_vi": "CN 18/10 - Nghe. Phát tối đa 2 lần, không cho xem chữ (xem chữ = transcript_open). Chấm: câu 1 = ý chính; câu 2-5 = 4 chi tiết (cần >= 3/4); câu 6 chẩn đoán.",
+      "time_min": 11,
+      "planned_date": "2026-10-18",
+      "items": [
+        {
+          "id": "BL-L1",
+          "kind": "mcq",
+          "stem": "What is the talk mainly about?",
+          "options": [
+            "a) why bats sleep in the day",
+            "b) how many bats use sound to find food at night",
+            "c) what fruit bats eat",
+            "d) why people cannot hear well at night"
+          ],
+          "answer": "b",
+          "explanation_vi": "Ý chính.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "BL-L2",
+          "kind": "short",
+          "stem": "When does the bat make the high sounds?",
+          "options": [],
+          "answer": "While it is flying.",
+          "explanation_vi": "Chi tiết 1/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "BL-L3",
+          "kind": "short",
+          "stem": "Can people hear most of these sounds? Why / why not?",
+          "options": [],
+          "answer": "No. They are too high (for people to hear).",
+          "explanation_vi": "Chi tiết 2/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "BL-L4",
+          "kind": "short",
+          "stem": "What is an echo?",
+          "options": [],
+          "answer": "A sound that bounces back / comes back.",
+          "explanation_vi": "Chi tiết 3/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "BL-L5",
+          "kind": "short",
+          "stem": "How do some big fruit bats find their food?",
+          "options": [],
+          "answer": "With their eyes and (their sense of) smell.",
+          "explanation_vi": "Chi tiết 4/4. Nghe hiểu cần >= 3/4 chi tiết (75%).",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "BL-L6",
+          "kind": "open",
+          "stem": "The echo from insect A comes back faster than the echo from insect B. Which insect is closer? How do you know?",
+          "options": [],
+          "answer": "Insect A. The time the echo takes to come back tells how far away the insect is; a faster echo means a shorter way.",
+          "explanation_vi": "CHẨN ĐOÁN (suy luận khi nghe).",
+          "target_id": "A-T2-INFER-L"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 3,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [],
+      "prompt_en": "Part A: match each word with its meaning. Part B: write one sentence of your own for each of five words.",
+      "prompt_vi": "CN 18/10 - Từ vựng (15 từ). Chẩn đoán độ rộng từ vựng, không ghi dòng kỹ năng.",
+      "time_min": 12,
+      "planned_date": "2026-10-18",
+      "items": [
+        {
+          "id": "BL-V01",
+          "kind": "mcq",
+          "stem": "Nhóm 1 - Thời tiết và nước - 1.: choose the meaning of 'cloud'.",
+          "options": [
+            "a. to become ice because it is very cold",
+            "b. a lot of water covering land that is usually dry",
+            "c. a white or grey shape in the sky, made of tiny drops of water",
+            "d. very bad weather with strong wind and heavy rain",
+            "e. to change from hard to liquid when it gets warm"
+          ],
+          "answer": "c",
+          "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+          "target_id": null
+        },
+        {
+          "id": "BL-V02",
+          "kind": "mcq",
+          "stem": "Nhóm 1 - Thời tiết và nước - 2.: choose the meaning of 'storm'.",
+          "options": [
+            "a. to become ice because it is very cold",
+            "b. a lot of water covering land that is usually dry",
+            "c. a white or grey shape in the sky, made of tiny drops of water",
+            "d. very bad weather with strong wind and heavy rain",
+            "e. to change from hard to liquid when it gets warm"
+          ],
+          "answer": "d",
+          "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+          "target_id": null
+        },
+        {
+          "id": "BL-V03",
+          "kind": "mcq",
+          "stem": "Nhóm 1 - Thời tiết và nước - 3.: choose the meaning of 'melt'.",
+          "options": [
+            "a. to become ice because it is very cold",
+            "b. a lot of water covering land that is usually dry",
+            "c. a white or grey shape in the sky, made of tiny drops of water",
+            "d. very bad weather with strong wind and heavy rain",
+            "e. to change from hard to liquid when it gets warm"
+          ],
+          "answer": "e",
+          "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+          "target_id": null
+        },
+        {
+          "id": "BL-V04",
+          "kind": "mcq",
+          "stem": "Nhóm 1 - Thời tiết và nước - 4.: choose the meaning of 'freeze'.",
+          "options": [
+            "a. to become ice because it is very cold",
+            "b. a lot of water covering land that is usually dry",
+            "c. a white or grey shape in the sky, made of tiny drops of water",
+            "d. very bad weather with strong wind and heavy rain",
+            "e. to change from hard to liquid when it gets warm"
+          ],
+          "answer": "a",
+          "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+          "target_id": null
+        },
+        {
+          "id": "BL-V05",
+          "kind": "mcq",
+          "stem": "Nhóm 1 - Thời tiết và nước - 5.: choose the meaning of 'flood'.",
+          "options": [
+            "a. to become ice because it is very cold",
+            "b. a lot of water covering land that is usually dry",
+            "c. a white or grey shape in the sky, made of tiny drops of water",
+            "d. very bad weather with strong wind and heavy rain",
+            "e. to change from hard to liquid when it gets warm"
+          ],
+          "answer": "b",
+          "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+          "target_id": null
+        },
+        {
+          "id": "BL-V06",
+          "kind": "mcq",
+          "stem": "Nhóm 2 - Sinh vật - 6.: choose the meaning of 'root'.",
+          "options": [
+            "f. a very small animal with six legs, like an ant or a bee",
+            "g. the hard outside part of a snail, an egg or a turtle",
+            "h. the part of a plant that grows under the ground",
+            "i. one of the soft, light things that cover a bird's body",
+            "j. a small hard thing that a new plant grows from"
+          ],
+          "answer": "h",
+          "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+          "target_id": null
+        },
+        {
+          "id": "BL-V07",
+          "kind": "mcq",
+          "stem": "Nhóm 2 - Sinh vật - 7.: choose the meaning of 'feather'.",
+          "options": [
+            "f. a very small animal with six legs, like an ant or a bee",
+            "g. the hard outside part of a snail, an egg or a turtle",
+            "h. the part of a plant that grows under the ground",
+            "i. one of the soft, light things that cover a bird's body",
+            "j. a small hard thing that a new plant grows from"
+          ],
+          "answer": "i",
+          "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+          "target_id": null
+        },
+        {
+          "id": "BL-V08",
+          "kind": "mcq",
+          "stem": "Nhóm 2 - Sinh vật - 8.: choose the meaning of 'insect'.",
+          "options": [
+            "f. a very small animal with six legs, like an ant or a bee",
+            "g. the hard outside part of a snail, an egg or a turtle",
+            "h. the part of a plant that grows under the ground",
+            "i. one of the soft, light things that cover a bird's body",
+            "j. a small hard thing that a new plant grows from"
+          ],
+          "answer": "f",
+          "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+          "target_id": null
+        },
+        {
+          "id": "BL-V09",
+          "kind": "mcq",
+          "stem": "Nhóm 2 - Sinh vật - 9.: choose the meaning of 'seed'.",
+          "options": [
+            "f. a very small animal with six legs, like an ant or a bee",
+            "g. the hard outside part of a snail, an egg or a turtle",
+            "h. the part of a plant that grows under the ground",
+            "i. one of the soft, light things that cover a bird's body",
+            "j. a small hard thing that a new plant grows from"
+          ],
+          "answer": "j",
+          "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+          "target_id": null
+        },
+        {
+          "id": "BL-V10",
+          "kind": "mcq",
+          "stem": "Nhóm 2 - Sinh vật - 10.: choose the meaning of 'shell'.",
+          "options": [
+            "f. a very small animal with six legs, like an ant or a bee",
+            "g. the hard outside part of a snail, an egg or a turtle",
+            "h. the part of a plant that grows under the ground",
+            "i. one of the soft, light things that cover a bird's body",
+            "j. a small hard thing that a new plant grows from"
+          ],
+          "answer": "g",
+          "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+          "target_id": null
+        },
+        {
+          "id": "BL-V11",
+          "kind": "mcq",
+          "stem": "Nhóm 3 - Trái Đất và vũ trụ - 11.: choose the meaning of 'rock'.",
+          "options": [
+            "k. land with water all around it",
+            "l. a dry place with very little rain and few plants",
+            "m. the hard material that mountains are made of",
+            "n. a very large round object that moves around a star",
+            "o. a big hole in the side of a mountain or under the ground"
+          ],
+          "answer": "m",
+          "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+          "target_id": null
+        },
+        {
+          "id": "BL-V12",
+          "kind": "mcq",
+          "stem": "Nhóm 3 - Trái Đất và vũ trụ - 12.: choose the meaning of 'planet'.",
+          "options": [
+            "k. land with water all around it",
+            "l. a dry place with very little rain and few plants",
+            "m. the hard material that mountains are made of",
+            "n. a very large round object that moves around a star",
+            "o. a big hole in the side of a mountain or under the ground"
+          ],
+          "answer": "n",
+          "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+          "target_id": null
+        },
+        {
+          "id": "BL-V13",
+          "kind": "mcq",
+          "stem": "Nhóm 3 - Trái Đất và vũ trụ - 13.: choose the meaning of 'desert'.",
+          "options": [
+            "k. land with water all around it",
+            "l. a dry place with very little rain and few plants",
+            "m. the hard material that mountains are made of",
+            "n. a very large round object that moves around a star",
+            "o. a big hole in the side of a mountain or under the ground"
+          ],
+          "answer": "l",
+          "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+          "target_id": null
+        },
+        {
+          "id": "BL-V14",
+          "kind": "mcq",
+          "stem": "Nhóm 3 - Trái Đất và vũ trụ - 14.: choose the meaning of 'cave'.",
+          "options": [
+            "k. land with water all around it",
+            "l. a dry place with very little rain and few plants",
+            "m. the hard material that mountains are made of",
+            "n. a very large round object that moves around a star",
+            "o. a big hole in the side of a mountain or under the ground"
+          ],
+          "answer": "o",
+          "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+          "target_id": null
+        },
+        {
+          "id": "BL-V15",
+          "kind": "mcq",
+          "stem": "Nhóm 3 - Trái Đất và vũ trụ - 15.: choose the meaning of 'island'.",
+          "options": [
+            "k. land with water all around it",
+            "l. a dry place with very little rain and few plants",
+            "m. the hard material that mountains are made of",
+            "n. a very large round object that moves around a star",
+            "o. a big hole in the side of a mountain or under the ground"
+          ],
+          "answer": "k",
+          "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+          "target_id": null
+        },
+        {
+          "id": "BL-VB1",
+          "kind": "open",
+          "stem": "Write one sentence of your own with the word: melt. The sentence must show that you understand the meaning.",
+          "options": [],
+          "answer": "Đ nếu đúng nghĩa và đúng dạng từ (vd. The ice cream melted in the sun.); ? nếu câu đúng nhưng không cho thấy nghĩa; S nếu sai.",
+          "explanation_vi": "CHẨN ĐOÁN (dùng được _/5). Không ghi dòng kỹ năng.",
+          "target_id": null
+        },
+        {
+          "id": "BL-VB2",
+          "kind": "open",
+          "stem": "Write one sentence of your own with the word: storm. The sentence must show that you understand the meaning.",
+          "options": [],
+          "answer": "Đ nếu đúng nghĩa và đúng dạng từ (vd. The ice cream melted in the sun.); ? nếu câu đúng nhưng không cho thấy nghĩa; S nếu sai.",
+          "explanation_vi": "CHẨN ĐOÁN (dùng được _/5). Không ghi dòng kỹ năng.",
+          "target_id": null
+        },
+        {
+          "id": "BL-VB3",
+          "kind": "open",
+          "stem": "Write one sentence of your own with the word: seed. The sentence must show that you understand the meaning.",
+          "options": [],
+          "answer": "Đ nếu đúng nghĩa và đúng dạng từ (vd. The ice cream melted in the sun.); ? nếu câu đúng nhưng không cho thấy nghĩa; S nếu sai.",
+          "explanation_vi": "CHẨN ĐOÁN (dùng được _/5). Không ghi dòng kỹ năng.",
+          "target_id": null
+        },
+        {
+          "id": "BL-VB4",
+          "kind": "open",
+          "stem": "Write one sentence of your own with the word: desert. The sentence must show that you understand the meaning.",
+          "options": [],
+          "answer": "Đ nếu đúng nghĩa và đúng dạng từ (vd. The ice cream melted in the sun.); ? nếu câu đúng nhưng không cho thấy nghĩa; S nếu sai.",
+          "explanation_vi": "CHẨN ĐOÁN (dùng được _/5). Không ghi dòng kỹ năng.",
+          "target_id": null
+        },
+        {
+          "id": "BL-VB5",
+          "kind": "open",
+          "stem": "Write one sentence of your own with the word: planet. The sentence must show that you understand the meaning.",
+          "options": [],
+          "answer": "Đ nếu đúng nghĩa và đúng dạng từ (vd. The ice cream melted in the sun.); ? nếu câu đúng nhưng không cho thấy nghĩa; S nếu sai.",
+          "explanation_vi": "CHẨN ĐOÁN (dùng được _/5). Không ghi dòng kỹ năng.",
+          "target_id": null
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 4,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [
+        "A-L4-DESC-S"
+      ],
+      "prompt_en": "Look at this picture. Tell me about this animal: what it looks like, where it lives, and what it does.",
+      "prompt_vi": "T2 19/10 - N1 Mô tả (45-60 giây). Ghi để cô tham khảo khi chốt bộ kỹ năng; A-L4-DESC-S nằm ngoài bộ 12.",
+      "time_min": 2,
+      "planned_date": "2026-10-19",
+      "items": [
+        {
+          "id": "BL-N1",
+          "kind": "open",
+          "stem": "Describe the animal in the picture (45-60 s).",
+          "options": [],
+          "answer": "Nói vật gì ngay đầu; >= 4 chi tiết thuộc >= 2 khía cạnh.",
+          "explanation_vi": "Chẩn đoán.",
+          "target_id": "A-L4-DESC-S"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 5,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [
+        "A-L3-SEQ-S"
+      ],
+      "prompt_en": "Tell me how you get ready for school, from the moment you wake up until you leave home.",
+      "prompt_vi": "T2 19/10 - N2 Trình tự (45-60 giây). Ghi để cô tham khảo; A-L3-SEQ-S nằm ngoài bộ 12.",
+      "time_min": 2,
+      "planned_date": "2026-10-19",
+      "items": [
+        {
+          "id": "BL-N2",
+          "kind": "open",
+          "stem": "How do you get ready for school? (45-60 s)",
+          "options": [],
+          "answer": ">= 4 bước đúng thứ tự; từ chỉ trình tự.",
+          "explanation_vi": "Chẩn đoán.",
+          "target_id": "A-L3-SEQ-S"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 6,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [
+        "A-L3-CAUSE-S",
+        "A-L2-COMPENSATE-S"
+      ],
+      "prompt_en": "(30 seconds to think, no writing.) Imagine nobody waters a plant for two weeks. What happens to it, and why?",
+      "prompt_vi": "T2 19/10 - N3 Vì sao (45-60 giây; Nói \"vì sao - nên\" cần nói >= 45 giây). Ghi activity_type = ACT-SPEAK-MONO (catalogue chỉ cho A-L3-CAUSE-S ở MONO). Xoay xở khi thiếu từ: chỉ chấm nếu có chỗ thiếu từ thật (vd. héo = wilt), cô xác nhận; không thì NULL. Cô không nói \"Why?\" trong lúc An nói.",
+      "time_min": 3,
+      "planned_date": "2026-10-19",
+      "items": [
+        {
+          "id": "BL-N3",
+          "kind": "open",
+          "stem": "Imagine nobody waters a plant for two weeks. What happens to it, and why?",
+          "options": [],
+          "answer": ">= 2 loại từ nối nguyên nhân-kết quả, đúng chiều (because, so, as a result, that's why).",
+          "explanation_vi": "A-L3-CAUSE-S: c1 từ nối, c2 đúng chiều. A-L2-COMPENSATE-S: c1 diễn đạt vòng thành công, c2 <= 1 lần chuyển sang tiếng Việt cho từ nội dung.",
+          "target_id": "A-L3-CAUSE-S"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 7,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "PRACTICE",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [
+        "A-L3-CAUSE-S"
+      ],
+      "prompt_en": "First, ___. Because ___, ___. As a result, ___. (Say it again, 45 seconds.)",
+      "prompt_vi": "T2 19/10 - N3 thử lại có câu mẫu. CHỈ khi N3 <= 2/4. Ghi dòng riêng: PRACTICE, attempt_no = 2, support_used = frame.",
+      "time_min": 1,
+      "planned_date": "2026-10-19",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 8,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [
+        "A-X1-TURN"
+      ],
+      "prompt_en": "(30 seconds to think.) Is it better for children to live in a big city or in the countryside? Tell me your opinion, give your reasons and an example. Talk for at least one minute.",
+      "prompt_vi": "T2 19/10 - N4 (60-90 giây). Cô nghe trực tiếp => ACT-SPEAK-LIVE: chỉ ghi dòng cho A-X1-TURN (c1 >= 60 giây, c2 <= 3 lần ngừng > 3 giây, c3 nói lại câu thay vì bỏ dở). Nêu ý kiến (A-T7-OPINION) chỉ nhận xét trên phiếu, KHÔNG ghi dòng vì catalogue không nhận Nêu ý kiến ở ACT-SPEAK-LIVE.",
+      "time_min": 3,
+      "planned_date": "2026-10-19",
+      "items": [
+        {
+          "id": "BL-N4",
+          "kind": "open",
+          "stem": "City or countryside? Opinion, reasons, example.",
+          "options": [],
+          "answer": "Quan điểm rõ; >= 2 lý do khác nhau; >= 1 ví dụ gắn với lý do. Không chấm đúng/sai quan điểm.",
+          "explanation_vi": "A-X1-TURN (c1 >= 60 giây, c2 <= 3 lần ngừng dài, c3 nói lại câu). Quan điểm, lý do, ví dụ: nhận xét chẩn đoán, không ghi dòng.",
+          "target_id": "A-X1-TURN"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 9,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "PRACTICE",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [],
+      "prompt_en": "Can you give me another reason? / Can you give me an example?",
+      "prompt_vi": "T2 19/10 - N4 thử lại có gợi ý. CHỈ khi thiếu lý do/ví dụ, sau khi An nói xong. Ghi tutor_prompt, attempt_no = 2; chẩn đoán, không ghi dòng Nêu ý kiến (LIVE không nhận).",
+      "time_min": 1,
+      "planned_date": "2026-10-19",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 10,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [
+        "A-L8-EXCHANGE-S"
+      ],
+      "prompt_en": "(a) I have a hobby that you don't know. Ask me questions to find out what it is. Ask me at least two questions. (b) Cô hỏi 4 câu về tuần của An, sau mỗi câu dừng 3-4 giây.",
+      "prompt_vi": "T2 19/10 - N5 Trao đổi (4 phút). Chẩn đoán; A-L8-EXCHANGE-S ngoài bộ 12.",
+      "time_min": 4,
+      "planned_date": "2026-10-19",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 11,
+      "activity_type": "ACT-WRITE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [
+        "A-L1-PAST-W"
+      ],
+      "prompt_en": "Think of a fun day out you had (a trip, a visit, a festival...). Write about it: at least 80 words. Where did you go? Who went with you? What did you do? What did you see or eat? How did you feel?",
+      "prompt_vi": "T2 19/10 - V1 (8 phút). A-L1-PAST-W chỉ chấm khi bài >= 80 từ VÀ >= 6 chỗ bắt buộc dùng quá khứ; thiếu một trong hai => NULL (không phải 0).",
+      "time_min": 8,
+      "planned_date": "2026-10-19",
+      "items": [
+        {
+          "id": "BL-V1",
+          "kind": "open",
+          "stem": "Write about a fun day out (at least 80 words).",
+          "options": [],
+          "answer": ">= 80% chỗ bắt buộc đúng quá khứ đơn; >= 3 động từ bất quy tắc khác nhau.",
+          "explanation_vi": "A-L1-PAST-W c1, c2.",
+          "target_id": "A-L1-PAST-W"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 12,
+      "activity_type": "ACT-WRITE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [
+        "A-L3-CAUSE-W",
+        "A-L3-PARA-W",
+        "A-T4-CAUSE"
+      ],
+      "prompt_en": "Why do leaves change colour in autumn? Explain it to a friend who did not read yesterday's text. Write one paragraph, 80-100 words. (The text is closed.)",
+      "prompt_vi": "T2 19/10 - V2 (12 phút). Viết đoạn văn chỉ chấm khi >= 80 từ, nếu không => NULL. Chuỗi gợi ý: lá xanh vì chlorophyll -> ngày ngắn, ít nắng -> cây ngừng làm chlorophyll mới, cái cũ phân hủy -> xanh mất -> vàng/cam vốn có lộ ra (một số cây tạo thêm đỏ).",
+      "time_min": 12,
+      "planned_date": "2026-10-19",
+      "items": [
+        {
+          "id": "BL-V2",
+          "kind": "open",
+          "stem": "Why do leaves change colour in autumn? (80-100 words)",
+          "options": [],
+          "answer": "Chuỗi nhân quả >= 2 liên kết nối thành chuỗi.",
+          "explanation_vi": "A-L3-CAUSE-W (từ nối), A-L3-PARA-W (câu mở đoạn, >= 3 câu triển khai, câu kết, >= 4 từ nối), A-T4-CAUSE (nội dung đúng).",
+          "target_id": "A-L3-CAUSE-W"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 13,
+      "activity_type": "ACT-WRITE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [],
+      "prompt_en": "Complete or write your own sentence (10 sentences).",
+      "prompt_vi": "T2 19/10 - Ngữ pháp (6 phút). Chỉ chẩn đoán _/10; không ghi dòng kỹ năng.",
+      "time_min": 6,
+      "planned_date": "2026-10-19",
+      "items": [
+        {
+          "id": "BL-G1",
+          "kind": "gap",
+          "stem": "Last summer, my family ______ .",
+          "options": [],
+          "answer": "went to the beach",
+          "explanation_vi": "CHẨN ĐOÁN cấu trúc: Quá khứ đơn. Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+          "target_id": null
+        },
+        {
+          "id": "BL-G2",
+          "kind": "gap",
+          "stem": "When I was small, I ______ .",
+          "options": [],
+          "answer": "had a red bike",
+          "explanation_vi": "CHẨN ĐOÁN cấu trúc: Quá khứ đơn bất quy tắc. Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+          "target_id": null
+        },
+        {
+          "id": "BL-G3",
+          "kind": "transform",
+          "stem": "Compare an elephant and a cat: one sentence with -er than.",
+          "options": [],
+          "answer": "An elephant is bigger than a cat.",
+          "explanation_vi": "CHẨN ĐOÁN cấu trúc: So sánh hơn. Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+          "target_id": null
+        },
+        {
+          "id": "BL-G4",
+          "kind": "transform",
+          "stem": "Which is the biggest animal you know? One sentence with the ...-est.",
+          "options": [],
+          "answer": "The blue whale is the biggest animal.",
+          "explanation_vi": "CHẨN ĐOÁN cấu trúc: So sánh nhất. Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+          "target_id": null
+        },
+        {
+          "id": "BL-G5",
+          "kind": "gap",
+          "stem": "Next weekend, I am going to ______ .",
+          "options": [],
+          "answer": "visit my grandparents",
+          "explanation_vi": "CHẨN ĐOÁN cấu trúc: going to. Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+          "target_id": null
+        },
+        {
+          "id": "BL-G6",
+          "kind": "gap",
+          "stem": "In 20 years, people will ______ .",
+          "options": [],
+          "answer": "travel to Mars",
+          "explanation_vi": "CHẨN ĐOÁN cấu trúc: will dự đoán. Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+          "target_id": null
+        },
+        {
+          "id": "BL-G7",
+          "kind": "gap",
+          "stem": "I have never ______ .",
+          "options": [],
+          "answer": "seen snow",
+          "explanation_vi": "CHẨN ĐOÁN cấu trúc: Hiện tại hoàn thành (trải nghiệm). Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+          "target_id": null
+        },
+        {
+          "id": "BL-G8",
+          "kind": "transform",
+          "stem": "Join with because: I took an umbrella. It was raining.",
+          "options": [],
+          "answer": "I took an umbrella because it was raining.",
+          "explanation_vi": "CHẨN ĐOÁN cấu trúc: Nối nguyên nhân. Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+          "target_id": null
+        },
+        {
+          "id": "BL-G9",
+          "kind": "transform",
+          "stem": "Join with so: The ice was in the sun. It melted.",
+          "options": [],
+          "answer": "The ice was in the sun, so it melted.",
+          "explanation_vi": "CHẨN ĐOÁN cấu trúc: Nối kết quả. Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+          "target_id": null
+        },
+        {
+          "id": "BL-G10",
+          "kind": "gap",
+          "stem": "Paper ______ (make) from wood.",
+          "options": [],
+          "answer": "is made",
+          "explanation_vi": "CHẨN ĐOÁN cấu trúc: Bị động hiện tại (thử, mức B1). Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+          "target_id": null
+        }
+      ],
+      "self_check_vi": []
+    }
+  ]
+}

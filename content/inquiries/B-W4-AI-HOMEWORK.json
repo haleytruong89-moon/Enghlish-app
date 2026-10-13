@@ -1,0 +1,659 @@
+{
+  "format": "inquiry-template/1",
+  "id": "B-W4-AI-HOMEWORK",
+  "version": 1,
+  "track": "B",
+  "status": "draft",
+  "catalogue_version": "0.2.1-draft",
+  "title_vi": "Tuần 4 — AI trong học tập",
+  "big_question_en": "Should grade-9 students be allowed to use AI chatbots for homework? If so, under what conditions?",
+  "big_question_vi": "Học sinh lớp 9 có nên được dùng chatbot AI khi làm bài tập về nhà không? Nếu có, với điều kiện gì?",
+  "week": 4,
+  "dates": {
+    "from": "2026-11-09",
+    "to": "2026-11-15"
+  },
+  "domain_bucket": "society",
+  "target_ids": [
+    "B-T1-EXAM-R",
+    "B-L2-CLOZE",
+    "B-L1-TRANSFORM-W",
+    "B-T2-ASSUME-R",
+    "B-T5-DATAOP",
+    "B-T5-SOURCE",
+    "B-T7-ARGUE",
+    "B-T11-QUALIFY",
+    "B-L1-COMPLEX-W",
+    "B-L2-PRECISE",
+    "B-L4-EXPLAIN-S"
+  ],
+  "sources": [
+    {
+      "id": "B-W4-AI-HOMEWORK-S1",
+      "title": "When Calculators Came to Class (exam-style reading)",
+      "url": null,
+      "author": "Pilot Kit B author",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào.",
+      "modality": "text",
+      "text": "¶1 When cheap pocket calculators first appeared in shops, many teachers were alarmed. If a machine could do arithmetic in a second, they asked, why would any child bother to learn their times tables? Some schools banned calculators completely. Others allowed them only in the final years of secondary school.\n\n¶2 Over time, a more balanced view developed. Most teachers today agree that students still need to understand how numbers work and to be able to estimate an answer in their heads. Without this understanding, a student who presses the wrong button will not notice that the answer is ridiculous. At the same time, the calculator frees students from long, repetitive calculations, so they can spend more time on the reasoning behind a problem.\n\n¶3 The lesson from this debate is not that every new tool is harmless, nor that every new tool is a threat. Rather, it is that a tool changes what we need to learn. When calculators arrived, mental arithmetic became less important for getting exact answers but more important for checking whether an answer made sense.\n\n¶4 Today, a similar debate is taking place about chatbots that can write essays and explain homework in seconds. Some people fear that students will stop thinking for themselves; others see a tireless personal tutor. If the history of the calculator is any guide, the answer will depend less on the tool itself than on the rules and habits that grow up around it. Students who use the tool to check and extend their thinking are likely to benefit; those who use it to avoid thinking are not."
+    },
+    {
+      "id": "B-W4-AI-HOMEWORK-S2",
+      "title": "Chatbots as homework helpers (cloze)",
+      "url": null,
+      "author": "Pilot Kit B author",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào.",
+      "modality": "text",
+      "text": "Some schools are now testing chatbots as homework helpers. The idea is that a student who is stuck at ten o'clock at night can ask for a hint instead of (1) ______ up. Supporters say this is especially (2) ______ for students whose parents cannot help with difficult subjects. However, teachers point out that chatbots sometimes give answers that sound (3) ______ but are wrong. For this reason, students are taught to treat the chatbot (4) ______ a study partner, not as a teacher who is always right. In one school's guidelines, students must first try a problem on their own, then ask the chatbot to explain only the step they do not understand. The school says the aim is not to stop students from using new technology, but to make sure that it (5) ______ their learning rather than replacing it. Early feedback from students has been mostly (6) ______, although some admit that it is tempting to ask for the full answer when they are tired. The school plans to (7) ______ the guidelines at the end of the year and will make changes (8) ______ necessary."
+    },
+    {
+      "id": "B-W4-AI-HOMEWORK-S3",
+      "title": "Source A — My Night-Time Tutor",
+      "url": null,
+      "author": "Imagined grade-10 student, personal study blog, October 2026 (invented)",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào.",
+      "modality": "text",
+      "text": "¶1 I used to dread maths homework. If I got stuck at ten at night, there was nobody to ask: my parents were tired, and my tutor only comes on Saturdays. This term, I started using an AI chatbot, and it has changed everything.\n\n¶2 I never ask it for the answer. Instead, I type in my working and ask it where my mistake is, or I ask it to explain a step in a different way. Sometimes I ask it to give me three similar problems so I can practise. I use it for about thirty minutes, three evenings a week. My maths test scores went from 6.5 at the start of the term to 8 in the mid-term test.\n\n¶3 A chatbot is like a patient tutor who never gets tired. Banning AI completely would be pointless, because students will use it anyway. Schools should teach us to use it well: ask for explanations, not answers."
+    },
+    {
+      "id": "B-W4-AI-HOMEWORK-S4",
+      "title": "Source B — When the Machine Writes, Who Learns?",
+      "url": null,
+      "author": "Imagined English teacher, school newsletter for parents, October 2026 (invented)",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào. Nguồn dùng cho bài nói Chủ nhật: thầy/cô KHÔNG đọc trước.",
+      "modality": "text",
+      "text": "¶1 This term I noticed that several homework essays in my grade-9 class were suddenly fluent, well organised and strangely similar. When I asked, some students admitted they had used a chatbot to write a first draft.\n\n¶2 So I tried a small comparison. Of the 36 students in the class, 14 said they had used a chatbot for their essays during the previous month. In an in-class essay test, written without any devices, those 14 students scored on average 1.5 points lower than the others.\n\n¶3 I must be careful here: students chose for themselves whether to use the chatbot, and those who did may have been weaker writers to begin with. It is one class over one month. But the pattern worries me. When the machine does the thinking, the student just copies, and chatbots will make lazy students lazier.\n\n¶4 I am not calling for a ban. Students may use AI to check grammar or explain a word after they have written their own draft. But the first draft must be theirs."
+    },
+    {
+      "id": "B-W4-AI-HOMEWORK-S5",
+      "title": "Source C — TaskNest press release",
+      "url": null,
+      "author": "Imagined app company, website press release, September 2026 (invented)",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào. Công ty và app là giả định.",
+      "modality": "text",
+      "text": "\"Students who use TaskNest finish their homework 40% faster! In our survey of 500 app users, 9 out of 10 said they felt less stressed after one month. Teachers love it too. Download TaskNest today and take control of your evenings.\""
+    }
+  ],
+  "steps": [
+    {
+      "step_no": 1,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [],
+      "target_ids": [
+        "B-T1-EXAM-R"
+      ],
+      "prompt_en": "12 minutes. For questions 3, 4 and 6, write the paragraph and the first words of the supporting sentence.",
+      "prompt_vi": "Thứ Hai 9/11 · A1 đọc hiểu (264 từ).",
+      "time_min": 12,
+      "planned_date": "2026-11-09",
+      "items": [
+        {
+          "id": "W4-A1-1",
+          "kind": "mcq",
+          "stem": "What is the passage mainly about?",
+          "options": [
+            "what the calculator debate can teach us about new tools such as chatbots",
+            "the history of the times tables",
+            "how chatbots write essays",
+            "why calculators should be banned in schools"
+          ],
+          "answer": "A",
+          "explanation_vi": "",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "W4-A1-2",
+          "kind": "mcq",
+          "stem": "According to paragraph 2, why do students still need to understand how numbers work?",
+          "options": [
+            "because calculators are expensive",
+            "because exams do not allow calculators",
+            "so that they notice when an answer is obviously wrong",
+            "so that they can repair calculators"
+          ],
+          "answer": "C",
+          "explanation_vi": "",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "W4-A1-3",
+          "kind": "mcq",
+          "stem": "The word \"ridiculous\" in paragraph 2 is closest in meaning to ______. (Write ¶ + supporting sentence.)",
+          "options": [
+            "correct",
+            "clearly wrong or silly",
+            "long",
+            "difficult"
+          ],
+          "answer": "B",
+          "explanation_vi": "¶2 \"a student who presses the wrong button will not notice that the answer is ridiculous\".",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "W4-A1-4",
+          "kind": "mcq",
+          "stem": "What does the writer suggest in paragraph 3 about the arrival of calculators? (Write ¶ + supporting sentence.)",
+          "options": [
+            "Mental arithmetic became useless.",
+            "Students became worse at maths.",
+            "All teachers accepted calculators immediately.",
+            "The skills students needed changed rather than disappeared."
+          ],
+          "answer": "D",
+          "explanation_vi": "¶3 \"a tool changes what we need to learn… less important… but more important for checking\".",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "W4-A1-5",
+          "kind": "mcq",
+          "stem": "According to paragraph 4, how do some people see chatbots?",
+          "options": [
+            "as a cheap calculator",
+            "as a tireless personal tutor",
+            "as a replacement for schools",
+            "as a tool for checking spelling only"
+          ],
+          "answer": "B",
+          "explanation_vi": "",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "W4-A1-6",
+          "kind": "mcq",
+          "stem": "The writer would most likely agree that ______. (Write ¶ + supporting sentence.)",
+          "options": [
+            "how students use chatbots matters more than whether they have them",
+            "chatbots should be banned in all schools",
+            "chatbots are completely harmless",
+            "calculators were a mistake"
+          ],
+          "answer": "A",
+          "explanation_vi": "¶4 \"the answer will depend less on the tool itself than on the rules and habits…\".",
+          "target_id": "B-T1-EXAM-R"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 2,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [],
+      "target_ids": [
+        "B-L2-CLOZE"
+      ],
+      "prompt_en": "Read the passage and choose the best answer for each gap. 8 minutes. No dictionary.",
+      "prompt_vi": "Thứ Hai 9/11 · A2 điền đoạn văn (181 từ). Dạng từ: 2, 3, 6. Sau đó 5' sổ lỗi.",
+      "time_min": 8,
+      "planned_date": "2026-11-09",
+      "items": [
+        {
+          "id": "W4-A2-1",
+          "kind": "gap",
+          "stem": "Gap (1)",
+          "options": [
+            "taking",
+            "making",
+            "giving",
+            "putting"
+          ],
+          "answer": "C",
+          "explanation_vi": "give up = bỏ cuộc.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W4-A2-2",
+          "kind": "word_form",
+          "stem": "Gap (2)",
+          "options": [
+            "use",
+            "useful",
+            "usefully",
+            "usefulness"
+          ],
+          "answer": "B",
+          "explanation_vi": "be especially + tính từ.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W4-A2-3",
+          "kind": "word_form",
+          "stem": "Gap (3)",
+          "options": [
+            "convince",
+            "convincing",
+            "convinced",
+            "convincingly"
+          ],
+          "answer": "B",
+          "explanation_vi": "sound + tính từ: convincing (nghe có vẻ thuyết phục). ĐÃ SỬA (FIXLIST): bộ phương án cũ confidence/confidently/confide/confident trùng y hệt câu 13 baseline.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W4-A2-4",
+          "kind": "gap",
+          "stem": "Gap (4)",
+          "options": [
+            "as",
+            "by",
+            "for",
+            "with"
+          ],
+          "answer": "A",
+          "explanation_vi": "treat… as…",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W4-A2-5",
+          "kind": "gap",
+          "stem": "Gap (5)",
+          "options": [
+            "stops",
+            "supports",
+            "replaces",
+            "ends"
+          ],
+          "answer": "B",
+          "explanation_vi": "supports their learning rather than replacing it.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W4-A2-6",
+          "kind": "word_form",
+          "stem": "Gap (6)",
+          "options": [
+            "position",
+            "positivity",
+            "positive",
+            "positively"
+          ],
+          "answer": "C",
+          "explanation_vi": "has been mostly + tính từ.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W4-A2-7",
+          "kind": "gap",
+          "stem": "Gap (7)",
+          "options": [
+            "review",
+            "remind",
+            "reply",
+            "retire"
+          ],
+          "answer": "A",
+          "explanation_vi": "review the guidelines.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W4-A2-8",
+          "kind": "gap",
+          "stem": "Gap (8)",
+          "options": [
+            "unless",
+            "if",
+            "so",
+            "because"
+          ],
+          "answer": "B",
+          "explanation_vi": "if necessary.",
+          "target_id": "B-L2-CLOZE"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 3,
+      "activity_type": "ACT-WRITE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "B-L1-TRANSFORM-W"
+      ],
+      "prompt_en": "Rewrite each sentence so that it means the same as the first one. Use the words given.",
+      "prompt_vi": "Thứ Ba 10/11, trong buổi · A3 viết lại câu.",
+      "time_min": 10,
+      "planned_date": "2026-11-10",
+      "items": [
+        {
+          "id": "W4-A3-1",
+          "kind": "transform",
+          "stem": "People believe that AI will change the way we learn. → It is believed ……",
+          "options": [],
+          "answer": "It is believed that AI will change the way we learn.",
+          "explanation_vi": "Cũng chấp nhận: (bỏ that cũng được) · Không chấp nhận: It is believed AI changes… (đổi thì)",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W4-A3-2",
+          "kind": "transform",
+          "stem": "\"Don't copy answers from a chatbot,\" the teacher told us. → The teacher told us ……",
+          "options": [],
+          "answer": "The teacher told us not to copy answers from a chatbot.",
+          "explanation_vi": "Cũng chấp nhận: — · Không chấp nhận: …us don't copy…; …us to not copy… (theo chuẩn đề thi)",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W4-A3-3",
+          "kind": "transform",
+          "stem": "You should check the facts, or you may end up believing false information. → If you ……",
+          "options": [],
+          "answer": "If you don't check the facts, you may end up believing false information.",
+          "explanation_vi": "Cũng chấp nhận: …do not… · …might / could end up… · Không chấp nhận: If you check the facts, you may… (ngược nghĩa). ĐÃ SỬA (FIXLIST): câu gốc \"learn wrong information\" không tự nhiên.",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W4-A3-4",
+          "kind": "transform",
+          "stem": "My old dictionary was less useful than this app. → This app is ……",
+          "options": [],
+          "answer": "This app is more useful than my old dictionary.",
+          "explanation_vi": "Cũng chấp nhận: …than my old dictionary was · Không chấp nhận: …more usefuller…; …less useful…",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W4-A3-5",
+          "kind": "transform",
+          "stem": "A group of students built this chatbot last year. → This chatbot ……",
+          "options": [],
+          "answer": "This chatbot was built by a group of students last year.",
+          "explanation_vi": "Cũng chấp nhận: …was built last year by a group of students · Không chấp nhận: was build; has been built; bỏ tác nhân",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W4-A3-6",
+          "kind": "transform",
+          "stem": "It is important to ask good questions. → Asking ……",
+          "options": [],
+          "answer": "Asking good questions is important.",
+          "explanation_vi": "Cũng chấp nhận: — · Không chấp nhận: …are important; To asking…",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W4-A3-7",
+          "kind": "transform",
+          "stem": "She uses AI to plan her revision. This saves her a lot of time. → She uses AI to plan her revision, which ……",
+          "options": [],
+          "answer": "She uses AI to plan her revision, which saves her a lot of time.",
+          "explanation_vi": "Cũng chấp nhận: — · Không chấp nhận: which save; which it saves; that saves (sau dấu phẩy)",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W4-A3-8",
+          "kind": "transform",
+          "stem": "I regret not checking the chatbot's answer. → I wish ……",
+          "options": [],
+          "answer": "I wish I had checked the chatbot's answer.",
+          "explanation_vi": "Cũng chấp nhận: I wish I'd checked… · Không chấp nhận: I wish I checked…; I wish I have checked…",
+          "target_id": "B-L1-TRANSFORM-W"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 4,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "delayed_check"
+      ],
+      "target_ids": [
+        "B-T5-DATAOP",
+        "B-T2-ASSUME-R"
+      ],
+      "prompt_en": "Read Sources A and B (10 minutes). Answer questions 1-2 first and hand them in; then answer questions 3-4.",
+      "prompt_vi": "Thứ Tư 11/11 · 35'. Câu 1-2 (D/C) là bài ôn lại B-T5-DATAOP sau 20 ngày (mốc 22/10); Nguyên không xem lại bài tuần 1. ĐÃ SỬA THỨ TỰ (FIXLIST): câu giả định cũ số 2 gợi ý đáp án cho phát biểu (iv), nên làm sau. purpose=delayed_check chỉ áp cho dòng CSV B-T5-DATAOP.",
+      "time_min": 35,
+      "planned_date": "2026-11-11",
+      "items": [
+        {
+          "id": "W4-B1-1i",
+          "kind": "mcq",
+          "stem": "\"My maths test scores went from 6.5 at the start of the term to 8 in the mid-term test.\" (A)",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "A",
+          "explanation_vi": "Dữ liệu/bằng chứng (D).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W4-B1-1ii",
+          "kind": "mcq",
+          "stem": "\"A chatbot is like a patient tutor who never gets tired.\" (A)",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "B",
+          "explanation_vi": "So sánh, hình ảnh.",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W4-B1-1iii",
+          "kind": "mcq",
+          "stem": "\"Those 14 students scored on average 1.5 points lower than the others.\" (B)",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "A",
+          "explanation_vi": "Dữ liệu/bằng chứng (D).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W4-B1-1iv",
+          "kind": "mcq",
+          "stem": "\"When the machine does the thinking, the student just copies.\" (B)",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "B",
+          "explanation_vi": "Khái quát, không có số đo.",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W4-B1-1v",
+          "kind": "mcq",
+          "stem": "\"I use it for about thirty minutes, three evenings a week.\" (A)",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "A",
+          "explanation_vi": "Dữ liệu/bằng chứng (D).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W4-B1-1vi",
+          "kind": "mcq",
+          "stem": "\"Banning AI completely would be pointless.\" (A)",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "B",
+          "explanation_vi": "Đánh giá về một chính sách.",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W4-B1-1vii",
+          "kind": "mcq",
+          "stem": "\"Of the 36 students in the class, 14 said they had used a chatbot for their essays during the previous month.\" (B)",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "A",
+          "explanation_vi": "Dữ liệu/bằng chứng (D).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W4-B1-1viii",
+          "kind": "mcq",
+          "stem": "\"Chatbots will make lazy students lazier.\" (B)",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "B",
+          "explanation_vi": "Dự đoán, khái quát.",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W4-B1-2",
+          "kind": "open",
+          "stem": "Choose two statements you marked C. For each, explain in 1-2 sentences why it is commentary, not data.",
+          "options": [],
+          "answer": "Ví dụ: (ii) so sánh, hình ảnh · (iv), (viii) khái quát, dự đoán không có số đo · (vi) đánh giá về chính sách.",
+          "explanation_vi": "c2 B-T5-DATAOP. Câu 1-2 là BÀI ÔN LẠI SAU 2 TUẦN (purpose=delayed_check, last_practice_date=2026-10-22). ĐÃ SỬA THỨ TỰ (FIXLIST): làm và nộp câu 1-2 TRƯỚC, rồi mới phát câu 3-4.",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W4-B1-3",
+          "kind": "open",
+          "stem": "Source A's writer says their maths scores went from 6.5 to 8. What does the writer assume caused this? Name one other possible cause. Quote the words.",
+          "options": [],
+          "answer": "The writer assumes the CHATBOT caused the rise (\"it has changed everything\" ¶1; \"My maths test scores went from 6.5… to 8\" ¶2). Other causes: more study time, an easier mid-term test, extra teaching, more familiarity with the test format.",
+          "explanation_vi": "c1-c3 B-T2-ASSUME-R; nói như giả định, không như sự thật.",
+          "target_id": "B-T2-ASSUME-R"
+        },
+        {
+          "id": "W4-B1-4",
+          "kind": "open",
+          "stem": "In Source B, ¶3, the teacher first says she \"must be careful\", then writes \"When the machine does the thinking, the student just copies\". What does this second sentence assume about all chatbot use? Quote the words.",
+          "options": [],
+          "answer": "It assumes that ALL chatbot use means the machine does the thinking, unlike the uses Source A describes (asking where the mistake is, asking for explanations). Quote ¶3.",
+          "explanation_vi": "Căn cứ thứ hai cho B-T2-ASSUME-R.",
+          "target_id": "B-T2-ASSUME-R"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 5,
+      "activity_type": "ACT-CANVAS-ADV",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [
+        "B-T7-ARGUE",
+        "B-T11-QUALIFY"
+      ],
+      "prompt_en": "Practice question: Should students be allowed to use AI to check their English essays? Fill in the Canvas with frames only (no paragraph this week). Canvas boxes: Question · 1. Your answer (My answer is that …) · 2. Reasons + evidence, each with [Source, ¶] (One reason is that … Source B shows this: \"…\" (¶2).) · 3. Why the evidence supports the reason (This supports my point because …) · 4. Limitation (However, this evidence is limited because …) · 5. Conditional conclusion (So it is likely / possible that …, unless / as long as …)",
+      "prompt_vi": "Thứ Năm 12/11 · Chỉ Canvas có câu mẫu (10').",
+      "time_min": 10,
+      "planned_date": "2026-11-12",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 6,
+      "activity_type": "ACT-WRITE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [],
+      "target_ids": [
+        "B-T7-ARGUE",
+        "B-T11-QUALIFY",
+        "B-L1-COMPLEX-W",
+        "B-L2-PRECISE"
+      ],
+      "prompt_en": "Should grade-9 students be allowed to use AI chatbots for homework? If so, under what conditions? 250-300 words, Sources A and B open. Give your position and, if you say \"yes\", at least one clear condition. Use evidence from both sources, explain how one piece of evidence supports your reason, name one limitation of the evidence (Source B admits some of its own; what does Source A leave out?), and end with a conclusion that says how sure you are. No dictionary, no spell-check, no AI.",
+      "prompt_vi": "Thứ Bảy 14/11 · 45'. Bỏ \"(both sources admit some)\" vì Nguồn A không tự nêu giới hạn nào. Đề thử 40 câu đã dời sang thứ Bảy 21/11 (ngoài app), nên bài viết ở lại thứ Bảy.",
+      "time_min": 45,
+      "planned_date": "2026-11-14",
+      "items": [],
+      "self_check_vi": [
+        "Câu đầu tiên đã trả lời thẳng câu hỏi chưa?",
+        "Mỗi lý do đã có ít nhất một chỗ dẫn từ nguồn (Nguồn A hay B, đoạn mấy) chưa?",
+        "Có ít nhất một chỗ bạn giải thích vì sao bằng chứng ấy đỡ cho lý do của mình chưa?",
+        "Bạn đã nêu một giới hạn của bằng chứng chưa?",
+        "Kết luận đã nói rõ bạn chắc đến đâu (likely, in most cases…) và khi nào thì kết luận sẽ khác (unless…, if…) chưa?",
+        "Bài đã đủ 250 từ chưa? Có vài câu phức với which, who, although, if… chưa?",
+        "Đọc lại một lượt, chỉ để tìm 3 lỗi bạn hay mắc nhất.",
+        "Bạn đã dùng điểm yếu mà Nguồn B tự thừa nhận, và chỉ ra điều Nguồn A bỏ qua chưa?"
+      ]
+    },
+    {
+      "step_no": 7,
+      "activity_type": "ACT-REVISE",
+      "mode": "REVISION",
+      "purpose": [],
+      "target_ids": [
+        "B-T7-ARGUE",
+        "B-T11-QUALIFY",
+        "B-L2-PRECISE"
+      ],
+      "prompt_en": "Read the (max 3) comments. Fix only those places. Underline what you changed and add one line: \"I changed … because …\".",
+      "prompt_vi": "Chủ nhật 15/11 chiều (nhịp thường: bài viết thứ Bảy 14/11, sửa bài Chủ nhật) · cùng learning_family FAM-B-AI-1.",
+      "time_min": 15,
+      "planned_date": "2026-11-15",
+      "items": [],
+      "self_check_vi": [
+        "Chỉ sửa những chỗ có gợi ý (tối đa 3), không viết lại cả bài.",
+        "Gạch chân chỗ đã sửa và ghi một dòng cuối: \"Mình đã sửa … vì …\"."
+      ],
+      "status": "needs_review",
+      "review_note": "Loại hoạt động ACT-REVISE không nằm trong danh sách bài được tính cho: B-T7-ARGUE, B-T11-QUALIFY, B-L2-PRECISE (danh mục v0.2.1). Cần phụ huynh quyết: đổi loại hoạt động của bước này, hoặc bỏ kỹ năng đó khỏi bước. Chưa sửa nội dung; mẫu này giữ nháp, chưa giao được."
+    },
+    {
+      "step_no": 8,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "B-L4-EXPLAIN-S"
+      ],
+      "prompt_en": "Read Source B for 2 minutes, turn it over, no notes. Explain the teacher's argument, including what she is careful about, so your teacher can say it back in one sentence. Give one example.",
+      "prompt_vi": "Chủ nhật 15/11, trong buổi (≈ 12'). Ý chính: \"The teacher worries that letting a chatbot write first drafts stops students learning to write: in her small comparison, chatbot users did worse in an in-class test, though she admits this may not be the cause. So she would allow AI only after students have written their own draft, for checking grammar or explaining words.\"",
+      "time_min": 12,
+      "planned_date": "2026-11-15",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 9,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "delayed_check"
+      ],
+      "target_ids": [
+        "B-T5-SOURCE"
+      ],
+      "prompt_en": "Read Source C. 1. How far can you trust Source C? Use at least two factors. 2. Name one specific limitation, and one thing Source C can still be used for.",
+      "prompt_vi": "Bài ôn lại B-T5-SOURCE, 10', làm vào thứ Hai 23/11 (tuần 6, sau đề thử 21/11; nằm ngoài khoảng ngày 9-15/11 của chủ đề này). Ghi purpose=delayed_check, last_practice_date=2026-11-08: câu 5 thứ Tư 4/11 và góp ý bài viết tuần 3 đều chạm yếu tố \"phương pháp khảo sát\", nên ngày sớm nhất là 22/11.",
+      "time_min": 10,
+      "planned_date": null,
+      "items": [
+        {
+          "id": "W4-C-1",
+          "kind": "open",
+          "stem": "How far can you trust Source C? Use at least two factors (who wrote it and why, how the figures were collected, when and over what period, whether anything else confirms it).",
+          "options": [],
+          "answer": "Written by the company that sells the app, to advertise it · only current app users were asked (unhappy users may have left) · \"40% faster\" gives no method and no comparison group · only one month · \"Teachers love it\" has no evidence · no independent source.",
+          "explanation_vi": "c1 B-T5-SOURCE (≥ 2 yếu tố).",
+          "target_id": "B-T5-SOURCE"
+        },
+        {
+          "id": "W4-C-2",
+          "kind": "open",
+          "stem": "Name one specific limitation, and one thing Source C can still be used for.",
+          "options": [],
+          "answer": "Limitation: any one above. Still useful for: what the app CLAIMS to do, and that some users SAY they feel less stressed — a starting point for finding independent evidence.",
+          "explanation_vi": "c2 B-T5-SOURCE. purpose=delayed_check.",
+          "target_id": "B-T5-SOURCE"
+        }
+      ],
+      "self_check_vi": [],
+      "status": "needs_review",
+      "review_note": "Loại hoạt động ACT-SOURCE-QA không nằm trong danh sách bài được tính cho: B-T5-SOURCE (danh mục v0.2.1). Cần phụ huynh quyết: đổi loại hoạt động của bước này, hoặc bỏ kỹ năng đó khỏi bước. Chưa sửa nội dung; mẫu này giữ nháp, chưa giao được."
+    }
+  ]
+}

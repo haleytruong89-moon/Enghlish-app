@@ -1,0 +1,678 @@
+{
+  "format": "inquiry-template/1",
+  "id": "B-W3-TRANSPORT",
+  "version": 1,
+  "track": "B",
+  "status": "draft",
+  "catalogue_version": "0.2.1-draft",
+  "title_vi": "Tuần 3 — Giao thông công cộng công bằng (Lanford, giả định)",
+  "big_question_en": "Which is the fairer way for Lanford to spend its transport money: free bus fares for students, older people and low-income workers, or more frequent buses for everyone?",
+  "big_question_vi": "Thành phố Lanford (giả định) nên dùng ngân sách giao thông để miễn vé xe buýt cho học sinh, người cao tuổi và người thu nhập thấp, hay để tăng chuyến cho mọi người? Cách nào công bằng hơn?",
+  "week": 3,
+  "dates": {
+    "from": "2026-11-02",
+    "to": "2026-11-08"
+  },
+  "domain_bucket": "society",
+  "target_ids": [
+    "B-T1-EXAM-R",
+    "B-L2-CLOZE",
+    "B-L1-TRANSFORM-W",
+    "B-T1-ARG-R",
+    "B-T2-ASSUME-R",
+    "B-T7-ARGUE",
+    "B-T11-QUALIFY",
+    "B-L1-COMPLEX-W",
+    "B-L2-PRECISE",
+    "B-L4-EXPLAIN-S"
+  ],
+  "sources": [
+    {
+      "id": "B-W3-TRANSPORT-S1",
+      "title": "The Bicycle Bus (exam-style reading)",
+      "url": null,
+      "author": "Pilot Kit B author",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào.",
+      "modality": "text",
+      "text": "¶1 In some cities, a new kind of \"bus\" has started to appear on the roads on weekday mornings. It has no engine, no driver and no ticket machine. It is a bicycle bus: a group of children who cycle to school together, guided by a few adult volunteers.\n\n¶2 The idea works like an ordinary bus route. The group follows a fixed path and stops at the same corners at the same times, where more children join. By the time it reaches the school gate, a bicycle bus may have grown from five riders to fifty. Because the children ride as one large, visible group, drivers slow down and give them space, which makes many parents feel more comfortable about letting their children cycle.\n\n¶3 Supporters say the benefits go beyond safety. Children arrive at school awake and in a good mood after twenty minutes of exercise. Fewer cars near the school gate mean less traffic and cleaner air for everyone. And for many children, the ride is simply the most enjoyable part of the day.\n\n¶4 Bicycle buses are not without difficulties, however. They depend entirely on volunteers, and when a key parent moves away or changes jobs, a route can disappear. They also work best where the roads are reasonably flat and where at least some cycle lanes exist. In cities with heavy traffic and no safe space for bikes, organisers warn that a bicycle bus should not be started without support from the local authorities.\n\n¶5 Even so, the idea is spreading, largely because it is cheap: all it needs is bicycles, a route and a few adults who are willing to get up early."
+    },
+    {
+      "id": "B-W3-TRANSPORT-S2",
+      "title": "Reliable public transport (cloze)",
+      "url": null,
+      "author": "Pilot Kit B author",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào.",
+      "modality": "text",
+      "text": "Public transport only works if people (1) ______ use it. In many fast-growing cities, the problem is not a lack of buses but a lack of (2) ______: buses get stuck in the same traffic jams as cars, so passengers cannot be sure when they will arrive. One solution is to give buses their own lanes. When buses can move freely, journeys become faster and more (3) ______, and more people are willing to leave their motorbikes at home. However, bus lanes only help if other vehicles are kept (4) ______ of them, which means the rules must be enforced. Another factor is the \"last kilometre\". Even a fast bus is not much use if the nearest stop is a long, hot walk away. Some cities are (5) ______ this problem by adding shaded footpaths and bicycle parking near stations. Fares (6) ______ matter, especially for students and older people, but many passengers say they care at least as much about (7) ______ and comfort. In short, a good transport system is one that people choose because it is convenient, not one they use only (8) ______ they have no other choice."
+    },
+    {
+      "id": "B-W3-TRANSPORT-S3",
+      "title": "Source A — Free Rides for Those Who Need Them Most",
+      "url": null,
+      "author": "Imagined retired teacher, local newspaper column, October 2026 (invented)",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào. Lanford và Westbrook là thành phố giả định. Nguồn dùng cho bài nói Chủ nhật: thầy/cô KHÔNG đọc trước.",
+      "modality": "text",
+      "text": "¶1 Our city likes to say that its buses are \"for everyone\". But for many people, they are not. A monthly bus pass in Lanford costs 300,000 dong. For a student or a pensioner, that is a lot of money, and for a family with three children at secondary school it is almost a million dong a month.\n\n¶2 The city has a limited budget for public transport, and it must decide how to spend it. I believe the fairest choice is to make buses free for students, people over sixty and low-income workers. These are the people who depend on buses most, because they cannot afford cars or taxis. In the neighbouring city of Westbrook, where fares for students were removed two years ago, school attendance rose and fewer teenagers rode motorbikes without a licence.\n\n¶3 Some will say that free rides are a gift the city cannot afford. But a city that wants clean air and safe roads cannot afford to keep its poorest residents off the bus."
+    },
+    {
+      "id": "B-W3-TRANSPORT-S4",
+      "title": "Source B — A Bus That Never Comes Is Not Cheap",
+      "url": null,
+      "author": "Imagined urban-planning student, Lanford public city forum, October 2026 (invented)",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào.",
+      "modality": "text",
+      "text": "¶1 Cheaper fares sound fair, but they miss the real problem. On most routes in Lanford, buses come only every 25 to 30 minutes, and they are often late. If you have to wait half an hour, even a free bus is not much use, especially in the rain.\n\n¶2 According to the city transport office's own estimate, removing fares for students, older people and low-income workers would cost about the same as doubling the number of buses on the ten busiest routes. In the office's passenger survey last year, 58 per cent of passengers named waiting time as their biggest complaint; only 21 per cent named the price.\n\n¶3 Better service helps everyone, including the poorest passengers, who often have the longest journeys. Of course, some families genuinely cannot afford the fare, and they should get help. But the city's main investment should go into frequency: a bus every ten minutes would bring more people onto public transport than any discount."
+    }
+  ],
+  "steps": [
+    {
+      "step_no": 1,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [],
+      "target_ids": [
+        "B-T1-EXAM-R"
+      ],
+      "prompt_en": "12 minutes. For questions 3, 4 and 6, write the paragraph and the first words of the supporting sentence.",
+      "prompt_vi": "Thứ Hai 2/11 (ở nhà) · A1 đọc hiểu (274 từ). Sau đó 5' sổ lỗi.",
+      "time_min": 12,
+      "planned_date": "2026-11-02",
+      "items": [
+        {
+          "id": "W3-A1-1",
+          "kind": "mcq",
+          "stem": "What is the passage mainly about?",
+          "options": [
+            "how to repair a bicycle",
+            "a new type of electric bus",
+            "a group cycling-to-school scheme, its benefits and its limits",
+            "why parents prefer to drive children to school"
+          ],
+          "answer": "C",
+          "explanation_vi": "",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "W3-A1-2",
+          "kind": "mcq",
+          "stem": "According to paragraph 2, why do drivers slow down and give the group space?",
+          "options": [
+            "because the children ride as one large, visible group",
+            "because police officers stop the traffic",
+            "because there are cycle lanes everywhere",
+            "because the volunteers wear uniforms"
+          ],
+          "answer": "A",
+          "explanation_vi": "",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "W3-A1-3",
+          "kind": "mcq",
+          "stem": "The word \"visible\" in paragraph 2 is closest in meaning to ______. (Write ¶ + supporting sentence.)",
+          "options": [
+            "noisy",
+            "fast",
+            "organised",
+            "easy to see"
+          ],
+          "answer": "D",
+          "explanation_vi": "¶2 \"Because the children ride as one large, visible group, drivers slow down\".",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "W3-A1-4",
+          "kind": "mcq",
+          "stem": "What can be inferred about bicycle buses from paragraph 4? (Write ¶ + supporting sentence.)",
+          "options": [
+            "They are usually banned by local authorities.",
+            "Their future depends on a small number of committed adults.",
+            "They need expensive equipment.",
+            "They are safest in cities with heavy traffic."
+          ],
+          "answer": "B",
+          "explanation_vi": "¶4 \"They depend entirely on volunteers… a route can disappear\".",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "W3-A1-5",
+          "kind": "mcq",
+          "stem": "Which of the following is NOT mentioned as a benefit of bicycle buses?",
+          "options": [
+            "lower bus fares for families",
+            "exercise before school",
+            "less traffic near the school",
+            "cleaner air"
+          ],
+          "answer": "A",
+          "explanation_vi": "",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "W3-A1-6",
+          "kind": "mcq",
+          "stem": "The word \"largely\" in the last paragraph suggests that ______. (Write ¶ + supporting sentence.)",
+          "options": [
+            "cost is the only reason the idea is spreading",
+            "the routes are getting longer",
+            "cost is the main, but not the only, reason the idea is spreading",
+            "the idea is spreading slowly"
+          ],
+          "answer": "C",
+          "explanation_vi": "¶5 \"largely because it is cheap\".",
+          "target_id": "B-T1-EXAM-R"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 2,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "B-L2-CLOZE"
+      ],
+      "prompt_en": "Read the passage and choose the best answer for each gap. 8 minutes. No dictionary.",
+      "prompt_vi": "Thứ Ba 3/11, trong buổi, thầy/cô duyệt · A2 điền đoạn văn (184 từ). Dạng từ: 1, 2, 3.",
+      "time_min": 8,
+      "planned_date": "2026-11-03",
+      "items": [
+        {
+          "id": "W3-A2-1",
+          "kind": "word_form",
+          "stem": "Gap (1)",
+          "options": [
+            "actual",
+            "actually",
+            "actuality",
+            "act"
+          ],
+          "answer": "B",
+          "explanation_vi": "Trạng từ bổ nghĩa cho use.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W3-A2-2",
+          "kind": "word_form",
+          "stem": "Gap (2)",
+          "options": [
+            "rely",
+            "reliable",
+            "reliably",
+            "reliability"
+          ],
+          "answer": "D",
+          "explanation_vi": "a lack of + danh từ.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W3-A2-3",
+          "kind": "word_form",
+          "stem": "Gap (3)",
+          "options": [
+            "predict",
+            "prediction",
+            "predictable",
+            "predictably"
+          ],
+          "answer": "C",
+          "explanation_vi": "faster and more + tính từ.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W3-A2-4",
+          "kind": "gap",
+          "stem": "Gap (4)",
+          "options": [
+            "out",
+            "off",
+            "away",
+            "from"
+          ],
+          "answer": "A",
+          "explanation_vi": "kept out of them.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W3-A2-5",
+          "kind": "gap",
+          "stem": "Gap (5)",
+          "options": [
+            "raising",
+            "making",
+            "tackling",
+            "causing"
+          ],
+          "answer": "C",
+          "explanation_vi": "tackle a problem = giải quyết.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W3-A2-6",
+          "kind": "gap",
+          "stem": "Gap (6)",
+          "options": [
+            "either",
+            "also",
+            "neither",
+            "yet"
+          ],
+          "answer": "B",
+          "explanation_vi": "Fares also matter.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W3-A2-7",
+          "kind": "gap",
+          "stem": "Gap (7)",
+          "options": [
+            "price",
+            "colour",
+            "fashion",
+            "speed"
+          ],
+          "answer": "D",
+          "explanation_vi": "price sai về logic vì câu trước đã nói đến fares.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W3-A2-8",
+          "kind": "gap",
+          "stem": "Gap (8)",
+          "options": [
+            "because",
+            "although",
+            "unless",
+            "so"
+          ],
+          "answer": "A",
+          "explanation_vi": "only because they have no other choice.",
+          "target_id": "B-L2-CLOZE"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 3,
+      "activity_type": "ACT-WRITE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "B-L1-TRANSFORM-W"
+      ],
+      "prompt_en": "Rewrite each sentence so that it means the same as the first one. Use the words given.",
+      "prompt_vi": "Thứ Ba 3/11, trong buổi · A3 viết lại câu.",
+      "time_min": 10,
+      "planned_date": "2026-11-03",
+      "items": [
+        {
+          "id": "W3-A3-1",
+          "kind": "transform",
+          "stem": "The city has opened two new bus lanes this year. → Two new bus lanes ……",
+          "options": [],
+          "answer": "Two new bus lanes have been opened by the city this year.",
+          "explanation_vi": "Cũng chấp nhận: …have been opened this year by the city · Không chấp nhận: were opened; have opened; bỏ by the city",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W3-A3-2",
+          "kind": "transform",
+          "stem": "\"The new metro line will open next year,\" the official said. → The official said (that) ……",
+          "options": [],
+          "answer": "The official said (that) the new metro line would open the following year.",
+          "explanation_vi": "Cũng chấp nhận: …the next year / the year after · Không chấp nhận: will open; giữ next year",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W3-A3-3",
+          "kind": "transform",
+          "stem": "We missed the bus because we left home late. → If we ……",
+          "options": [],
+          "answer": "If we hadn't left home late, we wouldn't have missed the bus.",
+          "explanation_vi": "Cũng chấp nhận: …had not… would not have… · If we had left home earlier, we wouldn't have missed / would have caught the bus. · Không chấp nhận: If we didn't leave…; …wouldn't miss…",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W3-A3-4",
+          "kind": "transform",
+          "stem": "Taking the bus is cheaper than taking a taxi. → Taking a taxi is not ……",
+          "options": [],
+          "answer": "Taking a taxi is not as cheap as taking the bus.",
+          "explanation_vi": "Cũng chấp nhận: …not so cheap as… · Không chấp nhận: …not cheaper than… (khác nghĩa)",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W3-A3-5",
+          "kind": "transform",
+          "stem": "Although the fare is low, many people still prefer motorbikes. → In spite of ……",
+          "options": [],
+          "answer": "In spite of the low fare, many people still prefer motorbikes.",
+          "explanation_vi": "Cũng chấp nhận: In spite of the fact that the fare is low, … · In spite of the fare being low, … · Không chấp nhận: In spite of the fare is low",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W3-A3-6",
+          "kind": "transform",
+          "stem": "That woman is a bus driver. Her son is in my class. → That woman ……",
+          "options": [],
+          "answer": "That woman, whose son is in my class, is a bus driver.",
+          "explanation_vi": "Cũng chấp nhận: (không có dấu phẩy cũng được) · Không chấp nhận: who her son; whose her son; which son",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W3-A3-7",
+          "kind": "transform",
+          "stem": "We should improve the bus service now. → It's time ……",
+          "options": [],
+          "answer": "It's time we improved the bus service.",
+          "explanation_vi": "Cũng chấp nhận: It's time for us to improve the bus service. · …(now) · Không chấp nhận: It's time we improve…",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W3-A3-8",
+          "kind": "transform",
+          "stem": "\"Why don't we take the metro to the museum?\" said Hoa. → Hoa suggested ……",
+          "options": [],
+          "answer": "Hoa suggested taking the metro to the museum.",
+          "explanation_vi": "Cũng chấp nhận: Hoa suggested (that) we/they (should) take the metro to the museum. · Không chấp nhận: suggested us to take; suggested to take",
+          "target_id": "B-L1-TRANSFORM-W"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 4,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [],
+      "target_ids": [
+        "B-T1-ARG-R",
+        "B-T2-ASSUME-R"
+      ],
+      "prompt_en": "Read Sources A and B (10 minutes), then answer the questions (20 minutes).",
+      "prompt_vi": "Thứ Tư 4/11 · B-T1-ARG-R và B-T2-ASSUME-R bối cảnh thứ 2.",
+      "time_min": 30,
+      "planned_date": "2026-11-04",
+      "items": [
+        {
+          "id": "W3-B1-1",
+          "kind": "short",
+          "stem": "In one sentence each, what is the main claim of Source A and of Source B?",
+          "options": [],
+          "answer": "A: the fairest choice is free buses for students, people over sixty and low-income workers. B: the money should mainly go into more frequent buses, because waiting time is the real problem.",
+          "explanation_vi": "Cần đúng cả hai (c1 B-T1-ARG-R).",
+          "target_id": "B-T1-ARG-R"
+        },
+        {
+          "id": "W3-B1-2",
+          "kind": "short",
+          "stem": "List three reasons or pieces of evidence used in Source B, with the paragraph.",
+          "options": [],
+          "answer": "3 trong: xe 25-30 phút một chuyến, hay trễ (¶1) · miễn vé tốn ngang gấp đôi xe ở 10 tuyến đông nhất (¶2) · 58% than thời gian chờ, 21% than giá (¶2) · dịch vụ tốt giúp cả người nghèo, vốn đi xa nhất (¶3).",
+          "explanation_vi": "c2 B-T1-ARG-R.",
+          "target_id": "B-T1-ARG-R"
+        },
+        {
+          "id": "W3-B1-3a",
+          "kind": "mcq",
+          "stem": "Which best describes Source B's attitude to helping poorer passengers?",
+          "options": [
+            "It rejects any help for them.",
+            "It accepts some help for families who cannot pay, but puts frequency first.",
+            "It thinks fares should be raised.",
+            "It has no view on them."
+          ],
+          "answer": "B",
+          "explanation_vi": "Cần đúng cả 3a và 3b (c3).",
+          "target_id": "B-T1-ARG-R"
+        },
+        {
+          "id": "W3-B1-3b",
+          "kind": "mcq",
+          "stem": "Which best describes Source A's attitude to the cost of free rides?",
+          "options": [
+            "It accepts the cost as worth paying for clean air and safe roads.",
+            "It thinks free rides cost nothing.",
+            "It says the city should borrow money.",
+            "It admits free rides are a mistake."
+          ],
+          "answer": "A",
+          "explanation_vi": "¶3.",
+          "target_id": "B-T1-ARG-R"
+        },
+        {
+          "id": "W3-B1-4",
+          "kind": "open",
+          "stem": "Source A says that in Westbrook \"school attendance rose and fewer teenagers rode motorbikes without a licence\". What does the writer assume about why this happened? Quote the words.",
+          "options": [],
+          "answer": "The writer assumes that removing student fares CAUSED both changes, though other causes are possible (laws, schools, coincidence). Quote ¶2 \"where fares for students were removed two years ago, school attendance rose…\".",
+          "explanation_vi": "c1-c3 B-T2-ASSUME-R.",
+          "target_id": "B-T2-ASSUME-R"
+        },
+        {
+          "id": "W3-B1-5",
+          "kind": "open",
+          "stem": "Source B uses a survey of passengers. Who was not asked, and what does Source B assume because of this?",
+          "options": [],
+          "answer": "People who do not ride the bus (perhaps because of the price) were not asked. Source B assumes current passengers' views represent the whole city, so it may underestimate the role of price. Quote ¶2 \"58 per cent of passengers…\".",
+          "explanation_vi": "Căn cứ thứ hai cho B-T2-ASSUME-R. Lưu ý (FIXLIST): câu này cũng chạm yếu tố \"phương pháp\" của B-T5-SOURCE → ghi vào nhật ký luyện (exposure) để tính khoảng cách bài ôn lại.",
+          "target_id": "B-T2-ASSUME-R"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 5,
+      "activity_type": "ACT-CANVAS-ADV",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [
+        "B-T7-ARGUE",
+        "B-T11-QUALIFY"
+      ],
+      "prompt_en": "Practice question: Should students travel free on Lanford's buses? Canvas with frames, then 80-120 words. Canvas boxes: Question · 1. Your answer (My answer is that …) · 2. Reasons + evidence, each with [Source, ¶] (One reason is that … Source B shows this: \"…\" (¶2).) · 3. Why the evidence supports the reason (This supports my point because …) · 4. Limitation (However, this evidence is limited because …) · 5. Conditional conclusion (So it is likely / possible that …, unless / as long as …)",
+      "prompt_vi": "Thứ Năm 5/11 · Luyện tập.",
+      "time_min": 20,
+      "planned_date": "2026-11-05",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 6,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [],
+      "prompt_en": "Choose A, B, C or D. 10 minutes.",
+      "prompt_vi": "Thứ Sáu 6/11 · Luyện nhanh (không ghi CSV).",
+      "time_min": 10,
+      "planned_date": "2026-11-06",
+      "items": [
+        {
+          "id": "W3-Q-1",
+          "kind": "mcq",
+          "stem": "bus[es] / watch[es] / box[es] / stop[s]",
+          "options": [
+            "buses",
+            "watches",
+            "boxes",
+            "stops"
+          ],
+          "answer": "D",
+          "explanation_vi": "stops /s/, còn lại /ɪz/.",
+          "target_id": null
+        },
+        {
+          "id": "W3-Q-2",
+          "kind": "mcq",
+          "stem": "Choose the sentence that is correctly made from these words: the new bus lane / make / journeys / faster / and / more reliable",
+          "options": [
+            "The new bus lane make journeys faster and more reliable.",
+            "The new bus lane makes journeys to be faster and more reliable.",
+            "The new bus lane makes journeys faster and more reliably.",
+            "The new bus lane makes journeys faster and more reliable."
+          ],
+          "answer": "D",
+          "explanation_vi": "Dựng câu: makes (chia ngôi 3 số ít) + tân ngữ + tính từ. A sai chia động từ; B thừa to be; C dùng trạng từ reliably sau make + tân ngữ.",
+          "target_id": null
+        },
+        {
+          "id": "W3-Q-3",
+          "kind": "mcq",
+          "stem": "Stress",
+          "options": [
+            "traffic",
+            "police",
+            "travel",
+            "station"
+          ],
+          "answer": "B",
+          "explanation_vi": "police nhấn âm 2.",
+          "target_id": null
+        },
+        {
+          "id": "W3-Q-4",
+          "kind": "mcq",
+          "stem": "Stress",
+          "options": [
+            "pollution",
+            "passenger",
+            "family",
+            "motorbike"
+          ],
+          "answer": "A",
+          "explanation_vi": "pollution nhấn âm 2.",
+          "target_id": null
+        },
+        {
+          "id": "W3-Q-5",
+          "kind": "mcq",
+          "stem": "If it ______ tomorrow, we will take the bus instead of cycling.",
+          "options": [
+            "will rain",
+            "rained",
+            "rains",
+            "would rain"
+          ],
+          "answer": "C",
+          "explanation_vi": "Điều kiện loại 1.",
+          "target_id": null
+        },
+        {
+          "id": "W3-Q-6",
+          "kind": "mcq",
+          "stem": "Choose the best order to make a short paragraph: a. Because of this faster service, more people are now leaving their motorbikes at home. b. The city has built three new bus lanes this year. c. Buses can move freely in these lanes, so journeys are quicker and more reliable. d. However, the lanes only work if other vehicles stay out of them.",
+          "options": [
+            "b–a–c–d",
+            "b–c–a–d",
+            "b–c–d–a",
+            "c–b–a–d"
+          ],
+          "answer": "B",
+          "explanation_vi": "b (nêu việc) – c (these lanes, nhanh hơn) – a (Because of this faster service) – d (However).",
+          "target_id": null
+        },
+        {
+          "id": "W3-Q-7",
+          "kind": "mcq",
+          "stem": "Passenger: \"Excuse me, does this bus go to the city library?\" – Driver: \"______\"",
+          "options": [
+            "Yes, I'd like to.",
+            "You're welcome.",
+            "Not at all, thanks.",
+            "No, it doesn't. You need the number 12."
+          ],
+          "answer": "D",
+          "explanation_vi": "",
+          "target_id": null
+        },
+        {
+          "id": "W3-Q-8",
+          "kind": "mcq",
+          "stem": "BUS LANE 6-9 a.m. Monday to Friday. Cars and motorbikes must not enter.",
+          "options": [
+            "Cars can use the lane on weekday mornings.",
+            "Cars and motorbikes cannot use the lane from 6 to 9 a.m. on weekdays.",
+            "The lane is closed at weekends.",
+            "Motorbikes can use the lane at any time."
+          ],
+          "answer": "B",
+          "explanation_vi": "ĐÃ SỬA (FIXLIST ⚪): phương án B cũ \"Only buses may use the lane…\" là suy diễn thêm; thay bằng câu bám sát biển.",
+          "target_id": null
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 7,
+      "activity_type": "ACT-WRITE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [],
+      "target_ids": [
+        "B-T7-ARGUE",
+        "B-T11-QUALIFY",
+        "B-L1-COMPLEX-W",
+        "B-L2-PRECISE"
+      ],
+      "prompt_en": "Which is the fairer way for Lanford to spend its transport money: free bus fares for students, older people and low-income workers, or more frequent buses for everyone? 250-300 words, Sources A and B open. Say what \"fair\" means in your answer (for example: helping those with least money, or giving everyone a better service). Use evidence from both sources, name one limitation, and end with a conclusion that says how sure you are and under what condition you would choose the other option.",
+      "prompt_vi": "Thứ Bảy 7/11 · 45'.",
+      "time_min": 45,
+      "planned_date": "2026-11-07",
+      "items": [],
+      "self_check_vi": [
+        "Câu đầu tiên đã trả lời thẳng câu hỏi chưa?",
+        "Mỗi lý do đã có ít nhất một chỗ dẫn từ nguồn (Nguồn A hay B, đoạn mấy) chưa?",
+        "Có ít nhất một chỗ bạn giải thích vì sao bằng chứng ấy đỡ cho lý do của mình chưa?",
+        "Bạn đã nêu một giới hạn của bằng chứng chưa?",
+        "Kết luận đã nói rõ bạn chắc đến đâu (likely, in most cases…) và khi nào thì kết luận sẽ khác (unless…, if…) chưa?",
+        "Bài đã đủ 250 từ chưa? Có vài câu phức với which, who, although, if… chưa?",
+        "Đọc lại một lượt, chỉ để tìm 3 lỗi bạn hay mắc nhất.",
+        "Kết luận của bạn có nói khi nào bạn sẽ chọn phương án kia không?"
+      ]
+    },
+    {
+      "step_no": 8,
+      "activity_type": "ACT-REVISE",
+      "mode": "REVISION",
+      "purpose": [],
+      "target_ids": [
+        "B-T7-ARGUE",
+        "B-T11-QUALIFY",
+        "B-L2-PRECISE"
+      ],
+      "prompt_en": "Read the (max 3) comments. Fix only those places. Underline what you changed and add one line: \"I changed … because …\".",
+      "prompt_vi": "Chủ nhật 8/11 chiều · cùng learning_family FAM-B-TR-1. Câu 5 thứ Tư 4/11 và góp ý bài viết tuần 3 chạm yếu tố \"phương pháp\" của B-T5-SOURCE, nên mốc last_practice_date cho B-T5-SOURCE là 2026-11-08 (bài ôn lại sớm nhất 22/11).",
+      "time_min": 15,
+      "planned_date": "2026-11-08",
+      "items": [],
+      "self_check_vi": [
+        "Chỉ sửa những chỗ có gợi ý (tối đa 3), không viết lại cả bài.",
+        "Gạch chân chỗ đã sửa và ghi một dòng cuối: \"Mình đã sửa … vì …\"."
+      ],
+      "status": "needs_review",
+      "review_note": "Loại hoạt động ACT-REVISE không nằm trong danh sách bài được tính cho: B-T7-ARGUE, B-T11-QUALIFY, B-L2-PRECISE (danh mục v0.2.1). Cần phụ huynh quyết: đổi loại hoạt động của bước này, hoặc bỏ kỹ năng đó khỏi bước. Chưa sửa nội dung; mẫu này giữ nháp, chưa giao được."
+    },
+    {
+      "step_no": 9,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "B-L4-EXPLAIN-S"
+      ],
+      "prompt_en": "Read Source A for 2 minutes, turn it over, no notes. Explain the writer's argument so your teacher can say it back in one sentence. Give one example.",
+      "prompt_vi": "Chủ nhật 8/11, trong buổi (≈ 12'). Ý chính: \"The writer argues that the fairest use of Lanford's limited transport money is free buses for students, older people and low-income workers, because they depend on buses most and passes are a heavy cost for them; the writer points to a neighbouring city where removing student fares seemed to help.\"",
+      "time_min": 12,
+      "planned_date": "2026-11-08",
+      "items": [],
+      "self_check_vi": []
+    }
+  ]
+}

@@ -1,0 +1,504 @@
+{
+  "format": "inquiry-template/1",
+  "id": "A-W4-PLANETS",
+  "version": 1,
+  "track": "A",
+  "status": "draft",
+  "catalogue_version": "0.2.1-draft",
+  "title_vi": "Tuần 4 - So sánh Sao Kim và Sao Hỏa (có bài ôn vòng tuần hoàn nước sau 14 ngày)",
+  "big_question_en": "How are Venus and Mars alike and different?",
+  "big_question_vi": "Sao Kim và Sao Hỏa giống và khác nhau thế nào?",
+  "week": 4,
+  "dates": {
+    "from": "2026-11-09",
+    "to": "2026-11-15"
+  },
+  "domain_bucket": "science",
+  "target_ids": [
+    "A-T1-TEXT-L",
+    "A-T1-TEXT-R",
+    "A-L3-CAUSE-S",
+    "A-L3-CAUSE-W",
+    "A-L3-PARA-W",
+    "A-L4-PROCESS-S",
+    "A-L2-CHUNKS",
+    "A-L2-COMPENSATE-S",
+    "A-T4-CAUSE",
+    "A-T7-OPINION",
+    "A-X1-TURN"
+  ],
+  "sources": [
+    {
+      "id": "A-W4-PLANETS-S1",
+      "title": "Venus: Earth's Hot Twin (bài đọc PLA-R)",
+      "url": null,
+      "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi - chỉ nhắc 'clouds made of acid', không giải thích mây hình thành (giữ khoảng cách 14 ngày cho bài ôn nước)",
+      "rights_note": "Tự soạn. Nguồn kiểm: NASA Venus Facts (https://science.nasa.gov/venus/venus-facts/): 467 độ C, khí quyển chủ yếu CO2, áp suất 93 lần, mây axit sunfuric, quay ngược, 243 ngày quay so với 225 ngày quỹ đạo, không có mặt trăng; Physics Today (https://physicstoday.aip.org/opinion/venus-is-not-earths-closest-neighbor): Sao Kim chỉ gần nhất khi tiến sát nhất.",
+      "modality": "text",
+      "text": "Venus: Earth's Hot Twin\n\nVenus is the second planet from the Sun. At its closest, Venus comes nearer to Earth than any other planet, and it is almost the same size as Earth. That is why people sometimes call it Earth's twin. But Venus is a terrible place to visit.\n\nVenus is the hottest planet in our Solar System. The temperature on its surface is about 465 degrees Celsius. That is hot enough to melt some metals! Mercury is closer to the Sun, but Venus is hotter. Why?\n\nThe answer is its atmosphere. The air on Venus is very thick, and it is mostly carbon dioxide. This thick air traps the heat from the Sun, like a heavy blanket. The heat cannot escape, so the planet stays extremely hot, day and night.\n\nThe air on Venus is also very heavy. If you stood on Venus, the air would press on you more than 90 times harder than the air on Earth. Its thick clouds are made of acid, too.\n\nVenus spins very slowly, and it spins in the opposite direction from most planets. One day on Venus is longer than one year there! Venus has no moons."
+    },
+    {
+      "id": "A-W4-PLANETS-S2",
+      "title": "Mars (bài nghe PLA-L, file A_PLA_L)",
+      "url": null,
+      "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi",
+      "rights_note": "Tự soạn, TTS một giọng cố định 0,9x. Nguồn kiểm: NASA Mars Facts (https://science.nasa.gov/mars/facts/): nửa Trái Đất, đỏ vì sắt gỉ, 20 độ C xuống -153 độ C, ngày 24,6 giờ, năm 687 ngày, hai mặt trăng; NASA JPL Mars in a Minute (https://www.jpl.nasa.gov/edu/resources/video/mars-in-a-minute-is-mars-red-hot/): xa Mặt Trời hơn, khí quyển mỏng ~100 lần.",
+      "modality": "audio",
+      "text": "Mars is the fourth planet from the Sun. It is about half the size of Earth. Mars looks red because its rocks and dust have iron in them, and the iron has rusted.\n\nMars is much colder than Earth, and there are two reasons. First, Mars is farther from the Sun, so it gets less heat. Second, its atmosphere is very thin. Thin air cannot hold the heat, so the heat escapes into space. The temperature can go from about 20 degrees Celsius on a summer afternoon down to about minus 150 degrees in the coldest places.\n\nA day on Mars is a little longer than a day on Earth, about 24 and a half hours. But a year on Mars is almost two Earth years long. Mars has two small moons, called Phobos and Deimos.\n\nScientists have sent robots to explore Mars, but no person has been there yet."
+    }
+  ],
+  "steps": [
+    {
+      "step_no": 1,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [],
+      "prompt_en": "Which planet would you like to visit? (You can speak Vietnamese.) Tip for a missing word: It's a kind of... / It's like...",
+      "prompt_vi": "T2 9/11 (8') - Câu hỏi lớn. Mẹo nói tiếp khi quên từ.",
+      "time_min": 8,
+      "planned_date": "2026-11-09",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 2,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-T1-TEXT-L"
+      ],
+      "prompt_en": "Listen (maximum 2 times, no text). Answer the questions.",
+      "prompt_vi": "T2 9/11 (13') - Bài nghe về Sao Hỏa làm TRONG buổi cô. Không xem chữ.",
+      "time_min": 13,
+      "planned_date": "2026-11-09",
+      "items": [
+        {
+          "id": "W4-L1",
+          "kind": "mcq",
+          "stem": "What is the talk mainly about?",
+          "options": [
+            "a) robots on Mars",
+            "b) what Mars is like and why it is cold",
+            "c) the moons of Earth",
+            "d) how to travel to Mars"
+          ],
+          "answer": "b",
+          "explanation_vi": "Ý chính (c1).",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W4-L2",
+          "kind": "short",
+          "stem": "Why does Mars look red?",
+          "options": [],
+          "answer": "Its rocks and dust have iron that has rusted.",
+          "explanation_vi": "Chi tiết 1/4 (nhân quả).",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W4-L3",
+          "kind": "short",
+          "stem": "Give one reason why Mars is cold.",
+          "options": [],
+          "answer": "It is farther from the Sun / its atmosphere is thin, so the heat escapes (một trong hai).",
+          "explanation_vi": "Chi tiết 2/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W4-L4",
+          "kind": "short",
+          "stem": "How long is a day on Mars?",
+          "options": [],
+          "answer": "About 24 and a half hours. Chấp nhận 24-25 giờ.",
+          "explanation_vi": "Chi tiết 3/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W4-L5",
+          "kind": "short",
+          "stem": "How many moons does Mars have?",
+          "options": [],
+          "answer": "Two (Phobos and Deimos).",
+          "explanation_vi": "Chi tiết 4/4. Cần >= 3/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W4-L6",
+          "kind": "open",
+          "stem": "If Mars had a thick atmosphere like Earth, would it be warmer or colder? Why?",
+          "options": [],
+          "answer": "Warmer - thick air holds the heat, so it cannot escape easily.",
+          "explanation_vi": "CHẨN ĐOÁN (suy luận).",
+          "target_id": "A-T2-INFER-L"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 3,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [],
+      "prompt_en": "Look at the NASA photos of Venus and Mars.",
+      "prompt_vi": "T2 9/11 (12' + 8' + 4') - Chiếu ảnh NASA, giao việc. KHÔNG phát 8 cụm từ ở T2. KHÔNG giải thích trước câu 'If you stood on Venus...' vì bài đọc T3 là bài tự làm (đã thêm chú thích trong bài).",
+      "time_min": 24,
+      "planned_date": "2026-11-09",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 4,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [],
+      "target_ids": [
+        "A-T1-TEXT-R"
+      ],
+      "prompt_en": "Read the text once, then answer. You may look back at the text.",
+      "prompt_vi": "T3 10/11 (18' + 7') - Bài đọc về Sao Kim ở nhà (18'). CUỐI T3, sau khi nộp bài đọc: phát 8 cụm từ + thẻ từ (7'). 8 cụm từ: planet = hành tinh · atmosphere = bầu khí quyển · carbon dioxide = khí CO2 · trap heat = giữ nhiệt lại · thick / thin = dày / mỏng · surface = bề mặt · far from the Sun = xa Mặt Trời · while = trong khi (để so sánh).",
+      "time_min": 25,
+      "planned_date": "2026-11-10",
+      "items": [
+        {
+          "id": "W4-R1",
+          "kind": "mcq",
+          "stem": "What is the text mainly about?",
+          "options": [
+            "a) why Venus is so hot and what it is like",
+            "b) why Mercury is the hottest planet",
+            "c) how to visit Venus",
+            "d) the moons of Venus"
+          ],
+          "answer": "a",
+          "explanation_vi": "Ý chính (c1).",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W4-R2",
+          "kind": "short",
+          "stem": "Why do people call Venus \"Earth's twin\"?",
+          "options": [],
+          "answer": "It is almost the same size as Earth (and comes close to Earth).",
+          "explanation_vi": "Chi tiết 1/5.",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W4-R3",
+          "kind": "short",
+          "stem": "What is the air on Venus mostly made of?",
+          "options": [],
+          "answer": "Carbon dioxide.",
+          "explanation_vi": "Chi tiết 2/5.",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W4-R4",
+          "kind": "short",
+          "stem": "Why does Venus stay so hot?",
+          "options": [],
+          "answer": "The thick air traps the heat; the heat cannot escape.",
+          "explanation_vi": "Chi tiết 3/5 (nhân quả).",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W4-R5",
+          "kind": "short",
+          "stem": "What are the clouds on Venus made of?",
+          "options": [],
+          "answer": "Acid.",
+          "explanation_vi": "Chi tiết 4/5.",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W4-R6",
+          "kind": "short",
+          "stem": "Which is longer on Venus: a day or a year?",
+          "options": [],
+          "answer": "A day.",
+          "explanation_vi": "Chi tiết 5/5. \"Ngày\" = một vòng quay quanh trục (243 ngày Trái Đất) so với một năm (225 ngày) theo NASA. Cần >= 4/5.",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W4-R7",
+          "kind": "open",
+          "stem": "Mercury is closer to the Sun than Venus. Why is this information in the text? What does it show?",
+          "options": [],
+          "answer": "Khoảng cách tới Mặt Trời không phải lý do chính; lý do chính là bầu khí quyển dày giữ nhiệt ('Why? The answer is its atmosphere').",
+          "explanation_vi": "CHẨN ĐOÁN (mục đích người viết). Câu trừu tượng với lớp 6, chỉ chẩn đoán.",
+          "target_id": "A-T2-INFER-R"
+        },
+        {
+          "id": "W4-R8",
+          "kind": "short",
+          "stem": "\"This thick air traps the heat.\" What does 'traps' mean?",
+          "options": [],
+          "answer": "Keeps it in / does not let it go out (giữ lại).",
+          "explanation_vi": "CHẨN ĐOÁN (nghĩa từ).",
+          "target_id": "A-T2-INFER-R"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 5,
+      "activity_type": "ACT-CANVAS-BASIC",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [
+        "A-T9-COMPARE"
+      ],
+      "prompt_en": "Fill in the table (order from the Sun, size, temperature, air, moons). Main idea: Venus and Mars are both..., but... Why: [Venus is hot because...] [Mars is cold because...]. Example: 'If you stood on Venus,...' or 'On Mars, at night,...'",
+      "prompt_vi": "T4 11/11 (14') - Canvas so sánh; được xem lại bài đọc và nghe lại bài Sao Hỏa. Đáp án bảng: thứ tự 2 / 4; gần bằng Trái Đất / khoảng một nửa; ~467 độ C, nóng nhất / lạnh, từ ~20 xuống ~-150 độ C; dày, chủ yếu CO2 / mỏng; 0 mặt trăng / 2 (Phobos, Deimos). A-T9-COMPARE ngoài bộ 12, tùy chọn.",
+      "time_min": 14,
+      "planned_date": "2026-11-11",
+      "items": [
+        {
+          "id": "W4-CV",
+          "kind": "open",
+          "stem": "Fill in the comparison table.",
+          "options": [],
+          "answer": "Order 2 / 4; size almost Earth / about half; temperature ~467 C / from ~20 C to ~-150 C; air thick, mostly CO2 / thin; moons 0 / 2.",
+          "explanation_vi": "Tùy chọn.",
+          "target_id": "A-T9-COMPARE"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 6,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [
+        "A-L3-CAUSE-S",
+        "A-L2-CHUNKS"
+      ],
+      "prompt_en": "Mercury is closer to the Sun than Venus. So why is Venus hotter? - Mercury is..., but Venus is... / The atmosphere on Venus is..., and it is mostly... / This thick air..., like... / As a result,... (45-60 seconds)",
+      "prompt_vi": "T4 11/11 (12').",
+      "time_min": 12,
+      "planned_date": "2026-11-11",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 7,
+      "activity_type": "ACT-WRITE",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [
+        "A-L3-CAUSE-W",
+        "A-L2-CHUNKS"
+      ],
+      "prompt_en": "Why is Mars so cold? - Mars is colder than Earth for two reasons. First, Mars is..., so... / Second, its atmosphere is..., so... / That's why... (50-70 words)",
+      "prompt_vi": "T5 12/11 (18').",
+      "time_min": 18,
+      "planned_date": "2026-11-12",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 8,
+      "activity_type": "ACT-SELF-REVIEW",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [],
+      "prompt_en": "Check your own writing.",
+      "prompt_vi": "T5 12/11 (5' + 2').",
+      "time_min": 7,
+      "planned_date": "2026-11-12",
+      "items": [],
+      "self_check_vi": [
+        "Bạn đã nói được hai lý do vì sao Sao Hỏa lạnh chưa?",
+        "Bạn đã dùng 2 từ nối khác nhau và 4 từ mới chưa?"
+      ]
+    },
+    {
+      "step_no": 9,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "delayed_check",
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-L3-CAUSE-S",
+        "A-L4-PROCESS-S",
+        "A-T4-CAUSE"
+      ],
+      "prompt_en": "A younger child asks you: 'Where does rain come from?' Explain it simply, step by step. (30 seconds to think, no notes. Speak 60-90 seconds.)",
+      "prompt_vi": "T6 13/11, LÀM ĐẦU TIÊN (7') - Bài ôn nước WAT-DEL. 13/11 - 30/10 = 14 ngày. last_practice_date = 2026-10-30. Chỉ làm nếu Sổ tiếp xúc không ghi lần nào gặp nội dung nước/mây/mưa từ 31/10.",
+      "time_min": 7,
+      "planned_date": "2026-11-13",
+      "items": [
+        {
+          "id": "W4-WATDEL",
+          "kind": "open",
+          "stem": "A younger child asks you: 'Where does rain come from?' Explain it simply, step by step.",
+          "options": [],
+          "answer": "Mặt Trời làm nóng nước -> nước bốc hơi thành hơi nước -> hơi nước bay lên, gặp lạnh -> ngưng tụ thành giọt nhỏ -> mây -> giọt nhập lại, nặng -> mưa -> sông, biển, đất -> lặp lại. Cốc nước đá = bước ngưng tụ.",
+          "explanation_vi": "A-L3-CAUSE-S; A-L4-PROCESS-S; A-T4-CAUSE.",
+          "target_id": "A-L3-CAUSE-S"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 10,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-L3-CAUSE-S",
+        "A-T4-CAUSE",
+        "A-L2-CHUNKS",
+        "A-T7-OPINION"
+      ],
+      "prompt_en": "Venus or Mars: which planet would be harder for astronauts to visit? Say which one you choose. Give two reasons and an example. Explain why that planet is so hot or so cold. (30 seconds to think. Speak 60-90 seconds.)",
+      "prompt_vi": "T6 13/11 (7') - Nói tự làm (PLA-SIC), ghi âm, ghi activity_type = ACT-SPEAK-MONO. Tuần 4 ý kiến nằm trong bài này (không có bước OP riêng): chấm Nêu ý kiến (c1 quan điểm rõ, c2 >= 2 lý do, c3 >= 1 ví dụ) cùng Nói vì sao-nên và Chuỗi nguyên nhân (phần 'explain why hot/cold'). Không có đáp án đúng/sai: chọn Sao Hỏa vẫn hợp lệ nếu lý do liên quan. Giải thích một quá trình khi nói = NULL.",
+      "time_min": 7,
+      "planned_date": "2026-11-13",
+      "items": [
+        {
+          "id": "W4-SIC",
+          "kind": "open",
+          "stem": "Venus or Mars: which planet would be harder for astronauts to visit? Choose one, give two reasons and an example, and explain why that planet is so hot or so cold.",
+          "options": [],
+          "answer": "Không có đáp án đúng/sai về hành tinh. Phần giải thích: Sao Kim nóng vì không khí dày chủ yếu CO2 giữ nhiệt; Sao Hỏa lạnh vì xa Mặt Trời và khí quyển mỏng nên nhiệt thoát ra.",
+          "explanation_vi": "A-T7-OPINION (c1-c3); A-L3-CAUSE-S (>= 2 loại từ nối, đúng chiều); A-T4-CAUSE (>= 2 liên kết nhân quả nối thành chuỗi); A-L2-CHUNKS (>= 4 trong 8 cụm từ).",
+          "target_id": "A-L3-CAUSE-S"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 11,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-X1-TURN",
+        "A-L2-COMPENSATE-S"
+      ],
+      "prompt_en": "Choose one picture. It must be something you know how to use, but you do not know its English name. Tell me about it: what it looks like, what we use it for, and how you use it. (30 seconds to think, no writing. Speak 60-90 seconds.)",
+      "prompt_vi": "T6 13/11 (4') - Lượt nói trực tiếp (kit mục 3.0, \"Thử thách thiếu từ\"). Cô đưa 3 ảnh: telescope (kính thiên văn) · binoculars (ống nhòm) · compass (la bàn). Cô không nói tên tiếng Anh trước T6; cô chỉ nói \"Bắt đầu nhé\" / \"Còn 30 giây\", không nhắc \"giải thích cách khác\". Ghi activity_type = ACT-SPEAK-LIVE, context_topic = lab-tools, chỉ cô chấm; cô bấm giờ (duration_s; c1 Nói trôi chảy cần >= 60 giây). Nói trôi chảy: c1 >= 60 giây, c2 <= 3 lần ngừng > 3 giây, c3 nói lại câu thay vì bỏ dở. Xoay xở khi thiếu từ: cô xác nhận có chỗ thiếu từ thật; An biết tên cả 3 vật (đổi bộ ảnh) hoặc không có chỗ thiếu thật => NULL, đó là kết quả hợp lệ.",
+      "time_min": 4,
+      "planned_date": "2026-11-13",
+      "items": [
+        {
+          "id": "W4-LIVE",
+          "kind": "open",
+          "stem": "Choose one picture and tell me about it.",
+          "options": [],
+          "answer": "Không có đáp án mẫu. Cô ghi: vật An chọn, từ An chưa biết, cách An diễn đạt vòng (a thing that..., it is like...), có chuyển sang tiếng Việt không.",
+          "explanation_vi": "A-X1-TURN (c1 >= 60 giây; c2 <= 3 lần ngừng dài; c3 nói lại câu) và A-L2-COMPENSATE-S (c1 >= 1 lần diễn đạt vòng thành công bằng tiếng Anh; c2 <= 1 lần chuyển sang tiếng Việt), hoặc NULL.",
+          "target_id": "A-X1-TURN"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 12,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-L8-EXCHANGE-S"
+      ],
+      "prompt_en": "I am an astronaut. I have just come back from space. Ask me at least two questions. (Then the tutor asks: Would you like to go to space one day?)",
+      "prompt_vi": "T6 13/11 (3') - An phỏng vấn cô (PLA-INT): ghi việc An hỏi; A-L8-EXCHANGE-S ngoài bộ 12, chẩn đoán. Không chấm ý kiến lần hai (đã chấm ở PLA-SIC).",
+      "time_min": 3,
+      "planned_date": "2026-11-13",
+      "items": [
+        {
+          "id": "W4-INT",
+          "kind": "open",
+          "stem": "Ask the astronaut at least two questions.",
+          "options": [],
+          "answer": "Không có đáp án mẫu; ghi số câu hỏi An đặt và dạng câu hỏi.",
+          "explanation_vi": "Chẩn đoán trao đổi hai chiều.",
+          "target_id": "A-L8-EXCHANGE-S"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 13,
+      "activity_type": "ACT-WRITE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-L3-CAUSE-W",
+        "A-L3-PARA-W",
+        "A-T4-CAUSE",
+        "A-L2-CHUNKS"
+      ],
+      "prompt_en": "Compare Venus and Mars in one paragraph (80-120 words). How are they the same, and how are they different? Explain why Venus is much hotter than Mars. (20 minutes.)",
+      "prompt_vi": "T6 13/11 (20') - Viết tự làm. Đề 80-120 từ. Dùng thì quá khứ: không ghi. A-L1-COMP-W và A-T9-COMPARE ngoài bộ 12, tùy chọn.",
+      "time_min": 20,
+      "planned_date": "2026-11-13",
+      "items": [
+        {
+          "id": "W4-WIC",
+          "kind": "open",
+          "stem": "Compare Venus and Mars in one paragraph.",
+          "options": [],
+          "answer": "Cùng một điểm cho cả hai hành tinh; giải thích Sao Kim nóng vì khí quyển dày giữ nhiệt.",
+          "explanation_vi": "A-L3-CAUSE-W; A-L3-PARA-W; A-T4-CAUSE; A-L2-CHUNKS.",
+          "target_id": "A-L3-CAUSE-W"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 14,
+      "activity_type": "ACT-SELF-REVIEW",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-A1-SELFASSESS"
+      ],
+      "prompt_en": "Before you hear any feedback, check your own paragraph.",
+      "prompt_vi": "T6 13/11 (3'). Tự kiểm: 1 điểm giống và khác của hai hành tinh; 2 giải thích vì sao Sao Kim nóng hơn Sao Hỏa; 3 nói cùng một điểm cho cả hai hành tinh.",
+      "time_min": 3,
+      "planned_date": "2026-11-13",
+      "items": [],
+      "self_check_vi": [
+        "Khi so sánh, bạn đã nói cùng một điểm cho cả hai hành tinh chưa?",
+        "Bạn đã giải thích vì sao Sao Kim nóng hơn chưa?",
+        "Bạn đã dùng 2 từ nối khác nhau và 4 từ mới chưa?",
+        "Một điều mình làm tốt: ______",
+        "Một điều mình muốn sửa: ______"
+      ]
+    },
+    {
+      "step_no": 15,
+      "activity_type": "ACT-REVISE",
+      "mode": "REVISION",
+      "purpose": [],
+      "target_ids": [
+        "A-A3-REDRAFT"
+      ],
+      "prompt_en": "Read each hint, fix your paragraph, underline what you changed, and write 'Mình đã đổi ... thành ... vì ...'.",
+      "prompt_vi": "T6 13/11 (7' + 15') - Thêm: kẻ hai cột Venus | Mars; mỗi câu so sánh đã có đủ cả hai cột chưa? Sau giờ: cô chấm lại mù 6 bài.",
+      "time_min": 15,
+      "planned_date": "2026-11-13",
+      "items": [],
+      "self_check_vi": []
+    }
+  ]
+}

@@ -1,0 +1,761 @@
+{
+  "format": "inquiry-template/1",
+  "id": "B-W1-HOMEWORK",
+  "version": 1,
+  "track": "B",
+  "status": "draft",
+  "catalogue_version": "0.2.1-draft",
+  "title_vi": "Tuần 1 — Bài tập về nhà",
+  "big_question_en": "Should there be a nightly time limit on homework for grade-9 students?",
+  "big_question_vi": "Có nên giới hạn thời gian làm bài tập về nhà mỗi tối cho học sinh lớp 9 không?",
+  "week": 1,
+  "dates": {
+    "from": "2026-10-19",
+    "to": "2026-10-25"
+  },
+  "domain_bucket": "society",
+  "target_ids": [
+    "B-T1-EXAM-R",
+    "B-L2-CLOZE",
+    "B-L1-TRANSFORM-W",
+    "B-T1-ARG-R",
+    "B-T5-DATAOP",
+    "B-T7-ARGUE",
+    "B-T11-QUALIFY",
+    "B-L1-COMPLEX-W",
+    "B-L2-PRECISE",
+    "B-L4-EXPLAIN-S"
+  ],
+  "sources": [
+    {
+      "id": "B-W1-HOMEWORK-S1",
+      "title": "Short Blocks, Long Results (exam-style reading)",
+      "url": null,
+      "author": "Pilot Kit B author",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào.",
+      "modality": "text",
+      "text": "¶1 Many students sit down to do their homework with good intentions and stand up three hours later wondering where the time went. One reason is that the brain finds it hard to stay focused on a single task for a long period. Phones, snacks and conversations offer easy escapes, and every interruption makes it harder to return to the work.\n\n¶2 A simple method that many students find useful is to divide study time into short blocks. In each block, you work on one task for about twenty-five minutes, with your phone in another room. Then you take a five-minute break to stretch, drink some water or look out of the window. After four blocks, you take a longer rest.\n\n¶3 The method works for several reasons. First, a short block feels manageable, so it is easier to start. Second, because you know a break is coming, you are less tempted to stop in the middle. Third, counting the blocks gives you a realistic picture of how long a task really takes, which helps you plan the next day.\n\n¶4 However, the method is not magic. Some tasks, such as writing an essay, need longer periods of deep concentration, and a timer that rings in the middle of a good idea can be annoying. Students who use the method successfully tend to adapt it: they make the blocks longer for creative work and keep them short for tasks they find boring, such as memorising vocabulary.\n\n¶5 The most important lesson may be that how you study matters as much as how long you study. Two focused hours can achieve more than four distracted ones."
+    },
+    {
+      "id": "B-W1-HOMEWORK-S2",
+      "title": "Homework policy (cloze)",
+      "url": null,
+      "author": "Pilot Kit B author",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào.",
+      "modality": "text",
+      "text": "Teachers at a secondary school decided to (1) ______ a new homework policy after many parents complained that their children were going to bed too late. Under the new rules, students in grade 9 receive no more than ninety minutes of homework a night, and teachers from different subjects must (2) ______ their plans so that big projects do not all arrive in the same week. The school also asked students to keep a record (3) ______ how long each task took. The results were (4) ______: some tasks that teachers expected to take twenty minutes were taking almost an hour. Teachers used this (5) ______ to shorten several assignments. Not everyone was happy at first. Some parents felt that less homework would make their children less (6) ______ for the entrance exam. However, after one term, most families agreed that the change had been (7) ______, especially for students who also attended extra classes. The school now plans to review the policy every year (8) ______ the help of a student committee."
+    },
+    {
+      "id": "B-W1-HOMEWORK-S3",
+      "title": "Source A — We Are Running Out of Evening",
+      "url": null,
+      "author": "Imagined grade-9 student, school magazine, October 2026 (invented)",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào.",
+      "modality": "text",
+      "text": "¶1 Last week I kept a diary of my evenings. On Monday I had homework in five subjects, and I finished at 11:40 p.m. On Wednesday it was 11:15. My friends say their weeks look the same. In a quick poll I ran in our class, 27 of 35 students said they regularly do more than three hours of homework a night.\n\n¶2 This is not sustainable. Teenagers need time to sleep, to exercise and simply to talk to their families. When every evening is filled with worksheets, we stop learning and start copying, just to get the work done.\n\n¶3 I am not asking for homework to be abolished. Some practice is useful, especially before tests. But each teacher sets work as if their subject were the only one. A limit of ninety minutes a night, shared fairly between subjects, would force teachers to choose the tasks that really matter. Quality, not quantity, should be the rule."
+    },
+    {
+      "id": "B-W1-HOMEWORK-S4",
+      "title": "Source B — Homework Is Not the Enemy",
+      "url": null,
+      "author": "Imagined secondary-school maths teacher, teachers' forum, October 2026 (invented)",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào. Nguồn dùng cho bài nói Chủ nhật: thầy/cô KHÔNG đọc trước.",
+      "modality": "text",
+      "text": "¶1 Every year, some students tell me they have too much homework. I take that seriously. But a strict time limit is the wrong answer.\n\n¶2 First, students work at very different speeds. A task that takes one student twenty minutes can take another an hour. A fixed limit would punish the slower students, who often need the practice most.\n\n¶3 Second, homework is where much of the learning actually happens. In class, students watch me solve problems; at home, they find out whether they can do it alone. Last year, students in my two classes who completed at least 80 per cent of their homework scored, on average, 1.2 points higher in the end-of-year test than those who did not.\n\n¶4 Of course, that does not prove that homework caused the difference; the students who did their homework may simply have been more motivated. Still, I believe the real problem is badly designed homework, such as long, repetitive worksheets, not homework itself. Teachers should coordinate across subjects and set fewer but better tasks."
+    }
+  ],
+  "steps": [
+    {
+      "step_no": 1,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [],
+      "target_ids": [
+        "B-T1-EXAM-R"
+      ],
+      "prompt_en": "No dictionary. 12 minutes. For questions 3, 5 and 6, also write the paragraph number and the first few words of the supporting sentence.",
+      "prompt_vi": "Thứ Hai 19/10 · A1 đọc hiểu (270 từ). c1 ≥ 5/6; c2 dẫn đúng câu ≥ 2/3 (câu 3, 5, 6).",
+      "time_min": 12,
+      "planned_date": "2026-10-19",
+      "items": [
+        {
+          "id": "W1-A1-1",
+          "kind": "mcq",
+          "stem": "What is the passage mainly about?",
+          "options": [
+            "why homework takes students too long",
+            "how to stop using a phone while studying",
+            "a way of studying in short, focused blocks, and its limits",
+            "why essays need long periods of concentration"
+          ],
+          "answer": "C",
+          "explanation_vi": "Ý chính cả bài (cả phương pháp lẫn giới hạn ở ¶4).",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "W1-A1-2",
+          "kind": "mcq",
+          "stem": "According to paragraph 2, what should you do after four blocks?",
+          "options": [
+            "take a longer rest",
+            "start a new subject",
+            "check your phone",
+            "stop for the day"
+          ],
+          "answer": "A",
+          "explanation_vi": "¶2 \"After four blocks, you take a longer rest.\"",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "W1-A1-3",
+          "kind": "mcq",
+          "stem": "The word \"manageable\" in paragraph 3 is closest in meaning to ______. (Write ¶ + supporting sentence.)",
+          "options": [
+            "compulsory",
+            "boring",
+            "expensive",
+            "possible to deal with"
+          ],
+          "answer": "D",
+          "explanation_vi": "¶3 \"a short block feels manageable, so it is easier to start\".",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "W1-A1-4",
+          "kind": "mcq",
+          "stem": "Which of the following is NOT given as a reason why the method works?",
+          "options": [
+            "A short block is easier to start.",
+            "Breaks help you remember vocabulary better.",
+            "Knowing a break is coming makes you less likely to stop.",
+            "Counting blocks shows how long tasks really take."
+          ],
+          "answer": "B",
+          "explanation_vi": "Bài không nói giờ nghỉ giúp nhớ từ vựng.",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "W1-A1-5",
+          "kind": "mcq",
+          "stem": "The phrase \"not magic\" in paragraph 4 suggests that the method ______. (Write ¶ + supporting sentence.)",
+          "options": [
+            "has limits and does not suit every task",
+            "was invented by a famous teacher",
+            "is difficult to learn",
+            "only works for boring tasks"
+          ],
+          "answer": "A",
+          "explanation_vi": "¶4 \"Some tasks… need longer periods… annoying\".",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "W1-A1-6",
+          "kind": "mcq",
+          "stem": "The writer would most probably agree that ______. (Write ¶ + supporting sentence.)",
+          "options": [
+            "students should always study in 25-minute blocks",
+            "the length of a study block should depend on the kind of task",
+            "long study sessions are always better than short ones",
+            "breaks are a waste of time"
+          ],
+          "answer": "B",
+          "explanation_vi": "¶4 \"make the blocks longer for creative work and keep them short for tasks they find boring\".",
+          "target_id": "B-T1-EXAM-R"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 2,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [],
+      "target_ids": [
+        "B-L2-CLOZE"
+      ],
+      "prompt_en": "Read the passage and choose the best answer for each gap. 8 minutes. No dictionary.",
+      "prompt_vi": "Thứ Hai 19/10 · A2 điền đoạn văn (165 từ). c1 ≥ 6/8; c2 dạng từ (2, 4, 7) ≥ 2/3. Sau đó 5' ghi sổ lỗi.",
+      "time_min": 8,
+      "planned_date": "2026-10-19",
+      "items": [
+        {
+          "id": "W1-A2-1",
+          "kind": "gap",
+          "stem": "Gap (1)",
+          "options": [
+            "introduce",
+            "invent",
+            "produce",
+            "reduce"
+          ],
+          "answer": "A",
+          "explanation_vi": "introduce a policy = ban hành, áp dụng chính sách.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W1-A2-2",
+          "kind": "word_form",
+          "stem": "Gap (2)",
+          "options": [
+            "coordination",
+            "coordinate",
+            "coordinator",
+            "coordinated"
+          ],
+          "answer": "B",
+          "explanation_vi": "must + động từ nguyên mẫu.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W1-A2-3",
+          "kind": "gap",
+          "stem": "Gap (3)",
+          "options": [
+            "in",
+            "for",
+            "of",
+            "with"
+          ],
+          "answer": "C",
+          "explanation_vi": "keep a record of.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W1-A2-4",
+          "kind": "word_form",
+          "stem": "Gap (4)",
+          "options": [
+            "surprise",
+            "surprised",
+            "surprising",
+            "surprisingly"
+          ],
+          "answer": "C",
+          "explanation_vi": "Kết quả gây ngạc nhiên → surprising.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W1-A2-5",
+          "kind": "gap",
+          "stem": "Gap (5)",
+          "options": [
+            "opinion",
+            "rumour",
+            "excuse",
+            "information"
+          ],
+          "answer": "D",
+          "explanation_vi": "Dữ liệu ghi chép thời gian = information.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W1-A2-6",
+          "kind": "gap",
+          "stem": "Gap (6)",
+          "options": [
+            "busy",
+            "ready",
+            "careful",
+            "tired"
+          ],
+          "answer": "B",
+          "explanation_vi": "ready for the entrance exam.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W1-A2-7",
+          "kind": "word_form",
+          "stem": "Gap (7)",
+          "options": [
+            "benefit",
+            "beneficiary",
+            "beneficially",
+            "beneficial"
+          ],
+          "answer": "D",
+          "explanation_vi": "had been + tính từ.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "W1-A2-8",
+          "kind": "gap",
+          "stem": "Gap (8)",
+          "options": [
+            "with",
+            "by",
+            "under",
+            "from"
+          ],
+          "answer": "A",
+          "explanation_vi": "with the help of.",
+          "target_id": "B-L2-CLOZE"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 3,
+      "activity_type": "ACT-WRITE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "B-L1-TRANSFORM-W"
+      ],
+      "prompt_en": "Rewrite each sentence so that it means the same as the first one. Use the words given.",
+      "prompt_vi": "Thứ Ba 20/10, đầu buổi học, thầy/cô quan sát (observed_directly=Y, validator_role=tutor). c1 ≥ 7/8; c2 không sai ở cấu trúc cần dùng.",
+      "time_min": 10,
+      "planned_date": "2026-10-20",
+      "items": [
+        {
+          "id": "W1-A3-1",
+          "kind": "transform",
+          "stem": "\"I finished my project last night,\" said Lan. → Lan said (that) ……",
+          "options": [],
+          "answer": "Lan said (that) she had finished her project the night before.",
+          "explanation_vi": "Cũng chấp nhận: …the previous night / the previous evening · Không chấp nhận: she finished (không lùi thì); giữ last night; yesterday",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W1-A3-2",
+          "kind": "transform",
+          "stem": "Our teacher marks the homework every Friday. → The homework ……",
+          "options": [],
+          "answer": "The homework is marked by our teacher every Friday.",
+          "explanation_vi": "Cũng chấp nhận: …is marked every Friday by our teacher · Không chấp nhận: was marked; is marking; bỏ by our teacher (tác nhân cụ thể phải giữ)",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W1-A3-3",
+          "kind": "transform",
+          "stem": "I don't have a quiet room, so I can't concentrate at home. → If I ……",
+          "options": [],
+          "answer": "If I had a quiet room, I could concentrate at home.",
+          "explanation_vi": "Cũng chấp nhận: …I would be able to concentrate at home · Không chấp nhận: If I have…; If I had…, I can…",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W1-A3-4",
+          "kind": "transform",
+          "stem": "I'm sorry I didn't start my essay earlier. → I wish ……",
+          "options": [],
+          "answer": "I wish I had started my essay earlier.",
+          "explanation_vi": "Cũng chấp nhận: I wish I'd started… · Không chấp nhận: I wish I started…; I wish I would start…",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W1-A3-5",
+          "kind": "transform",
+          "stem": "The task was so difficult that I couldn't finish it in an hour. → The task was too ……",
+          "options": [],
+          "answer": "The task was too difficult for me to finish in an hour.",
+          "explanation_vi": "Cũng chấp nhận: …in one hour · Không chấp nhận: …to finish it… (lặp tân ngữ); bỏ for me",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W1-A3-6",
+          "kind": "transform",
+          "stem": "Although she was tired, she finished all her exercises. → Despite ……",
+          "options": [],
+          "answer": "Despite being tired, she finished all her exercises.",
+          "explanation_vi": "Cũng chấp nhận: Despite her tiredness, … · Despite the fact that she was tired, … · Không chấp nhận: Despite she was tired; Despite of",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W1-A3-7",
+          "kind": "transform",
+          "stem": "No student in my class works harder than Minh. → Minh ……",
+          "options": [],
+          "answer": "Minh works the hardest in my class.",
+          "explanation_vi": "Cũng chấp nhận: Minh works harder than any other student in my class. · Minh is the hardest-working student in my class. · Minh works hardest in my class. · Không chấp nhận: …than any student… (thiếu other); the most hard",
+          "target_id": "B-L1-TRANSFORM-W"
+        },
+        {
+          "id": "W1-A3-8",
+          "kind": "transform",
+          "stem": "I usually spend two hours doing homework every evening. → It usually takes ……",
+          "options": [],
+          "answer": "It usually takes me two hours to do my homework every evening.",
+          "explanation_vi": "Cũng chấp nhận: …to do homework… · …takes me two hours every evening to do my homework · Không chấp nhận: …takes me two hours doing…; …takes two hours for me doing…",
+          "target_id": "B-L1-TRANSFORM-W"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 4,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [],
+      "target_ids": [
+        "B-T1-ARG-R",
+        "B-T5-DATAOP"
+      ],
+      "prompt_en": "Read Sources A and B (10 minutes), then answer the questions (20 minutes).",
+      "prompt_vi": "Thứ Tư 21/10 · Câu hỏi về nguồn. Phụ huynh chấm.",
+      "time_min": 30,
+      "planned_date": "2026-10-21",
+      "items": [
+        {
+          "id": "W1-B1-1",
+          "kind": "short",
+          "stem": "In one sentence each, in your own words, what is the main claim of Source A and of Source B?",
+          "options": [],
+          "answer": "A: there should be a limit of about 90 minutes a night, shared fairly between subjects (not abolishing homework). B: a strict time limit is the wrong answer; the real problem is badly designed homework, so teachers should coordinate and set fewer, better tasks.",
+          "explanation_vi": "Cần đúng cả hai (c1 B-T1-ARG-R).",
+          "target_id": "B-T1-ARG-R"
+        },
+        {
+          "id": "W1-B1-2",
+          "kind": "short",
+          "stem": "List three reasons or pieces of evidence that the writer of Source A uses. Give the paragraph (¶).",
+          "options": [],
+          "answer": "3 trong: nhật ký 5 môn, xong lúc 11:40 / 11:15 (¶1) · khảo sát lớp 27/35 trên 3 giờ (¶1) · tuổi teen cần ngủ, tập thể dục, trò chuyện (¶2) · quá tải thì chép chứ không học (¶2) · mỗi giáo viên giao như thể chỉ có môn mình (¶3).",
+          "explanation_vi": "c2 B-T1-ARG-R.",
+          "target_id": "B-T1-ARG-R"
+        },
+        {
+          "id": "W1-B1-3a",
+          "kind": "mcq",
+          "stem": "The writer of Source A wants homework to be:",
+          "options": [
+            "abolished completely",
+            "limited and shared fairly between subjects",
+            "given only before tests",
+            "replaced by projects"
+          ],
+          "answer": "B",
+          "explanation_vi": "Cần đúng cả 3a và 3b (c3 B-T1-ARG-R).",
+          "target_id": "B-T1-ARG-R"
+        },
+        {
+          "id": "W1-B1-3b",
+          "kind": "mcq",
+          "stem": "The writer of Source B thinks a strict time limit is:",
+          "options": [
+            "the best solution",
+            "unnecessary, because there is no problem",
+            "the wrong solution to a real problem",
+            "fair to slower students"
+          ],
+          "answer": "C",
+          "explanation_vi": "Cần đúng cả 3a và 3b.",
+          "target_id": "B-T1-ARG-R"
+        },
+        {
+          "id": "W1-B1-4i",
+          "kind": "mcq",
+          "stem": "\"On Monday I had homework in five subjects, and I finished at 11:40 p.m.\" (A)",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "A",
+          "explanation_vi": "Dữ liệu/bằng chứng (D).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W1-B1-4ii",
+          "kind": "mcq",
+          "stem": "\"This is not sustainable.\" (A)",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "B",
+          "explanation_vi": "Bình luận/diễn giải (C).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W1-B1-4iii",
+          "kind": "mcq",
+          "stem": "\"27 of 35 students said they regularly do more than three hours of homework a night.\" (A)",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "A",
+          "explanation_vi": "Dữ liệu/bằng chứng (D).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W1-B1-4iv",
+          "kind": "mcq",
+          "stem": "\"A fixed limit would punish the slower students.\" (B)",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "B",
+          "explanation_vi": "Dự đoán, không phải điều đã đo.",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W1-B1-4v",
+          "kind": "mcq",
+          "stem": "\"When every evening is filled with worksheets, we stop learning and start copying.\" (A)",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "B",
+          "explanation_vi": "Bình luận/diễn giải (C).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W1-B1-4vi",
+          "kind": "mcq",
+          "stem": "\"On Wednesday it was 11:15.\" (A)",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "A",
+          "explanation_vi": "Dữ liệu/bằng chứng (D).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W1-B1-4vii",
+          "kind": "mcq",
+          "stem": "\"Students… who completed at least 80 per cent of their homework scored, on average, 1.2 points higher in the end-of-year test.\" (B)",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "A",
+          "explanation_vi": "Dữ liệu/bằng chứng (D).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W1-B1-4viii",
+          "kind": "mcq",
+          "stem": "\"The real problem is badly designed homework… not homework itself.\" (B)",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "B",
+          "explanation_vi": "Bình luận/diễn giải (C).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "W1-B1-5",
+          "kind": "open",
+          "stem": "Choose two statements you marked C. For each, explain in 1-2 sentences why it is commentary, not data.",
+          "options": [],
+          "answer": "Ví dụ: (iv) dự đoán · (ii) đánh giá của người viết · (v) khái quát từ trải nghiệm · (viii) ý kiến về nguyên nhân.",
+          "explanation_vi": "c2 B-T5-DATAOP (c1 ≥ 7/8).",
+          "target_id": "B-T5-DATAOP"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 5,
+      "activity_type": "ACT-CANVAS-ADV",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [
+        "B-T7-ARGUE",
+        "B-T11-QUALIFY"
+      ],
+      "prompt_en": "Practice question: According to the two sources, is the main problem the amount of homework or the way it is set? 1. Fill in the Canvas (with sentence frames). 2. Write one paragraph of 80-120 words. Canvas boxes: Question · 1. Your answer (My answer is that …) · 2. Reasons + evidence, each with [Source, ¶] (One reason is that … Source B shows this: \"…\" (¶2).) · 3. Why the evidence supports the reason (This supports my point because …) · 4. Limitation (However, this evidence is limited because …) · 5. Conditional conclusion (So it is likely / possible that …, unless / as long as …)",
+      "prompt_vi": "Thứ Năm 22/10 · Bài luyện tập có câu mẫu (support_used=frame). Câu hỏi luyện tập khác câu hỏi lớn.",
+      "time_min": 20,
+      "planned_date": "2026-10-22",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 6,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [],
+      "prompt_en": "Choose A, B, C or D. 10 minutes.",
+      "prompt_vi": "Thứ Sáu 23/10 · Luyện nhanh 8 câu (không ghi CSV, chỉ ghi sổ lỗi).",
+      "time_min": 10,
+      "planned_date": "2026-10-23",
+      "items": [
+        {
+          "id": "W1-Q-1",
+          "kind": "mcq",
+          "stem": "-ed: cook[ed] / play[ed] / watch[ed] / wash[ed]",
+          "options": [
+            "cooked",
+            "played",
+            "watched",
+            "washed"
+          ],
+          "answer": "B",
+          "explanation_vi": "played /d/, còn lại /t/.",
+          "target_id": null
+        },
+        {
+          "id": "W1-Q-2",
+          "kind": "mcq",
+          "stem": "Choose the sentence that is correctly made from these words: our teacher / ask / us / hand in / project / before Friday",
+          "options": [
+            "Our teacher asks us hand in the project before Friday.",
+            "Our teacher asked us handing in the project before Friday.",
+            "Our teacher asked us to hand in the project before Friday.",
+            "Our teacher asked that us hand in project before Friday."
+          ],
+          "answer": "C",
+          "explanation_vi": "Dựng câu: ask + tân ngữ + to + động từ nguyên mẫu (asked us to hand in). A thiếu to; B dùng V-ing sau asked us; D dùng that-clause sai (that us).",
+          "target_id": null
+        },
+        {
+          "id": "W1-Q-3",
+          "kind": "mcq",
+          "stem": "Stress",
+          "options": [
+            "begin",
+            "teacher",
+            "careful",
+            "homework"
+          ],
+          "answer": "A",
+          "explanation_vi": "begin nhấn âm 2.",
+          "target_id": null
+        },
+        {
+          "id": "W1-Q-4",
+          "kind": "mcq",
+          "stem": "Stress",
+          "options": [
+            "education",
+            "activity",
+            "environment",
+            "experience"
+          ],
+          "answer": "A",
+          "explanation_vi": "edu'cation nhấn âm 3, còn lại âm 2.",
+          "target_id": null
+        },
+        {
+          "id": "W1-Q-5",
+          "kind": "mcq",
+          "stem": "By the time we arrived, the film ______.",
+          "options": [
+            "has started",
+            "starts",
+            "had started",
+            "was starting"
+          ],
+          "answer": "C",
+          "explanation_vi": "Quá khứ hoàn thành.",
+          "target_id": null
+        },
+        {
+          "id": "W1-Q-6",
+          "kind": "mcq",
+          "stem": "Choose the best order to make a short paragraph: a. First, I write down everything I have to do. b. I follow a simple routine when I do my homework. c. Finally, I check my answers before I close my books. d. Then I start with the hardest subject while I still feel fresh.",
+          "options": [
+            "a–b–d–c",
+            "d–b–a–c",
+            "b–d–a–c",
+            "b–a–d–c"
+          ],
+          "answer": "D",
+          "explanation_vi": "b (câu chủ đề) – a (First) – d (Then) – c (Finally).",
+          "target_id": null
+        },
+        {
+          "id": "W1-Q-7",
+          "kind": "mcq",
+          "stem": "Tom: \"I've just won the school poetry prize!\" – Anna: \"______\"",
+          "options": [
+            "Never mind.",
+            "Same to you.",
+            "Help yourself.",
+            "Congratulations!"
+          ],
+          "answer": "D",
+          "explanation_vi": "",
+          "target_id": null
+        },
+        {
+          "id": "W1-Q-8",
+          "kind": "mcq",
+          "stem": "Notice at the canteen exit: PLEASE RETURN TRAYS HERE. No food in the library.",
+          "options": [
+            "You can eat in the library if you return your tray.",
+            "Trays should be returned here, and you must not eat in the library.",
+            "The library sells food.",
+            "Trays are not allowed in the canteen."
+          ],
+          "answer": "B",
+          "explanation_vi": "(Đề xuất ⚪: đổi \"Canteen notice\" thành \"Notice at the canteen exit\".)",
+          "target_id": null
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 7,
+      "activity_type": "ACT-WRITE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [],
+      "target_ids": [
+        "B-T7-ARGUE",
+        "B-T11-QUALIFY",
+        "B-L1-COMPLEX-W",
+        "B-L2-PRECISE"
+      ],
+      "prompt_en": "Should there be a nightly time limit on homework for grade-9 students? Write 250-300 words. You may keep Sources A and B open. First, make a quick Canvas in 5 minutes (no frames): your answer, at least two reasons, each with [Source, ¶], one limitation, and your conclusion. State your position clearly. Use evidence from both sources. Explain how at least one piece of evidence supports your reason. Mention one limitation of the evidence. End with a conclusion that says how sure you are. No dictionary, no spell-check, no AI.",
+      "prompt_vi": "Thứ Bảy 24/10 · Canvas nhanh 5' + viết 35' + tự kiểm 5'. Nguồn để mở là điều kiện của bài (ghi support_note). B-L1-COMPLEX-W để trống nếu < 250 từ.",
+      "time_min": 45,
+      "planned_date": "2026-10-24",
+      "items": [],
+      "self_check_vi": [
+        "Câu đầu tiên đã trả lời thẳng câu hỏi chưa?",
+        "Mỗi lý do đã có ít nhất một chỗ dẫn từ nguồn (Nguồn A hay B, đoạn mấy) chưa?",
+        "Có ít nhất một chỗ bạn giải thích vì sao bằng chứng ấy đỡ cho lý do của mình chưa?",
+        "Bạn đã nêu một giới hạn của bằng chứng chưa?",
+        "Kết luận đã nói rõ bạn chắc đến đâu (likely, in most cases…) và khi nào thì kết luận sẽ khác (unless…, if…) chưa?",
+        "Bài đã đủ 250 từ chưa? Có vài câu phức với which, who, although, if… chưa?",
+        "Đọc lại một lượt, chỉ để tìm 3 lỗi bạn hay mắc nhất.",
+        "Bạn có trả lời được lý do mạnh nhất của phía không giống ý mình không?"
+      ]
+    },
+    {
+      "step_no": 8,
+      "activity_type": "ACT-REVISE",
+      "mode": "REVISION",
+      "purpose": [],
+      "target_ids": [
+        "B-T7-ARGUE",
+        "B-T11-QUALIFY",
+        "B-L2-PRECISE"
+      ],
+      "prompt_en": "Read the (max 3) comments. Fix only those places. Underline what you changed and add one line: \"I changed … because …\".",
+      "prompt_vi": "Chủ nhật 25/10 chiều · attempt_no=2, is_first_attempt=N, cùng learning_family FAM-B-HW-1.",
+      "time_min": 15,
+      "planned_date": "2026-10-25",
+      "items": [],
+      "self_check_vi": [
+        "Chỉ sửa những chỗ có gợi ý (tối đa 3), không viết lại cả bài.",
+        "Gạch chân chỗ đã sửa và ghi một dòng cuối: \"Mình đã sửa … vì …\"."
+      ],
+      "status": "needs_review",
+      "review_note": "Loại hoạt động ACT-REVISE không nằm trong danh sách bài được tính cho: B-T7-ARGUE, B-T11-QUALIFY, B-L2-PRECISE (danh mục v0.2.1). Cần phụ huynh quyết: đổi loại hoạt động của bước này, hoặc bỏ kỹ năng đó khỏi bước. Chưa sửa nội dung; mẫu này giữ nháp, chưa giao được."
+    },
+    {
+      "step_no": 9,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [
+        "B-L4-EXPLAIN-S"
+      ],
+      "prompt_en": "Read Source B again for 2 minutes. You may write up to 5 key words on a card. Then explain the writer's argument to your teacher, who has not read it, in 2-3 minutes, so that they can say it back to you in one sentence. Give at least one example from your own life.",
+      "prompt_vi": "Chủ nhật 25/10, trong buổi (≈ 12'). Bài luyện tập (support_used=notes), purpose=none. Ý chính (phụ huynh giữ, mở sau khi thầy/cô nhắc lại): \"A fixed homework time limit is the wrong fix, because students work at different speeds and homework is where they practise alone; the real problem is badly designed, uncoordinated homework, so teachers should set fewer, better tasks.\" Trao đổi 3' không chấm.",
+      "time_min": 12,
+      "planned_date": "2026-10-25",
+      "items": [],
+      "self_check_vi": []
+    }
+  ]
+}
