@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -73,3 +74,90 @@ jobs:
           npm run db:seed-dev -- --auth=stub
           npm run db:seed-dev -- --auth=stub
           test "$(psql "$DATABASE_URL" -tAc "select count(*) from english.learners where is_test = false")" = "0"
+
+  e2e:
+    name: E2E smoke (Playwright + real local Supabase)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      # CI-only throwaway values for a stack that lives and dies inside this job.
+      SEED_DEV_PASSWORD: ci-only-e2e-password-1234
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.120.0
+      - name: Start local Supabase (auth + PostgREST + Postgres only; config in supabase/config.toml)
+        run: supabase start
+
+      - name: Apply our migrations on real Supabase Postgres (twice — 2nd must be a no-op)
+        run: |
+          set -euo pipefail
+          npm run db:apply
+          npm run db:apply | tee /tmp/second.txt
+          grep -q "nothing to apply" /tmp/second.txt
+
+      - name: Read local Supabase keys
+        run: |
+          set -euo pipefail
+          supabase status -o env > "$RUNNER_TEMP/supabase.env"
+          set -a
+          . "$RUNNER_TEMP/supabase.env"
+          set +a
+          : "${API_URL:?}" "${ANON_KEY:?}" "${SERVICE_ROLE_KEY:?}"
+          echo "::add-mask::$ANON_KEY"
+          echo "::add-mask::$SERVICE_ROLE_KEY"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+
+      - name: Seed the TEST family (real Auth Admin API)
+        run: npm run db:seed-dev
+
+      - name: Build and start the app (ALLOW_REAL_LEARNERS=false)
+        env:
+          ALLOW_REAL_LEARNERS: "false"
+        run: |
+          set -euo pipefail
+          npm run build
+          nohup npm start -- --hostname 127.0.0.1 --port 3000 > "$RUNNER_TEMP/next.log" 2>&1 &
+          for _ in $(seq 1 60); do
+            curl -fsS -o /dev/null http://127.0.0.1:3000/login && exit 0
+            sleep 1
+          done
+          echo "App did not come up:"; cat "$RUNNER_TEMP/next.log"; exit 1
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright
+        run: npm run test:e2e
+
+      - name: App log (on failure)
+        if: failure()
+        run: cat "$RUNNER_TEMP/next.log" || true
+
+      - name: Supabase container logs (on failure)
+        if: failure()
+        run: |
+          for c in $(docker ps -a --format '{{.Names}}' | grep -E 'auth|rest'); do
+            echo "=== $c ==="; docker logs --tail 40 "$c" 2>&1 || true
+          done
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
