@@ -141,12 +141,21 @@ export const targetsPage = {
   codeLabel: "mã",
   trackingOnlyTitle: "Theo dõi thêm (không tính vào đánh giá)",
   trackingOnlyEmpty: "Không có mục theo dõi thêm.",
-  noSet: "Chưa chọn bộ kỹ năng cho bạn này. Phụ huynh cần gán bộ kỹ năng trước.",
+  noSet: "Chưa chọn bộ kỹ năng cho em này.",
   back: "Về trang chủ",
   techInfoSet: "Bộ kỹ năng",
   techInfoCatalogue: "Danh mục",
   techInfoCodes: "Mã kỹ năng",
 } as const;
+
+/**
+ * Tên ngắn cho các chỉ số chỉ để theo dõi (aggregate_indicators). Chỉ số nào chưa có tên ở đây thì
+ * hiện nguyên `definition_vi` của danh mục (câu dài, vẫn đúng nhưng nặng chữ).
+ */
+export const trackingNames: Record<string, string> = {
+  "AGG-B-EXAM-MOCK": "Điểm đề thử tháng",
+  "AGG-B-L1-ERRORS": "Lỗi ngữ pháp hay gặp",
+};
 
 // ---------- §5 Thông điệp mẫu -----------------------------------------------------------
 export const messages = {

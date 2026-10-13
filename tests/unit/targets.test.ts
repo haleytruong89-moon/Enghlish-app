@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { AccessStore, Learner, Member, Relationship } from "@/lib/auth/requireAccess";
 import { loadConfig } from "@/lib/config/content";
-import { levelLabels, skillNames } from "@/lib/copy/vi";
+import { levelLabels, skillNames, targetsPage, trackingNames } from "@/lib/copy/vi";
 import { authorizeTargetsPage } from "@/lib/targets/access";
 import {
   buildTargetsView,
   pickCurrentAssignment,
   targetTitle,
+  trackingLabel,
   type DefinitionInput,
 } from "@/lib/targets/view";
 
@@ -97,6 +98,20 @@ describe("buildTargetsView", () => {
       for (const t of view.trackingOnly) expect(rowIds.has(t.id)).toBe(false);
       expect(view.rows).toHaveLength(12);
     }
+  });
+
+  it("tracking-only aggregates use the short Vietnamese names; others fall back to the catalogue definition", () => {
+    const b = buildTargetsView(definition("B-v1"), targets, dimensions, aggregates);
+    expect(b.trackingOnly.map((t) => t.label)).toEqual(["Điểm đề thử tháng", "Lỗi ngữ pháp hay gặp"]);
+    expect(trackingNames["AGG-B-EXAM-MOCK"]).toBe("Điểm đề thử tháng");
+    expect(trackingLabel({ id: "AGG-X-UNKNOWN", definitionVi: "Định nghĩa dài trong danh mục" })).toBe("Định nghĩa dài trong danh mục");
+    // dimensions keep their catalogue name
+    const a = buildTargetsView(definition("A-v1"), targets, dimensions, aggregates);
+    expect(a.trackingOnly.map((t) => t.label)).toEqual(a.trackingOnly.map((t) => dimensions.find((d) => d.id === t.id)?.nameVi));
+  });
+
+  it("the 'no set' text is neutral (no instruction about who must do what)", () => {
+    expect(targetsPage.noSet).toBe("Chưa chọn bộ kỹ năng cho em này.");
   });
 
   it("skips (never invents) a target that is missing from the loaded data", () => {

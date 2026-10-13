@@ -3,7 +3,7 @@
  * The page shows the learner's CURRENT target set; tracking-only items are listed apart and
  * are never part of the denominator.
  */
-import { levelLabels, skillNames } from "@/lib/copy/vi";
+import { levelLabels, skillNames, trackingNames } from "@/lib/copy/vi";
 
 export type TargetSetAssignment = { definitionId: string; effectiveFrom: Date; seq: number };
 
@@ -52,6 +52,11 @@ export function targetTitle(target: TargetInput): string {
   return skillNames[target.id]?.staff ?? target.titleVi;
 }
 
+/** Short Vietnamese name for a tracking-only aggregate; falls back to the catalogue's long definition. */
+export function trackingLabel(aggregate: AggregateInput): string {
+  return trackingNames[aggregate.id] ?? aggregate.definitionVi;
+}
+
 export function buildTargetsView(
   def: DefinitionInput,
   targets: TargetInput[],
@@ -81,7 +86,7 @@ export function buildTargetsView(
     }),
     ...def.trackingOnly.aggregates.flatMap((id) => {
       const a = aggById.get(id);
-      return a ? [{ id, label: a.definitionVi }] : [];
+      return a ? [{ id, label: trackingLabel(a) }] : [];
     }),
   ];
 
