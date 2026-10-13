@@ -5,6 +5,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CONTENT_DIR } from "../../lib/config/content";
 import type { InquiryTemplate } from "../../lib/config/schemas";
 import { addDays, daysBetween, todayVn } from "../../lib/inquiries/dates";
+import { Client } from "pg";
+import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { as, asCommit, createTestDb, migrate, seed, type Seeded, type TestDb } from "./helpers";
 
 /**
@@ -323,6 +325,114 @@ describe("S5 hardening (Opus review)", () => {
       // the parent reads the current published version only
       const rows = await as(db.client, "authenticated", s.users.parent, async (q) => (await q("select id from english.lesson_notes order by created_at")).rows as { id: string }[]);
       expect(rows.map((r) => r.id)).toEqual([n2.id]);
+    });
+  });
+
+  // -------------------------------------------------------------------------------------------------------------
+  describe("two people acting on the same piece of work at the same moment", () => {
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const clients: Client[] = [];
+    async function newClient(): Promise<Client> {
+      const c = new Client(pgConfigFromUrl(db.url));
+      await c.connect();
+      clients.push(c);
+      return c;
+    }
+    afterAll(async () => {
+      for (const c of clients) await c.end().catch(() => undefined);
+    });
+    /** Open a transaction on `c` as a role and leave it open (the caller commits). */
+    async function openAs(c: Client, role: "authenticated" | "service_role", uid: string | null, sql: string, params: unknown[]) {
+      await c.query("begin");
+      await c.query("select set_config('request.jwt.claim.sub', $1, true)", [uid ?? ""]);
+      await c.query(`set local role ${role}`);
+      return c.query(sql, params);
+    }
+    /** How many other sessions of this database are waiting for a lock right now. */
+    const waiting = async () => count("select count(*)::int as n from pg_stat_activity where datname = current_database() and wait_event_type = 'Lock'");
+    const errOf = (p: Promise<unknown>) => p.then(() => null, (e: unknown) => e as { code?: string; message?: string });
+
+    it("two first reviews of the same skill (the tutor and the parent): the second waits, then is refused cleanly - one observation, one decision", async () => {
+      const r = await offline(M().tutorAn, await activity(aW1, 6), "manual_import", "Paper writing for the race");
+      const sql = "select english.eng_record_review($1, 'A-L3-CAUSE-W', $2::smallint, false, null, null, $3, $4) as r";
+      const a = await newClient();
+      const b = await newClient();
+      await openAs(a, "service_role", null, sql, [r.episode_id, 3, M().tutorAn, randomUUID()]); // tutor's review, not yet committed
+      const pending = errOf(asCommit(b, "service_role", null, async (q) => q(sql, [r.episode_id, 1, M().parent, randomUUID()])));
+      await sleep(400);
+      expect(await waiting()).toBeGreaterThanOrEqual(1); // the parent's review is waiting on the tutor's
+      await a.query("commit");
+      const err = await pending;
+      expect(err?.code, err?.message).toBe("23505");
+      expect(err?.message).toMatch(/already has a decision/);
+      expect(await q1("select validator_role, final_score from english.validation_decisions where episode_id = $1 and target_key = 'A-L3-CAUSE-W'", [r.episode_id])).toEqual([{ validator_role: "tutor", final_score: 3 }]);
+      expect(await count("select count(*)::int as n from english.observations where episode_id = $1 and target_key = 'A-L3-CAUSE-W'", [r.episode_id])).toBe(1);
+    });
+
+    it("the same, started together with no ordering: exactly one wins, whichever it is, and nothing is half-written", async () => {
+      for (let i = 0; i < 3; i += 1) {
+        const r = await offline(M().tutorAn, await activity(aW1, 6), "manual_import", `Paper writing for the race ${i}`);
+        const sql = "select english.eng_record_review($1, 'A-L2-CHUNKS', $2::smallint, false, null, null, $3, $4) as r";
+        const a = await newClient();
+        const b = await newClient();
+        const results = await Promise.allSettled([
+          asCommit(a, "service_role", null, async (q) => q(sql, [r.episode_id, 2, M().tutorAn, randomUUID()])),
+          asCommit(b, "service_role", null, async (q) => q(sql, [r.episode_id, 4, M().parent, randomUUID()])),
+        ]);
+        expect(results.filter((x) => x.status === "fulfilled")).toHaveLength(1);
+        const lost = results.find((x) => x.status === "rejected") as PromiseRejectedResult;
+        expect((lost.reason as { code?: string }).code).toBe("23505");
+        expect(await count("select count(*)::int as n from english.validation_decisions where episode_id = $1 and target_key = 'A-L2-CHUNKS'", [r.episode_id])).toBe(1);
+        expect(await count("select count(*)::int as n from english.observations where episode_id = $1 and target_key = 'A-L2-CHUNKS'", [r.episode_id])).toBe(1);
+      }
+    });
+
+    it("a student's submit and an adult's record of the same one-time check at once: exactly one attempt and one episode", async () => {
+      const content = JSON.stringify({ answers: { "W1-R7": "Probably not." } });
+      const submitSql = "select english.eng_submit_attempt($1, $2, $3::jsonb, array['none']::text[], 'in_app') as r";
+      const recordSql = "select english.eng_record_offline_attempt($1, 'manual_import', 'Paper reading quiz', null, null, $2::date, array['unknown']::text[], $3, $4) as r";
+
+      // (a) the student is first and still holds the step when the tutor arrives
+      const stepA = await activity(aW1, 3); // ACT-SOURCE-QA, INDEPENDENT_CHECK
+      const a = await newClient();
+      const b = await newClient();
+      await openAs(a, "authenticated", s.users.studentAn, submitSql, [stepA, randomUUID(), content]);
+      const tutor = errOf(asCommit(b, "service_role", null, async (q) => q(recordSql, [stepA, TODAY, M().tutorAn, randomUUID()])));
+      await sleep(400);
+      expect(await waiting()).toBeGreaterThanOrEqual(1);
+      await a.query("commit");
+      const errA = await tutor;
+      expect(errA?.code, errA?.message).toBe("23505");
+      expect(errA?.message).toMatch(/one-time/);
+      expect(await q1("select provenance from english.attempts where activity_instance_id = $1", [stepA])).toEqual([{ provenance: "in_app" }]);
+      expect(await count("select count(*)::int as n from english.episodes e join english.attempts t on t.id = e.attempt_id where t.activity_instance_id = $1", [stepA])).toBe(1);
+
+      // (b) the adult is first
+      const stepB = await activity(aW1, 2); // another one-time check
+      const c = await newClient();
+      const d = await newClient();
+      await openAs(c, "service_role", null, recordSql, [stepB, TODAY, M().tutorAn, randomUUID()]);
+      const student = errOf(asCommit(d, "authenticated", s.users.studentAn, async (q) => q(submitSql, [stepB, randomUUID(), JSON.stringify({ answers: { "W1-L2": "Three." } })])));
+      await sleep(400);
+      expect(await waiting()).toBeGreaterThanOrEqual(1);
+      await c.query("commit");
+      const errB = await student;
+      expect(errB?.code, errB?.message).toBe("23505");
+      expect(await q1("select provenance from english.attempts where activity_instance_id = $1", [stepB])).toEqual([{ provenance: "manual_import" }]);
+
+      // (c) started together on fresh steps: never two attempts
+      for (const stepNo of [11, 12]) {
+        const step = await activity(aW0, stepNo); // A-W0 writing baseline checks (independent)
+        const e = await newClient();
+        const f = await newClient();
+        const outcome = await Promise.allSettled([
+          asCommit(e, "authenticated", s.users.studentAn, async (q) => q(submitSql, [step, randomUUID(), JSON.stringify({ text: "Volcanoes erupt because the magma rises." })])),
+          asCommit(f, "service_role", null, async (q) => q(recordSql, [step, TODAY, M().tutorAn, randomUUID()])),
+        ]);
+        expect(outcome.filter((x) => x.status === "fulfilled")).toHaveLength(1);
+        expect(await count("select count(*)::int as n from english.attempts where activity_instance_id = $1", [step])).toBe(1);
+        expect(await count("select count(*)::int as n from english.exposure_log x join english.attempts t on t.id = x.attempt_id where t.activity_instance_id = $1", [step])).toBeGreaterThan(0);
+      }
     });
   });
 
