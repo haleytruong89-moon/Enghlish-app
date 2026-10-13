@@ -81,7 +81,11 @@ describe("migrations", () => {
       join pg_namespace n on n.oid = c.relnamespace
       where n.nspname = 'english' and c.relkind = 'r'`);
     expect(rows.map((r) => r.relname).sort()).toEqual(
-      ["app_errors", "audit_log", "consents", "families", "learners", "members", "relationships", "schema_migrations"],
+      [
+        "activity_templates", "aggregate_indicators", "app_errors", "assessment_policies", "audit_log",
+        "catalogue_versions", "consents", "dimensions", "families", "learners", "members", "relationships",
+        "schema_migrations", "target_set_definitions", "target_sets", "targets", "tracks",
+      ],
     );
     for (const r of rows) expect(r.relrowsecurity, r.relname).toBe(true);
   });
@@ -106,7 +110,11 @@ describe("migrations", () => {
       from pg_class c join pg_namespace n on n.oid = c.relnamespace
       where n.nspname = 'english' and c.relkind = 'r' order by 1`);
     const readable = rows.filter((r) => r.s).map((r) => r.relname);
-    expect(readable).toEqual(["audit_log", "consents", "families", "learners", "members", "relationships"]);
+    expect(readable).toEqual([
+      "activity_templates", "aggregate_indicators", "assessment_policies", "audit_log", "catalogue_versions",
+      "consents", "dimensions", "families", "learners", "members", "relationships", "target_set_definitions",
+      "target_sets", "targets", "tracks",
+    ]);
     expect(rows.some((r) => r.w)).toBe(false);
   });
 });
