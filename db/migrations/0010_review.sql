@@ -501,6 +501,16 @@ begin
         where t.id = p_target and t.descriptor_version = v_template ->> 'descriptor_version' and c ->> 'id' = k)) then
       raise exception 'eng_record_review: unknown criterion for this skill' using errcode = '22023';
     end if;
+    -- Tiêu chí "gia sư nghe trực tiếp" (method = tutor_live) chỉ ghi được khi bài được quan sát trực tiếp; kỹ năng vẫn chấm được từ
+    -- tiêu chí rater của nó (vd. B-L4-EXPLAIN-S: c1 nghe trực tiếp, c2 rater).
+    if not v_ep.observed_directly and exists (
+      select 1 from pg_catalog.jsonb_object_keys(p_criteria) k
+      where exists (
+        select 1 from english.targets t, pg_catalog.jsonb_array_elements(t.success_criteria) c
+        where t.id = p_target and t.descriptor_version = v_template ->> 'descriptor_version'
+          and c ->> 'id' = k and c ->> 'method' = 'tutor_live')) then
+      raise exception 'eng_record_review: a live-only criterion cannot be ticked for work that was not watched live' using errcode = '22023';
+    end if;
   end if;
 
   -- Gửi lại: cùng kết quả (không tạo dòng mới).

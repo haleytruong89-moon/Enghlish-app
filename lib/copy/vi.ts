@@ -298,6 +298,8 @@ export const reviewPage = {
   criteriaTitle: "Để đạt 3/4 cần:",
   criteriaMachine: "máy kiểm tra được",
   criteriaPerson: "cần người xem",
+  criteriaLive: `${tutorHonorific} nghe trực tiếp`,
+  criteriaLiveLocked: `chỉ ghi được khi ${tutorHonorific} nghe trực tiếp`,
   levelsDetails: "Mô tả từng mức",
   levelOf: (n: number) => `Mức ${n}`,
   noteOptional: "Ghi chú cho kỹ năng này (không bắt buộc)",

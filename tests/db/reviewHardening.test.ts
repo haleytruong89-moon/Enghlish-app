@@ -79,6 +79,31 @@ describe("S5 hardening (Opus review)", () => {
       const r = await q("select english.eng_submit_attempt($1, $2, $3::jsonb, $4::text[], 'in_app') as r", [activityId, randomUUID(), JSON.stringify(content), assistance]);
       return (r.rows[0] as { r: Receipt }).r;
     });
+  const review = (by: string, episode: string, target: string, score: number | null, opts: { notObserved?: boolean; criteria?: unknown; clientId?: string } = {}) =>
+    svc<{ decision_id: string }>("select english.eng_record_review($1, $2, $3::smallint, $4, $5::jsonb, null, $6, $7) as r", [
+      episode, target, score, opts.notObserved ?? false, opts.criteria === undefined ? null : JSON.stringify(opts.criteria), by, opts.clientId ?? randomUUID(),
+    ]);
+  /**
+   * A piece of work that is NOT watched live on a step the app only lets the tutor record live (so the app can no longer make it).
+   * Built with the same helpers the app uses, as the table owner; used to check the database's own rules stay true by themselves.
+   */
+  async function unwatchedEpisode(activityId: string): Promise<{ attemptId: string; episodeId: string }> {
+    const id = randomUUID();
+    const [a] = await q1<{ learner_id: string; target_ids: string[]; purpose: string[]; mode: string; template: string }>(
+      "select a.learner_id, a.target_ids, a.purpose, a.mode, i.snapshot->'template'->>'id' as template from english.activity_instances a join english.inquiry_instances i on i.id = a.inquiry_instance_id where a.id = $1", [activityId]);
+    const row = a as { learner_id: string; target_ids: string[]; purpose: string[]; mode: string; template: string };
+    await db.client.query(
+      `insert into english.attempts(id, activity_instance_id, learner_id, attempt_no, parent_attempt_id, learning_family_id, mode, provenance, declared_assistance, content_hash, client_submission_id)
+       values ($1, $2, $3, 1, null, $1, $4, 'manual_import', array['unknown'], repeat('b', 64), gen_random_uuid())`,
+      [id, activityId, row.learner_id, row.mode]);
+    await db.client.query(
+      "insert into english.artifact_versions(attempt_id, learner_id, kind, version, content, is_raw, created_by) values ($1, $2, 'text', 1, '{\"text\":\"Paper note\"}'::jsonb, true, $3)",
+      [id, row.learner_id, M().tutorNguyen]);
+    await db.client.query("select english.eng_record_attempt_effects($1, $2, $3::text[], $4::text[], $5, 1, true, now(), false)", [id, row.learner_id, row.target_ids, row.purpose, row.template]);
+    return { attemptId: id, episodeId: await episodeOf(id) };
+  }
+  const episodeOf = async (attemptId: string) =>
+    ((await q1<{ id: string }>("select id from english.episodes where attempt_id = $1", [attemptId]))[0] as { id: string }).id;
   const fail = async (p: Promise<unknown>, code: string, re?: RegExp) => {
     const err = await p.then(() => null, (e: unknown) => e as { code?: string; message?: string });
     expect(err, "expected an error").not.toBeNull();
@@ -227,6 +252,35 @@ describe("S5 hardening (Opus review)", () => {
   });
 
   // -------------------------------------------------------------------------------------------------------------
+  describe("a criterion only the tutor can hear live is ticked only on work watched live", () => {
+    it("B-L4-EXPLAIN-S (c1 heard live, c2 for a rater): without live observation c1 is refused, c2 is accepted and the skill stays scorable", async () => {
+      const bW0 = await assign("nguyen", "B-W0-BASELINE");
+      const speak = await activity(bW0, 6); // ACT-SPEAK-LIVE baseline
+      const { episodeId } = await unwatchedEpisode(speak);
+      const view = (await rpcAs<{ targets: { key: string; scorable: boolean; criteria: { id: string; method: string }[] }[] }>(
+        s.users.tutorNguyen, "select english.eng_review_episode($1) as r", [episodeId]));
+      const t = view.targets.find((x) => x.key === "B-L4-EXPLAIN-S");
+      expect(t).toMatchObject({ scorable: true });
+      expect(t?.criteria.map((c) => [c.id, c.method])).toEqual([["c1", "tutor_live"], ["c2", "rater"]]);
+
+      await fail(review(M().tutorNguyen, episodeId, "B-L4-EXPLAIN-S", 3, { criteria: { c1: true, c2: true } }), "22023", /live-only/);
+      await fail(review(M().tutorNguyen, episodeId, "B-L4-EXPLAIN-S", 2, { criteria: { c1: false } }), "22023", /live-only/);
+      expect(await count("select count(*)::int as n from english.observations where episode_id = $1", [episodeId])).toBe(0);
+      await review(M().tutorNguyen, episodeId, "B-L4-EXPLAIN-S", 2, { criteria: { c2: true } });
+      const [o] = await q1<{ criteria_results: Record<string, boolean> }>("select criteria_results from english.observations where episode_id = $1", [episodeId]);
+      expect(o?.criteria_results).toEqual({ c2: true });
+    });
+
+    it("on work the tutor watched live both criteria can be ticked", async () => {
+      const second = await assign("nguyen", "B-W0-BASELINE"); // a second assignment: its own one-time step 6
+      const live = await offline(M().tutorNguyen, await activity(second, 6), "tutor_live", "Nguyên explained why homework should be limited");
+      await review(M().tutorNguyen, live.episode_id, "B-L4-EXPLAIN-S", 4, { criteria: { c1: true, c2: true } });
+      const [o] = await q1<{ criteria_results: Record<string, boolean> }>("select criteria_results from english.observations where episode_id = $1", [live.episode_id]);
+      expect(o?.criteria_results).toEqual({ c1: true, c2: true });
+    });
+  });
+
+  // -------------------------------------------------------------------------------------------------------------
   describe("the inbox is filtered and paged in SQL, so new work always shows up (more than 500 items)", () => {
     const BULK = 520;
     let practiceStep: string;
@@ -305,11 +359,12 @@ describe("S5 hardening (Opus review)", () => {
       expect(parent.counts.todo).toBe(tutor.counts.todo);
       expect(parent.counts.to_decide).toBeLessThan(tutor.counts.to_decide ?? 0); // checkpoint / live work is read-only for the parent
       expect(tutor.counts.to_decide).toBe(tutor.counts.todo);
-      for (const uid of [s.users.studentAn, s.users.tutorNguyen]) {
-        const p = await inboxPage(uid);
-        expect(p.items).toEqual([]);
-        expect(p.counts).toMatchObject({ todo: 0, done: 0, to_decide: 0 });
-      }
+      const student = await inboxPage(s.users.studentAn);
+      expect(student.items).toEqual([]);
+      expect(student.counts).toMatchObject({ todo: 0, done: 0, to_decide: 0 });
+      // the other child's tutor sees only that child's work
+      const other = await inboxPage(s.users.tutorNguyen);
+      expect(other.items.every((r) => r.learner_id === s.learners.nguyen)).toBe(true);
       await expect(inboxPage(s.users.tutorAn, "everything")).rejects.toMatchObject({ code: "22023" });
       await expect(rpcAs(s.users.tutorAn, "select english.eng_review_inbox(false, 'todo', 50, now(), null) as r")).rejects.toMatchObject({ code: "22023" });
     });

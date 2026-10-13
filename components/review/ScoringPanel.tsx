@@ -22,12 +22,15 @@ export function ScoringPanel({
   alias,
   viewerRole,
   canDecide,
+  observedDirectly,
   targets,
 }: {
   episodeId: string;
   alias: string;
   viewerRole: "tutor" | "parent";
   canDecide: boolean;
+  /** The tutor watched this work live: only then may the "heard live" criteria be ticked (the database refuses them otherwise). */
+  observedDirectly: boolean;
   targets: PanelTarget[];
 }) {
   const router = useRouter();
@@ -121,7 +124,7 @@ export function ScoringPanel({
                     <p className="text-xs font-semibold text-muted">{reviewPage.criteriaTitle}</p>
                     {t.criteria.map((c) => (
                       <label key={c.id} className="flex items-start gap-2 text-sm">
-                        {canDecide && decided === null ? (
+                        {canDecide && decided === null && !(c.method === "tutor_live" && !observedDirectly) ? (
                           <input
                             type="checkbox"
                             className="mt-1 size-4"
@@ -130,7 +133,10 @@ export function ScoringPanel({
                           />
                         ) : null}
                         <span>
-                          {c.checkVi} <span className="text-muted">· {c.computable ? reviewPage.criteriaMachine : reviewPage.criteriaPerson}</span>
+                          {c.checkVi}{" "}
+                          <span className="text-muted">
+                            · {c.method === "tutor_live" ? (observedDirectly ? reviewPage.criteriaLive : reviewPage.criteriaLiveLocked) : c.computable ? reviewPage.criteriaMachine : reviewPage.criteriaPerson}
+                          </span>
                         </span>
                       </label>
                     ))}

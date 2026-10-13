@@ -23,7 +23,7 @@ const target = (over: Partial<PanelTarget>): PanelTarget => ({
 });
 
 const panel = (over: Partial<Parameters<typeof ScoringPanel>[0]>) =>
-  renderToStaticMarkup(createElement(ScoringPanel, { episodeId: "e1", alias: "An (thử)", viewerRole: "tutor", canDecide: true, targets: [target({})], ...over }));
+  renderToStaticMarkup(createElement(ScoringPanel, { episodeId: "e1", alias: "An (thử)", viewerRole: "tutor", canDecide: true, observedDirectly: false, targets: [target({})], ...over }));
 
 /** Visible text: markup without the collapsed technical-information blocks. */
 const visibleText = (html: string) =>
@@ -59,6 +59,22 @@ describe("S5 copy", () => {
       expect(s, s).not.toMatch(/ACT-|A-L\d|B-L\d|AP-0\./);
     }
     expect(reviewPage.waitingTutor).toContain(tutorHonorific);
+  });
+});
+
+describe("S5 scoring panel: criteria heard live", () => {
+  const live = target({
+    key: "B-L4-EXPLAIN-S",
+    criteria: [{ id: "c1", checkVi: "Nói trôi chảy", method: "tutor_live", computable: false }, { id: "c2", checkVi: "Có ví dụ", method: "rater", computable: false }],
+  });
+  it("on work that was not watched live the heard-live criterion has no checkbox (only the rater one does); watched live it has", () => {
+    const boxes = (html: string) => (html.match(/type="checkbox"/g) ?? []).length;
+    const unwatched = panel({ targets: [live], observedDirectly: false });
+    expect(boxes(unwatched)).toBe(1);
+    expect(visibleText(unwatched)).toContain(reviewPage.criteriaLiveLocked);
+    const watched = panel({ targets: [live], observedDirectly: true });
+    expect(boxes(watched)).toBe(2);
+    expect(visibleText(watched)).toContain(reviewPage.criteriaLive);
   });
 });
 

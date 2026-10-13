@@ -89,6 +89,7 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
             alias={learner.alias}
             viewerRole={view.viewer.role}
             canDecide={view.viewer.canDecide}
+            observedDirectly={view.episode.observedDirectly}
             targets={targets}
           />
         </div>
