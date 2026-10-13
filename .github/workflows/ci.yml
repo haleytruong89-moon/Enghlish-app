@@ -15,7 +15,7 @@ concurrency:
 jobs:
   check:
     name: Typecheck · lint · unit · build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
 
   db:
     name: DB tests (Postgres 16 + Supabase/Launcher stub)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     services:
       postgres:
