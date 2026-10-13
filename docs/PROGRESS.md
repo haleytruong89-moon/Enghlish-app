@@ -228,7 +228,7 @@ Cách gỡ (chọn một cho mỗi loại vấn đề): (a) đổi loại hoạt
 
 ## S4 (+ phần đọc/nghe/viết của S3) — Em làm bài trên app và nộp bài có biên nhận (14/10/2026)
 
-**Trạng thái:** code xong, test xanh (225 unit + 173 DB = 398; E2E 47 test chạy trong CI trên nhánh, xanh). **Chờ phụ huynh** áp 1 file SQL mới (bên dưới) rồi mới thử trên preview. Nhánh `feature/s4-student-work`, chưa mở PR. Kế hoạch: `docs/plans/s4-student-work.md`.
+**Trạng thái:** code xong và đã sửa theo review Opus (14/10), test xanh (230 unit + 179 DB = 409; E2E chạy trong CI trên nhánh). **Chờ phụ huynh** áp 1 file SQL mới (bên dưới) rồi mới thử trên preview. Nhánh `feature/s4-student-work`, chưa mở PR. Kế hoạch: `docs/plans/s4-student-work.md`.
 
 ### Em làm được gì bây giờ
 
@@ -254,7 +254,7 @@ Xem điểm và góp ý (S5/S6), hộp duyệt và chấm của gia sư/phụ hu
 | Hàm của học sinh (security definer, `search_path=''`, `auth.uid()` phải là chính em; chỉ `authenticated` chạy được): `eng_save_draft`, `eng_submit_attempt`, và 4 hàm đọc `eng_my_inquiries`, `eng_my_home`, `eng_my_activity`, `eng_my_step_sources`. Không ai (kể cả service role, phụ huynh, gia sư) ghi trực tiếp vào các bảng này | `0009` |
 | **Nộp bài trong 1 transaction:** khóa dòng bước → kiểm hợp lệ → `attempts` (`attempt_no`, `learning_family_id` = lần đầu của bước, `mode`, hash sha256 của nội dung) → bản nội dung nguyên gốc → tự chấm → gợi ý đã khai báo → lần tiếp xúc (`practice`/`retry`) → episode → xóa nháp → ghi `audit_log` → trả biên nhận `{attempt_id, attempt_no, submitted_at, hash}`. Gửi lại **cùng** `client_submission_id` + cùng nội dung → **cùng biên nhận**, không tạo dòng mới (4 yêu cầu đồng thời chỉ ra 1 dòng); cùng id mà khác nội dung/khác bước → 409 | `0009` |
 | Luật đếm theo DESIGN §8: `is_first_attempt = (attempt_no = 1) và mode ≠ REVISION`; facet `baseline`/`checkpoint`/`delayed_check`/`transfer_check` lấy từ `purpose` của bước; `observed_directly = false` cho bài làm trên app. Chưa chấm điểm gì ở lát này | `0009` |
-| **Tự chấm câu đóng, phía server, chỉ gia sư/phụ huynh thấy** (bảng `attempt_auto_checks`): trắc nghiệm/điền chỗ trống có phương án = đúng phương án (chữ cái hoặc chữ, bỏ khoảng trắng/hoa thường — cùng luật với `resolveMcqAnswer` của TypeScript, có test đối chiếu trên **mọi** câu đóng thật của 6 mẫu); điền chữ tự do = khớp không phân biệt hoa thường/khoảng trắng với một trong các đáp án cách nhau bởi " / "; **transform / short / open = "cần người chấm"**. Không bao giờ ra điểm 0–4 | `0009` |
+| **Tự chấm câu đóng, phía server, chỉ gia sư/phụ huynh thấy** (bảng `attempt_auto_checks`): trắc nghiệm/điền chỗ trống có phương án = đúng phương án (chữ cái hoặc chữ, bỏ khoảng trắng/hoa thường — cùng luật với `resolveMcqAnswer` của TypeScript, có test đối chiếu trên **mọi** câu đóng thật của 6 mẫu); điền chữ tự do = khớp với một trong các đáp án cách nhau bởi " / " sau khi làm sạch chữ (không phân biệt hoa thường, gộp khoảng trắng, bỏ dấu . ! ? cuối câu, đổi nháy cong thành nháy thẳng, bỏ ký tự khoảng trắng không ngắt / rộng-0, Unicode NFC); **transform / short / open = "cần người chấm"**. Không bao giờ ra điểm 0–4 | `0009` |
 | 4 route: `GET /api/student/home`, `GET /api/student/activities/:id`, `PUT /api/drafts/:activityId`, `POST /api/attempts`. Chưa đăng nhập 401; **gia sư/phụ huynh 403** (không nộp thay em được); em khác/ngoài phạm vi/chưa đến ngày 404; body sai 400; trùng id khác nội dung hoặc nộp lần 2 bài tự làm 409. Trả về chỉ qua danh sách trường cho phép (zod) — khóa, kết quả tự chấm, lời thoại, `prompt_vi`, ghi chú, mã kỹ năng không thể lọt ra | `lib/work/`, `app/api/` |
 | Trang chủ của em (`/`) và trang làm bài (`/activities/[id]`), theo mockup Main/Studio: nền #F4F5F0, xanh #2B5D4F, thẻ trắng viền #D9DCD3 bo 16, ô bấm ≥ 44px, chạy tốt ở 390px. Mọi chữ qua `lib/copy/vi.ts` (mục `work`), xưng "bạn" | `app/page.tsx`, `app/activities/[id]/page.tsx`, `components/student/` |
 | Dev seed bắt đầu tuần của em THỬ từ **3 ngày trước** → An có bước 1–7 của A-W1 đã mở, Nguyên có đủ 6 bước B-W0; để preview và CI có việc để làm | `scripts/lib/seed.ts` (`devDueOn`) |
@@ -269,6 +269,26 @@ Xem điểm và góp ý (S5/S6), hộp duyệt và chấm của gia sư/phụ hu
 | (không nói) | Bảng `template_step_sources` nối (mẫu, bước) → bài đọc/nghe | Mẫu chủ đề chỉ liệt kê nguồn của **cả tuần**, không ghi nguồn nào cho bước nào. Xem "Cần phụ huynh xác nhận" #1 |
 | Route đọc dùng quyền gì | Cả 4 route dùng action `work:submit` của `requireAccess` | Các route này là của học sinh; gia sư/phụ huynh gọi nhầm nhận 403 thay vì nhìn thấy dữ liệu em qua đường này (xem dữ liệu em là việc của S5) |
 | Nháp chỉ `text`/`answers` | Nháp còn nhớ ô "dán" và các gợi ý đã tick | Mở lại trang không mất khai báo |
+
+### Sau review Opus (14/10/2026) — đã sửa (vẫn trong `0009`, chưa áp ở đâu nên sửa tại chỗ)
+
+| # | Vấn đề | Cách sửa |
+|---|---|---|
+| 1 | Bước app chưa làm được (nói trực tiếp, sơ đồ ý, tự nói, tự xem lại, sửa bài) vẫn trao cho em đề, câu hỏi, gợi ý tự kiểm và nguồn (vd. B-W0 bước 6 = bài đọc lật lại) | `eng_my_activity` và `eng_my_step_sources` chỉ trả mã bước, loại, chế độ và **khóa nhãn trung tính** (`with_tutor` / `on_paper`) cho mọi bước không phải ACT-SOURCE-QA / ACT-WRITE (hoặc chế độ REVISION). API `GET /api/student/activities/:id` cũng không gọi hàm nguồn; trang chỉ hiện nhãn |
+| 2 | `eng_my_released_steps` (0007) lộ `target_ids`, `target_id` của câu hỏi và `purpose` | `0009` thay hàm: chỉ trả đầu bài + các bước đã mở (mã bước, loại, chế độ, ngày hiệu lực, cờ `supported`); bước làm được kèm đề/câu hỏi đã lọc, bước không làm được không có chữ nào. Gia sư/phụ huynh đọc thẳng snapshot (RLS) nên không phụ thuộc hàm này |
+| 3 | Chuẩn hóa chữ tự chấm thiếu NFC, khoảng trắng không ngắt, ký tự rộng-0, nháy cong, dấu câu cuối | `english.eng_clean_text` + `eng_norm_answer` (chỉ có ở SQL, không có bản TypeScript); áp cho cả đáp án và phần tách " / "; ô chỉ có ký tự vô hình tính là trống |
+| 4 | Thiếu test 4 lần nộp đồng thời với `client_submission_id` KHÁC NHAU | Thêm: đúng 1 lần nộp, 3 lỗi 23505 (→ 409) |
+| nit | Gửi lại cùng id nhưng khác hỗ trợ/nguồn gốc bài vẫn trả biên nhận cũ | Nay là 409 |
+| nit | "Xong x/y" tính cả bước không làm được | y chỉ tính bước làm được trong app; các bước còn lại ghi riêng |
+| nit | Ô tự kiểm 40px; chữ "Cô" viết cứng; cảnh báo hai tab không báo khi tab sau mở lúc chưa có nháp | 44px; hằng `tutorHonorific`; tab chưa có nháp báo base revision 0 |
+
+Ghi chú cho S5 và các lát sau (đã biết, chủ ý):
+
+- **(a) Giao lại cùng một mẫu cho cùng một em bắt đầu một "gia đình học tập" mới** (`learning_family_id` = lần nộp đầu của bước **trong instance mới**). S5 quyết cách đếm "lần đầu" khi một em làm lại cùng mẫu ở lần giao khác (DESIGN §8 nói theo gia đình học tập; hiện mỗi lần giao là một gia đình).
+- **(b) Nguồn đã mở thì các bước sau vẫn đọc được** (theo thiết kế, xem lại bài là bình thường): khi bước đã đến ngày, nguồn của bước đó đọc được mãi, kể cả lúc em đang làm các bước sau của tuần. App không "đóng" nguồn lại, và không ghi lần mở nguồn (`source_open`) ở lát này.
+- **(c) `template_step_sources` không nằm trong snapshot.** Thêm dòng mới về sau có thể đổi nguồn mà bài đã giao hiển thị (chỉ thêm, không sửa/xóa, nên chỉ *thêm* nguồn cho bước). Chấp nhận cho pilot; nếu cần cố định thì đưa vào snapshot ở lần giao.
+- **(d) Ràng buộc `source_version = template_version`** trên `template_step_sources` hạn chế dùng lại nguồn khi mẫu lên v2 (nguồn v1 không nối được mẫu v2 mà không đổi nguồn). Cần nới ràng buộc bằng migration mới khi làm mẫu v2.
+- Câu hỏi lớn của B-W0 ghi "B-v1" (nội dung mẫu, hiện cả trên trang chủ của em): nên đổi chữ ở lần soạn nội dung sau.
 
 ### Cần phụ huynh xác nhận (builder đã chọn mặc định an toàn — "đóng khi thiếu")
 
