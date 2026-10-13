@@ -563,7 +563,8 @@ end
 $$;
 
 -- Nộp bài: một transaction tạo attempt + bản nội dung + khai báo hỗ trợ + lần tiếp xúc + episode + kết quả tự chấm. Idempotent theo
--- (học sinh, client_submission_id): gửi lại y hệt → cùng biên nhận; cùng id mà khác nội dung / khác bước → 23505 (409).
+-- (học sinh, client_submission_id): gửi lại y hệt (cùng bước, nội dung, khai báo hỗ trợ, nguồn gốc bài) → cùng biên nhận; cùng id mà
+-- khác bất kỳ điều nào trong đó → 23505 (409), không im lặng trả biên nhận cũ.
 create or replace function english.eng_submit_attempt(
   p_activity uuid,
   p_client_id uuid,
@@ -643,7 +644,10 @@ begin
   select t.* into v_existing from english.attempts t
   where t.learner_id = v_act.learner_id and t.client_submission_id = p_client_id;
   if found then
-    if v_existing.activity_instance_id <> p_activity or v_existing.content_hash <> v_hash then
+    if v_existing.activity_instance_id <> p_activity
+       or v_existing.content_hash <> v_hash
+       or v_existing.declared_assistance is distinct from v_assist
+       or v_existing.provenance is distinct from p_provenance then
       raise exception 'eng_submit_attempt: client_submission_id was already used for a different submission'
         using errcode = '23505';
     end if;

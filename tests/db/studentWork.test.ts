@@ -516,6 +516,65 @@ describe("S4 student work (DESIGN §5, §6, §8, §9)", () => {
       expect(await count("select count(*)::int as n from english.assistance_events e join english.attempts a on a.id = e.attempt_id where a.activity_instance_id = $1", [step2])).toBe(1);
     });
 
+    it("4 simultaneous submissions of an INDEPENDENT_CHECK with DIFFERENT client ids create exactly one attempt; the others are a clean 409 (23505)", async () => {
+      const step = await activity(x4, 2);
+      const body = { answers: { "W1-L1": stepOf(tpl, 2).items[0]!.options[0]! } };
+      const clients = await Promise.all(
+        [1, 2, 3, 4].map(async () => {
+          const c = new Client(pgConfigFromUrl(db.url));
+          await c.connect();
+          return c;
+        }),
+      );
+      try {
+        const results = await Promise.allSettled(
+          clients.map(async (c) => {
+            await c.query("begin");
+            try {
+              await c.query("select set_config('request.jwt.claim.sub', $1, true)", [an()]);
+              await c.query("set local role authenticated");
+              const r = await c.query("select english.eng_submit_attempt($1, $2, $3::jsonb, $4::text[], 'in_app') as r", [step, randomUUID(), JSON.stringify(body), ["none"]]);
+              await c.query("commit");
+              return (r.rows[0] as { r: Receipt }).r;
+            } catch (err) {
+              await c.query("rollback");
+              throw err;
+            }
+          }),
+        );
+        const ok = results.filter((r): r is PromiseFulfilledResult<Receipt> => r.status === "fulfilled");
+        const bad = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+        expect(ok).toHaveLength(1);
+        expect(ok[0]!.value).toMatchObject({ attempt_no: 1, replayed: false });
+        expect(bad).toHaveLength(3);
+        for (const b of bad) expect(b.reason).toMatchObject({ code: "23505" }); // 23505 -> HTTP 409, never a 500 / a second row
+      } finally {
+        await Promise.all(clients.map((c) => c.end()));
+      }
+      expect(await count("select count(*)::int as n from english.attempts where activity_instance_id = $1", [step])).toBe(1);
+      expect(await count("select count(*)::int as n from english.episodes e join english.attempts a on a.id = e.attempt_id where a.activity_instance_id = $1", [step])).toBe(1);
+      expect(await count("select count(*)::int as n from english.exposure_log e join english.attempts a on a.id = e.attempt_id where a.activity_instance_id = $1", [step])).toBe(1);
+    });
+
+    it("a replay must match the declared help and the provenance too: same id with different help or provenance is a 409, not a silent old receipt", async () => {
+      // `receipt` / `clientId` / `step3` come from the first test of this block: content(), ["none"], in_app
+      await expect(submitAs(an(), step3, clientId, content(), ["notes"])).rejects.toMatchObject({ code: "23505" });
+      await expect(submitAs(an(), step3, clientId, content(), ["none"], "pasted")).rejects.toMatchObject({ code: "23505" });
+      await expect(submitAs(an(), step3, clientId, content(), ["dictionary", "notes"])).rejects.toMatchObject({ code: "23505" });
+      // exactly the same declaration (the order of help items does not matter) is still a replay
+      expect(await submitAs(an(), step3, clientId, content(), ["none"], "in_app")).toEqual({ ...receipt, replayed: true });
+      expect(await count("select count(*)::int as n from english.attempts where activity_instance_id = $1", [step3])).toBe(1);
+      expect(await count("select count(*)::int as n from english.assistance_events where attempt_id = $1", [receipt.attempt_id])).toBe(0);
+      // a replay of a submission with several help items, sent in another order, is also the same receipt
+      const step = await activity(x2, 3);
+      const id = randomUUID();
+      const body = { answers: { "W1-R1": optionOf("W1-R1", "b") } };
+      const first = await submitAs(an(), step, id, body, ["notes", "dictionary"], "pasted");
+      expect(await submitAs(an(), step, id, body, ["dictionary", "notes"], "pasted")).toEqual({ ...first, replayed: true });
+      await expect(submitAs(an(), step, id, body, ["dictionary", "notes"], "in_app")).rejects.toMatchObject({ code: "23505" });
+      await expect(submitAs(an(), step, id, body, ["dictionary"], "pasted")).rejects.toMatchObject({ code: "23505" });
+    });
+
     it("rejects: unreleased step, unsupported step types, another child's step, staff, anon, bad help declarations, bad content", async () => {
       const ok = { answers: { "W1-R1": optionOf("W1-R1", "b") } };
       const fail = (p: Promise<unknown>, code: string) => expect(p).rejects.toMatchObject({ code });
