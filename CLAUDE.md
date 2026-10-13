@@ -53,7 +53,24 @@ npm run dev · npm run typecheck · npm run lint · npm test
 npm run db:apply          # áp migration chưa có (cần DATABASE_URL)
 npm run db:seed-dev       # gia đình THỬ (An (thử), Nguyên (thử)) + gán A-v1 / B-v1
 npm run gen:config        # sinh db/migrations/0006 từ content/*.json (-- --check: báo lệch)
+npm run test:e2e          # Playwright — chạy trong CI với Supabase local thật (job "E2E smoke"); máy không có Docker thì chỉ `--list`
+npm run doctor            # kiểm tra cài đặt cloud 1 lần: bảng ✓/✗ tiếng Việt + cách sửa (cần .env.local; hoặc GitHub → Actions → "Setup doctor")
 ```
+
+## Quay lại khi hỏng (rollback)
+
+| Tình huống | Cách quay lại | Mất tối đa |
+|---|---|---|
+| Code hỏng sau khi deploy | Vercel → Deployments → chọn bản trước → **Promote to Production** (tức thì). Sau đó `git revert` PR lỗi để main sạch. | 0 dữ liệu |
+| Database lỗi / xóa nhầm | Tải artifact sao lưu đêm (GitHub Actions, giữ 30 ngày) → `age -d` bằng khóa offline → `pg_restore` vào project thử, đối chiếu, rồi mới khôi phục schema `english`. Migration chỉ thêm (expand/contract) nên không có bước "down". **Chưa gồm `auth.users`** — chờ phụ huynh quyết (PROGRESS). | ≤ ~24 giờ |
+| Ai quyết | **Phụ huynh** quyết và bấm. Claude chỉ chuẩn bị lệnh/kiểm tra; không tự khôi phục, không tự xóa dữ liệu. | — |
+
+## Phân vai model (`.claude/agents/`)
+
+- `reviewer` (Opus): review diff cuối mỗi lát — bắt buộc trước khi mở PR cho phụ huynh.
+- `builder` (Sonnet): code từng bước theo kế hoạch lát; sai 2 lần cùng chỗ → dừng, chuyển Opus.
+- `chore` (Haiku): việc cơ học (đổi tên, format).
+- Kế hoạch mỗi lát (Opus) ghi vào `docs/plans/sN-<ten>.md` trước khi code.
 
 ## Current status
 
