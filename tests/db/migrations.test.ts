@@ -85,9 +85,9 @@ describe("migrations", () => {
         "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
         "app_errors", "artifact_versions", "assessment_policies", "assistance_events", "attempt_auto_checks",
         "attempts", "audit_log", "catalogue_versions", "consents", "dimensions", "episodes", "exposure_log",
-        "families", "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "members",
-        "relationships", "schema_migrations", "source_transcripts", "sources", "target_set_definitions",
-        "target_sets", "targets", "template_item_keys", "template_step_sources", "tracks", "working_drafts",
+        "families", "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "lesson_notes", "members",
+        "observations", "relationships", "schema_migrations", "source_transcripts", "sources", "target_set_definitions",
+        "target_sets", "targets", "template_item_keys", "template_step_sources", "tracks", "validation_decisions", "working_drafts",
       ],
     );
     for (const r of rows) expect(r.relrowsecurity, r.relname).toBe(true);
@@ -117,9 +117,9 @@ describe("migrations", () => {
       "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
       "artifact_versions", "assessment_policies", "assistance_events", "attempt_auto_checks", "attempts",
       "audit_log", "catalogue_versions", "consents", "dimensions", "episodes", "exposure_log", "families",
-      "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "members", "relationships",
-      "source_transcripts", "sources", "target_set_definitions", "target_sets", "targets",
-      "template_item_keys", "template_step_sources", "tracks", "working_drafts",
+      "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "lesson_notes", "members", "observations",
+      "relationships", "source_transcripts", "sources", "target_set_definitions", "target_sets", "targets",
+      "template_item_keys", "template_step_sources", "tracks", "validation_decisions", "working_drafts",
     ]);
     expect(rows.some((r) => r.w)).toBe(false);
   });

@@ -19,7 +19,9 @@ export type Role = "parent" | "tutor" | "student";
 export type Action =
   | "learner:read" //        see the learner and their (role-filtered) data
   | "work:submit" //         student submits own work (S4)
-  | "work:review" //         tutor/parent review evidence (S5)
+  | "work:review" //         tutor/parent review evidence (S5); the database narrows it further (D15)
+  | "notes:read" //         lesson notes — tutor (all versions) and parent (published ones; RLS decides) (S5)
+  | "notes:write" //        write a lesson note — tutor only (S5)
   | "targets:read" //        tracked-skills page (target set) — parent and tutor only
   | "inquiries:read" //     assigned inquiries + assignable templates — parent and tutor only
   | "inquiries:assign" //   assign an inquiry template — parent and tutor only
@@ -29,7 +31,16 @@ export type Action =
 
 export const ACTIONS_BY_ROLE: Record<Role, readonly Action[]> = {
   student: ["learner:read", "work:submit"],
-  tutor: ["learner:read", "targets:read", "inquiries:read", "inquiries:assign", "activities:event", "work:review"],
+  tutor: [
+    "learner:read",
+    "targets:read",
+    "inquiries:read",
+    "inquiries:assign",
+    "activities:event",
+    "work:review",
+    "notes:read",
+    "notes:write",
+  ],
   parent: [
     "learner:read",
     "targets:read",
@@ -37,6 +48,7 @@ export const ACTIONS_BY_ROLE: Record<Role, readonly Action[]> = {
     "inquiries:assign",
     "activities:event",
     "work:review",
+    "notes:read",
     "consent:read",
     "admin",
   ],
@@ -143,4 +155,17 @@ export async function requireAccess(
   if (!ACTIONS_BY_ROLE[member.role].includes(action)) throw new AccessError(403, "forbidden");
 
   return { member, learner, action };
+}
+
+/**
+ * Staff gate for routes that are not about one learner (the review inbox): signed in, a member of this app, and not a
+ * student. No session → 401; not a member → 404 (Launcher-only accounts see nothing); student → 403.
+ */
+export async function requireStaff(user: AccessUser, deps: Partial<AccessDeps> = {}): Promise<Member> {
+  if (!user?.id) throw new AccessError(401, "unauthenticated");
+  const store = deps.store ?? (await defaultStore());
+  const member = await store.getMemberByUserId(user.id);
+  if (!member) throw new AccessError(404, "not_found");
+  if (member.role === "student") throw new AccessError(403, "forbidden");
+  return member;
 }

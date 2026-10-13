@@ -3,9 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { AssignForm } from "@/components/inquiries/AssignForm";
 import { StepActions } from "@/components/inquiries/StepActions";
-import { activityLabels, app, inquiriesPage, learnerWithTrack, modeLabels, purposeLabels, type Mode } from "@/lib/copy/vi";
+import { OfflineForm } from "@/components/review/OfflineForm";
+import { activityLabels, app, fallbackLabels, inquiriesPage, learnerWithTrack, modeLabels, purposeLabels, type Mode } from "@/lib/copy/vi";
 import { authorizeInquiriesPage } from "@/lib/inquiries/access";
-import { dateWindow, defaultDueOn } from "@/lib/inquiries/dates";
+import { addDays, dateWindow, defaultDueOn, todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi, safeExternalUrl } from "@/lib/inquiries/format";
 import { loadInquiriesPage } from "@/lib/inquiries/load";
 import { createUserClient } from "@/lib/supabase/server";
@@ -31,6 +32,7 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
   const { templates, inquiries } = await loadInquiriesPage(learner.id, learner.trackId);
   const now = new Date();
   const range = dateWindow(now);
+  const today = todayVn(now);
 
   return (
     <>
@@ -89,7 +91,7 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
                         const href = s.modality === "video" ? safeExternalUrl(s.url) : null;
                         return (
                           <li key={s.id}>
-                            {inquiriesPage.sourceModality[s.modality] ?? s.modality}: {s.title}
+                            {inquiriesPage.sourceModality[s.modality] ?? fallbackLabels.modality}: {s.title}
                             {href ? (
                               <>
                                 {" · "}
@@ -109,12 +111,12 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
                   {q.steps.map((s) => (
                     <li key={s.activityId} className="rounded-lg border border-line px-4 py-3" data-testid={`step-${q.templateId}-${s.stepNo}`}>
                       <p className="font-medium">
-                        {inquiriesPage.stepLabel(s.stepNo)} · {activityLabels[s.activityType] ?? s.activityType}
+                        {inquiriesPage.stepLabel(s.stepNo)} · {activityLabels[s.activityType] ?? fallbackLabels.activity}
                       </p>
                       <p className="mt-1 text-sm text-muted">
-                        {modeLabels[s.mode as Mode]?.staff ?? s.mode}
+                        {modeLabels[s.mode as Mode]?.staff ?? fallbackLabels.mode}
                         {s.timeMin ? ` · ${inquiriesPage.minutes(s.timeMin)}` : ""}
-                        {s.purpose.length ? ` · ${s.purpose.map((p) => purposeLabels[p] ?? p).join(", ")}` : ""}
+                        {s.purpose.length ? ` · ${s.purpose.map((p) => purposeLabels[p] ?? fallbackLabels.purpose).join(", ")}` : ""}
                       </p>
                       <p className="mt-1 text-sm">
                         {s.schedule.date ? inquiriesPage.scheduledFor(formatDateVi(s.schedule.date)) : inquiriesPage.noDate}
@@ -135,6 +137,17 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
                         minDate={range.min}
                         maxDate={range.max}
                       />
+                      {s.schedule.skipped ? null : (
+                        <OfflineForm
+                          learnerId={learner.id}
+                          activityId={s.activityId}
+                          isTutor={member.role === "tutor"}
+                          tutorOnly={s.purpose.includes("checkpoint")}
+                          liveOnly={s.activityType === "ACT-SPEAK-LIVE"}
+                          minDate={addDays(todayVn(new Date(q.assignedAt)), -1)}
+                          maxDate={today}
+                        />
+                      )}
                       <details className="mt-2 text-xs text-muted">
                         <summary className="min-h-11 cursor-pointer py-3">{app.techInfo}</summary>
                         <p>

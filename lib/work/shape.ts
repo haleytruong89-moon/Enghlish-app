@@ -7,6 +7,11 @@ import { z } from "zod";
 import { ASSISTANCE_VALUES, PROVENANCE_VALUES, type ActivityView, type DraftReceipt, type HomeView, type Receipt, type SourceView } from "./types";
 
 const mode = z.enum(["PRACTICE", "INDEPENDENT_CHECK", "REVISION"]);
+/** The database can also hold work recorded outside the app (S5); the student only learns that it was "offline". */
+const attemptProvenance = z
+  .enum([...PROVENANCE_VALUES, "tutor_live", "manual_import"])
+  .transform((v): "in_app" | "pasted" | "offline" => (v === "tutor_live" || v === "manual_import" ? "offline" : v));
+
 const text = z.string();
 const nullableText = z.string().nullable().optional().transform((v) => v ?? null);
 
@@ -92,7 +97,7 @@ const supportedActivitySchema = z.object({
       }),
     ),
   }),
-  attempts: z.array(z.object({ attempt_no: z.number().int(), submitted_at: text, provenance: z.enum(PROVENANCE_VALUES) })),
+  attempts: z.array(z.object({ attempt_no: z.number().int(), submitted_at: text, provenance: attemptProvenance })),
   draft: z
     .object({ content: draftContent, revision: z.number().int(), updated_at: text })
     .nullable()

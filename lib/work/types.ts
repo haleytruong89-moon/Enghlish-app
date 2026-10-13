@@ -5,6 +5,8 @@ export type Assistance = (typeof ASSISTANCE_VALUES)[number];
 
 export const PROVENANCE_VALUES = ["in_app", "pasted"] as const;
 export type Provenance = (typeof PROVENANCE_VALUES)[number];
+/** What the student sees of an earlier attempt: in the app, pasted, or recorded by the tutor/parent outside the app (S5) - no more detail. */
+export type AttemptProvenance = Provenance | "offline";
 
 export type Mode = "PRACTICE" | "INDEPENDENT_CHECK" | "REVISION";
 
@@ -94,7 +96,7 @@ export type SupportedActivityView = {
   shape: "text" | "answers";
   canSubmit: boolean;
   step: { promptEn: string; timeMin: number | null; selfCheckVi: string[]; items: ItemView[] };
-  attempts: { attemptNo: number; submittedAt: string; provenance: Provenance }[];
+  attempts: { attemptNo: number; submittedAt: string; provenance: AttemptProvenance }[];
   draft: { content: DraftContent; revision: number; updatedAt: string } | null;
   sources: SourceView[];
 };

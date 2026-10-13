@@ -207,3 +207,70 @@ export async function assignDevInquiries(client: ClientBase, seeded: SeedResult)
   }
   return out;
 }
+
+/**
+ * S5: something to review on a preview. An (thử) also gets the week-4 inquiry (A-W4-PLANETS) and, as An, submits ONE writing
+ * practice (step 7). Then the review inbox has an item for the test tutor/parent to open and score. Kept apart from
+ * DEV_INQUIRIES on purpose: those are what the S2/S4 tests count. Idempotent (fixed request id / submission id: a second run
+ * returns the same instance and the same receipt). Skips, never fails, when the migrations or the template are not there yet.
+ */
+export const DEV_REVIEW_WORK = {
+  learner: "an",
+  template: "A-W4-PLANETS",
+  version: 1,
+  requestId: "seed-dev:A-W4-PLANETS:1",
+  stepNo: 7,
+  submissionId: "e0000000-0000-4000-8000-0000000005a1",
+  text: "The planets stay in orbit because the Sun pulls them with its gravity. As a result, they go around the Sun again and again.",
+} as const;
+
+export type DevReviewWorkResult = { instanceId: string | null; attemptId: string | null; skipped?: string };
+
+export async function seedDevReviewWork(client: ClientBase, seeded: SeedResult, users: SeedUsers): Promise<DevReviewWorkResult> {
+  const d = DEV_REVIEW_WORK;
+  const fns = await client.query<{ ok: boolean }>(
+    `select to_regprocedure('english.eng_assign_inquiry(uuid,text,integer,date,uuid,text)') is not null
+        and to_regprocedure('english.eng_submit_attempt(uuid,uuid,jsonb,text[],text)') is not null
+        and to_regprocedure('english.eng_review_inbox(boolean,text,integer,timestamptz,uuid)') is not null as ok`,
+  );
+  if (!fns.rows[0]?.ok) return { instanceId: null, attemptId: null, skipped: "migration 0010 is not applied" };
+  const tpl = await client.query<{ date_from: string; date_to: string }>(
+    "select date_from::text as date_from, date_to::text as date_to from english.inquiry_templates where id = $1 and version = $2 and published_at is not null",
+    [d.template, d.version],
+  );
+  const row = tpl.rows[0];
+  if (!row) return { instanceId: null, attemptId: null, skipped: "template not published (apply 0008)" };
+
+  const inst = await client.query<{ id: string }>("select english.eng_assign_inquiry($1, $2, $3, $4, $5, $6) as id", [
+    seeded.learners[d.learner],
+    d.template,
+    d.version,
+    devDueOn(row.date_from, row.date_to),
+    seeded.members.parent,
+    d.requestId,
+  ]);
+  const instanceId = (inst.rows[0] as { id: string }).id;
+
+  const act = await client.query<{ id: string; released: boolean }>(
+    "select id, english.eng_activity_released(id) as released from english.activity_instances where inquiry_instance_id = $1 and step_no = $2",
+    [instanceId, d.stepNo],
+  );
+  const step = act.rows[0];
+  if (!step?.released) return { instanceId, attemptId: null, skipped: "the step is not open yet" };
+
+  // Submit AS the child: the function identifies the caller by auth.uid() (a transaction-local claim), exactly as in the app.
+  await client.query("begin");
+  try {
+    await client.query("select set_config('request.jwt.claim.sub', $1, true)", [users.studentAn]);
+    await client.query("set local role authenticated");
+    const r = await client.query<{ r: { attempt_id: string } }>(
+      "select english.eng_submit_attempt($1, $2, $3::jsonb, $4::text[], 'in_app') as r",
+      [step.id, d.submissionId, JSON.stringify({ text: d.text }), ["none"]],
+    );
+    await client.query("commit");
+    return { instanceId, attemptId: (r.rows[0] as { r: { attempt_id: string } }).r.attempt_id };
+  } catch (err) {
+    await client.query("rollback");
+    throw err;
+  }
+}
