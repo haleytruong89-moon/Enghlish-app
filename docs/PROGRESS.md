@@ -112,7 +112,7 @@
 | Trang đọc-only **"Kỹ năng đang theo dõi"** cho phụ huynh và gia sư (link trên thẻ từng em): danh sách 12 kỹ năng, mỗi kỹ năng ghi "Chưa đủ bài để đánh giá"; mục "Theo dõi thêm (không tính vào đánh giá)" tách riêng. Học sinh không có trang này; ngoài phạm vi → 404 | `app/learners/[id]/targets/` |
 | Zod cho danh mục/ngưỡng/bộ kỹ năng + hàm dựng `TargetKey` (target "any" tách theo kênh nói/viết) | `lib/config/` |
 
-**Test:** `npm run typecheck` ✓ · `npm run lint` ✓ · `npm test` ✓ (136 test: 61 unit + 75 DB). Có test: số dòng khớp JSON; mọi target trong bộ có thật và đúng track; sửa/xóa/truncate dòng đã công bố bị chặn; em/gia sư này không đọc được bộ kỹ năng của em kia; `anon` không đọc gì; gán sai track bị từ chối; chạy lại migration không đổi gì; xóa dữ liệu một em kéo theo `target_sets` của em đó.
+**Test:** `npm run typecheck` ✓ · `npm run lint` ✓ · `npm test` ✓ (203 test: 115 unit + 88 DB) · E2E trong CI: 28 test (thêm 6 test trang "Kỹ năng đang theo dõi"). Có test: khóa phiên bản (sửa bản đã công bố → đỏ; thêm `B-v2` → `0007` chỉ có B-v2, không ghi đè); số dòng khớp JSON; mọi target trong bộ có thật và đúng track; sửa/xóa/truncate dòng đã công bố bị chặn; em/gia sư này không đọc được bộ kỹ năng của em kia; `anon` không đọc gì; gán sai track bị từ chối; chạy lại migration không đổi gì; xóa dữ liệu một em kéo theo `target_sets` của em đó.
 
 ### Phụ huynh cần làm
 
@@ -136,3 +136,15 @@
 - Chưa làm (đúng phạm vi S1): `inquiry_templates`, `sources` (S2); tính trạng thái (S7); sửa cấu hình trên giao diện; giao diện cho học sinh.
 - `scaffold_level` của `tracks` để trống vì PRD/DESIGN chưa quy định giá trị; `canvas_template` lấy theo PRD §4 (A = ACT-CANVAS-BASIC, B = ACT-CANVAS-ADV). `activity_templates.schema` còn `{}` — S2/S4 điền.
 - Cột `track_ids` của `activity_templates` lấy từ bảng PRD §4 (catalogue chỉ có id loại hoạt động): ACT-CANVAS-BASIC chỉ Track A, ACT-CANVAS-ADV chỉ Track B, 6 loại còn lại cả hai.
+
+### Review Opus (14/10) — đã sửa
+
+Reviewer (Opus) soát S1, đã sửa xong các điểm sau (chưa áp DB thật nên sửa thẳng `0005`; `0001`–`0004` không đụng):
+
+1. **Khóa phiên bản nội dung.** `content/config.lock.json` ghi mã băm của danh mục `0.2.1-draft`, ngưỡng `AP-0.2-pilot`, bộ `A-v1`, `B-v1` và migration chứa chúng. `npm run gen:config -- --check` (chạy trong CI) báo đỏ khi: bản đã công bố bị sửa ("published version … changed — create a new version instead" / "hãy tạo phiên bản mới"), migration seed lệch nguồn, hoặc có nội dung mới chưa vào migration. Bản mới (vd `B-v2`) → `npm run gen:config -- --new` ghi vào số migration kế tiếp (`0007_seed_b_v2.sql`, chỉ chứa phần mới) và tự thêm vào lock; không bao giờ ghi đè file có sẵn. `0006` được sinh lại một lần cho khớp (mã băm theo từng bộ kỹ năng; danh mục công bố trước khi công bố bộ kỹ năng) — vì chưa áp ở đâu nên không ảnh hưởng ai.
+2. **"Bộ hiện hành" xác định rõ ràng.** `target_sets` có cột `seq` (tự tăng); `eng_assign_target_set` dùng `clock_timestamp()`; chỗ nào chọn bộ hiện hành cũng xếp theo `effective_from` giảm dần rồi `seq` giảm dần (trong SQL và trong `pickCurrentAssignment`). Có test: hai lần gán trong CÙNG một transaction → lần sau là hiện hành.
+3. **Chặt chẽ hơn ở DB.** Kiểm tra bộ kỹ năng chạy cả khi UPDATE; muốn công bố một bộ thì danh mục của nó phải đã công bố. Em đã được gán bộ kỹ năng thì **không đổi track được** (chưa hỗ trợ trong pilot; cần đổi thì tạo em mới đúng track). `dollarQuote` không còn bị lỗi khi chuỗi kết thúc bằng `$j`.
+4. **Chữ trên giao diện.** Khi chưa gán bộ: "Chưa chọn bộ kỹ năng cho em này." (không chỉ việc cho ai). Hai mục chỉ-để-theo-dõi của Track B hiện tên ngắn: "Điểm đề thử tháng", "Lỗi ngữ pháp hay gặp".
+5. **E2E** `tests/e2e/targets.spec.ts`: phụ huynh mở trang của An và Nguyên (12 dòng + mục theo dõi thêm); gia sư chỉ vào được trang của em mình, trang em kia 404; học sinh không có link, gõ địa chỉ trang của mình hoặc của em kia đều 404.
+
+**Câu hỏi mở cho S7 (chưa quyết, cần phụ huynh/Opus):** mẫu số coverage đang tính theo **12 mã target** của bộ, nhưng target có kênh ra "any" sẽ giữ **một trạng thái cho mỗi kênh** (nói / viết). Khi tính "số kỹ năng đã Tự làm được / số đang theo dõi", một target "any" tính là 1 (khi cả hai kênh đạt? khi một kênh đạt?) hay là 2 ô? Cần quyết trước khi viết engine ở S7.
