@@ -1,0 +1,26 @@
+{
+  "catalogues": {
+    "0.2.1-draft": {
+      "sha256": "44210cefee4e1e594354c34f329c9a177073582dd9465354c1c52af7255021b8",
+      "migration": "0006_seed_config_v0_2_1.sql"
+    }
+  },
+  "policies": {
+    "AP-0.2-pilot": {
+      "sha256": "c64accb9a72f8dd6ea817c03640db4c7ebdc80ba0ca58e84cb37472949feb6b0",
+      "migration": "0006_seed_config_v0_2_1.sql"
+    }
+  },
+  "targetSets": {
+    "A-v1": {
+      "sha256": "807f5ab6cb98f2cf47cbc1d683827296f70fb9bacb3deff0aa7c56856f209c18",
+      "migration": "0006_seed_config_v0_2_1.sql",
+      "catalogue": "0.2.1-draft"
+    },
+    "B-v1": {
+      "sha256": "64dea8203ed11457a2d59dc9dbb490f96189a0b4c19cfb97999da62baf145765",
+      "migration": "0006_seed_config_v0_2_1.sql",
+      "catalogue": "0.2.1-draft"
+    }
+  }
+}

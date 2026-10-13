@@ -52,7 +52,8 @@ Next.js (App Router) + TypeScript strict + Tailwind · Supabase (Postgres + Auth
 npm run dev · npm run typecheck · npm run lint · npm test
 npm run db:apply          # áp migration chưa có (cần DATABASE_URL)
 npm run db:seed-dev       # gia đình THỬ (An (thử), Nguyên (thử)) + gán A-v1 / B-v1
-npm run gen:config        # sinh db/migrations/0006 từ content/*.json (-- --check: báo lệch)
+npm run gen:config        # = --check: báo đỏ nếu bản đã công bố bị sửa, migration seed lệch, hoặc có nội dung mới chưa vào migration
+npm run gen:config -- --new  # nội dung MỚI (vd B-v2) → ghi vào migration kế tiếp NNNN_seed_*.sql + khóa vào content/config.lock.json (không bao giờ ghi đè)
 npm run test:e2e          # Playwright — chạy trong CI với Supabase local thật (job "E2E smoke"); máy không có Docker thì chỉ `--list`
 npm run doctor            # kiểm tra cài đặt cloud 1 lần: bảng ✓/✗ tiếng Việt + cách sửa (cần .env.local; hoặc GitHub → Actions → "Setup doctor")
 ```
@@ -77,5 +78,5 @@ npm run doctor            # kiểm tra cài đặt cloud 1 lần: bảng ✓/✗
 - Repo: `haleytruong89-moon/Enghlish-app` (private). S0 đã push, CI xanh. **S1 (cấu hình: track, danh mục, ngưỡng, bộ kỹ năng A-v1/B-v1, trang "Kỹ năng đang theo dõi") code xong trên nhánh `feature/s1-config`**, chờ review + phụ huynh áp `0005`, `0006` (xem `docs/PROGRESS.md`).
 - Chờ phụ huynh: Supabase (schema `english`, tắt sign-up, áp 0001–0006), Vercel, khóa sao lưu + GitHub Secrets (xem `docs/PROGRESS.md`).
 - Tiếp theo theo thứ tự ưu tiên để 2 em dùng sớm: **S2 → S4 → S5 (+ phần câu hỏi đọc/bài dạng đề của S3)**.
-- Seed cấu hình sinh tự động: sửa `content/*.json` rồi `npm run gen:config` (CI chạy `--check`); không sửa tay `0006`.
+- Seed cấu hình sinh tự động và **khóa phiên bản**: bản đã công bố (danh mục 0.2.1-draft, ngưỡng AP-0.2-pilot, bộ A-v1/B-v1) nằm trong `content/config.lock.json` — KHÔNG sửa nội dung của chúng (CI báo đỏ). Muốn đổi = thêm phiên bản mới (file mới, id mới như `B-v2`) rồi `npm run gen:config -- --new` để sinh migration kế tiếp (0007…); không sửa tay các migration seed.
 - Pilot thủ công cả 2 em chạy song song từ 17–19/10/2026 (Pilot Kit A/B v0.2 trong hub).

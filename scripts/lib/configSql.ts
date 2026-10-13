@@ -1,12 +1,12 @@
 /**
- * Pure SQL generator for the config seed migration (S1 plan, step 3).
- * content/*.json  →  db/migrations/0006_seed_config_v0_2_1.sql
- * No timestamps and no randomness: the output is a pure function of the content files,
- * so CI can check that the checked-in file equals what the generator produces.
+ * Pure SQL generator for the config seed migrations (S1 plan, step 3).
+ * content/*.json + content/config.lock.json  →  db/migrations/NNNN_seed_*.sql
+ * No timestamps and no randomness: the output is a pure function of the content items assigned to
+ * the migration in the lock, so CI can check that each checked-in file equals what the generator produces.
  */
-import type { ConfigBundle } from "../../lib/config/content";
+import type { CatalogueItem, PolicyItem, TargetSetItem } from "../../lib/config/versions";
 
-export const SEED_MIGRATION_VERSION = "0006";
+/** The first seed migration (catalogue 0.2.1-draft, AP-0.2-pilot, A-v1, B-v1). */
 export const SEED_MIGRATION_FILE = "0006_seed_config_v0_2_1.sql";
 
 /**
@@ -36,11 +36,15 @@ export function quoteLiteral(s: string): string {
   return `'${escaped}'`;
 }
 
-/** Dollar-quote with a tag that does not occur in the text. */
+/**
+ * Dollar-quote with a tag that cannot collide with the text. The closing `$tag$` is glued to the end
+ * of the text, so a text ending in `$j` must also be rejected for tag `j` — hence the `+ "$"`.
+ */
 export function dollarQuote(s: string): string {
   assertNoNul(s);
+  const probe = `${s}$`;
   let tag = "j";
-  for (let i = 1; s.includes(`$${tag}$`); i++) tag = `j${i}`;
+  for (let i = 1; probe.includes(`$${tag}$`); i++) tag = `j${i}`;
   return `$${tag}$${s}$${tag}$`;
 }
 
@@ -55,8 +59,77 @@ export function jsonLiteral(value: unknown): string {
 const textArray = (path: string) =>
   `array(select e from jsonb_array_elements_text(${path}) with ordinality as t(e, n) order by n)`;
 
-export function buildConfigSql(cfg: ConfigBundle): string {
-  const { catalogue, policy, targetSets, hashes } = cfg;
+export type SeedTargetSet = TargetSetItem & { catalogue: string };
+
+export type SeedInput = {
+  /** Migration file name, e.g. 0006_seed_config_v0_2_1.sql — the 4-digit prefix is the version it records. */
+  file: string;
+  catalogues: CatalogueItem[];
+  policies: PolicyItem[];
+  targetSets: SeedTargetSet[];
+  /** Every catalogue (also already-published ones): target sets look up their descriptor version here. */
+  allCatalogues: CatalogueItem[];
+};
+
+export function buildSeedSql(input: SeedInput): string {
+  const { file, catalogues, policies, targetSets, allCatalogues } = input;
+  const migrationVersion = /^(\d{4})_/.exec(file)?.[1];
+  if (!migrationVersion) throw new Error(`bad migration file name ${file}`);
+
+  const parts: string[] = [];
+  const contains = [
+    ...catalogues.map((c) => `catalogue ${c.id}`),
+    ...policies.map((p) => `policy ${p.id}`),
+    ...targetSets.map((t) => `target set ${t.id}`),
+  ];
+  const hashLines = [...catalogues, ...policies, ...targetSets].map(
+    (i) => `-- sha256 ${i.kind === "targetSet" ? "target_set" : i.kind} ${i.id}=${i.hash}`,
+  );
+  parts.push(`-- ${file}
+-- GENERATED FILE — do not edit by hand. Source: content/*.json, locked in content/config.lock.json.
+-- Verify: npm run gen:config -- --check (CI fails when this file differs from the generator output
+-- or when a version already published here has changed — then create a NEW version instead).
+-- Contains: ${contains.join(" · ")}
+${hashLines.join("\n")}
+-- Idempotent: every insert is skipped when the row exists; catalogue rows are skipped once the version is published.
+`);
+
+  for (const p of policies) {
+    parts.push(`-- Assessment policy ${p.id} (published immediately)
+insert into english.assessment_policies(version, config, source_hash, published_at)
+values (${quoteLiteral(p.id)}, ${jsonLiteral(p.data)}, ${quoteLiteral(p.hash)}, now())
+on conflict (version) do nothing;
+`);
+  }
+
+  for (const c of catalogues) parts.push(catalogueBlocks(c));
+
+  // Catalogues are published BEFORE the target sets: a definition may only be published against a published catalogue.
+  for (const c of catalogues) {
+    parts.push(`-- Publish catalogue ${c.id} (after its inserts, so they never meet the immutability trigger)
+update english.catalogue_versions set published_at = now()
+where version = ${quoteLiteral(c.id)} and published_at is null;
+`);
+  }
+
+  for (const t of targetSets) {
+    const cat = allCatalogues.find((c) => c.id === t.catalogue);
+    if (!cat) throw new Error(`target set ${t.id}: catalogue ${t.catalogue} not found`);
+    parts.push(`-- Target set definition ${t.id} (published immediately; a trigger checks that every target exists for the track)
+insert into english.target_set_definitions(id, track_id, version, descriptor_version, catalogue_version, target_ids, tracking_only, source_hash, published_at)
+select r->>'id', r->>'track', (r->>'version')::int, ${quoteLiteral(cat.data.meta.descriptor_version)}, ${quoteLiteral(cat.id)},
+  ${textArray("r->'target_ids'")}, r->'tracking_only', ${quoteLiteral(t.hash)}, now()
+from jsonb_array_elements(${jsonLiteral([t.data])}) as r
+on conflict (id) do nothing;
+`);
+  }
+
+  parts.push(`insert into english.schema_migrations(version) values ('${migrationVersion}') on conflict do nothing;\n`);
+  return parts.join("\n");
+}
+
+function catalogueBlocks(item: CatalogueItem): string {
+  const catalogue = item.data;
   const cv = catalogue.meta.version;
   const dv = catalogue.meta.descriptor_version;
   const cvLit = quoteLiteral(cv);
@@ -76,29 +149,13 @@ export function buildConfigSql(cfg: ConfigBundle): string {
     where cv.version = ${cvLit} and cv.published_at is not null)`;
 
   const parts: string[] = [];
-  parts.push(`-- ${SEED_MIGRATION_FILE}
--- GENERATED FILE — do not edit by hand. Source: content/*.json. Regenerate: npm run gen:config
--- (CI runs \`npm run gen:config -- --check\` and fails when this file differs from the generator output.)
--- Catalogue ${cv} · policy ${policy.version} · target sets ${targetSets.map((s) => s.id).join(", ")}
--- sha256 catalogue=${hashes.catalogue}
--- sha256 policy=${hashes.policy}
--- sha256 target_sets=${hashes.targetSets}
--- Idempotent: the catalogue block is skipped once ${cv} is published (published rows are immutable).
-`);
-
-  parts.push(`-- 1. Assessment policy (published immediately)
-insert into english.assessment_policies(version, config, source_hash, published_at)
-values (${quoteLiteral(policy.version)}, ${jsonLiteral(policy.config)}, ${quoteLiteral(hashes.policy)}, now())
-on conflict (version) do nothing;
-`);
-
-  parts.push(`-- 2. Catalogue version (stays unpublished until the last statement of the catalogue block)
+  parts.push(`-- Catalogue version ${cv} (stays unpublished until the publish statement below)
 insert into english.catalogue_versions(version, descriptor_version, assessment_policy_version, source_hash, meta)
-values (${cvLit}, ${dvLit}, ${quoteLiteral(catalogue.meta.assessment_policy_version)}, ${quoteLiteral(hashes.catalogue)}, ${jsonLiteral(catalogue.meta)})
+values (${cvLit}, ${dvLit}, ${quoteLiteral(catalogue.meta.assessment_policy_version)}, ${quoteLiteral(item.hash)}, ${jsonLiteral(catalogue.meta)})
 on conflict (version) do nothing;
 `);
 
-  parts.push(`-- 3. Dimensions
+  parts.push(`-- Dimensions of ${cv}
 insert into english.dimensions(id, catalogue_version, dim_group, name_en, name_vi, ai_scorable, cefr_applicable, extension, track_ids, rubric, rubric_vi, raw)
 select r->>'id', ${cvLit}, r->>'group', r->>'name_en', r->>'name_vi',
   (r->>'ai_scorable')::boolean, (r->>'cefr_applicable')::boolean, (r->>'extension')::boolean,
@@ -108,7 +165,7 @@ ${notPublished}
 on conflict (id, catalogue_version) do nothing;
 `);
 
-  parts.push(`-- 4. Targets
+  parts.push(`-- Targets of ${cv}
 insert into english.targets(id, descriptor_version, catalogue_version, track_id, dimension_id, title_en, title_vi, target_demand, input_modality, output_modality, success_criteria, opportunity_rule, ai_may_propose, core, status, raw)
 select r->>'id', ${dvLit}, ${cvLit}, r->>'track', r->>'dimension_id', r->>'title_en', r->>'title_vi', r->>'target_demand',
   r->>'input_modality', r->>'output_modality', r->'success_criteria', r->>'opportunity_rule',
@@ -118,7 +175,7 @@ ${notPublished}
 on conflict (id, descriptor_version) do nothing;
 `);
 
-  parts.push(`-- 5. Aggregate indicators (diagnostic only, never mastery gates)
+  parts.push(`-- Aggregate indicators of ${cv} (diagnostic only, never mastery gates)
 insert into english.aggregate_indicators(id, catalogue_version, track_id, dimension_id, definition, definition_vi, use, mastery_gate, raw)
 select r->>'id', ${cvLit}, r->>'track', r->>'dimension_id', r->>'definition', r->>'definition_vi', r->>'use',
   (r->>'mastery_gate')::boolean, r
@@ -127,7 +184,7 @@ ${notPublished}
 on conflict (id, catalogue_version) do nothing;
 `);
 
-  parts.push(`-- 6. Activity templates (ids from the catalogue, tracks from PRD §4; \`schema\` is filled by later slices)
+  parts.push(`-- Activity templates (ids from the catalogue, tracks from PRD §4; \`schema\` is filled by later slices)
 insert into english.activity_templates(id, track_ids, description)
 select r->>'id', ${textArray("r->'track_ids'")}, r->>'desc'
 from jsonb_array_elements(${jsonLiteral(
@@ -135,20 +192,5 @@ from jsonb_array_elements(${jsonLiteral(
   )}) as r
 on conflict (id) do nothing;
 `);
-
-  parts.push(`-- 7. Target set definitions (published immediately; a trigger checks that every target exists for the track)
-insert into english.target_set_definitions(id, track_id, version, descriptor_version, catalogue_version, target_ids, tracking_only, source_hash, published_at)
-select r->>'id', r->>'track', (r->>'version')::int, ${dvLit}, ${cvLit},
-  ${textArray("r->'target_ids'")}, r->'tracking_only', ${quoteLiteral(hashes.targetSets)}, now()
-from jsonb_array_elements(${jsonLiteral(targetSets)}) as r
-on conflict (id) do nothing;
-`);
-
-  parts.push(`-- 8. Publish the catalogue version (last, so the inserts above never meet the immutability trigger)
-update english.catalogue_versions set published_at = now()
-where version = ${cvLit} and published_at is null;
-`);
-
-  parts.push(`insert into english.schema_migrations(version) values ('${SEED_MIGRATION_VERSION}') on conflict do nothing;\n`);
   return parts.join("\n");
 }

@@ -28,7 +28,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test:unit
-      - name: Seed migration 0006 matches content/*.json (no drift)
+      - name: Seed migrations match content/*.json + version lock (no drift, no edits to published versions)
         run: npm run gen:config -- --check
       - name: Build (no secrets needed — env is read at request time)
         run: npm run build

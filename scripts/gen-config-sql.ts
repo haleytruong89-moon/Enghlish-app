@@ -1,37 +1,30 @@
 /**
- * npm run gen:config             → (re)write db/migrations/0006_seed_config_v0_2_1.sql from content/*.json
- * npm run gen:config -- --check  → exit 1 when the checked-in file differs from the generator output (CI)
+ * npm run gen:config             → same as --check
+ * npm run gen:config -- --check  → exit 1 when a published version changed, a seed migration drifted,
+ *                                  or content exists that is not in any migration yet (CI)
+ * npm run gen:config -- --new    → put NEW (not yet locked) versions into the next free migration
+ *                                  NNNN_seed_<slug>.sql and add them to content/config.lock.json.
+ *                                  Never overwrites a migration; refuses if a locked version changed.
  */
-import { readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { loadConfig } from "../lib/config/content";
-import { MIGRATIONS_DIR } from "./lib/migrate";
-import { buildConfigSql, SEED_MIGRATION_FILE } from "./lib/configSql";
+import { checkConfig, generateNew } from "./lib/configLock";
 
 async function main() {
-  const check = process.argv.includes("--check");
-  const target = path.join(MIGRATIONS_DIR, SEED_MIGRATION_FILE);
-  const sql = buildConfigSql(loadConfig());
-
-  if (check) {
-    let current: string | null = null;
-    try {
-      current = await readFile(target, "utf8");
-    } catch {
-      current = null;
+  if (process.argv.includes("--new")) {
+    const res = await generateNew();
+    if (!res) {
+      console.log("nothing new: every version in content/ is already in a seed migration");
+      return;
     }
-    if (current !== sql) {
-      console.error(
-        `${SEED_MIGRATION_FILE} is out of date with content/*.json — run \`npm run gen:config\` and commit the result.`,
-      );
-      process.exit(1);
-    }
-    console.log(`${SEED_MIGRATION_FILE} is up to date`);
+    console.log(`wrote db/migrations/${res.file} for ${res.ids.join(", ")} and updated content/config.lock.json — commit both`);
     return;
   }
 
-  await writeFile(target, sql, "utf8");
-  console.log(`wrote ${SEED_MIGRATION_FILE} (${Buffer.byteLength(sql)} bytes)`);
+  const { problems } = await checkConfig();
+  if (problems.length) {
+    for (const p of problems) console.error(`ERROR: ${p}`);
+    process.exit(1);
+  }
+  console.log("config content, lock and seed migrations are consistent");
 }
 
 main().catch((err: unknown) => {
