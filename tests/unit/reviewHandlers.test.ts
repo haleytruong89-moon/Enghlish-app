@@ -302,6 +302,11 @@ describe("S5 handlers: writes", () => {
     // the parent claiming "I watched live": the database says no
     const refuse = makeStore({ recordOffline: vi.fn(async () => { throw new ReviewDbError("42501", "this member may not record this work"); }) });
     expect((await handleOffline(deps("parent", refuse), AN, goodOffline)).status).toBe(403);
+    // a checkpoint / live speaking step is the tutor's alone: the database says so (D15) and the route answers "tutor_only"
+    const tutorOnly = makeStore({ recordOffline: vi.fn(async () => { throw new ReviewDbError("42501", "eng_record_offline_attempt: only a tutor may record this step (D15)"); }) });
+    const denied = await handleOffline(deps("parent", tutorOnly), AN, goodOffline);
+    expect(denied.status).toBe(403);
+    expect((denied.body as { error: string }).error).toBe("tutor_only");
   });
 
   it("lesson note: at most 3 actions of 200 characters, levels from a fixed list, edits carry supersedes_id", async () => {

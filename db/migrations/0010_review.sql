@@ -839,6 +839,14 @@ begin
      or (p_provenance = 'tutor_live' and v_member.role <> 'tutor') then
     raise exception 'eng_record_offline_attempt: this member may not record this work' using errcode = '42501';
   end if;
+  -- D15 cho bài ghi ngoài app (chặt hơn, phụ huynh có thể nới sau): bước kiểm tra trong buổi (purpose có checkpoint) hoặc bước nói trực
+  -- tiếp với gia sư (ACT-SPEAK-LIVE) CHỈ gia sư còn quan hệ hiệu lực ghi được; bước nói trực tiếp chỉ nhận provenance 'tutor_live'.
+  if (v_act.purpose @> array['checkpoint'] or v_act.activity_type = 'ACT-SPEAK-LIVE') and v_member.role <> 'tutor' then
+    raise exception 'eng_record_offline_attempt: only a tutor may record this step (D15)' using errcode = '42501';
+  end if;
+  if v_act.activity_type = 'ACT-SPEAK-LIVE' and p_provenance <> 'tutor_live' then
+    raise exception 'eng_record_offline_attempt: a live speaking step is recorded as tutor_live only' using errcode = '22023';
+  end if;
 
   v_content := pg_catalog.jsonb_build_object('text', p_text, 'session_date', p_session_date)
     || case when p_duration_sec is not null then pg_catalog.jsonb_build_object('duration_sec', p_duration_sec) else '{}'::jsonb end

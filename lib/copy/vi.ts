@@ -367,6 +367,8 @@ export const offlineForm = {
   openReview: "Mở bài để chấm",
   error: "Chưa ghi được. Bước này có thể chưa mở, đã làm xong (bài tự làm chỉ một lần) hoặc ngày chưa hợp lệ.",
   errorForbidden: `Chỉ ${tutorHonorific} ghi được bài do ${tutorHonorific} trực tiếp nghe hoặc xem.`,
+  /** Shown to a parent instead of the form on a checkpoint step or a live-speaking step (D15, stricter for now). */
+  tutorOnlyNote: `Chỉ ${tutorHonorific} ghi bài này.`,
 } as const;
 
 export const notesPage = {

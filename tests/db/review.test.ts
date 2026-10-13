@@ -298,16 +298,18 @@ describe("S5 review: scores per skill, D15 routing, work outside the app, lesson
       expect(await count("select count(*)::int as n from english.validation_decisions where episode_id = $1 and target_key = 'A-L3-CAUSE-W'", [ep6])).toBe(1);
     });
 
-    it("a skill that only the tutor can hear live (A-X1-TURN) cannot be scored from work that was not watched live", async () => {
+    it("a live step (A-X1-TURN) is recorded by the tutor as tutor_live only: the parent and a paper record are refused; the work is then scorable by the tutor alone", async () => {
       const act9 = await activity(r1, 9);
-      const paper = await offline(M().parent, act9, "manual_import", "Paper note about a conversation", { clientId: randomUUID() });
-      const view = (await viewAs(s.users.parent, paper.episode_id)) as EpisodeView;
-      const turn = view.targets.find((t) => t.key === "A-X1-TURN");
-      expect(turn).toMatchObject({ scorable: false, locked_reason: "needs_live" });
-      await fail(review(M().tutorAn, paper.episode_id, "A-X1-TURN", 3), "23514");
-      // and that episode was recorded as a checkpoint, so the parent is not allowed to decide the other skill either
-      await fail(review(M().parent, paper.episode_id, "A-L2-COMPENSATE-S", 3), "42501");
-      await review(M().tutorAn, paper.episode_id, "A-L2-COMPENSATE-S", 2);
+      await fail(offline(M().parent, act9, "manual_import", "Paper note about a conversation"), "42501", /D15/);
+      await fail(offline(M().parent, act9, "tutor_live", "I watched it"), "42501");
+      await fail(offline(M().tutorAn, act9, "manual_import", "Paper note about a conversation"), "22023", /tutor_live/);
+      expect(await count("select count(*)::int as n from english.attempts where activity_instance_id = $1", [act9])).toBe(0);
+      const live = await offline(M().tutorAn, act9, "tutor_live", "Tutor notes: An took turns and asked one follow-up question");
+      const view = (await viewAs(s.users.parent, live.episode_id)) as EpisodeView;
+      expect(view.viewer.can_decide).toBe(false);
+      expect(view.targets.find((t) => t.key === "A-X1-TURN")).toMatchObject({ scorable: true, locked_reason: null });
+      await fail(review(M().parent, live.episode_id, "A-L2-COMPENSATE-S", 3), "42501");
+      await review(M().tutorAn, live.episode_id, "A-L2-COMPENSATE-S", 2);
     });
   });
 
@@ -414,7 +416,7 @@ describe("S5 review: scores per skill, D15 routing, work outside the app, lesson
     it("live in the session: tutor only, observed_directly, a checkpoint facet from the step, exposure, no audio, immutable", async () => {
       const act9 = await activity(r1, 9);
       const attemptsBefore = await count("select count(*)::int as n from english.attempts where activity_instance_id = $1", [act9]);
-      expect(attemptsBefore).toBe(1); // the manual import in the previous block
+      expect(attemptsBefore).toBe(1); // the live record in the previous block
       await fail(offline(M().parent, await activity(r1, 8), "tutor_live", "x"), "42501"); // the parent cannot claim "I watched live"
       const act5 = await activity(r1, 5); // SPEAK-MONO practice: not in the app at all
       const r = await offline(M().tutorAn, act5, "tutor_live", "Tutor notes: An explained why volcanoes erupt in 5 sentences.", { duration: 95, words: 60, assistance: ["notes"], date: YESTERDAY });
@@ -441,13 +443,14 @@ describe("S5 review: scores per skill, D15 routing, work outside the app, lesson
 
     it("a live checkpoint step records A-X1-TURN as scorable; the one-time check cannot be recorded twice", async () => {
       const act9 = await activity(r1, 9);
-      // the paper import above already used this one-time step
+      // the live record above already used this one-time step
       await fail(offline(M().tutorAn, act9, "tutor_live", "second go"), "23505", /one-time/);
       const act8 = await activity(r1, 8);
       const r = await offline(M().tutorAn, act8, "tutor_live", "Retold the volcano process aloud", { duration: 120 });
       expect(r.attempt_no).toBe(1);
       await fail(offline(M().tutorAn, act8, "tutor_live", "again"), "23505", /one-time/);
-      await fail(offline(M().parent, act8, "manual_import", "again"), "23505", /one-time/);
+      await fail(offline(M().tutorAn, act8, "manual_import", "again"), "23505", /one-time/);
+      await fail(offline(M().parent, act8, "manual_import", "again"), "42501", /D15/); // a checkpoint step: the tutor alone records it
       const view = (await viewAs(s.users.tutorAn, r.episode_id)) as EpisodeView;
       expect(view.episode).toMatchObject({ restricted: true, observed_directly: true });
       expect(view.episode.facets.checkpoint).toBe(true);

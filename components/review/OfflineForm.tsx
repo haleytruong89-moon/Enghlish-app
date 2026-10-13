@@ -14,18 +14,24 @@ export function OfflineForm({
   learnerId,
   activityId,
   isTutor,
+  tutorOnly = false,
+  liveOnly = false,
   minDate,
   maxDate,
 }: {
   learnerId: string;
   activityId: string;
   isTutor: boolean;
+  /** Checkpoint step or live speaking step: only the tutor records it (the database re-checks). */
+  tutorOnly?: boolean;
+  /** Live speaking step: recorded as "watched live" only (no paper option). */
+  liveOnly?: boolean;
   minDate: string;
   maxDate: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [provenance, setProvenance] = useState<"tutor_live" | "manual_import">(isTutor ? "tutor_live" : "manual_import");
+  const [provenance, setProvenance] = useState<"tutor_live" | "manual_import">(isTutor || liveOnly ? "tutor_live" : "manual_import");
   const [date, setDate] = useState(maxDate);
   const [text, setText] = useState("");
   const [duration, setDuration] = useState("");
@@ -87,6 +93,14 @@ export function OfflineForm({
 
   const btn = "min-h-11 rounded-lg border border-line bg-white px-4 text-sm font-medium hover:border-accent";
 
+  if (!isTutor && (tutorOnly || liveOnly)) {
+    return (
+      <p className="mt-2 text-sm text-muted" data-testid={`offline-tutor-only-${activityId}`}>
+        {offlineForm.tutorOnlyNote}
+      </p>
+    );
+  }
+
   if (!open) {
     return (
       <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -118,10 +132,12 @@ export function OfflineForm({
             {offlineForm.kindLive}
           </label>
         ) : null}
-        <label className="flex min-h-11 items-center gap-2 text-sm">
-          <input type="radio" name={`kind-${base}`} className="size-4" checked={provenance === "manual_import"} onChange={() => setProvenance("manual_import")} />
-          {offlineForm.kindPaper}
-        </label>
+        {liveOnly ? null : (
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="radio" name={`kind-${base}`} className="size-4" checked={provenance === "manual_import"} onChange={() => setProvenance("manual_import")} />
+            {offlineForm.kindPaper}
+          </label>
+        )}
       </fieldset>
 
       <div className="flex flex-col gap-1">

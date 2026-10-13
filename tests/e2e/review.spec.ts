@@ -212,6 +212,21 @@ test.describe.serial("S5 review", () => {
     await expect(page.getByTestId("decided-A-L2-CHUNKS")).toContainText(formatScore(1));
   });
 
+  test("a parent cannot record a checkpoint step or a live speaking step: the page shows a note instead of the form and the API says tutor-only", async ({ page }) => {
+    await loginAs(page, "parent");
+    const checkpointStep = 2; // A-W4 step 2: source Q&A, a checkpoint (open from the start)
+    const activityId = await activityIdOf(page, checkpointStep);
+    await page.goto(`/learners/${LEARNER_IDS.an}/inquiries`);
+    const step = page.getByTestId(`step-A-W4-PLANETS-${checkpointStep}`).first();
+    await expect(step.getByTestId(`offline-tutor-only-${activityId}`)).toHaveText(offlineForm.tutorOnlyNote);
+    await expect(step.getByTestId(`offline-open-${activityId}`)).toHaveCount(0);
+    const res = await page.request.post(`/api/learners/${LEARNER_IDS.an}/offline-attempts`, {
+      data: { client_id: randomUUID(), activity_id: activityId, provenance: "manual_import", text: "x", session_date: todayVn(), assistance: ["none"] },
+    });
+    expect(res.status()).toBe(403);
+    expect(((await res.json()) as { error: string }).error).toBe("tutor_only");
+  });
+
   test("a lesson note with 3 next actions; the parent sees it only when shared", async ({ page }) => {
     const marker = `Buổi thử ${Date.now()}`;
     await loginAs(page, "tutorAn");
