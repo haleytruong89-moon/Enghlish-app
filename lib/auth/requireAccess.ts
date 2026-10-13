@@ -20,13 +20,14 @@ export type Action =
   | "learner:read" //        see the learner and their (role-filtered) data
   | "work:submit" //         student submits own work (S4)
   | "work:review" //         tutor/parent review evidence (S5)
+  | "targets:read" //        tracked-skills page (target set) — parent and tutor only
   | "consent:read" //        consents — parent only
   | "admin"; //              export / purge / settings — parent only
 
 export const ACTIONS_BY_ROLE: Record<Role, readonly Action[]> = {
   student: ["learner:read", "work:submit"],
-  tutor: ["learner:read", "work:review"],
-  parent: ["learner:read", "work:review", "consent:read", "admin"],
+  tutor: ["learner:read", "targets:read", "work:review"],
+  parent: ["learner:read", "targets:read", "work:review", "consent:read", "admin"],
 };
 
 export type Member = {

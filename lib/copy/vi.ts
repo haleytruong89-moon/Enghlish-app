@@ -131,6 +131,23 @@ export const skillNames: Record<string, { staff: string; student: string }> = {
   "A-X1-TURN": { staff: "Nói trôi chảy (cô nghe trực tiếp)", student: "Nói liền mạch" },
 };
 
+// ---------- Kỹ năng đang theo dõi (S1) — chỉ phụ huynh/gia sư; học sinh không có trang này -------------
+export const targetsPage = {
+  link: "Kỹ năng đang theo dõi",
+  title: (alias: string) => `Kỹ năng đang theo dõi · ${alias}`,
+  count: (n: number) => `${n} kỹ năng đang theo dõi`,
+  intro: "Đây là danh sách kỹ năng dùng để đánh giá tiến bộ. Khi có đủ bài làm đã duyệt, bậc của từng kỹ năng sẽ hiện ở đây.",
+  dimension: "Nhóm",
+  codeLabel: "mã",
+  trackingOnlyTitle: "Theo dõi thêm (không tính vào đánh giá)",
+  trackingOnlyEmpty: "Không có mục theo dõi thêm.",
+  noSet: "Chưa chọn bộ kỹ năng cho bạn này. Phụ huynh cần gán bộ kỹ năng trước.",
+  back: "Về trang chủ",
+  techInfoSet: "Bộ kỹ năng",
+  techInfoCatalogue: "Danh mục",
+  techInfoCodes: "Mã kỹ năng",
+} as const;
+
 // ---------- §5 Thông điệp mẫu -----------------------------------------------------------
 export const messages = {
   submitted: "Đã nộp! Cô sẽ xem và gửi góp ý cho bạn.",
