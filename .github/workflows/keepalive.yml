@@ -1,0 +1,31 @@
+name: Keepalive
+
+# Supabase free projects pause after a week without activity (DESIGN §14).
+# One light query per day; prints only a count of migrations, never data.
+#
+# Secret (name only): DATABASE_URL — Supabase "Session pooler" connection string.
+
+on:
+  schedule:
+    - cron: "41 1 * * *" # 08:41 Asia/Ho_Chi_Minh
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PGSSLMODE: require
+    steps:
+      - name: Light query
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          test -n "$DATABASE_URL" || { echo "::error::secret DATABASE_URL is not set"; exit 1; }
+          command -v psql > /dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client > /dev/null; }
+          n="$(psql "$DATABASE_URL" -tAc "select count(*) from english.schema_migrations")"
+          echo "alive — english migrations applied: ${n}"

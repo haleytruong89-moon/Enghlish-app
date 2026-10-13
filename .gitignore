@@ -1,0 +1,26 @@
+# deps / build
+node_modules/
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# env — never commit secrets
+.env
+.env.*
+!.env.example
+
+# backups / dumps — never commit data
+*.sql.gz
+*.dump
+*.age
+backup/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+npm-debug.log*
+.vercel

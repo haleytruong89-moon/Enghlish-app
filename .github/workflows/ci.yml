@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck · lint · unit · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test:unit
+      - name: Build (no secrets needed — env is read at request time)
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+
+  db:
+    name: DB tests (Postgres 16 + Supabase/Launcher stub)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: DB tests (each test file creates its own database with the stub)
+        run: npm run test:db
+      - name: db:apply CLI on a stub database (twice — must be a no-op the 2nd time) + seed
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ci_apply
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 -qc "create database ci_apply"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f db/stub/supabase_stub.sql
+          npm run db:apply
+          npm run db:apply | tee /tmp/second.txt
+          grep -q "nothing to apply" /tmp/second.txt
+          npm run db:seed-dev -- --auth=stub
+          npm run db:seed-dev -- --auth=stub
+          test "$(psql "$DATABASE_URL" -tAc "select count(*) from english.learners where is_test = false")" = "0"

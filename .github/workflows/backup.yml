@@ -1,0 +1,76 @@
+name: Nightly backup (encrypted)
+
+# DESIGN §14 / NFR-05: nightly pg_dump of schemas public + english → age-encrypted →
+# private workflow artifact kept 30 days. Data is never printed to the log.
+#
+# Secrets (names only — set values in GitHub → Settings → Secrets and variables → Actions):
+#   DATABASE_URL          Supabase "Session pooler" connection string (IPv4; port 5432)
+#   BACKUP_AGE_RECIPIENT  age PUBLIC key (age1…). The private key stays offline with the parent.
+
+on:
+  schedule:
+    - cron: "17 19 * * *" # 02:17 Asia/Ho_Chi_Minh
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PG_MAJOR: "17" # pg_dump must be >= the Supabase server major version
+      PGSSLMODE: require
+    steps:
+      - name: Check secrets are present (without printing them)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+        run: |
+          test -n "$DATABASE_URL" || { echo "::error::secret DATABASE_URL is not set"; exit 1; }
+          case "$BACKUP_AGE_RECIPIENT" in
+            age1*) ;;
+            *) echo "::error::secret BACKUP_AGE_RECIPIENT must be an age public key (age1…)"; exit 1 ;;
+          esac
+
+      - name: Install pg_dump ${{ env.PG_MAJOR }} and age
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common age > /dev/null
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
+          sudo apt-get install -y -qq "postgresql-client-${PG_MAJOR}" > /dev/null
+
+      - name: Dump public + english, encrypt with age
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p backup
+          stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          out="backup/learning-os-${stamp}.dump.age"
+          # Custom format → restore with pg_restore. Plain data never touches disk unencrypted.
+          "/usr/lib/postgresql/${PG_MAJOR}/bin/pg_dump" "$DATABASE_URL" \
+              --format=custom --no-owner \
+              --schema=public --schema=english \
+            | age --encrypt --recipient "$BACKUP_AGE_RECIPIENT" --output "$out"
+          size="$(stat -c %s "$out")"
+          test "$size" -gt 1024 || { echo "::error::backup file is suspiciously small"; exit 1; }
+          echo "backup ok: $(basename "$out") (${size} bytes, encrypted)"
+          echo "BACKUP_NAME=learning-os-${stamp}" >> "$GITHUB_ENV"
+
+      - name: Upload encrypted artifact (private, 30 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BACKUP_NAME }}
+          path: backup/*.dump.age
+          retention-days: 30
+          if-no-files-found: error
+          compression-level: 0
