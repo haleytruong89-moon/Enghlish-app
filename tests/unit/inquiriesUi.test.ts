@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../../lib/config/content";
 import { ACTIVITY_TYPE_IDS, STEP_PURPOSES } from "@/lib/config/schemas";
-import { activityLabels, inquiriesPage, modeLabels, purposeLabels } from "@/lib/copy/vi";
+import { activityLabels, inquiriesPage, modeLabels, purposeLabels, tutorHonorific } from "@/lib/copy/vi";
 import { authorizeInquiriesPage } from "@/lib/inquiries/access";
 import { formatDateVi, safeExternalUrl } from "@/lib/inquiries/format";
 
@@ -15,6 +15,13 @@ describe("inquiries page copy and helpers", () => {
     }
     for (const p of STEP_PURPOSES) expect(purposeLabels[p], p).toBeTruthy();
     for (const m of ["PRACTICE", "INDEPENDENT_CHECK", "REVISION"] as const) expect(modeLabels[m].staff).toBeTruthy();
+  });
+
+  it("staff copy names the tutor through the single configurable honorific, and the restore action has its agreed label", () => {
+    expect(tutorHonorific).toBe("thầy/cô");
+    expect(activityLabels["ACT-SPEAK-LIVE"]).toBe(`Nói chuyện trực tiếp với ${tutorHonorific}`);
+    for (const label of Object.values(activityLabels)) expect(label).not.toMatch(/(^|\s)cô(\s|$)/i);
+    expect(inquiriesPage.unskip).toBe("Khôi phục bước");
   });
 
   it("formats dates as dd/mm/yyyy and ignores time parts", () => {

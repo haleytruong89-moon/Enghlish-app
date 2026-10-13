@@ -193,13 +193,19 @@ export const inquiriesPage = {
   techInfoCodes: "Mã bước và kỹ năng",
 } as const;
 
+/**
+ * Cách gọi gia sư trong chữ dành cho phụ huynh / gia sư (UX guide §2: "Cô/thầy", cấu hình được). Chưa có cài đặt
+ * theo gia đình nên dùng một hằng số trung tính ở MỘT chỗ — đổi ở đây là đổi cả màn hình dành cho nhân viên.
+ */
+export const tutorHonorific = "thầy/cô";
+
 /** Nhãn bước theo loại hoạt động (UX guide chưa liệt kê — đặt cùng giọng với §3.3). Mã chỉ hiện trong "Thông tin kỹ thuật". */
 export const activityLabels: Record<string, string> = {
   "ACT-SOURCE-QA": "Đọc hoặc nghe rồi trả lời câu hỏi",
   "ACT-CANVAS-BASIC": "Sắp xếp ý: ý chính – vì sao – ví dụ",
   "ACT-CANVAS-ADV": "Sắp xếp lập luận: ý kiến, bằng chứng, hạn chế, hướng khác",
   "ACT-SPEAK-MONO": "Tự nói và ghi lại",
-  "ACT-SPEAK-LIVE": "Nói chuyện trực tiếp với cô",
+  "ACT-SPEAK-LIVE": `Nói chuyện trực tiếp với ${tutorHonorific}`,
   "ACT-WRITE": "Viết bài",
   "ACT-REVISE": "Sửa lại bài đã viết",
   "ACT-SELF-REVIEW": "Tự xem lại bài của mình",
