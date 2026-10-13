@@ -52,6 +52,7 @@ Next.js (App Router) + TypeScript strict + Tailwind · Supabase (Postgres + Auth
 npm run dev · npm run typecheck · npm run lint · npm test
 npm run db:apply          # áp migration chưa có (cần DATABASE_URL)
 npm run db:seed-dev       # gia đình THỬ (An (thử), Nguyên (thử))
+npm run doctor            # kiểm tra cài đặt cloud 1 lần: bảng ✓/✗ tiếng Việt + cách sửa (cần .env.local; hoặc GitHub → Actions → "Setup doctor")
 ```
 
 ## Quay lại khi hỏng (rollback)
