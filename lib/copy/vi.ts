@@ -148,6 +148,70 @@ export const targetsPage = {
   techInfoCodes: "Mã kỹ năng",
 } as const;
 
+// ---------- Giao bài (S2) — chỉ phụ huynh/gia sư; học sinh không có trang này ---------------------------------
+export const inquiriesPage = {
+  link: "Giao bài",
+  title: (alias: string) => `Giao bài · ${alias}`,
+  back: "Về trang chủ",
+  availableTitle: "Bài có thể giao",
+  availableEmpty: "Chưa có bài nào để giao cho em này.",
+  weekRange: (week: number, from: string, to: string) => (week === 0 ? `Bài đầu vào · ${from} – ${to}` : `Tuần ${week} · ${from} – ${to}`),
+  stepCount: (n: number) => `${n} bước`,
+  dueLabel: "Hạn làm xong",
+  assignButton: "Giao bài",
+  assigning: "Đang giao…",
+  assignDone: "Đã giao bài.",
+  assignError: "Chưa giao được bài. Bạn thử lại sau ít phút.",
+  assignedTitle: "Đã giao",
+  assignedEmpty: "Chưa giao bài nào.",
+  assignedOn: (date: string) => `Giao ngày ${date}`,
+  dueOn: (date: string) => `Hạn ${date}`,
+  stepLabel: (n: number) => `Bước ${n}`,
+  minutes: (n: number) => `${n} phút`,
+  scheduledFor: (date: string) => `Ngày làm: ${date}`,
+  noDate: "Chưa xếp ngày",
+  originalDate: (date: string) => `Ngày dự kiến ban đầu: ${date}`,
+  skippedTag: "Đã bỏ qua",
+  lastReason: (reason: string) => `Lý do gần nhất: ${reason}`,
+  reschedule: "Đổi ngày",
+  skip: "Bỏ bước",
+  unskip: "Làm lại bước",
+  newDate: "Ngày mới",
+  reasonLabel: "Lý do (bắt buộc)",
+  reasonRequired: "Bạn nhập lý do (ít nhất 3 chữ) nhé.",
+  dateRequired: "Bạn chọn ngày mới nhé.",
+  save: "Lưu",
+  cancel: "Thôi",
+  saving: "Đang lưu…",
+  eventError: "Chưa lưu được. Bạn thử lại sau ít phút.",
+  sourcesTitle: "Tài liệu của chủ đề",
+  sourceModality: { text: "Bài đọc", audio: "Bài nghe", video: "Video" } as Record<string, string>,
+  /** Video chỉ là liên kết (O-F1): mở trang ngoài, app không nhúng trình phát. */
+  videoLink: "Mở video ở trang ngoài",
+  techInfoTemplate: "Mẫu bài",
+  techInfoCodes: "Mã bước và kỹ năng",
+} as const;
+
+/** Nhãn bước theo loại hoạt động (UX guide chưa liệt kê — đặt cùng giọng với §3.3). Mã chỉ hiện trong "Thông tin kỹ thuật". */
+export const activityLabels: Record<string, string> = {
+  "ACT-SOURCE-QA": "Đọc hoặc nghe rồi trả lời câu hỏi",
+  "ACT-CANVAS-BASIC": "Sắp xếp ý: ý chính – vì sao – ví dụ",
+  "ACT-CANVAS-ADV": "Sắp xếp lập luận: ý kiến, bằng chứng, hạn chế, hướng khác",
+  "ACT-SPEAK-MONO": "Tự nói và ghi lại",
+  "ACT-SPEAK-LIVE": "Nói chuyện trực tiếp với cô",
+  "ACT-WRITE": "Viết bài",
+  "ACT-REVISE": "Sửa lại bài đã viết",
+  "ACT-SELF-REVIEW": "Tự xem lại bài của mình",
+};
+
+/** Mục đích của bước (purpose) — nhãn cho phụ huynh/gia sư. */
+export const purposeLabels: Record<string, string> = {
+  baseline: "Bài đầu vào (không tính vào bậc)",
+  checkpoint: concepts.checkpoint.staff,
+  delayed_check: concepts.delayedCheck.staff,
+  transfer_check: concepts.transferCheck.staff,
+};
+
 /**
  * Tên ngắn cho các chỉ số chỉ để theo dõi (aggregate_indicators). Chỉ số nào chưa có tên ở đây thì
  * hiện nguyên `definition_vi` của danh mục (câu dài, vẫn đúng nhưng nặng chữ).
