@@ -1,5 +1,5 @@
 import type { ClientBase } from "pg";
-import { defaultDueOn } from "../../lib/inquiries/dates";
+import { addDays, daysBetween, dateWindow, todayVn } from "../../lib/inquiries/dates";
 
 /** Fixed IDs so the dev seed is idempotent. Only TEST data — never real learners. */
 export const TEST_FAMILY_ID = "e0000000-0000-4000-8000-000000000001";
@@ -153,6 +153,22 @@ export const DEV_INQUIRIES = [
   { learner: "nguyen", template: "B-W0-BASELINE", version: 1, requestId: "seed-dev:B-W0-BASELINE:1" },
 ] as const;
 
+/** The test learners' dev week started this many days ago, so the first steps of each inquiry are already released. */
+export const DEV_WEEK_STARTED_DAYS_AGO = 3;
+
+/**
+ * Due date for the dev inquiries: the template's own week, moved so that it STARTED DEV_WEEK_STARTED_DAYS_AGO days
+ * ago. Steps planned in the first days are then released, so the student screens (S4) have work to show on a
+ * preview and in CI, while the later ones (e.g. the second week-end steps) are still ahead. The database moves every
+ * step by (due - template end date). Always inside the window it accepts.
+ */
+export function devDueOn(dateFrom: string, dateTo: string, now: Date = new Date()): string {
+  const today = todayVn(now);
+  const { min, max } = dateWindow(now);
+  const due = addDays(addDays(today, -DEV_WEEK_STARTED_DAYS_AGO), Math.max(0, daysBetween(dateFrom, dateTo)));
+  return due < min ? min : due > max ? max : due;
+}
+
 export type DevInquiryResult = { template: string; learner: string; instanceId: string | null; skipped?: string };
 
 /**
@@ -178,9 +194,7 @@ export async function assignDevInquiries(client: ClientBase, seeded: SeedResult)
       out.push({ template: d.template, learner: d.learner, instanceId: null, skipped: "template not published (apply 0008)" });
       continue;
     }
-    // The template's own end date while its week is still ahead; afterwards a same-length week from today
-    // (the database keeps the relative schedule). Always inside the window the database accepts.
-    const due = defaultDueOn(row.date_from, row.date_to);
+    const due = devDueOn(row.date_from, row.date_to);
     const res = await client.query<{ id: string }>("select english.eng_assign_inquiry($1, $2, $3, $4, $5, $6) as id", [
       seeded.learners[d.learner],
       d.template,

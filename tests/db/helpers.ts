@@ -132,3 +132,26 @@ export async function errorAs(
     return err as Error & { code?: string };
   }
 }
+
+/**
+ * Like `as`, but COMMITS on success (rolls back on error). For tests that build on earlier writes, e.g. a second
+ * submission after a first. Every test file has its own database, so committed rows never leak across files.
+ */
+export async function asCommit<T>(
+  client: Client,
+  role: Role,
+  userId: string | null,
+  fn: (q: Client["query"]) => Promise<T>,
+): Promise<T> {
+  await client.query("begin");
+  try {
+    await client.query("select set_config('request.jwt.claim.sub', $1, true)", [userId ?? ""]);
+    await client.query(`set local role ${role}`);
+    const out = await fn(client.query.bind(client) as Client["query"]);
+    await client.query("commit");
+    return out;
+  } catch (err) {
+    await client.query("rollback");
+    throw err;
+  }
+}

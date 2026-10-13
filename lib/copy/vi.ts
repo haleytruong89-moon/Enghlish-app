@@ -4,6 +4,15 @@
  * Học sinh: xưng "bạn", câu ngắn, không điểm, không mã (D28).
  */
 
+// ---------- Cách gọi gia sư ---------------------------------------------------------
+/**
+ * Cách gọi gia sư trong chữ dành cho phụ huynh / gia sư (UX guide §2: "Cô/thầy", cấu hình được). Chưa có cài đặt
+ * theo gia đình nên dùng một hằng số trung tính ở MỘT chỗ — đổi ở đây là đổi cả màn hình dành cho nhân viên.
+ */
+export const tutorHonorific = "thầy/cô";
+/** Cùng cách gọi, viết hoa chữ đầu (đầu câu). */
+export const tutorHonorificCap = tutorHonorific.charAt(0).toUpperCase() + tutorHonorific.slice(1);
+
 // ---------- Chung ---------------------------------------------------------------
 export const app = {
   name: "Learning OS",
@@ -29,7 +38,7 @@ export const auth = {
 // ---------- Trang chủ theo vai trò (S0: placeholder) -------------------------------
 export const home = {
   studentGreeting: (alias: string) => `Chào ${alias}!`,
-  studentEmpty: "Hôm nay chưa có việc mới. Cô sẽ giao bài sớm thôi.",
+  studentEmpty: `Hôm nay chưa có việc mới. ${tutorHonorificCap} sẽ giao bài sớm thôi.`,
   tutorTitle: "Học sinh của cô/thầy",
   tutorEmpty: "Chưa có học sinh nào được giao cho cô/thầy.",
   parentTitle: "Các con",
@@ -193,11 +202,6 @@ export const inquiriesPage = {
   techInfoCodes: "Mã bước và kỹ năng",
 } as const;
 
-/**
- * Cách gọi gia sư trong chữ dành cho phụ huynh / gia sư (UX guide §2: "Cô/thầy", cấu hình được). Chưa có cài đặt
- * theo gia đình nên dùng một hằng số trung tính ở MỘT chỗ — đổi ở đây là đổi cả màn hình dành cho nhân viên.
- */
-export const tutorHonorific = "thầy/cô";
 
 /** Nhãn bước theo loại hoạt động (UX guide chưa liệt kê — đặt cùng giọng với §3.3). Mã chỉ hiện trong "Thông tin kỹ thuật". */
 export const activityLabels: Record<string, string> = {
@@ -230,7 +234,7 @@ export const trackingNames: Record<string, string> = {
 
 // ---------- §5 Thông điệp mẫu -----------------------------------------------------------
 export const messages = {
-  submitted: "Đã nộp! Cô sẽ xem và gửi góp ý cho bạn.",
+  submitted: `Đã nộp! ${tutorHonorificCap} sẽ xem và gửi góp ý cho bạn.`,
   aiPendingStudent: "Đã nhận bài. Góp ý sẽ có sau.",
   aiPendingStaff: "AI chưa xem được bài này — cần cô xem.",
   offline: "Mất mạng — bài vẫn đang được giữ trên máy. Đừng đóng trang nhé.",
@@ -249,4 +253,81 @@ export const apiErrors = {
   404: "Không tìm thấy.",
   409: "Yêu cầu này bị trùng với một yêu cầu trước đó.",
   500: "Có lỗi xảy ra. Bạn thử lại sau ít phút.",
+} as const;
+
+// ---------- S4: màn hình làm bài của học sinh (UX guide §3.3 / §5; mockup Main + Studio) ------------------------------
+/** Thứ trong tuần, bắt đầu từ Chủ nhật (Date#getUTCDay). */
+export const weekdayNames = ["Chủ nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"] as const;
+
+export const work = {
+  // trang chủ
+  todayLine: (weekday: string, ddmm: string) => `${weekday} ${ddmm}`,
+  nextTitle: "Việc tiếp theo",
+  start: "Bắt đầu",
+  minutes: (n: number) => `khoảng ${n} phút`,
+  allDone: `Hôm nay bạn đã làm hết việc được giao. ${tutorHonorificCap} sẽ giao thêm sớm thôi.`,
+  topicTitle: (title: string) => `${concepts.inquiry.student}: ${title}`,
+  /** Chỉ đếm bước làm được trong app; bước làm theo phiếu / với thầy/cô tính riêng (offApp). */
+  progress: (done: number, total: number) => `Xong ${done}/${total} bước`,
+  offApp: (n: number) => `${n} bước làm theo phiếu hoặc với ${tutorHonorific}`,
+  stateNow: "Bây giờ",
+  stateDone: "Đã xong",
+  stateLater: "Chưa làm",
+  noAppYet: "Sắp có trên app — làm theo phiếu",
+  withTutor: `Làm cùng ${tutorHonorific} trong buổi học`,
+  /** Khóa nhãn trung tính do máy chủ trả cho bước app chưa làm được. */
+  statusLabels: {
+    with_tutor: `Làm cùng ${tutorHonorific} trong buổi học`,
+    on_paper: "Sắp có trên app — làm theo phiếu",
+  },
+  // trang làm bài
+  back: (title: string) => `‹ ${title}`,
+  homeLink: "Về trang chủ",
+  taskTitle: "Đề bài",
+  readingTitle: "Bài đọc",
+  listeningTitle: "Bài nghe",
+  videoTitle: "Video",
+  openAudio: "Mở bài nghe (trang mới)",
+  openVideo: "Mở video (trang mới)",
+  openLink: "Mở bài (trang mới)",
+  noLink: `Bài này chưa có đường dẫn trong app. Bạn nhờ ${tutorHonorific} mở giúp nhé.`,
+  byAuthor: (author: string) => `Tác giả: ${author}`,
+  questionsTitle: "Câu hỏi",
+  questionLabel: (n: number) => `Câu ${n}`,
+  answerLabel: "Câu trả lời của bạn",
+  answerHint: "Bạn gõ câu trả lời vào đây",
+  writeTitle: "Viết bài của bạn",
+  writeLabel: "Bài viết",
+  writeHint: "Viết vài câu bằng tiếng Anh. Chưa chắc cũng cứ viết nhé.",
+  wordCount: (n: number) => (n === 1 ? "1 từ" : `${n} từ`),
+  selfCheckTitle: "Trước khi nộp, tự kiểm nhé",
+  helpTitle: "Bạn đã dùng gợi ý nào?",
+  helpHint: `Bạn chọn theo những gì bạn thật sự đã làm. Dùng gợi ý cũng không sao, ${tutorHonorific} chỉ cần biết để hiểu bạn đang ở đâu.`,
+  help: {
+    none: "Mình không dùng gợi ý nào",
+    notes: "Mình xem ghi chép",
+    dictionary: "Mình tra từ điển hoặc dịch",
+    asked_someone: "Mình hỏi người khác",
+    ai_outside: "Mình hỏi AI ngoài app",
+  },
+  pastedLabel: "Mình có dán chữ từ chỗ khác vào",
+  pastedNote: `Bạn vừa dán chữ vào. ${tutorHonorificCap} sẽ biết đoạn đó không phải bạn tự gõ.`,
+  submit: "Nộp bài",
+  submitting: "Đang nộp…",
+  submitAgain: "Nộp lần nữa",
+  needAnswer: "Bạn trả lời ít nhất một câu rồi nộp nhé.",
+  needText: "Bạn viết vài câu rồi nộp nhé.",
+  needHelp: "Bạn chọn một mục về gợi ý trước khi nộp nhé.",
+  submitError: "Chưa nộp được. Bài của bạn vẫn còn đây, bạn bấm nộp lại nhé.",
+  submitConflict: "Bài này đã được nộp rồi. Bạn mở lại trang chủ để xem nhé.",
+  submittedAt: (hhmm: string) => `Đã nộp lúc ${hhmm}`,
+  alreadySubmitted: (hhmm: string) => `Bạn đã nộp bài này lúc ${hhmm}.`,
+  mayRetry: "Bạn có thể làm lại để luyện thêm.",
+  retry: "Làm lại",
+  checkOnce: `Bài này chỉ làm một lần. ${tutorHonorificCap} sẽ xem và gửi góp ý cho bạn.`,
+  savedAt: (hhmm: string) => `Đã tự lưu lúc ${hhmm}`,
+  saving: "Đang lưu…",
+  notSaved: "Chưa lưu được. Bài vẫn còn trên màn hình, bạn đừng đóng trang nhé.",
+  otherTab: "Bài này vừa được lưu ở một chỗ khác. Bản bạn đang gõ đã được lưu đè lên.",
+  notAvailable: "Bước này chưa mở hoặc không phải của bạn.",
 } as const;
