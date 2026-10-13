@@ -263,7 +263,9 @@ export const work = {
   minutes: (n: number) => `khoảng ${n} phút`,
   allDone: "Hôm nay bạn đã làm hết việc được giao. Cô sẽ giao thêm sớm thôi.",
   topicTitle: (title: string) => `${concepts.inquiry.student}: ${title}`,
+  /** Chỉ đếm bước làm được trong app; bước làm theo phiếu / với thầy/cô tính riêng (offApp). */
   progress: (done: number, total: number) => `Xong ${done}/${total} bước`,
+  offApp: (n: number) => `${n} bước làm theo phiếu hoặc với ${tutorHonorific}`,
   stateNow: "Bây giờ",
   stateDone: "Đã xong",
   stateLater: "Chưa làm",

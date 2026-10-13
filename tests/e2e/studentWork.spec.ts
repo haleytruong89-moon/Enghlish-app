@@ -43,6 +43,8 @@ test.describe("An (thử): reading step, writing step, receipts", () => {
     // steps that are not in the app yet have a neutral label and no link
     await expect(card(page, AN_TITLE).getByTestId("step-4")).toContainText(work.noAppYet);
     await expect(card(page, AN_TITLE).getByTestId("step-4").getByRole("link")).toHaveCount(0);
+    // the progress counts only steps the app can do; the others are listed apart
+    await expect(card(page, AN_TITLE).getByTestId("off-app")).toBeVisible();
 
     await card(page, AN_TITLE).getByTestId("step-3").getByRole("link").click();
     await expect(page).toHaveURL(/\/activities\/[0-9a-f-]{36}$/);

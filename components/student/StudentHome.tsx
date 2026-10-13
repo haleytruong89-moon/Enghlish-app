@@ -65,7 +65,10 @@ function StepRow({ step, state }: { step: HomeStep; state: StepState }) {
 }
 
 function InquiryCard({ inquiry, next }: { inquiry: HomeInquiry; next: ReturnType<typeof pickNextTask> }) {
-  const done = inquiry.steps.filter((s) => s.attempts > 0).length;
+  // "Xong x/y bước" counts only the steps the app can do; steps done on paper / with the tutor are shown apart
+  const inApp = inquiry.steps.filter((s) => doableInApp(s.activityType, s.mode));
+  const done = inApp.filter((s) => s.attempts > 0).length;
+  const offApp = inquiry.steps.length - inApp.length;
   return (
     <section
       aria-labelledby={`inq-${inquiry.instanceId}`}
@@ -76,8 +79,15 @@ function InquiryCard({ inquiry, next }: { inquiry: HomeInquiry; next: ReturnType
         <h2 id={`inq-${inquiry.instanceId}`} className="text-[15px] font-bold">
           {work.topicTitle(inquiry.titleVi)}
         </h2>
-        <span className="shrink-0 text-[13px] text-muted">{work.progress(done, inquiry.steps.length)}</span>
+        <span className="shrink-0 text-[13px] text-muted" data-testid="progress">
+          {work.progress(done, inApp.length)}
+        </span>
       </div>
+      {offApp > 0 ? (
+        <p className="-mt-1.5 text-[13px] text-muted" data-testid="off-app">
+          {work.offApp(offApp)}
+        </p>
+      ) : null}
       <ol className="flex flex-col gap-1">
         {inquiry.steps.map((s) => (
           <StepRow key={s.activityId} step={s} state={stepState(s, next)} />

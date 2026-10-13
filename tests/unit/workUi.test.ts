@@ -86,7 +86,11 @@ describe("StudentHome", () => {
     expect(html).toContain(work.nextTitle);
     expect(html).toContain('href="/activities/a3"'); // step 2 is done, step 1 cannot be done in the app
     expect(html).toContain(work.start);
-    expect(html).toContain(work.progress(1, 5));
+    // "Xong x/y bước" counts only the steps the app can do (a2, a3, a6); the other two are shown apart
+    expect(html).toContain(work.progress(1, 3));
+    expect(html).not.toContain(work.progress(1, 5));
+    expect(html).toContain(work.offApp(2));
+    expect(html).toContain("2 bước làm theo phiếu hoặc với thầy/cô");
     expect(html).toMatch(/data-testid="step-2" data-state="done"/);
     expect(html).toMatch(/data-testid="step-3" data-state="now"/);
     expect(html).toMatch(/data-testid="step-6" data-state="later"/);
