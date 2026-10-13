@@ -348,6 +348,18 @@ describe("S4 student work (DESIGN §5, §6, §8, §9)", () => {
       expect(await rowsAs(db.client, "authenticated", s.users.tutorAn, "select 1 from english.working_drafts")).toHaveLength(1);
     });
 
+    it("two tabs that both started with no draft: the second one (base revision 0) is warned, and a lone first save is not", async () => {
+      const step = await activity(x3, 6);
+      // tab 1 and tab 2 both opened the page with no saved draft, so each reports base 0
+      const first = await saveAs(an(), step, { text: "tab one" }, 0);
+      expect(first).toMatchObject({ revision: 1, other_tab_changed: false });
+      const second = await saveAs(an(), step, { text: "tab two" }, 0);
+      expect(second).toMatchObject({ revision: 2, other_tab_changed: true }); // saved over, but flagged
+      // tab 2 now knows revision 2 and is quiet again
+      expect(await saveAs(an(), step, { text: "tab two, more" }, 2)).toMatchObject({ revision: 3, other_tab_changed: false });
+      await db.client.query("delete from english.working_drafts where activity_instance_id = $1", [step]);
+    });
+
     it("rejects bad drafts, other children, staff and steps that are not open or not supported", async () => {
       const step6 = await activity(x2, 6);
       const fail = async (p: Promise<unknown>, code: string) => expect(p).rejects.toMatchObject({ code });

@@ -51,3 +51,11 @@ export function sourceTitle(title: string): string {
   const cleaned = title.replace(/\s*\((?=[^)]*(?:bài đọc|bài nghe|file |MINI-|cloze|reading|listening script|exam-style))[^)]*\)\s*$/i, "");
   return cleaned.trim() === "" ? title : cleaned;
 }
+
+/**
+ * The revision a tab reports as its base when it autosaves. A tab that opened with NO saved draft reports 0 ("I saw nothing"),
+ * not "nothing": the server then still warns when another tab saved first (a missing base would warn about nothing).
+ */
+export function baseRevisionOf(draft: { revision: number } | null | undefined): number {
+  return draft?.revision ?? 0;
+}

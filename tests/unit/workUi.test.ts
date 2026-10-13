@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { SourceReader } from "@/components/student/SourceReader";
 import { StudentHome } from "@/components/student/StudentHome";
 import { activityLabels, tutorHonorific, weekdayNames, work } from "@/lib/copy/vi";
-import { formatHm, nonEmptyAnswers, sourceTitle, todayLine, unsupportedLabel, wordsOf } from "@/lib/work/view";
+import { baseRevisionOf, formatHm, nonEmptyAnswers, sourceTitle, todayLine, unsupportedLabel, wordsOf } from "@/lib/work/view";
 import type { HomeView, SourceView } from "@/lib/work/types";
 
 const home: HomeView = {
@@ -72,6 +72,12 @@ describe("source titles", () => {
 });
 
 describe("editor helpers", () => {
+  it("a tab that opened without a draft reports base revision 0 (so a second tab is still noticed), never 'no base'", () => {
+    expect(baseRevisionOf(null)).toBe(0);
+    expect(baseRevisionOf(undefined)).toBe(0);
+    expect(baseRevisionOf({ revision: 4 })).toBe(4);
+  });
+
   it("counts words and drops empty answers", () => {
     expect(wordsOf("")).toBe(0);
     expect(wordsOf("  Volcanoes erupt\nbecause   magma rises. ")).toBe(5);

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { messages, work } from "@/lib/copy/vi";
 import { ASSISTANCE_VALUES, type SupportedActivityView, type Assistance, type DraftContent, type ItemView, type Receipt } from "@/lib/work/types";
-import { formatHm, nonEmptyAnswers, wordsOf } from "@/lib/work/view";
+import { baseRevisionOf, formatHm, nonEmptyAnswers, wordsOf } from "@/lib/work/view";
 
 const AUTOSAVE_MS = 5000;
 
@@ -42,7 +42,8 @@ export function WorkForm({ activity }: { activity: SupportedActivityView }) {
   const dirty = useRef(false);
   const closed = useRef(false);
   const inflight = useRef<Promise<void> | null>(null);
-  const revision = useRef<number | null>(draft?.revision ?? null);
+  // 0 = "this tab started with no draft": still a base, so a second tab that saved first is noticed (the server warns when it differs)
+  const revision = useRef<number>(baseRevisionOf(draft));
   const pending = useRef<{ id: string; sig: string } | null>(null);
 
   const content = (): DraftContent =>
@@ -72,7 +73,7 @@ export function WorkForm({ activity }: { activity: SupportedActivityView }) {
         const res = await fetch(`/api/drafts/${activity.activityId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: snapshot, ...(revision.current !== null ? { base_revision: revision.current } : {}) }),
+          body: JSON.stringify({ content: snapshot, base_revision: revision.current }),
         });
         if (!res.ok) throw new Error(String(res.status));
         const json = (await res.json()) as { draft: { revision: number; savedAt: string; otherTabChanged: boolean } };
@@ -154,7 +155,7 @@ export function WorkForm({ activity }: { activity: SupportedActivityView }) {
   function again() {
     closed.current = false;
     dirty.current = false;
-    revision.current = null;
+    revision.current = baseRevisionOf(null);
     setReceipt(null);
     setProblem(null);
     setSaveState("idle");
@@ -300,7 +301,7 @@ export function WorkForm({ activity }: { activity: SupportedActivityView }) {
         <fieldset className="m-0 flex flex-col gap-1 rounded-2xl border border-line bg-white px-4 py-3">
           <legend className="px-1 text-sm font-semibold text-muted">{work.selfCheckTitle}</legend>
           {step.selfCheckVi.map((line, i) => (
-            <label key={i} className="flex min-h-10 items-center gap-2.5 text-sm">
+            <label key={i} className="flex min-h-11 items-center gap-2.5 text-sm">
               <input
                 type="checkbox"
                 checked={!!selfCheck[i]}
