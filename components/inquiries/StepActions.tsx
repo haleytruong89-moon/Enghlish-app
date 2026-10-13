@@ -7,17 +7,22 @@ import { inquiriesPage } from "@/lib/copy/vi";
 type Kind = "reschedule" | "skip" | "unskip";
 
 /**
- * "Đổi ngày" / "Bỏ bước" / "Làm lại bước" for one step. A reason is mandatory — checked here for a
+ * "Đổi ngày" / "Bỏ bước" / "Khôi phục bước" for one step. A reason is mandatory — checked here for a
  * friendly message and again by the API and the database.
  */
 export function StepActions({
   activityId,
   skipped,
   currentDate,
+  minDate,
+  maxDate,
 }: {
   activityId: string;
   skipped: boolean;
   currentDate: string | null;
+  /** Allowed window for a new date: today - 7 .. today + 120 (Asia/Ho_Chi_Minh). */
+  minDate: string;
+  maxDate: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState<Kind | null>(null);
@@ -38,6 +43,7 @@ export function StepActions({
     if (!open) return;
     if (reason.trim().length < 3) return setError(inquiriesPage.reasonRequired);
     if (open === "reschedule" && !date) return setError(inquiriesPage.dateRequired);
+    if (open === "reschedule" && (date < minDate || date > maxDate)) return setError(inquiriesPage.dateOutOfRange);
     setBusy(true);
     setError(null);
     try {
@@ -82,6 +88,8 @@ export function StepActions({
               <input
                 id={`date-${base}`}
                 type="date"
+                min={minDate}
+                max={maxDate}
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="min-h-11 rounded-lg border border-line px-3"

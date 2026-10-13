@@ -1,4 +1,5 @@
 import type { ClientBase } from "pg";
+import { defaultDueOn } from "../../lib/inquiries/dates";
 
 /** Fixed IDs so the dev seed is idempotent. Only TEST data — never real learners. */
 export const TEST_FAMILY_ID = "e0000000-0000-4000-8000-000000000001";
@@ -168,15 +169,18 @@ export async function assignDevInquiries(client: ClientBase, seeded: SeedResult)
       out.push({ template: d.template, learner: d.learner, instanceId: null, skipped: "migration 0007 is not applied" });
       continue;
     }
-    const tpl = await client.query<{ due: string }>(
-      "select date_to::text as due from english.inquiry_templates where id = $1 and version = $2 and published_at is not null",
+    const tpl = await client.query<{ date_from: string; date_to: string }>(
+      "select date_from::text as date_from, date_to::text as date_to from english.inquiry_templates where id = $1 and version = $2 and published_at is not null",
       [d.template, d.version],
     );
-    const due = tpl.rows[0]?.due;
-    if (!due) {
+    const row = tpl.rows[0];
+    if (!row) {
       out.push({ template: d.template, learner: d.learner, instanceId: null, skipped: "template not published (apply 0008)" });
       continue;
     }
+    // The template's own end date while its week is still ahead; afterwards a same-length week from today
+    // (the database keeps the relative schedule). Always inside the window the database accepts.
+    const due = defaultDueOn(row.date_from, row.date_to);
     const res = await client.query<{ id: string }>("select english.eng_assign_inquiry($1, $2, $3, $4, $5, $6) as id", [
       seeded.learners[d.learner],
       d.template,

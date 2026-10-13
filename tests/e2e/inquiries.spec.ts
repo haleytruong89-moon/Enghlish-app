@@ -1,10 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 import { inquiriesPage, learnerWithTrack } from "@/lib/copy/vi";
+import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { LEARNER_IDS, loginAs } from "./helpers";
 
 const AN = "An (thử)";
 const NGUYEN = "Nguyên (thử)";
+// Dates are relative to today (Asia/Ho_Chi_Minh): assign and reschedule dates must lie in [today - 7, today + 120].
+const RESCHEDULE_TO = addDays(todayVn(), 5);
+const RESCHEDULE_API = addDays(todayVn(), 6);
+const TOO_FAR = addDays(todayVn(), 200);
 const url = (who: "an" | "nguyen") => `/learners/${LEARNER_IDS[who]}/inquiries`;
 
 async function notFound(page: Page, target: string) {
@@ -45,8 +50,15 @@ test.describe("parent: assign and schedule", () => {
     await expect(page.getByTestId("template-A-W2-WATERCYCLE")).toBeVisible();
     await expect(page.getByTestId("template-B-W0-BASELINE")).toHaveCount(0);
 
-    await page.getByTestId("template-A-W2-WATERCYCLE").getByRole("button", { name: inquiriesPage.assignButton, exact: true }).click();
+    const assignButton = page.getByTestId("template-A-W2-WATERCYCLE").getByRole("button", { name: inquiriesPage.assignButton, exact: true });
+    await assignButton.click();
     await expect(page.getByTestId("inquiry-A-W2-WATERCYCLE").first()).toBeVisible();
+    // the confirmation stays and the same values cannot be submitted twice; a new due date re-enables the button
+    await expect(page.getByTestId("template-A-W2-WATERCYCLE").getByText(inquiriesPage.assignDone)).toBeVisible();
+    await expect(assignButton).toBeDisabled();
+    const dueInput = page.getByTestId("template-A-W2-WATERCYCLE").getByLabel(inquiriesPage.dueLabel);
+    await dueInput.fill(addDays(await dueInput.inputValue(), 1));
+    await expect(assignButton).toBeEnabled();
     await expect(page.getByTestId("inquiry-A-W2-WATERCYCLE").first().getByRole("listitem").first()).toBeVisible();
   });
 
@@ -69,7 +81,7 @@ test.describe("parent: assign and schedule", () => {
       if (r.method() === "POST" && r.url().includes("/events")) sent += 1;
     });
     await step1.getByRole("button", { name: inquiriesPage.reschedule, exact: true }).click();
-    await step1.getByLabel(inquiriesPage.newDate).fill("2026-10-23");
+    await step1.getByLabel(inquiriesPage.newDate).fill(RESCHEDULE_TO);
     await step1.getByRole("button", { name: inquiriesPage.save, exact: true }).click();
     await expect(step1.getByRole("alert")).toHaveText(inquiriesPage.reasonRequired);
     expect(sent).toBe(0);
@@ -77,15 +89,16 @@ test.describe("parent: assign and schedule", () => {
     // UI: with a reason → saved, shown as the effective date, reason visible
     await step1.getByLabel(inquiriesPage.reasonLabel).fill("Em có lịch học thêm");
     await step1.getByRole("button", { name: inquiriesPage.save, exact: true }).click();
-    await expect(step1.getByText(inquiriesPage.scheduledFor(formatDateVi("2026-10-23")))).toBeVisible();
+    await expect(step1.getByText(inquiriesPage.scheduledFor(formatDateVi(RESCHEDULE_TO)))).toBeVisible();
     await expect(step1.getByText(inquiriesPage.lastReason("Em có lịch học thêm"))).toBeVisible();
 
     // API: missing / blank reason → 400, nothing recorded
     const activityId = await activityIdOf(page, "an", "A-W1-VOLCANOES", 1);
     for (const body of [
-      { kind: "reschedule", new_date: "2026-10-24" },
-      { kind: "reschedule", new_date: "2026-10-24", reason: "   " },
+      { kind: "reschedule", new_date: RESCHEDULE_API },
+      { kind: "reschedule", new_date: RESCHEDULE_API, reason: "   " },
       { kind: "skip", reason: "" },
+      { kind: "reschedule", new_date: TOO_FAR, reason: "Ngày xa quá" }, // outside [today - 7, today + 120]
     ]) {
       const res = await page.request.post(`/api/activities/${activityId}/events`, { data: body });
       expect(res.status(), JSON.stringify(body)).toBe(400);
@@ -121,7 +134,7 @@ test.describe("tutors only reach their own learner", () => {
       expect((await page.request.get(path)).status(), path).toBe(404);
     }
     const post = await page.request.post(`/api/learners/${LEARNER_IDS.an}/inquiries`, {
-      data: { template_id: "A-W3-EARTHQUAKES", version: 1, due_on: "2026-11-01", client_request_id: "e2e-tutor-outside-scope" },
+      data: { template_id: "A-W3-EARTHQUAKES", version: 1, due_on: addDays(todayVn(), 10), client_request_id: "e2e-tutor-outside-scope" },
     });
     expect(post.status()).toBe(404);
   });
@@ -148,7 +161,7 @@ test.describe("students never get this page or these routes", () => {
       expect((await page.request.get(`/api/learners/${LEARNER_IDS[own]}/templates`)).status()).toBe(403);
       expect((await page.request.get(`/api/learners/${LEARNER_IDS[other]}/inquiries`)).status()).toBe(404);
       const assign = await page.request.post(`/api/learners/${LEARNER_IDS[own]}/inquiries`, {
-        data: { template_id: "A-W3-EARTHQUAKES", version: 1, due_on: "2026-11-01", client_request_id: "e2e-student-assign-1" },
+        data: { template_id: "A-W3-EARTHQUAKES", version: 1, due_on: addDays(todayVn(), 10), client_request_id: "e2e-student-assign-1" },
       });
       expect(assign.status()).toBe(403);
     });

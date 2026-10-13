@@ -5,6 +5,7 @@ import { AssignForm } from "@/components/inquiries/AssignForm";
 import { StepActions } from "@/components/inquiries/StepActions";
 import { activityLabels, app, inquiriesPage, learnerWithTrack, modeLabels, purposeLabels, type Mode } from "@/lib/copy/vi";
 import { authorizeInquiriesPage } from "@/lib/inquiries/access";
+import { dateWindow, defaultDueOn } from "@/lib/inquiries/dates";
 import { formatDateVi, safeExternalUrl } from "@/lib/inquiries/format";
 import { loadInquiriesPage } from "@/lib/inquiries/load";
 import { createUserClient } from "@/lib/supabase/server";
@@ -28,6 +29,8 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
 
   const { member, learner } = access.grant;
   const { templates, inquiries } = await loadInquiriesPage(learner.id, learner.trackId);
+  const now = new Date();
+  const range = dateWindow(now);
 
   return (
     <>
@@ -52,7 +55,14 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
                   {inquiriesPage.weekRange(t.week, formatDateVi(t.dateFrom), formatDateVi(t.dateTo))} ·{" "}
                   {inquiriesPage.stepCount(t.stepCount)}
                 </p>
-                <AssignForm learnerId={learner.id} templateId={t.id} version={t.version} defaultDue={t.dateTo} />
+                <AssignForm
+                  learnerId={learner.id}
+                  templateId={t.id}
+                  version={t.version}
+                  defaultDue={defaultDueOn(t.dateFrom, t.dateTo, now)}
+                  minDue={range.min}
+                  maxDue={range.max}
+                />
               </li>
             ))}
           </ul>
@@ -118,7 +128,13 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
                       {s.schedule.lastReason ? (
                         <p className="text-xs text-muted">{inquiriesPage.lastReason(s.schedule.lastReason)}</p>
                       ) : null}
-                      <StepActions activityId={s.activityId} skipped={s.schedule.skipped} currentDate={s.schedule.date} />
+                      <StepActions
+                        activityId={s.activityId}
+                        skipped={s.schedule.skipped}
+                        currentDate={s.schedule.date}
+                        minDate={range.min}
+                        maxDate={range.max}
+                      />
                       <details className="mt-2 text-xs text-muted">
                         <summary className="min-h-11 cursor-pointer py-3">{app.techInfo}</summary>
                         <p>

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { toKeyRows, toSafeSteps, toSources } from "../../lib/config/inquiries";
 import { loadContentItems } from "../../lib/config/versions";
+import { addDays, daysBetween, defaultDueOn } from "../../lib/inquiries/dates";
 import { assignDevInquiries, DEV_INQUIRIES } from "../../scripts/lib/seed";
 import { createTestDb, migrate, rowsAs, seed, type Seeded, type TestDb } from "./helpers";
 
@@ -98,14 +99,17 @@ describe("0008 seed: the pilot inquiry templates (S2)", () => {
     expect(await count("select count(*)::int as n from english.inquiry_instances")).toBe(2);
 
     const an = (await q("select i.template_id, i.assigned_by, i.due_on::text as due, (select count(*)::int from english.activity_instances a where a.inquiry_instance_id = i.id) as steps from english.inquiry_instances i where learner_id = $1", [s.learners.an]))[0];
-    expect(an).toEqual({ template_id: "A-W1-VOLCANOES", assigned_by: s.members.parent, due: "2026-10-25", steps: 13 });
+    const volcanoes = published.find((p) => p.id === "A-W1-VOLCANOES@1")?.data;
+    if (!volcanoes) throw new Error("A-W1 missing");
+    const due = defaultDueOn(volcanoes.dates.from, volcanoes.dates.to);
+    expect(an).toEqual({ template_id: "A-W1-VOLCANOES", assigned_by: s.members.parent, due, steps: 13 });
     const ng = (await q("select i.template_id, (select count(*)::int from english.activity_instances a where a.inquiry_instance_id = i.id) as steps from english.inquiry_instances i where learner_id = $1", [s.learners.nguyen]))[0];
     expect(ng).toEqual({ template_id: "B-W0-BASELINE", steps: 6 });
 
-    // the default schedule comes from the template (kit dates), and every step is there
+    // the schedule comes from the template (kit dates), moved by (due - template end date) days, and every step is there
+    const shift = daysBetween(volcanoes.dates.to, due);
     const dates = await q<{ step_no: number; d: string | null }>("select step_no, scheduled_for::text as d from english.activity_instances where learner_id = $1 order by step_no", [s.learners.an]);
-    const volcanoes = published.find((p) => p.id === "A-W1-VOLCANOES@1")?.data;
-    expect(dates.map((r) => r.d)).toEqual(volcanoes?.steps.map((st) => st.planned_date));
+    expect(dates.map((r) => r.d)).toEqual(volcanoes.steps.map((st) => (st.planned_date ? addDays(st.planned_date, shift) : null)));
   });
 
   it("baseline steps carry purpose 'baseline' all the way into the learner's activity rows", async () => {

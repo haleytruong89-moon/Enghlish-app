@@ -499,6 +499,11 @@ declare
   v_user uuid;
   v_role text;
   v_id uuid;
+  v_today date := (pg_catalog.now() at time zone 'Asia/Ho_Chi_Minh')::date;
+  v_shift int;
+  v_steps jsonb;
+  v_desc text;
+  v_policy text;
 begin
   if p_learner is null or p_template is null or p_version is null or p_due is null or p_by is null then
     raise exception 'eng_assign_inquiry: learner, template, version, due date and actor are required'
@@ -545,6 +550,35 @@ begin
       using errcode = '23514';
   end if;
 
+  -- Hạn giao phải hợp lý: từ 7 ngày trước đến 120 ngày sau hôm nay (giờ Việt Nam).
+  if p_due < v_today - 7 or p_due > v_today + 120 then
+    raise exception 'eng_assign_inquiry: due date % must be between % and % (today in Asia/Ho_Chi_Minh -7 .. +120 days)',
+      p_due, v_today - 7, v_today + 120 using errcode = '23514';
+  end if;
+
+  -- Giao muộn / sớm vẫn giữ lịch tương đối: mỗi ngày kế hoạch của mẫu dịch đi (hạn giao - ngày kết thúc của mẫu) ngày.
+  v_shift := p_due - v_tpl.date_to;
+  select coalesce(pg_catalog.jsonb_agg(
+           case when s ->> 'planned_date' is null then s
+                else pg_catalog.jsonb_set(s, '{planned_date}',
+                       pg_catalog.to_jsonb(((s ->> 'planned_date')::date + v_shift)::text)) end
+           order by (s ->> 'step_no')::int), '[]'::jsonb)
+  into v_steps
+  from pg_catalog.jsonb_array_elements(v_tpl.steps) as s;
+
+  -- Phiên bản "mô tả" và chính sách chấm lúc giao: theo bộ target HIỆN HÀNH của em (nếu có), không thì theo danh mục của mẫu.
+  select d.descriptor_version, cv.assessment_policy_version into v_desc, v_policy
+  from english.target_sets ts
+  join english.target_set_definitions d on d.id = ts.definition_id
+  join english.catalogue_versions cv on cv.version = d.catalogue_version
+  where ts.learner_id = p_learner
+  order by ts.effective_from desc, ts.seq desc
+  limit 1;
+  if v_desc is null then
+    select cv.descriptor_version, cv.assessment_policy_version into v_desc, v_policy
+    from english.catalogue_versions cv where cv.version = v_tpl.catalogue_version;
+  end if;
+
   insert into english.inquiry_instances(learner_id, template_id, template_version, snapshot, assigned_by, due_on, client_request_id)
   values (
     p_learner, v_tpl.id, v_tpl.version,
@@ -558,14 +592,20 @@ begin
         'big_question_en', v_tpl.big_question_en,
         'big_question_vi', v_tpl.big_question_vi,
         'week', v_tpl.week,
-        'date_from', v_tpl.date_from,
-        'date_to', v_tpl.date_to,
+        -- Cửa sổ THỰC của bài đã giao (đã dịch ngày); ngày gốc của mẫu giữ riêng để đối chiếu.
+        'date_from', v_tpl.date_from + v_shift,
+        'date_to', v_tpl.date_to + v_shift,
+        'template_date_from', v_tpl.date_from,
+        'template_date_to', v_tpl.date_to,
+        'date_shift_days', v_shift,
         'domain_bucket', v_tpl.domain_bucket,
         'catalogue_version', v_tpl.catalogue_version,
+        'descriptor_version', v_desc,
+        'assessment_policy_version', v_policy,
         'source_hash', v_tpl.source_hash),
       'target_ids', pg_catalog.to_jsonb(v_tpl.target_ids),
       'sources', v_tpl.sources,
-      'steps', v_tpl.steps),
+      'steps', v_steps),
     p_by, p_due, p_client_request_id)
   returning id into v_id;
 
@@ -574,7 +614,7 @@ begin
     array(select e from jsonb_array_elements_text(s -> 'purpose') with ordinality as t(e, n) order by n),
     array(select e from jsonb_array_elements_text(s -> 'target_ids') with ordinality as t(e, n) order by n),
     nullif(s ->> 'planned_date', '')::date
-  from jsonb_array_elements(v_tpl.steps) as s;
+  from jsonb_array_elements(v_steps) as s;
 
   insert into english.instance_item_keys(inquiry_instance_id, learner_id, item_id, step_no, kind, answer, explanation_vi)
   select v_id, p_learner, k.item_id, k.step_no, k.kind, k.answer, k.explanation_vi
@@ -584,7 +624,7 @@ begin
   select m.user_id, m.role into v_user, v_role from english.members m where m.id = p_by;
   insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
   values (v_user, v_role, 'inquiry.assigned', v_family, p_learner,
-          pg_catalog.jsonb_build_object('inquiry_instance', v_id, 'template', v_tpl.id, 'version', v_tpl.version, 'due_on', p_due));
+          pg_catalog.jsonb_build_object('inquiry_instance', v_id, 'template', v_tpl.id, 'version', v_tpl.version, 'due_on', p_due, 'date_shift_days', v_shift));
 
   return v_id;
 end
@@ -613,6 +653,7 @@ declare
   v_user uuid;
   v_role text;
   v_id bigint;
+  v_today date := (pg_catalog.now() at time zone 'Asia/Ho_Chi_Minh')::date;
 begin
   if p_activity is null or p_kind is null or p_by is null then
     raise exception 'eng_activity_event: activity, kind and actor are required' using errcode = '22004';
@@ -640,6 +681,11 @@ begin
   if (p_kind = 'reschedule') <> (p_new_date is not null) then
     raise exception 'eng_activity_event: reschedule needs a new date, skip/unskip must not have one'
       using errcode = '23514';
+  end if;
+
+  if p_new_date is not null and (p_new_date < v_today - 7 or p_new_date > v_today + 120) then
+    raise exception 'eng_activity_event: new date % must be between % and % (today in Asia/Ho_Chi_Minh -7 .. +120 days)',
+      p_new_date, v_today - 7, v_today + 120 using errcode = '23514';
   end if;
 
   select e.kind into v_last

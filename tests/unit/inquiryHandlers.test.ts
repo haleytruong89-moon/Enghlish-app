@@ -163,9 +163,34 @@ describe("S2 route handlers: validation and database errors", () => {
   });
 
   it("schemas accept the documented shapes", () => {
-    expect(assignBodySchema.safeParse(goodAssign).success).toBe(true);
-    expect(eventBodySchema.safeParse(goodEvent).success).toBe(true);
-    expect(eventBodySchema.safeParse({ kind: "unskip", reason: "Làm lại bước này" }).success).toBe(true);
+    expect(assignBodySchema(NOW).safeParse(goodAssign).success).toBe(true);
+    expect(eventBodySchema(NOW).safeParse(goodEvent).success).toBe(true);
+    expect(eventBodySchema(NOW).safeParse({ kind: "unskip", reason: "Làm lại bước này" }).success).toBe(true);
+  });
+
+  it("due date and reschedule date must lie in [today - 7, today + 120] (Asia/Ho_Chi_Minh): edges in, one day further out", async () => {
+    // NOW = 2026-10-14 15:00 in Hồ Chí Minh → window 2026-10-07 .. 2027-02-11
+    const edges: [string, boolean][] = [
+      ["2026-10-06", false], ["2026-10-07", true], ["2026-10-14", true], ["2027-02-11", true], ["2027-02-12", false], ["2030-01-01", false],
+    ];
+    for (const [d, ok] of edges) {
+      expect(assignBodySchema(NOW).safeParse({ ...goodAssign, due_on: d }).success, `due ${d}`).toBe(ok);
+      expect(eventBodySchema(NOW).safeParse({ ...goodEvent, new_date: d }).success, `reschedule ${d}`).toBe(ok);
+    }
+    // "today" is the Vietnamese date: 20:00 UTC on 14/10 is already 15/10 in Hồ Chí Minh
+    const late = new Date("2026-10-14T20:00:00Z");
+    expect(assignBodySchema(late).safeParse({ ...goodAssign, due_on: "2026-10-08" }).success).toBe(true);
+    expect(assignBodySchema(late).safeParse({ ...goodAssign, due_on: "2026-10-07" }).success).toBe(false);
+  });
+
+  it("the handlers apply the window: 400 for a due date or a reschedule date outside it, nothing is stored", async () => {
+    const s = makeStore();
+    expect((await handleAssign(deps("parent", s), AN, { ...goodAssign, due_on: "2026-09-01" })).status).toBe(400);
+    expect((await handleAssign(deps("parent", s), AN, { ...goodAssign, due_on: "2027-06-01" })).status).toBe(400);
+    expect((await handleActivityEvent(deps("parent", s), ACT_AN, { ...goodEvent, new_date: "2026-09-01" })).status).toBe(400);
+    expect((await handleActivityEvent(deps("parent", s), ACT_AN, { ...goodEvent, new_date: "2027-06-01" })).status).toBe(400);
+    expect(s.assign).not.toHaveBeenCalled();
+    expect(s.recordEvent).not.toHaveBeenCalled();
   });
 });
 

@@ -1,9 +1,11 @@
+import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { sourceHash } from "../../lib/config/content";
 import { toKeyRows, toSafeSteps } from "../../lib/config/inquiries";
 import type { InquiryTemplate } from "../../lib/config/schemas";
 import { loadContentItems, type InquiryTemplateItem } from "../../lib/config/versions";
 import { buildSeedSql } from "../../scripts/lib/configSql";
+import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { createAuthUser, createTestDb, errorAs, migrate, rowsAs, seed, type Seeded, type TestDb } from "./helpers";
 
 // All dates are relative to "today in Asia/Ho_Chi_Minh" (what the database uses), so the suite keeps passing
@@ -437,6 +439,72 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
       expect(other.err).toBeNull();
     });
 
+    /** Run `fn` as the owner inside a transaction that is always rolled back; returns what fn returns. */
+    const inTx = async <T>(fn: () => Promise<T>): Promise<T> => {
+      await db.client.query("begin");
+      try {
+        return await fn();
+      } finally {
+        await db.client.query("rollback");
+      }
+    };
+
+    it("a late (or early) assignment keeps the relative schedule: every planned date moves by (due - template end date) days", async () => {
+      for (const shift of [4, -3, 0]) {
+        const due = addDays(DUE, shift);
+        const got = await inTx(async () => {
+          const id = (await db.client.query<{ id: string }>(assignSql, [s.learners.an, "A-W9-TEST", 1, due, s.members.parent, `req-shift-${shift + 10}`])).rows[0]?.id;
+          const acts = (await db.client.query("select step_no, scheduled_for::text as d from english.activity_instances where inquiry_instance_id = $1 order by step_no", [id])).rows;
+          const snap = (await db.client.query("select snapshot, due_on::text as due from english.inquiry_instances where id = $1", [id])).rows[0];
+          return { acts, snap };
+        });
+        // step 1 planned STEP1, step 2 has no date and stays without one
+        expect(got.acts, `shift ${shift}`).toEqual([{ step_no: 1, d: addDays(STEP1, shift) }, { step_no: 2, d: null }]);
+        expect(got.snap.due).toBe(due);
+        expect(got.snap.snapshot.steps[0].planned_date).toBe(addDays(STEP1, shift));
+        expect(got.snap.snapshot.steps[1].planned_date).toBeNull();
+        expect(got.snap.snapshot.template).toMatchObject({ date_from: addDays(FROM, shift), date_to: due, template_date_from: FROM, template_date_to: DUE, date_shift_days: shift });
+      }
+    });
+
+    it("the due date must lie in [today - 7, today + 120] (Asia/Ho_Chi_Minh): the edges are accepted, one day beyond is refused", async () => {
+      for (const [due, ok] of [
+        [addDays(TODAY, -8), false],
+        [addDays(TODAY, -7), true],
+        [addDays(TODAY, 120), true],
+        [addDays(TODAY, 121), false],
+        ["2030-01-01", false],
+      ] as const) {
+        const err = await inTx(async () => {
+          try {
+            await db.client.query(assignSql, [s.learners.an, "A-W9-TEST", 1, due, s.members.parent, "req-window-001"]);
+            return null;
+          } catch (e) {
+            return e as Error & { code?: string };
+          }
+        });
+        if (ok) expect(err, due).toBeNull();
+        else {
+          expect(err?.code, due).toBe("23514");
+          expect(err?.message, due).toMatch(/due date .* must be between/);
+        }
+      }
+    });
+
+    it("the snapshot records the catalogue, descriptor and assessment-policy versions in force at assignment", async () => {
+      const t = (await db.client.query("select snapshot -> 'template' as t from english.inquiry_instances where id = $1", [anInstance])).rows[0].t;
+      const meta = catalogueItem!.data.meta;
+      expect(t).toMatchObject({
+        catalogue_version: catalogueItem!.id,
+        descriptor_version: meta.descriptor_version,
+        assessment_policy_version: meta.assessment_policy_version,
+      });
+      // they come from the learner's current target set when there is one (A-v1 here), not from the template alone
+      const set = (await db.client.query("select d.descriptor_version, cv.assessment_policy_version as ap from english.target_sets ts join english.target_set_definitions d on d.id = ts.definition_id join english.catalogue_versions cv on cv.version = d.catalogue_version where ts.learner_id = $1", [s.learners.an])).rows[0];
+      expect(t.descriptor_version).toBe(set.descriptor_version);
+      expect(t.assessment_policy_version).toBe(set.ap);
+    });
+
     it("validates its arguments", async () => {
       expect((await svc(assignSql, [s.learners.an, "A-W9-TEST", 1, DUE, s.members.parent, "short"])).err?.code).toBe("22023");
       expect((await svc(assignSql, [s.learners.an, "A-W9-TEST", 1, null, s.members.parent, "req-null-due1"])).err?.code).toBe("22004");
@@ -500,6 +568,23 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
         await db.client.query("rollback");
       }
       expect(await count("select count(*)::int as n from english.activity_instance_events")).toBe(0);
+    });
+
+    it("a new date must lie in [today - 7, today + 120]: edges accepted, one day beyond refused", async () => {
+      for (const [d, ok] of [
+        [addDays(TODAY, -8), false],
+        [addDays(TODAY, -7), true],
+        [addDays(TODAY, 120), true],
+        [addDays(TODAY, 121), false],
+        ["2030-01-01", false],
+      ] as const) {
+        const r = await ev("reschedule", d, "đổi ngày thử", s.members.parent, () => anActivities[0]);
+        if (ok) expect(r.err, d).toBeNull();
+        else {
+          expect(r.err?.code, d).toBe("23514");
+          expect(r.err?.message, d).toMatch(/new date .* must be between/);
+        }
+      }
     });
 
     it("checks the actor: student, the other child's tutor, unknown member", async () => {
@@ -918,6 +1003,44 @@ describe("S2 inquiries (DESIGN §4, §5, §7)", () => {
       expect(staffSnapshot[0]?.snapshot.steps.map((x) => x.step_no)).toEqual([1, 2, 3, 4, 5]);
       const fn = (await db.client.query("select has_function_privilege('authenticated', 'english.eng_my_released_steps(uuid)', 'execute') as a, has_function_privilege('anon', 'english.eng_my_released_steps(uuid)', 'execute') as n")).rows[0];
       expect(fn).toEqual({ a: true, n: false });
+    });
+  });
+
+  describe("concurrent assignment", () => {
+    it("four simultaneous requests with the same client_request_id create exactly one inquiry (one row, one set of steps and keys)", async () => {
+      // a learner of their own, so the counts above stay untouched
+      const learner = (
+        await db.client.query<{ id: string }>(
+          "insert into english.learners(family_id, alias, track_id) values ($1, 'Concurrency (thử)', 'A') returning id",
+          [s.familyId],
+        )
+      ).rows[0]?.id;
+      if (!learner) throw new Error("no learner");
+      const clients = await Promise.all(
+        [0, 1, 2, 3].map(async () => {
+          const c = new Client(pgConfigFromUrl(db.url));
+          await c.connect();
+          return c;
+        }),
+      );
+      try {
+        const results = await Promise.all(
+          clients.map((c) => c.query<{ id: string }>(assignSql, [learner, "A-W9-TEST", 1, DUE, s.members.parent, "req-concurrent-1"])),
+        );
+        const ids = new Set(results.map((r) => r.rows[0]?.id));
+        expect(ids.size).toBe(1);
+        expect(await count("select count(*)::int as n from english.inquiry_instances where learner_id = $1", [learner])).toBe(1);
+        expect(await count("select count(*)::int as n from english.activity_instances where learner_id = $1", [learner])).toBe(2);
+        expect(await count("select count(*)::int as n from english.instance_item_keys where learner_id = $1", [learner])).toBeGreaterThan(0);
+        expect(await count("select count(*)::int as n from english.audit_log where learner_id = $1 and action = 'inquiry.assigned'", [learner])).toBe(1);
+        const keysPerItem = await count(
+          "select count(*)::int as n from (select item_id from english.instance_item_keys where learner_id = $1 group by item_id having count(*) > 1) d",
+          [learner],
+        );
+        expect(keysPerItem).toBe(0);
+      } finally {
+        await Promise.all(clients.map((c) => c.end()));
+      }
     });
   });
 });

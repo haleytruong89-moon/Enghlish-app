@@ -108,7 +108,7 @@ export async function handleListInquiries(deps: HandlerDeps, learnerId: string):
 export async function handleAssign(deps: HandlerDeps, learnerId: string, rawBody: unknown): Promise<HandlerResult> {
   const g = await guard(deps, learnerId, "inquiries:assign");
   if (!g.ok) return g.result;
-  const parsed = assignBodySchema.safeParse(rawBody);
+  const parsed = assignBodySchema(deps.access?.now).safeParse(rawBody);
   if (!parsed.success) return fail(400, "invalid_body");
   try {
     const id = await deps.store.assign({ ...parsed.data, learnerId: g.grant.learner.id, byMemberId: g.grant.member.id });
@@ -128,7 +128,7 @@ export async function handleActivityEvent(deps: HandlerDeps, activityId: string,
 
   const g = await guard(deps, learnerId, "activities:event");
   if (!g.ok) return g.result;
-  const parsed = eventBodySchema.safeParse(rawBody);
+  const parsed = eventBodySchema(deps.access?.now).safeParse(rawBody);
   if (!parsed.success) return fail(400, "invalid_body");
   try {
     const id = await deps.store.recordEvent({ ...parsed.data, activityId, byMemberId: g.grant.member.id });
