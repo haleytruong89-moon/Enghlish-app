@@ -113,12 +113,13 @@ describe("append-only audit_log + controlled purge (DESIGN §6, FR-21)", () => {
     expect(result.guc).toBe(""); // door closed again before returning
     expect(result.counts).toEqual({
       an_learner: 0, nguyen_learner: 1, an_rels: 0, an_consents: 0,
-      an_audit: 0, nguyen_audit: 1, an_member: 0, receipts: 1,
+      // Nguyên keeps 2 rows: the test-seed audit row + the S1 `target_set.assigned` receipt.
+      an_audit: 0, nguyen_audit: 2, an_member: 0, receipts: 1,
     });
     expect(result.receipt).toMatchObject({
       learner_id: s.learners.an,
       was_test: true,
-      deleted: { learners: 1, consents: 1, relationships: 2, members: 1 },
+      deleted: { learners: 1, consents: 1, relationships: 2, members: 1, target_sets: 1 },
     });
   });
 

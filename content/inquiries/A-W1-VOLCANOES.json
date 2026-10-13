@@ -1,0 +1,465 @@
+{
+  "format": "inquiry-template/1",
+  "id": "A-W1-VOLCANOES",
+  "version": 1,
+  "track": "A",
+  "status": "published",
+  "catalogue_version": "0.2.1-draft",
+  "title_vi": "Tuần 1 - Núi lửa",
+  "big_question_en": "Why do volcanoes erupt?",
+  "big_question_vi": "Vì sao núi lửa phun trào?",
+  "week": 1,
+  "dates": {
+    "from": "2026-10-19",
+    "to": "2026-10-25"
+  },
+  "domain_bucket": "science",
+  "target_ids": [
+    "A-T1-TEXT-L",
+    "A-T1-TEXT-R",
+    "A-L3-CAUSE-S",
+    "A-L3-CAUSE-W",
+    "A-L3-PARA-W",
+    "A-L4-PROCESS-S",
+    "A-L2-CHUNKS",
+    "A-L2-COMPENSATE-S",
+    "A-T4-CAUSE",
+    "A-T7-OPINION",
+    "A-X1-TURN"
+  ],
+  "sources": [
+    {
+      "id": "A-W1-VOLCANOES-S1",
+      "title": "Why Do Volcanoes Erupt? (bài đọc VOL-R)",
+      "url": null,
+      "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi",
+      "rights_note": "Tự soạn (v0.2.1). Nguồn kiểm: NPS (https://www.nps.gov/subjects/volcanoes/volcanic-eruptions.htm), NASA Space Place (https://spaceplace.nasa.gov/volcanoes2/), USGS Kilauea (https://www.usgs.gov/volcanoes/kilauea), USGS 1980 Cataclysmic Eruption (https://www.usgs.gov/volcanoes/mount-st.-helens/science/1980-cataclysmic-eruption), USGS buồng magma phần lớn là đá nóng gần đặc (https://www.usgs.gov/faqs/how-big-magma-chamber-under-yellowstone). Đơn giản hóa có chủ ý: Kilauea \"usually\" phun chảy.",
+      "modality": "text",
+      "text": "Why Do Volcanoes Erupt?\n\nDeep under the ground, it is extremely hot. In some places, part of the rock melts. Melted rock under the ground is called magma.\n\nMagma is lighter than the solid rock around it, so it slowly rises. It often collects deep under a volcano, in a place called a magma chamber.\n\nMagma has gas in it, a bit like the gas in a bottle of fizzy drink. Deep underground, the heavy rock above presses on the magma, so the gas stays inside. But when the magma rises near the surface, there is less pressure. The gas comes out and makes bubbles. The bubbles grow bigger and push the magma up. When the push is strong enough, the magma breaks through the ground. This is an eruption. When magma comes out of a volcano, we call it lava.\n\nNot all eruptions are the same. Some magma is runny, like soup. The gas escapes easily, so the lava pours out and flows like a red river. Kilauea in Hawaii usually erupts this way. Other magma is thick and sticky, like honey. The gas is trapped, and the pressure builds up. As a result, the volcano explodes and throws ash high into the sky. Mount St. Helens in the USA had thick magma like this, and it exploded in 1980."
+    },
+    {
+      "id": "A-W1-VOLCANOES-S2",
+      "title": "Dr Linh, volcano scientist (bài nghe VOL-L, file A_VOL_L)",
+      "url": null,
+      "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi; nhân vật Dr Linh là hư cấu",
+      "rights_note": "Tự soạn, TTS một giọng cố định 0,9x. Nguồn kiểm: USGS FAQ (https://www.usgs.gov/faqs/how-can-we-tell-when-volcano-will-erupt): dấu hiệu động đất, mặt đất phồng, thay đổi khí; USGS Eruption forecast (https://www.usgs.gov/natural-hazards/volcano-hazards/eruption-forecast): dự báo là xác suất, không phải một ngày chính xác.",
+      "modality": "audio",
+      "text": "Hi, I'm Dr Linh, and I am a volcano scientist. People often ask me, \"Can you tell the exact day a volcano will erupt?\" The honest answer is no. But we can see warning signs.\n\nEvery day, my team watches a volcano for three signs. First, we count small earthquakes. When magma moves up under the ground, it breaks rock, and this makes many small earthquakes. Second, we measure the ground. When magma collects under a volcano, the ground can rise a little, like a balloon. Third, we check the gas. When magma moves closer to the surface, the gas coming out of the volcano can change.\n\nIf we see all three signs getting stronger, we tell the people who live nearby. Then they can leave their homes in time. Our job is not to stop eruptions. Our job is to keep people safe."
+    }
+  ],
+  "steps": [
+    {
+      "step_no": 1,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [],
+      "prompt_en": "What do you know about volcanoes? (You can speak Vietnamese.) Tip for a missing word: It's a kind of... / It's like... / It's a thing that... / I don't know the word, but... / How do you say ... in English?",
+      "prompt_vi": "T2 19/10 (25') - Câu hỏi lớn + đoán trước + mẹo nói tiếp khi quên từ (luyện với 2 vật khác bộ ảnh T6, vd. cái dập ghim, cái bấm lỗ). CHƯA phát thẻ 8 cụm từ (nghĩa và câu ví dụ trùng đáp án bài đọc/nghe).",
+      "time_min": 25,
+      "planned_date": "2026-10-19",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 2,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [],
+      "target_ids": [
+        "A-T1-TEXT-L"
+      ],
+      "prompt_en": "Listen (maximum 2 times, no text). Answer the questions.",
+      "prompt_vi": "T3 20/10 (10') - Bài nghe ở nhà, bố/mẹ ngồi cạnh. Nghe hiểu: c1 ý chính, c2 >= 3/4 chi tiết. L6 chẩn đoán.",
+      "time_min": 10,
+      "planned_date": "2026-10-20",
+      "items": [
+        {
+          "id": "W1-L1",
+          "kind": "mcq",
+          "stem": "What is the talk mainly about?",
+          "options": [
+            "a) how volcanoes are made",
+            "b) how scientists watch for warning signs of an eruption",
+            "c) why Dr Linh likes volcanoes",
+            "d) how to stop an eruption"
+          ],
+          "answer": "b",
+          "explanation_vi": "Ý chính (c1).",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W1-L2",
+          "kind": "short",
+          "stem": "How many warning signs does Dr Linh's team watch?",
+          "options": [],
+          "answer": "Three.",
+          "explanation_vi": "Chi tiết 1/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W1-L3",
+          "kind": "short",
+          "stem": "What makes many small earthquakes?",
+          "options": [],
+          "answer": "Magma moving up and breaking rock.",
+          "explanation_vi": "Chi tiết 2/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W1-L4",
+          "kind": "short",
+          "stem": "What can happen to the ground when magma collects under a volcano?",
+          "options": [],
+          "answer": "It can rise a little (like a balloon).",
+          "explanation_vi": "Chi tiết 3/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W1-L5",
+          "kind": "short",
+          "stem": "What does the team do if all three signs get stronger?",
+          "options": [],
+          "answer": "They tell / warn the people who live nearby (so they can leave).",
+          "explanation_vi": "Chi tiết 4/4. Cần >= 3/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W1-L6",
+          "kind": "open",
+          "stem": "Dr Linh says, \"Our job is not to stop eruptions.\" Why do you think she says this?",
+          "options": [],
+          "answer": "Vì con người không ngăn được núi lửa phun; việc của nhà khoa học là cảnh báo để người dân an toàn. Dấu hiệu: 'Our job is to keep people safe'.",
+          "explanation_vi": "CHẨN ĐOÁN (mục đích người nói). Được trả lời tiếng Việt, ghi lang=vi.",
+          "target_id": "A-T2-INFER-L"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 3,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [],
+      "target_ids": [
+        "A-T1-TEXT-R"
+      ],
+      "prompt_en": "Read the text once, then answer. You may look back at the text.",
+      "prompt_vi": "T3 20/10 (18') - Bài đọc ở nhà. Xem lại bài = bình thường (không ghi source_open). Đọc hiểu: c1 ý chính, c2 >= 4/5 chi tiết (R2-R6).",
+      "time_min": 18,
+      "planned_date": "2026-10-20",
+      "items": [
+        {
+          "id": "W1-R1",
+          "kind": "mcq",
+          "stem": "What is the text mainly about?",
+          "options": [
+            "a) why the inside of the Earth is hot",
+            "b) why volcanoes erupt, and why eruptions are different",
+            "c) the story of Mount St. Helens",
+            "d) how to make lava at home"
+          ],
+          "answer": "b",
+          "explanation_vi": "Ý chính (c1).",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W1-R2",
+          "kind": "short",
+          "stem": "What is magma?",
+          "options": [],
+          "answer": "Melted rock under the ground.",
+          "explanation_vi": "Chi tiết 1/5.",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W1-R3",
+          "kind": "short",
+          "stem": "Why does magma start to rise from deep under the ground?",
+          "options": [],
+          "answer": "It is lighter than the solid rock around it.",
+          "explanation_vi": "Chi tiết 2/5. Chữ \"start\" khóa đúng giai đoạn đầu (nhẹ hơn đá), không phải giai đoạn bong bóng đẩy.",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W1-R4",
+          "kind": "short",
+          "stem": "Deep underground, why does the gas stay inside the magma?",
+          "options": [],
+          "answer": "The heavy rock above presses on it (high pressure).",
+          "explanation_vi": "Chi tiết 3/5 (nhân quả).",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W1-R5",
+          "kind": "short",
+          "stem": "Put in order: (A) The bubbles push the magma up. (B) Magma rises near the surface. (C) The magma breaks through the ground. (D) The gas comes out and makes bubbles.",
+          "options": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "answer": "B, D, A, C",
+          "explanation_vi": "Chi tiết 4/5 (trình tự).",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W1-R6",
+          "kind": "short",
+          "stem": "Why can a volcano with thick, sticky magma explode?",
+          "options": [],
+          "answer": "The gas is trapped, so the pressure builds up (it cannot get out).",
+          "explanation_vi": "Chi tiết 5/5 (nhân quả có trong bài). Cần >= 4/5 chi tiết.",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W1-R7",
+          "kind": "open",
+          "stem": "Scientists find that the magma under a volcano is very runny. Will the next eruption probably be a big explosion? Why or why not? Give a clue from the text.",
+          "options": [],
+          "answer": "Probably not. Gas escapes easily from runny magma, so the lava pours out and flows.",
+          "explanation_vi": "CHẨN ĐOÁN (suy luận).",
+          "target_id": "A-T2-INFER-R"
+        },
+        {
+          "id": "W1-R8",
+          "kind": "short",
+          "stem": "\"The gas is trapped.\" What does 'trapped' mean?",
+          "options": [],
+          "answer": "Cannot get out (bị giữ lại, mắc kẹt).",
+          "explanation_vi": "CHẨN ĐOÁN (nghĩa từ).",
+          "target_id": "A-T2-INFER-R"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 4,
+      "activity_type": "ACT-CANVAS-BASIC",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [
+        "A-T4-CAUSE"
+      ],
+      "prompt_en": "Main idea: Volcanoes erupt because... Why (3 cards, each one is the result of the one before): [Magma is lighter than rock, so...] -> [Near the surface,...] -> [The bubbles...]. Example: choose Kilauea or Mount St. Helens. How did it erupt? Why?",
+      "prompt_vi": "T4 21/10 (6' + 12') - Làm đầu tiên: phát 8 cụm từ + thẻ từ (6'), SAU khi An nộp bài nghe và bài đọc. Rồi Canvas (12'): được xem lại bài đọc (source_open), viết thẻ tiếng Việt nếu bí. 8 cụm từ: magma = đá nóng chảy dưới lòng đất · lava = dung nham · melted rock = đá nóng chảy · rise/rises = đi lên · gas bubbles = bong bóng khí · pressure builds up = áp suất tăng dần · erupt/an eruption = phun trào · as a result = kết quả là. Đáp án gợi ý cho bố mẹ: Magma nhẹ hơn đá -> nổi lên, gom trong buồng magma -> gần mặt đất áp suất giảm -> khí thoát ra thành bong bóng -> bong bóng lớn dần, đẩy magma -> magma xuyên qua mặt đất = phun trào. Magma loãng: khí thoát dễ -> dung nham chảy. Magma đặc: khí bị giữ -> áp suất tăng -> nổ.",
+      "time_min": 18,
+      "planned_date": "2026-10-21",
+      "items": [
+        {
+          "id": "W1-CV",
+          "kind": "open",
+          "stem": "Fill in the three cards and the example.",
+          "options": [],
+          "answer": "Magma nhẹ hơn đá -> nổi lên, gom trong buồng magma -> gần mặt đất áp suất giảm -> khí thoát ra thành bong bóng -> bong bóng lớn dần, đẩy magma -> magma xuyên qua mặt đất = phun trào. Magma loãng: khí thoát dễ -> dung nham chảy. Magma đặc: khí bị giữ -> áp suất tăng -> nổ.",
+          "explanation_vi": "Luyện tập, tùy chọn ghi 1 dòng Giải thích chuỗi nguyên nhân.",
+          "target_id": "A-T4-CAUSE"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 5,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [
+        "A-L3-CAUSE-S",
+        "A-L2-CHUNKS"
+      ],
+      "prompt_en": "Why does magma rise, and what happens to the gas in it? - Magma is... / Magma rises because... / Deep underground, the gas stays inside because... / When the magma comes near the surface,..., so... / As a result,... (Think for 1 minute, then speak 45-60 seconds.)",
+      "prompt_vi": "T4 21/10 (12') - Luyện nói có câu mẫu, ghi âm trên máy (chế độ máy bay). support_used = frame. Bố mẹ nghe 1 lần, đánh dấu từ nối và từ mới, không cần gõ chữ.",
+      "time_min": 12,
+      "planned_date": "2026-10-21",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 6,
+      "activity_type": "ACT-WRITE",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [
+        "A-L3-CAUSE-W",
+        "A-L2-CHUNKS"
+      ],
+      "prompt_en": "Magma and lava: what is the difference? Why does magma come up to the surface? Magma is..., but lava is... / Magma is lighter than..., so... / When it comes near the surface, the gas... / That is why... (50-70 words)",
+      "prompt_vi": "T5 22/10 (18') - Luyện viết có câu mẫu. Chỉ ghi A-L2-CHUNKS nếu >= 60 từ; không ghi Viết đoạn văn (< 80 từ).",
+      "time_min": 18,
+      "planned_date": "2026-10-22",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 7,
+      "activity_type": "ACT-SELF-REVIEW",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [],
+      "prompt_en": "Check your own writing.",
+      "prompt_vi": "T5 22/10 (5' + 2' thẻ từ) - Tự kiểm sau khi viết luyện.",
+      "time_min": 7,
+      "planned_date": "2026-10-22",
+      "items": [],
+      "self_check_vi": [
+        "Câu đầu của bạn đã trả lời câu hỏi chưa?",
+        "Bạn đã nói vì sao magma đi lên và vì sao khí đẩy nó chưa?",
+        "Bạn đã dùng 2 từ nối khác nhau và 4 từ mới chưa?"
+      ]
+    },
+    {
+      "step_no": 8,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-L3-CAUSE-S",
+        "A-L4-PROCESS-S",
+        "A-T4-CAUSE",
+        "A-L2-CHUNKS"
+      ],
+      "prompt_en": "How and why does a volcano erupt? Explain it step by step, from deep under the ground to the eruption. (30 seconds to think, no writing. Speak 60-90 seconds.)",
+      "prompt_vi": "T6 23/10 (7') - Nói tự làm (SIC), bài kiểm tra trong buổi, cô quan sát trực tiếp, ghi âm. Ghi activity_type = ACT-SPEAK-MONO. Không câu mẫu, không vở. Nói trôi chảy và Xoay xở khi thiếu từ được chấm ở lượt LIVE kế tiếp, không ở đây.",
+      "time_min": 7,
+      "planned_date": "2026-10-23",
+      "items": [
+        {
+          "id": "W1-SIC",
+          "kind": "open",
+          "stem": "How and why does a volcano erupt? Explain step by step.",
+          "options": [],
+          "answer": "Magma nhẹ hơn đá -> nổi lên, gom trong buồng magma -> gần mặt đất áp suất giảm -> khí thoát ra thành bong bóng -> bong bóng lớn dần, đẩy magma -> magma xuyên qua mặt đất = phun trào. Magma loãng: khí thoát dễ -> dung nham chảy. Magma đặc: khí bị giữ -> áp suất tăng -> nổ.",
+          "explanation_vi": "A-L3-CAUSE-S (>= 2 loại từ nối, đúng chiều); A-L4-PROCESS-S (nêu tên quá trình + kết quả, >= 3 bước đúng thứ tự); A-T4-CAUSE (>= 2 liên kết đúng, nối thành chuỗi); A-L2-CHUNKS (>= 4 trong 8 cụm từ).",
+          "target_id": "A-L3-CAUSE-S"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 9,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-X1-TURN",
+        "A-L2-COMPENSATE-S"
+      ],
+      "prompt_en": "Choose one picture. It must be something you know how to use, but you do not know its English name. Tell me about it: what it looks like, what we use it for, and how you use it. (30 seconds to think, no writing. Speak 60-90 seconds.)",
+      "prompt_vi": "T6 23/10 (4') - Lượt nói trực tiếp (kit mục 3.0, \"Thử thách thiếu từ\"). Cô đưa 3 ảnh: tweezers (cái nhíp) · funnel (cái phễu) · magnifying glass (kính lúp). Cô không nói tên tiếng Anh trước T6; cô chỉ nói \"Bắt đầu nhé\" / \"Còn 30 giây\", không nhắc \"giải thích cách khác\". Ghi activity_type = ACT-SPEAK-LIVE, context_topic = lab-tools, chỉ cô chấm; cô bấm giờ (duration_s; c1 Nói trôi chảy cần >= 60 giây). Nói trôi chảy: c1 >= 60 giây, c2 <= 3 lần ngừng > 3 giây, c3 nói lại câu thay vì bỏ dở. Xoay xở khi thiếu từ: cô xác nhận có chỗ thiếu từ thật; An biết tên cả 3 vật (đổi bộ ảnh) hoặc không có chỗ thiếu thật => NULL, đó là kết quả hợp lệ.",
+      "time_min": 4,
+      "planned_date": "2026-10-23",
+      "items": [
+        {
+          "id": "W1-LIVE",
+          "kind": "open",
+          "stem": "Choose one picture and tell me about it.",
+          "options": [],
+          "answer": "Không có đáp án mẫu. Cô ghi: vật An chọn, từ An chưa biết, cách An diễn đạt vòng (a thing that..., it is like...), có chuyển sang tiếng Việt không.",
+          "explanation_vi": "A-X1-TURN (c1 >= 60 giây; c2 <= 3 lần ngừng dài; c3 nói lại câu) và A-L2-COMPENSATE-S (c1 >= 1 lần diễn đạt vòng thành công bằng tiếng Anh; c2 <= 1 lần chuyển sang tiếng Việt), hoặc NULL.",
+          "target_id": "A-X1-TURN"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 10,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-T7-OPINION"
+      ],
+      "prompt_en": "Would you like to live near a volcano? Why or why not? Give your reasons and an example. Talk for at least one minute. (Then: Now you can ask me two questions about volcanoes.)",
+      "prompt_vi": "T6 23/10 (3') - Nói ý kiến (OP), ghi âm trên máy. Cô hỏi một lần, nghĩ 30 giây, không hỏi thêm \"Why?\" khi An đang nói; An nói ít nhất 1 phút. Chấm: c1 quan điểm rõ, c2 >= 2 lý do khác nhau, c3 >= 1 ví dụ gắn với lý do. Không chấm quan điểm đúng/sai. Ghi activity_type = ACT-SPEAK-MONO (catalogue không nhận Nêu ý kiến ở ACT-SPEAK-LIVE). Sau đó: \"Now you can ask me two questions about volcanoes.\" (luyện hỏi, chỉ ghi chú, không ghi dòng).",
+      "time_min": 3,
+      "planned_date": "2026-10-23",
+      "items": [
+        {
+          "id": "W1-OP",
+          "kind": "open",
+          "stem": "Would you like to live near a volcano? Why or why not? Give your reasons and an example. Talk for at least one minute.",
+          "options": [],
+          "answer": "Không có đáp án đúng/sai; chấm lập luận.",
+          "explanation_vi": "A-T7-OPINION: c1 quan điểm rõ; c2 >= 2 lý do khác nhau, liên quan; c3 >= 1 ví dụ gắn với một lý do.",
+          "target_id": "A-T7-OPINION"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 11,
+      "activity_type": "ACT-WRITE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-L3-CAUSE-W",
+        "A-L3-PARA-W",
+        "A-T4-CAUSE",
+        "A-L2-CHUNKS"
+      ],
+      "prompt_en": "Some volcanoes explode, but others let lava flow out gently. Why? Write one paragraph (80-120 words). (20 minutes. No dictionary, no text.)",
+      "prompt_vi": "T6 23/10 (20') - Viết tự làm, bài kiểm tra trong buổi, cô có mặt, không can thiệp. Dùng thì quá khứ: không ghi (đề giải thích). Viết đoạn văn chỉ chấm khi >= 80 từ.",
+      "time_min": 20,
+      "planned_date": "2026-10-23",
+      "items": [
+        {
+          "id": "W1-WIC",
+          "kind": "open",
+          "stem": "Some volcanoes explode, but others let lava flow out gently. Why?",
+          "options": [],
+          "answer": "Magma loãng -> khí thoát dễ -> dung nham chảy nhẹ; magma đặc -> khí bị giữ -> áp suất tăng -> nổ.",
+          "explanation_vi": "A-L3-CAUSE-W c1-c2; A-L3-PARA-W c1-c3; A-T4-CAUSE c1-c2; A-L2-CHUNKS c1-c2.",
+          "target_id": "A-L3-CAUSE-W"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 12,
+      "activity_type": "ACT-SELF-REVIEW",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-A1-SELFASSESS"
+      ],
+      "prompt_en": "Before you hear any feedback, check your own paragraph.",
+      "prompt_vi": "T6 23/10 (3') - Tự kiểm TRƯỚC khi nghe góp ý. A-A1-SELFASSESS thuộc nhóm theo dõi, không vào mẫu số 12.",
+      "time_min": 3,
+      "planned_date": "2026-10-23",
+      "items": [],
+      "self_check_vi": [
+        "Câu đầu của bạn đã trả lời câu hỏi (vì sao có núi lửa nổ, có núi lửa chảy nhẹ) chưa?",
+        "Bạn đã nói vì sao magma loãng thì dung nham chảy ra, magma đặc thì núi lửa nổ chưa?",
+        "Bạn đã dùng 2 từ nối khác nhau và 4 từ mới chưa?",
+        "Một điều mình làm tốt: ______",
+        "Một điều mình muốn sửa: ______"
+      ]
+    },
+    {
+      "step_no": 13,
+      "activity_type": "ACT-REVISE",
+      "mode": "REVISION",
+      "purpose": [],
+      "target_ids": [
+        "A-A3-REDRAFT"
+      ],
+      "prompt_en": "Read each hint. Find the place in your paragraph and fix it. Underline what you changed. Write one line for each hint: 'Mình đã đổi ... thành ... vì ...'.",
+      "prompt_vi": "T6 23/10 (cô chọn <= 3 gợi ý 7' + An sửa 15') - Gợi ý chỉ chỗ và loại lỗi, không đưa câu đúng. Luôn is_first_attempt = N, chung learning_family với bản gốc. Thêm: nếu cô hỏi về chiều nhân quả, đọc to câu đó và hỏi 'cái gì xảy ra trước?'.",
+      "time_min": 15,
+      "planned_date": "2026-10-23",
+      "items": [],
+      "self_check_vi": []
+    }
+  ]
+}

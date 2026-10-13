@@ -131,6 +131,103 @@ export const skillNames: Record<string, { staff: string; student: string }> = {
   "A-X1-TURN": { staff: "Nói trôi chảy (cô nghe trực tiếp)", student: "Nói liền mạch" },
 };
 
+// ---------- Kỹ năng đang theo dõi (S1) — chỉ phụ huynh/gia sư; học sinh không có trang này -------------
+export const targetsPage = {
+  link: "Kỹ năng đang theo dõi",
+  title: (alias: string) => `Kỹ năng đang theo dõi · ${alias}`,
+  count: (n: number) => `${n} kỹ năng đang theo dõi`,
+  intro: "Đây là danh sách kỹ năng dùng để đánh giá tiến bộ. Khi có đủ bài làm đã duyệt, bậc của từng kỹ năng sẽ hiện ở đây.",
+  dimension: "Nhóm",
+  codeLabel: "mã",
+  trackingOnlyTitle: "Theo dõi thêm (không tính vào đánh giá)",
+  trackingOnlyEmpty: "Không có mục theo dõi thêm.",
+  noSet: "Chưa chọn bộ kỹ năng cho em này.",
+  back: "Về trang chủ",
+  techInfoSet: "Bộ kỹ năng",
+  techInfoCatalogue: "Danh mục",
+  techInfoCodes: "Mã kỹ năng",
+} as const;
+
+// ---------- Giao bài (S2) — chỉ phụ huynh/gia sư; học sinh không có trang này ---------------------------------
+export const inquiriesPage = {
+  link: "Giao bài",
+  title: (alias: string) => `Giao bài · ${alias}`,
+  back: "Về trang chủ",
+  availableTitle: "Bài có thể giao",
+  availableEmpty: "Chưa có bài nào để giao cho em này.",
+  weekRange: (week: number, from: string, to: string) => (week === 0 ? `Bài đầu vào · ${from} – ${to}` : `Tuần ${week} · ${from} – ${to}`),
+  stepCount: (n: number) => `${n} bước`,
+  dueLabel: "Hạn làm xong",
+  assignButton: "Giao bài",
+  assigning: "Đang giao…",
+  assignDone: "Đã giao bài.",
+  assignError: "Chưa giao được bài. Bạn thử lại sau ít phút.",
+  assignedTitle: "Đã giao",
+  assignedEmpty: "Chưa giao bài nào.",
+  assignedOn: (date: string) => `Giao ngày ${date}`,
+  dueOn: (date: string) => `Hạn ${date}`,
+  stepLabel: (n: number) => `Bước ${n}`,
+  minutes: (n: number) => `${n} phút`,
+  scheduledFor: (date: string) => `Ngày làm: ${date}`,
+  noDate: "Chưa xếp ngày",
+  originalDate: (date: string) => `Ngày dự kiến ban đầu: ${date}`,
+  skippedTag: "Đã bỏ qua",
+  lastReason: (reason: string) => `Lý do gần nhất: ${reason}`,
+  reschedule: "Đổi ngày",
+  skip: "Bỏ bước",
+  unskip: "Khôi phục bước",
+  newDate: "Ngày mới",
+  reasonLabel: "Lý do (bắt buộc)",
+  reasonRequired: "Bạn nhập lý do (ít nhất 3 chữ) nhé.",
+  dateRequired: "Bạn chọn ngày mới nhé.",
+  dateOutOfRange: "Ngày này xa quá. Bạn chọn ngày từ 7 ngày trước đến 120 ngày sau hôm nay nhé.",
+  save: "Lưu",
+  cancel: "Thôi",
+  saving: "Đang lưu…",
+  eventError: "Chưa lưu được. Bạn thử lại sau ít phút.",
+  sourcesTitle: "Tài liệu của chủ đề",
+  sourceModality: { text: "Bài đọc", audio: "Bài nghe", video: "Video" } as Record<string, string>,
+  /** Video chỉ là liên kết (O-F1): mở trang ngoài, app không nhúng trình phát. */
+  videoLink: "Mở video ở trang ngoài",
+  techInfoTemplate: "Mẫu bài",
+  techInfoCodes: "Mã bước và kỹ năng",
+} as const;
+
+/**
+ * Cách gọi gia sư trong chữ dành cho phụ huynh / gia sư (UX guide §2: "Cô/thầy", cấu hình được). Chưa có cài đặt
+ * theo gia đình nên dùng một hằng số trung tính ở MỘT chỗ — đổi ở đây là đổi cả màn hình dành cho nhân viên.
+ */
+export const tutorHonorific = "thầy/cô";
+
+/** Nhãn bước theo loại hoạt động (UX guide chưa liệt kê — đặt cùng giọng với §3.3). Mã chỉ hiện trong "Thông tin kỹ thuật". */
+export const activityLabels: Record<string, string> = {
+  "ACT-SOURCE-QA": "Đọc hoặc nghe rồi trả lời câu hỏi",
+  "ACT-CANVAS-BASIC": "Sắp xếp ý: ý chính – vì sao – ví dụ",
+  "ACT-CANVAS-ADV": "Sắp xếp lập luận: ý kiến, bằng chứng, hạn chế, hướng khác",
+  "ACT-SPEAK-MONO": "Tự nói và ghi lại",
+  "ACT-SPEAK-LIVE": `Nói chuyện trực tiếp với ${tutorHonorific}`,
+  "ACT-WRITE": "Viết bài",
+  "ACT-REVISE": "Sửa lại bài đã viết",
+  "ACT-SELF-REVIEW": "Tự xem lại bài của mình",
+};
+
+/** Mục đích của bước (purpose) — nhãn cho phụ huynh/gia sư. */
+export const purposeLabels: Record<string, string> = {
+  baseline: "Bài đầu vào (không tính vào bậc)",
+  checkpoint: concepts.checkpoint.staff,
+  delayed_check: concepts.delayedCheck.staff,
+  transfer_check: concepts.transferCheck.staff,
+};
+
+/**
+ * Tên ngắn cho các chỉ số chỉ để theo dõi (aggregate_indicators). Chỉ số nào chưa có tên ở đây thì
+ * hiện nguyên `definition_vi` của danh mục (câu dài, vẫn đúng nhưng nặng chữ).
+ */
+export const trackingNames: Record<string, string> = {
+  "AGG-B-EXAM-MOCK": "Điểm đề thử tháng",
+  "AGG-B-L1-ERRORS": "Lỗi ngữ pháp hay gặp",
+};
+
 // ---------- §5 Thông điệp mẫu -----------------------------------------------------------
 export const messages = {
   submitted: "Đã nộp! Cô sẽ xem và gửi góp ý cho bạn.",
@@ -146,8 +243,10 @@ export const messages = {
 
 // ---------- Lỗi API (trả về JSON, có thể hiện cho người dùng) ------------------------------
 export const apiErrors = {
+  400: "Thông tin gửi lên chưa đúng. Bạn kiểm tra lại nhé.",
   401: "Bạn cần đăng nhập lại.",
   403: "Tài khoản này không làm được việc đó.",
   404: "Không tìm thấy.",
+  409: "Yêu cầu này bị trùng với một yêu cầu trước đó.",
   500: "Có lỗi xảy ra. Bạn thử lại sau ít phút.",
 } as const;

@@ -1,0 +1,48 @@
+[
+  {
+    "id": "A-v1",
+    "track": "A",
+    "version": 1,
+    "target_ids": [
+      "A-L3-CAUSE-S",
+      "A-L3-CAUSE-W",
+      "A-L3-PARA-W",
+      "A-L4-PROCESS-S",
+      "A-L1-PAST-W",
+      "A-L2-CHUNKS",
+      "A-L2-COMPENSATE-S",
+      "A-T1-TEXT-R",
+      "A-T1-TEXT-L",
+      "A-T4-CAUSE",
+      "A-T7-OPINION",
+      "A-X1-TURN"
+    ],
+    "tracking_only": {
+      "dimensions": ["A1", "A3", "A5"],
+      "aggregates": []
+    }
+  },
+  {
+    "id": "B-v1",
+    "track": "B",
+    "version": 1,
+    "target_ids": [
+      "B-T1-EXAM-R",
+      "B-L2-CLOZE",
+      "B-L1-TRANSFORM-W",
+      "B-T1-ARG-R",
+      "B-T2-ASSUME-R",
+      "B-L2-PRECISE",
+      "B-L1-COMPLEX-W",
+      "B-T5-DATAOP",
+      "B-T5-SOURCE",
+      "B-T7-ARGUE",
+      "B-T11-QUALIFY",
+      "B-L4-EXPLAIN-S"
+    ],
+    "tracking_only": {
+      "dimensions": [],
+      "aggregates": ["AGG-B-EXAM-MOCK", "AGG-B-L1-ERRORS"]
+    }
+  }
+]

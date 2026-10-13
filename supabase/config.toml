@@ -1,0 +1,56 @@
+# Local Supabase stack used ONLY by the CI `e2e` job (and optional local runs).
+# Our schema is applied with `npm run db:apply` (never `supabase db push`), so there is
+# deliberately no supabase/migrations folder. Not used for the cloud project.
+project_id = "learning-os-e2e"
+
+[api]
+enabled = true
+port = 54321
+# Same as the cloud project: `english` exposed next to `public` (PROGRESS step 3).
+schemas = ["public", "english"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.pooler]
+enabled = false
+
+[db.seed]
+enabled = false
+
+[realtime]
+enabled = false
+
+[studio]
+enabled = false
+
+[inbucket]
+enabled = false
+
+[storage]
+enabled = false
+
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3000"
+additional_redirect_urls = ["http://127.0.0.1:3000"]
+jwt_expiry = 3600
+# Same as the cloud project: accounts are created by the parent only (PROGRESS step 4).
+enable_signup = false
+enable_anonymous_sign_ins = false
+
+# Email + password provider ON (that is how the family logs in). [auth] enable_signup = false
+# above is the global "Allow new users to sign up" switch.
+[auth.email]
+enable_signup = true
+enable_confirmations = false

@@ -1,0 +1,512 @@
+{
+  "format": "inquiry-template/1",
+  "id": "A-W3-EARTHQUAKES",
+  "version": 1,
+  "track": "A",
+  "status": "published",
+  "catalogue_version": "0.2.1-draft",
+  "title_vi": "Tuần 3 - Động đất (có bài ôn núi lửa sau 14 ngày)",
+  "big_question_en": "Why does the ground shake?",
+  "big_question_vi": "Vì sao mặt đất rung lên?",
+  "week": 3,
+  "dates": {
+    "from": "2026-11-02",
+    "to": "2026-11-08"
+  },
+  "domain_bucket": "science",
+  "target_ids": [
+    "A-T1-TEXT-L",
+    "A-T1-TEXT-R",
+    "A-L3-CAUSE-S",
+    "A-L3-CAUSE-W",
+    "A-L3-PARA-W",
+    "A-L4-PROCESS-S",
+    "A-L1-PAST-W",
+    "A-L2-CHUNKS",
+    "A-L2-COMPENSATE-S",
+    "A-T4-CAUSE",
+    "A-T7-OPINION",
+    "A-X1-TURN"
+  ],
+  "sources": [
+    {
+      "id": "A-W3-EARTHQUAKES-S1",
+      "title": "Why Does the Ground Shake? (bài đọc EQ-R)",
+      "url": null,
+      "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi - không nhắc núi lửa hay 'vành đai lửa' (giữ khoảng cách 14 ngày cho bài ôn núi lửa)",
+      "rights_note": "Tự soạn. Nguồn kiểm: USGS The Science of Earthquakes (https://www.usgs.gov/programs/earthquake-hazards/science-earthquakes), USGS tốc độ mảng (https://www.usgs.gov/faqs/how-fast-do-tectonic-plates-move), USGS cường độ rung (https://www.usgs.gov/programs/earthquake-hazards/earthquake-magnitude-energy-release-and-shaking-intensity). Câu \"Many earthquakes are very small…\" chưa có trang USGS nêu thẳng; phụ huynh tìm \"too small to be felt\" trên USGS trước khi giao.",
+      "modality": "text",
+      "text": "Why Does the Ground Shake?\n\nThe ground under our feet feels still. But the outside of the Earth is not one solid piece. It is broken into huge pieces called plates, like the cracked shell of a boiled egg.\n\nThe plates move very slowly, about as fast as your fingernails grow. Some plates move apart, some push into each other, and some slide past each other.\n\nThe edges of the plates are rough, so they often get stuck. The plates keep pushing, but the edges cannot move. Energy builds up in the rocks, like a ruler that you bend more and more. Then, suddenly, the rocks slip, like the ruler springing back. The stored energy travels out in all directions as waves. These are called seismic waves. When the waves reach the surface, the ground shakes. This is an earthquake.\n\nThe crack where the rocks slip is called a fault. The place on the surface right above the start of the earthquake is called the epicentre. The shaking is usually strongest near the epicentre.\n\nMany earthquakes are very small, and people do not feel them. After a big earthquake, smaller ones called aftershocks often follow."
+    },
+    {
+      "id": "A-W3-EARTHQUAKES-S2",
+      "title": "Drop, Cover, Hold On (bài nghe EQ-L, file A_EQ_L)",
+      "url": null,
+      "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi",
+      "rights_note": "Tự soạn, TTS một giọng cố định 0,9x. Nguồn kiểm: CDC (https://cdc.gov/earthquakes/safety/stay-safe-during-an-earthquake.html): drop, cover, hold on; không chạy ra ngoài; không đứng ở khung cửa; tránh kính; ra chỗ trống.",
+      "modality": "audio",
+      "text": "What should you do if the ground starts to shake? Remember three words: Drop, Cover, Hold On.\n\nFirst, drop down onto your hands and knees. This stops you from falling over.\n\nNext, cover your head and neck with your arms. If there is a strong table or desk near you, get under it. Things can fall from shelves and walls, so protect your head.\n\nThen, hold on to the table and stay there until the shaking stops.\n\nDo not run outside while the ground is shaking, and do not stand in a doorway. Stay away from windows, because the glass can break.\n\nIf you are outside, move to an open place, away from buildings, trees and electric wires. Then drop down and stay there.\n\nWhen the shaking stops, wait for an adult to tell you what to do next."
+    }
+  ],
+  "steps": [
+    {
+      "step_no": 1,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [],
+      "prompt_en": "Why does the ground shake? (You can speak Vietnamese.) Do not talk about volcanoes this week - if An asks, say: 'We will talk about that on Friday.'",
+      "prompt_vi": "T2 2/11 (8') - Câu hỏi lớn. Cả tuần KHÔNG nhắc núi lửa (bài ôn 6/11). An lỡ nói về núi lửa => ghi Sổ tiếp xúc.",
+      "time_min": 8,
+      "planned_date": "2026-11-02",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 2,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-T1-TEXT-R"
+      ],
+      "prompt_en": "Read the text once, then answer. You may look back at the text. No dictionary.",
+      "prompt_vi": "T2 2/11 (18') - Bài đọc làm TRONG buổi cô. An làm một mình.",
+      "time_min": 18,
+      "planned_date": "2026-11-02",
+      "items": [
+        {
+          "id": "W3-R1",
+          "kind": "mcq",
+          "stem": "What is the text mainly about?",
+          "options": [
+            "a) how to stay safe in an earthquake",
+            "b) why earthquakes happen",
+            "c) how fast fingernails grow",
+            "d) why boiled eggs crack"
+          ],
+          "answer": "b",
+          "explanation_vi": "Ý chính (c1).",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W3-R2",
+          "kind": "short",
+          "stem": "What are plates?",
+          "options": [],
+          "answer": "Huge pieces of the outside of the Earth.",
+          "explanation_vi": "Chi tiết 1/5.",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W3-R3",
+          "kind": "short",
+          "stem": "How fast do plates move?",
+          "options": [],
+          "answer": "Very slowly - about as fast as fingernails grow.",
+          "explanation_vi": "Chi tiết 2/5.",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W3-R4",
+          "kind": "short",
+          "stem": "Why do the edges of the plates often get stuck?",
+          "options": [],
+          "answer": "Because they are rough.",
+          "explanation_vi": "Chi tiết 3/5 (nhân quả).",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W3-R5",
+          "kind": "short",
+          "stem": "Put in order: (A) the rocks suddenly slip (B) energy builds up in the rocks (C) the edges get stuck (D) the ground shakes",
+          "options": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "answer": "C, B, A, D",
+          "explanation_vi": "Chi tiết 4/5 (trình tự).",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W3-R6",
+          "kind": "short",
+          "stem": "Where is the shaking usually strongest?",
+          "options": [],
+          "answer": "Near the epicentre.",
+          "explanation_vi": "Chi tiết 5/5. Cần >= 4/5.",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W3-R7",
+          "kind": "open",
+          "stem": "Two towns feel the same earthquake. Town A is 5 km from the epicentre. Town B is 200 km away. Which town probably feels stronger shaking? Why?",
+          "options": [],
+          "answer": "Town A - it is nearer to the epicentre, and the text says the shaking is usually strongest there.",
+          "explanation_vi": "CHẨN ĐOÁN (suy luận ứng dụng).",
+          "target_id": "A-T2-INFER-R"
+        },
+        {
+          "id": "W3-R8",
+          "kind": "short",
+          "stem": "\"...the rocks slip.\" What does 'slip' mean here?",
+          "options": [],
+          "answer": "Move suddenly (trượt đi bất ngờ).",
+          "explanation_vi": "CHẨN ĐOÁN (nghĩa từ).",
+          "target_id": "A-T2-INFER-R"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 3,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [],
+      "prompt_en": "Tip for a missing word: It's a kind of... / It's like... / It's a thing that... (practise with two objects that are not in the Friday picture set). Then: this week you will practise speaking and writing about earthquakes.",
+      "prompt_vi": "T2 2/11 (10' + 5' + 4') - Mẹo nói tiếp khi quên từ (luyện với 2 vật khác bộ ảnh T6), giao việc. KHÔNG phát 8 cụm từ ở T2: nghĩa và câu ví dụ trùng đáp án bài đọc/nghe.",
+      "time_min": 19,
+      "planned_date": "2026-11-02",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 4,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [],
+      "target_ids": [
+        "A-T1-TEXT-L"
+      ],
+      "prompt_en": "Listen (maximum 2 times, no text). Answer the questions.",
+      "prompt_vi": "T3 3/11 (25') - Bài nghe ở nhà (10'), sau đó tập 'Drop, Cover, Hold On' bằng động tác (5'; chỉ làm SAU khi đã nộp bài nghe). CUỐI T3, sau khi nộp cả bài đọc và bài nghe: phát 8 cụm từ + thẻ từ (10'). 8 cụm từ: plates = các mảng · move slowly = di chuyển chậm · get stuck = bị kẹt · energy builds up = năng lượng tích tụ · suddenly slip = đột ngột trượt · seismic waves = sóng địa chấn · the ground shakes = mặt đất rung · because of = vì, do.",
+      "time_min": 25,
+      "planned_date": "2026-11-03",
+      "items": [
+        {
+          "id": "W3-L1",
+          "kind": "mcq",
+          "stem": "What is the talk mainly about?",
+          "options": [
+            "a) why earthquakes happen",
+            "b) what to do to stay safe when the ground shakes",
+            "c) how to build strong tables",
+            "d) why windows break"
+          ],
+          "answer": "b",
+          "explanation_vi": "Ý chính (c1).",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W3-L2",
+          "kind": "short",
+          "stem": "What should you do first?",
+          "options": [],
+          "answer": "Drop down onto your hands and knees (chấp nhận 'Drop').",
+          "explanation_vi": "Chi tiết 1/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W3-L3",
+          "kind": "short",
+          "stem": "What should you cover with your arms?",
+          "options": [],
+          "answer": "Your head and neck.",
+          "explanation_vi": "Chi tiết 2/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W3-L4",
+          "kind": "short",
+          "stem": "Why should you stay away from windows?",
+          "options": [],
+          "answer": "The glass can break.",
+          "explanation_vi": "Chi tiết 3/4 (nhân quả).",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W3-L5",
+          "kind": "short",
+          "stem": "If you are outside, where should you go?",
+          "options": [],
+          "answer": "An open place, away from buildings, trees and electric wires.",
+          "explanation_vi": "Chi tiết 4/4. Cần >= 3/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W3-L6",
+          "kind": "open",
+          "stem": "Why does the speaker tell you to get under a strong table?",
+          "options": [],
+          "answer": "Bàn chắc che đầu và cổ khỏi đồ rơi ('Things can fall... so protect your head').",
+          "explanation_vi": "CHẨN ĐOÁN (suy luận).",
+          "target_id": "A-T2-INFER-L"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 5,
+      "activity_type": "ACT-CANVAS-BASIC",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [
+        "A-T4-CAUSE"
+      ],
+      "prompt_en": "Main idea: Earthquakes happen when... Why (4 cards): [Plates move, but the edges...] -> [Energy...] -> [Suddenly,...] -> [Seismic waves..., so...]. Example: the ruler - you bend it and let it go. Which step is that?",
+      "prompt_vi": "T4 4/11 (12'). Đáp án gợi ý: Mảng di chuyển -> mép gồ ghề bị kẹt -> năng lượng tích tụ trong đá -> đá đột ngột trượt (đứt gãy) -> năng lượng lan ra thành sóng địa chấn -> sóng tới mặt đất -> rung. Thước: uốn = tích năng lượng; bật lại = đá trượt.",
+      "time_min": 12,
+      "planned_date": "2026-11-04",
+      "items": [
+        {
+          "id": "W3-CV",
+          "kind": "open",
+          "stem": "Fill in the 4 cards and the example.",
+          "options": [],
+          "answer": "Mảng di chuyển -> mép gồ ghề bị kẹt -> năng lượng tích tụ trong đá -> đá đột ngột trượt (đứt gãy) -> năng lượng lan ra thành sóng địa chấn -> sóng tới mặt đất -> rung.",
+          "explanation_vi": "Luyện tập, tùy chọn.",
+          "target_id": "A-T4-CAUSE"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 6,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [
+        "A-L3-CAUSE-S",
+        "A-L2-CHUNKS"
+      ],
+      "prompt_en": "What should you do if an earthquake happens? Why? - First,..., because... / Next,... This is important because... / Do not..., because... / If you are outside,... (45-60 seconds)",
+      "prompt_vi": "T4 4/11 (12') - Luyện nói có câu mẫu. support_used = frame.",
+      "time_min": 12,
+      "planned_date": "2026-11-04",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 7,
+      "activity_type": "ACT-WRITE",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [
+        "A-L3-CAUSE-W",
+        "A-L2-CHUNKS"
+      ],
+      "prompt_en": "What are plates, and why do their edges get stuck? - The outside of the Earth is... / The plates move..., about as fast as... / The edges of the plates are..., so... / Energy builds up because... (50-70 words)",
+      "prompt_vi": "T5 5/11 (18'). Hỏi An trước (T5) có ổn với đề nhật ký động đất không.",
+      "time_min": 18,
+      "planned_date": "2026-11-05",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 8,
+      "activity_type": "ACT-SELF-REVIEW",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [],
+      "prompt_en": "Check your own writing.",
+      "prompt_vi": "T5 5/11 (5' + 2').",
+      "time_min": 7,
+      "planned_date": "2026-11-05",
+      "items": [],
+      "self_check_vi": [
+        "Bạn đã nói vì sao mép các mảng bị kẹt chưa?",
+        "Bạn đã kể đủ: kẹt -> tích năng lượng -> trượt -> rung chưa?",
+        "Câu cuối của bạn đã kết lại ý chưa?"
+      ]
+    },
+    {
+      "step_no": 9,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "delayed_check",
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-L3-CAUSE-S",
+        "A-L4-PROCESS-S",
+        "A-T4-CAUSE"
+      ],
+      "prompt_en": "A younger child asks you: 'Why do volcanoes erupt?' Explain it simply, step by step. (30 seconds to think, no notes. Speak 60-90 seconds.)",
+      "prompt_vi": "T6 6/11, LÀM ĐẦU TIÊN (7') - Bài ôn núi lửa VOL-DEL. Hợp lệ khi ngày ôn - ngày tiếp xúc cuối >= 14: 6/11 - 23/10 = 14. last_practice_date = 2026-10-23. Chỉ làm nếu Sổ tiếp xúc không ghi lần gặp núi lửa nào từ 24/10; nếu có, dời sang >= 14 ngày sau lần đó (vd. T2 9/11 = 17 ngày). Ghi thêm (chẩn đoán): An dùng lại đúng mấy trong 8 cụm từ tuần 1.",
+      "time_min": 7,
+      "planned_date": "2026-11-06",
+      "items": [
+        {
+          "id": "W3-VOLDEL",
+          "kind": "open",
+          "stem": "A younger child asks you: 'Why do volcanoes erupt?' Explain it simply, step by step.",
+          "options": [],
+          "answer": "Magma nhẹ hơn đá -> nổi lên, gom trong buồng magma -> gần mặt đất áp suất giảm -> khí thoát ra thành bong bóng -> bong bóng lớn dần, đẩy magma -> magma xuyên qua mặt đất = phun trào. Magma loãng: khí thoát dễ -> dung nham chảy. Magma đặc: khí bị giữ -> áp suất tăng -> nổ.",
+          "explanation_vi": "A-L3-CAUSE-S; A-L4-PROCESS-S; A-T4-CAUSE (nhớ chuỗi sau 14 ngày).",
+          "target_id": "A-L3-CAUSE-S"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 10,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-L3-CAUSE-S",
+        "A-L4-PROCESS-S",
+        "A-T4-CAUSE",
+        "A-L2-CHUNKS"
+      ],
+      "prompt_en": "Why do earthquakes happen? Explain it step by step, from the plates to the shaking ground. (30 seconds to think. Speak 60-90 seconds.)",
+      "prompt_vi": "T6 6/11 (7') - Nói tự làm (SIC), kiểm tra trong buổi, ghi âm. Ghi activity_type = ACT-SPEAK-MONO. Nói trôi chảy và Xoay xở khi thiếu từ được chấm ở lượt LIVE kế tiếp.",
+      "time_min": 7,
+      "planned_date": "2026-11-06",
+      "items": [
+        {
+          "id": "W3-SIC",
+          "kind": "open",
+          "stem": "Why do earthquakes happen? Explain step by step.",
+          "options": [],
+          "answer": "Mảng di chuyển -> mép gồ ghề bị kẹt -> năng lượng tích tụ trong đá -> đá đột ngột trượt (đứt gãy) -> năng lượng lan ra thành sóng địa chấn -> sóng tới mặt đất -> rung.",
+          "explanation_vi": "A-L3-CAUSE-S; A-L4-PROCESS-S; A-T4-CAUSE; A-L2-CHUNKS.",
+          "target_id": "A-L3-CAUSE-S"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 11,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-X1-TURN",
+        "A-L2-COMPENSATE-S"
+      ],
+      "prompt_en": "Choose one picture. It must be something you know how to use, but you do not know its English name. Tell me about it: what it looks like, what we use it for, and how you use it. (30 seconds to think, no writing. Speak 60-90 seconds.)",
+      "prompt_vi": "T6 6/11 (4') - Lượt nói trực tiếp (kit mục 3.0, \"Thử thách thiếu từ\"). Cô đưa 3 ảnh: whistle (cái còi) · first-aid kit (hộp sơ cứu) · fire extinguisher (bình chữa cháy). Cô không nói tên tiếng Anh trước T6; cô chỉ nói \"Bắt đầu nhé\" / \"Còn 30 giây\", không nhắc \"giải thích cách khác\". Ghi activity_type = ACT-SPEAK-LIVE, context_topic = lab-tools, chỉ cô chấm; cô bấm giờ (duration_s; c1 Nói trôi chảy cần >= 60 giây). Nói trôi chảy: c1 >= 60 giây, c2 <= 3 lần ngừng > 3 giây, c3 nói lại câu thay vì bỏ dở. Xoay xở khi thiếu từ: cô xác nhận có chỗ thiếu từ thật; An biết tên cả 3 vật (đổi bộ ảnh) hoặc không có chỗ thiếu thật => NULL, đó là kết quả hợp lệ.",
+      "time_min": 4,
+      "planned_date": "2026-11-06",
+      "items": [
+        {
+          "id": "W3-LIVE",
+          "kind": "open",
+          "stem": "Choose one picture and tell me about it.",
+          "options": [],
+          "answer": "Không có đáp án mẫu. Cô ghi: vật An chọn, từ An chưa biết, cách An diễn đạt vòng (a thing that..., it is like...), có chuyển sang tiếng Việt không.",
+          "explanation_vi": "A-X1-TURN (c1 >= 60 giây; c2 <= 3 lần ngừng dài; c3 nói lại câu) và A-L2-COMPENSATE-S (c1 >= 1 lần diễn đạt vòng thành công bằng tiếng Anh; c2 <= 1 lần chuyển sang tiếng Việt), hoặc NULL.",
+          "target_id": "A-X1-TURN"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 12,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-T7-OPINION"
+      ],
+      "prompt_en": "Should every school practise earthquake drills, even in places where earthquakes are rare? Why or why not? Give your reasons and an example. Talk for at least one minute. (Then: Now ask me two questions about earthquakes.)",
+      "prompt_vi": "T6 6/11 (3') - Nói ý kiến (OP), ghi âm trên máy. Cô hỏi một lần, nghĩ 30 giây, không hỏi thêm \"Why?\" khi An đang nói; An nói ít nhất 1 phút. Chấm: c1 quan điểm rõ, c2 >= 2 lý do khác nhau, c3 >= 1 ví dụ gắn với lý do. Không chấm quan điểm đúng/sai. Ghi activity_type = ACT-SPEAK-MONO (catalogue không nhận Nêu ý kiến ở ACT-SPEAK-LIVE). Sau đó: \"Now ask me two questions about earthquakes.\" (chỉ ghi chú, không ghi dòng).",
+      "time_min": 3,
+      "planned_date": "2026-11-06",
+      "items": [
+        {
+          "id": "W3-OP",
+          "kind": "open",
+          "stem": "Should every school practise earthquake drills, even in places where earthquakes are rare? Why or why not? Give your reasons and an example. Talk for at least one minute.",
+          "options": [],
+          "answer": "Không có đáp án đúng/sai; chấm lập luận.",
+          "explanation_vi": "A-T7-OPINION: c1 quan điểm rõ; c2 >= 2 lý do khác nhau, liên quan; c3 >= 1 ví dụ gắn với một lý do.",
+          "target_id": "A-T7-OPINION"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 13,
+      "activity_type": "ACT-WRITE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-L1-PAST-W",
+        "A-L3-CAUSE-W",
+        "A-L3-PARA-W",
+        "A-T4-CAUSE",
+        "A-L2-CHUNKS"
+      ],
+      "prompt_en": "Imagine that yesterday, at school, you felt a very small earthquake. It lasted a few seconds, and nobody was hurt. Write your diary in one paragraph (80-120 words). What happened? What did you do? Why did the ground shake? (20 minutes.)",
+      "prompt_vi": "T6 6/11 (20') - Viết tự làm. Đề thay thế nếu An lo: 'Yesterday your class had an earthquake drill. Write your diary in one paragraph (80-120 words): what did you do, and why do earthquakes happen?' (ghi đề đã dùng vào notes). < 6 chỗ bắt buộc dùng quá khứ hoặc < 80 từ => NULL.",
+      "time_min": 20,
+      "planned_date": "2026-11-06",
+      "items": [
+        {
+          "id": "W3-WIC",
+          "kind": "open",
+          "stem": "Write your diary about a very small earthquake.",
+          "options": [],
+          "answer": "Kể quá khứ + giải thích: mảng kẹt -> tích năng lượng -> trượt -> sóng -> rung.",
+          "explanation_vi": "A-L1-PAST-W; A-L3-CAUSE-W; A-L3-PARA-W; A-T4-CAUSE; A-L2-CHUNKS.",
+          "target_id": "A-L1-PAST-W"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 14,
+      "activity_type": "ACT-SELF-REVIEW",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-A1-SELFASSESS"
+      ],
+      "prompt_en": "Before you hear any feedback, check your own diary.",
+      "prompt_vi": "T6 6/11 (3').",
+      "time_min": 3,
+      "planned_date": "2026-11-06",
+      "items": [],
+      "self_check_vi": [
+        "Bạn đã nói vì sao mặt đất rung chưa?",
+        "Nhật ký của bạn kể chuyện hôm qua: các động từ đã ở quá khứ chưa?",
+        "Câu cuối của bạn đã kết lại ý chưa?",
+        "Một điều mình làm tốt: ______",
+        "Một điều mình muốn sửa: ______"
+      ]
+    },
+    {
+      "step_no": 15,
+      "activity_type": "ACT-REVISE",
+      "mode": "REVISION",
+      "purpose": [],
+      "target_ids": [
+        "A-A3-REDRAFT"
+      ],
+      "prompt_en": "Read each hint, fix your diary, underline what you changed, and write 'Mình đã đổi ... thành ... vì ...'.",
+      "prompt_vi": "T6 6/11 (7' + 15') - Thêm: gạch dưới mọi động từ trong nhật ký; chuyện hôm qua thì động từ ở quá khứ.",
+      "time_min": 15,
+      "planned_date": "2026-11-06",
+      "items": [],
+      "self_check_vi": []
+    }
+  ]
+}

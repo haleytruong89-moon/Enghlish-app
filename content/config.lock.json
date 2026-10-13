@@ -1,0 +1,52 @@
+{
+  "catalogues": {
+    "0.2.1-draft": {
+      "sha256": "44210cefee4e1e594354c34f329c9a177073582dd9465354c1c52af7255021b8",
+      "migration": "0006_seed_config_v0_2_1.sql"
+    }
+  },
+  "policies": {
+    "AP-0.2-pilot": {
+      "sha256": "c64accb9a72f8dd6ea817c03640db4c7ebdc80ba0ca58e84cb37472949feb6b0",
+      "migration": "0006_seed_config_v0_2_1.sql"
+    }
+  },
+  "targetSets": {
+    "A-v1": {
+      "sha256": "807f5ab6cb98f2cf47cbc1d683827296f70fb9bacb3deff0aa7c56856f209c18",
+      "migration": "0006_seed_config_v0_2_1.sql",
+      "catalogue": "0.2.1-draft"
+    },
+    "B-v1": {
+      "sha256": "64dea8203ed11457a2d59dc9dbb490f96189a0b4c19cfb97999da62baf145765",
+      "migration": "0006_seed_config_v0_2_1.sql",
+      "catalogue": "0.2.1-draft"
+    }
+  },
+  "inquiryTemplates": {
+    "A-W0-BASELINE@1": {
+      "sha256": "e4906feb1f2c7bcea2cc14e5e7ea9dfb832a0e94b01cee9aa810b0283690f828",
+      "migration": "0008_seed_inquiries_pilot_v1.sql"
+    },
+    "A-W1-VOLCANOES@1": {
+      "sha256": "04bfdbb0957501ad68430ef0021b616b5a673699d3431c3916c65ea7d9020a93",
+      "migration": "0008_seed_inquiries_pilot_v1.sql"
+    },
+    "A-W2-WATERCYCLE@1": {
+      "sha256": "0e5ee89d1bba142bca0c4b2df7ca20c950df3cbe822cc0395c9be0b00a459e48",
+      "migration": "0008_seed_inquiries_pilot_v1.sql"
+    },
+    "A-W3-EARTHQUAKES@1": {
+      "sha256": "c99e5eefddd3b4610fe6f1828dd1f6dbd152f82c0bbdea5b836dd0183f8b9177",
+      "migration": "0008_seed_inquiries_pilot_v1.sql"
+    },
+    "A-W4-PLANETS@1": {
+      "sha256": "88a9cc4d7fc9f280c8c9027d8babc0b94d6a39e7223792927d3fef0ff17251f1",
+      "migration": "0008_seed_inquiries_pilot_v1.sql"
+    },
+    "B-W0-BASELINE@1": {
+      "sha256": "c9d6b784dc3bb12f3c7c8fae11b5a54036b74877b9d8acde40968c6f7807f750",
+      "migration": "0008_seed_inquiries_pilot_v1.sql"
+    }
+  }
+}

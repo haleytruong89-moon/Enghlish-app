@@ -1,0 +1,483 @@
+{
+  "format": "inquiry-template/1",
+  "id": "A-W2-WATERCYCLE",
+  "version": 1,
+  "track": "A",
+  "status": "published",
+  "catalogue_version": "0.2.1-draft",
+  "title_vi": "Tuần 2 - Vòng tuần hoàn của nước",
+  "big_question_en": "Where does rain come from?",
+  "big_question_vi": "Mưa từ đâu đến?",
+  "week": 2,
+  "dates": {
+    "from": "2026-10-26",
+    "to": "2026-11-01"
+  },
+  "domain_bucket": "science",
+  "target_ids": [
+    "A-T1-TEXT-L",
+    "A-T1-TEXT-R",
+    "A-L3-CAUSE-S",
+    "A-L3-CAUSE-W",
+    "A-L3-PARA-W",
+    "A-L4-PROCESS-S",
+    "A-L1-PAST-W",
+    "A-L2-CHUNKS",
+    "A-L2-COMPENSATE-S",
+    "A-T4-CAUSE",
+    "A-T7-OPINION",
+    "A-X1-TURN"
+  ],
+  "sources": [
+    {
+      "id": "A-W2-WATERCYCLE-S1",
+      "title": "The Never-Ending Journey of Water (bài đọc WAT-R)",
+      "url": null,
+      "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi",
+      "rights_note": "Tự soạn, không sao chép. Nguồn kiểm: NASA GPM (https://gpm.nasa.gov/resources/faq/how-does-water-cycle-work), NASA Science for Kids (https://science.nasa.gov/kids/earth/what-is-the-water-cycle/), USGS Water Science School (https://www.usgs.gov/water-science-school/science/condensation-and-water-cycle).",
+      "modality": "text",
+      "text": "The Never-Ending Journey of Water\n\nSome of the water in your glass may once have been in a cloud, a river or the sea. Water moves around the Earth again and again. This journey is called the water cycle.\n\nThe journey starts with the Sun. The Sun heats the water in seas, rivers and lakes. Some of the water turns into a gas called water vapour. We cannot see water vapour, but it is in the air all around us. This change from liquid water to gas is called evaporation. Plants help too: they let out water vapour from their leaves.\n\nWarm air with water vapour rises. High in the sky, the air is cold, so the water vapour cools down. It changes back into tiny drops of water. This is called condensation. Millions of these tiny drops make a cloud.\n\nInside the cloud, the drops bump into each other and join together. They grow bigger and heavier. When they are too heavy to stay in the air, they fall as rain. Sometimes they fall as snow or hail instead. This is called precipitation.\n\nThe rain flows into rivers and back to the sea, or it soaks into the ground. Then the Sun heats the water again, and the journey starts again."
+    },
+    {
+      "id": "A-W2-WATERCYCLE-S2",
+      "title": "Mai and the cold glass (bài nghe WAT-L, file A_WAT_L)",
+      "url": null,
+      "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi; nhân vật Mai là hư cấu",
+      "rights_note": "Tự soạn, TTS một giọng cố định 0,9x. Nguồn kiểm: USGS Water Science School (nước ngoài cốc lạnh ngày ẩm là ngưng tụ).",
+      "modality": "audio",
+      "text": "Hi, I'm Mai. Yesterday was a very hot day, and the air felt wet, so I made a glass of iced water. After ten minutes, I saw something strange. There were lots of small drops of water on the outside of the glass! The table under the glass was wet too.\n\nAt first, I thought the glass had a hole. But the water inside did not go down. So where did the drops come from?\n\nMy teacher explained it to me. The air around us has water vapour in it. When the warm air touched the cold glass, the water vapour cooled down. It changed into tiny drops of liquid water on the glass. This is called condensation.\n\nThe same thing happens in the sky. High up, the air is cold, so water vapour cools and makes tiny drops. That is how clouds start. My cold glass showed me the beginning of a cloud!"
+    }
+  ],
+  "steps": [
+    {
+      "step_no": 1,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [],
+      "prompt_en": "Where does rain come from? (You can speak Vietnamese.) Tip for a missing word: It's a kind of... / It's like... / It's a thing that...",
+      "prompt_vi": "T2 26/10 (10') - Câu hỏi lớn, đoán trước, nhắc mẹo nói tiếp khi quên từ.",
+      "time_min": 10,
+      "planned_date": "2026-10-26",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 2,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-T1-TEXT-L"
+      ],
+      "prompt_en": "Listen (maximum 2 times, no text). Answer the questions.",
+      "prompt_vi": "T2 26/10 (13') - Bài nghe làm TRONG buổi cô. Cô quan sát: An không xem chữ, số lần nghe.",
+      "time_min": 13,
+      "planned_date": "2026-10-26",
+      "items": [
+        {
+          "id": "W2-L1",
+          "kind": "mcq",
+          "stem": "What is the talk mainly about?",
+          "options": [
+            "a) how to make iced water",
+            "b) why drops of water appeared on the outside of a cold glass",
+            "c) why Mai's glass had a hole",
+            "d) how rain falls"
+          ],
+          "answer": "b",
+          "explanation_vi": "Ý chính (c1).",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W2-L2",
+          "kind": "short",
+          "stem": "What was the weather like?",
+          "options": [],
+          "answer": "Very hot (and the air felt wet). Chấp nhận \"hot\".",
+          "explanation_vi": "Chi tiết 1/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W2-L3",
+          "kind": "short",
+          "stem": "What did Mai think at first?",
+          "options": [],
+          "answer": "That the glass had a hole.",
+          "explanation_vi": "Chi tiết 2/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W2-L4",
+          "kind": "short",
+          "stem": "What is in the air around us?",
+          "options": [],
+          "answer": "Water vapour.",
+          "explanation_vi": "Chi tiết 3/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W2-L5",
+          "kind": "short",
+          "stem": "What happened to the water vapour when it touched the cold glass?",
+          "options": [],
+          "answer": "It cooled down and changed into tiny drops of water.",
+          "explanation_vi": "Chi tiết 4/4. Cần >= 3/4.",
+          "target_id": "A-T1-TEXT-L"
+        },
+        {
+          "id": "W2-L6",
+          "kind": "open",
+          "stem": "How did Mai know that the glass did NOT have a hole?",
+          "options": [],
+          "answer": "Nước trong cốc không vơi đi; nếu thủng thì nước bên trong phải giảm.",
+          "explanation_vi": "CHẨN ĐOÁN (suy luận).",
+          "target_id": "A-T2-INFER-L"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 3,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [],
+      "prompt_en": "Say the words after the tutor. Listen for the ending sounds -s and -ed in verbs you already know (not this week's topic). Tomorrow's experiment: a glass with ice and a glass without ice.",
+      "prompt_vi": "T2 26/10 (12' + 10') - Âm cuối -s/-ed với động từ quen thuộc, khác chủ đề; rồi giới thiệu thí nghiệm cốc lạnh. KHÔNG phát 8 cụm từ ở T2 (nghĩa và câu ví dụ trùng đáp án bài đọc/nghe).",
+      "time_min": 22,
+      "planned_date": "2026-10-26",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 4,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [],
+      "target_ids": [
+        "A-T1-TEXT-R"
+      ],
+      "prompt_en": "Read the text once, then answer. You may look back at the text.",
+      "prompt_vi": "T3 27/10 (28') - Đặt hai cốc trước (3'; A: đá + nước; B: nước thường, cốc thủy tinh lau khô), để yên ít nhất 10 phút không chạm; trong lúc chờ An LÀM BÀI ĐỌC (18') ở bàn khác; rồi quan sát cốc với bố/mẹ (7'): mặt ngoài, sờ thử, nhìn khăn giấy, nói điều mình thấy. Không ghi chép mang vào T6.",
+      "time_min": 28,
+      "planned_date": "2026-10-27",
+      "items": [
+        {
+          "id": "W2-R1",
+          "kind": "mcq",
+          "stem": "What is the text mainly about?",
+          "options": [
+            "a) why we should drink water",
+            "b) how water moves around the Earth again and again",
+            "c) how plants drink water",
+            "d) why the sea is salty"
+          ],
+          "answer": "b",
+          "explanation_vi": "Ý chính (c1).",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W2-R2",
+          "kind": "short",
+          "stem": "What heats the water in seas, rivers and lakes?",
+          "options": [],
+          "answer": "The Sun.",
+          "explanation_vi": "Chi tiết 1/5.",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W2-R3",
+          "kind": "short",
+          "stem": "What is evaporation?",
+          "options": [],
+          "answer": "Liquid water changing into a gas (water vapour).",
+          "explanation_vi": "Chi tiết 2/5.",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W2-R4",
+          "kind": "short",
+          "stem": "Why does water vapour cool down high in the sky?",
+          "options": [],
+          "answer": "Because the air high in the sky is cold.",
+          "explanation_vi": "Chi tiết 3/5 (nhân quả).",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W2-R5",
+          "kind": "short",
+          "stem": "Put in order: (A) the drops join and grow heavy (B) water vapour rises (C) the Sun heats the water (D) rain falls (E) tiny drops make a cloud",
+          "options": [
+            "A",
+            "B",
+            "C",
+            "D",
+            "E"
+          ],
+          "answer": "C, B, E, A, D",
+          "explanation_vi": "Chi tiết 4/5 (trình tự).",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W2-R6",
+          "kind": "short",
+          "stem": "Why do the drops fall from the cloud?",
+          "options": [],
+          "answer": "They become too heavy to stay in the air.",
+          "explanation_vi": "Chi tiết 5/5 (nhân quả). Cần >= 4/5.",
+          "target_id": "A-T1-TEXT-R"
+        },
+        {
+          "id": "W2-R7",
+          "kind": "open",
+          "stem": "On a cold winter morning, you can see your breath like a little white cloud. Use the text to explain why.",
+          "options": [],
+          "answer": "Hơi thở có hơi nước ấm; không khí lạnh làm hơi nước nguội, ngưng tụ thành giọt rất nhỏ nên nhìn thấy được (đoạn 3).",
+          "explanation_vi": "CHẨN ĐOÁN (suy luận áp dụng). Có \"winter\" vì cuối tháng 10 Hà Nội thường chưa đủ lạnh để thấy hơi thở.",
+          "target_id": "A-T2-INFER-R"
+        },
+        {
+          "id": "W2-R8",
+          "kind": "short",
+          "stem": "\"...it soaks into the ground.\" What does 'soaks into' mean?",
+          "options": [],
+          "answer": "Goes slowly into (thấm vào).",
+          "explanation_vi": "CHẨN ĐOÁN (nghĩa từ).",
+          "target_id": "A-T2-INFER-R"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 5,
+      "activity_type": "ACT-CANVAS-BASIC",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [
+        "A-T4-CAUSE"
+      ],
+      "prompt_en": "Main idea: Water moves in a cycle: ... Why (4 cards): [The Sun heats the water, so...] -> [Water vapour rises and...] -> [Tiny drops...] -> [The drops get heavy, so...]. Example: your glass of iced water on Tuesday - which step is it?",
+      "prompt_vi": "T4 28/10 (6' + 12') - Làm đầu tiên: phát 8 cụm từ + thẻ từ (6'), SAU khi An nộp bài nghe và bài đọc. Rồi Canvas (12'). 8 cụm từ: evaporate/evaporation = bốc hơi · water vapour = hơi nước · condense/condensation = ngưng tụ · tiny drops = giọt rất nhỏ · form a cloud / clouds form = tạo thành mây · fall as rain = rơi xuống thành mưa · heat from the Sun = sức nóng của Mặt Trời · that's why = vì thế mà. Đáp án gợi ý: Mặt Trời làm nóng nước -> nước bốc hơi thành hơi nước -> hơi nước bay lên, gặp lạnh -> ngưng tụ thành giọt nhỏ -> mây -> giọt nhập lại, nặng -> mưa -> sông, biển, đất -> lặp lại. Cốc nước đá = bước ngưng tụ.",
+      "time_min": 18,
+      "planned_date": "2026-10-28",
+      "items": [
+        {
+          "id": "W2-CV",
+          "kind": "open",
+          "stem": "Fill in the 4 cards and the example.",
+          "options": [],
+          "answer": "Mặt Trời làm nóng nước -> nước bốc hơi thành hơi nước -> hơi nước bay lên, gặp lạnh -> ngưng tụ thành giọt nhỏ -> mây -> giọt nhập lại, nặng -> mưa -> sông, biển, đất -> lặp lại. Cốc nước đá = bước ngưng tụ.",
+          "explanation_vi": "Luyện tập, tùy chọn.",
+          "target_id": "A-T4-CAUSE"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 6,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [
+        "A-L3-CAUSE-S",
+        "A-L2-CHUNKS"
+      ],
+      "prompt_en": "After the rain, there is a puddle on the road. On a sunny day, it disappears. Why? - After the rain,... / The Sun... / The water turns into... This is called... / We cannot see..., so... / That's why... (45-60 seconds)",
+      "prompt_vi": "T4 28/10 (12') - Luyện nói có câu mẫu. support_used = frame.",
+      "time_min": 12,
+      "planned_date": "2026-10-28",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 7,
+      "activity_type": "ACT-WRITE",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [
+        "A-L3-CAUSE-W",
+        "A-L2-CHUNKS"
+      ],
+      "prompt_en": "How does a cloud form? - First, the Sun... / The water vapour rises, and high in the sky... / Because the air is cold,... / Millions of tiny drops... (50-70 words)",
+      "prompt_vi": "T5 29/10 (18') - Luyện viết có câu mẫu. Chỉ ghi A-L2-CHUNKS nếu >= 60 từ.",
+      "time_min": 18,
+      "planned_date": "2026-10-29",
+      "items": [],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 8,
+      "activity_type": "ACT-SELF-REVIEW",
+      "mode": "PRACTICE",
+      "purpose": [],
+      "target_ids": [],
+      "prompt_en": "Check your own writing.",
+      "prompt_vi": "T5 29/10 (5' + 2' thẻ từ).",
+      "time_min": 7,
+      "planned_date": "2026-10-29",
+      "items": [],
+      "self_check_vi": [
+        "Câu đầu của bạn đã trả lời câu hỏi chưa?",
+        "Bạn đã nói đủ: mặt trời làm nóng -> hơi nước bay lên -> lạnh nên thành giọt -> mây chưa?",
+        "Bạn đã dùng 2 từ nối khác nhau và 4 từ mới chưa?"
+      ]
+    },
+    {
+      "step_no": 9,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-L3-CAUSE-S",
+        "A-L4-PROCESS-S",
+        "A-T4-CAUSE",
+        "A-L2-CHUNKS"
+      ],
+      "prompt_en": "How does the water cycle work? Tell the journey of a drop of water from the sea, up to a cloud, and back to the sea. (30 seconds to think. Speak 60-90 seconds.)",
+      "prompt_vi": "T6 30/10 (7') - Nói tự làm (SIC), kiểm tra trong buổi, ghi âm. Ghi activity_type = ACT-SPEAK-MONO. Nói trôi chảy và Xoay xở khi thiếu từ được chấm ở lượt LIVE kế tiếp.",
+      "time_min": 7,
+      "planned_date": "2026-10-30",
+      "items": [
+        {
+          "id": "W2-SIC",
+          "kind": "open",
+          "stem": "Tell the journey of a drop of water from the sea, up to a cloud, and back to the sea.",
+          "options": [],
+          "answer": "Mặt Trời làm nóng nước -> nước bốc hơi thành hơi nước -> hơi nước bay lên, gặp lạnh -> ngưng tụ thành giọt nhỏ -> mây -> giọt nhập lại, nặng -> mưa -> sông, biển, đất -> lặp lại. Cốc nước đá = bước ngưng tụ.",
+          "explanation_vi": "A-L3-CAUSE-S; A-L4-PROCESS-S (>= 3 bước đúng thứ tự); A-T4-CAUSE (chuỗi); A-L2-CHUNKS (>= 4/8 cụm).",
+          "target_id": "A-L3-CAUSE-S"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 10,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-X1-TURN",
+        "A-L2-COMPENSATE-S"
+      ],
+      "prompt_en": "Choose one picture. It must be something you know how to use, but you do not know its English name. Tell me about it: what it looks like, what we use it for, and how you use it. (30 seconds to think, no writing. Speak 60-90 seconds.)",
+      "prompt_vi": "T6 30/10 (4') - Lượt nói trực tiếp (kit mục 3.0, \"Thử thách thiếu từ\"). Cô đưa 3 ảnh: sponge (miếng bọt biển) · tape measure (thước dây) · ladder (cái thang). Cô không nói tên tiếng Anh trước T6; cô chỉ nói \"Bắt đầu nhé\" / \"Còn 30 giây\", không nhắc \"giải thích cách khác\". Ghi activity_type = ACT-SPEAK-LIVE, context_topic = lab-tools, chỉ cô chấm; cô bấm giờ (duration_s; c1 Nói trôi chảy cần >= 60 giây). Nói trôi chảy: c1 >= 60 giây, c2 <= 3 lần ngừng > 3 giây, c3 nói lại câu thay vì bỏ dở. Xoay xở khi thiếu từ: cô xác nhận có chỗ thiếu từ thật; An biết tên cả 3 vật (đổi bộ ảnh) hoặc không có chỗ thiếu thật => NULL, đó là kết quả hợp lệ.",
+      "time_min": 4,
+      "planned_date": "2026-10-30",
+      "items": [
+        {
+          "id": "W2-LIVE",
+          "kind": "open",
+          "stem": "Choose one picture and tell me about it.",
+          "options": [],
+          "answer": "Không có đáp án mẫu. Cô ghi: vật An chọn, từ An chưa biết, cách An diễn đạt vòng (a thing that..., it is like...), có chuyển sang tiếng Việt không.",
+          "explanation_vi": "A-X1-TURN (c1 >= 60 giây; c2 <= 3 lần ngừng dài; c3 nói lại câu) và A-L2-COMPENSATE-S (c1 >= 1 lần diễn đạt vòng thành công bằng tiếng Anh; c2 <= 1 lần chuyển sang tiếng Việt), hoặc NULL.",
+          "target_id": "A-X1-TURN"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 11,
+      "activity_type": "ACT-SPEAK-MONO",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-T7-OPINION"
+      ],
+      "prompt_en": "Do you like rainy days or sunny days more? Why? Give your reasons and an example. Talk for at least one minute. (Then: Now ask me two questions about rain or clouds.)",
+      "prompt_vi": "T6 30/10 (3') - Nói ý kiến (OP), ghi âm trên máy. Cô hỏi một lần, nghĩ 30 giây, không hỏi thêm \"Why?\" khi An đang nói; An nói ít nhất 1 phút. Chấm: c1 quan điểm rõ, c2 >= 2 lý do khác nhau, c3 >= 1 ví dụ gắn với lý do. Không chấm quan điểm đúng/sai. Ghi activity_type = ACT-SPEAK-MONO (catalogue không nhận Nêu ý kiến ở ACT-SPEAK-LIVE). Sau đó: \"Now ask me two questions about rain or clouds.\" (chỉ ghi chú, không ghi dòng).",
+      "time_min": 3,
+      "planned_date": "2026-10-30",
+      "items": [
+        {
+          "id": "W2-OP",
+          "kind": "open",
+          "stem": "Do you like rainy days or sunny days more? Why? Give your reasons and an example. Talk for at least one minute.",
+          "options": [],
+          "answer": "Không có đáp án đúng/sai; chấm lập luận.",
+          "explanation_vi": "A-T7-OPINION: c1 quan điểm rõ; c2 >= 2 lý do khác nhau, liên quan; c3 >= 1 ví dụ gắn với một lý do.",
+          "target_id": "A-T7-OPINION"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 12,
+      "activity_type": "ACT-WRITE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-L1-PAST-W",
+        "A-L3-CAUSE-W",
+        "A-L3-PARA-W",
+        "A-T4-CAUSE",
+        "A-L2-CHUNKS"
+      ],
+      "prompt_en": "Write a report of your cold-glass experiment in one paragraph (80-120 words). What did you do? What did you see? Why did it happen? (20 minutes. No dictionary, no notes.)",
+      "prompt_vi": "T6 30/10 (20') - Viết tự làm, kiểm tra trong buổi. Đếm chỗ bắt buộc dùng quá khứ (put, waited, saw, was, touched...): < 6 chỗ hoặc < 80 từ => A-L1-PAST-W = NULL.",
+      "time_min": 20,
+      "planned_date": "2026-10-30",
+      "items": [
+        {
+          "id": "W2-WIC",
+          "kind": "open",
+          "stem": "Write a report of your cold-glass experiment.",
+          "options": [],
+          "answer": "Kể quá khứ: đã làm gì, thấy gì; giải thích: hơi nước trong không khí gặp cốc lạnh -> nguội -> ngưng tụ thành giọt.",
+          "explanation_vi": "A-L1-PAST-W c1-c2; A-L3-CAUSE-W; A-L3-PARA-W; A-T4-CAUSE; A-L2-CHUNKS.",
+          "target_id": "A-L1-PAST-W"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 13,
+      "activity_type": "ACT-SELF-REVIEW",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "checkpoint"
+      ],
+      "target_ids": [
+        "A-A1-SELFASSESS"
+      ],
+      "prompt_en": "Before you hear any feedback, check your own report.",
+      "prompt_vi": "T6 30/10 (3'). Tự kiểm: 1 bạn làm gì -> bạn thấy gì; 2 động từ quá khứ (put, saw, waited); 3 giải thích vì sao có giọt nước ngoài cốc.",
+      "time_min": 3,
+      "planned_date": "2026-10-30",
+      "items": [],
+      "self_check_vi": [
+        "Bạn đã kể đủ: bạn đã làm gì, bạn đã thấy gì chưa?",
+        "Báo cáo đã dùng động từ quá khứ (put, saw, waited...) chưa?",
+        "Bạn đã giải thích vì sao có giọt nước ngoài cốc chưa?",
+        "Một điều mình làm tốt: ______",
+        "Một điều mình muốn sửa: ______"
+      ]
+    },
+    {
+      "step_no": 14,
+      "activity_type": "ACT-REVISE",
+      "mode": "REVISION",
+      "purpose": [],
+      "target_ids": [
+        "A-A3-REDRAFT"
+      ],
+      "prompt_en": "Read each hint, fix your report, underline what you changed, and write 'Mình đã đổi ... thành ... vì ...'.",
+      "prompt_vi": "T6 30/10 (7' + 15') - Thêm: đọc to từng câu có động từ; chuyện đã xảy ra thì động từ đã ở quá khứ chưa?",
+      "time_min": 15,
+      "planned_date": "2026-10-30",
+      "items": [],
+      "self_check_vi": []
+    }
+  ]
+}

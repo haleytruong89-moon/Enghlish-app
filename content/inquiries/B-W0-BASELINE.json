@@ -1,0 +1,755 @@
+{
+  "format": "inquiry-template/1",
+  "id": "B-W0-BASELINE",
+  "version": 1,
+  "track": "B",
+  "status": "published",
+  "catalogue_version": "0.2.1-draft",
+  "title_vi": "Baseline B v0.2.1 (2 buổi × 60 phút)",
+  "big_question_en": "Baseline: where does Nguyên start on each B-v1 target?",
+  "big_question_vi": "Hồ sơ xuất phát cho từng kỹ năng (không tính vào \"Tự làm được\")",
+  "week": 0,
+  "dates": {
+    "from": "2026-10-17",
+    "to": "2026-10-18"
+  },
+  "domain_bucket": "society",
+  "target_ids": [
+    "B-T1-EXAM-R",
+    "B-L2-CLOZE",
+    "B-T1-ARG-R",
+    "B-T2-ASSUME-R",
+    "B-T5-DATAOP",
+    "B-T11-QUALIFY",
+    "B-L1-COMPLEX-W",
+    "B-L2-PRECISE",
+    "B-L4-EXPLAIN-S",
+    "AGG-B-EXAM-MOCK"
+  ],
+  "sources": [
+    {
+      "id": "B-W0-BASELINE-S1",
+      "title": "Volunteering (cloze passage, MINI-20 Q10-15)",
+      "url": null,
+      "author": "Pilot Kit B author",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào.",
+      "modality": "text",
+      "text": "Volunteering is becoming increasingly (10) ______ among teenagers in Vietnam's big cities. Some students help at local libraries, (11) ______ others prefer to join clean-up days in parks and along rivers. Many volunteers say the work gives them a real sense of (12) ______ that they do not always get from tests and marks. They also learn practical skills, such as working in a team and talking to people of different ages. One student explained that she used to be very shy in class, but after a few months at a children's reading club she felt much more (13) ______. Schools have noticed the trend, and some now give certificates to students who volunteer regularly throughout the year. However, teachers warn that volunteering should not take too much time away (14) ______ sleep or homework. A sensible plan, they suggest, is to choose one activity and (15) ______ it seriously, rather than trying to join everything at once."
+    },
+    {
+      "id": "B-W0-BASELINE-S2",
+      "title": "Rooftop garden (reading, MINI-20 Q16-17)",
+      "url": null,
+      "author": "Pilot Kit B author",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào.",
+      "modality": "text",
+      "text": "Two years ago, the students of a city secondary school turned the empty roof of their building into a small vegetable garden. At first, the project was meant to be a one-term science activity. However, the garden soon became a popular place to spend break time, and a group of students offered to water the plants during the summer holiday. Today, the school kitchen uses some of the vegetables, and younger classes visit the roof to learn how plants grow. The teacher who started the project says the biggest surprise was not the harvest but the number of students who kept coming back without being asked."
+    },
+    {
+      "id": "B-W0-BASELINE-S3",
+      "title": "Let Us Sleep: Why Our School Day Should Start Later",
+      "url": null,
+      "author": "Imagined student writer (invented)",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào.",
+      "modality": "text",
+      "text": "¶1 Every morning at 6:15, my alarm goes off, and every morning I make the same promise: tonight I will go to bed earlier. I never do. I am not lazy, and neither are my classmates. The problem is that our school day starts at 7:00, which is simply too early for teenagers. I believe our school should move the start of lessons to 8:00.\n\n¶2 My first reason is health. Doctors often explain that during the teenage years the body clock shifts, so many teenagers do not feel sleepy until late in the evening. If we have to get up before 6:30, we cannot get the eight to ten hours of sleep that we need. Last month, the student council asked 200 students in our school about their sleep. Sixty-two per cent said they slept fewer than seven hours on school nights.\n\n¶3 My second reason is learning. Anyone who has visited a first-period class knows what I mean: half the room is yawning, and the other half is staring at the board without seeing it. A tired student is not a stupid student, but he or she is a slower one. Starting an hour later would turn that wasted first lesson into a useful one.\n\n¶4 Third, a later start would make mornings safer. At the moment, many of us cycle to school in the dark during the winter months, when the roads are busy with trucks.\n\n¶5 Some people argue that a later start means a later finish, so students would have less time for homework and extra classes. That is true, but it misses the point. An extra hour in the afternoon is worth much less than an extra hour of sleep. In any case, students who sleep longer will be more alert in the evening too, so they will finish their homework faster.\n\n¶6 Changing the timetable will not be easy. Teachers, parents and bus drivers would all need to adjust. But if we really care about students, the question is not whether we can afford to change. It is whether we can afford not to."
+    },
+    {
+      "id": "B-W0-BASELINE-S4",
+      "title": "Lunchtime library: hypothetical data",
+      "url": null,
+      "author": "Pilot Kit B author",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào.",
+      "modality": "text",
+      "text": "HYPOTHETICAL DATA, invented for practice. These are not real results.\nA secondary school opened its library at lunchtime for one term (September–December), for class 9A only. Class 9B kept the old timetable (library open only after school).\n\n| | 9A (lunchtime library) | 9B (no change) |\n|---|---|---|\n| Students in class | 40 | 38 |\n| Books borrowed per student per month, August | 0.8 | 0.9 |\n| Books borrowed per student per month, December | 1.9 | 1.0 |\n| Students who said \"I enjoy reading more now\" (December) | 22 of 40 | 9 of 38 |\n| End-of-term reading test, class average (out of 10) | 7.1 | 7.0 |\n\n*Note: in October, 9A's English teacher also started a weekly book club.*\n\nQuestion: Did opening the library at lunchtime make students in 9A read more and read better?\n\nFill in the four boxes in English (1–3 sentences each):\n1. Claim: your answer to the question.\n2. Evidence: at least two numbers from the table that support or challenge your claim.\n3. Limitation: at least one reason why this data cannot fully answer the question.\n4. Conditional conclusion: how sure are you? What would make you more (or less) sure?"
+    },
+    {
+      "id": "B-W0-BASELINE-S5",
+      "title": "Water refill stations (listening script)",
+      "url": null,
+      "author": "Imagined student-council speaker (invented)",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào. Phát bằng giọng đọc máy cố định trên máy phụ huynh; không ghi âm giọng Nguyên.",
+      "modality": "audio",
+      "text": "Good morning, everyone. I'm speaking on behalf of the student council about our proposal to put water refill stations in the school. At the moment, our canteen sells about three hundred plastic bottles of water every day, and most of them end up in the bin after one use. We think there is a better way.\nOur plan is simple. The school would put three refill stations in the main building, and every student would be asked to bring a reusable bottle. The stations would cost money at the start, but the canteen would no longer need to order bottled water, so the cost could be recovered in about two years.\nOf course, there are some concerns. Some parents have asked whether the water would be safe to drink. That's a fair question, and we think the filters should be tested every term, with the results posted on the notice board. Others worry that younger students will forget their bottles. For them, the canteen could keep a small supply of paper cups.\nWe are not saying this will solve every environmental problem. But it is a practical step, and we'd like to try it for one term and then review it together."
+    },
+    {
+      "id": "B-W0-BASELINE-S6",
+      "title": "The planning fallacy",
+      "url": null,
+      "author": "Pilot Kit B author",
+      "rights_note": "Tự soạn cho khóa học (Pilot Kit B v0.2.1); người viết, trường, thành phố và mọi con số là giả định. Không chép từ đề thi hay ấn phẩm nào. KHÔNG cho thầy/cô xem trước buổi (FIXLIST #1).",
+      "modality": "text",
+      "text": "Most people are surprisingly bad at predicting how long their own tasks will take. Psychologists call this the \"planning fallacy\". When we plan, we tend to imagine the best version of the task: we picture ourselves working steadily, with no interruptions, no mistakes and no tiredness. We rarely think about the things that went wrong last time. Interestingly, when we predict how long other people's tasks will take, we tend to be less optimistic, because we think about what actually happened to them before rather than about their hopes. One way to reduce the planning fallacy is to ask, \"How long did a similar task actually take me last time?\" and to use that answer, not your hopes, as a starting point. Another tip is to break a big task into smaller steps and estimate each one, which makes it harder to forget parts of the work."
+    }
+  ],
+  "steps": [
+    {
+      "step_no": 1,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [
+        "AGG-B-EXAM-MOCK",
+        "B-L2-CLOZE"
+      ],
+      "prompt_en": "Choose the best answer (A, B, C or D). 25 minutes. No dictionary.",
+      "prompt_vi": "Thứ Bảy 17/10 · (a) Đề rút gọn 20 câu, phụ huynh bấm giờ. Ghi theo phần MINI-20: PRON 1-4 · VOCGRAM 5-7 · COMM 8 · CLOZE 10-15 + 20 · READ 9, 16, 17 · TRANS 18-19. B-L2-CLOZE chấm trên câu 10-15 (c1 ≥ 5/6; c2 dạng từ 10, 12, 13 ≥ 2/3).",
+      "time_min": 25,
+      "planned_date": "2026-10-17",
+      "items": [
+        {
+          "id": "BL-a01",
+          "kind": "mcq",
+          "stem": "Choose the word whose underlined part is pronounced differently: h[ea]lthy / br[ea]kfast / h[ea]vy / m[ea]ning",
+          "options": [
+            "healthy",
+            "breakfast",
+            "heavy",
+            "meaning"
+          ],
+          "answer": "D",
+          "explanation_vi": "meaning /iː/, các từ còn lại /e/.",
+          "target_id": "AGG-B-EXAM-MOCK"
+        },
+        {
+          "id": "BL-a02",
+          "kind": "mcq",
+          "stem": "Choose the word whose underlined part is pronounced differently: watch[ed] / hop[ed] / decid[ed] / laugh[ed]",
+          "options": [
+            "watched",
+            "hoped",
+            "decided",
+            "laughed"
+          ],
+          "answer": "C",
+          "explanation_vi": "decided /ɪd/, các từ còn lại /t/.",
+          "target_id": "AGG-B-EXAM-MOCK"
+        },
+        {
+          "id": "BL-a03",
+          "kind": "mcq",
+          "stem": "Choose the word that has a different stress pattern from the others.",
+          "options": [
+            "reply",
+            "student",
+            "village",
+            "study"
+          ],
+          "answer": "A",
+          "explanation_vi": "reply nhấn âm 2, các từ còn lại âm 1.",
+          "target_id": "AGG-B-EXAM-MOCK"
+        },
+        {
+          "id": "BL-a04",
+          "kind": "mcq",
+          "stem": "Choose the word that has a different stress pattern from the others.",
+          "options": [
+            "important",
+            "family",
+            "computer",
+            "remember"
+          ],
+          "answer": "B",
+          "explanation_vi": "family nhấn âm 1, các từ còn lại âm 2.",
+          "target_id": "AGG-B-EXAM-MOCK"
+        },
+        {
+          "id": "BL-a05",
+          "kind": "mcq",
+          "stem": "If I ______ more free time, I would join the school debate club.",
+          "options": [
+            "have",
+            "will have",
+            "would have",
+            "had"
+          ],
+          "answer": "D",
+          "explanation_vi": "Câu điều kiện loại 2: If + quá khứ đơn, would + V.",
+          "target_id": "AGG-B-EXAM-MOCK"
+        },
+        {
+          "id": "BL-a06",
+          "kind": "mcq",
+          "stem": "The library ______ in 1998 is going to be repainted next month.",
+          "options": [
+            "built",
+            "building",
+            "was built",
+            "which built"
+          ],
+          "answer": "A",
+          "explanation_vi": "Rút gọn mệnh đề quan hệ bị động (which was built → built).",
+          "target_id": "AGG-B-EXAM-MOCK"
+        },
+        {
+          "id": "BL-a07",
+          "kind": "mcq",
+          "stem": "The class trip was ______ because of the heavy rain.",
+          "options": [
+            "taken after",
+            "called off",
+            "looked up",
+            "given in"
+          ],
+          "answer": "B",
+          "explanation_vi": "call off = hủy.",
+          "target_id": "AGG-B-EXAM-MOCK"
+        },
+        {
+          "id": "BL-a08",
+          "kind": "mcq",
+          "stem": "Mai: \"Would you mind if I opened the window?\" – Lan: \"______\"",
+          "options": [
+            "Yes, I'd love to.",
+            "You're welcome.",
+            "No, go ahead.",
+            "Never mind."
+          ],
+          "answer": "C",
+          "explanation_vi": "Would you mind…? → \"No, go ahead\" là đồng ý.",
+          "target_id": "AGG-B-EXAM-MOCK"
+        },
+        {
+          "id": "BL-a09",
+          "kind": "mcq",
+          "stem": "This notice is on the door of the school library: SILENT STUDY ZONE – Phones on silent. Group discussions in Room 2 only.",
+          "options": [
+            "Students may not use phones anywhere in the library.",
+            "Room 2 is closed for group discussions.",
+            "Students must leave their phones at the entrance.",
+            "Students who want to work in groups should go to Room 2."
+          ],
+          "answer": "D",
+          "explanation_vi": "Thảo luận nhóm chỉ ở Room 2; điện thoại để im lặng chứ không bị cấm.",
+          "target_id": "AGG-B-EXAM-MOCK"
+        },
+        {
+          "id": "BL-a10",
+          "kind": "word_form",
+          "stem": "Gap (10)",
+          "options": [
+            "popularity",
+            "popularly",
+            "popular",
+            "populate"
+          ],
+          "answer": "C",
+          "explanation_vi": "increasingly + tính từ: popular.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "BL-a11",
+          "kind": "gap",
+          "stem": "Gap (11)",
+          "options": [
+            "while",
+            "because",
+            "so",
+            "unless"
+          ],
+          "answer": "A",
+          "explanation_vi": "while nối hai ý đối lập (some… while others…).",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "BL-a12",
+          "kind": "word_form",
+          "stem": "Gap (12)",
+          "options": [
+            "achieve",
+            "achievement",
+            "achieving",
+            "achievable"
+          ],
+          "answer": "B",
+          "explanation_vi": "a sense of + danh từ: achievement.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "BL-a13",
+          "kind": "word_form",
+          "stem": "Gap (13)",
+          "options": [
+            "confidence",
+            "confidently",
+            "confide",
+            "confident"
+          ],
+          "answer": "D",
+          "explanation_vi": "felt (much more) + tính từ: confident.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "BL-a14",
+          "kind": "gap",
+          "stem": "Gap (14)",
+          "options": [
+            "of",
+            "with",
+            "from",
+            "at"
+          ],
+          "answer": "C",
+          "explanation_vi": "take time away from.",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "BL-a15",
+          "kind": "gap",
+          "stem": "Gap (15)",
+          "options": [
+            "take",
+            "make",
+            "hold",
+            "get"
+          ],
+          "answer": "A",
+          "explanation_vi": "take it seriously. (ĐÃ SỬA theo FIXLIST: phương án C cũ \"do\" bị thay bằng \"hold\" vì \"do it seriously\" cũng dùng được.)",
+          "target_id": "B-L2-CLOZE"
+        },
+        {
+          "id": "BL-a16",
+          "kind": "mcq",
+          "stem": "What is the passage mainly about?",
+          "options": [
+            "how to grow vegetables on a roof",
+            "a short science activity that grew into a lasting school project",
+            "why the school kitchen needs fresh vegetables",
+            "a teacher's plan to change break time"
+          ],
+          "answer": "B",
+          "explanation_vi": "Ý chính cả đoạn.",
+          "target_id": "AGG-B-EXAM-MOCK"
+        },
+        {
+          "id": "BL-a17",
+          "kind": "mcq",
+          "stem": "What does the teacher's comment in the last sentence suggest?",
+          "options": [
+            "The garden produced fewer vegetables than expected.",
+            "Students were required to visit the garden every week.",
+            "The project will probably end soon.",
+            "The students' willingness to come back on their own impressed the teacher more than the harvest."
+          ],
+          "answer": "D",
+          "explanation_vi": "\"not the harvest but… without being asked\".",
+          "target_id": "AGG-B-EXAM-MOCK"
+        },
+        {
+          "id": "BL-a18",
+          "kind": "mcq",
+          "stem": "Choose the sentence closest in meaning: I haven't seen my cousin for three years.",
+          "options": [
+            "I saw my cousin three years.",
+            "I didn't see my cousin three years ago.",
+            "I last saw my cousin three years ago.",
+            "It's three years when I saw my cousin."
+          ],
+          "answer": "C",
+          "explanation_vi": "Hiện tại hoàn thành + for → last + quá khứ + ago.",
+          "target_id": "AGG-B-EXAM-MOCK"
+        },
+        {
+          "id": "BL-a19",
+          "kind": "mcq",
+          "stem": "Choose the sentence closest in meaning: It's a pity I can't speak Japanese.",
+          "options": [
+            "I wish I could speak Japanese.",
+            "I wish I can speak Japanese.",
+            "If only I couldn't speak Japanese.",
+            "I wish I didn't speak Japanese."
+          ],
+          "answer": "A",
+          "explanation_vi": "It's a pity I can't → I wish I could.",
+          "target_id": "AGG-B-EXAM-MOCK"
+        },
+        {
+          "id": "BL-a20",
+          "kind": "mcq",
+          "stem": "Choose the best order: a. First, it saves time, because students do not have to wait for the bus. b. Many students in my class now cycle to school. c. Second, it is good exercise at the start of the day. d. There are two main reasons for this.",
+          "options": [
+            "d–b–a–c",
+            "b–d–a–c",
+            "b–a–d–c",
+            "b–d–c–a"
+          ],
+          "answer": "B",
+          "explanation_vi": "b (chủ đề) – d (hai lý do) – a (First) – c (Second).",
+          "target_id": "AGG-B-EXAM-MOCK"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 2,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [
+        "B-T1-EXAM-R",
+        "B-T1-ARG-R",
+        "B-T2-ASSUME-R",
+        "B-T5-DATAOP"
+      ],
+      "prompt_en": "No dictionary. For questions 3, 4 and 6, write the paragraph number (¶) and the first few words of the sentence that supports your answer. Part 2: answer in English (short answers are fine).",
+      "prompt_vi": "Thứ Bảy 17/10 · (b) Đọc bài nghị luận ≈ 345 từ: đọc 4' + 6 câu trắc nghiệm 8' + tự luận 10'. Văn bản ngắn hơn yêu cầu của B-T1-ARG-R: ghi notes \"văn bản ngắn hơn yêu cầu target\".",
+      "time_min": 22,
+      "planned_date": "2026-10-17",
+      "items": [
+        {
+          "id": "BL-b01",
+          "kind": "mcq",
+          "stem": "What is the writer's main purpose?",
+          "options": [
+            "to describe a typical morning at school",
+            "to explain how the body clock works",
+            "to persuade readers that the school day should start later",
+            "to complain about homework"
+          ],
+          "answer": "C",
+          "explanation_vi": "Bài nghị luận đề xuất dời giờ học.",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "BL-b02",
+          "kind": "mcq",
+          "stem": "According to paragraph 2, which is true about the student council's survey?",
+          "options": [
+            "200 students slept fewer than seven hours on school nights.",
+            "More than half of the students asked slept fewer than seven hours on school nights.",
+            "62 students slept fewer than seven hours on school nights.",
+            "Most students slept eight to ten hours."
+          ],
+          "answer": "B",
+          "explanation_vi": "62% của 200 (= 124 em) là hơn một nửa.",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "BL-b03",
+          "kind": "mcq",
+          "stem": "The word \"alert\" in paragraph 5 is closest in meaning to ______. (Write ¶ + supporting sentence.)",
+          "options": [
+            "awake and able to think clearly",
+            "worried",
+            "sleepy",
+            "busy"
+          ],
+          "answer": "A",
+          "explanation_vi": "Căn cứ ¶5 \"students who sleep longer will be more alert in the evening too, so they will finish their homework faster\".",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "BL-b04",
+          "kind": "mcq",
+          "stem": "What does the writer imply in paragraph 3? (Write ¶ + supporting sentence.)",
+          "options": [
+            "Students in the first lesson are less intelligent.",
+            "Teachers should stop teaching in the first period.",
+            "Students yawn because the lessons are boring.",
+            "The first lesson is currently of little use to many students."
+          ],
+          "answer": "D",
+          "explanation_vi": "Căn cứ ¶3 \"Starting an hour later would turn that wasted first lesson into a useful one\".",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "BL-b05",
+          "kind": "mcq",
+          "stem": "How does the writer respond to the opposing view in paragraph 5?",
+          "options": [
+            "The writer accepts it completely and changes position.",
+            "The writer admits part of it is true but argues that sleep matters more.",
+            "The writer ignores it.",
+            "The writer says it is not worth answering."
+          ],
+          "answer": "B",
+          "explanation_vi": "¶5 \"That is true, but it misses the point\". Dòng này cũng là c3 của B-T1-ARG-R (lập trường).",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "BL-b06",
+          "kind": "mcq",
+          "stem": "In the last paragraph, the writer suggests that ______. (Write ¶ + supporting sentence.)",
+          "options": [
+            "changing the timetable would be cheap and easy",
+            "bus drivers are against the change",
+            "keeping the current timetable also has a cost",
+            "teachers will refuse to adjust"
+          ],
+          "answer": "C",
+          "explanation_vi": "Căn cứ ¶6 \"whether we can afford not to\".",
+          "target_id": "B-T1-EXAM-R"
+        },
+        {
+          "id": "BL-b07",
+          "kind": "short",
+          "stem": "In one sentence, what is the writer's main claim?",
+          "options": [],
+          "answer": "The school should move the start of lessons from 7:00 to 8:00 (start later).",
+          "explanation_vi": "c1 của B-T1-ARG-R.",
+          "target_id": "B-T1-ARG-R"
+        },
+        {
+          "id": "BL-b08",
+          "kind": "short",
+          "stem": "List three reasons the writer gives.",
+          "options": [],
+          "answer": "Health/sleep (¶2) · learning – tired students are slower, first lesson wasted (¶3) · safety – cycling in the dark (¶4).",
+          "explanation_vi": "Cần đủ 3 lý do (c2 của B-T1-ARG-R).",
+          "target_id": "B-T1-ARG-R"
+        },
+        {
+          "id": "BL-b09",
+          "kind": "open",
+          "stem": "The writer seems to take something for granted without saying it. Name one unstated assumption, and quote the words that show it.",
+          "options": [],
+          "answer": "Một trong: (i) dời giờ thì học sinh thực sự ngủ thêm, không thức khuya hơn (¶2 \"If we have to get up before 6:30…\", ¶5) · (ii) 200 em được hỏi đại diện cho cả trường (¶2 \"asked 200 students\") · (iii) điều thấy ở lớp mình đúng cho mọi lớp (¶1 \"neither are my classmates\", ¶3 \"Anyone who has visited…\") · (iv) với MỌI học sinh, giờ buổi chiều kém giá trị hơn giờ ngủ (¶5).",
+          "explanation_vi": "c1 giả định hợp lý; c2 trích đúng; c3 trình bày như điều người viết ngầm cho là đúng, không như điều bài nói ra. Với (iv): chỉ chấp nhận khi học sinh nêu phần NGẦM (áp dụng cho mọi học sinh), vì \"worth much less\" là điều bài đã nói thẳng.",
+          "target_id": "B-T2-ASSUME-R"
+        },
+        {
+          "id": "BL-b10i",
+          "kind": "mcq",
+          "stem": "\"Our school day starts at 7:00.\"",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "A",
+          "explanation_vi": "Dữ liệu/bằng chứng (D).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "BL-b10ii",
+          "kind": "mcq",
+          "stem": "\"7:00 is simply too early for teenagers.\"",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "B",
+          "explanation_vi": "Bình luận/diễn giải (C).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "BL-b10iii",
+          "kind": "mcq",
+          "stem": "\"Last month, the student council asked 200 students in our school about their sleep.\"",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "A",
+          "explanation_vi": "Dữ liệu/bằng chứng (D).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "BL-b10iv",
+          "kind": "mcq",
+          "stem": "\"Sixty-two per cent said they slept fewer than seven hours on school nights.\"",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "A",
+          "explanation_vi": "Dữ liệu/bằng chứng (D).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "BL-b10v",
+          "kind": "mcq",
+          "stem": "\"A tired student is not a stupid student, but he or she is a slower one.\"",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "B",
+          "explanation_vi": "Bình luận/diễn giải (C).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "BL-b10vi",
+          "kind": "mcq",
+          "stem": "\"An extra hour in the afternoon is worth much less than an extra hour of sleep.\"",
+          "options": [
+            "D (data/evidence)",
+            "C (commentary/interpretation)"
+          ],
+          "answer": "B",
+          "explanation_vi": "Bình luận/diễn giải (C).",
+          "target_id": "B-T5-DATAOP"
+        },
+        {
+          "id": "BL-b11",
+          "kind": "open",
+          "stem": "Choose two statements you marked C. For each, explain in 1-2 sentences why it is commentary, not data.",
+          "options": [],
+          "answer": "Ví dụ: (ii) là đánh giá (\"simply too early\"), không có số đo · (v) là khái quát/so sánh không dựa trên phép đo · (vi) là so sánh giá trị, tùy người nói.",
+          "explanation_vi": "c2 của B-T5-DATAOP: ≥ 2 giải thích đúng.",
+          "target_id": "B-T5-DATAOP"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 3,
+      "activity_type": "ACT-CANVAS-ADV",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [
+        "B-T11-QUALIFY"
+      ],
+      "prompt_en": "Fill in the four boxes in English (1-3 sentences each): 1. Claim 2. Evidence (at least two numbers from the table) 3. Limitation 4. Conditional conclusion: how sure are you? What would make you more (or less) sure?",
+      "prompt_vi": "Thứ Bảy 17/10 · (f) Canvas trên số liệu giả định, 13 phút.",
+      "time_min": 13,
+      "planned_date": "2026-10-17",
+      "items": [
+        {
+          "id": "BL-f01",
+          "kind": "open",
+          "stem": "Did opening the library at lunchtime make students in 9A read more and read better? Fill in Claim / Evidence / Limitation / Conditional conclusion.",
+          "options": [],
+          "answer": "Mượn sách 9A 0,8→1,9 trong khi 9B 0,9→1,0; thích đọc 22/40 so với 9/38; nhưng điểm đọc 7,1 so với 7,0. Giới hạn: câu lạc bộ sách cũng bắt đầu ở 9A (gây nhiễu), 1 lớp, 1 học kỳ, mượn chưa chắc là đọc, \"thích đọc\" là tự khai, không có điểm đọc đầu kỳ để so, tháng 8 có thể là kỳ nghỉ. Kết luận đạt: \"Có khả năng thư viện (có lẽ cùng CLB sách) làm 9A mượn sách nhiều hơn; chưa đủ bằng chứng rằng các em đọc giỏi hơn. Sẽ chắc hơn nếu lớp khác mở thư viện mà không có CLB sách và vẫn thấy kết quả tương tự.\"",
+          "explanation_vi": "c1 mức chắc chắn khớp bằng chứng; c2 có ≥ 1 điều kiện. \"Chưa đủ bằng chứng\" có lập luận vẫn đạt 3-4.",
+          "target_id": "B-T11-QUALIFY"
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 4,
+      "activity_type": "ACT-SOURCE-QA",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [],
+      "prompt_en": "Read the questions first (1 minute). You will hear the talk twice.",
+      "prompt_vi": "Chủ nhật 18/10 (ở nhà) · (c) Nghe ≈ 200 từ, 2 lần, không mở lời bài. Chẩn đoán, nằm ngoài 12 kỹ năng: ghi auto_checks = n/5, để trống score.",
+      "time_min": 10,
+      "planned_date": "2026-10-18",
+      "items": [
+        {
+          "id": "BL-c01",
+          "kind": "mcq",
+          "stem": "What is the speaker's main purpose?",
+          "options": [
+            "to complain about the canteen",
+            "to propose putting water refill stations in the school",
+            "to explain how water filters work",
+            "to ask students to buy more bottled water"
+          ],
+          "answer": "B",
+          "explanation_vi": "Chẩn đoán, ngoài 12 kỹ năng.",
+          "target_id": null
+        },
+        {
+          "id": "BL-c02",
+          "kind": "mcq",
+          "stem": "According to the speaker, how could the cost of the stations be recovered?",
+          "options": [
+            "by charging students for water",
+            "through parents' donations",
+            "because the canteen would no longer need to order bottled water",
+            "by selling reusable bottles"
+          ],
+          "answer": "C",
+          "explanation_vi": "",
+          "target_id": null
+        },
+        {
+          "id": "BL-c03",
+          "kind": "short",
+          "stem": "What does the speaker suggest to deal with parents' worries about safety?",
+          "options": [],
+          "answer": "Test the filters every term AND post the results on the notice board.",
+          "explanation_vi": "Cần đủ cả hai ý.",
+          "target_id": null
+        },
+        {
+          "id": "BL-c04",
+          "kind": "mcq",
+          "stem": "Which best describes the speaker's attitude to the plan?",
+          "options": [
+            "certain that it will solve all environmental problems",
+            "doubtful whether it is worth trying",
+            "angry with the parents who raised concerns",
+            "cautiously positive: a practical step to try and then review"
+          ],
+          "answer": "D",
+          "explanation_vi": "",
+          "target_id": null
+        },
+        {
+          "id": "BL-c05",
+          "kind": "mcq",
+          "stem": "What can be inferred about the plan?",
+          "options": [
+            "The council is open to changing it after a trial.",
+            "It has already been approved by the school.",
+            "Younger students will not be allowed to use the stations.",
+            "The canteen will stop selling food."
+          ],
+          "answer": "A",
+          "explanation_vi": "\"try it for one term and then review it together\".",
+          "target_id": null
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 5,
+      "activity_type": "ACT-WRITE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [
+        "B-L1-COMPLEX-W",
+        "B-L2-PRECISE"
+      ],
+      "prompt_en": "Your school is thinking about replacing one written test per term in each subject with a group project. Do you think this is a good idea? Write 250-280 words. Give a clear opinion, at least two reasons with examples, and a short conclusion. No dictionary, no spell-check, no AI.",
+      "prompt_vi": "Chủ nhật 18/10 · (d) Dàn ý 5' + viết 27' + đọc lại 3'. ĐÃ SỬA (FIXLIST #2): yêu cầu 250-280 từ (giữ 35 phút) để B-L1-COMPLEX-W, vốn chỉ chấm khi bài ≥ 250 từ, có cơ hội hợp lệ. B-T7-ARGUE để trống (không có nguồn).",
+      "time_min": 35,
+      "planned_date": "2026-10-18",
+      "items": [],
+      "self_check_vi": [
+        "Bài đã đủ 250 từ chưa?",
+        "Có vài câu phức với which, who, although, if… chưa?"
+      ]
+    },
+    {
+      "step_no": 6,
+      "activity_type": "ACT-SPEAK-LIVE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [
+        "baseline"
+      ],
+      "target_ids": [
+        "B-L4-EXPLAIN-S"
+      ],
+      "prompt_en": "Read for 2 minutes, then turn the paper over. Explain the idea to your teacher, who has not read it, so that they can say it back to you in one sentence. Use at least one example from everyday life.",
+      "prompt_vi": "Chủ nhật 18/10, 20:30 trong buổi · (e) 15': đọc 2' + giải thích 2-3' + thầy/cô nhắc lại 1' + trao đổi 5' + ghi nhận xét 4'. Ý chính để đối chiếu (phụ huynh giữ trong phong bì, chỉ mở SAU khi thầy/cô nhắc lại): \"People usually underestimate how long their own tasks will take because they imagine an ideal version of the work and ignore past problems. They can plan better by basing estimates on how long similar tasks actually took, and by breaking tasks into steps.\" Baseline không tính vào \"Tự làm được\".",
+      "time_min": 15,
+      "planned_date": "2026-10-18",
+      "items": [
+        {
+          "id": "BL-e01",
+          "kind": "open",
+          "stem": "Tutor restates the main idea in one sentence; then compare with the key idea.",
+          "options": [],
+          "answer": "People usually underestimate how long their own tasks will take because they imagine an ideal version of the work and ignore past problems; they can plan better by using how long similar tasks actually took and by breaking tasks into steps.",
+          "explanation_vi": "c1 thầy/cô nhắc lại khớp ý chính; c2 có ≥ 1 ví dụ hoặc so sánh.",
+          "target_id": "B-L4-EXPLAIN-S"
+        }
+      ],
+      "self_check_vi": []
+    }
+  ]
+}

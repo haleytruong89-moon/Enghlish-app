@@ -1,0 +1,2698 @@
+{
+  "format": "inquiry-draft/0.1",
+  "track": "A",
+  "items": [
+    {
+      "inquiry_id": "A-W0-BASELINE",
+      "title_vi": "Baseline A v0.2.1 - hồ sơ xuất phát (2 buổi x 45 phút)",
+      "big_question_en": "What can An already do in English?",
+      "big_question_vi": "An đã làm được gì bằng tiếng Anh? (không phải bài thi; không tính vào 'Tự làm được')",
+      "week": 0,
+      "dates": {
+        "from": "2026-10-18",
+        "to": "2026-10-19"
+      },
+      "domain_bucket": "science",
+      "target_ids": [
+        "A-T1-TEXT-R",
+        "A-T1-TEXT-L",
+        "A-L3-CAUSE-S",
+        "A-L2-COMPENSATE-S",
+        "A-X1-TURN",
+        "A-L1-PAST-W",
+        "A-L3-CAUSE-W",
+        "A-L3-PARA-W",
+        "A-T4-CAUSE"
+      ],
+      "sources": [
+        {
+          "title": "Why Do Leaves Change Colour? (bài đọc baseline)",
+          "url": null,
+          "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi",
+          "rights_note": "Tự soạn, không sao chép. Đã đối chiếu (kit mục 2.11): USDA Forest Service (https://fs.usda.gov/Internet/FSE_DOCUMENTS/stelprd3817419.pdf); RSC (https://edu.rsc.org/everyday-chemistry/the-chemistry-behind-leaves-changing-colour-and-falling-from-trees/4018155.article); Britannica (https://britannica.com/story/why-do-leaves-fall-in-autumn); câu cây bàng Hà Nội lá đỏ vào mùa đông: VietNamNet (https://vietnamnet.vn/ngam-ha-noi-dep-nhu-tranh-trong-mua-la-bang-do-ruc-214928.html).",
+          "modality": "text",
+          "text": "Why Do Leaves Change Colour?\n\nIn many countries, green leaves turn yellow, orange or red in autumn, and then they fall. Why does this happen?\n\nA leaf is green because it has a green material called chlorophyll. Chlorophyll helps the tree to make food from sunlight, air and water. In spring and summer, the tree makes a lot of chlorophyll, so the green colour covers the other colours in the leaf.\n\nIn autumn, the days get shorter and the nights get longer. With less sunlight, the tree stops making new chlorophyll. The old chlorophyll slowly breaks down, and the green colour disappears. Now we can see yellow and orange. These colours were in the leaf all summer, but the green colour hid them.\n\nSome trees, like maples, also make a new red colour in autumn. Their leaves are brightest after sunny days and cool nights.\n\nNext, a thin wall grows where the leaf joins the branch, and the leaf falls. Thin leaves full of water could freeze in a cold winter, so the tree drops them.\n\nIn Hanoi, the big leaves of the Indian almond tree (cây bàng) turn red in winter. I think these red leaves are the most beautiful thing in our city."
+        },
+        {
+          "title": "How Do Bats Find Food in the Dark? (bài nghe baseline, file A_BL_L)",
+          "url": null,
+          "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi",
+          "rights_note": "Tự soạn, đọc bằng một giọng TTS cố định, tốc độ 0,9x. Đã đối chiếu: Cleveland Zoological Society (https://www.clevelandzoosociety.org/Z/2024/06/20/ask-the-expert-do-all-bats-use-echolocation), National Geographic 2014 (https://www.nationalgeographic.com/science/phenomena/2014/12/04/fruit-bats-have-sonar-too-but-its-not-very-good/). Chưa kiểm được: \"âm thanh quá cao để người nghe thấy\" và \"thời gian tiếng vang cho biết khoảng cách\" (trang NPS về dơi chưa mở được); phụ huynh kiểm trước 17/10.",
+          "modality": "audio",
+          "text": "How Do Bats Find Food in the Dark?\n\nHello! Today's question is: how can a bat catch insects at night, when it is too dark to see well?\n\nMany bats use sound. While a bat is flying, it makes very high sounds. Most of these sounds are too high for people to hear. When a sound hits an insect, it bounces back to the bat. This returning sound is called an echo.\n\nThe bat listens to the echo carefully. The echo tells the bat where the insect is. The bat also notices how long the echo takes to come back. This tells it how far away the insect is. Then the bat flies quickly and catches its dinner.\n\nFinding things with echoes like this is called echolocation. But not all bats do it. Some big fruit bats find their food mainly with their eyes and their good sense of smell.\n\nSo next time you see a bat at night, remember: it is listening to the dark!"
+        }
+      ],
+      "steps": [
+        {
+          "step_no": 1,
+          "activity_type": "ACT-SOURCE-QA",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "baseline"
+          ],
+          "target_ids": [
+            "A-T1-TEXT-R"
+          ],
+          "prompt_en": "Read the text (5 minutes). Then answer the 8 questions (10 minutes). You may look back at the text.",
+          "prompt_vi": "CN 18/10 - Đọc. Không từ điển. Xem lại bài khi trả lời là bình thường của kỹ năng đọc: không ghi source_open (kit mục 1.3). Chấm: câu 1 = ý chính; câu 2-5 = 4 chi tiết (cần 4/4); câu 6-8 chẩn đoán.",
+          "time_min": 15,
+          "items": [
+            {
+              "id": "BL-R1",
+              "kind": "mcq",
+              "stem": "What is the text mainly about?",
+              "options": [
+                "a) how trees make food",
+                "b) why leaves change colour and fall",
+                "c) the trees in Hanoi",
+                "d) why maple trees are red"
+              ],
+              "answer": "b",
+              "explanation_vi": "Ý chính: lá đổi màu và rụng. Chấm c1 của Đọc hiểu.",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "BL-R2",
+              "kind": "short",
+              "stem": "What does chlorophyll help the tree to do?",
+              "options": [],
+              "answer": "Make food (from sunlight, air and water).",
+              "explanation_vi": "Chi tiết 1/4.",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "BL-R3",
+              "kind": "short",
+              "stem": "Why does the tree stop making new chlorophyll in autumn?",
+              "options": [],
+              "answer": "There is less sunlight / the days get shorter (the nights get longer).",
+              "explanation_vi": "Chi tiết 2/4 (nhân quả có trong bài).",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "BL-R4",
+              "kind": "short",
+              "stem": "Where were the yellow and orange colours in summer?",
+              "options": [],
+              "answer": "In the leaf already; the green colour hid them.",
+              "explanation_vi": "Chi tiết 3/4.",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "BL-R5",
+              "kind": "short",
+              "stem": "Put in order: (A) the green colour disappears (B) the days get shorter (C) we can see yellow and orange (D) the tree stops making new chlorophyll",
+              "options": [
+                "A",
+                "B",
+                "C",
+                "D"
+              ],
+              "answer": "B, D, A, C",
+              "explanation_vi": "Chi tiết 4/4 (trình tự). Đọc hiểu cần 4/4 chi tiết (80%).",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "BL-R6",
+              "kind": "open",
+              "stem": "In October, Nam finds a leaf that is half green and half yellow. Did the yellow colour come into the leaf in October? Explain, using the text.",
+              "options": [],
+              "answer": "No. The yellow was in the leaf all summer; the green chlorophyll is breaking down, so now the yellow shows.",
+              "explanation_vi": "CHẨN ĐOÁN (suy luận, không ghi dòng kỹ năng). Cần nêu dấu hiệu trong bài (\"These colours were in the leaf all summer\").",
+              "target_id": "A-T2-INFER-R"
+            },
+            {
+              "id": "BL-R7",
+              "kind": "short",
+              "stem": "\"...the green colour hid them.\" What does 'hid' mean here?",
+              "options": [],
+              "answer": "Covered them so we could not see them (che, giấu).",
+              "explanation_vi": "CHẨN ĐOÁN (nghĩa từ theo ngữ cảnh).",
+              "target_id": "A-T2-INFER-R"
+            },
+            {
+              "id": "BL-R8",
+              "kind": "open",
+              "stem": "Look at these two sentences. (A) In autumn, the days get shorter and the nights get longer. (B) I think these red leaves are the most beautiful thing in our city. Which one is an opinion? How do you know?",
+              "options": [],
+              "answer": "(B). It says what the writer feels ('I think', 'the most beautiful') and nobody can check it. (A) can be checked, so it is a fact.",
+              "explanation_vi": "CHẨN ĐOÁN (sự thật/ý kiến). Chỉ có 1 câu nên A-T5-FACTOP-R là NULL, không ghi dòng kỹ năng.",
+              "target_id": "A-T5-FACTOP-R"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 2,
+          "activity_type": "ACT-SOURCE-QA",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "baseline"
+          ],
+          "target_ids": [
+            "A-T1-TEXT-L"
+          ],
+          "prompt_en": "Read the questions first (2 minutes). Listen (first time). Answer. Listen (second time). Finish.",
+          "prompt_vi": "CN 18/10 - Nghe. Phát tối đa 2 lần, không cho xem chữ (xem chữ = transcript_open). Chấm: câu 1 = ý chính; câu 2-5 = 4 chi tiết (cần >= 3/4); câu 6 chẩn đoán.",
+          "time_min": 11,
+          "items": [
+            {
+              "id": "BL-L1",
+              "kind": "mcq",
+              "stem": "What is the talk mainly about?",
+              "options": [
+                "a) why bats sleep in the day",
+                "b) how many bats use sound to find food at night",
+                "c) what fruit bats eat",
+                "d) why people cannot hear well at night"
+              ],
+              "answer": "b",
+              "explanation_vi": "Ý chính.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "BL-L2",
+              "kind": "short",
+              "stem": "When does the bat make the high sounds?",
+              "options": [],
+              "answer": "While it is flying.",
+              "explanation_vi": "Chi tiết 1/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "BL-L3",
+              "kind": "short",
+              "stem": "Can people hear most of these sounds? Why / why not?",
+              "options": [],
+              "answer": "No. They are too high (for people to hear).",
+              "explanation_vi": "Chi tiết 2/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "BL-L4",
+              "kind": "short",
+              "stem": "What is an echo?",
+              "options": [],
+              "answer": "A sound that bounces back / comes back.",
+              "explanation_vi": "Chi tiết 3/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "BL-L5",
+              "kind": "short",
+              "stem": "How do some big fruit bats find their food?",
+              "options": [],
+              "answer": "With their eyes and (their sense of) smell.",
+              "explanation_vi": "Chi tiết 4/4. Nghe hiểu cần >= 3/4 chi tiết (75%).",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "BL-L6",
+              "kind": "open",
+              "stem": "The echo from insect A comes back faster than the echo from insect B. Which insect is closer? How do you know?",
+              "options": [],
+              "answer": "Insect A. The time the echo takes to come back tells how far away the insect is; a faster echo means a shorter way.",
+              "explanation_vi": "CHẨN ĐOÁN (suy luận khi nghe).",
+              "target_id": "A-T2-INFER-L"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 3,
+          "activity_type": "ACT-SOURCE-QA",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "baseline"
+          ],
+          "target_ids": [],
+          "prompt_en": "Part A: match each word with its meaning. Part B: write one sentence of your own for each of five words.",
+          "prompt_vi": "CN 18/10 - Từ vựng (15 từ). Chẩn đoán độ rộng từ vựng, không ghi dòng kỹ năng.",
+          "time_min": 12,
+          "items": [
+            {
+              "id": "BL-V01",
+              "kind": "mcq",
+              "stem": "Nhóm 1 - Thời tiết và nước - 1.: choose the meaning of 'cloud'.",
+              "options": [
+                "a. to become ice because it is very cold",
+                "b. a lot of water covering land that is usually dry",
+                "c. a white or grey shape in the sky, made of tiny drops of water",
+                "d. very bad weather with strong wind and heavy rain",
+                "e. to change from hard to liquid when it gets warm"
+              ],
+              "answer": "c",
+              "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-V02",
+              "kind": "mcq",
+              "stem": "Nhóm 1 - Thời tiết và nước - 2.: choose the meaning of 'storm'.",
+              "options": [
+                "a. to become ice because it is very cold",
+                "b. a lot of water covering land that is usually dry",
+                "c. a white or grey shape in the sky, made of tiny drops of water",
+                "d. very bad weather with strong wind and heavy rain",
+                "e. to change from hard to liquid when it gets warm"
+              ],
+              "answer": "d",
+              "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-V03",
+              "kind": "mcq",
+              "stem": "Nhóm 1 - Thời tiết và nước - 3.: choose the meaning of 'melt'.",
+              "options": [
+                "a. to become ice because it is very cold",
+                "b. a lot of water covering land that is usually dry",
+                "c. a white or grey shape in the sky, made of tiny drops of water",
+                "d. very bad weather with strong wind and heavy rain",
+                "e. to change from hard to liquid when it gets warm"
+              ],
+              "answer": "e",
+              "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-V04",
+              "kind": "mcq",
+              "stem": "Nhóm 1 - Thời tiết và nước - 4.: choose the meaning of 'freeze'.",
+              "options": [
+                "a. to become ice because it is very cold",
+                "b. a lot of water covering land that is usually dry",
+                "c. a white or grey shape in the sky, made of tiny drops of water",
+                "d. very bad weather with strong wind and heavy rain",
+                "e. to change from hard to liquid when it gets warm"
+              ],
+              "answer": "a",
+              "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-V05",
+              "kind": "mcq",
+              "stem": "Nhóm 1 - Thời tiết và nước - 5.: choose the meaning of 'flood'.",
+              "options": [
+                "a. to become ice because it is very cold",
+                "b. a lot of water covering land that is usually dry",
+                "c. a white or grey shape in the sky, made of tiny drops of water",
+                "d. very bad weather with strong wind and heavy rain",
+                "e. to change from hard to liquid when it gets warm"
+              ],
+              "answer": "b",
+              "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-V06",
+              "kind": "mcq",
+              "stem": "Nhóm 2 - Sinh vật - 6.: choose the meaning of 'root'.",
+              "options": [
+                "f. a very small animal with six legs, like an ant or a bee",
+                "g. the hard outside part of a snail, an egg or a turtle",
+                "h. the part of a plant that grows under the ground",
+                "i. one of the soft, light things that cover a bird's body",
+                "j. a small hard thing that a new plant grows from"
+              ],
+              "answer": "h",
+              "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-V07",
+              "kind": "mcq",
+              "stem": "Nhóm 2 - Sinh vật - 7.: choose the meaning of 'feather'.",
+              "options": [
+                "f. a very small animal with six legs, like an ant or a bee",
+                "g. the hard outside part of a snail, an egg or a turtle",
+                "h. the part of a plant that grows under the ground",
+                "i. one of the soft, light things that cover a bird's body",
+                "j. a small hard thing that a new plant grows from"
+              ],
+              "answer": "i",
+              "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-V08",
+              "kind": "mcq",
+              "stem": "Nhóm 2 - Sinh vật - 8.: choose the meaning of 'insect'.",
+              "options": [
+                "f. a very small animal with six legs, like an ant or a bee",
+                "g. the hard outside part of a snail, an egg or a turtle",
+                "h. the part of a plant that grows under the ground",
+                "i. one of the soft, light things that cover a bird's body",
+                "j. a small hard thing that a new plant grows from"
+              ],
+              "answer": "f",
+              "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-V09",
+              "kind": "mcq",
+              "stem": "Nhóm 2 - Sinh vật - 9.: choose the meaning of 'seed'.",
+              "options": [
+                "f. a very small animal with six legs, like an ant or a bee",
+                "g. the hard outside part of a snail, an egg or a turtle",
+                "h. the part of a plant that grows under the ground",
+                "i. one of the soft, light things that cover a bird's body",
+                "j. a small hard thing that a new plant grows from"
+              ],
+              "answer": "j",
+              "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-V10",
+              "kind": "mcq",
+              "stem": "Nhóm 2 - Sinh vật - 10.: choose the meaning of 'shell'.",
+              "options": [
+                "f. a very small animal with six legs, like an ant or a bee",
+                "g. the hard outside part of a snail, an egg or a turtle",
+                "h. the part of a plant that grows under the ground",
+                "i. one of the soft, light things that cover a bird's body",
+                "j. a small hard thing that a new plant grows from"
+              ],
+              "answer": "g",
+              "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-V11",
+              "kind": "mcq",
+              "stem": "Nhóm 3 - Trái Đất và vũ trụ - 11.: choose the meaning of 'rock'.",
+              "options": [
+                "k. land with water all around it",
+                "l. a dry place with very little rain and few plants",
+                "m. the hard material that mountains are made of",
+                "n. a very large round object that moves around a star",
+                "o. a big hole in the side of a mountain or under the ground"
+              ],
+              "answer": "m",
+              "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-V12",
+              "kind": "mcq",
+              "stem": "Nhóm 3 - Trái Đất và vũ trụ - 12.: choose the meaning of 'planet'.",
+              "options": [
+                "k. land with water all around it",
+                "l. a dry place with very little rain and few plants",
+                "m. the hard material that mountains are made of",
+                "n. a very large round object that moves around a star",
+                "o. a big hole in the side of a mountain or under the ground"
+              ],
+              "answer": "n",
+              "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-V13",
+              "kind": "mcq",
+              "stem": "Nhóm 3 - Trái Đất và vũ trụ - 13.: choose the meaning of 'desert'.",
+              "options": [
+                "k. land with water all around it",
+                "l. a dry place with very little rain and few plants",
+                "m. the hard material that mountains are made of",
+                "n. a very large round object that moves around a star",
+                "o. a big hole in the side of a mountain or under the ground"
+              ],
+              "answer": "l",
+              "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-V14",
+              "kind": "mcq",
+              "stem": "Nhóm 3 - Trái Đất và vũ trụ - 14.: choose the meaning of 'cave'.",
+              "options": [
+                "k. land with water all around it",
+                "l. a dry place with very little rain and few plants",
+                "m. the hard material that mountains are made of",
+                "n. a very large round object that moves around a star",
+                "o. a big hole in the side of a mountain or under the ground"
+              ],
+              "answer": "o",
+              "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-V15",
+              "kind": "mcq",
+              "stem": "Nhóm 3 - Trái Đất và vũ trụ - 15.: choose the meaning of 'island'.",
+              "options": [
+                "k. land with water all around it",
+                "l. a dry place with very little rain and few plants",
+                "m. the hard material that mountains are made of",
+                "n. a very large round object that moves around a star",
+                "o. a big hole in the side of a mountain or under the ground"
+              ],
+              "answer": "k",
+              "explanation_vi": "CHẨN ĐOÁN độ rộng từ vựng (nhận biết _/15).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-VB1",
+              "kind": "open",
+              "stem": "Write one sentence of your own with the word: melt. The sentence must show that you understand the meaning.",
+              "options": [],
+              "answer": "Đ nếu đúng nghĩa và đúng dạng từ (vd. The ice cream melted in the sun.); ? nếu câu đúng nhưng không cho thấy nghĩa; S nếu sai.",
+              "explanation_vi": "CHẨN ĐOÁN (dùng được _/5). Không ghi dòng kỹ năng.",
+              "target_id": ""
+            },
+            {
+              "id": "BL-VB2",
+              "kind": "open",
+              "stem": "Write one sentence of your own with the word: storm. The sentence must show that you understand the meaning.",
+              "options": [],
+              "answer": "Đ nếu đúng nghĩa và đúng dạng từ (vd. The ice cream melted in the sun.); ? nếu câu đúng nhưng không cho thấy nghĩa; S nếu sai.",
+              "explanation_vi": "CHẨN ĐOÁN (dùng được _/5). Không ghi dòng kỹ năng.",
+              "target_id": ""
+            },
+            {
+              "id": "BL-VB3",
+              "kind": "open",
+              "stem": "Write one sentence of your own with the word: seed. The sentence must show that you understand the meaning.",
+              "options": [],
+              "answer": "Đ nếu đúng nghĩa và đúng dạng từ (vd. The ice cream melted in the sun.); ? nếu câu đúng nhưng không cho thấy nghĩa; S nếu sai.",
+              "explanation_vi": "CHẨN ĐOÁN (dùng được _/5). Không ghi dòng kỹ năng.",
+              "target_id": ""
+            },
+            {
+              "id": "BL-VB4",
+              "kind": "open",
+              "stem": "Write one sentence of your own with the word: desert. The sentence must show that you understand the meaning.",
+              "options": [],
+              "answer": "Đ nếu đúng nghĩa và đúng dạng từ (vd. The ice cream melted in the sun.); ? nếu câu đúng nhưng không cho thấy nghĩa; S nếu sai.",
+              "explanation_vi": "CHẨN ĐOÁN (dùng được _/5). Không ghi dòng kỹ năng.",
+              "target_id": ""
+            },
+            {
+              "id": "BL-VB5",
+              "kind": "open",
+              "stem": "Write one sentence of your own with the word: planet. The sentence must show that you understand the meaning.",
+              "options": [],
+              "answer": "Đ nếu đúng nghĩa và đúng dạng từ (vd. The ice cream melted in the sun.); ? nếu câu đúng nhưng không cho thấy nghĩa; S nếu sai.",
+              "explanation_vi": "CHẨN ĐOÁN (dùng được _/5). Không ghi dòng kỹ năng.",
+              "target_id": ""
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 4,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "baseline"
+          ],
+          "target_ids": [
+            "A-L4-DESC-S"
+          ],
+          "prompt_en": "Look at this picture. Tell me about this animal: what it looks like, where it lives, and what it does.",
+          "prompt_vi": "T2 19/10 - N1 Mô tả (45-60 giây). Ghi để cô tham khảo khi chốt bộ kỹ năng; A-L4-DESC-S nằm ngoài bộ 12.",
+          "time_min": 2,
+          "items": [
+            {
+              "id": "BL-N1",
+              "kind": "open",
+              "stem": "Describe the animal in the picture (45-60 s).",
+              "options": [],
+              "answer": "Nói vật gì ngay đầu; >= 4 chi tiết thuộc >= 2 khía cạnh.",
+              "explanation_vi": "Chẩn đoán.",
+              "target_id": "A-L4-DESC-S"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 5,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "baseline"
+          ],
+          "target_ids": [
+            "A-L3-SEQ-S"
+          ],
+          "prompt_en": "Tell me how you get ready for school, from the moment you wake up until you leave home.",
+          "prompt_vi": "T2 19/10 - N2 Trình tự (45-60 giây). Ghi để cô tham khảo; A-L3-SEQ-S nằm ngoài bộ 12.",
+          "time_min": 2,
+          "items": [
+            {
+              "id": "BL-N2",
+              "kind": "open",
+              "stem": "How do you get ready for school? (45-60 s)",
+              "options": [],
+              "answer": ">= 4 bước đúng thứ tự; từ chỉ trình tự.",
+              "explanation_vi": "Chẩn đoán.",
+              "target_id": "A-L3-SEQ-S"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 6,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "baseline"
+          ],
+          "target_ids": [
+            "A-L3-CAUSE-S",
+            "A-L2-COMPENSATE-S"
+          ],
+          "prompt_en": "(30 seconds to think, no writing.) Imagine nobody waters a plant for two weeks. What happens to it, and why?",
+          "prompt_vi": "T2 19/10 - N3 Vì sao (45-60 giây; Nói \"vì sao - nên\" cần nói >= 45 giây). Ghi activity_type = ACT-SPEAK-MONO (catalogue chỉ cho A-L3-CAUSE-S ở MONO). Xoay xở khi thiếu từ: chỉ chấm nếu có chỗ thiếu từ thật (vd. héo = wilt), cô xác nhận; không thì NULL. Cô không nói \"Why?\" trong lúc An nói.",
+          "time_min": 3,
+          "items": [
+            {
+              "id": "BL-N3",
+              "kind": "open",
+              "stem": "Imagine nobody waters a plant for two weeks. What happens to it, and why?",
+              "options": [],
+              "answer": ">= 2 loại từ nối nguyên nhân-kết quả, đúng chiều (because, so, as a result, that's why).",
+              "explanation_vi": "A-L3-CAUSE-S: c1 từ nối, c2 đúng chiều. A-L2-COMPENSATE-S: c1 diễn đạt vòng thành công, c2 <= 1 lần chuyển sang tiếng Việt cho từ nội dung.",
+              "target_id": "A-L3-CAUSE-S"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 7,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "PRACTICE",
+          "purpose": [
+            "baseline"
+          ],
+          "target_ids": [
+            "A-L3-CAUSE-S"
+          ],
+          "prompt_en": "First, ___. Because ___, ___. As a result, ___. (Say it again, 45 seconds.)",
+          "prompt_vi": "T2 19/10 - N3 thử lại có câu mẫu. CHỈ khi N3 <= 2/4. Ghi dòng riêng: PRACTICE, attempt_no = 2, support_used = frame.",
+          "time_min": 1,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 8,
+          "activity_type": "ACT-SPEAK-LIVE",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "baseline"
+          ],
+          "target_ids": [
+            "A-X1-TURN"
+          ],
+          "prompt_en": "(30 seconds to think.) Is it better for children to live in a big city or in the countryside? Tell me your opinion, give your reasons and an example. Talk for at least one minute.",
+          "prompt_vi": "T2 19/10 - N4 (60-90 giây). Cô nghe trực tiếp => ACT-SPEAK-LIVE: chỉ ghi dòng cho A-X1-TURN (c1 >= 60 giây, c2 <= 3 lần ngừng > 3 giây, c3 nói lại câu thay vì bỏ dở). Nêu ý kiến (A-T7-OPINION) chỉ nhận xét trên phiếu, KHÔNG ghi dòng vì catalogue không nhận Nêu ý kiến ở ACT-SPEAK-LIVE.",
+          "time_min": 3,
+          "items": [
+            {
+              "id": "BL-N4",
+              "kind": "open",
+              "stem": "City or countryside? Opinion, reasons, example.",
+              "options": [],
+              "answer": "Quan điểm rõ; >= 2 lý do khác nhau; >= 1 ví dụ gắn với lý do. Không chấm đúng/sai quan điểm.",
+              "explanation_vi": "A-X1-TURN (c1 >= 60 giây, c2 <= 3 lần ngừng dài, c3 nói lại câu). Quan điểm, lý do, ví dụ: nhận xét chẩn đoán, không ghi dòng.",
+              "target_id": "A-X1-TURN"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 9,
+          "activity_type": "ACT-SPEAK-LIVE",
+          "mode": "PRACTICE",
+          "purpose": [
+            "baseline"
+          ],
+          "target_ids": [],
+          "prompt_en": "Can you give me another reason? / Can you give me an example?",
+          "prompt_vi": "T2 19/10 - N4 thử lại có gợi ý. CHỈ khi thiếu lý do/ví dụ, sau khi An nói xong. Ghi tutor_prompt, attempt_no = 2; chẩn đoán, không ghi dòng Nêu ý kiến (LIVE không nhận).",
+          "time_min": 1,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 10,
+          "activity_type": "ACT-SPEAK-LIVE",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "baseline"
+          ],
+          "target_ids": [
+            "A-L8-EXCHANGE-S"
+          ],
+          "prompt_en": "(a) I have a hobby that you don't know. Ask me questions to find out what it is. Ask me at least two questions. (b) Cô hỏi 4 câu về tuần của An, sau mỗi câu dừng 3-4 giây.",
+          "prompt_vi": "T2 19/10 - N5 Trao đổi (4 phút). Chẩn đoán; A-L8-EXCHANGE-S ngoài bộ 12.",
+          "time_min": 4,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 11,
+          "activity_type": "ACT-WRITE",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "baseline"
+          ],
+          "target_ids": [
+            "A-L1-PAST-W"
+          ],
+          "prompt_en": "Think of a fun day out you had (a trip, a visit, a festival...). Write about it: at least 80 words. Where did you go? Who went with you? What did you do? What did you see or eat? How did you feel?",
+          "prompt_vi": "T2 19/10 - V1 (8 phút). A-L1-PAST-W chỉ chấm khi bài >= 80 từ VÀ >= 6 chỗ bắt buộc dùng quá khứ; thiếu một trong hai => NULL (không phải 0).",
+          "time_min": 8,
+          "items": [
+            {
+              "id": "BL-V1",
+              "kind": "open",
+              "stem": "Write about a fun day out (at least 80 words).",
+              "options": [],
+              "answer": ">= 80% chỗ bắt buộc đúng quá khứ đơn; >= 3 động từ bất quy tắc khác nhau.",
+              "explanation_vi": "A-L1-PAST-W c1, c2.",
+              "target_id": "A-L1-PAST-W"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 12,
+          "activity_type": "ACT-WRITE",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "baseline"
+          ],
+          "target_ids": [
+            "A-L3-CAUSE-W",
+            "A-L3-PARA-W",
+            "A-T4-CAUSE"
+          ],
+          "prompt_en": "Why do leaves change colour in autumn? Explain it to a friend who did not read yesterday's text. Write one paragraph, 80-100 words. (The text is closed.)",
+          "prompt_vi": "T2 19/10 - V2 (12 phút). Viết đoạn văn chỉ chấm khi >= 80 từ, nếu không => NULL. Chuỗi gợi ý: lá xanh vì chlorophyll -> ngày ngắn, ít nắng -> cây ngừng làm chlorophyll mới, cái cũ phân hủy -> xanh mất -> vàng/cam vốn có lộ ra (một số cây tạo thêm đỏ).",
+          "time_min": 12,
+          "items": [
+            {
+              "id": "BL-V2",
+              "kind": "open",
+              "stem": "Why do leaves change colour in autumn? (80-100 words)",
+              "options": [],
+              "answer": "Chuỗi nhân quả >= 2 liên kết nối thành chuỗi.",
+              "explanation_vi": "A-L3-CAUSE-W (từ nối), A-L3-PARA-W (câu mở đoạn, >= 3 câu triển khai, câu kết, >= 4 từ nối), A-T4-CAUSE (nội dung đúng).",
+              "target_id": "A-L3-CAUSE-W"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 13,
+          "activity_type": "ACT-WRITE",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "baseline"
+          ],
+          "target_ids": [],
+          "prompt_en": "Complete or write your own sentence (10 sentences).",
+          "prompt_vi": "T2 19/10 - Ngữ pháp (6 phút). Chỉ chẩn đoán _/10; không ghi dòng kỹ năng.",
+          "time_min": 6,
+          "items": [
+            {
+              "id": "BL-G1",
+              "kind": "gap",
+              "stem": "Last summer, my family ______ .",
+              "options": [],
+              "answer": "went to the beach",
+              "explanation_vi": "CHẨN ĐOÁN cấu trúc: Quá khứ đơn. Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-G2",
+              "kind": "gap",
+              "stem": "When I was small, I ______ .",
+              "options": [],
+              "answer": "had a red bike",
+              "explanation_vi": "CHẨN ĐOÁN cấu trúc: Quá khứ đơn bất quy tắc. Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-G3",
+              "kind": "transform",
+              "stem": "Compare an elephant and a cat: one sentence with -er than.",
+              "options": [],
+              "answer": "An elephant is bigger than a cat.",
+              "explanation_vi": "CHẨN ĐOÁN cấu trúc: So sánh hơn. Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-G4",
+              "kind": "transform",
+              "stem": "Which is the biggest animal you know? One sentence with the ...-est.",
+              "options": [],
+              "answer": "The blue whale is the biggest animal.",
+              "explanation_vi": "CHẨN ĐOÁN cấu trúc: So sánh nhất. Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-G5",
+              "kind": "gap",
+              "stem": "Next weekend, I am going to ______ .",
+              "options": [],
+              "answer": "visit my grandparents",
+              "explanation_vi": "CHẨN ĐOÁN cấu trúc: going to. Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-G6",
+              "kind": "gap",
+              "stem": "In 20 years, people will ______ .",
+              "options": [],
+              "answer": "travel to Mars",
+              "explanation_vi": "CHẨN ĐOÁN cấu trúc: will dự đoán. Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-G7",
+              "kind": "gap",
+              "stem": "I have never ______ .",
+              "options": [],
+              "answer": "seen snow",
+              "explanation_vi": "CHẨN ĐOÁN cấu trúc: Hiện tại hoàn thành (trải nghiệm). Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-G8",
+              "kind": "transform",
+              "stem": "Join with because: I took an umbrella. It was raining.",
+              "options": [],
+              "answer": "I took an umbrella because it was raining.",
+              "explanation_vi": "CHẨN ĐOÁN cấu trúc: Nối nguyên nhân. Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-G9",
+              "kind": "transform",
+              "stem": "Join with so: The ice was in the sun. It melted.",
+              "options": [],
+              "answer": "The ice was in the sun, so it melted.",
+              "explanation_vi": "CHẨN ĐOÁN cấu trúc: Nối kết quả. Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+              "target_id": ""
+            },
+            {
+              "id": "BL-G10",
+              "kind": "gap",
+              "stem": "Paper ______ (make) from wood.",
+              "options": [],
+              "answer": "is made",
+              "explanation_vi": "CHẨN ĐOÁN cấu trúc: Bị động hiện tại (thử, mức B1). Câu hoàn thành/điền không phải cơ hội hợp lệ cho kỹ năng ngữ pháp (catalogue).",
+              "target_id": ""
+            }
+          ],
+          "self_check_vi": []
+        }
+      ]
+    },
+    {
+      "inquiry_id": "A-W1-VOLCANOES",
+      "title_vi": "Tuần 1 - Núi lửa",
+      "big_question_en": "Why do volcanoes erupt?",
+      "big_question_vi": "Vì sao núi lửa phun trào?",
+      "week": 1,
+      "dates": {
+        "from": "2026-10-19",
+        "to": "2026-10-25"
+      },
+      "domain_bucket": "science",
+      "target_ids": [
+        "A-T1-TEXT-L",
+        "A-T1-TEXT-R",
+        "A-L3-CAUSE-S",
+        "A-L3-CAUSE-W",
+        "A-L3-PARA-W",
+        "A-L4-PROCESS-S",
+        "A-L2-CHUNKS",
+        "A-L2-COMPENSATE-S",
+        "A-T4-CAUSE",
+        "A-T7-OPINION",
+        "A-X1-TURN"
+      ],
+      "sources": [
+        {
+          "title": "Why Do Volcanoes Erupt? (bài đọc VOL-R)",
+          "url": null,
+          "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi",
+          "rights_note": "Tự soạn (v0.2.1). Nguồn kiểm: NPS (https://www.nps.gov/subjects/volcanoes/volcanic-eruptions.htm), NASA Space Place (https://spaceplace.nasa.gov/volcanoes2/), USGS Kilauea (https://www.usgs.gov/volcanoes/kilauea), USGS 1980 Cataclysmic Eruption (https://www.usgs.gov/volcanoes/mount-st.-helens/science/1980-cataclysmic-eruption), USGS buồng magma phần lớn là đá nóng gần đặc (https://www.usgs.gov/faqs/how-big-magma-chamber-under-yellowstone). Đơn giản hóa có chủ ý: Kilauea \"usually\" phun chảy.",
+          "modality": "text",
+          "text": "Why Do Volcanoes Erupt?\n\nDeep under the ground, it is extremely hot. In some places, part of the rock melts. Melted rock under the ground is called magma.\n\nMagma is lighter than the solid rock around it, so it slowly rises. It often collects deep under a volcano, in a place called a magma chamber.\n\nMagma has gas in it, a bit like the gas in a bottle of fizzy drink. Deep underground, the heavy rock above presses on the magma, so the gas stays inside. But when the magma rises near the surface, there is less pressure. The gas comes out and makes bubbles. The bubbles grow bigger and push the magma up. When the push is strong enough, the magma breaks through the ground. This is an eruption. When magma comes out of a volcano, we call it lava.\n\nNot all eruptions are the same. Some magma is runny, like soup. The gas escapes easily, so the lava pours out and flows like a red river. Kilauea in Hawaii usually erupts this way. Other magma is thick and sticky, like honey. The gas is trapped, and the pressure builds up. As a result, the volcano explodes and throws ash high into the sky. Mount St. Helens in the USA had thick magma like this, and it exploded in 1980."
+        },
+        {
+          "title": "Dr Linh, volcano scientist (bài nghe VOL-L, file A_VOL_L)",
+          "url": null,
+          "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi; nhân vật Dr Linh là hư cấu",
+          "rights_note": "Tự soạn, TTS một giọng cố định 0,9x. Nguồn kiểm: USGS FAQ (https://www.usgs.gov/faqs/how-can-we-tell-when-volcano-will-erupt): dấu hiệu động đất, mặt đất phồng, thay đổi khí; USGS Eruption forecast (https://www.usgs.gov/natural-hazards/volcano-hazards/eruption-forecast): dự báo là xác suất, không phải một ngày chính xác.",
+          "modality": "audio",
+          "text": "Hi, I'm Dr Linh, and I am a volcano scientist. People often ask me, \"Can you tell the exact day a volcano will erupt?\" The honest answer is no. But we can see warning signs.\n\nEvery day, my team watches a volcano for three signs. First, we count small earthquakes. When magma moves up under the ground, it breaks rock, and this makes many small earthquakes. Second, we measure the ground. When magma collects under a volcano, the ground can rise a little, like a balloon. Third, we check the gas. When magma moves closer to the surface, the gas coming out of the volcano can change.\n\nIf we see all three signs getting stronger, we tell the people who live nearby. Then they can leave their homes in time. Our job is not to stop eruptions. Our job is to keep people safe."
+        }
+      ],
+      "steps": [
+        {
+          "step_no": 1,
+          "activity_type": "ACT-SPEAK-LIVE",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [],
+          "prompt_en": "What do you know about volcanoes? (You can speak Vietnamese.) Tip for a missing word: It's a kind of... / It's like... / It's a thing that... / I don't know the word, but... / How do you say ... in English?",
+          "prompt_vi": "T2 19/10 (25') - Câu hỏi lớn + đoán trước + mẹo nói tiếp khi quên từ (luyện với 2 vật khác bộ ảnh T6, vd. cái dập ghim, cái bấm lỗ). CHƯA phát thẻ 8 cụm từ (nghĩa và câu ví dụ trùng đáp án bài đọc/nghe).",
+          "time_min": 25,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 2,
+          "activity_type": "ACT-SOURCE-QA",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [],
+          "target_ids": [
+            "A-T1-TEXT-L"
+          ],
+          "prompt_en": "Listen (maximum 2 times, no text). Answer the questions.",
+          "prompt_vi": "T3 20/10 (10') - Bài nghe ở nhà, bố/mẹ ngồi cạnh. Nghe hiểu: c1 ý chính, c2 >= 3/4 chi tiết. L6 chẩn đoán.",
+          "time_min": 10,
+          "items": [
+            {
+              "id": "W1-L1",
+              "kind": "mcq",
+              "stem": "What is the talk mainly about?",
+              "options": [
+                "a) how volcanoes are made",
+                "b) how scientists watch for warning signs of an eruption",
+                "c) why Dr Linh likes volcanoes",
+                "d) how to stop an eruption"
+              ],
+              "answer": "b",
+              "explanation_vi": "Ý chính (c1).",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W1-L2",
+              "kind": "short",
+              "stem": "How many warning signs does Dr Linh's team watch?",
+              "options": [],
+              "answer": "Three.",
+              "explanation_vi": "Chi tiết 1/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W1-L3",
+              "kind": "short",
+              "stem": "What makes many small earthquakes?",
+              "options": [],
+              "answer": "Magma moving up and breaking rock.",
+              "explanation_vi": "Chi tiết 2/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W1-L4",
+              "kind": "short",
+              "stem": "What can happen to the ground when magma collects under a volcano?",
+              "options": [],
+              "answer": "It can rise a little (like a balloon).",
+              "explanation_vi": "Chi tiết 3/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W1-L5",
+              "kind": "short",
+              "stem": "What does the team do if all three signs get stronger?",
+              "options": [],
+              "answer": "They tell / warn the people who live nearby (so they can leave).",
+              "explanation_vi": "Chi tiết 4/4. Cần >= 3/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W1-L6",
+              "kind": "open",
+              "stem": "Dr Linh says, \"Our job is not to stop eruptions.\" Why do you think she says this?",
+              "options": [],
+              "answer": "Vì con người không ngăn được núi lửa phun; việc của nhà khoa học là cảnh báo để người dân an toàn. Dấu hiệu: 'Our job is to keep people safe'.",
+              "explanation_vi": "CHẨN ĐOÁN (mục đích người nói). Được trả lời tiếng Việt, ghi lang=vi.",
+              "target_id": "A-T2-INFER-L"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 3,
+          "activity_type": "ACT-SOURCE-QA",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [],
+          "target_ids": [
+            "A-T1-TEXT-R"
+          ],
+          "prompt_en": "Read the text once, then answer. You may look back at the text.",
+          "prompt_vi": "T3 20/10 (18') - Bài đọc ở nhà. Xem lại bài = bình thường (không ghi source_open). Đọc hiểu: c1 ý chính, c2 >= 4/5 chi tiết (R2-R6).",
+          "time_min": 18,
+          "items": [
+            {
+              "id": "W1-R1",
+              "kind": "mcq",
+              "stem": "What is the text mainly about?",
+              "options": [
+                "a) why the inside of the Earth is hot",
+                "b) why volcanoes erupt, and why eruptions are different",
+                "c) the story of Mount St. Helens",
+                "d) how to make lava at home"
+              ],
+              "answer": "b",
+              "explanation_vi": "Ý chính (c1).",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W1-R2",
+              "kind": "short",
+              "stem": "What is magma?",
+              "options": [],
+              "answer": "Melted rock under the ground.",
+              "explanation_vi": "Chi tiết 1/5.",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W1-R3",
+              "kind": "short",
+              "stem": "Why does magma start to rise from deep under the ground?",
+              "options": [],
+              "answer": "It is lighter than the solid rock around it.",
+              "explanation_vi": "Chi tiết 2/5. Chữ \"start\" khóa đúng giai đoạn đầu (nhẹ hơn đá), không phải giai đoạn bong bóng đẩy.",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W1-R4",
+              "kind": "short",
+              "stem": "Deep underground, why does the gas stay inside the magma?",
+              "options": [],
+              "answer": "The heavy rock above presses on it (high pressure).",
+              "explanation_vi": "Chi tiết 3/5 (nhân quả).",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W1-R5",
+              "kind": "short",
+              "stem": "Put in order: (A) The bubbles push the magma up. (B) Magma rises near the surface. (C) The magma breaks through the ground. (D) The gas comes out and makes bubbles.",
+              "options": [
+                "A",
+                "B",
+                "C",
+                "D"
+              ],
+              "answer": "B, D, A, C",
+              "explanation_vi": "Chi tiết 4/5 (trình tự).",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W1-R6",
+              "kind": "short",
+              "stem": "Why can a volcano with thick, sticky magma explode?",
+              "options": [],
+              "answer": "The gas is trapped, so the pressure builds up (it cannot get out).",
+              "explanation_vi": "Chi tiết 5/5 (nhân quả có trong bài). Cần >= 4/5 chi tiết.",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W1-R7",
+              "kind": "open",
+              "stem": "Scientists find that the magma under a volcano is very runny. Will the next eruption probably be a big explosion? Why or why not? Give a clue from the text.",
+              "options": [],
+              "answer": "Probably not. Gas escapes easily from runny magma, so the lava pours out and flows.",
+              "explanation_vi": "CHẨN ĐOÁN (suy luận).",
+              "target_id": "A-T2-INFER-R"
+            },
+            {
+              "id": "W1-R8",
+              "kind": "short",
+              "stem": "\"The gas is trapped.\" What does 'trapped' mean?",
+              "options": [],
+              "answer": "Cannot get out (bị giữ lại, mắc kẹt).",
+              "explanation_vi": "CHẨN ĐOÁN (nghĩa từ).",
+              "target_id": "A-T2-INFER-R"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 4,
+          "activity_type": "ACT-CANVAS-BASIC",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [
+            "A-T4-CAUSE"
+          ],
+          "prompt_en": "Main idea: Volcanoes erupt because... Why (3 cards, each one is the result of the one before): [Magma is lighter than rock, so...] -> [Near the surface,...] -> [The bubbles...]. Example: choose Kilauea or Mount St. Helens. How did it erupt? Why?",
+          "prompt_vi": "T4 21/10 (6' + 12') - Làm đầu tiên: phát 8 cụm từ + thẻ từ (6'), SAU khi An nộp bài nghe và bài đọc. Rồi Canvas (12'): được xem lại bài đọc (source_open), viết thẻ tiếng Việt nếu bí. 8 cụm từ: magma = đá nóng chảy dưới lòng đất · lava = dung nham · melted rock = đá nóng chảy · rise/rises = đi lên · gas bubbles = bong bóng khí · pressure builds up = áp suất tăng dần · erupt/an eruption = phun trào · as a result = kết quả là. Đáp án gợi ý cho bố mẹ: Magma nhẹ hơn đá -> nổi lên, gom trong buồng magma -> gần mặt đất áp suất giảm -> khí thoát ra thành bong bóng -> bong bóng lớn dần, đẩy magma -> magma xuyên qua mặt đất = phun trào. Magma loãng: khí thoát dễ -> dung nham chảy. Magma đặc: khí bị giữ -> áp suất tăng -> nổ.",
+          "time_min": 18,
+          "items": [
+            {
+              "id": "W1-CV",
+              "kind": "open",
+              "stem": "Fill in the three cards and the example.",
+              "options": [],
+              "answer": "Magma nhẹ hơn đá -> nổi lên, gom trong buồng magma -> gần mặt đất áp suất giảm -> khí thoát ra thành bong bóng -> bong bóng lớn dần, đẩy magma -> magma xuyên qua mặt đất = phun trào. Magma loãng: khí thoát dễ -> dung nham chảy. Magma đặc: khí bị giữ -> áp suất tăng -> nổ.",
+              "explanation_vi": "Luyện tập, tùy chọn ghi 1 dòng Giải thích chuỗi nguyên nhân.",
+              "target_id": "A-T4-CAUSE"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 5,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [
+            "A-L3-CAUSE-S",
+            "A-L2-CHUNKS"
+          ],
+          "prompt_en": "Why does magma rise, and what happens to the gas in it? - Magma is... / Magma rises because... / Deep underground, the gas stays inside because... / When the magma comes near the surface,..., so... / As a result,... (Think for 1 minute, then speak 45-60 seconds.)",
+          "prompt_vi": "T4 21/10 (12') - Luyện nói có câu mẫu, ghi âm trên máy (chế độ máy bay). support_used = frame. Bố mẹ nghe 1 lần, đánh dấu từ nối và từ mới, không cần gõ chữ.",
+          "time_min": 12,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 6,
+          "activity_type": "ACT-WRITE",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [
+            "A-L3-CAUSE-W",
+            "A-L2-CHUNKS"
+          ],
+          "prompt_en": "Magma and lava: what is the difference? Why does magma come up to the surface? Magma is..., but lava is... / Magma is lighter than..., so... / When it comes near the surface, the gas... / That is why... (50-70 words)",
+          "prompt_vi": "T5 22/10 (18') - Luyện viết có câu mẫu. Chỉ ghi A-L2-CHUNKS nếu >= 60 từ; không ghi Viết đoạn văn (< 80 từ).",
+          "time_min": 18,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 7,
+          "activity_type": "ACT-SELF-REVIEW",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [],
+          "prompt_en": "Check your own writing.",
+          "prompt_vi": "T5 22/10 (5' + 2' thẻ từ) - Tự kiểm sau khi viết luyện.",
+          "time_min": 7,
+          "items": [],
+          "self_check_vi": [
+            "Câu đầu của bạn đã trả lời câu hỏi chưa?",
+            "Bạn đã nói vì sao magma đi lên và vì sao khí đẩy nó chưa?",
+            "Bạn đã dùng 2 từ nối khác nhau và 4 từ mới chưa?"
+          ]
+        },
+        {
+          "step_no": 8,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-L3-CAUSE-S",
+            "A-L4-PROCESS-S",
+            "A-T4-CAUSE",
+            "A-L2-CHUNKS"
+          ],
+          "prompt_en": "How and why does a volcano erupt? Explain it step by step, from deep under the ground to the eruption. (30 seconds to think, no writing. Speak 60-90 seconds.)",
+          "prompt_vi": "T6 23/10 (7') - Nói tự làm (SIC), bài kiểm tra trong buổi, cô quan sát trực tiếp, ghi âm. Ghi activity_type = ACT-SPEAK-MONO. Không câu mẫu, không vở. Nói trôi chảy và Xoay xở khi thiếu từ được chấm ở lượt LIVE kế tiếp, không ở đây.",
+          "time_min": 7,
+          "items": [
+            {
+              "id": "W1-SIC",
+              "kind": "open",
+              "stem": "How and why does a volcano erupt? Explain step by step.",
+              "options": [],
+              "answer": "Magma nhẹ hơn đá -> nổi lên, gom trong buồng magma -> gần mặt đất áp suất giảm -> khí thoát ra thành bong bóng -> bong bóng lớn dần, đẩy magma -> magma xuyên qua mặt đất = phun trào. Magma loãng: khí thoát dễ -> dung nham chảy. Magma đặc: khí bị giữ -> áp suất tăng -> nổ.",
+              "explanation_vi": "A-L3-CAUSE-S (>= 2 loại từ nối, đúng chiều); A-L4-PROCESS-S (nêu tên quá trình + kết quả, >= 3 bước đúng thứ tự); A-T4-CAUSE (>= 2 liên kết đúng, nối thành chuỗi); A-L2-CHUNKS (>= 4 trong 8 cụm từ).",
+              "target_id": "A-L3-CAUSE-S"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 9,
+          "activity_type": "ACT-SPEAK-LIVE",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-X1-TURN",
+            "A-L2-COMPENSATE-S"
+          ],
+          "prompt_en": "Choose one picture. It must be something you know how to use, but you do not know its English name. Tell me about it: what it looks like, what we use it for, and how you use it. (30 seconds to think, no writing. Speak 60-90 seconds.)",
+          "prompt_vi": "T6 23/10 (4') - Lượt nói trực tiếp (kit mục 3.0, \"Thử thách thiếu từ\"). Cô đưa 3 ảnh: tweezers (cái nhíp) · funnel (cái phễu) · magnifying glass (kính lúp). Cô không nói tên tiếng Anh trước T6; cô chỉ nói \"Bắt đầu nhé\" / \"Còn 30 giây\", không nhắc \"giải thích cách khác\". Ghi activity_type = ACT-SPEAK-LIVE, context_topic = lab-tools, chỉ cô chấm; cô bấm giờ (duration_s; c1 Nói trôi chảy cần >= 60 giây). Nói trôi chảy: c1 >= 60 giây, c2 <= 3 lần ngừng > 3 giây, c3 nói lại câu thay vì bỏ dở. Xoay xở khi thiếu từ: cô xác nhận có chỗ thiếu từ thật; An biết tên cả 3 vật (đổi bộ ảnh) hoặc không có chỗ thiếu thật => NULL, đó là kết quả hợp lệ.",
+          "time_min": 4,
+          "items": [
+            {
+              "id": "W1-LIVE",
+              "kind": "open",
+              "stem": "Choose one picture and tell me about it.",
+              "options": [],
+              "answer": "Không có đáp án mẫu. Cô ghi: vật An chọn, từ An chưa biết, cách An diễn đạt vòng (a thing that..., it is like...), có chuyển sang tiếng Việt không.",
+              "explanation_vi": "A-X1-TURN (c1 >= 60 giây; c2 <= 3 lần ngừng dài; c3 nói lại câu) và A-L2-COMPENSATE-S (c1 >= 1 lần diễn đạt vòng thành công bằng tiếng Anh; c2 <= 1 lần chuyển sang tiếng Việt), hoặc NULL.",
+              "target_id": "A-X1-TURN"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 10,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-T7-OPINION"
+          ],
+          "prompt_en": "Would you like to live near a volcano? Why or why not? Give your reasons and an example. Talk for at least one minute. (Then: Now you can ask me two questions about volcanoes.)",
+          "prompt_vi": "T6 23/10 (3') - Nói ý kiến (OP), ghi âm trên máy. Cô hỏi một lần, nghĩ 30 giây, không hỏi thêm \"Why?\" khi An đang nói; An nói ít nhất 1 phút. Chấm: c1 quan điểm rõ, c2 >= 2 lý do khác nhau, c3 >= 1 ví dụ gắn với lý do. Không chấm quan điểm đúng/sai. Ghi activity_type = ACT-SPEAK-MONO (catalogue không nhận Nêu ý kiến ở ACT-SPEAK-LIVE). Sau đó: \"Now you can ask me two questions about volcanoes.\" (luyện hỏi, chỉ ghi chú, không ghi dòng).",
+          "time_min": 3,
+          "items": [
+            {
+              "id": "W1-OP",
+              "kind": "open",
+              "stem": "Would you like to live near a volcano? Why or why not? Give your reasons and an example. Talk for at least one minute.",
+              "options": [],
+              "answer": "Không có đáp án đúng/sai; chấm lập luận.",
+              "explanation_vi": "A-T7-OPINION: c1 quan điểm rõ; c2 >= 2 lý do khác nhau, liên quan; c3 >= 1 ví dụ gắn với một lý do.",
+              "target_id": "A-T7-OPINION"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 11,
+          "activity_type": "ACT-WRITE",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-L3-CAUSE-W",
+            "A-L3-PARA-W",
+            "A-T4-CAUSE",
+            "A-L2-CHUNKS"
+          ],
+          "prompt_en": "Some volcanoes explode, but others let lava flow out gently. Why? Write one paragraph (80-120 words). (20 minutes. No dictionary, no text.)",
+          "prompt_vi": "T6 23/10 (20') - Viết tự làm, bài kiểm tra trong buổi, cô có mặt, không can thiệp. Dùng thì quá khứ: không ghi (đề giải thích). Viết đoạn văn chỉ chấm khi >= 80 từ.",
+          "time_min": 20,
+          "items": [
+            {
+              "id": "W1-WIC",
+              "kind": "open",
+              "stem": "Some volcanoes explode, but others let lava flow out gently. Why?",
+              "options": [],
+              "answer": "Magma loãng -> khí thoát dễ -> dung nham chảy nhẹ; magma đặc -> khí bị giữ -> áp suất tăng -> nổ.",
+              "explanation_vi": "A-L3-CAUSE-W c1-c2; A-L3-PARA-W c1-c3; A-T4-CAUSE c1-c2; A-L2-CHUNKS c1-c2.",
+              "target_id": "A-L3-CAUSE-W"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 12,
+          "activity_type": "ACT-SELF-REVIEW",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-A1-SELFASSESS"
+          ],
+          "prompt_en": "Before you hear any feedback, check your own paragraph.",
+          "prompt_vi": "T6 23/10 (3') - Tự kiểm TRƯỚC khi nghe góp ý. A-A1-SELFASSESS thuộc nhóm theo dõi, không vào mẫu số 12.",
+          "time_min": 3,
+          "items": [],
+          "self_check_vi": [
+            "Câu đầu của bạn đã trả lời câu hỏi (vì sao có núi lửa nổ, có núi lửa chảy nhẹ) chưa?",
+            "Bạn đã nói vì sao magma loãng thì dung nham chảy ra, magma đặc thì núi lửa nổ chưa?",
+            "Bạn đã dùng 2 từ nối khác nhau và 4 từ mới chưa?",
+            "Một điều mình làm tốt: ______",
+            "Một điều mình muốn sửa: ______"
+          ]
+        },
+        {
+          "step_no": 13,
+          "activity_type": "ACT-REVISE",
+          "mode": "REVISION",
+          "purpose": [],
+          "target_ids": [
+            "A-A3-REDRAFT"
+          ],
+          "prompt_en": "Read each hint. Find the place in your paragraph and fix it. Underline what you changed. Write one line for each hint: 'Mình đã đổi ... thành ... vì ...'.",
+          "prompt_vi": "T6 23/10 (cô chọn <= 3 gợi ý 7' + An sửa 15') - Gợi ý chỉ chỗ và loại lỗi, không đưa câu đúng. Luôn is_first_attempt = N, chung learning_family với bản gốc. Thêm: nếu cô hỏi về chiều nhân quả, đọc to câu đó và hỏi 'cái gì xảy ra trước?'.",
+          "time_min": 15,
+          "items": [],
+          "self_check_vi": []
+        }
+      ]
+    },
+    {
+      "inquiry_id": "A-W2-WATERCYCLE",
+      "title_vi": "Tuần 2 - Vòng tuần hoàn của nước",
+      "big_question_en": "Where does rain come from?",
+      "big_question_vi": "Mưa từ đâu đến?",
+      "week": 2,
+      "dates": {
+        "from": "2026-10-26",
+        "to": "2026-11-01"
+      },
+      "domain_bucket": "science",
+      "target_ids": [
+        "A-T1-TEXT-L",
+        "A-T1-TEXT-R",
+        "A-L3-CAUSE-S",
+        "A-L3-CAUSE-W",
+        "A-L3-PARA-W",
+        "A-L4-PROCESS-S",
+        "A-L1-PAST-W",
+        "A-L2-CHUNKS",
+        "A-L2-COMPENSATE-S",
+        "A-T4-CAUSE",
+        "A-T7-OPINION",
+        "A-X1-TURN"
+      ],
+      "sources": [
+        {
+          "title": "The Never-Ending Journey of Water (bài đọc WAT-R)",
+          "url": null,
+          "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi",
+          "rights_note": "Tự soạn, không sao chép. Nguồn kiểm: NASA GPM (https://gpm.nasa.gov/resources/faq/how-does-water-cycle-work), NASA Science for Kids (https://science.nasa.gov/kids/earth/what-is-the-water-cycle/), USGS Water Science School (https://www.usgs.gov/water-science-school/science/condensation-and-water-cycle).",
+          "modality": "text",
+          "text": "The Never-Ending Journey of Water\n\nSome of the water in your glass may once have been in a cloud, a river or the sea. Water moves around the Earth again and again. This journey is called the water cycle.\n\nThe journey starts with the Sun. The Sun heats the water in seas, rivers and lakes. Some of the water turns into a gas called water vapour. We cannot see water vapour, but it is in the air all around us. This change from liquid water to gas is called evaporation. Plants help too: they let out water vapour from their leaves.\n\nWarm air with water vapour rises. High in the sky, the air is cold, so the water vapour cools down. It changes back into tiny drops of water. This is called condensation. Millions of these tiny drops make a cloud.\n\nInside the cloud, the drops bump into each other and join together. They grow bigger and heavier. When they are too heavy to stay in the air, they fall as rain. Sometimes they fall as snow or hail instead. This is called precipitation.\n\nThe rain flows into rivers and back to the sea, or it soaks into the ground. Then the Sun heats the water again, and the journey starts again."
+        },
+        {
+          "title": "Mai and the cold glass (bài nghe WAT-L, file A_WAT_L)",
+          "url": null,
+          "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi; nhân vật Mai là hư cấu",
+          "rights_note": "Tự soạn, TTS một giọng cố định 0,9x. Nguồn kiểm: USGS Water Science School (nước ngoài cốc lạnh ngày ẩm là ngưng tụ).",
+          "modality": "audio",
+          "text": "Hi, I'm Mai. Yesterday was a very hot day, and the air felt wet, so I made a glass of iced water. After ten minutes, I saw something strange. There were lots of small drops of water on the outside of the glass! The table under the glass was wet too.\n\nAt first, I thought the glass had a hole. But the water inside did not go down. So where did the drops come from?\n\nMy teacher explained it to me. The air around us has water vapour in it. When the warm air touched the cold glass, the water vapour cooled down. It changed into tiny drops of liquid water on the glass. This is called condensation.\n\nThe same thing happens in the sky. High up, the air is cold, so water vapour cools and makes tiny drops. That is how clouds start. My cold glass showed me the beginning of a cloud!"
+        }
+      ],
+      "steps": [
+        {
+          "step_no": 1,
+          "activity_type": "ACT-SPEAK-LIVE",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [],
+          "prompt_en": "Where does rain come from? (You can speak Vietnamese.) Tip for a missing word: It's a kind of... / It's like... / It's a thing that...",
+          "prompt_vi": "T2 26/10 (10') - Câu hỏi lớn, đoán trước, nhắc mẹo nói tiếp khi quên từ.",
+          "time_min": 10,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 2,
+          "activity_type": "ACT-SOURCE-QA",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-T1-TEXT-L"
+          ],
+          "prompt_en": "Listen (maximum 2 times, no text). Answer the questions.",
+          "prompt_vi": "T2 26/10 (13') - Bài nghe làm TRONG buổi cô. Cô quan sát: An không xem chữ, số lần nghe.",
+          "time_min": 13,
+          "items": [
+            {
+              "id": "W2-L1",
+              "kind": "mcq",
+              "stem": "What is the talk mainly about?",
+              "options": [
+                "a) how to make iced water",
+                "b) why drops of water appeared on the outside of a cold glass",
+                "c) why Mai's glass had a hole",
+                "d) how rain falls"
+              ],
+              "answer": "b",
+              "explanation_vi": "Ý chính (c1).",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W2-L2",
+              "kind": "short",
+              "stem": "What was the weather like?",
+              "options": [],
+              "answer": "Very hot (and the air felt wet). Chấp nhận \"hot\".",
+              "explanation_vi": "Chi tiết 1/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W2-L3",
+              "kind": "short",
+              "stem": "What did Mai think at first?",
+              "options": [],
+              "answer": "That the glass had a hole.",
+              "explanation_vi": "Chi tiết 2/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W2-L4",
+              "kind": "short",
+              "stem": "What is in the air around us?",
+              "options": [],
+              "answer": "Water vapour.",
+              "explanation_vi": "Chi tiết 3/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W2-L5",
+              "kind": "short",
+              "stem": "What happened to the water vapour when it touched the cold glass?",
+              "options": [],
+              "answer": "It cooled down and changed into tiny drops of water.",
+              "explanation_vi": "Chi tiết 4/4. Cần >= 3/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W2-L6",
+              "kind": "open",
+              "stem": "How did Mai know that the glass did NOT have a hole?",
+              "options": [],
+              "answer": "Nước trong cốc không vơi đi; nếu thủng thì nước bên trong phải giảm.",
+              "explanation_vi": "CHẨN ĐOÁN (suy luận).",
+              "target_id": "A-T2-INFER-L"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 3,
+          "activity_type": "ACT-SPEAK-LIVE",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [],
+          "prompt_en": "Say the words after the tutor. Listen for the ending sounds -s and -ed in verbs you already know (not this week's topic). Tomorrow's experiment: a glass with ice and a glass without ice.",
+          "prompt_vi": "T2 26/10 (12' + 10') - Âm cuối -s/-ed với động từ quen thuộc, khác chủ đề; rồi giới thiệu thí nghiệm cốc lạnh. KHÔNG phát 8 cụm từ ở T2 (nghĩa và câu ví dụ trùng đáp án bài đọc/nghe).",
+          "time_min": 22,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 4,
+          "activity_type": "ACT-SOURCE-QA",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [],
+          "target_ids": [
+            "A-T1-TEXT-R"
+          ],
+          "prompt_en": "Read the text once, then answer. You may look back at the text.",
+          "prompt_vi": "T3 27/10 (28') - Đặt hai cốc trước (3'; A: đá + nước; B: nước thường, cốc thủy tinh lau khô), để yên ít nhất 10 phút không chạm; trong lúc chờ An LÀM BÀI ĐỌC (18') ở bàn khác; rồi quan sát cốc với bố/mẹ (7'): mặt ngoài, sờ thử, nhìn khăn giấy, nói điều mình thấy. Không ghi chép mang vào T6.",
+          "time_min": 28,
+          "items": [
+            {
+              "id": "W2-R1",
+              "kind": "mcq",
+              "stem": "What is the text mainly about?",
+              "options": [
+                "a) why we should drink water",
+                "b) how water moves around the Earth again and again",
+                "c) how plants drink water",
+                "d) why the sea is salty"
+              ],
+              "answer": "b",
+              "explanation_vi": "Ý chính (c1).",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W2-R2",
+              "kind": "short",
+              "stem": "What heats the water in seas, rivers and lakes?",
+              "options": [],
+              "answer": "The Sun.",
+              "explanation_vi": "Chi tiết 1/5.",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W2-R3",
+              "kind": "short",
+              "stem": "What is evaporation?",
+              "options": [],
+              "answer": "Liquid water changing into a gas (water vapour).",
+              "explanation_vi": "Chi tiết 2/5.",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W2-R4",
+              "kind": "short",
+              "stem": "Why does water vapour cool down high in the sky?",
+              "options": [],
+              "answer": "Because the air high in the sky is cold.",
+              "explanation_vi": "Chi tiết 3/5 (nhân quả).",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W2-R5",
+              "kind": "short",
+              "stem": "Put in order: (A) the drops join and grow heavy (B) water vapour rises (C) the Sun heats the water (D) rain falls (E) tiny drops make a cloud",
+              "options": [
+                "A",
+                "B",
+                "C",
+                "D",
+                "E"
+              ],
+              "answer": "C, B, E, A, D",
+              "explanation_vi": "Chi tiết 4/5 (trình tự).",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W2-R6",
+              "kind": "short",
+              "stem": "Why do the drops fall from the cloud?",
+              "options": [],
+              "answer": "They become too heavy to stay in the air.",
+              "explanation_vi": "Chi tiết 5/5 (nhân quả). Cần >= 4/5.",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W2-R7",
+              "kind": "open",
+              "stem": "On a cold winter morning, you can see your breath like a little white cloud. Use the text to explain why.",
+              "options": [],
+              "answer": "Hơi thở có hơi nước ấm; không khí lạnh làm hơi nước nguội, ngưng tụ thành giọt rất nhỏ nên nhìn thấy được (đoạn 3).",
+              "explanation_vi": "CHẨN ĐOÁN (suy luận áp dụng). Có \"winter\" vì cuối tháng 10 Hà Nội thường chưa đủ lạnh để thấy hơi thở.",
+              "target_id": "A-T2-INFER-R"
+            },
+            {
+              "id": "W2-R8",
+              "kind": "short",
+              "stem": "\"...it soaks into the ground.\" What does 'soaks into' mean?",
+              "options": [],
+              "answer": "Goes slowly into (thấm vào).",
+              "explanation_vi": "CHẨN ĐOÁN (nghĩa từ).",
+              "target_id": "A-T2-INFER-R"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 5,
+          "activity_type": "ACT-CANVAS-BASIC",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [
+            "A-T4-CAUSE"
+          ],
+          "prompt_en": "Main idea: Water moves in a cycle: ... Why (4 cards): [The Sun heats the water, so...] -> [Water vapour rises and...] -> [Tiny drops...] -> [The drops get heavy, so...]. Example: your glass of iced water on Tuesday - which step is it?",
+          "prompt_vi": "T4 28/10 (6' + 12') - Làm đầu tiên: phát 8 cụm từ + thẻ từ (6'), SAU khi An nộp bài nghe và bài đọc. Rồi Canvas (12'). 8 cụm từ: evaporate/evaporation = bốc hơi · water vapour = hơi nước · condense/condensation = ngưng tụ · tiny drops = giọt rất nhỏ · form a cloud / clouds form = tạo thành mây · fall as rain = rơi xuống thành mưa · heat from the Sun = sức nóng của Mặt Trời · that's why = vì thế mà. Đáp án gợi ý: Mặt Trời làm nóng nước -> nước bốc hơi thành hơi nước -> hơi nước bay lên, gặp lạnh -> ngưng tụ thành giọt nhỏ -> mây -> giọt nhập lại, nặng -> mưa -> sông, biển, đất -> lặp lại. Cốc nước đá = bước ngưng tụ.",
+          "time_min": 18,
+          "items": [
+            {
+              "id": "W2-CV",
+              "kind": "open",
+              "stem": "Fill in the 4 cards and the example.",
+              "options": [],
+              "answer": "Mặt Trời làm nóng nước -> nước bốc hơi thành hơi nước -> hơi nước bay lên, gặp lạnh -> ngưng tụ thành giọt nhỏ -> mây -> giọt nhập lại, nặng -> mưa -> sông, biển, đất -> lặp lại. Cốc nước đá = bước ngưng tụ.",
+              "explanation_vi": "Luyện tập, tùy chọn.",
+              "target_id": "A-T4-CAUSE"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 6,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [
+            "A-L3-CAUSE-S",
+            "A-L2-CHUNKS"
+          ],
+          "prompt_en": "After the rain, there is a puddle on the road. On a sunny day, it disappears. Why? - After the rain,... / The Sun... / The water turns into... This is called... / We cannot see..., so... / That's why... (45-60 seconds)",
+          "prompt_vi": "T4 28/10 (12') - Luyện nói có câu mẫu. support_used = frame.",
+          "time_min": 12,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 7,
+          "activity_type": "ACT-WRITE",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [
+            "A-L3-CAUSE-W",
+            "A-L2-CHUNKS"
+          ],
+          "prompt_en": "How does a cloud form? - First, the Sun... / The water vapour rises, and high in the sky... / Because the air is cold,... / Millions of tiny drops... (50-70 words)",
+          "prompt_vi": "T5 29/10 (18') - Luyện viết có câu mẫu. Chỉ ghi A-L2-CHUNKS nếu >= 60 từ.",
+          "time_min": 18,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 8,
+          "activity_type": "ACT-SELF-REVIEW",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [],
+          "prompt_en": "Check your own writing.",
+          "prompt_vi": "T5 29/10 (5' + 2' thẻ từ).",
+          "time_min": 7,
+          "items": [],
+          "self_check_vi": [
+            "Câu đầu của bạn đã trả lời câu hỏi chưa?",
+            "Bạn đã nói đủ: mặt trời làm nóng -> hơi nước bay lên -> lạnh nên thành giọt -> mây chưa?",
+            "Bạn đã dùng 2 từ nối khác nhau và 4 từ mới chưa?"
+          ]
+        },
+        {
+          "step_no": 9,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-L3-CAUSE-S",
+            "A-L4-PROCESS-S",
+            "A-T4-CAUSE",
+            "A-L2-CHUNKS"
+          ],
+          "prompt_en": "How does the water cycle work? Tell the journey of a drop of water from the sea, up to a cloud, and back to the sea. (30 seconds to think. Speak 60-90 seconds.)",
+          "prompt_vi": "T6 30/10 (7') - Nói tự làm (SIC), kiểm tra trong buổi, ghi âm. Ghi activity_type = ACT-SPEAK-MONO. Nói trôi chảy và Xoay xở khi thiếu từ được chấm ở lượt LIVE kế tiếp.",
+          "time_min": 7,
+          "items": [
+            {
+              "id": "W2-SIC",
+              "kind": "open",
+              "stem": "Tell the journey of a drop of water from the sea, up to a cloud, and back to the sea.",
+              "options": [],
+              "answer": "Mặt Trời làm nóng nước -> nước bốc hơi thành hơi nước -> hơi nước bay lên, gặp lạnh -> ngưng tụ thành giọt nhỏ -> mây -> giọt nhập lại, nặng -> mưa -> sông, biển, đất -> lặp lại. Cốc nước đá = bước ngưng tụ.",
+              "explanation_vi": "A-L3-CAUSE-S; A-L4-PROCESS-S (>= 3 bước đúng thứ tự); A-T4-CAUSE (chuỗi); A-L2-CHUNKS (>= 4/8 cụm).",
+              "target_id": "A-L3-CAUSE-S"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 10,
+          "activity_type": "ACT-SPEAK-LIVE",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-X1-TURN",
+            "A-L2-COMPENSATE-S"
+          ],
+          "prompt_en": "Choose one picture. It must be something you know how to use, but you do not know its English name. Tell me about it: what it looks like, what we use it for, and how you use it. (30 seconds to think, no writing. Speak 60-90 seconds.)",
+          "prompt_vi": "T6 30/10 (4') - Lượt nói trực tiếp (kit mục 3.0, \"Thử thách thiếu từ\"). Cô đưa 3 ảnh: sponge (miếng bọt biển) · tape measure (thước dây) · ladder (cái thang). Cô không nói tên tiếng Anh trước T6; cô chỉ nói \"Bắt đầu nhé\" / \"Còn 30 giây\", không nhắc \"giải thích cách khác\". Ghi activity_type = ACT-SPEAK-LIVE, context_topic = lab-tools, chỉ cô chấm; cô bấm giờ (duration_s; c1 Nói trôi chảy cần >= 60 giây). Nói trôi chảy: c1 >= 60 giây, c2 <= 3 lần ngừng > 3 giây, c3 nói lại câu thay vì bỏ dở. Xoay xở khi thiếu từ: cô xác nhận có chỗ thiếu từ thật; An biết tên cả 3 vật (đổi bộ ảnh) hoặc không có chỗ thiếu thật => NULL, đó là kết quả hợp lệ.",
+          "time_min": 4,
+          "items": [
+            {
+              "id": "W2-LIVE",
+              "kind": "open",
+              "stem": "Choose one picture and tell me about it.",
+              "options": [],
+              "answer": "Không có đáp án mẫu. Cô ghi: vật An chọn, từ An chưa biết, cách An diễn đạt vòng (a thing that..., it is like...), có chuyển sang tiếng Việt không.",
+              "explanation_vi": "A-X1-TURN (c1 >= 60 giây; c2 <= 3 lần ngừng dài; c3 nói lại câu) và A-L2-COMPENSATE-S (c1 >= 1 lần diễn đạt vòng thành công bằng tiếng Anh; c2 <= 1 lần chuyển sang tiếng Việt), hoặc NULL.",
+              "target_id": "A-X1-TURN"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 11,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-T7-OPINION"
+          ],
+          "prompt_en": "Do you like rainy days or sunny days more? Why? Give your reasons and an example. Talk for at least one minute. (Then: Now ask me two questions about rain or clouds.)",
+          "prompt_vi": "T6 30/10 (3') - Nói ý kiến (OP), ghi âm trên máy. Cô hỏi một lần, nghĩ 30 giây, không hỏi thêm \"Why?\" khi An đang nói; An nói ít nhất 1 phút. Chấm: c1 quan điểm rõ, c2 >= 2 lý do khác nhau, c3 >= 1 ví dụ gắn với lý do. Không chấm quan điểm đúng/sai. Ghi activity_type = ACT-SPEAK-MONO (catalogue không nhận Nêu ý kiến ở ACT-SPEAK-LIVE). Sau đó: \"Now ask me two questions about rain or clouds.\" (chỉ ghi chú, không ghi dòng).",
+          "time_min": 3,
+          "items": [
+            {
+              "id": "W2-OP",
+              "kind": "open",
+              "stem": "Do you like rainy days or sunny days more? Why? Give your reasons and an example. Talk for at least one minute.",
+              "options": [],
+              "answer": "Không có đáp án đúng/sai; chấm lập luận.",
+              "explanation_vi": "A-T7-OPINION: c1 quan điểm rõ; c2 >= 2 lý do khác nhau, liên quan; c3 >= 1 ví dụ gắn với một lý do.",
+              "target_id": "A-T7-OPINION"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 12,
+          "activity_type": "ACT-WRITE",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-L1-PAST-W",
+            "A-L3-CAUSE-W",
+            "A-L3-PARA-W",
+            "A-T4-CAUSE",
+            "A-L2-CHUNKS"
+          ],
+          "prompt_en": "Write a report of your cold-glass experiment in one paragraph (80-120 words). What did you do? What did you see? Why did it happen? (20 minutes. No dictionary, no notes.)",
+          "prompt_vi": "T6 30/10 (20') - Viết tự làm, kiểm tra trong buổi. Đếm chỗ bắt buộc dùng quá khứ (put, waited, saw, was, touched...): < 6 chỗ hoặc < 80 từ => A-L1-PAST-W = NULL.",
+          "time_min": 20,
+          "items": [
+            {
+              "id": "W2-WIC",
+              "kind": "open",
+              "stem": "Write a report of your cold-glass experiment.",
+              "options": [],
+              "answer": "Kể quá khứ: đã làm gì, thấy gì; giải thích: hơi nước trong không khí gặp cốc lạnh -> nguội -> ngưng tụ thành giọt.",
+              "explanation_vi": "A-L1-PAST-W c1-c2; A-L3-CAUSE-W; A-L3-PARA-W; A-T4-CAUSE; A-L2-CHUNKS.",
+              "target_id": "A-L1-PAST-W"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 13,
+          "activity_type": "ACT-SELF-REVIEW",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-A1-SELFASSESS"
+          ],
+          "prompt_en": "Before you hear any feedback, check your own report.",
+          "prompt_vi": "T6 30/10 (3'). Tự kiểm: 1 bạn làm gì -> bạn thấy gì; 2 động từ quá khứ (put, saw, waited); 3 giải thích vì sao có giọt nước ngoài cốc.",
+          "time_min": 3,
+          "items": [],
+          "self_check_vi": [
+            "Bạn đã kể đủ: bạn đã làm gì, bạn đã thấy gì chưa?",
+            "Báo cáo đã dùng động từ quá khứ (put, saw, waited...) chưa?",
+            "Bạn đã giải thích vì sao có giọt nước ngoài cốc chưa?",
+            "Một điều mình làm tốt: ______",
+            "Một điều mình muốn sửa: ______"
+          ]
+        },
+        {
+          "step_no": 14,
+          "activity_type": "ACT-REVISE",
+          "mode": "REVISION",
+          "purpose": [],
+          "target_ids": [
+            "A-A3-REDRAFT"
+          ],
+          "prompt_en": "Read each hint, fix your report, underline what you changed, and write 'Mình đã đổi ... thành ... vì ...'.",
+          "prompt_vi": "T6 30/10 (7' + 15') - Thêm: đọc to từng câu có động từ; chuyện đã xảy ra thì động từ đã ở quá khứ chưa?",
+          "time_min": 15,
+          "items": [],
+          "self_check_vi": []
+        }
+      ]
+    },
+    {
+      "inquiry_id": "A-W3-EARTHQUAKES",
+      "title_vi": "Tuần 3 - Động đất (có bài ôn núi lửa sau 14 ngày)",
+      "big_question_en": "Why does the ground shake?",
+      "big_question_vi": "Vì sao mặt đất rung lên?",
+      "week": 3,
+      "dates": {
+        "from": "2026-11-02",
+        "to": "2026-11-08"
+      },
+      "domain_bucket": "science",
+      "target_ids": [
+        "A-T1-TEXT-L",
+        "A-T1-TEXT-R",
+        "A-L3-CAUSE-S",
+        "A-L3-CAUSE-W",
+        "A-L3-PARA-W",
+        "A-L4-PROCESS-S",
+        "A-L1-PAST-W",
+        "A-L2-CHUNKS",
+        "A-L2-COMPENSATE-S",
+        "A-T4-CAUSE",
+        "A-T7-OPINION",
+        "A-X1-TURN"
+      ],
+      "sources": [
+        {
+          "title": "Why Does the Ground Shake? (bài đọc EQ-R)",
+          "url": null,
+          "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi - không nhắc núi lửa hay 'vành đai lửa' (giữ khoảng cách 14 ngày cho bài ôn núi lửa)",
+          "rights_note": "Tự soạn. Nguồn kiểm: USGS The Science of Earthquakes (https://www.usgs.gov/programs/earthquake-hazards/science-earthquakes), USGS tốc độ mảng (https://www.usgs.gov/faqs/how-fast-do-tectonic-plates-move), USGS cường độ rung (https://www.usgs.gov/programs/earthquake-hazards/earthquake-magnitude-energy-release-and-shaking-intensity). Câu \"Many earthquakes are very small…\" chưa có trang USGS nêu thẳng; phụ huynh tìm \"too small to be felt\" trên USGS trước khi giao.",
+          "modality": "text",
+          "text": "Why Does the Ground Shake?\n\nThe ground under our feet feels still. But the outside of the Earth is not one solid piece. It is broken into huge pieces called plates, like the cracked shell of a boiled egg.\n\nThe plates move very slowly, about as fast as your fingernails grow. Some plates move apart, some push into each other, and some slide past each other.\n\nThe edges of the plates are rough, so they often get stuck. The plates keep pushing, but the edges cannot move. Energy builds up in the rocks, like a ruler that you bend more and more. Then, suddenly, the rocks slip, like the ruler springing back. The stored energy travels out in all directions as waves. These are called seismic waves. When the waves reach the surface, the ground shakes. This is an earthquake.\n\nThe crack where the rocks slip is called a fault. The place on the surface right above the start of the earthquake is called the epicentre. The shaking is usually strongest near the epicentre.\n\nMany earthquakes are very small, and people do not feel them. After a big earthquake, smaller ones called aftershocks often follow."
+        },
+        {
+          "title": "Drop, Cover, Hold On (bài nghe EQ-L, file A_EQ_L)",
+          "url": null,
+          "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi",
+          "rights_note": "Tự soạn, TTS một giọng cố định 0,9x. Nguồn kiểm: CDC (https://cdc.gov/earthquakes/safety/stay-safe-during-an-earthquake.html): drop, cover, hold on; không chạy ra ngoài; không đứng ở khung cửa; tránh kính; ra chỗ trống.",
+          "modality": "audio",
+          "text": "What should you do if the ground starts to shake? Remember three words: Drop, Cover, Hold On.\n\nFirst, drop down onto your hands and knees. This stops you from falling over.\n\nNext, cover your head and neck with your arms. If there is a strong table or desk near you, get under it. Things can fall from shelves and walls, so protect your head.\n\nThen, hold on to the table and stay there until the shaking stops.\n\nDo not run outside while the ground is shaking, and do not stand in a doorway. Stay away from windows, because the glass can break.\n\nIf you are outside, move to an open place, away from buildings, trees and electric wires. Then drop down and stay there.\n\nWhen the shaking stops, wait for an adult to tell you what to do next."
+        }
+      ],
+      "steps": [
+        {
+          "step_no": 1,
+          "activity_type": "ACT-SPEAK-LIVE",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [],
+          "prompt_en": "Why does the ground shake? (You can speak Vietnamese.) Do not talk about volcanoes this week - if An asks, say: 'We will talk about that on Friday.'",
+          "prompt_vi": "T2 2/11 (8') - Câu hỏi lớn. Cả tuần KHÔNG nhắc núi lửa (bài ôn 6/11). An lỡ nói về núi lửa => ghi Sổ tiếp xúc.",
+          "time_min": 8,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 2,
+          "activity_type": "ACT-SOURCE-QA",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-T1-TEXT-R"
+          ],
+          "prompt_en": "Read the text once, then answer. You may look back at the text. No dictionary.",
+          "prompt_vi": "T2 2/11 (18') - Bài đọc làm TRONG buổi cô. An làm một mình.",
+          "time_min": 18,
+          "items": [
+            {
+              "id": "W3-R1",
+              "kind": "mcq",
+              "stem": "What is the text mainly about?",
+              "options": [
+                "a) how to stay safe in an earthquake",
+                "b) why earthquakes happen",
+                "c) how fast fingernails grow",
+                "d) why boiled eggs crack"
+              ],
+              "answer": "b",
+              "explanation_vi": "Ý chính (c1).",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W3-R2",
+              "kind": "short",
+              "stem": "What are plates?",
+              "options": [],
+              "answer": "Huge pieces of the outside of the Earth.",
+              "explanation_vi": "Chi tiết 1/5.",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W3-R3",
+              "kind": "short",
+              "stem": "How fast do plates move?",
+              "options": [],
+              "answer": "Very slowly - about as fast as fingernails grow.",
+              "explanation_vi": "Chi tiết 2/5.",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W3-R4",
+              "kind": "short",
+              "stem": "Why do the edges of the plates often get stuck?",
+              "options": [],
+              "answer": "Because they are rough.",
+              "explanation_vi": "Chi tiết 3/5 (nhân quả).",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W3-R5",
+              "kind": "short",
+              "stem": "Put in order: (A) the rocks suddenly slip (B) energy builds up in the rocks (C) the edges get stuck (D) the ground shakes",
+              "options": [
+                "A",
+                "B",
+                "C",
+                "D"
+              ],
+              "answer": "C, B, A, D",
+              "explanation_vi": "Chi tiết 4/5 (trình tự).",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W3-R6",
+              "kind": "short",
+              "stem": "Where is the shaking usually strongest?",
+              "options": [],
+              "answer": "Near the epicentre.",
+              "explanation_vi": "Chi tiết 5/5. Cần >= 4/5.",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W3-R7",
+              "kind": "open",
+              "stem": "Two towns feel the same earthquake. Town A is 5 km from the epicentre. Town B is 200 km away. Which town probably feels stronger shaking? Why?",
+              "options": [],
+              "answer": "Town A - it is nearer to the epicentre, and the text says the shaking is usually strongest there.",
+              "explanation_vi": "CHẨN ĐOÁN (suy luận ứng dụng).",
+              "target_id": "A-T2-INFER-R"
+            },
+            {
+              "id": "W3-R8",
+              "kind": "short",
+              "stem": "\"...the rocks slip.\" What does 'slip' mean here?",
+              "options": [],
+              "answer": "Move suddenly (trượt đi bất ngờ).",
+              "explanation_vi": "CHẨN ĐOÁN (nghĩa từ).",
+              "target_id": "A-T2-INFER-R"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 3,
+          "activity_type": "ACT-SPEAK-LIVE",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [],
+          "prompt_en": "Tip for a missing word: It's a kind of... / It's like... / It's a thing that... (practise with two objects that are not in the Friday picture set). Then: this week you will practise speaking and writing about earthquakes.",
+          "prompt_vi": "T2 2/11 (10' + 5' + 4') - Mẹo nói tiếp khi quên từ (luyện với 2 vật khác bộ ảnh T6), giao việc. KHÔNG phát 8 cụm từ ở T2: nghĩa và câu ví dụ trùng đáp án bài đọc/nghe.",
+          "time_min": 19,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 4,
+          "activity_type": "ACT-SOURCE-QA",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [],
+          "target_ids": [
+            "A-T1-TEXT-L"
+          ],
+          "prompt_en": "Listen (maximum 2 times, no text). Answer the questions.",
+          "prompt_vi": "T3 3/11 (25') - Bài nghe ở nhà (10'), sau đó tập 'Drop, Cover, Hold On' bằng động tác (5'; chỉ làm SAU khi đã nộp bài nghe). CUỐI T3, sau khi nộp cả bài đọc và bài nghe: phát 8 cụm từ + thẻ từ (10'). 8 cụm từ: plates = các mảng · move slowly = di chuyển chậm · get stuck = bị kẹt · energy builds up = năng lượng tích tụ · suddenly slip = đột ngột trượt · seismic waves = sóng địa chấn · the ground shakes = mặt đất rung · because of = vì, do.",
+          "time_min": 25,
+          "items": [
+            {
+              "id": "W3-L1",
+              "kind": "mcq",
+              "stem": "What is the talk mainly about?",
+              "options": [
+                "a) why earthquakes happen",
+                "b) what to do to stay safe when the ground shakes",
+                "c) how to build strong tables",
+                "d) why windows break"
+              ],
+              "answer": "b",
+              "explanation_vi": "Ý chính (c1).",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W3-L2",
+              "kind": "short",
+              "stem": "What should you do first?",
+              "options": [],
+              "answer": "Drop down onto your hands and knees (chấp nhận 'Drop').",
+              "explanation_vi": "Chi tiết 1/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W3-L3",
+              "kind": "short",
+              "stem": "What should you cover with your arms?",
+              "options": [],
+              "answer": "Your head and neck.",
+              "explanation_vi": "Chi tiết 2/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W3-L4",
+              "kind": "short",
+              "stem": "Why should you stay away from windows?",
+              "options": [],
+              "answer": "The glass can break.",
+              "explanation_vi": "Chi tiết 3/4 (nhân quả).",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W3-L5",
+              "kind": "short",
+              "stem": "If you are outside, where should you go?",
+              "options": [],
+              "answer": "An open place, away from buildings, trees and electric wires.",
+              "explanation_vi": "Chi tiết 4/4. Cần >= 3/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W3-L6",
+              "kind": "open",
+              "stem": "Why does the speaker tell you to get under a strong table?",
+              "options": [],
+              "answer": "Bàn chắc che đầu và cổ khỏi đồ rơi ('Things can fall... so protect your head').",
+              "explanation_vi": "CHẨN ĐOÁN (suy luận).",
+              "target_id": "A-T2-INFER-L"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 5,
+          "activity_type": "ACT-CANVAS-BASIC",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [
+            "A-T4-CAUSE"
+          ],
+          "prompt_en": "Main idea: Earthquakes happen when... Why (4 cards): [Plates move, but the edges...] -> [Energy...] -> [Suddenly,...] -> [Seismic waves..., so...]. Example: the ruler - you bend it and let it go. Which step is that?",
+          "prompt_vi": "T4 4/11 (12'). Đáp án gợi ý: Mảng di chuyển -> mép gồ ghề bị kẹt -> năng lượng tích tụ trong đá -> đá đột ngột trượt (đứt gãy) -> năng lượng lan ra thành sóng địa chấn -> sóng tới mặt đất -> rung. Thước: uốn = tích năng lượng; bật lại = đá trượt.",
+          "time_min": 12,
+          "items": [
+            {
+              "id": "W3-CV",
+              "kind": "open",
+              "stem": "Fill in the 4 cards and the example.",
+              "options": [],
+              "answer": "Mảng di chuyển -> mép gồ ghề bị kẹt -> năng lượng tích tụ trong đá -> đá đột ngột trượt (đứt gãy) -> năng lượng lan ra thành sóng địa chấn -> sóng tới mặt đất -> rung.",
+              "explanation_vi": "Luyện tập, tùy chọn.",
+              "target_id": "A-T4-CAUSE"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 6,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [
+            "A-L3-CAUSE-S",
+            "A-L2-CHUNKS"
+          ],
+          "prompt_en": "What should you do if an earthquake happens? Why? - First,..., because... / Next,... This is important because... / Do not..., because... / If you are outside,... (45-60 seconds)",
+          "prompt_vi": "T4 4/11 (12') - Luyện nói có câu mẫu. support_used = frame.",
+          "time_min": 12,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 7,
+          "activity_type": "ACT-WRITE",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [
+            "A-L3-CAUSE-W",
+            "A-L2-CHUNKS"
+          ],
+          "prompt_en": "What are plates, and why do their edges get stuck? - The outside of the Earth is... / The plates move..., about as fast as... / The edges of the plates are..., so... / Energy builds up because... (50-70 words)",
+          "prompt_vi": "T5 5/11 (18'). Hỏi An trước (T5) có ổn với đề nhật ký động đất không.",
+          "time_min": 18,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 8,
+          "activity_type": "ACT-SELF-REVIEW",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [],
+          "prompt_en": "Check your own writing.",
+          "prompt_vi": "T5 5/11 (5' + 2').",
+          "time_min": 7,
+          "items": [],
+          "self_check_vi": [
+            "Bạn đã nói vì sao mép các mảng bị kẹt chưa?",
+            "Bạn đã kể đủ: kẹt -> tích năng lượng -> trượt -> rung chưa?",
+            "Câu cuối của bạn đã kết lại ý chưa?"
+          ]
+        },
+        {
+          "step_no": 9,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "delayed_check",
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-L3-CAUSE-S",
+            "A-L4-PROCESS-S",
+            "A-T4-CAUSE"
+          ],
+          "prompt_en": "A younger child asks you: 'Why do volcanoes erupt?' Explain it simply, step by step. (30 seconds to think, no notes. Speak 60-90 seconds.)",
+          "prompt_vi": "T6 6/11, LÀM ĐẦU TIÊN (7') - Bài ôn núi lửa VOL-DEL. Hợp lệ khi ngày ôn - ngày tiếp xúc cuối >= 14: 6/11 - 23/10 = 14. last_practice_date = 2026-10-23. Chỉ làm nếu Sổ tiếp xúc không ghi lần gặp núi lửa nào từ 24/10; nếu có, dời sang >= 14 ngày sau lần đó (vd. T2 9/11 = 17 ngày). Ghi thêm (chẩn đoán): An dùng lại đúng mấy trong 8 cụm từ tuần 1.",
+          "time_min": 7,
+          "items": [
+            {
+              "id": "W3-VOLDEL",
+              "kind": "open",
+              "stem": "A younger child asks you: 'Why do volcanoes erupt?' Explain it simply, step by step.",
+              "options": [],
+              "answer": "Magma nhẹ hơn đá -> nổi lên, gom trong buồng magma -> gần mặt đất áp suất giảm -> khí thoát ra thành bong bóng -> bong bóng lớn dần, đẩy magma -> magma xuyên qua mặt đất = phun trào. Magma loãng: khí thoát dễ -> dung nham chảy. Magma đặc: khí bị giữ -> áp suất tăng -> nổ.",
+              "explanation_vi": "A-L3-CAUSE-S; A-L4-PROCESS-S; A-T4-CAUSE (nhớ chuỗi sau 14 ngày).",
+              "target_id": "A-L3-CAUSE-S"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 10,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-L3-CAUSE-S",
+            "A-L4-PROCESS-S",
+            "A-T4-CAUSE",
+            "A-L2-CHUNKS"
+          ],
+          "prompt_en": "Why do earthquakes happen? Explain it step by step, from the plates to the shaking ground. (30 seconds to think. Speak 60-90 seconds.)",
+          "prompt_vi": "T6 6/11 (7') - Nói tự làm (SIC), kiểm tra trong buổi, ghi âm. Ghi activity_type = ACT-SPEAK-MONO. Nói trôi chảy và Xoay xở khi thiếu từ được chấm ở lượt LIVE kế tiếp.",
+          "time_min": 7,
+          "items": [
+            {
+              "id": "W3-SIC",
+              "kind": "open",
+              "stem": "Why do earthquakes happen? Explain step by step.",
+              "options": [],
+              "answer": "Mảng di chuyển -> mép gồ ghề bị kẹt -> năng lượng tích tụ trong đá -> đá đột ngột trượt (đứt gãy) -> năng lượng lan ra thành sóng địa chấn -> sóng tới mặt đất -> rung.",
+              "explanation_vi": "A-L3-CAUSE-S; A-L4-PROCESS-S; A-T4-CAUSE; A-L2-CHUNKS.",
+              "target_id": "A-L3-CAUSE-S"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 11,
+          "activity_type": "ACT-SPEAK-LIVE",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-X1-TURN",
+            "A-L2-COMPENSATE-S"
+          ],
+          "prompt_en": "Choose one picture. It must be something you know how to use, but you do not know its English name. Tell me about it: what it looks like, what we use it for, and how you use it. (30 seconds to think, no writing. Speak 60-90 seconds.)",
+          "prompt_vi": "T6 6/11 (4') - Lượt nói trực tiếp (kit mục 3.0, \"Thử thách thiếu từ\"). Cô đưa 3 ảnh: whistle (cái còi) · first-aid kit (hộp sơ cứu) · fire extinguisher (bình chữa cháy). Cô không nói tên tiếng Anh trước T6; cô chỉ nói \"Bắt đầu nhé\" / \"Còn 30 giây\", không nhắc \"giải thích cách khác\". Ghi activity_type = ACT-SPEAK-LIVE, context_topic = lab-tools, chỉ cô chấm; cô bấm giờ (duration_s; c1 Nói trôi chảy cần >= 60 giây). Nói trôi chảy: c1 >= 60 giây, c2 <= 3 lần ngừng > 3 giây, c3 nói lại câu thay vì bỏ dở. Xoay xở khi thiếu từ: cô xác nhận có chỗ thiếu từ thật; An biết tên cả 3 vật (đổi bộ ảnh) hoặc không có chỗ thiếu thật => NULL, đó là kết quả hợp lệ.",
+          "time_min": 4,
+          "items": [
+            {
+              "id": "W3-LIVE",
+              "kind": "open",
+              "stem": "Choose one picture and tell me about it.",
+              "options": [],
+              "answer": "Không có đáp án mẫu. Cô ghi: vật An chọn, từ An chưa biết, cách An diễn đạt vòng (a thing that..., it is like...), có chuyển sang tiếng Việt không.",
+              "explanation_vi": "A-X1-TURN (c1 >= 60 giây; c2 <= 3 lần ngừng dài; c3 nói lại câu) và A-L2-COMPENSATE-S (c1 >= 1 lần diễn đạt vòng thành công bằng tiếng Anh; c2 <= 1 lần chuyển sang tiếng Việt), hoặc NULL.",
+              "target_id": "A-X1-TURN"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 12,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-T7-OPINION"
+          ],
+          "prompt_en": "Should every school practise earthquake drills, even in places where earthquakes are rare? Why or why not? Give your reasons and an example. Talk for at least one minute. (Then: Now ask me two questions about earthquakes.)",
+          "prompt_vi": "T6 6/11 (3') - Nói ý kiến (OP), ghi âm trên máy. Cô hỏi một lần, nghĩ 30 giây, không hỏi thêm \"Why?\" khi An đang nói; An nói ít nhất 1 phút. Chấm: c1 quan điểm rõ, c2 >= 2 lý do khác nhau, c3 >= 1 ví dụ gắn với lý do. Không chấm quan điểm đúng/sai. Ghi activity_type = ACT-SPEAK-MONO (catalogue không nhận Nêu ý kiến ở ACT-SPEAK-LIVE). Sau đó: \"Now ask me two questions about earthquakes.\" (chỉ ghi chú, không ghi dòng).",
+          "time_min": 3,
+          "items": [
+            {
+              "id": "W3-OP",
+              "kind": "open",
+              "stem": "Should every school practise earthquake drills, even in places where earthquakes are rare? Why or why not? Give your reasons and an example. Talk for at least one minute.",
+              "options": [],
+              "answer": "Không có đáp án đúng/sai; chấm lập luận.",
+              "explanation_vi": "A-T7-OPINION: c1 quan điểm rõ; c2 >= 2 lý do khác nhau, liên quan; c3 >= 1 ví dụ gắn với một lý do.",
+              "target_id": "A-T7-OPINION"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 13,
+          "activity_type": "ACT-WRITE",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-L1-PAST-W",
+            "A-L3-CAUSE-W",
+            "A-L3-PARA-W",
+            "A-T4-CAUSE",
+            "A-L2-CHUNKS"
+          ],
+          "prompt_en": "Imagine that yesterday, at school, you felt a very small earthquake. It lasted a few seconds, and nobody was hurt. Write your diary in one paragraph (80-120 words). What happened? What did you do? Why did the ground shake? (20 minutes.)",
+          "prompt_vi": "T6 6/11 (20') - Viết tự làm. Đề thay thế nếu An lo: 'Yesterday your class had an earthquake drill. Write your diary in one paragraph (80-120 words): what did you do, and why do earthquakes happen?' (ghi đề đã dùng vào notes). < 6 chỗ bắt buộc dùng quá khứ hoặc < 80 từ => NULL.",
+          "time_min": 20,
+          "items": [
+            {
+              "id": "W3-WIC",
+              "kind": "open",
+              "stem": "Write your diary about a very small earthquake.",
+              "options": [],
+              "answer": "Kể quá khứ + giải thích: mảng kẹt -> tích năng lượng -> trượt -> sóng -> rung.",
+              "explanation_vi": "A-L1-PAST-W; A-L3-CAUSE-W; A-L3-PARA-W; A-T4-CAUSE; A-L2-CHUNKS.",
+              "target_id": "A-L1-PAST-W"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 14,
+          "activity_type": "ACT-SELF-REVIEW",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-A1-SELFASSESS"
+          ],
+          "prompt_en": "Before you hear any feedback, check your own diary.",
+          "prompt_vi": "T6 6/11 (3').",
+          "time_min": 3,
+          "items": [],
+          "self_check_vi": [
+            "Bạn đã nói vì sao mặt đất rung chưa?",
+            "Nhật ký của bạn kể chuyện hôm qua: các động từ đã ở quá khứ chưa?",
+            "Câu cuối của bạn đã kết lại ý chưa?",
+            "Một điều mình làm tốt: ______",
+            "Một điều mình muốn sửa: ______"
+          ]
+        },
+        {
+          "step_no": 15,
+          "activity_type": "ACT-REVISE",
+          "mode": "REVISION",
+          "purpose": [],
+          "target_ids": [
+            "A-A3-REDRAFT"
+          ],
+          "prompt_en": "Read each hint, fix your diary, underline what you changed, and write 'Mình đã đổi ... thành ... vì ...'.",
+          "prompt_vi": "T6 6/11 (7' + 15') - Thêm: gạch dưới mọi động từ trong nhật ký; chuyện hôm qua thì động từ ở quá khứ.",
+          "time_min": 15,
+          "items": [],
+          "self_check_vi": []
+        }
+      ]
+    },
+    {
+      "inquiry_id": "A-W4-PLANETS",
+      "title_vi": "Tuần 4 - So sánh Sao Kim và Sao Hỏa (có bài ôn vòng tuần hoàn nước sau 14 ngày)",
+      "big_question_en": "How are Venus and Mars alike and different?",
+      "big_question_vi": "Sao Kim và Sao Hỏa giống và khác nhau thế nào?",
+      "week": 4,
+      "dates": {
+        "from": "2026-11-09",
+        "to": "2026-11-15"
+      },
+      "domain_bucket": "science",
+      "target_ids": [
+        "A-T1-TEXT-L",
+        "A-T1-TEXT-R",
+        "A-L3-CAUSE-S",
+        "A-L3-CAUSE-W",
+        "A-L3-PARA-W",
+        "A-L4-PROCESS-S",
+        "A-L2-CHUNKS",
+        "A-L2-COMPENSATE-S",
+        "A-T4-CAUSE",
+        "A-T7-OPINION",
+        "A-X1-TURN"
+      ],
+      "sources": [
+        {
+          "title": "Venus: Earth's Hot Twin (bài đọc PLA-R)",
+          "url": null,
+          "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi - chỉ nhắc 'clouds made of acid', không giải thích mây hình thành (giữ khoảng cách 14 ngày cho bài ôn nước)",
+          "rights_note": "Tự soạn. Nguồn kiểm: NASA Venus Facts (https://science.nasa.gov/venus/venus-facts/): 467 độ C, khí quyển chủ yếu CO2, áp suất 93 lần, mây axit sunfuric, quay ngược, 243 ngày quay so với 225 ngày quỹ đạo, không có mặt trăng; Physics Today (https://physicstoday.aip.org/opinion/venus-is-not-earths-closest-neighbor): Sao Kim chỉ gần nhất khi tiến sát nhất.",
+          "modality": "text",
+          "text": "Venus: Earth's Hot Twin\n\nVenus is the second planet from the Sun. At its closest, Venus comes nearer to Earth than any other planet, and it is almost the same size as Earth. That is why people sometimes call it Earth's twin. But Venus is a terrible place to visit.\n\nVenus is the hottest planet in our Solar System. The temperature on its surface is about 465 degrees Celsius. That is hot enough to melt some metals! Mercury is closer to the Sun, but Venus is hotter. Why?\n\nThe answer is its atmosphere. The air on Venus is very thick, and it is mostly carbon dioxide. This thick air traps the heat from the Sun, like a heavy blanket. The heat cannot escape, so the planet stays extremely hot, day and night.\n\nThe air on Venus is also very heavy. If you stood on Venus, the air would press on you more than 90 times harder than the air on Earth. Its thick clouds are made of acid, too.\n\nVenus spins very slowly, and it spins in the opposite direction from most planets. One day on Venus is longer than one year there! Venus has no moons."
+        },
+        {
+          "title": "Mars (bài nghe PLA-L, file A_PLA_L)",
+          "url": null,
+          "author": "Tự soạn cho Pilot Kit A v0.2.1 (phụ huynh/Claude); không phải trích từ sách hay đề thi",
+          "rights_note": "Tự soạn, TTS một giọng cố định 0,9x. Nguồn kiểm: NASA Mars Facts (https://science.nasa.gov/mars/facts/): nửa Trái Đất, đỏ vì sắt gỉ, 20 độ C xuống -153 độ C, ngày 24,6 giờ, năm 687 ngày, hai mặt trăng; NASA JPL Mars in a Minute (https://www.jpl.nasa.gov/edu/resources/video/mars-in-a-minute-is-mars-red-hot/): xa Mặt Trời hơn, khí quyển mỏng ~100 lần.",
+          "modality": "audio",
+          "text": "Mars is the fourth planet from the Sun. It is about half the size of Earth. Mars looks red because its rocks and dust have iron in them, and the iron has rusted.\n\nMars is much colder than Earth, and there are two reasons. First, Mars is farther from the Sun, so it gets less heat. Second, its atmosphere is very thin. Thin air cannot hold the heat, so the heat escapes into space. The temperature can go from about 20 degrees Celsius on a summer afternoon down to about minus 150 degrees in the coldest places.\n\nA day on Mars is a little longer than a day on Earth, about 24 and a half hours. But a year on Mars is almost two Earth years long. Mars has two small moons, called Phobos and Deimos.\n\nScientists have sent robots to explore Mars, but no person has been there yet."
+        }
+      ],
+      "steps": [
+        {
+          "step_no": 1,
+          "activity_type": "ACT-SPEAK-LIVE",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [],
+          "prompt_en": "Which planet would you like to visit? (You can speak Vietnamese.) Tip for a missing word: It's a kind of... / It's like...",
+          "prompt_vi": "T2 9/11 (8') - Câu hỏi lớn. Mẹo nói tiếp khi quên từ.",
+          "time_min": 8,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 2,
+          "activity_type": "ACT-SOURCE-QA",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-T1-TEXT-L"
+          ],
+          "prompt_en": "Listen (maximum 2 times, no text). Answer the questions.",
+          "prompt_vi": "T2 9/11 (13') - Bài nghe về Sao Hỏa làm TRONG buổi cô. Không xem chữ.",
+          "time_min": 13,
+          "items": [
+            {
+              "id": "W4-L1",
+              "kind": "mcq",
+              "stem": "What is the talk mainly about?",
+              "options": [
+                "a) robots on Mars",
+                "b) what Mars is like and why it is cold",
+                "c) the moons of Earth",
+                "d) how to travel to Mars"
+              ],
+              "answer": "b",
+              "explanation_vi": "Ý chính (c1).",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W4-L2",
+              "kind": "short",
+              "stem": "Why does Mars look red?",
+              "options": [],
+              "answer": "Its rocks and dust have iron that has rusted.",
+              "explanation_vi": "Chi tiết 1/4 (nhân quả).",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W4-L3",
+              "kind": "short",
+              "stem": "Give one reason why Mars is cold.",
+              "options": [],
+              "answer": "It is farther from the Sun / its atmosphere is thin, so the heat escapes (một trong hai).",
+              "explanation_vi": "Chi tiết 2/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W4-L4",
+              "kind": "short",
+              "stem": "How long is a day on Mars?",
+              "options": [],
+              "answer": "About 24 and a half hours. Chấp nhận 24-25 giờ.",
+              "explanation_vi": "Chi tiết 3/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W4-L5",
+              "kind": "short",
+              "stem": "How many moons does Mars have?",
+              "options": [],
+              "answer": "Two (Phobos and Deimos).",
+              "explanation_vi": "Chi tiết 4/4. Cần >= 3/4.",
+              "target_id": "A-T1-TEXT-L"
+            },
+            {
+              "id": "W4-L6",
+              "kind": "open",
+              "stem": "If Mars had a thick atmosphere like Earth, would it be warmer or colder? Why?",
+              "options": [],
+              "answer": "Warmer - thick air holds the heat, so it cannot escape easily.",
+              "explanation_vi": "CHẨN ĐOÁN (suy luận).",
+              "target_id": "A-T2-INFER-L"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 3,
+          "activity_type": "ACT-SPEAK-LIVE",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [],
+          "prompt_en": "Look at the NASA photos of Venus and Mars.",
+          "prompt_vi": "T2 9/11 (12' + 8' + 4') - Chiếu ảnh NASA, giao việc. KHÔNG phát 8 cụm từ ở T2. KHÔNG giải thích trước câu 'If you stood on Venus...' vì bài đọc T3 là bài tự làm (đã thêm chú thích trong bài).",
+          "time_min": 24,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 4,
+          "activity_type": "ACT-SOURCE-QA",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [],
+          "target_ids": [
+            "A-T1-TEXT-R"
+          ],
+          "prompt_en": "Read the text once, then answer. You may look back at the text.",
+          "prompt_vi": "T3 10/11 (18' + 7') - Bài đọc về Sao Kim ở nhà (18'). CUỐI T3, sau khi nộp bài đọc: phát 8 cụm từ + thẻ từ (7'). 8 cụm từ: planet = hành tinh · atmosphere = bầu khí quyển · carbon dioxide = khí CO2 · trap heat = giữ nhiệt lại · thick / thin = dày / mỏng · surface = bề mặt · far from the Sun = xa Mặt Trời · while = trong khi (để so sánh).",
+          "time_min": 25,
+          "items": [
+            {
+              "id": "W4-R1",
+              "kind": "mcq",
+              "stem": "What is the text mainly about?",
+              "options": [
+                "a) why Venus is so hot and what it is like",
+                "b) why Mercury is the hottest planet",
+                "c) how to visit Venus",
+                "d) the moons of Venus"
+              ],
+              "answer": "a",
+              "explanation_vi": "Ý chính (c1).",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W4-R2",
+              "kind": "short",
+              "stem": "Why do people call Venus \"Earth's twin\"?",
+              "options": [],
+              "answer": "It is almost the same size as Earth (and comes close to Earth).",
+              "explanation_vi": "Chi tiết 1/5.",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W4-R3",
+              "kind": "short",
+              "stem": "What is the air on Venus mostly made of?",
+              "options": [],
+              "answer": "Carbon dioxide.",
+              "explanation_vi": "Chi tiết 2/5.",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W4-R4",
+              "kind": "short",
+              "stem": "Why does Venus stay so hot?",
+              "options": [],
+              "answer": "The thick air traps the heat; the heat cannot escape.",
+              "explanation_vi": "Chi tiết 3/5 (nhân quả).",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W4-R5",
+              "kind": "short",
+              "stem": "What are the clouds on Venus made of?",
+              "options": [],
+              "answer": "Acid.",
+              "explanation_vi": "Chi tiết 4/5.",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W4-R6",
+              "kind": "short",
+              "stem": "Which is longer on Venus: a day or a year?",
+              "options": [],
+              "answer": "A day.",
+              "explanation_vi": "Chi tiết 5/5. \"Ngày\" = một vòng quay quanh trục (243 ngày Trái Đất) so với một năm (225 ngày) theo NASA. Cần >= 4/5.",
+              "target_id": "A-T1-TEXT-R"
+            },
+            {
+              "id": "W4-R7",
+              "kind": "open",
+              "stem": "Mercury is closer to the Sun than Venus. Why is this information in the text? What does it show?",
+              "options": [],
+              "answer": "Khoảng cách tới Mặt Trời không phải lý do chính; lý do chính là bầu khí quyển dày giữ nhiệt ('Why? The answer is its atmosphere').",
+              "explanation_vi": "CHẨN ĐOÁN (mục đích người viết). Câu trừu tượng với lớp 6, chỉ chẩn đoán.",
+              "target_id": "A-T2-INFER-R"
+            },
+            {
+              "id": "W4-R8",
+              "kind": "short",
+              "stem": "\"This thick air traps the heat.\" What does 'traps' mean?",
+              "options": [],
+              "answer": "Keeps it in / does not let it go out (giữ lại).",
+              "explanation_vi": "CHẨN ĐOÁN (nghĩa từ).",
+              "target_id": "A-T2-INFER-R"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 5,
+          "activity_type": "ACT-CANVAS-BASIC",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [
+            "A-T9-COMPARE"
+          ],
+          "prompt_en": "Fill in the table (order from the Sun, size, temperature, air, moons). Main idea: Venus and Mars are both..., but... Why: [Venus is hot because...] [Mars is cold because...]. Example: 'If you stood on Venus,...' or 'On Mars, at night,...'",
+          "prompt_vi": "T4 11/11 (14') - Canvas so sánh; được xem lại bài đọc và nghe lại bài Sao Hỏa. Đáp án bảng: thứ tự 2 / 4; gần bằng Trái Đất / khoảng một nửa; ~467 độ C, nóng nhất / lạnh, từ ~20 xuống ~-150 độ C; dày, chủ yếu CO2 / mỏng; 0 mặt trăng / 2 (Phobos, Deimos). A-T9-COMPARE ngoài bộ 12, tùy chọn.",
+          "time_min": 14,
+          "items": [
+            {
+              "id": "W4-CV",
+              "kind": "open",
+              "stem": "Fill in the comparison table.",
+              "options": [],
+              "answer": "Order 2 / 4; size almost Earth / about half; temperature ~467 C / from ~20 C to ~-150 C; air thick, mostly CO2 / thin; moons 0 / 2.",
+              "explanation_vi": "Tùy chọn.",
+              "target_id": "A-T9-COMPARE"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 6,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [
+            "A-L3-CAUSE-S",
+            "A-L2-CHUNKS"
+          ],
+          "prompt_en": "Mercury is closer to the Sun than Venus. So why is Venus hotter? - Mercury is..., but Venus is... / The atmosphere on Venus is..., and it is mostly... / This thick air..., like... / As a result,... (45-60 seconds)",
+          "prompt_vi": "T4 11/11 (12').",
+          "time_min": 12,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 7,
+          "activity_type": "ACT-WRITE",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [
+            "A-L3-CAUSE-W",
+            "A-L2-CHUNKS"
+          ],
+          "prompt_en": "Why is Mars so cold? - Mars is colder than Earth for two reasons. First, Mars is..., so... / Second, its atmosphere is..., so... / That's why... (50-70 words)",
+          "prompt_vi": "T5 12/11 (18').",
+          "time_min": 18,
+          "items": [],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 8,
+          "activity_type": "ACT-SELF-REVIEW",
+          "mode": "PRACTICE",
+          "purpose": [],
+          "target_ids": [],
+          "prompt_en": "Check your own writing.",
+          "prompt_vi": "T5 12/11 (5' + 2').",
+          "time_min": 7,
+          "items": [],
+          "self_check_vi": [
+            "Bạn đã nói được hai lý do vì sao Sao Hỏa lạnh chưa?",
+            "Bạn đã dùng 2 từ nối khác nhau và 4 từ mới chưa?"
+          ]
+        },
+        {
+          "step_no": 9,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "delayed_check",
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-L3-CAUSE-S",
+            "A-L4-PROCESS-S",
+            "A-T4-CAUSE"
+          ],
+          "prompt_en": "A younger child asks you: 'Where does rain come from?' Explain it simply, step by step. (30 seconds to think, no notes. Speak 60-90 seconds.)",
+          "prompt_vi": "T6 13/11, LÀM ĐẦU TIÊN (7') - Bài ôn nước WAT-DEL. 13/11 - 30/10 = 14 ngày. last_practice_date = 2026-10-30. Chỉ làm nếu Sổ tiếp xúc không ghi lần nào gặp nội dung nước/mây/mưa từ 31/10.",
+          "time_min": 7,
+          "items": [
+            {
+              "id": "W4-WATDEL",
+              "kind": "open",
+              "stem": "A younger child asks you: 'Where does rain come from?' Explain it simply, step by step.",
+              "options": [],
+              "answer": "Mặt Trời làm nóng nước -> nước bốc hơi thành hơi nước -> hơi nước bay lên, gặp lạnh -> ngưng tụ thành giọt nhỏ -> mây -> giọt nhập lại, nặng -> mưa -> sông, biển, đất -> lặp lại. Cốc nước đá = bước ngưng tụ.",
+              "explanation_vi": "A-L3-CAUSE-S; A-L4-PROCESS-S; A-T4-CAUSE.",
+              "target_id": "A-L3-CAUSE-S"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 10,
+          "activity_type": "ACT-SPEAK-MONO",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-L3-CAUSE-S",
+            "A-T4-CAUSE",
+            "A-L2-CHUNKS",
+            "A-T7-OPINION"
+          ],
+          "prompt_en": "Venus or Mars: which planet would be harder for astronauts to visit? Say which one you choose. Give two reasons and an example. Explain why that planet is so hot or so cold. (30 seconds to think. Speak 60-90 seconds.)",
+          "prompt_vi": "T6 13/11 (7') - Nói tự làm (PLA-SIC), ghi âm, ghi activity_type = ACT-SPEAK-MONO. Tuần 4 ý kiến nằm trong bài này (không có bước OP riêng): chấm Nêu ý kiến (c1 quan điểm rõ, c2 >= 2 lý do, c3 >= 1 ví dụ) cùng Nói vì sao-nên và Chuỗi nguyên nhân (phần 'explain why hot/cold'). Không có đáp án đúng/sai: chọn Sao Hỏa vẫn hợp lệ nếu lý do liên quan. Giải thích một quá trình khi nói = NULL.",
+          "time_min": 7,
+          "items": [
+            {
+              "id": "W4-SIC",
+              "kind": "open",
+              "stem": "Venus or Mars: which planet would be harder for astronauts to visit? Choose one, give two reasons and an example, and explain why that planet is so hot or so cold.",
+              "options": [],
+              "answer": "Không có đáp án đúng/sai về hành tinh. Phần giải thích: Sao Kim nóng vì không khí dày chủ yếu CO2 giữ nhiệt; Sao Hỏa lạnh vì xa Mặt Trời và khí quyển mỏng nên nhiệt thoát ra.",
+              "explanation_vi": "A-T7-OPINION (c1-c3); A-L3-CAUSE-S (>= 2 loại từ nối, đúng chiều); A-T4-CAUSE (>= 2 liên kết nhân quả nối thành chuỗi); A-L2-CHUNKS (>= 4 trong 8 cụm từ).",
+              "target_id": "A-L3-CAUSE-S"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 11,
+          "activity_type": "ACT-SPEAK-LIVE",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-X1-TURN",
+            "A-L2-COMPENSATE-S"
+          ],
+          "prompt_en": "Choose one picture. It must be something you know how to use, but you do not know its English name. Tell me about it: what it looks like, what we use it for, and how you use it. (30 seconds to think, no writing. Speak 60-90 seconds.)",
+          "prompt_vi": "T6 13/11 (4') - Lượt nói trực tiếp (kit mục 3.0, \"Thử thách thiếu từ\"). Cô đưa 3 ảnh: telescope (kính thiên văn) · binoculars (ống nhòm) · compass (la bàn). Cô không nói tên tiếng Anh trước T6; cô chỉ nói \"Bắt đầu nhé\" / \"Còn 30 giây\", không nhắc \"giải thích cách khác\". Ghi activity_type = ACT-SPEAK-LIVE, context_topic = lab-tools, chỉ cô chấm; cô bấm giờ (duration_s; c1 Nói trôi chảy cần >= 60 giây). Nói trôi chảy: c1 >= 60 giây, c2 <= 3 lần ngừng > 3 giây, c3 nói lại câu thay vì bỏ dở. Xoay xở khi thiếu từ: cô xác nhận có chỗ thiếu từ thật; An biết tên cả 3 vật (đổi bộ ảnh) hoặc không có chỗ thiếu thật => NULL, đó là kết quả hợp lệ.",
+          "time_min": 4,
+          "items": [
+            {
+              "id": "W4-LIVE",
+              "kind": "open",
+              "stem": "Choose one picture and tell me about it.",
+              "options": [],
+              "answer": "Không có đáp án mẫu. Cô ghi: vật An chọn, từ An chưa biết, cách An diễn đạt vòng (a thing that..., it is like...), có chuyển sang tiếng Việt không.",
+              "explanation_vi": "A-X1-TURN (c1 >= 60 giây; c2 <= 3 lần ngừng dài; c3 nói lại câu) và A-L2-COMPENSATE-S (c1 >= 1 lần diễn đạt vòng thành công bằng tiếng Anh; c2 <= 1 lần chuyển sang tiếng Việt), hoặc NULL.",
+              "target_id": "A-X1-TURN"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 12,
+          "activity_type": "ACT-SPEAK-LIVE",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-L8-EXCHANGE-S"
+          ],
+          "prompt_en": "I am an astronaut. I have just come back from space. Ask me at least two questions. (Then the tutor asks: Would you like to go to space one day?)",
+          "prompt_vi": "T6 13/11 (3') - An phỏng vấn cô (PLA-INT): ghi việc An hỏi; A-L8-EXCHANGE-S ngoài bộ 12, chẩn đoán. Không chấm ý kiến lần hai (đã chấm ở PLA-SIC).",
+          "time_min": 3,
+          "items": [
+            {
+              "id": "W4-INT",
+              "kind": "open",
+              "stem": "Ask the astronaut at least two questions.",
+              "options": [],
+              "answer": "Không có đáp án mẫu; ghi số câu hỏi An đặt và dạng câu hỏi.",
+              "explanation_vi": "Chẩn đoán trao đổi hai chiều.",
+              "target_id": "A-L8-EXCHANGE-S"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 13,
+          "activity_type": "ACT-WRITE",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-L3-CAUSE-W",
+            "A-L3-PARA-W",
+            "A-T4-CAUSE",
+            "A-L2-CHUNKS"
+          ],
+          "prompt_en": "Compare Venus and Mars in one paragraph (80-120 words). How are they the same, and how are they different? Explain why Venus is much hotter than Mars. (20 minutes.)",
+          "prompt_vi": "T6 13/11 (20') - Viết tự làm. Đề 80-120 từ. Dùng thì quá khứ: không ghi. A-L1-COMP-W và A-T9-COMPARE ngoài bộ 12, tùy chọn.",
+          "time_min": 20,
+          "items": [
+            {
+              "id": "W4-WIC",
+              "kind": "open",
+              "stem": "Compare Venus and Mars in one paragraph.",
+              "options": [],
+              "answer": "Cùng một điểm cho cả hai hành tinh; giải thích Sao Kim nóng vì khí quyển dày giữ nhiệt.",
+              "explanation_vi": "A-L3-CAUSE-W; A-L3-PARA-W; A-T4-CAUSE; A-L2-CHUNKS.",
+              "target_id": "A-L3-CAUSE-W"
+            }
+          ],
+          "self_check_vi": []
+        },
+        {
+          "step_no": 14,
+          "activity_type": "ACT-SELF-REVIEW",
+          "mode": "INDEPENDENT_CHECK",
+          "purpose": [
+            "checkpoint"
+          ],
+          "target_ids": [
+            "A-A1-SELFASSESS"
+          ],
+          "prompt_en": "Before you hear any feedback, check your own paragraph.",
+          "prompt_vi": "T6 13/11 (3'). Tự kiểm: 1 điểm giống và khác của hai hành tinh; 2 giải thích vì sao Sao Kim nóng hơn Sao Hỏa; 3 nói cùng một điểm cho cả hai hành tinh.",
+          "time_min": 3,
+          "items": [],
+          "self_check_vi": [
+            "Khi so sánh, bạn đã nói cùng một điểm cho cả hai hành tinh chưa?",
+            "Bạn đã giải thích vì sao Sao Kim nóng hơn chưa?",
+            "Bạn đã dùng 2 từ nối khác nhau và 4 từ mới chưa?",
+            "Một điều mình làm tốt: ______",
+            "Một điều mình muốn sửa: ______"
+          ]
+        },
+        {
+          "step_no": 15,
+          "activity_type": "ACT-REVISE",
+          "mode": "REVISION",
+          "purpose": [],
+          "target_ids": [
+            "A-A3-REDRAFT"
+          ],
+          "prompt_en": "Read each hint, fix your paragraph, underline what you changed, and write 'Mình đã đổi ... thành ... vì ...'.",
+          "prompt_vi": "T6 13/11 (7' + 15') - Thêm: kẻ hai cột Venus | Mars; mỗi câu so sánh đã có đủ cả hai cột chưa? Sau giờ: cô chấm lại mù 6 bài.",
+          "time_min": 15,
+          "items": [],
+          "self_check_vi": []
+        }
+      ]
+    }
+  ]
+}

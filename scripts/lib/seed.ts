@@ -1,4 +1,5 @@
 import type { ClientBase } from "pg";
+import { defaultDueOn } from "../../lib/inquiries/dates";
 
 /** Fixed IDs so the dev seed is idempotent. Only TEST data — never real learners. */
 export const TEST_FAMILY_ID = "e0000000-0000-4000-8000-000000000001";
@@ -71,9 +72,9 @@ export async function seedTestFamily(client: ClientBase, users: SeedUsers): Prom
       members[key] = (ins.rows[0] as { id: string }).id;
     }
 
-    const learners: [string, string, string, string, string][] = [
-      [TEST_LEARNER_AN_ID, members.studentAn, "An (thử)", "A", "skillgrow:child:an:test"],
-      [TEST_LEARNER_NGUYEN_ID, members.studentNguyen, "Nguyên (thử)", "B", "skillgrow:child:nguyen:test"],
+    const learners: [string, string, string, string, string, string][] = [
+      [TEST_LEARNER_AN_ID, members.studentAn, "An (thử)", "A", "skillgrow:child:an:test", "A-v1"],
+      [TEST_LEARNER_NGUYEN_ID, members.studentNguyen, "Nguyên (thử)", "B", "skillgrow:child:nguyen:test", "B-v1"],
     ];
     for (const [id, memberId, alias, track, ref] of learners) {
       await client.query(
@@ -82,6 +83,11 @@ export async function seedTestFamily(client: ClientBase, users: SeedUsers): Prom
          on conflict (id) do update set is_test = true`,
         [id, TEST_FAMILY_ID, memberId, alias, track, ref],
       );
+    }
+
+    // Target set per learner (S1). Idempotent: the function does nothing when the set is already current.
+    for (const [id, , , , , targetSet] of learners) {
+      await client.query("select english.eng_assign_target_set($1, $2)", [id, targetSet]);
     }
 
     const rels: [string, string, "parent" | "tutor"][] = [
@@ -135,4 +141,55 @@ export async function seedTestFamily(client: ClientBase, users: SeedUsers): Prom
     await client.query("rollback");
     throw err;
   }
+}
+
+/**
+ * Inquiries handed to the TEST learners by the dev seed (S2). Fixed client_request_ids make it idempotent:
+ * running the seed again returns the same instances. Nguyên gets the baseline: it is the only Track B
+ * template published so far (the weekly ones wait for a content decision, see docs/PROGRESS.md).
+ */
+export const DEV_INQUIRIES = [
+  { learner: "an", template: "A-W1-VOLCANOES", version: 1, requestId: "seed-dev:A-W1-VOLCANOES:1" },
+  { learner: "nguyen", template: "B-W0-BASELINE", version: 1, requestId: "seed-dev:B-W0-BASELINE:1" },
+] as const;
+
+export type DevInquiryResult = { template: string; learner: string; instanceId: string | null; skipped?: string };
+
+/**
+ * Assign DEV_INQUIRIES to the test learners as the test parent. Skips (does not fail) when migrations
+ * 0007/0008 are not applied yet or a template is not published, so an older database can still be seeded.
+ */
+export async function assignDevInquiries(client: ClientBase, seeded: SeedResult): Promise<DevInquiryResult[]> {
+  const fn = await client.query<{ ok: boolean }>(
+    "select to_regprocedure('english.eng_assign_inquiry(uuid,text,integer,date,uuid,text)') is not null as ok",
+  );
+  const out: DevInquiryResult[] = [];
+  for (const d of DEV_INQUIRIES) {
+    if (!fn.rows[0]?.ok) {
+      out.push({ template: d.template, learner: d.learner, instanceId: null, skipped: "migration 0007 is not applied" });
+      continue;
+    }
+    const tpl = await client.query<{ date_from: string; date_to: string }>(
+      "select date_from::text as date_from, date_to::text as date_to from english.inquiry_templates where id = $1 and version = $2 and published_at is not null",
+      [d.template, d.version],
+    );
+    const row = tpl.rows[0];
+    if (!row) {
+      out.push({ template: d.template, learner: d.learner, instanceId: null, skipped: "template not published (apply 0008)" });
+      continue;
+    }
+    // The template's own end date while its week is still ahead; afterwards a same-length week from today
+    // (the database keeps the relative schedule). Always inside the window the database accepts.
+    const due = defaultDueOn(row.date_from, row.date_to);
+    const res = await client.query<{ id: string }>("select english.eng_assign_inquiry($1, $2, $3, $4, $5, $6) as id", [
+      seeded.learners[d.learner],
+      d.template,
+      d.version,
+      due,
+      seeded.members.parent,
+      d.requestId,
+    ]);
+    out.push({ template: d.template, learner: d.learner, instanceId: (res.rows[0] as { id: string }).id });
+  }
+  return out;
 }
