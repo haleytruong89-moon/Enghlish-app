@@ -2,8 +2,10 @@ import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { LearnerCard } from "@/components/LearnerCard";
 import { StudentHome } from "@/components/student/StudentHome";
-import { home } from "@/lib/copy/vi";
+import Link from "next/link";
+import { home, reviewPage } from "@/lib/copy/vi";
 import { loadHome } from "@/lib/home/loadHome";
+import { countToDecide, loadInbox } from "@/lib/review/load";
 import { safeColor } from "@/lib/home/visible";
 import { loadStudentHome } from "@/lib/work/load";
 
@@ -51,6 +53,13 @@ export default async function HomePage() {
   }
 
   const isParent = data.kind === "parent";
+  // How much work waits for this person. A failed lookup must not take the whole home page down: show the link without a number.
+  let toDecide: number | null = null;
+  try {
+    toDecide = countToDecide(await loadInbox());
+  } catch {
+    toDecide = null;
+  }
   return (
     <>
       <AppHeader name={data.displayName} showTestBadge={anyTest} />
@@ -58,6 +67,13 @@ export default async function HomePage() {
         <h1 className="text-2xl font-bold">{isParent ? home.parentTitle : home.tutorTitle}</h1>
         {isParent ? <p className="mt-2 text-muted">{home.parentSummary(data.learners.length)}</p> : null}
         {data.learners.length === 0 && !isParent ? <p className="mt-4 text-muted">{home.tutorEmpty}</p> : null}
+        <Link
+          href="/review"
+          data-testid="review-link"
+          className="mt-5 inline-flex min-h-12 items-center rounded-xl bg-accent px-5 text-base font-semibold text-white"
+        >
+          {toDecide === null ? reviewPage.link : reviewPage.linkCount(toDecide)}
+        </Link>
         <ul className="mt-6 flex flex-col gap-3">
           {data.learners.map((l) => (
             <LearnerCard key={l.id} learner={l} />

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { home, inquiriesPage, learnerWithTrack, targetsPage } from "@/lib/copy/vi";
+import { home, inquiriesPage, learnerWithTrack, notesPage, targetsPage } from "@/lib/copy/vi";
 import { safeColor, type LearnerSummary } from "@/lib/home/visible";
 
 /** Staff view (parent/tutor): "An · Track A" + status in words (never colour alone). */
@@ -27,6 +27,12 @@ export function LearnerCard({ learner }: { learner: LearnerSummary }) {
         className="mt-1 ml-4 inline-flex min-h-11 items-center text-sm font-medium text-accent underline"
       >
         {inquiriesPage.link}
+      </Link>
+      <Link
+        href={`/learners/${learner.id}/notes`}
+        className="mt-1 ml-4 inline-flex min-h-11 items-center text-sm font-medium text-accent underline"
+      >
+        {notesPage.link}
       </Link>
     </li>
   );

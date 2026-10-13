@@ -3,9 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { AssignForm } from "@/components/inquiries/AssignForm";
 import { StepActions } from "@/components/inquiries/StepActions";
+import { OfflineForm } from "@/components/review/OfflineForm";
 import { activityLabels, app, inquiriesPage, learnerWithTrack, modeLabels, purposeLabels, type Mode } from "@/lib/copy/vi";
 import { authorizeInquiriesPage } from "@/lib/inquiries/access";
-import { dateWindow, defaultDueOn } from "@/lib/inquiries/dates";
+import { addDays, dateWindow, defaultDueOn, todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi, safeExternalUrl } from "@/lib/inquiries/format";
 import { loadInquiriesPage } from "@/lib/inquiries/load";
 import { createUserClient } from "@/lib/supabase/server";
@@ -31,6 +32,7 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
   const { templates, inquiries } = await loadInquiriesPage(learner.id, learner.trackId);
   const now = new Date();
   const range = dateWindow(now);
+  const today = todayVn(now);
 
   return (
     <>
@@ -135,6 +137,15 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
                         minDate={range.min}
                         maxDate={range.max}
                       />
+                      {s.schedule.skipped ? null : (
+                        <OfflineForm
+                          learnerId={learner.id}
+                          activityId={s.activityId}
+                          isTutor={member.role === "tutor"}
+                          minDate={addDays(todayVn(new Date(q.assignedAt)), -1)}
+                          maxDate={today}
+                        />
+                      )}
                       <details className="mt-2 text-xs text-muted">
                         <summary className="min-h-11 cursor-pointer py-3">{app.techInfo}</summary>
                         <p>
