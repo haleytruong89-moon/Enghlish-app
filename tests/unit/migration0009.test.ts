@@ -85,6 +85,16 @@ describe("0009_student_work.sql", () => {
     expect(sql).toContain("grant execute on function english.eng_my_released_steps(uuid) to authenticated;");
   });
 
+  it("the free-text normaliser cleans NFC, non-breaking and zero-width characters, curly quotes and trailing . ! ? (one place, used for both sides)", () => {
+    const start = sql.indexOf("create or replace function english.eng_clean_text(");
+    const end = sql.indexOf("create or replace function english.eng_step_shape(");
+    const body = sql.slice(start, end);
+    for (const needle of ["nfc", "\\u00A0", "\\u202F", "\\u200B-\\u200D\\uFEFF", "\\u2018\\u2019", "\\u201C\\u201D", "[.!?]+", "pg_catalog.lower"]) {
+      expect(body, needle).toContain(needle);
+    }
+    expect(sql).toContain("regexp_split_to_table(english.eng_clean_text(v_key), ' / ')");
+  });
+
   it("the learner tables are append-only (trigger + truncate trigger) and only working_drafts is mutable", () => {
     for (const t of ["attempts", "artifact_versions", "assistance_events", "exposure_log", "episodes", "attempt_auto_checks"]) {
       expect(sql, t).toMatch(new RegExp(`'${t}'`));

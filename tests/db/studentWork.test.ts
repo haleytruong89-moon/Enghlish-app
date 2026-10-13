@@ -693,6 +693,77 @@ describe("S4 student work (DESIGN §5, §6, §8, §9)", () => {
       expect(row?.checks.correct).toBe(1);
     });
 
+    it("free-text gap normalisation: NFC, non-breaking and zero-width characters, curly quotes, spacing, trailing . ! ? and case all compare equal", async () => {
+      const norm = async (t: string) => (await q1<{ n: string }>("select english.eng_norm_answer($1) as n", [t]))[0]!.n;
+      const KEY = "went to the beach";
+      const same = [
+        "went to the beach",
+        "went to the beach.",
+        "Went to the beach!",
+        "went to the beach?",
+        "went to the beach...",
+        "  WENT   to  the\tbeach \n",
+        "went\u00A0to\u00A0the\u00A0beach", // NBSP
+        "went to the beach\u00A0.", // NBSP before the full stop
+        "went\u202Fto the beach", // narrow NBSP
+        "went\u2009to the beach", // thin space
+        "went\u200B to the beach", // zero-width space
+        "we\u200Bnt to th\u200Ce be\u200Dach\uFEFF", // zero-width non-joiner / joiner / BOM, inside words and at the end
+        "\uFEFFwent to the beach",
+      ];
+      for (const t of same) expect(await norm(t), JSON.stringify(t)).toBe(KEY);
+      // NFC: "é" as e + combining acute equals the single code point
+      expect(await norm("caf\u0065\u0301")).toBe(await norm("caf\u00E9"));
+      // curly quotes / apostrophes become straight ones
+      expect(await norm("don\u2019t")).toBe("don't");
+      expect(await norm("don\u2018t")).toBe("don't");
+      expect(await norm("\u201CHello\u201D")).toBe('"hello"');
+      // what must NOT be forgiven: other words, inner punctuation, other letters
+      for (const t of ["went to the beaches", "went, to the beach", "went to the  beach x", "go to the beach", "wnet to the beach"]) {
+        expect(await norm(t), t).not.toBe(KEY);
+      }
+
+      // end to end through the real submit path: A-W0 step 13, BL-G1 ("went to the beach"), BL-G10 ("is made")
+      const results: Record<string, string> = {};
+      for (const [label, value] of [
+        ["dot", "went to the beach."],
+        ["nbsp", "went\u00A0to the beach"],
+        ["zwsp", "went to\u200B the beach"],
+        ["bang", "WENT TO THE BEACH!"],
+        ["wrong", "went to the park."],
+      ] as const) {
+        const fresh = await assign("an", "A-W0-BASELINE", dueReleasingAll("A-W0-BASELINE"));
+        const r = await submitAs(an(), await activity(fresh, 13), randomUUID(), { answers: { "BL-G1": value, "BL-G10": "is\u00A0made. " } });
+        const [row] = await q1<{ checks: { items: Record<string, { result: string }> } }>("select checks from english.attempt_auto_checks where attempt_id = $1", [r.attempt_id]);
+        results[label] = `${row!.checks.items["BL-G1"]!.result}/${row!.checks.items["BL-G10"]!.result}`;
+      }
+      expect(results).toEqual({ dot: "correct/correct", nbsp: "correct/correct", zwsp: "correct/correct", bang: "correct/correct", wrong: "incorrect/correct" });
+
+      // alternatives written with " / " keep working, also with odd spaces around the slash and curly quotes in the key
+      await db.client.query("begin");
+      try {
+        await db.client.query(
+          `insert into english.instance_item_keys(inquiry_instance_id, learner_id, item_id, step_no, kind, answer)
+           values ($1, $2, 'n-gap', 99, 'answer', 'colour\u00A0/\u00A0color'), ($1, $2, 'n-apo', 99, 'answer', 'I don\u2019t know / I do not know')`,
+          [x1, s.learners.an],
+        );
+        const step = { items: [{ id: "n-gap", kind: "gap", stem: "x", options: [] }, { id: "n-apo", kind: "gap", stem: "x", options: [] }] };
+        const run = async (answers: Record<string, string>) =>
+          (await db.client.query<{ r: { items: Record<string, { result: string }> } }>("select english.eng_compute_auto_checks($1, $2::jsonb, $3::jsonb) as r", [x1, JSON.stringify(step), JSON.stringify(answers)])).rows[0]!.r.items;
+        const a = await run({ "n-gap": "Color.", "n-apo": "I don't know!" });
+        expect([a["n-gap"]?.result, a["n-apo"]?.result]).toEqual(["correct", "correct"]);
+        const b = await run({ "n-gap": "colour\u00A0", "n-apo": "i do not know" });
+        expect([b["n-gap"]?.result, b["n-apo"]?.result]).toEqual(["correct", "correct"]);
+        const c = await run({ "n-gap": "colours", "n-apo": "I dont know" });
+        expect([c["n-gap"]?.result, c["n-apo"]?.result]).toEqual(["incorrect", "incorrect"]);
+        // a box holding only an NBSP / zero-width space is blank, not wrong
+        const d = await run({ "n-gap": "\u00A0\u200B", "n-apo": " " });
+        expect([d["n-gap"]?.result, d["n-apo"]?.result]).toEqual(["blank", "blank"]);
+      } finally {
+        await db.client.query("rollback");
+      }
+    });
+
     it("answers separated by ' / ' in a key are all accepted; labelled options resolve by label; table-driven against resolveMcqAnswer", async () => {
       // 1) accepted alternatives, through the real function with a throwaway instance key set
       const step = {

@@ -103,11 +103,31 @@ begin
 end
 $$;
 
--- So khớp chữ: bỏ khoảng trắng thừa, không phân biệt hoa thường.
+-- Làm sạch chữ trước khi so: Unicode NFC; khoảng trắng "lạ" (NBSP U+00A0, U+202F, các khoảng U+2000–200A, U+205F, U+3000) → dấu cách;
+-- ký tự rộng-0 (U+200B–U+200D, U+FEFF) → bỏ; nháy cong (U+2018, U+2019, U+201B) → ', nháy kép cong (U+201C, U+201D) → ";
+-- gộp khoảng trắng; bỏ khoảng trắng đầu/cuối.
+create or replace function english.eng_clean_text(p_text text) returns text
+language sql immutable set search_path = ''
+as $$
+  select pg_catalog.btrim(
+    pg_catalog.regexp_replace(
+      pg_catalog.regexp_replace(
+        pg_catalog.regexp_replace(
+          pg_catalog.regexp_replace(
+            pg_catalog.regexp_replace(
+              normalize(coalesce(p_text, ''), nfc),
+              '[\u200B-\u200D\uFEFF]', '', 'g'),
+            '[\u00A0\u202F\u2000-\u200A\u205F\u3000]', ' ', 'g'),
+          '[\u2018\u2019\u201B]', '''', 'g'),
+        '[\u201C\u201D]', '"', 'g'),
+      '\s+', ' ', 'g'))
+$$;
+
+-- So khớp chữ: làm sạch như trên, bỏ dấu chấm / chấm than / chấm hỏi ở cuối câu, không phân biệt hoa thường.
 create or replace function english.eng_norm_answer(p_text text) returns text
 language sql immutable set search_path = ''
 as $$
-  select pg_catalog.lower(pg_catalog.btrim(pg_catalog.regexp_replace(coalesce(p_text, ''), '\s+', ' ', 'g')))
+  select pg_catalog.lower(pg_catalog.btrim(pg_catalog.regexp_replace(english.eng_clean_text(p_text), '[.!?]+\s*$', '')))
 $$;
 
 -- Hình dạng nội dung của một bước: 'text' (một bài viết tự do: ACT-WRITE không có câu hỏi, hoặc chỉ một câu "open")
@@ -215,7 +235,7 @@ end
 $$;
 
 -- Tự chấm (CHỈ phụ huynh/gia sư thấy kết quả). mcq / gap / word_form có khóa: chọn đúng lựa chọn, hoặc (chữ tự do) khớp
--- không phân biệt hoa thường / khoảng trắng với một trong các đáp án chấp nhận, cách nhau bởi " / ". transform / short /
+-- không phân biệt hoa thường / khoảng trắng / nháy cong / dấu câu cuối (english.eng_norm_answer) với một trong các đáp án chấp nhận, cách nhau bởi " / ". transform / short /
 -- open: "needs_person". Không bao giờ ra điểm 0–4.
 create or replace function english.eng_compute_auto_checks(p_instance uuid, p_step jsonb, p_answers jsonb) returns jsonb
 language plpgsql stable set search_path = ''
@@ -253,15 +273,15 @@ begin
           v_ki := english.eng_resolve_option(v_opts, v_key);
           if v_ki is not null then
             v_gi := english.eng_resolve_option(v_opts, v_given);
-            v_res := case when pg_catalog.btrim(v_given) = '' then 'blank'
+            v_res := case when english.eng_clean_text(v_given) = '' then 'blank'
                           when v_gi is not null and v_gi = v_ki then 'correct'
                           else 'incorrect' end;
           end if;
         else
           v_res := case
-            when pg_catalog.btrim(v_given) = '' then 'blank'
+            when english.eng_clean_text(v_given) = '' then 'blank'
             when exists (
-              select 1 from pg_catalog.regexp_split_to_table(v_key, '\s+/\s+') as a
+              select 1 from pg_catalog.regexp_split_to_table(english.eng_clean_text(v_key), ' / ') as a
               where english.eng_norm_answer(a) = english.eng_norm_answer(v_given)) then 'correct'
             else 'incorrect' end;
         end if;
@@ -284,6 +304,7 @@ revoke execute on function english.eng_activity_released(uuid) from public, anon
 revoke execute on function english.eng_step_supported(text, text) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_step_status_label(text, text) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_resolve_option(jsonb, text) from public, anon, authenticated, service_role;
+revoke execute on function english.eng_clean_text(text) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_norm_answer(text) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_step_shape(jsonb) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_check_work_content(jsonb, jsonb, boolean) from public, anon, authenticated, service_role;
