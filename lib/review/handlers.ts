@@ -128,6 +128,7 @@ function fromDbError(err: unknown): HandlerResult {
         if (/\(step_not_open_on_date\)/.test(err.detail)) return fail(400, "step_not_open_on_date");
         return fail(400, "invalid");
       case "22023":
+        return /\(note_too_long\)/.test(err.detail) ? fail(400, "note_too_long") : fail(400, "invalid");
       case "22004":
       case "22P02":
         return fail(400, "invalid");
@@ -222,7 +223,10 @@ export async function handleSupport(deps: HandlerDeps, attemptId: string, rawBod
   const g = await guardByRef(deps, attemptId, (id) => deps.store.getAttemptLearnerId(id), "work:review");
   if (!g.ok) return g.result;
   const parsed = supportBodySchema.safeParse(rawBody);
-  if (!parsed.success) return fail(400, "invalid_body");
+  if (!parsed.success) {
+    // The one rule the form can fix by itself gets its own answer: the note is too long.
+    return fail(400, parsed.error.issues.some((i) => i.path[0] === "note" && i.code === "too_big") ? "note_too_long" : "invalid_body");
+  }
   const body: SupportBody = parsed.data;
   try {
     const r = (await deps.store.recordSupport({

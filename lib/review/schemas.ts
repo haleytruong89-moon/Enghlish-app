@@ -1,6 +1,6 @@
 /** Request bodies for the S5 routes (zod). Parsed AFTER requireAccess, so outsiders always get 404. */
 import { z } from "zod";
-import { OFFLINE_ASSISTANCE, OFFLINE_PROVENANCE, SUPPORT_KINDS, SUPPORT_LEVELS } from "./types";
+import { OFFLINE_ASSISTANCE, OFFLINE_PROVENANCE, SUPPORT_KINDS, SUPPORT_LEVELS, SUPPORT_NOTE_MAX } from "./types";
 
 const isoDate = z
   .string()
@@ -54,7 +54,7 @@ export const supportBodySchema = z.strictObject({
   client_id: clientId.optional(),
   kind: z.enum(SUPPORT_KINDS),
   target_ids: z.array(z.string().min(1).max(100)).min(1).max(30),
-  note: z.string().trim().max(1000).optional(),
+  note: z.string().trim().max(SUPPORT_NOTE_MAX).optional(),
 });
 export type SupportBody = z.infer<typeof supportBodySchema>;
 

@@ -3,12 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { reviewPage, supportKindLabels } from "@/lib/copy/vi";
-import { SUPPORT_KINDS } from "@/lib/review/types";
+import { SUPPORT_KINDS, SUPPORT_NOTE_MAX } from "@/lib/review/types";
 
 /** Add support the reviewer saw (a separate fact; it never changes a score). */
-export function SupportForm({ attemptId, skills }: { attemptId: string; skills: { key: string; label: string }[] }) {
+export function SupportForm({ attemptId, skills, initialOpen = false }: { attemptId: string; skills: { key: string; label: string }[]; initialOpen?: boolean }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [kind, setKind] = useState<string>(SUPPORT_KINDS[0]);
   const [picked, setPicked] = useState<string[]>(skills.map((s) => s.key));
   const [note, setNote] = useState("");
@@ -20,6 +20,7 @@ export function SupportForm({ attemptId, skills }: { attemptId: string; skills: 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (picked.length === 0) return setError(reviewPage.supportError);
+    if (note.trim().length > SUPPORT_NOTE_MAX) return setError(reviewPage.supportNoteTooLong(SUPPORT_NOTE_MAX));
     setBusy(true);
     setError(null);
     try {
@@ -29,6 +30,9 @@ export function SupportForm({ attemptId, skills }: { attemptId: string; skills: 
         body: JSON.stringify({ client_id: clientId.current, kind, target_ids: picked, ...(note.trim() ? { note: note.trim() } : {}) }),
       });
       if (res.status === 403) return setError(reviewPage.tutorOnlyDenied);
+      if (res.status === 400 && ((await res.json().catch(() => null)) as { error?: string } | null)?.error === "note_too_long") {
+        return setError(reviewPage.supportNoteTooLong(SUPPORT_NOTE_MAX));
+      }
       if (!res.ok) throw new Error(String(res.status));
       clientId.current = crypto.randomUUID();
       setNote("");
@@ -93,7 +97,18 @@ export function SupportForm({ attemptId, skills }: { attemptId: string; skills: 
         <label htmlFor="support-note" className="text-sm text-muted">
           {reviewPage.supportNote}
         </label>
-        <input id="support-note" type="text" maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} className="min-h-11 rounded-lg border border-line px-3" />
+        <input
+          id="support-note"
+          type="text"
+          maxLength={SUPPORT_NOTE_MAX}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          aria-describedby="support-note-count"
+          className="min-h-11 rounded-lg border border-line px-3"
+        />
+        <span id="support-note-count" className="text-xs text-muted">
+          {reviewPage.supportNoteCount(note.length, SUPPORT_NOTE_MAX)}
+        </span>
       </div>
       <p className="text-xs text-muted">{reviewPage.supportSeparate}</p>
       {error ? (

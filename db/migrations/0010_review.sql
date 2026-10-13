@@ -737,7 +737,7 @@ begin
     raise exception 'eng_record_observed_support: unknown kind' using errcode = '22023';
   end if;
   if v_note is not null and pg_catalog.length(v_note) > 300 then
-    raise exception 'eng_record_observed_support: the note is too long' using errcode = '22023';
+    raise exception 'eng_record_observed_support: the note is too long, at most 300 characters (note_too_long)' using errcode = '22023';
   end if;
 
   select a.target_ids into v_act_targets

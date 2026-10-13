@@ -281,6 +281,26 @@ describe("S5 hardening (Opus review)", () => {
   });
 
   // -------------------------------------------------------------------------------------------------------------
+  describe("the note on observed support has one limit: 300 characters", () => {
+    const support = (by: string, attempt: string, targets: string[], note: string | null) =>
+      svc<{ id: string }>("select english.eng_record_observed_support($1, $2::text[], 'tutor_prompt', $3, $4, null) as r", [attempt, targets, note, by]);
+
+    it("300 characters (after trimming) are kept; 301 are refused with the note_too_long marker and nothing is written", async () => {
+      const r = await offline(M().tutorAn, await activity(aW1, 6), "tutor_live", "Volcanoes erupt because magma rises"); // ACT-WRITE practice
+      const [targets] = await q1<{ target_ids: string[] }>("select target_ids from english.activity_instances where id = $1", [await activity(aW1, 6)]);
+      const keys = (targets as { target_ids: string[] }).target_ids.slice(0, 1);
+      const before = await count("select count(*)::int as n from english.assistance_events where attempt_id = $1 and verification = 'observed' and kind = 'tutor_prompt'", [r.attempt_id]);
+      await support(M().tutorAn, r.attempt_id, keys, "x".repeat(300));
+      await support(M().tutorAn, r.attempt_id, keys, `  ${"y".repeat(300)}  `);
+      await fail(support(M().tutorAn, r.attempt_id, keys, "z".repeat(301)), "22023", /note_too_long/);
+      await fail(support(M().tutorAn, r.attempt_id, keys, ` ${"z".repeat(301)} `), "22023", /note_too_long/);
+      expect(await count("select count(*)::int as n from english.assistance_events where attempt_id = $1 and verification = 'observed' and kind = 'tutor_prompt'", [r.attempt_id])).toBe(before + 2);
+      // the column itself holds the same limit
+      await expect(db.client.query("update english.assistance_events set note = $1 where attempt_id = $2 and note is not null", ["w".repeat(301), r.attempt_id])).rejects.toThrow();
+    });
+  });
+
+  // -------------------------------------------------------------------------------------------------------------
   describe("the inbox is filtered and paged in SQL, so new work always shows up (more than 500 items)", () => {
     const BULK = 520;
     let practiceStep: string;

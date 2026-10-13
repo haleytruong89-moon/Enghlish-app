@@ -292,6 +292,8 @@ export const reviewPage = {
   supportSeparate: "Gợi ý ghi riêng, không làm đổi mức đã chọn.",
   supportSaved: "Đã ghi gợi ý.",
   supportError: "Chưa ghi được gợi ý. Bạn thử lại sau ít phút.",
+  supportNoteTooLong: (max: number) => `Ghi chú dài quá. Bạn viết ngắn lại, tối đa ${max} ký tự nhé.`,
+  supportNoteCount: (n: number, max: number) => `${n}/${max} ký tự`,
 
   scoreTitle: "Chấm từng kỹ năng",
   scaleLegend: "Ý nghĩa thang điểm",

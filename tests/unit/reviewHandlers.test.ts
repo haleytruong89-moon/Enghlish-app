@@ -13,6 +13,7 @@ import {
   type HandlerDeps,
   type ReviewStore,
 } from "@/lib/review/handlers";
+import { SUPPORT_NOTE_MAX } from "@/lib/review/types";
 import { decisionsBodySchema, modifyBodySchema, noteBodySchema, offlineBodySchema, supportBodySchema } from "@/lib/review/schemas";
 import { parseEpisode, parseInbox, parseNotes } from "@/lib/review/shape";
 import { toActivityView } from "@/lib/work/shape";
@@ -354,6 +355,22 @@ describe("S5 schemas", () => {
     expect(supportBodySchema.safeParse(goodSupport).success).toBe(true);
     expect(offlineBodySchema.safeParse(goodOffline).success).toBe(true);
     expect(noteBodySchema.safeParse(goodNote).success).toBe(true);
+  });
+});
+
+describe("S5 support note: one limit of 300 everywhere", () => {
+  it("zod accepts 300 characters (also with spaces around) and refuses 301 with its own answer; the database message is mapped too", async () => {
+    const ok = "x".repeat(SUPPORT_NOTE_MAX);
+    expect(supportBodySchema.safeParse({ ...goodSupport, note: ok }).success).toBe(true);
+    expect(supportBodySchema.safeParse({ ...goodSupport, note: `  ${ok}  ` }).success).toBe(true);
+    expect(supportBodySchema.safeParse({ ...goodSupport, note: `${ok}y` }).success).toBe(false);
+    const s = makeStore();
+    const long = await handleSupport(deps("tutorAn", s), ATT_AN, { ...goodSupport, note: `${ok}y` });
+    expect(long.status).toBe(400);
+    expect((long.body as { error: string }).error).toBe("note_too_long");
+    expect(s.recordSupport).not.toHaveBeenCalled();
+    const db = makeStore({ recordSupport: vi.fn(async () => { throw new ReviewDbError("22023", "eng_record_observed_support: the note is too long, at most 300 characters (note_too_long)"); }) });
+    expect(((await handleSupport(deps("tutorAn", db), ATT_AN, goodSupport)).body as { error: string }).error).toBe("note_too_long");
   });
 });
 

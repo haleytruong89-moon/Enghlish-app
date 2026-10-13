@@ -138,4 +138,6 @@ export type LessonNoteView = {
 
 export const OFFLINE_ASSISTANCE = ["none", "notes", "dictionary", "asked_someone", "ai_outside", "unknown"] as const;
 export const OFFLINE_PROVENANCE = ["tutor_live", "manual_import"] as const;
+/** One limit for the note on observed support: the database column, eng_record_observed_support, the zod schema and the input all use it. */
+export const SUPPORT_NOTE_MAX = 300;
 export const SUPPORT_KINDS = ["tutor_prompt", "frame", "notes", "model_answer", "accessibility"] as const;

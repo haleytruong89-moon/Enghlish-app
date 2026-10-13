@@ -3,11 +3,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { ScoreButtons } from "@/components/review/ScoreButtons";
 import { ScoringPanel, type PanelTarget } from "@/components/review/ScoringPanel";
+import { SupportForm } from "@/components/review/SupportForm";
 import { WorkPanel } from "@/components/review/WorkPanel";
 import { concepts, formatScore, notesPage, offlineForm, reviewPage, scoreLabels, tutorHonorific, weekdayNames } from "@/lib/copy/vi";
 import { formatWhen, skillLabel } from "@/lib/review/format";
 import { cursorToParam, parseCursor, parseFilter } from "@/lib/review/inbox";
-import type { ReviewDecision, ReviewEpisodeView } from "@/lib/review/types";
+import { SUPPORT_NOTE_MAX, type ReviewDecision, type ReviewEpisodeView } from "@/lib/review/types";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 
@@ -75,6 +76,15 @@ describe("S5 scoring panel: criteria heard live", () => {
     const watched = panel({ targets: [live], observedDirectly: true });
     expect(boxes(watched)).toBe(2);
     expect(visibleText(watched)).toContain(reviewPage.criteriaLive);
+  });
+});
+
+describe("S5 support form", () => {
+  it("the note input stops at the same 300 characters as the database and shows a count", () => {
+    const html = renderToStaticMarkup(createElement(SupportForm, { attemptId: "a1", skills: [{ key: "A-L3-CAUSE-W", label: "Viết" }], initialOpen: true }));
+    expect(html).toMatch(/id="support-note"[^>]*maxLength="300"/);
+    expect(html).toContain(reviewPage.supportNoteCount(0, 300));
+    expect(SUPPORT_NOTE_MAX).toBe(300);
   });
 });
 
