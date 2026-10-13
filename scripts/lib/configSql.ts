@@ -4,7 +4,9 @@
  * No timestamps and no randomness: the output is a pure function of the content items assigned to
  * the migration in the lock, so CI can check that each checked-in file equals what the generator produces.
  */
-import type { CatalogueItem, PolicyItem, TargetSetItem } from "../../lib/config/versions";
+import { createHash } from "node:crypto";
+import { toKeyRows, toSafeSteps, toSources, validateInquiryTemplate } from "../../lib/config/inquiries";
+import type { CatalogueItem, InquiryTemplateItem, PolicyItem, TargetSetItem } from "../../lib/config/versions";
 
 /** The first seed migration (catalogue 0.2.1-draft, AP-0.2-pilot, A-v1, B-v1). */
 export const SEED_MIGRATION_FILE = "0006_seed_config_v0_2_1.sql";
@@ -67,12 +69,15 @@ export type SeedInput = {
   catalogues: CatalogueItem[];
   policies: PolicyItem[];
   targetSets: SeedTargetSet[];
+  /** Published inquiry templates (sources, answer keys and tutor notes go with them). */
+  inquiryTemplates?: InquiryTemplateItem[];
   /** Every catalogue (also already-published ones): target sets look up their descriptor version here. */
   allCatalogues: CatalogueItem[];
 };
 
 export function buildSeedSql(input: SeedInput): string {
   const { file, catalogues, policies, targetSets, allCatalogues } = input;
+  const inquiryTemplates = input.inquiryTemplates ?? [];
   const migrationVersion = /^(\d{4})_/.exec(file)?.[1];
   if (!migrationVersion) throw new Error(`bad migration file name ${file}`);
 
@@ -81,9 +86,10 @@ export function buildSeedSql(input: SeedInput): string {
     ...catalogues.map((c) => `catalogue ${c.id}`),
     ...policies.map((p) => `policy ${p.id}`),
     ...targetSets.map((t) => `target set ${t.id}`),
+    ...inquiryTemplates.map((t) => `inquiry template ${t.id}`),
   ];
-  const hashLines = [...catalogues, ...policies, ...targetSets].map(
-    (i) => `-- sha256 ${i.kind === "targetSet" ? "target_set" : i.kind} ${i.id}=${i.hash}`,
+  const hashLines = [...catalogues, ...policies, ...targetSets, ...inquiryTemplates].map(
+    (i) => `-- sha256 ${KIND_IN_HEADER[i.kind]} ${i.id}=${i.hash}`,
   );
   parts.push(`-- ${file}
 -- GENERATED FILE — do not edit by hand. Source: content/*.json, locked in content/config.lock.json.
@@ -124,7 +130,115 @@ on conflict (id) do nothing;
 `);
   }
 
+  for (const t of inquiryTemplates) parts.push(inquiryTemplateBlocks(t, allCatalogues));
+
   parts.push(`insert into english.schema_migrations(version) values ('${migrationVersion}') on conflict do nothing;\n`);
+  return parts.join("\n");
+}
+
+const KIND_IN_HEADER = {
+  catalogue: "catalogue",
+  policy: "policy",
+  targetSet: "target_set",
+  inquiryTemplate: "inquiry_template",
+} as const;
+
+const sha256 = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+
+/**
+ * One inquiry template: sources → transcripts → (publish sources) → template as draft → answer keys →
+ * publish template. Children go in BEFORE the parent is published (published parents refuse new children),
+ * and every child insert is skipped when its parent is already published, so a re-run changes nothing.
+ * A template that breaks a catalogue rule is a generator error — it never reaches a migration.
+ */
+function inquiryTemplateBlocks(item: InquiryTemplateItem, allCatalogues: CatalogueItem[]): string {
+  const t = item.data;
+  const cat = allCatalogues.find((c) => c.id === t.catalogue_version);
+  if (!cat) throw new Error(`inquiry template ${item.id}: catalogue ${t.catalogue_version} not found`);
+  const violations = validateInquiryTemplate(t, cat.data);
+  if (violations.length) {
+    throw new Error(
+      `inquiry template ${item.id} breaks catalogue rules and cannot be seeded (keep it status "draft" until the parent decides):\n` +
+        violations.map((v) => `  - ${v.message}`).join("\n"),
+    );
+  }
+
+  const { refs, rows } = toSources(t);
+  const sourceRecords = rows.map((r) => ({
+    id: r.id,
+    version: r.version,
+    title: r.title,
+    url: r.url,
+    author: r.author,
+    rights_note: r.rights_note,
+    modality: r.modality,
+    body: r.body,
+    source_hash: sha256(r),
+  }));
+  const transcriptRecords = rows.filter((r) => r.transcript !== null).map((r) => ({ id: r.id, version: r.version, transcript: r.transcript }));
+  const keyRecords = toKeyRows(t);
+  const templateRecord = {
+    id: t.id,
+    version: t.version,
+    track_id: t.track,
+    title_vi: t.title_vi,
+    big_question_en: t.big_question_en,
+    big_question_vi: t.big_question_vi,
+    week: t.week,
+    date_from: t.dates.from,
+    date_to: t.dates.to,
+    domain_bucket: t.domain_bucket,
+    target_ids: t.target_ids,
+    steps: toSafeSteps(t),
+    sources: refs,
+  };
+
+  const idLit = quoteLiteral(t.id);
+  const verLit = String(t.version);
+  const templateNotPublished = `not exists (
+    select 1 from english.inquiry_templates it
+    where it.id = ${idLit} and it.version = ${verLit} and it.published_at is not null)`;
+  const sourceIds = rows.map((r) => quoteLiteral(r.id)).join(", ");
+
+  const parts: string[] = [];
+  parts.push(`-- Inquiry template ${t.id} v${t.version} (published after its sources and answer keys are in)`);
+  if (rows.length) {
+    parts.push(`insert into english.sources(id, version, title, url, author, rights_note, modality, body, source_hash)
+select r->>'id', (r->>'version')::int, r->>'title', r->>'url', r->>'author', r->>'rights_note', r->>'modality', r->>'body', r->>'source_hash'
+from jsonb_array_elements(${jsonLiteral(sourceRecords)}) as r
+where ${templateNotPublished}
+on conflict (id, version) do nothing;
+`);
+  }
+  if (transcriptRecords.length) {
+    parts.push(`insert into english.source_transcripts(source_id, source_version, transcript)
+select r->>'id', (r->>'version')::int, r->>'transcript'
+from jsonb_array_elements(${jsonLiteral(transcriptRecords)}) as r
+where ${templateNotPublished}
+on conflict (source_id, source_version) do nothing;
+`);
+  }
+  if (rows.length) {
+    parts.push(`update english.sources set published_at = now()
+where version = ${verLit} and id in (${sourceIds}) and published_at is null;
+`);
+  }
+  parts.push(`insert into english.inquiry_templates(id, version, track_id, title_vi, big_question_en, big_question_vi, week, date_from, date_to, domain_bucket, target_ids, steps, sources, catalogue_version, status, source_hash)
+select r->>'id', (r->>'version')::int, r->>'track_id', r->>'title_vi', r->>'big_question_en', r->>'big_question_vi', (r->>'week')::int,
+  (r->>'date_from')::date, (r->>'date_to')::date, r->>'domain_bucket',
+  ${textArray("r->'target_ids'")}, r->'steps', r->'sources', ${quoteLiteral(t.catalogue_version)}, 'draft', ${quoteLiteral(item.hash)}
+from jsonb_array_elements(${jsonLiteral([templateRecord])}) as r
+on conflict (id, version) do nothing;
+`);
+  parts.push(`insert into english.template_item_keys(template_id, template_version, item_id, step_no, kind, answer, explanation_vi)
+select ${idLit}, ${verLit}, r->>'item_id', (r->>'step_no')::int, r->>'kind', r->>'answer', r->>'explanation_vi'
+from jsonb_array_elements(${jsonLiteral(keyRecords)}) as r
+where ${templateNotPublished}
+on conflict (template_id, template_version, item_id) do nothing;
+`);
+  parts.push(`update english.inquiry_templates set status = 'published', published_at = now()
+where id = ${idLit} and version = ${verLit} and published_at is null;
+`);
   return parts.join("\n");
 }
 

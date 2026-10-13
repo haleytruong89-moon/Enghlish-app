@@ -5,12 +5,14 @@
  * npm run gen:config -- --new    → put NEW (not yet locked) versions into the next free migration
  *                                  NNNN_seed_<slug>.sql and add them to content/config.lock.json.
  *                                  Never overwrites a migration; refuses if a locked version changed.
+ *                                  Optional: --name=<a_z0_9> sets the file-name part (0008_seed_<name>.sql).
  */
 import { checkConfig, generateNew } from "./lib/configLock";
 
 async function main() {
   if (process.argv.includes("--new")) {
-    const res = await generateNew();
+    const name = process.argv.find((a) => a.startsWith("--name="))?.split("=")[1];
+    const res = await generateNew(undefined, undefined, name);
     if (!res) {
       console.log("nothing new: every version in content/ is already in a seed migration");
       return;

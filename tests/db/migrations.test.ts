@@ -82,9 +82,11 @@ describe("migrations", () => {
       where n.nspname = 'english' and c.relkind = 'r'`);
     expect(rows.map((r) => r.relname).sort()).toEqual(
       [
-        "activity_templates", "aggregate_indicators", "app_errors", "assessment_policies", "audit_log",
-        "catalogue_versions", "consents", "dimensions", "families", "learners", "members", "relationships",
-        "schema_migrations", "target_set_definitions", "target_sets", "targets", "tracks",
+        "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
+        "app_errors", "assessment_policies", "audit_log", "catalogue_versions", "consents", "dimensions",
+        "families", "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "members",
+        "relationships", "schema_migrations", "source_transcripts", "sources", "target_set_definitions",
+        "target_sets", "targets", "template_item_keys", "tracks",
       ],
     );
     for (const r of rows) expect(r.relrowsecurity, r.relname).toBe(true);
@@ -111,9 +113,11 @@ describe("migrations", () => {
       where n.nspname = 'english' and c.relkind = 'r' order by 1`);
     const readable = rows.filter((r) => r.s).map((r) => r.relname);
     expect(readable).toEqual([
-      "activity_templates", "aggregate_indicators", "assessment_policies", "audit_log", "catalogue_versions",
-      "consents", "dimensions", "families", "learners", "members", "relationships", "target_set_definitions",
-      "target_sets", "targets", "tracks",
+      "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
+      "assessment_policies", "audit_log", "catalogue_versions", "consents", "dimensions", "families",
+      "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "members", "relationships",
+      "source_transcripts", "sources", "target_set_definitions", "target_sets", "targets",
+      "template_item_keys", "tracks",
     ]);
     expect(rows.some((r) => r.w)).toBe(false);
   });

@@ -30,7 +30,15 @@ beforeEach(() => {
   paths = { contentDir: path.join(tmp, "content"), migrationsDir: path.join(tmp, "migrations") };
   cpSync(CONTENT_DIR, paths.contentDir, { recursive: true });
   mkdirSync(paths.migrationsDir);
-  cpSync(MIGRATIONS_DIR, paths.migrationsDir, { recursive: true });
+  // These tests exercise the S1 state (catalogue, policy, target sets in 0006): the S2 templates and
+  // everything after 0006 are left out of the fixture, so "the next free number" is 0007 here.
+  // (Inquiry templates have their own tests in inquiriesSeed.test.ts.)
+  cpSync(MIGRATIONS_DIR, paths.migrationsDir, { recursive: true, filter: (src) => !/[\\/](0\d{3})_/.test(src) || /[\\/]000[1-6]_/.test(src) });
+  rmSync(path.join(paths.contentDir, "inquiries"), { recursive: true, force: true });
+  const lockPath = path.join(paths.contentDir, LOCK_FILE);
+  const lock = JSON.parse(readFileSync(lockPath, "utf8")) as Record<string, unknown>;
+  delete lock.inquiryTemplates;
+  writeFileSync(lockPath, JSON.stringify(lock, null, 2) + "\n");
 });
 afterEach(() => rmSync(tmp, { recursive: true, force: true }));
 
