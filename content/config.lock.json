@@ -47,6 +47,22 @@
     "B-W0-BASELINE@1": {
       "sha256": "c9d6b784dc3bb12f3c7c8fae11b5a54036b74877b9d8acde40968c6f7807f750",
       "migration": "0008_seed_inquiries_pilot_v1.sql"
+    },
+    "B-W1-HOMEWORK@1": {
+      "sha256": "60cba8866bc208a91c38de2e18a98906d23209dcecfbe9924938d4409d9df091",
+      "migration": "0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql"
+    },
+    "B-W2-PHONES@1": {
+      "sha256": "ee170f6e5b7d08240bbbefd4c64b26cd050ea4dbc962a7bcc0c666bb6b14bb4f",
+      "migration": "0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql"
+    },
+    "B-W3-TRANSPORT@1": {
+      "sha256": "b7a358212b12fec8bc71acc8fad85d9399f2e4a3bfd19731a9d391975bc09956",
+      "migration": "0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql"
+    },
+    "B-W4-AI-HOMEWORK@1": {
+      "sha256": "36eeac4d15282b36c3385f0e1aab182f4ac61f463996d1ce90810d7451c4d92c",
+      "migration": "0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql"
     }
   }
 }

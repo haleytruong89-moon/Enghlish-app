@@ -3,7 +3,7 @@
   "id": "B-W1-HOMEWORK",
   "version": 1,
   "track": "B",
-  "status": "draft",
+  "status": "published",
   "catalogue_version": "0.2.1-draft",
   "title_vi": "Tuần 1 — Bài tập về nhà",
   "big_question_en": "Should there be a nightly time limit on homework for grade-9 students?",
@@ -24,7 +24,8 @@
     "B-T11-QUALIFY",
     "B-L1-COMPLEX-W",
     "B-L2-PRECISE",
-    "B-L4-EXPLAIN-S"
+    "B-L4-EXPLAIN-S",
+    "B-A3-REVISE"
   ],
   "sources": [
     {
@@ -726,9 +727,7 @@
       "mode": "REVISION",
       "purpose": [],
       "target_ids": [
-        "B-T7-ARGUE",
-        "B-T11-QUALIFY",
-        "B-L2-PRECISE"
+        "B-A3-REVISE"
       ],
       "prompt_en": "Read the (max 3) comments. Fix only those places. Underline what you changed and add one line: \"I changed … because …\".",
       "prompt_vi": "Chủ nhật 25/10 chiều · attempt_no=2, is_first_attempt=N, cùng learning_family FAM-B-HW-1.",
@@ -738,9 +737,7 @@
       "self_check_vi": [
         "Chỉ sửa những chỗ có gợi ý (tối đa 3), không viết lại cả bài.",
         "Gạch chân chỗ đã sửa và ghi một dòng cuối: \"Mình đã sửa … vì …\"."
-      ],
-      "status": "needs_review",
-      "review_note": "Loại hoạt động ACT-REVISE không nằm trong danh sách bài được tính cho: B-T7-ARGUE, B-T11-QUALIFY, B-L2-PRECISE (danh mục v0.2.1). Cần phụ huynh quyết: đổi loại hoạt động của bước này, hoặc bỏ kỹ năng đó khỏi bước. Chưa sửa nội dung; mẫu này giữ nháp, chưa giao được."
+      ]
     },
     {
       "step_no": 9,

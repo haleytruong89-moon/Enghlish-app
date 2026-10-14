@@ -24,9 +24,10 @@ describe("0008 seed: the pilot inquiry templates (S2)", () => {
     await db?.drop();
   });
 
-  it("seeds exactly the published templates: 5 for Track A, the Track B baseline; drafts are not in the database", async () => {
+  it("seeds exactly the published templates (0008 + 0011): 5 for Track A, 5 for Track B; there are no drafts left", async () => {
     expect(published.map((p) => p.id)).toEqual([
-      "A-W0-BASELINE@1", "A-W1-VOLCANOES@1", "A-W2-WATERCYCLE@1", "A-W3-EARTHQUAKES@1", "A-W4-PLANETS@1", "B-W0-BASELINE@1",
+      "A-W0-BASELINE@1", "A-W1-VOLCANOES@1", "A-W2-WATERCYCLE@1", "A-W3-EARTHQUAKES@1", "A-W4-PLANETS@1",
+      "B-W0-BASELINE@1", "B-W1-HOMEWORK@1", "B-W2-PHONES@1", "B-W3-TRANSPORT@1", "B-W4-AI-HOMEWORK@1",
     ]);
     const rows = await q<{ id: string; version: number; status: string; published: boolean; source_hash: string }>(
       "select id, version, status, published_at is not null as published, source_hash from english.inquiry_templates order by id",
@@ -41,7 +42,7 @@ describe("0008 seed: the pilot inquiry templates (S2)", () => {
     for (const d of content.draftInquiryTemplates) {
       expect(await count("select count(*)::int as n from english.inquiry_templates where id = $1", [d.data.id]), d.id).toBe(0);
     }
-    expect(content.draftInquiryTemplates.map((d) => d.id)).toEqual(["B-W1-HOMEWORK@1", "B-W2-PHONES@1", "B-W3-TRANSPORT@1", "B-W4-AI-HOMEWORK@1"]);
+    expect(content.draftInquiryTemplates).toEqual([]);
   });
 
   it("the database holds what the content files say: safe steps, source rows, one key row per item", async () => {
@@ -125,15 +126,29 @@ describe("0008 seed: the pilot inquiry templates (S2)", () => {
     for (const r of rows) expect(r.purpose).toContain("baseline");
   });
 
+  it("0012: the 31 step-to-source rows of B-W1..B-W4 are in the database, each on a real step and a real published source of the same week", async () => {
+    const rows = await q<{ template_id: string; step_no: number; source_id: string }>(
+      "select template_id, step_no, source_id from english.template_step_sources where template_id like 'B-W_-%' and template_id <> 'B-W0-BASELINE'",
+    );
+    expect(rows).toHaveLength(31);
+    for (const r of rows) {
+      const tpl = published.find((p) => p.data.id === r.template_id)?.data;
+      expect(tpl?.steps.some((st) => st.step_no === r.step_no), `${r.template_id}#${r.step_no}`).toBe(true);
+      expect(r.source_id.startsWith(`${r.template_id}-S`), r.source_id).toBe(true);
+    }
+    expect(await count("select count(*)::int as n from english.template_step_sources m left join english.sources s on s.id = m.source_id and s.version = m.source_version and s.published_at is not null where s.id is null")).toBe(0);
+    expect(await count("select count(*)::int as n from english.schema_migrations where version in ('0011', '0012')")).toBe(2);
+  });
+
   it("students read no template, source, key or transcript table; staff read the texts but a tutor only of their child's track", async () => {
     for (const student of [s.users.studentAn, s.users.studentNguyen]) {
       for (const table of ["inquiry_templates", "sources", "template_item_keys", "instance_item_keys", "source_transcripts"]) {
         expect(await rowsAs(db.client, "authenticated", student, `select * from english.${table}`), `${table} / student`).toEqual([]);
       }
     }
-    // the parent (both tracks) reads everything: 6 templates, all their sources, keys and transcripts
+    // the parent (both tracks) reads everything: 10 templates, all their sources, keys and transcripts
     const parent = s.users.parent;
-    expect(await rowsAs(db.client, "authenticated", parent, "select id from english.inquiry_templates")).toHaveLength(6);
+    expect(await rowsAs(db.client, "authenticated", parent, "select id from english.inquiry_templates")).toHaveLength(10);
     expect((await rowsAs(db.client, "authenticated", parent, "select id from english.sources")).length).toBeGreaterThan(0);
     for (const table of ["template_item_keys", "instance_item_keys", "source_transcripts"]) {
       expect((await rowsAs(db.client, "authenticated", parent, `select * from english.${table}`)).length, table).toBeGreaterThan(0);

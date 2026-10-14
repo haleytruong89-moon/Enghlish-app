@@ -36,17 +36,22 @@ beforeEach(() => {
 afterEach(() => rmSync(tmp, { recursive: true, force: true }));
 
 describe("inquiry templates in the version lock", () => {
-  it("the six published templates are locked into 0008, the four draft ones are not locked or seeded", () => {
+  it("the six first templates are locked into 0008, the four Track B weeks (published 14/10) into 0011 alone", () => {
     const lock = JSON.parse(readFileSync(path.join(CONTENT_DIR, LOCK_FILE), "utf8")) as { inquiryTemplates: Record<string, { sha256: string; migration: string }> };
     expect(Object.keys(lock.inquiryTemplates)).toEqual([
       "A-W0-BASELINE@1", "A-W1-VOLCANOES@1", "A-W2-WATERCYCLE@1", "A-W3-EARTHQUAKES@1", "A-W4-PLANETS@1", "B-W0-BASELINE@1",
+      "B-W1-HOMEWORK@1", "B-W2-PHONES@1", "B-W3-TRANSPORT@1", "B-W4-AI-HOMEWORK@1",
     ]);
-    for (const e of Object.values(lock.inquiryTemplates)) {
+    const weeks = ["B-W1-HOMEWORK", "B-W2-PHONES", "B-W3-TRANSPORT", "B-W4-AI-HOMEWORK"];
+    for (const [key, e] of Object.entries(lock.inquiryTemplates)) {
       expect(e.sha256).toMatch(/^[0-9a-f]{64}$/);
-      expect(e.migration).toBe("0008_seed_inquiries_pilot_v1.sql");
+      expect(e.migration, key).toBe(weeks.some((w) => key.startsWith(`${w}@`)) ? "0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql" : "0008_seed_inquiries_pilot_v1.sql");
     }
-    const sql = readFileSync(path.join(MIGRATIONS_DIR, "0008_seed_inquiries_pilot_v1.sql"), "utf8");
-    for (const draft of ["B-W1-HOMEWORK", "B-W2-PHONES", "B-W3-TRANSPORT", "B-W4-AI-HOMEWORK"]) expect(sql).not.toContain(draft);
+    const sql8 = readFileSync(path.join(MIGRATIONS_DIR, "0008_seed_inquiries_pilot_v1.sql"), "utf8");
+    for (const w of weeks) expect(sql8).not.toContain(w);
+    const sql11 = readFileSync(path.join(MIGRATIONS_DIR, "0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql"), "utf8");
+    for (const w of weeks) expect(sql11).toContain(w);
+    for (const other of ["A-W0-BASELINE", "A-W1-VOLCANOES", "A-W2-WATERCYCLE", "A-W3-EARTHQUAKES", "A-W4-PLANETS", "B-W0-BASELINE"]) expect(sql11).not.toContain(other);
   });
 
   it("check passes on the untouched copy; a re-run of --new has nothing to do", async () => {
@@ -86,11 +91,11 @@ describe("inquiry templates in the version lock", () => {
     const before = await checkConfig(paths);
     expect(before.unlocked).toEqual(["inquiry template A-W5-NEWWEEK@1"]);
     const res = await generateNew(paths);
-    expect(res).toEqual({ file: "0011_seed_a_w5_newweek_1.sql", ids: ["A-W5-NEWWEEK@1"] });
-    const sql = readFileSync(path.join(paths.migrationsDir, "0011_seed_a_w5_newweek_1.sql"), "utf8");
+    expect(res).toEqual({ file: "0013_seed_a_w5_newweek_1.sql", ids: ["A-W5-NEWWEEK@1"] });
+    const sql = readFileSync(path.join(paths.migrationsDir, "0013_seed_a_w5_newweek_1.sql"), "utf8");
     expect(sql).toContain("Inquiry template A-W5-NEWWEEK v1");
     expect(sql).not.toContain("A-W1-VOLCANOES");
-    expect(sql.trim().endsWith("values ('0011') on conflict do nothing;")).toBe(true);
+    expect(sql.trim().endsWith("values ('0013') on conflict do nothing;")).toBe(true);
     expect(await checkConfig(paths)).toEqual({ problems: [], unlocked: [] });
     expect(migrations().filter((f) => f.startsWith("0008"))).toEqual(["0008_seed_inquiries_pilot_v1.sql"]);
   });
@@ -99,7 +104,7 @@ describe("inquiry templates in the version lock", () => {
     addTemplate("A-W5-NEWWEEK");
     await expect(generateNew(paths, undefined, "Bad Name!")).rejects.toThrow(/--name/);
     const res = await generateNew(paths, undefined, "week5");
-    expect(res?.file).toBe("0011_seed_week5.sql");
+    expect(res?.file).toBe("0013_seed_week5.sql");
   });
 
   it("a published template that breaks the evidence-task whitelist is a generator error and a check error", async () => {
@@ -111,7 +116,7 @@ describe("inquiry templates in the version lock", () => {
     const { problems } = await checkConfig(paths);
     expect(problems.some((p) => p.includes("A-W6-BADTASK@1") && p.includes("is not an evidence task of A-L3-CAUSE-W"))).toBe(true);
     await expect(generateNew(paths)).rejects.toThrow(/breaks catalogue rules[\s\S]*not an evidence task of A-L3-CAUSE-W/);
-    expect(migrations()).not.toContain("0011_seed_a_w6_badtask_1.sql");
+    expect(migrations()).not.toContain("0013_seed_a_w6_badtask_1.sql");
     // …the same content as a draft is just a draft: no error, never seeded
     const t = readTpl("A-W6-BADTASK");
     t.status = "draft";
