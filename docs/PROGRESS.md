@@ -80,7 +80,7 @@
 | 2 | Xóa dữ liệu một em có xóa luôn tài khoản đăng nhập | Trước pilot thật | Xóa dữ liệu app trước; tài khoản phụ huynh tự xóa trên Supabase |
 | 3 | O-F1 quy tắc video | Trước S2 | Chỉ link YouTube/nguồn mở, không tải video lên |
 | 4 | Ngày đề thử tuần 4 của Nguyên | Trước 14/11 | 21/11 |
-| 5 | **B-W1…B-W4 (4 mẫu Track B) còn nháp, chưa seed, chưa giao được** — vài bước vi phạm luật danh mục (bảng ở mục S2 "Quyết định đang chờ phụ huynh"). Cách gỡ: (a) đổi loại hoạt động của bước, (b) bỏ kỹ năng đó khỏi bước, hoặc (c) thêm phiên bản danh mục cho phép | **Trước 19/10** (B-W1 bắt đầu tuần của Nguyên; B-W0 đầu vào giao được ngay) | Phụ huynh chọn (a)/(b)/(c) cho từng loại vấn đề (sửa bài ACT-REVISE; đọc-hiểu nguồn cho B-T5-SOURCE). Builder không tự sửa nội dung |
+| 5 | ~~B-W1…B-W4 còn nháp~~ — **ĐÃ QUYẾT 14/10, phương án (a)**: bước sửa bài → kỹ năng `B-A3-REVISE`; câu hỏi đánh giá độ tin cậy nguồn → loại `ACT-WRITE` với `B-T5-SOURCE` (B-W2 bước 4 tách đôi, B-W4 bước 9 đổi loại). 4 mẫu đã **công bố**, seed `0011`, nguồn của bước `0012` (chi tiết ở mục "Quyết định 14/10" trong phần S2). Còn lại: xác nhận bảng bước→bài đọc của `0012` | — | Đã xong; phụ huynh chỉ cần áp `0011`, `0012` sau `0010` |
 | 6 | **Ghi bài ngoài app ở bài kiểm tra trong buổi và bài nói trực tiếp**: chỉ thầy/cô ghi; phụ huynh không ghi được (màn hình hiện "Chỉ thầy/cô ghi bài này"). Bài nói trực tiếp chỉ ghi dạng "thầy/cô nghe trực tiếp" | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới**: nếu muốn phụ huynh ghi được bài giấy của bước kiểm tra, nói để nới sau |
 | 7 | **Bài do người lớn ghi giúp (bài giấy, bài nói trong buổi)**: học sinh không đọc được nội dung, người ghi hay gợi ý đi kèm; em chỉ thấy một dòng "bài này đã làm cùng thầy/cô hoặc trên giấy, đã ghi lại rồi" | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới**: nếu muốn em xem lại chữ thầy/cô đã ghi, nói để nới sau |
 | 8 | **Ngày ghi bài ngoài app** không được sớm hơn lần làm gần nhất của bước đó (kể cả bài em nộp trong app), và bước phải đã mở vào ngày ghi | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới**: nếu hay phải ghi bù theo thứ tự khác, nói để nới sau |
@@ -210,20 +210,24 @@ Thêm test: học sinh chỉ thấy bước N từ đúng ngày của nó (kể 
 3. **Xem thử trên preview:** chạy lại `npm run db:seed-dev` (giao bài mẫu cho em THỬ). Đăng nhập phụ huynh thử → thẻ từng em có link "Giao bài" → trang có "Bài có thể giao" và "Đã giao". Thử giao một mẫu khác, rồi "Đổi ngày" (để trống lý do → báo lỗi, không lưu). Gia sư của An: chỉ mở được trang của An. Học sinh: không có link; gõ địa chỉ trang → "Không tìm thấy".
 4. **Giao bài cho em thật:** trang "Giao bài" của em đó (cần `ALLOW_REAL_LEARNERS=true`). Chọn mẫu, chọn hạn, bấm "Giao bài".
 
-### Quyết định đang chờ phụ huynh (B-W1…B-W4 chưa giao được)
+### Quyết định 14/10/2026 — B-W1…B-W4 đã công bố (phương án a)
 
-4 mẫu Track B giữ **nháp**, chưa seed, vì có bước vi phạm luật "loại hoạt động phải thuộc danh sách bài được tính của kỹ năng" trong danh mục v0.2.1. Builder **không đổi nội dung** (đây không phải lỗi gõ nhầm). Mỗi bước có `status: "needs_review"` + ghi chú trong file. (Sau khi sửa cách đọc danh mục ở review #3, kiểm tra lại: **đúng các bước dưới đây vẫn vi phạm, không thêm không bớt**.)
+Phụ huynh chọn **(a)**: đổi loại hoạt động / kỹ năng của bước cho khớp danh mục v0.2.1; **không đổi đáp án, đề, lựa chọn hay lời nhắc** (có test so từng câu với bản nháp `drafts/inquiries_B_draft.json`).
 
-| Mẫu | Bước | Vấn đề |
+| Mẫu | Bước (số cũ → mới) | Đã đổi |
 |---|---|---|
-| B-W1-HOMEWORK | 8 | ACT-REVISE không được tính cho B-T7-ARGUE, B-T11-QUALIFY, B-L2-PRECISE |
-| B-W2-PHONES | 4 | ACT-SOURCE-QA không được tính cho B-T5-SOURCE |
-| B-W2-PHONES | 8 | như B-W1 bước 8 |
-| B-W3-TRANSPORT | 8 | như B-W1 bước 8 |
-| B-W4-AI-HOMEWORK | 7 | như B-W1 bước 8 |
-| B-W4-AI-HOMEWORK | 9 | ACT-SOURCE-QA không được tính cho B-T5-SOURCE |
+| B-W1-HOMEWORK | 8 | ACT-REVISE: kỹ năng → `B-A3-REVISE` |
+| B-W2-PHONES | 4 | Tách đôi: bước 4 giữ ACT-SOURCE-QA với `B-T2-ASSUME-R` (câu 1–2, 15'); **bước 5 mới** = ACT-WRITE với `B-T5-SOURCE` (2 câu tin cậy nguồn, 15'; lời nhắc EN theo quy định, ghi "questions 1 and 2" vì màn hình em đánh số lại từ 1 trong mỗi bước). Các bước sau dời +1 (cũ 5–9 → mới 6–10) |
+| B-W2-PHONES | 8 → 9 | ACT-REVISE → `B-A3-REVISE` |
+| B-W3-TRANSPORT | 8 | ACT-REVISE → `B-A3-REVISE` |
+| B-W4-AI-HOMEWORK | 7 | ACT-REVISE → `B-A3-REVISE` |
+| B-W4-AI-HOMEWORK | 9 | Toàn bộ câu là `B-T5-SOURCE` → đổi loại sang ACT-WRITE (không đổi gì khác) |
 
-Cách gỡ (chọn một cho mỗi loại vấn đề): (a) đổi loại hoạt động của bước (vd bước sửa bài → loại được tính), (b) bỏ kỹ năng đó khỏi bước (bước vẫn làm nhưng không tính cho kỹ năng đó), hoặc (c) sửa danh mục (thêm phiên bản danh mục mới cho phép loại đó — việc lớn hơn). Sau khi quyết: sửa file, bỏ `status`/`review_note` ở bước, đổi mẫu thành `published`, `npm run gen:config -- --new` → số seed kế tiếp là **`0011`** (S4 dùng `0009`, S5 dùng `0010`; công cụ tự sinh đúng số). **Lưu ý thời gian:** B-W1 bắt đầu tuần của Nguyên; B-W0 (đầu vào) giao được ngay.
+Cả 4 mẫu: bỏ `status`/`review_note` ở bước, thêm `B-A3-REVISE` (và `B-T5-SOURCE` nếu thiếu) vào danh sách kỹ năng của mẫu, `status: published`, version 1. Seed: `db/migrations/0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql` (chỉ 4 mẫu này, sinh bằng `npm run gen:config -- --new`) + `content/config.lock.json`. Nguồn của bước: `db/migrations/0012_track_b_step_sources.sql` (31 dòng, chờ phụ huynh xác nhận như bảng của `0009`).
+
+**Cần phụ huynh biết:** (1) lời nhắc tiếng Việt của B-W2 bước 4 (chỉ gia sư/phụ huynh thấy) vẫn nhắc "mốc last_practice_date của B-T5-SOURCE" — giữ nguyên chữ, nay mốc đó nằm ở bước 5 mới. (2) Lời nhắc tiếng Anh của bước 4 vẫn ghi "(10 minutes)… (20 minutes)" nhưng bước còn 15' — giữ nguyên chữ. (3) Pilot thủ công: cách ghi CSV đã cập nhật ở đầu Pilot Kit B v0.2.1 (bản em và bản gia sư). (4) `db:seed-dev` vẫn giao B-W0 (không B-W1) cho Nguyên (thử) để không làm vỡ test giao diện S4/S5.
+
+**SQL phụ huynh áp (sau `0010`, đúng thứ tự):** `db/migrations/0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql` rồi `db/migrations/0012_track_b_step_sources.sql` (`npm run db:apply`). Kiểm tra: `select id, version, status from english.inquiry_templates order by 1;` → **10 dòng** `published`; `select count(*) from english.template_step_sources;` → **47**.
 
 ### Ghi chú cho các lát sau
 
@@ -297,7 +301,7 @@ Ghi chú cho S5 và các lát sau (đã biết, chủ ý):
 
 ### Cần phụ huynh xác nhận (builder đã chọn mặc định an toàn — "đóng khi thiếu")
 
-1. **Bước nào dùng bài đọc/nghe nào** (bảng `template_step_sources`, 16 dòng, seed trong `0009`). Mặc định builder suy ra từ chuỗi "Nghe…/Đọc…" của đề: A-W0 bước 1→bài đọc, 2→bài nghe; A-W1 bước 2→**nghe**, 3→**đọc** (bài nghe tự làm không kèm bài đọc); A-W2 2→nghe, 4→đọc; A-W3 2→đọc, 4→nghe; A-W4 2→nghe, 4→đọc; B-W0 1→2 bài (S1, S2), 2→S3, 3→S4, 4→S5, 6→S6. **Bước nào không có dòng → em không nhận nguồn nào.** B-W1…B-W4 chưa có (mẫu còn nháp). Xem lại bảng này trước khi cho em thật dùng; sửa = thêm migration mới (bảng chỉ thêm, không sửa).
+1. **Bước nào dùng bài đọc/nghe nào** (bảng `template_step_sources`, 16 dòng, seed trong `0009`). Mặc định builder suy ra từ chuỗi "Nghe…/Đọc…" của đề: A-W0 bước 1→bài đọc, 2→bài nghe; A-W1 bước 2→**nghe**, 3→**đọc** (bài nghe tự làm không kèm bài đọc); A-W2 2→nghe, 4→đọc; A-W3 2→đọc, 4→nghe; A-W4 2→nghe, 4→đọc; B-W0 1→2 bài (S1, S2), 2→S3, 3→S4, 4→S5, 6→S6. **Bước nào không có dòng → em không nhận nguồn nào.** B-W1…B-W4: 31 dòng trong `0012` (14/10): "Read Sources A and B" và bài viết "Sources A and B open" → Nguồn A + B; câu đọc hiểu kiểu đề → bài đọc S1; điền đoạn văn → S2; nói trực tiếp "Read Source X" → nguồn X; B-W4 bước 9 → Nguồn C; B-W2 bước 5 mới → Nguồn A + B. Xem lại bảng này trước khi cho em thật dùng; sửa = thêm migration mới (bảng chỉ thêm, không sửa).
 2. **Bài nghe chưa có link/tệp** trong dữ liệu (`url = null` cho cả 5 bài nghe; tên tệp như `A_VOL_L` chỉ nằm trong tiêu đề). Hiện em thấy "Bài này chưa có đường dẫn trong app. Bạn nhờ thầy/cô mở giúp nhé." Quyết: (a) thầy/cô phát tệp trong buổi (như Pilot Kit), hoặc (b) đưa tệp lên một nơi riêng và điền `url` (nghĩa là có migration nội dung mới). **Âm thanh không đi qua app trong cả hai cách.**
 3. **A-W0 bước 13, câu điền chữ tự do** (`BL-G1…`): tự chấm hiện so chữ không phân biệt hoa thường/khoảng trắng và đáp án nhiều cách cách nhau " / ". Câu cần người xem (đáp án mở) được đánh dấu "cần người chấm". Nếu kit muốn luật khác, nói trước S5.
 4. **Tiêu đề bài đọc/nghe** trong nội dung có ghi chú nhân viên trong ngoặc ("(bài đọc VOL-R)", "(cloze passage, MINI-20 Q10-15)"): app cắt phần ngoặc đó khi hiện cho em. Nên chỉnh nội dung ở lần soạn sau.
@@ -328,11 +332,11 @@ Ghi chú cho S5 và các lát sau (đã biết, chủ ý):
 
 ### Ghi chú cho S5 và các lát sau
 
-- **Seed cấu hình kế tiếp là `0011`** (S4 dùng `0009`, S5 dùng `0010`): phần "Cách gỡ" của B-W1…B-W4 ở S2 chỉ cần chạy `npm run gen:config -- --new`, công cụ tự sinh `0011`.
+- **Seed cấu hình kế tiếp là `0013`** (`0011` = 4 mẫu Track B, `0012` = nguồn của bước, đều 14/10).
 - S5 (hộp duyệt/chấm): đọc `attempts` + `artifact_versions` + `attempt_auto_checks` + `assistance_events` + `episodes` của em. Bài nộp là bản **nguyên gốc** (`is_raw = true`); điểm AI / người chấm / quyết định là 3 lớp riêng, bảng mới (`reviews`…) — đừng thêm cột vào các bảng append-only. Chấm mù, `sealed`/`note` của khóa đáp án, tin nhắn "Đã nhận bài. Góp ý sẽ có sau." (`messages.aiPendingStudent`) đều là việc của S5.
 - Câu `transform`/`short`/`open` đang là `needs_person`: S5 cần giao diện cho gia sư chấm.
 - Episode đã có `is_first_attempt`, facet và `context_id` (id mẫu) nhưng **chưa có điểm**; "Bài làm được tính" (đủ điều kiện làm bằng chứng) và trạng thái dẫn xuất chưa tính — S5/S6.
-- Mẫu B-W1…B-W4 khi công bố cần thêm dòng `template_step_sources` (migration cùng số với seed mẫu).
+- Mẫu B-W1…B-W4: dòng `template_step_sources` đã thêm ở `0012` (14/10).
 - `exposure_log` đã ghi `source = 'practice' | 'retry'`; các nguồn khác (`delayed`, `transfer`…) thêm khi có các lát tương ứng.
 
 ## S5 — Hộp duyệt, chấm theo từng kỹ năng, ai được duyệt (D15), bài làm ngoài app, ghi chú buổi học (14/10/2026)
@@ -397,7 +401,7 @@ Quy tắc nằm **trong cơ sở dữ liệu** (hàm `eng_review_role`), không 
 
 ### Ghi chú cho S6, S7 và các lát sau
 
-- **Seed cấu hình kế tiếp là `0011`** (S5 dùng `0010`): `npm run gen:config -- --new` sẽ tự sinh số đó. Phần "Cách gỡ" của B-W1…B-W4 (mục S2) đã sửa thành `0011`.
+- **Seed cấu hình kế tiếp là `0013`** (`0011`, `0012` đã dùng cho B-W1…B-W4 ngày 14/10): `npm run gen:config -- --new` sẽ tự sinh số đó.
 - S6 (góp ý, sửa bài): quyết định hiện hành của một (bài, kỹ năng) lấy qua `validation_decisions` không bị thay thế (view/hàm `eng_review_episode` đã làm). Góp ý gửi em là bảng/đường riêng — đừng đưa điểm 0–4 ra học sinh.
 - S7 (trạng thái, đề xuất bậc): bằng chứng đủ điều kiện = `observations` + quyết định hiện hành + `episodes` (facet, `is_first_attempt`, `observed_directly`). Bảng `exposure_log` đã có nguồn `lesson` (ghi chú buổi học). Chưa có gì tính trạng thái; cột `blind` của `observations` đã ghi sẵn cho hiệu chỉnh D16.
 - Bài ghi ngoài app có `provenance` = `tutor_live` | `manual_import` (đang hiển thị cho nhân viên); nếu S10 (phòng nói) thêm đường ghi chữ nói thì dùng chung `eng_record_attempt_effects`.
