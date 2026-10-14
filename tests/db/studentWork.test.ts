@@ -302,7 +302,7 @@ describe("S4 student work (DESIGN §5, §6, §8, §9)", () => {
       const rows = await q1<{ template_id: string; step_no: number; source_id: string; modality: string }>(
         "select m.template_id, m.step_no, m.source_id, s.modality from english.template_step_sources m join english.sources s on s.id = m.source_id and s.version = m.source_version",
       );
-      expect(rows).toHaveLength(16);
+      expect(rows).toHaveLength(47); // 16 from 0009 (Track A + B-W0) + 31 from 0012 (B-W1..B-W4)
       for (const r of rows.filter((x) => x.template_id.startsWith("A-"))) {
         const prompt = stepOf(template(r.template_id), r.step_no).prompt_en;
         expect(/\blisten\b|\bhear\b/i.test(prompt), `${r.template_id}#${r.step_no}`).toBe(r.modality === "audio");
@@ -316,7 +316,7 @@ describe("S4 student work (DESIGN §5, §6, §8, §9)", () => {
         }
       }
       // staff may read the table, students may not; rows are insert-only
-      expect(await rowsAs(db.client, "authenticated", s.users.parent, "select 1 from english.template_step_sources")).toHaveLength(16);
+      expect(await rowsAs(db.client, "authenticated", s.users.parent, "select 1 from english.template_step_sources")).toHaveLength(47);
       expect(await rowsAs(db.client, "authenticated", an(), "select 1 from english.template_step_sources")).toEqual([]);
       for (const sql of ["update english.template_step_sources set position = 9", "delete from english.template_step_sources", "truncate english.template_step_sources"]) {
         await db.client.query("begin");

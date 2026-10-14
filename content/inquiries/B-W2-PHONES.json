@@ -3,7 +3,7 @@
   "id": "B-W2-PHONES",
   "version": 1,
   "track": "B",
-  "status": "draft",
+  "status": "published",
   "catalogue_version": "0.2.1-draft",
   "title_vi": "Tuần 2 — Điện thoại ở trường",
   "big_question_en": "Should schools ban phones for the whole school day?",
@@ -391,12 +391,11 @@
       "mode": "INDEPENDENT_CHECK",
       "purpose": [],
       "target_ids": [
-        "B-T2-ASSUME-R",
-        "B-T5-SOURCE"
+        "B-T2-ASSUME-R"
       ],
-      "prompt_en": "Read Sources A and B (10 minutes), then answer the questions (20 minutes).",
-      "prompt_vi": "Thứ Tư 28/10 · Câu hỏi về nguồn. Phụ huynh chấm; góp ý 29/10. Lưu ý: mốc last_practice_date của B-T5-SOURCE cho bài ôn lại là 8/11 (xem tuần 3), không phải 29/10.",
-      "time_min": 30,
+      "prompt_en": "Read Sources A and B (10 minutes), then answer the questions (5 minutes).",
+      "prompt_vi": "Thứ Tư 28/10 · Câu hỏi về nguồn. Phụ huynh chấm; góp ý 29/10.",
+      "time_min": 15,
       "planned_date": "2026-10-28",
       "items": [
         {
@@ -416,7 +415,23 @@
           "answer": "Từ đóng khung: \"this important change\" (¶1), \"encouraging\", \"noisier and happier\", \"finally playing\", \"staring silently at screens\" (¶2), \"I am confident that… no one will want to go back\" (¶3). \"Change is never easy\" khiến người phản đối trông như chỉ ngại thay đổi, không có lý do chính đáng.",
           "explanation_vi": "ĐÃ SỬA (FIXLIST): đổi \"before any evidence is given\" thành \"without giving any evidence\"; thêm \"this important change\" và \"I am confident…\"; bỏ \"Most importantly\" khỏi danh sách. Một ý đúng kèm câu chữ trích là đủ c1, c2.",
           "target_id": "B-T2-ASSUME-R"
-        },
+        }
+      ],
+      "self_check_vi": []
+    },
+    {
+      "step_no": 5,
+      "activity_type": "ACT-WRITE",
+      "mode": "INDEPENDENT_CHECK",
+      "purpose": [],
+      "target_ids": [
+        "B-T5-SOURCE"
+      ],
+      "prompt_en": "Answer questions 1 and 2 about how far you can trust the sources. Follow the instructions in each question.",
+      "prompt_vi": "Thứ Tư 28/10 · Phần đánh giá độ tin cậy của nguồn (tách từ bước đọc ở trên để tính đúng kỹ năng B-T5-SOURCE). Phụ huynh chấm; góp ý 29/10. Lưu ý: mốc last_practice_date của B-T5-SOURCE cho bài ôn lại là 8/11 (xem tuần 3), không phải 29/10.",
+      "time_min": 15,
+      "planned_date": "2026-10-28",
+      "items": [
         {
           "id": "W2-B1-3",
           "kind": "open",
@@ -436,12 +451,10 @@
           "target_id": "B-T5-SOURCE"
         }
       ],
-      "self_check_vi": [],
-      "status": "needs_review",
-      "review_note": "Loại hoạt động ACT-SOURCE-QA không nằm trong danh sách bài được tính cho: B-T5-SOURCE (danh mục v0.2.1). Cần phụ huynh quyết: đổi loại hoạt động của bước này, hoặc bỏ kỹ năng đó khỏi bước. Chưa sửa nội dung; mẫu này giữ nháp, chưa giao được."
+      "self_check_vi": []
     },
     {
-      "step_no": 5,
+      "step_no": 6,
       "activity_type": "ACT-CANVAS-ADV",
       "mode": "PRACTICE",
       "purpose": [],
@@ -457,7 +470,7 @@
       "self_check_vi": []
     },
     {
-      "step_no": 6,
+      "step_no": 7,
       "activity_type": "ACT-SOURCE-QA",
       "mode": "PRACTICE",
       "purpose": [],
@@ -583,7 +596,7 @@
       "self_check_vi": []
     },
     {
-      "step_no": 7,
+      "step_no": 8,
       "activity_type": "ACT-WRITE",
       "mode": "INDEPENDENT_CHECK",
       "purpose": [],
@@ -610,14 +623,12 @@
       ]
     },
     {
-      "step_no": 8,
+      "step_no": 9,
       "activity_type": "ACT-REVISE",
       "mode": "REVISION",
       "purpose": [],
       "target_ids": [
-        "B-T7-ARGUE",
-        "B-T11-QUALIFY",
-        "B-L2-PRECISE"
+        "B-A3-REVISE"
       ],
       "prompt_en": "Read the (max 3) comments. Fix only those places. Underline what you changed and add one line: \"I changed … because …\".",
       "prompt_vi": "Chủ nhật 1/11 chiều · cùng learning_family FAM-B-PH-1.",
@@ -627,12 +638,10 @@
       "self_check_vi": [
         "Chỉ sửa những chỗ có gợi ý (tối đa 3), không viết lại cả bài.",
         "Gạch chân chỗ đã sửa và ghi một dòng cuối: \"Mình đã sửa … vì …\"."
-      ],
-      "status": "needs_review",
-      "review_note": "Loại hoạt động ACT-REVISE không nằm trong danh sách bài được tính cho: B-T7-ARGUE, B-T11-QUALIFY, B-L2-PRECISE (danh mục v0.2.1). Cần phụ huynh quyết: đổi loại hoạt động của bước này, hoặc bỏ kỹ năng đó khỏi bước. Chưa sửa nội dung; mẫu này giữ nháp, chưa giao được."
+      ]
     },
     {
-      "step_no": 9,
+      "step_no": 10,
       "activity_type": "ACT-SPEAK-LIVE",
       "mode": "INDEPENDENT_CHECK",
       "purpose": [

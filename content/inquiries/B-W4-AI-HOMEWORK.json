@@ -3,7 +3,7 @@
   "id": "B-W4-AI-HOMEWORK",
   "version": 1,
   "track": "B",
-  "status": "draft",
+  "status": "published",
   "catalogue_version": "0.2.1-draft",
   "title_vi": "Tuần 4 — AI trong học tập",
   "big_question_en": "Should grade-9 students be allowed to use AI chatbots for homework? If so, under what conditions?",
@@ -584,9 +584,7 @@
       "mode": "REVISION",
       "purpose": [],
       "target_ids": [
-        "B-T7-ARGUE",
-        "B-T11-QUALIFY",
-        "B-L2-PRECISE"
+        "B-A3-REVISE"
       ],
       "prompt_en": "Read the (max 3) comments. Fix only those places. Underline what you changed and add one line: \"I changed … because …\".",
       "prompt_vi": "Chủ nhật 15/11 chiều (nhịp thường: bài viết thứ Bảy 14/11, sửa bài Chủ nhật) · cùng learning_family FAM-B-AI-1.",
@@ -596,9 +594,7 @@
       "self_check_vi": [
         "Chỉ sửa những chỗ có gợi ý (tối đa 3), không viết lại cả bài.",
         "Gạch chân chỗ đã sửa và ghi một dòng cuối: \"Mình đã sửa … vì …\"."
-      ],
-      "status": "needs_review",
-      "review_note": "Loại hoạt động ACT-REVISE không nằm trong danh sách bài được tính cho: B-T7-ARGUE, B-T11-QUALIFY, B-L2-PRECISE (danh mục v0.2.1). Cần phụ huynh quyết: đổi loại hoạt động của bước này, hoặc bỏ kỹ năng đó khỏi bước. Chưa sửa nội dung; mẫu này giữ nháp, chưa giao được."
+      ]
     },
     {
       "step_no": 8,
@@ -619,7 +615,7 @@
     },
     {
       "step_no": 9,
-      "activity_type": "ACT-SOURCE-QA",
+      "activity_type": "ACT-WRITE",
       "mode": "INDEPENDENT_CHECK",
       "purpose": [
         "delayed_check"
@@ -651,9 +647,7 @@
           "target_id": "B-T5-SOURCE"
         }
       ],
-      "self_check_vi": [],
-      "status": "needs_review",
-      "review_note": "Loại hoạt động ACT-SOURCE-QA không nằm trong danh sách bài được tính cho: B-T5-SOURCE (danh mục v0.2.1). Cần phụ huynh quyết: đổi loại hoạt động của bước này, hoặc bỏ kỹ năng đó khỏi bước. Chưa sửa nội dung; mẫu này giữ nháp, chưa giao được."
+      "self_check_vi": []
     }
   ]
 }

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { CONTENT_DIR } from "@/lib/config/content";
 import {
@@ -103,19 +105,14 @@ describe("inquiry template files (content/inquiries)", () => {
     }
   });
 
-  it("the audit found exactly these content problems: REVISE / SOURCE-QA steps whose targets the catalogue does not allow", () => {
-    const found: Record<string, number[]> = {};
+  it("all 10 templates are published (14/10 decision, option a): no draft, no needs_review step, no whitelist violation", () => {
+    expect(items.inquiryTemplates).toHaveLength(10);
+    expect(items.draftInquiryTemplates).toHaveLength(0);
     for (const t of all) {
-      const bad = [...new Set(validateInquiryTemplate(t, catalogue).map((v) => v.stepNo ?? 0))];
-      if (bad.length) found[t.id] = bad;
+      expect(t.status, t.id).toBe("published");
+      expect(t.steps.filter((s) => s.status !== undefined || s.review_note !== undefined), t.id).toEqual([]);
+      expect(validateInquiryTemplate(t, catalogue), t.id).toEqual([]);
     }
-    expect(found).toEqual({
-      "B-W1-HOMEWORK": [8],
-      "B-W2-PHONES": [4, 8],
-      "B-W3-TRANSPORT": [8],
-      "B-W4-AI-HOMEWORK": [7, 9],
-    });
-    for (const id of Object.keys(found)) expect(byId(id).status, id).toBe("draft");
   });
 
   it("planned dates fall inside the template week", () => {
@@ -334,6 +331,111 @@ describe("student-safe split", () => {
   it("a published template cannot keep a needs_review step", () => {
     const t = clone("B-W1-HOMEWORK");
     t.status = "published";
+    const step = t.steps[7];
+    if (!step) throw new Error("fixture step missing");
+    step.status = "needs_review";
+    step.review_note = "waits for the parent";
     expect(inquiryTemplateSchema.safeParse(t).success).toBe(false);
+  });
+});
+
+describe("Track B templates B-W1..B-W4 after the 14/10 decision (option a)", () => {
+  const B_WEEKS = ["B-W1-HOMEWORK", "B-W2-PHONES", "B-W3-TRANSPORT", "B-W4-AI-HOMEWORK"];
+  type DraftItem = { id: string; kind: string; stem: string; options: string[]; answer: string; explanation_vi: string; target_id: string | null };
+  const draftFile = JSON.parse(readFileSync(path.join(CONTENT_DIR, "inquiries", "drafts", "inquiries_B_draft.json"), "utf8")) as {
+    items: { inquiry_id: string; sources: { text: string; title: string }[]; steps: { items?: DraftItem[] }[] }[];
+  };
+
+  it("are published at version 1 and pass the catalogue whitelist with no violation at all", () => {
+    for (const id of B_WEEKS) {
+      const t = byId(id);
+      expect(t.status, id).toBe("published");
+      expect(t.version, id).toBe(1);
+      expect(inquiryTemplateSchema.safeParse(t).success, id).toBe(true);
+      expect(validateInquiryTemplate(t, catalogue), id).toEqual([]);
+      for (const s of t.steps) {
+        // like Track A (A-A3-* is never at the top level): the revise score is only on the revise steps
+        for (const tid of s.target_ids.filter((x) => x !== "B-A3-REVISE")) expect(t.target_ids, `${id}#${s.step_no} ${tid}`).toContain(tid);
+      }
+      expect(t.target_ids, id).not.toContain("B-A3-REVISE");
+    }
+  });
+
+  it("every revision step counts for B-A3-REVISE only; every ACT-SOURCE-QA step has no B-T5-SOURCE any more", () => {
+    for (const id of B_WEEKS) {
+      const t = byId(id);
+      const revise = t.steps.filter((s) => s.activity_type === "ACT-REVISE");
+      expect(revise, id).toHaveLength(1);
+      expect(revise[0]?.target_ids, id).toEqual(["B-A3-REVISE"]);
+      for (const s of t.steps.filter((x) => x.activity_type === "ACT-SOURCE-QA")) {
+        expect(s.target_ids, `${id}#${s.step_no}`).not.toContain("B-T5-SOURCE");
+        for (const i of s.items) expect(i.target_id, `${id} ${i.id}`).not.toBe("B-T5-SOURCE");
+      }
+    }
+  });
+
+  it("B-W2: the source-QA step is split in two, items and targets in the right place, steps renumbered", () => {
+    const t = byId("B-W2-PHONES");
+    expect(t.steps.map((s) => s.step_no)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    const [read, trust] = [t.steps[3], t.steps[4]];
+    if (!read || !trust) throw new Error("split steps missing");
+    expect(read.activity_type).toBe("ACT-SOURCE-QA");
+    expect(read.target_ids).toEqual(["B-T2-ASSUME-R"]);
+    expect(read.items.map((i) => [i.id, i.target_id])).toEqual([["W2-B1-1", "B-T2-ASSUME-R"], ["W2-B1-2", "B-T2-ASSUME-R"]]);
+    expect(trust.activity_type).toBe("ACT-WRITE");
+    expect(trust.target_ids).toEqual(["B-T5-SOURCE"]);
+    expect(trust.items.map((i) => [i.id, i.target_id])).toEqual([["W2-B1-3", "B-T5-SOURCE"], ["W2-B1-4", "B-T5-SOURCE"]]);
+    expect(trust.prompt_en).toBe("Answer questions 1 and 2 about how far you can trust the sources. Follow the instructions in each question.");
+    expect(trust.prompt_vi).toBe(
+      "Thứ Tư 28/10 · Phần đánh giá độ tin cậy của nguồn (tách từ bước đọc ở trên để tính đúng kỹ năng B-T5-SOURCE). Phụ huynh chấm; góp ý 29/10. Lưu ý: mốc last_practice_date của B-T5-SOURCE cho bài ôn lại là 8/11 (xem tuần 3), không phải 29/10.",
+    );
+    expect(read.prompt_en).toBe("Read Sources A and B (10 minutes), then answer the questions (5 minutes).");
+    expect(read.prompt_vi).toBe("Thứ Tư 28/10 · Câu hỏi về nguồn. Phụ huynh chấm; góp ý 29/10.");
+    // same mode / purpose / planned date; time 30 → new step max(5, floor(30/2)) = 15, the original keeps the other 15
+    expect(trust.mode).toBe(read.mode);
+    expect(trust.purpose).toEqual(read.purpose);
+    expect(trust.planned_date).toBe(read.planned_date);
+    expect(trust.time_min).toBe(15);
+    expect(read.time_min).toBe(15);
+    expect(t.target_ids).toContain("B-T5-SOURCE");
+    expect(t.target_ids).not.toContain("B-A3-REVISE");
+    // the later steps moved by one
+    expect(t.steps.map((s) => s.activity_type)).toEqual([
+      "ACT-SOURCE-QA", "ACT-SOURCE-QA", "ACT-WRITE", "ACT-SOURCE-QA", "ACT-WRITE", "ACT-CANVAS-ADV", "ACT-SOURCE-QA", "ACT-WRITE", "ACT-REVISE", "ACT-SPEAK-LIVE",
+    ]);
+  });
+
+  it("B-W4: the all-B-T5-SOURCE step (last) is now ACT-WRITE, nothing else about it changed", () => {
+    const t = byId("B-W4-AI-HOMEWORK");
+    expect(t.steps).toHaveLength(9);
+    const last = t.steps[8];
+    expect(last?.activity_type).toBe("ACT-WRITE");
+    expect(last?.target_ids).toEqual(["B-T5-SOURCE"]);
+    expect(last?.mode).toBe("INDEPENDENT_CHECK");
+    expect(last?.time_min).toBe(10);
+    expect(last?.items.map((i) => i.id)).toEqual(["W4-C-1", "W4-C-2"]);
+  });
+
+  it("no answer, stem or option changed versus the Pilot Kit draft (compared item by item); no item was added or lost", () => {
+    for (const id of B_WEEKS) {
+      const draft = draftFile.items.find((d) => d.inquiry_id === id);
+      if (!draft) throw new Error(`no draft for ${id}`);
+      const before = new Map(draft.steps.flatMap((s) => s.items ?? []).map((i) => [i.id, i]));
+      const after = new Map(byId(id).steps.flatMap((s) => s.items).map((i) => [i.id, i]));
+      expect([...after.keys()].sort(), id).toEqual([...before.keys()].sort());
+      for (const [itemId, a] of after) {
+        const b = before.get(itemId);
+        expect({ kind: a.kind, stem: a.stem, options: a.options, answer: a.answer, explanation_vi: a.explanation_vi, target_id: a.target_id }, `${id} ${itemId}`).toEqual({
+          kind: b?.kind,
+          stem: b?.stem,
+          options: b?.options,
+          answer: b?.answer,
+          explanation_vi: b?.explanation_vi,
+          target_id: b?.target_id || null, // the Pilot Kit draft writes "" for a pure diagnostic item
+        });
+      }
+      // sources are untouched too
+      expect(byId(id).sources.map((s) => [s.title, s.text]), id).toEqual(draft.sources.map((s) => [s.title, s.text]));
+    }
   });
 });
