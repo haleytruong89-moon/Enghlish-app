@@ -354,8 +354,10 @@ describe("Track B templates B-W1..B-W4 after the 14/10 decision (option a)", () 
       expect(inquiryTemplateSchema.safeParse(t).success, id).toBe(true);
       expect(validateInquiryTemplate(t, catalogue), id).toEqual([]);
       for (const s of t.steps) {
-        for (const tid of s.target_ids) expect(t.target_ids, `${id}#${s.step_no} ${tid}`).toContain(tid);
+        // like Track A (A-A3-* is never at the top level): the revise score is only on the revise steps
+        for (const tid of s.target_ids.filter((x) => x !== "B-A3-REVISE")) expect(t.target_ids, `${id}#${s.step_no} ${tid}`).toContain(tid);
       }
+      expect(t.target_ids, id).not.toContain("B-A3-REVISE");
     }
   });
 
@@ -383,8 +385,12 @@ describe("Track B templates B-W1..B-W4 after the 14/10 decision (option a)", () 
     expect(trust.activity_type).toBe("ACT-WRITE");
     expect(trust.target_ids).toEqual(["B-T5-SOURCE"]);
     expect(trust.items.map((i) => [i.id, i.target_id])).toEqual([["W2-B1-3", "B-T5-SOURCE"], ["W2-B1-4", "B-T5-SOURCE"]]);
-    expect(trust.prompt_en).toBe("Answer questions 1 and 2 about how far you can trust the sources. Write 2–4 sentences for each answer.");
-    expect(trust.prompt_vi).toBe("Phần đánh giá độ tin cậy của nguồn (tách từ bước đọc ở trên để tính đúng kỹ năng B-T5-SOURCE).");
+    expect(trust.prompt_en).toBe("Answer questions 1 and 2 about how far you can trust the sources. Follow the instructions in each question.");
+    expect(trust.prompt_vi).toBe(
+      "Thứ Tư 28/10 · Phần đánh giá độ tin cậy của nguồn (tách từ bước đọc ở trên để tính đúng kỹ năng B-T5-SOURCE). Phụ huynh chấm; góp ý 29/10. Lưu ý: mốc last_practice_date của B-T5-SOURCE cho bài ôn lại là 8/11 (xem tuần 3), không phải 29/10.",
+    );
+    expect(read.prompt_en).toBe("Read Sources A and B (10 minutes), then answer the questions (5 minutes).");
+    expect(read.prompt_vi).toBe("Thứ Tư 28/10 · Câu hỏi về nguồn. Phụ huynh chấm; góp ý 29/10.");
     // same mode / purpose / planned date; time 30 → new step max(5, floor(30/2)) = 15, the original keeps the other 15
     expect(trust.mode).toBe(read.mode);
     expect(trust.purpose).toEqual(read.purpose);
@@ -392,7 +398,7 @@ describe("Track B templates B-W1..B-W4 after the 14/10 decision (option a)", () 
     expect(trust.time_min).toBe(15);
     expect(read.time_min).toBe(15);
     expect(t.target_ids).toContain("B-T5-SOURCE");
-    expect(t.target_ids).toContain("B-A3-REVISE");
+    expect(t.target_ids).not.toContain("B-A3-REVISE");
     // the later steps moved by one
     expect(t.steps.map((s) => s.activity_type)).toEqual([
       "ACT-SOURCE-QA", "ACT-SOURCE-QA", "ACT-WRITE", "ACT-SOURCE-QA", "ACT-WRITE", "ACT-CANVAS-ADV", "ACT-SOURCE-QA", "ACT-WRITE", "ACT-REVISE", "ACT-SPEAK-LIVE",

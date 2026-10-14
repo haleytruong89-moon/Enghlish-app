@@ -86,6 +86,8 @@
 | 8 | **Ngày ghi bài ngoài app** không được sớm hơn lần làm gần nhất của bước đó (kể cả bài em nộp trong app), và bước phải đã mở vào ngày ghi | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới**: nếu hay phải ghi bù theo thứ tự khác, nói để nới sau |
 | 9 | **Tiêu chí "thầy/cô nghe trực tiếp"** (vd. nói trôi chảy): chỉ tick được khi bài là bài thầy/cô nghe trực tiếp; bài khác chấm theo các tiêu chí còn lại | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới** |
 | 10 | **Ghi chú gợi ý quan sát được** tối đa 300 ký tự (một giới hạn ở mọi lớp: ô nhập, API, cơ sở dữ liệu) | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới** nếu thấy ngắn quá |
+| 11 | Điểm "sửa bài" (`B-A3-REVISE`) của Nguyên được chấm nhưng chưa nằm trong bộ theo dõi B-v1 (Track A có A3 trong "theo dõi thêm") | Sau baseline | Khi làm B-v2 sau baseline, thêm A3 vào "theo dõi thêm" của Nguyên |
+| 12 | `B-T5-SOURCE` chỉ có 2 cơ hội: 28/10 (B-W2) và kiểm tra trễ 23/11 trên nguồn mới C. Có tính kiểm tra trễ trên **nguồn mới** không? (quy định: cùng chủ đề/nguồn) | Trước 23/11 | Chờ phụ huynh/gia sư quyết; cho đến lúc đó không tự tính là kiểm tra trễ hợp lệ |
 
 ## Nền vận hành (13/10/2026, đêm)
 
@@ -212,22 +214,22 @@ Thêm test: học sinh chỉ thấy bước N từ đúng ngày của nó (kể 
 
 ### Quyết định 14/10/2026 — B-W1…B-W4 đã công bố (phương án a)
 
-Phụ huynh chọn **(a)**: đổi loại hoạt động / kỹ năng của bước cho khớp danh mục v0.2.1; **không đổi đáp án, đề, lựa chọn hay lời nhắc** (có test so từng câu với bản nháp `drafts/inquiries_B_draft.json`).
+Phụ huynh chọn **(a)**: đổi loại hoạt động / kỹ năng của bước cho khớp danh mục v0.2.1; **không đổi đề, lựa chọn, đáp án hay lời giải của câu nào** (có test so từng câu với bản nháp `drafts/inquiries_B_draft.json`). Lời nhắc chỉ đổi đúng ở B-W2 bước 4–5: xem mục "Cần phụ huynh biết" bên dưới; các mẫu và bước khác giữ nguyên chữ.
 
 | Mẫu | Bước (số cũ → mới) | Đã đổi |
 |---|---|---|
 | B-W1-HOMEWORK | 8 | ACT-REVISE: kỹ năng → `B-A3-REVISE` |
-| B-W2-PHONES | 4 | Tách đôi: bước 4 giữ ACT-SOURCE-QA với `B-T2-ASSUME-R` (câu 1–2, 15'); **bước 5 mới** = ACT-WRITE với `B-T5-SOURCE` (2 câu tin cậy nguồn, 15'; lời nhắc EN theo quy định, ghi "questions 1 and 2" vì màn hình em đánh số lại từ 1 trong mỗi bước). Các bước sau dời +1 (cũ 5–9 → mới 6–10) |
+| B-W2-PHONES | 4 | Tách đôi: bước 4 giữ ACT-SOURCE-QA với `B-T2-ASSUME-R` (câu 1–2, 15'); **bước 5 mới** = ACT-WRITE với `B-T5-SOURCE` (2 câu tin cậy nguồn, 15'; lời nhắc EN "Answer questions 1 and 2 about how far you can trust the sources. Follow the instructions in each question." — ghi "questions 1 and 2" vì màn hình em đánh số lại từ 1 trong mỗi bước, và không ghi số câu cần viết vì mỗi câu đã có hướng dẫn riêng). Các bước sau dời +1 (cũ 5–9 → mới 6–10) |
 | B-W2-PHONES | 8 → 9 | ACT-REVISE → `B-A3-REVISE` |
 | B-W3-TRANSPORT | 8 | ACT-REVISE → `B-A3-REVISE` |
 | B-W4-AI-HOMEWORK | 7 | ACT-REVISE → `B-A3-REVISE` |
 | B-W4-AI-HOMEWORK | 9 | Toàn bộ câu là `B-T5-SOURCE` → đổi loại sang ACT-WRITE (không đổi gì khác) |
 
-Cả 4 mẫu: bỏ `status`/`review_note` ở bước, thêm `B-A3-REVISE` (và `B-T5-SOURCE` nếu thiếu) vào danh sách kỹ năng của mẫu, `status: published`, version 1. Seed: `db/migrations/0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql` (chỉ 4 mẫu này, sinh bằng `npm run gen:config -- --new`) + `content/config.lock.json`. Nguồn của bước: `db/migrations/0012_track_b_step_sources.sql` (31 dòng, chờ phụ huynh xác nhận như bảng của `0009`).
+Cả 4 mẫu: bỏ `status`/`review_note` ở bước, thêm `B-T5-SOURCE` (nếu thiếu) vào danh sách kỹ năng của mẫu (`B-A3-REVISE` chỉ nằm ở bước sửa bài, không nằm ở danh sách của mẫu — giống Track A với `A-A3-*`), `status: published`, version 1. Seed: `db/migrations/0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql` (chỉ 4 mẫu này, sinh bằng `npm run gen:config -- --new`) + `content/config.lock.json`. Nguồn của bước: `db/migrations/0012_track_b_step_sources.sql` (31 dòng, chờ phụ huynh xác nhận như bảng của `0009`).
 
-**Cần phụ huynh biết:** (1) lời nhắc tiếng Việt của B-W2 bước 4 (chỉ gia sư/phụ huynh thấy) vẫn nhắc "mốc last_practice_date của B-T5-SOURCE" — giữ nguyên chữ, nay mốc đó nằm ở bước 5 mới. (2) Lời nhắc tiếng Anh của bước 4 vẫn ghi "(10 minutes)… (20 minutes)" nhưng bước còn 15' — giữ nguyên chữ. (3) Pilot thủ công: cách ghi CSV đã cập nhật ở đầu Pilot Kit B v0.2.1 (bản em và bản gia sư). (4) `db:seed-dev` vẫn giao B-W0 (không B-W1) cho Nguyên (thử) để không làm vỡ test giao diện S4/S5.
+**Cần phụ huynh biết:** (1) **Lời nhắc đã đổi đúng 3 chỗ, đều ở B-W2** (còn lại giữ nguyên chữ; đề, lựa chọn, đáp án, lời giải không đổi): (a) bước 4, lời nhắc EN: thời gian "(10 minutes)… (20 minutes)" → "(10 minutes)… (5 minutes)" cho khớp bước 15'; (b) bước 5 mới, lời nhắc EN: "Answer questions 1 and 2 about how far you can trust the sources. Follow the instructions in each question."; (c) bước 5 mới, lời nhắc tiếng Việt (chỉ gia sư/phụ huynh thấy): nhận "Phụ huynh chấm; góp ý 29/10" và lưu ý về mốc `last_practice_date` của `B-T5-SOURCE` (8/11) chuyển từ bước 4 sang bước 5; bước 4 chỉ còn "Thứ Tư 28/10 · Câu hỏi về nguồn. Phụ huynh chấm; góp ý 29/10." (2) Phần tách đôi này dùng 15' + 15' như bước cũ 30'; chữ "5 minutes" của bước 4 chỉ là phần trả lời sau khi đọc 10'. (3) Pilot thủ công: cách ghi CSV đã cập nhật ở đầu Pilot Kit B v0.2.1 (bản em và bản gia sư). (4) `db:seed-dev` vẫn giao B-W0 (không B-W1) cho Nguyên (thử) để không làm vỡ test giao diện S4/S5.
 
-**SQL phụ huynh áp (sau `0010`, đúng thứ tự):** `db/migrations/0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql` rồi `db/migrations/0012_track_b_step_sources.sql` (`npm run db:apply`). Kiểm tra: `select id, version, status from english.inquiry_templates order by 1;` → **10 dòng** `published`; `select count(*) from english.template_step_sources;` → **47**.
+**SQL phụ huynh áp (sau `0010`, đúng thứ tự):** `db/migrations/0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql` rồi `db/migrations/0012_track_b_step_sources.sql` (`npm run db:apply`; `0012` tự báo lỗi và dừng nếu chưa có `0011` hoặc thiếu dòng nào trong 31 dòng, không bao giờ âm thầm chèn 0 dòng). Kiểm tra: `select id, version, status from english.inquiry_templates order by 1;` → **10 dòng** `published`; `select count(*) from english.template_step_sources;` → **47**.
 
 ### Ghi chú cho các lát sau
 

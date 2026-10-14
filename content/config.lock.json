@@ -49,19 +49,19 @@
       "migration": "0008_seed_inquiries_pilot_v1.sql"
     },
     "B-W1-HOMEWORK@1": {
-      "sha256": "60cba8866bc208a91c38de2e18a98906d23209dcecfbe9924938d4409d9df091",
+      "sha256": "009192479a016fe87f66f1abe162d5bd604892f94a59013ff5a6968bc69ae5ba",
       "migration": "0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql"
     },
     "B-W2-PHONES@1": {
-      "sha256": "ee170f6e5b7d08240bbbefd4c64b26cd050ea4dbc962a7bcc0c666bb6b14bb4f",
+      "sha256": "9282d7196928515a7080c937fa8d0f50821757e734836cffccf6d97eaf9c4c3b",
       "migration": "0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql"
     },
     "B-W3-TRANSPORT@1": {
-      "sha256": "b7a358212b12fec8bc71acc8fad85d9399f2e4a3bfd19731a9d391975bc09956",
+      "sha256": "a17b40b47c51405fb732ccaa21b88be3b3d9784615ea94e5be3f58aff14abc2e",
       "migration": "0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql"
     },
     "B-W4-AI-HOMEWORK@1": {
-      "sha256": "36eeac4d15282b36c3385f0e1aab182f4ac61f463996d1ce90810d7451c4d92c",
+      "sha256": "cfc1b9066fc45499ed535b40a3eb4939c0292664f880485443c6016d3042958c",
       "migration": "0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql"
     }
   }

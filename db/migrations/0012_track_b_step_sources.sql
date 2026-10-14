@@ -4,6 +4,14 @@
 -- Nguồn A + B; câu hỏi đọc hiểu kiểu đề thi (EXAM-R) → bài đọc S1; điền đoạn văn (CLOZE) → bài S2; "Read Source X again/for 2 minutes"
 -- (nói trực tiếp) → nguồn đó; B-W4 bước 9 "Read Source C" → S5. Bước không có nguồn rõ ràng (viết lại câu, luyện nhanh, sơ đồ ý,
 -- sửa bài) thì KHÔNG có dòng. Chờ phụ huynh xác nhận (docs/PROGRESS.md). Muốn đổi sau này = thêm migration mới.
+-- Fail loudly (never insert 0 rows by accident): this file needs 0011 (templates + sources) to be applied first.
+do $$
+begin
+  if not exists (select 1 from english.schema_migrations where version = '0011') then
+    raise exception '0012 needs 0011 to be applied first (templates and sources of B-W1..B-W4 are seeded there)';
+  end if;
+end $$;
+
 insert into english.template_step_sources(template_id, template_version, step_no, source_id, source_version, position)
 select m.template_id, 1, m.step_no, m.source_id, 1, m.position
 from (values
@@ -46,5 +54,18 @@ from (values
 where exists (select 1 from english.sources s where s.id = m.source_id and s.version = 1)
   and exists (select 1 from english.inquiry_templates t where t.id = m.template_id and t.version = 1)
 on conflict do nothing;
+
+-- All 31 rows must be there (a missing template or source would have been skipped silently by the filters above).
+do $$
+declare
+  n integer;
+begin
+  select count(*) into n
+  from english.template_step_sources
+  where template_id in ('B-W1-HOMEWORK', 'B-W2-PHONES', 'B-W3-TRANSPORT', 'B-W4-AI-HOMEWORK');
+  if n < 31 then
+    raise exception '0012 expected 31 step-to-source rows for B-W1..B-W4 but found %', n;
+  end if;
+end $$;
 
 insert into english.schema_migrations(version) values ('0012') on conflict do nothing;
