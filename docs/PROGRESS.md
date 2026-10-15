@@ -29,7 +29,8 @@
 3. **Mở schema `english` cho API:** Supabase Dashboard → Project Settings → **Data API** → *Exposed schemas* → thêm `english` (giữ `public`). Bấm Save.
 4. **Tắt tự đăng ký:** Authentication → Sign In / Providers → tắt *Allow new users to sign up*. Tài khoản do phụ huynh tạo.
 5. **Lấy chuỗi kết nối:** Project Settings → Database → Connection string → **Session pooler** (cổng 5432). Chép vào file `.env.local` trên máy mình dòng `DATABASE_URL=...` (không gửi cho ai, không commit).
-6. **Áp migration** (chọn 1 cách):
+6. **Áp migration** (chọn 1 cách — **dễ nhất là cách GitHub**, không cài gì trên máy):
+   - **Trên GitHub:** cần Secret `DATABASE_URL` (bước 11) → tab **Actions** → **Apply database migrations** → **Run workflow** → gõ `APPLY` → Run. Xem kết quả ở *Summary*; lần chạy tự kiểm tra chạy lại lần 2 là "không còn gì để áp".
    - Trên máy: `npm install` rồi `npm run db:apply`. Chạy lại lần 2 phải báo "nothing to apply".
    - Hoặc SQL Editor của Supabase: dán **lần lượt** từng file dưới đây, bấm Run từng file.
 7. **Kiểm tra toàn bộ cài đặt bằng 1 thao tác** (làm sau bước 6; làm lại sau bước 11 để kiểm tra cả khóa sao lưu). Chọn 1 cách, rồi đọc bảng ✓/✗ — mỗi dòng ✗ có 1 câu chỉ cách sửa:
