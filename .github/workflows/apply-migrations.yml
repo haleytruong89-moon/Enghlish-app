@@ -1,0 +1,68 @@
+name: Apply database migrations
+
+# Manual only — the parent presses "Run workflow" and types APPLY to confirm.
+# Runs `npm run db:apply` against the real Supabase database (secret DATABASE_URL):
+# applies only db/migrations/NNNN_*.sql files not yet recorded in english.schema_migrations,
+# each file in its own transaction, in order. Running it again is a no-op ("nothing to apply").
+# Never touches schema `public`; never uses `supabase db push`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Gõ APPLY để xác nhận áp SQL lên database thật'
+        required: true
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apply-migrations
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: ${{ inputs.confirm == 'APPLY' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check secret is present (without printing it)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: test -n "$DATABASE_URL" || { echo "::error::secret DATABASE_URL is not set"; exit 1; }
+      - name: Apply pending migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          npm run db:apply | tee /tmp/apply.txt
+          {
+            echo "## Áp SQL lên database"
+            echo
+            echo '```'
+            grep -v -i "postgres://\|postgresql://" /tmp/apply.txt || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Second run must be a no-op
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          npm run db:apply | tee /tmp/second.txt
+          grep -q "nothing to apply" /tmp/second.txt
+          echo "✓ Chạy lại lần 2: không còn gì để áp." >> "$GITHUB_STEP_SUMMARY"
+
+  not-confirmed:
+    if: ${{ inputs.confirm != 'APPLY' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          echo "Chưa áp gì: ô xác nhận phải là APPLY." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
