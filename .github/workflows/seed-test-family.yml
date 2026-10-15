@@ -1,0 +1,80 @@
+name: Seed test family
+
+# Manual only — the parent presses "Run workflow" and types SEED to confirm.
+# Runs `npm run db:seed-dev` against the real Supabase project: creates the TEST family only
+# (is_test = true): 1 parent, 2 tutors, "An (thử)", "Nguyên (thử)" with emails eng-test-…@example.com,
+# all sharing the password in secret SEED_DEV_PASSWORD. Idempotent — running again changes nothing.
+# Never creates real learners.
+#
+# Secrets: DATABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SEED_DEV_PASSWORD (≥ 12 characters)
+# Variables: NEXT_PUBLIC_SUPABASE_URL
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Gõ SEED để xác nhận tạo gia đình THỬ'
+        required: true
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seed-test-family
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    if: ${{ inputs.confirm == 'SEED' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check secrets are present (without printing them)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SEED_DEV_PASSWORD: ${{ secrets.SEED_DEV_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+        run: |
+          missing=""
+          for v in DATABASE_URL SUPABASE_SERVICE_ROLE_KEY SEED_DEV_PASSWORD NEXT_PUBLIC_SUPABASE_URL; do
+            test -n "${!v}" || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::missing:$missing"
+            echo "Thiếu:$missing — thêm ở Settings → Secrets and variables → Actions." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+      - name: Create the test family
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SEED_DEV_PASSWORD: ${{ secrets.SEED_DEV_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+        run: |
+          set -euo pipefail
+          npm run db:seed-dev | tee /tmp/seed.txt
+          {
+            echo "## Gia đình THỬ"
+            echo
+            echo '```'
+            grep -v -i "postgres://\|postgresql://\|sb_secret_" /tmp/seed.txt | grep -v "^>" || true
+            echo '```'
+            echo
+            echo "Đăng nhập app bằng một trong các email trên, mật khẩu = giá trị secret SEED_DEV_PASSWORD."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  not-confirmed:
+    if: ${{ inputs.confirm != 'SEED' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          echo "Chưa tạo gì: ô xác nhận phải là SEED." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
