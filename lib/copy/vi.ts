@@ -35,6 +35,25 @@ export const auth = {
   errorGeneric: "Chưa đăng nhập được. Bạn thử lại sau ít phút.",
 } as const;
 
+// ---------- Đổi mật khẩu (mọi vai trò) -----------------------------------------------
+export const account = {
+  changePassword: "Đổi mật khẩu",
+  title: "Đổi mật khẩu",
+  intro: "Đặt mật khẩu của riêng bạn (ít nhất 12 ký tự). Lần sau đăng nhập bằng mật khẩu mới.",
+  newPassword: "Mật khẩu mới",
+  confirmPassword: "Nhập lại mật khẩu mới",
+  submit: "Lưu mật khẩu mới",
+  submitting: "Đang lưu…",
+  success: "Đã đổi mật khẩu. Lần sau đăng nhập bằng mật khẩu mới.",
+  back: "Về trang chính",
+  errorShort: "Mật khẩu mới cần có ít nhất 12 ký tự.",
+  errorMismatch: "Hai ô mật khẩu chưa giống nhau. Bạn nhập lại nhé.",
+  errorSame: "Mật khẩu mới cần khác mật khẩu đang dùng.",
+  errorWeak: "Mật khẩu này dễ đoán quá. Bạn chọn mật khẩu khác nhé.",
+  errorSession: "Phiên đăng nhập đã hết. Bạn đăng nhập lại rồi thử đổi nhé.",
+  errorGeneric: "Chưa đổi được mật khẩu. Bạn thử lại sau ít phút.",
+} as const;
+
 // ---------- Trang chủ theo vai trò (S0: placeholder) -------------------------------
 export const home = {
   studentGreeting: (alias: string) => `Chào ${alias}!`,
