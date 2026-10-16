@@ -51,6 +51,8 @@ const ROLE_TEXT: Record<Slot, string> = {
   tutorNguyen: "Gia sư của Nguyên",
 };
 
+// NOTE: user_metadata.app is editable by the account owner (supabase.auth.updateUser). It is only used to word the summary
+// ("made by this tool earlier"); never for any access or safety decision.
 const APP_TAG = "learning-os";
 
 function emailsOf(input: RealFamilyInput): Record<Slot, string> {

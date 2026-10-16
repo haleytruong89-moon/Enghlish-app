@@ -12,6 +12,7 @@ const inputClass = "min-h-12 rounded-lg border border-line bg-white px-4 text-ba
 /**
  * Changes the password of the person who is signed in, from the browser, with their OWN session
  * (anon key + session cookie): no service role, no server action, nothing about the password reaches our server.
+ * `method="post"` and no `name` on the inputs: a submit before hydration can never put the password in the URL.
  */
 export function PasswordForm() {
   const [password, setPassword] = useState("");
@@ -46,14 +47,13 @@ export function PasswordForm() {
 
   const busy = status.kind === "busy";
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
+    <form method="post" onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
       <div className="flex flex-col gap-2">
         <label htmlFor="new-password" className="text-sm font-medium">
           {account.newPassword}
         </label>
         <input
           id="new-password"
-          name="new-password"
           type="password"
           autoComplete="new-password"
           required
@@ -69,7 +69,6 @@ export function PasswordForm() {
         </label>
         <input
           id="confirm-password"
-          name="confirm-password"
           type="password"
           autoComplete="new-password"
           required

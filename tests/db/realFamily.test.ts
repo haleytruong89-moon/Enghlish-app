@@ -257,12 +257,38 @@ describe("S1b: create the real family", () => {
     expect(same.kept).toContain("Gia sư của An: không đổi (đã có lịch sử).");
     expect(await tutorRows()).toEqual(before);
 
-    // another tutor requested for the same learner: the member row is made, the history is still not touched
+    // another tutor requested for the same learner: the slot counts as filled by the ended row -> refused, nothing inserted
     const newTutor = await createAuthUser(db.client, "co-moi@example.com");
-    const other = await createRealFamily(db.client, { ...users, tutorAn: newTutor }, NAMES);
-    expect(other.kept).toContain("Gia sư của An: không đổi (đã có lịch sử).");
+    const members = () => n("select count(*)::int as n from english.members where family_id = $1", [REAL_FAMILY_ID]);
+    const membersBefore = await members();
+    await expect(createRealFamily(db.client, { ...users, tutorAn: newTutor }, NAMES)).rejects.toThrow(/gia sư của An đã có người khác/);
+    expect(await members()).toBe(membersBefore);
     expect(await tutorRows()).toEqual(before);
     expect(await n("select count(*)::int as n from english.relationships where learner_id = $1 and relation = 'tutor'", [REAL_LEARNER_AN_ID])).toBe(1);
+  });
+
+  it("email pre-check: the tutor slot is filled by an ended or future-dated tutor relationship too", async () => {
+    const emailOfUser = async (id: string) =>
+      ((await q<{ email: string }>("select email from auth.users where id = $1", [id]))[0]?.email ?? null)?.toLowerCase() ?? null;
+    const emails = {
+      parent: "bo-me@example.com",
+      studentAn: "an@example.com",
+      studentNguyen: "nguyen@example.com",
+      tutorAn: "co-lan@example.com",
+      tutorNguyen: "thay-minh@example.com",
+    };
+    // the previous test left An's tutor relationship ended; make Nguyên's one end in the future
+    await db.client.query(
+      "update english.relationships set valid_to = now() + interval '1 day' where learner_id = $1 and relation = 'tutor'",
+      [REAL_LEARNER_NGUYEN_ID],
+    );
+    await expect(checkRealFamilyEmails(db.client, emails, emailOfUser)).resolves.toBeUndefined();
+    await expect(checkRealFamilyEmails(db.client, { ...emails, tutorAn: "co-moi@example.com" }, emailOfUser)).rejects.toThrow(
+      /đã có người, nhưng email bạn nhập khác/,
+    );
+    await expect(checkRealFamilyEmails(db.client, { ...emails, tutorNguyen: "thay-moi@example.com" }, emailOfUser)).rejects.toThrow(
+      /đã có người, nhưng email bạn nhập khác/,
+    );
   });
 });
 
@@ -445,6 +471,24 @@ describe("S1b: CLI with the stub auth (reuses existing accounts, never touches t
     }
     expect(await authRows()).toEqual(before);
     expect((await db.client.query("select count(*)::int as n from english.members where family_id = $1", [REAL_FAMILY_ID])).rows[0]).toEqual({ n: 5 });
+  });
+
+  it("refuses a NEW tutor email when the learner's tutor relationship has ENDED: no auth user, no member row", async () => {
+    await db.client.query(
+      "update english.relationships set valid_to = now() + interval '1 second' where learner_id = $1 and relation = 'tutor'",
+      [REAL_LEARNER_AN_ID],
+    );
+    try {
+      const before = await authRows();
+      const r = run({ TUTOR_AN_EMAIL: "co-moi@example.com" });
+      expect(r.status).toBe(1);
+      expect(r.stderr).toMatch(/đã có người, nhưng email bạn nhập khác/);
+      noPasswordLeak(r);
+      expect(await authRows()).toEqual(before);
+      expect((await db.client.query("select count(*)::int as n from english.members where family_id = $1", [REAL_FAMILY_ID])).rows[0]).toEqual({ n: 5 });
+    } finally {
+      await db.client.query("update english.relationships set valid_to = null where learner_id = $1 and relation = 'tutor'", [REAL_LEARNER_AN_ID]);
+    }
   });
 });
 

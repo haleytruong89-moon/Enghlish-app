@@ -18,6 +18,8 @@ export function passwordChangeErrorText(error: { code?: string; status?: number 
       return account.errorSame;
     case "weak_password":
       return account.errorWeak;
+    case "reauthentication_needed":
+      return account.errorReauth;
     case "session_not_found":
     case "refresh_token_not_found":
     case "user_not_found":

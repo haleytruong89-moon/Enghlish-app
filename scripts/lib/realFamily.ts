@@ -101,13 +101,15 @@ export async function checkRealFamilyConflicts(client: ClientBase, users: Partia
       throw new Error(`${ROLE_LABEL[l.key]} đã gắn với một tài khoản khác — dừng, không đổi người.`);
     }
     if (users[l.tutorKey]) {
+      // The tutor slot counts as filled by ANY tutor relationship row (active, ended, future valid_to): a different tutor
+      // must be refused here, never inserted as a member who then could not get a relationship.
       const other = await client.query(
         `select 1 from english.relationships r join english.members m on m.id = r.member_id
-         where r.learner_id = $1 and r.relation = 'tutor' and r.valid_to is null and m.user_id <> $2`,
+         where r.learner_id = $1 and r.relation = 'tutor' and m.user_id <> $2`,
         [l.id, users[l.tutorKey]],
       );
       if (other.rowCount) {
-        throw new Error(`${ROLE_LABEL[l.tutorKey]} đã có người khác đang phụ trách — đổi gia sư làm riêng, không qua công cụ này.`);
+        throw new Error(`${ROLE_LABEL[l.tutorKey]} đã có người khác trong hồ sơ (đang phụ trách hoặc đã kết thúc) — đổi gia sư làm riêng, không qua công cụ này.`);
       }
     }
   }

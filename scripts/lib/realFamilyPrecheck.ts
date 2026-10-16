@@ -43,7 +43,7 @@ export async function checkPrerequisites(client: ClientBase, migrationVersionsOn
 
 /**
  * For every slot that is ALREADY filled in the real family (parent, each learner's student account, each learner's
- * active tutor): the requested email must be the email of the person in place. A different email is refused even when
+ * tutor: ANY tutor relationship row counts, active, ended or with a future valid_to): the requested email must be the email of the person in place. A different email is refused even when
  * that email has no account yet — otherwise a new auth account would be created for someone who then could never be
  * placed. `emailOfUser` returns the current login email (lower-case) of an auth user id, or null when unknown.
  */
@@ -72,7 +72,7 @@ export async function checkRealFamilyEmails(
     bound[l.student] = student.rows.map((r) => r.user_id).filter((u): u is string => !!u);
     const tutors = await client.query<{ user_id: string }>(
       `select m.user_id from english.relationships r join english.members m on m.id = r.member_id
-       where r.learner_id = $1 and r.relation = 'tutor' and r.valid_to is null`,
+       where r.learner_id = $1 and r.relation = 'tutor'`,
       [l.id],
     );
     bound[l.tutor] = tutors.rows.map((r) => r.user_id);
