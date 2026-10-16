@@ -90,6 +90,7 @@
 | 10 | **Ghi chú gợi ý quan sát được** tối đa 300 ký tự (một giới hạn ở mọi lớp: ô nhập, API, cơ sở dữ liệu) | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới** nếu thấy ngắn quá |
 | 11 | Điểm "sửa bài" (`B-A3-REVISE`) của Nguyên được chấm nhưng chưa nằm trong bộ theo dõi B-v1 (Track A có A3 trong "theo dõi thêm") | Sau baseline | Khi làm B-v2 sau baseline, thêm A3 vào "theo dõi thêm" của Nguyên |
 | 12 | `B-T5-SOURCE` chỉ có 2 cơ hội: 28/10 (B-W2) và kiểm tra trễ 23/11 trên nguồn mới C. Có tính kiểm tra trễ trên **nguồn mới** không? (quy định: cùng chủ đề/nguồn) | Trước 23/11 | Chờ phụ huynh/gia sư quyết; cho đến lúc đó không tự tính là kiểm tra trễ hợp lệ |
+| 13 | **Nội dung thông báo đồng ý (consent)**: app chưa có văn bản thông báo nào, bảng chỉ lưu *phiên bản*. Khi tạo gia đình thật, hệ thống ghi 1 bản đồng ý `data` cho mỗi em (do phụ huynh xác nhận) với phiên bản `pilot-2026-10`. Chưa ghi đồng ý `ai_text` (AI tắt cho cả hai em) | Trước khi bật AI | Soạn văn bản ngắn bằng tiếng Việt ứng với `pilot-2026-10`; khi đổi chữ thì đặt phiên bản mới và ghi dòng mới |
 
 ## Nền vận hành (13/10/2026, đêm)
 
@@ -413,3 +414,42 @@ Quy tắc nằm **trong cơ sở dữ liệu** (hàm `eng_review_role`), không 
 ## Quyết định 16/10/2026 — sao lưu hằng tuần
 
 Phụ huynh chọn chạy sao lưu **hằng tuần** (02:17 sáng Chủ nhật) thay vì hằng đêm. Hệ quả: nếu database hỏng, có thể mất tối đa ~7 ngày dữ liệu (thay vì ~1 ngày); artifact giữ 30 ngày ≈ 4 bản. Giảm thiểu: trước mỗi lần áp SQL mới hoặc thay đổi lớn, bấm chạy tay *Weekly backup*. Có thể đổi lại hằng đêm bất cứ lúc nào (1 dòng `cron` trong `.github/workflows/backup.yml`). Ping giữ project không ngủ (*Keepalive*) vẫn chạy hằng ngày — khác việc sao lưu.
+
+## S1b — Tạo gia đình THẬT (16/10/2026)
+
+**Trạng thái:** code + test xong (không có migration mới). **Chờ phụ huynh** bấm chạy workflow và đặt biến trên Vercel.
+
+### Làm gì
+
+Một workflow bấm tay **"Create real family"** (GitHub → Actions) tạo trong schema `english`: 1 phụ huynh, em **An** (Track A, bộ A-v1), em **Nguyên** (Track B, bộ B-v1), gia sư của An, gia sư của Nguyên, quan hệ còn hiệu lực, 1 bản đồng ý dữ liệu cho mỗi em (phiên bản `pilot-2026-10`). **Không giao bài tự động** — phụ huynh giao từng tuần ở trang "Giao bài". Chạy lại lần 2 không đổi gì. Không in mật khẩu.
+
+Quy tắc an toàn:
+
+- **Tài khoản đã có thì dùng lại** (tìm theo email, không phân biệt hoa/thường). Launcher đã có tài khoản của phụ huynh và 2 em → gõ đúng email đăng nhập Launcher thì **một tài khoản dùng cho cả hai app**; không đổi mật khẩu, không sửa gì của tài khoản đó.
+- Email chưa có tài khoản → tạo mới, mật khẩu tạm = secret `NEW_ACCOUNT_TEMP_PASSWORD`.
+- Ai đã thuộc gia đình khác trong app (kể cả gia đình THỬ) → **dừng**, chưa tạo gì (kể cả tài khoản mới). Không bao giờ chuyển người giữa các gia đình. Nếu chạy lại với một gia sư/phụ huynh/em *khác* người đã gán → cũng dừng (đổi gia sư làm riêng).
+- Tên hiển thị của em cố định "An" / "Nguyên" (chỉ hai tên này mới được gửi cho AI sau này).
+
+### Phụ huynh cần làm
+
+1. **GitHub → Settings → Secrets and variables → Actions:** có sẵn `DATABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, biến `NEXT_PUBLIC_SUPABASE_URL`. Thêm secret **`NEW_ACCOUNT_TEMP_PASSWORD`** (≥ 12 ký tự) — *chỉ cần nếu có người chưa có tài khoản* (thường là 2 gia sư).
+2. Đã áp `0001`–`0012` trên Supabase (xem các mục trên). Nên bấm chạy tay *Weekly backup* trước (thay đổi dữ liệu thật đầu tiên).
+3. **Actions → "Create real family" → Run workflow**, điền: `confirm` = `CREATE`; email đăng nhập (Launcher) của phụ huynh, An, Nguyên; email + tên hiển thị (vd "Cô Lan") của gia sư An và gia sư Nguyên. 5 email phải khác nhau.
+4. Mở trang kết quả (Summary): mỗi người có dòng "đã có tài khoản (dùng chung Launcher)" hoặc "tạo mới — mật khẩu tạm = secret NEW_ACCOUNT_TEMP_PASSWORD".
+5. **Gia sư lấy mật khẩu thế nào:** Supabase không gửi được email cho địa chỉ bất kỳ, nên phụ huynh **tự đưa** mật khẩu tạm (giá trị secret) cho từng gia sư — nên qua kênh riêng, không gửi nhóm. Trang đổi mật khẩu sẽ làm sau; đến lúc đó, nếu muốn đổi: Supabase → Authentication → Users → chọn người → đặt mật khẩu mới.
+6. **Vercel → Settings → Environment Variables:** `ALLOW_REAL_LEARNERS=true` chỉ cho **Production** (Preview giữ `false`), rồi **Redeploy** Production. Không đặt `true` cho Preview.
+7. Đăng nhập bằng tài khoản phụ huynh trên Production: thấy An và Nguyên; vào **Giao bài** để giao tuần đầu (baseline). Dữ liệu thử vẫn nằm riêng trong "Gia đình thử" và không lẫn.
+
+### Kiểm tra sau khi chạy (SQL Editor)
+
+```sql
+select alias, track_id, is_test from english.learners order by alias;   -- An A false · Nguyên B false · (An (thử), Nguyên (thử) true)
+select r.relation, m.display_name, l.alias from english.relationships r
+  join english.members m on m.id = r.member_id join english.learners l on l.id = r.learner_id
+  where l.is_test = false order by l.alias, r.relation;                  -- 4 dòng
+```
+
+### Ghi chú
+
+- Cần quyết định #13 (văn bản thông báo đồng ý) trước khi bật AI; hiện chỉ ghi phiên bản.
+- Ngoài phạm vi: trang đổi mật khẩu, email mời, giao diện quản trị.
