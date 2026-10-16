@@ -18,7 +18,7 @@
 | Cổng kiểm quyền `requireAccess` cho mọi route; route mẫu `GET /api/learners/:id` trả **404** khi hỏi em ngoài phạm vi | `lib/auth/`, `app/api/learners/[id]/` |
 | `ALLOW_REAL_LEARNERS=false` → app chỉ hiện learner thử (dùng cho bản preview) | `lib/env.ts` |
 | Mọi chữ giao diện theo UX_COPY_GUIDE v0.1 | `lib/copy/vi.ts` |
-| CI (kiểm kiểu, lint, test, build, test DB), sao lưu mã hóa hằng đêm, ping giữ project không ngủ | `.github/workflows/` |
+| CI (kiểm kiểu, lint, test, build, test DB), sao lưu mã hóa hằng tuần (sáng Chủ nhật), ping giữ project không ngủ | `.github/workflows/` |
 
 **Test (chạy trên máy, Postgres 16 + bản giả lập Supabase/Launcher):** `npm run typecheck` ✓ · `npm run lint` ✓ · `npm test` ✓ (52 test). Có test: gia sư của An không đọc được Nguyên và ngược lại; học sinh không đọc được em kia; `anon` không đọc được gì; tài khoản chỉ có bên Launcher không thấy gì bên này (và ngược lại); `audit_log` chặn sửa/xóa/truncate; đường xóa chỉ đi qua hàm.
 
@@ -47,7 +47,7 @@
    - Đừng bấm "Add" tích hợp Supabase trên Vercel (nó tạo DB mới / chèn `DATABASE_URL`).
 10. **Khóa sao lưu:** trên máy mình chạy `age-keygen -o learning-os-backup.key`. Giữ file này **offline** (USB/giấy). Dòng `Public key: age1…` là khóa công khai.
 11. **GitHub Secrets** (repo → Settings → Secrets and variables → Actions): `DATABASE_URL` (chuỗi Session pooler), `BACKUP_AGE_RECIPIENT` (khóa công khai `age1…`).
-12. **Chạy thử sao lưu:** tab Actions → *Nightly backup (encrypted)* → Run workflow → thấy artifact `learning-os-…`. Diễn tập khôi phục (G0): tải artifact, `age -d -i learning-os-backup.key file.dump.age > file.dump`, rồi `pg_restore` vào một project thử, đối chiếu số dòng.
+12. **Chạy thử sao lưu:** tab Actions → *Weekly backup (encrypted)* → Run workflow → thấy artifact `learning-os-…`. Diễn tập khôi phục (G0): tải artifact, `age -d -i learning-os-backup.key file.dump.age > file.dump`, rồi `pg_restore` vào một project thử, đối chiếu số dòng.
 
 ### File SQL cần áp (đúng thứ tự)
 
@@ -409,3 +409,7 @@ Quy tắc nằm **trong cơ sở dữ liệu** (hàm `eng_review_role`), không 
 - S6 (góp ý, sửa bài): quyết định hiện hành của một (bài, kỹ năng) lấy qua `validation_decisions` không bị thay thế (view/hàm `eng_review_episode` đã làm). Góp ý gửi em là bảng/đường riêng — đừng đưa điểm 0–4 ra học sinh.
 - S7 (trạng thái, đề xuất bậc): bằng chứng đủ điều kiện = `observations` + quyết định hiện hành + `episodes` (facet, `is_first_attempt`, `observed_directly`). Bảng `exposure_log` đã có nguồn `lesson` (ghi chú buổi học). Chưa có gì tính trạng thái; cột `blind` của `observations` đã ghi sẵn cho hiệu chỉnh D16.
 - Bài ghi ngoài app có `provenance` = `tutor_live` | `manual_import` (đang hiển thị cho nhân viên); nếu S10 (phòng nói) thêm đường ghi chữ nói thì dùng chung `eng_record_attempt_effects`.
+
+## Quyết định 16/10/2026 — sao lưu hằng tuần
+
+Phụ huynh chọn chạy sao lưu **hằng tuần** (02:17 sáng Chủ nhật) thay vì hằng đêm. Hệ quả: nếu database hỏng, có thể mất tối đa ~7 ngày dữ liệu (thay vì ~1 ngày); artifact giữ 30 ngày ≈ 4 bản. Giảm thiểu: trước mỗi lần áp SQL mới hoặc thay đổi lớn, bấm chạy tay *Weekly backup*. Có thể đổi lại hằng đêm bất cứ lúc nào (1 dòng `cron` trong `.github/workflows/backup.yml`). Ping giữ project không ngủ (*Keepalive*) vẫn chạy hằng ngày — khác việc sao lưu.

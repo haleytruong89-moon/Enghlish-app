@@ -252,7 +252,7 @@ computeTargetState(input: {
 | Việc | Cách |
 |---|---|
 | Region | Chọn khi tạo project chung (đề xuất Singapore) |
-| Backup | GitHub Actions hằng đêm: `pg_dump` schema `public` + `english` → mã hóa `age` (khóa công khai trong repo, khóa riêng phụ huynh giữ offline) → artifact riêng tư `retention-days: 30` |
+| Backup | GitHub Actions **hằng tuần** (sáng Chủ nhật — phụ huynh quyết 16/10/2026, mất tối đa ~7 ngày; chạy tay trước thay đổi lớn): `pg_dump` schema `public` + `english` → mã hóa `age` (khóa công khai trong repo, khóa riêng phụ huynh giữ offline) → artifact riêng tư `retention-days: 30` |
 | Khôi phục thử | 1 lần trước pilot (G0): restore vào project thử, đối chiếu số dòng/ID |
 | Giữ project không ngủ | GitHub Actions ping hằng ngày (như App Toán) |
 | Log | Không ghi transcript/bài làm vào log Vercel; lỗi vào `english.app_errors` |

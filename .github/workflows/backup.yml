@@ -1,6 +1,6 @@
-name: Nightly backup (encrypted)
+name: Weekly backup (encrypted)
 
-# DESIGN §14 / NFR-05: nightly pg_dump of schemas public + english → age-encrypted →
+# DESIGN §14 / NFR-05 (parent decision 16/10/2026: weekly, RPO ≤ 7 days): weekly pg_dump of schemas public + english → age-encrypted →
 # private workflow artifact kept 30 days. Data is never printed to the log.
 #
 # Secrets (names only — set values in GitHub → Settings → Secrets and variables → Actions):
@@ -9,7 +9,7 @@ name: Nightly backup (encrypted)
 
 on:
   schedule:
-    - cron: "17 19 * * *" # 02:17 Asia/Ho_Chi_Minh
+    - cron: "17 19 * * 6" # Sunday 02:17 Asia/Ho_Chi_Minh (weekly; also run manually before risky changes)
   workflow_dispatch:
 
 permissions:
