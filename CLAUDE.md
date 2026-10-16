@@ -52,6 +52,7 @@ Next.js (App Router) + TypeScript strict + Tailwind · Supabase (Postgres + Auth
 npm run dev · npm run typecheck · npm run lint · npm test
 npm run db:apply          # áp migration chưa có (cần DATABASE_URL)
 npm run db:seed-dev       # gia đình THỬ (An (thử), Nguyên (thử)) + gán A-v1 / B-v1
+npm run db:create-family  # gia đình THẬT (An, Nguyên + 2 gia sư): dùng lại tài khoản đã có theo email; thường chạy qua workflow "Create real family" (gõ CREATE)
 npm run gen:config        # = --check: báo đỏ nếu bản đã công bố bị sửa, migration seed lệch, hoặc có nội dung mới chưa vào migration
 npm run gen:config -- --new  # nội dung MỚI (vd B-v2) → ghi vào migration kế tiếp NNNN_seed_*.sql + khóa vào content/config.lock.json (không bao giờ ghi đè)
 npm run test:e2e          # Playwright — chạy trong CI với Supabase local thật (job "E2E smoke"); máy không có Docker thì chỉ `--list`

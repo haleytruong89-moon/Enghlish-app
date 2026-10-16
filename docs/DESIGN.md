@@ -1,7 +1,7 @@
 # Learning OS (Family Edition) — DESIGN v0.2 (DRAFT)
 
 > Thiết kế kỹ thuật cho `PRD_FAMILY_EDITION_v1.0.md` (+ MVP PRD v1.0). Thay thế `DESIGN.md` v0.1.
-> Cập nhật: 11/10/2026. Đổi quyết định kiến trúc → bàn trên Claude.ai trước, rồi sửa file này.
+> Cập nhật: 11/10/2026; 16/10/2026: theo PRD v1.1 (13/10) Track B chạy ngay, không còn "nháp đến hè 2027". Đổi quyết định kiến trúc → bàn trên Claude.ai trước, rồi sửa file này.
 > Nguồn năng lực/rubric: `content/catalogue_v0.2.json` (đọc bằng code, không chép tay).
 
 ## 0. Tổng quan
@@ -61,7 +61,7 @@
 |---|---|---|
 | `families` | id, name, timezone | 1 dòng |
 | `members` | user_id (= auth.users.id), family_id, role (`parent`/`tutor`/`student`), display_name, color | Một người một vai trong app này |
-| `learners` | id, family_id, member_id (tài khoản của con), alias (`An`/`Nguyên`), track_id, external_ref (vd `skillgrow:child:an`), is_test, ai_enabled, status (`active`/`draft`) | Track B: `status = draft` đến hè 2027 |
+| `learners` | id, family_id, member_id (tài khoản của con), alias (`An`/`Nguyên`), track_id, external_ref (vd `skillgrow:child:an`), is_test, ai_enabled, status (`active`/`draft`) | Track B (PRD v1.1): `status = active` ngay — 2 track chạy song song; chỉ Clarifier/Challenger và 70/30 đầy đủ chờ hè 2027 |
 | `relationships` | member_id, learner_id, relation (`parent`/`tutor`), valid_from, valid_to | Hết hạn = mất quyền với request mới (FR-01b) |
 | `consents` | learner_id, subject_member_id, notice_version, scope (`data`/`ai_text`), granted, at | AI chỉ chạy khi có consent `ai_text` còn hiệu lực + `ai_enabled` |
 
@@ -195,7 +195,7 @@ computeTargetState(input: {
 
 | Mục | Thiết kế |
 |---|---|
-| Chế độ | Track A: `reviewer`, `coach`. Track B (⏸): + `clarifier`, `challenger` |
+| Chế độ | Track A: `reviewer`, `coach`. Track B (PRD v1.1): `reviewer`, `coach` ngay như Track A; + `clarifier`, `challenger` từ hè 2027 |
 | Context tối thiểu | Task snapshot + target(s) + rubric + success_criteria + artifact (đã ẩn danh) + trích nguồn cần thiết. Reviewer **không** thấy điểm gia sư/trạng thái hiện tại (PRD §8.1) |
 | Ẩn danh | Chỉ `alias`; lọc danh sách tên thật/trường (cả có dấu và không dấu) trước khi gửi |
 | Đầu ra Reviewer | zod theo PRD §8.2: `target_key`, `assessment_status` (`PROPOSED`/`ABSTAIN`), `quality_score` 0–4/null, `criteria_results`, `evidence_refs` (span có thật), `rationale`, `priority_feedback` ≤3, `limitations`, `review_reasons` |
@@ -261,7 +261,7 @@ computeTargetState(input: {
 
 ## 15. Tách khỏi project dùng chung
 
-**Ngưỡng:** DB chung > ~60% của 500 MB · cần backup chính thức/PITR · sự cố chéo app · khi bật Track B (hè 2027).
+**Ngưỡng:** DB chung > ~60% của 500 MB · cần backup chính thức/PITR · sự cố chéo app · khi bật phần Track B đầy đủ — Clarifier/Challenger, 70/30 (hè 2027).
 **Cách tách:** tạo project mới (gói Pro) → `pg_dump --schema=english` → restore → chuyển tài khoản người dùng (mời lại/đặt lại mật khẩu cho 3–5 người) → đổi env → chạy song song 1 tuần đọc-only → xóa schema cũ.
 
 ## 16. Cấu trúc thư mục

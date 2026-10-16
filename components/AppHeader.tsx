@@ -1,4 +1,5 @@
-import { app, auth } from "@/lib/copy/vi";
+import Link from "next/link";
+import { account, app, auth } from "@/lib/copy/vi";
 
 export function AppHeader({ name, showTestBadge }: { name?: string; showTestBadge?: boolean }) {
   return (
@@ -13,6 +14,13 @@ export function AppHeader({ name, showTestBadge }: { name?: string; showTestBadg
       </div>
       <div className="flex items-center gap-3">
         {name ? <span className="hidden text-sm text-muted sm:inline">{name}</span> : null}
+        <Link
+          href="/account/password"
+          data-testid="change-password-link"
+          className="inline-flex min-h-11 items-center px-2 text-sm font-medium text-accent underline"
+        >
+          {account.changePassword}
+        </Link>
         <form action="/auth/signout" method="post">
           <button
             type="submit"
