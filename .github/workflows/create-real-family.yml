@@ -1,0 +1,126 @@
+name: Create real family
+
+# Manual only — the parent presses "Run workflow" and types CREATE to confirm.
+# Runs `npm run db:create-family` against the real Supabase project: creates the REAL family in schema `english`
+# (is_test = false): 1 parent, learner "An" (track A), learner "Nguyên" (track B), 1 tutor each, active relationships,
+# a consent record, target sets A-v1 / B-v1. It does NOT assign inquiries (the parent does that on "Giao bài").
+#
+# Accounts are looked up by email (case-insensitive). The Launcher already has logins for the parent and the children:
+# type those emails and one login works for both apps — existing accounts are NOT changed (no password reset, no metadata
+# overwrite). Only emails with no account yet are created, with the temporary password in secret NEW_ACCOUNT_TEMP_PASSWORD.
+# Idempotent — running again changes nothing. A person who already belongs to another family stops the run.
+#
+# Secrets: DATABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEW_ACCOUNT_TEMP_PASSWORD (≥ 12 characters; needed only if some account is created)
+# Variables: NEXT_PUBLIC_SUPABASE_URL
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Gõ CREATE để xác nhận tạo gia đình THẬT'
+        required: true
+        default: ''
+      parent_email:
+        description: 'Email đăng nhập của phụ huynh (cùng email với Launcher)'
+        required: true
+      an_email:
+        description: 'Email đăng nhập của An (cùng email với Launcher)'
+        required: true
+      nguyen_email:
+        description: 'Email đăng nhập của Nguyên (cùng email với Launcher)'
+        required: true
+      tutor_an_email:
+        description: 'Email gia sư của An'
+        required: true
+      tutor_an_name:
+        description: 'Tên hiển thị gia sư của An (ví dụ: Cô Lan)'
+        required: true
+      tutor_nguyen_email:
+        description: 'Email gia sư của Nguyên'
+        required: true
+      tutor_nguyen_name:
+        description: 'Tên hiển thị gia sư của Nguyên (ví dụ: Thầy Minh)'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: create-real-family
+  cancel-in-progress: false
+
+jobs:
+  create:
+    if: ${{ inputs.confirm == 'CREATE' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check secrets are present (without printing them)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+        run: |
+          missing=""
+          for v in DATABASE_URL SUPABASE_SERVICE_ROLE_KEY NEXT_PUBLIC_SUPABASE_URL; do
+            test -n "${!v}" || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::missing:$missing"
+            echo "Thiếu:$missing — thêm ở Settings → Secrets and variables → Actions." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+      - name: Create the real family
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEW_ACCOUNT_TEMP_PASSWORD: ${{ secrets.NEW_ACCOUNT_TEMP_PASSWORD }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          # Inputs go through env (never interpolated into the shell script) and are validated by the script.
+          PARENT_EMAIL: ${{ inputs.parent_email }}
+          AN_EMAIL: ${{ inputs.an_email }}
+          NGUYEN_EMAIL: ${{ inputs.nguyen_email }}
+          TUTOR_AN_EMAIL: ${{ inputs.tutor_an_email }}
+          TUTOR_AN_NAME: ${{ inputs.tutor_an_name }}
+          TUTOR_NGUYEN_EMAIL: ${{ inputs.tutor_nguyen_email }}
+          TUTOR_NGUYEN_NAME: ${{ inputs.tutor_nguyen_name }}
+        run: |
+          set -uo pipefail
+          status=0
+          npm run db:create-family > /tmp/family.txt 2>&1 || status=$?
+          {
+            if [ "$status" -eq 0 ]; then
+              echo "## Gia đình THẬT"
+            else
+              echo "## Chưa tạo được gia đình THẬT"
+            fi
+            echo
+            echo '```'
+            grep -v -i "postgres://\|postgresql://\|sb_secret_\|eyJ" /tmp/family.txt | grep -v "^>" || true
+            echo '```'
+            echo
+            if [ "$status" -eq 0 ]; then
+              echo "Người **đã có tài khoản (dùng chung Launcher)**: đăng nhập như cũ, không đổi gì."
+              echo "Người **tạo mới**: đăng nhập bằng email trên, mật khẩu = giá trị secret NEW_ACCOUNT_TEMP_PASSWORD (nên đổi sau; trang đổi mật khẩu sẽ làm sau)."
+              echo
+              echo "Bước kế: Vercel → Production → đặt \`ALLOW_REAL_LEARNERS=true\` (Preview giữ \`false\`) rồi Redeploy; sau đó vào trang **Giao bài** để giao tuần đầu."
+            else
+              echo "Không có gì bị ghi vào database. Sửa theo dòng báo lỗi ở trên rồi chạy lại."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/family.txt | grep -v -i "postgres://\|postgresql://\|sb_secret_\|eyJ" || true
+          exit "$status"
+
+  not-confirmed:
+    if: ${{ inputs.confirm != 'CREATE' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          echo "Chưa tạo gì: ô xác nhận phải là CREATE." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
