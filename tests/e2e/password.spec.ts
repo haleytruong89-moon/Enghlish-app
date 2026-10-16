@@ -44,17 +44,17 @@ test("a signed-in user changes their own password and logs in with the new one",
   await expect(page.getByRole("heading", { level: 1, name: account.title })).toBeVisible();
 
   // validation first: too short, then two different entries
-  await page.getByLabel(account.newPassword).fill("short");
-  await page.getByLabel(account.confirmPassword).fill("short");
+  await page.getByLabel(account.newPassword, { exact: true }).fill("short");
+  await page.getByLabel(account.confirmPassword, { exact: true }).fill("short");
   await page.getByRole("button", { name: account.submit }).click();
   await expect(page.locator("#password-error")).toHaveText(account.errorShort);
-  await page.getByLabel(account.newPassword).fill(NEW_PASSWORD);
-  await page.getByLabel(account.confirmPassword).fill(`${NEW_PASSWORD}x`);
+  await page.getByLabel(account.newPassword, { exact: true }).fill(NEW_PASSWORD);
+  await page.getByLabel(account.confirmPassword, { exact: true }).fill(`${NEW_PASSWORD}x`);
   await page.getByRole("button", { name: account.submit }).click();
   await expect(page.locator("#password-error")).toHaveText(account.errorMismatch);
 
   // the real change
-  await page.getByLabel(account.confirmPassword).fill(NEW_PASSWORD);
+  await page.getByLabel(account.confirmPassword, { exact: true }).fill(NEW_PASSWORD);
   await page.getByRole("button", { name: account.submit }).click();
   await expect(page.locator("#password-done")).toHaveText(account.success);
 
