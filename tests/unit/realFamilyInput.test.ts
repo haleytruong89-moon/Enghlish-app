@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkTempPassword, MAX_NAME_LENGTH, validateRealFamilyInput } from "../../scripts/lib/realFamilyInput";
+import { checkSlotPasswords, MAX_NAME_LENGTH, passwordsFromEnv, PASSWORD_ENV, SLOTS, validateRealFamilyInput } from "../../scripts/lib/realFamilyInput";
 
 const good = {
   parentEmail: "bo.me@example.com",
@@ -52,16 +52,61 @@ describe("validateRealFamilyInput", () => {
   });
 });
 
-describe("checkTempPassword", () => {
-  it("is not needed when every account already exists", () => {
-    expect(checkTempPassword(undefined, 0)).toBeNull();
+describe("per-slot temporary passwords", () => {
+  const pw = {
+    parent: "parent-secret-001",
+    studentAn: "an-secret-0000002",
+    studentNguyen: "nguyen-secret-003",
+    tutorAn: "tutor-an-secret-04",
+    tutorNguyen: "tutor-nguyen-sec-5",
+  };
+
+  it("uses one secret name per slot", () => {
+    expect(SLOTS.map((s) => PASSWORD_ENV[s]).sort()).toEqual([
+      "NEW_PASSWORD_AN",
+      "NEW_PASSWORD_NGUYEN",
+      "NEW_PASSWORD_PARENT",
+      "NEW_PASSWORD_TUTOR_AN",
+      "NEW_PASSWORD_TUTOR_NGUYEN",
+    ]);
+    expect(passwordsFromEnv({ NEW_PASSWORD_AN: "x".repeat(12), NEW_PASSWORD_PARENT: "" })).toEqual({
+      parent: undefined,
+      studentAn: "x".repeat(12),
+      studentNguyen: undefined,
+      tutorAn: undefined,
+      tutorNguyen: undefined,
+    });
   });
-  it("is required, with at least 12 characters, when some account must be created", () => {
-    expect(checkTempPassword(undefined, 1)).toMatch(/NEW_ACCOUNT_TEMP_PASSWORD/);
-    expect(checkTempPassword("short", 2)).toMatch(/12/);
-    expect(checkTempPassword("exactly-12-ch", 2)).toBeNull();
+
+  it("needs nothing when every account already exists", () => {
+    expect(checkSlotPasswords({}, [])).toEqual([]);
   });
-  it("never echoes the password in its message", () => {
-    expect(checkTempPassword("short-secret", 1) ?? "").not.toContain("short-secret");
+
+  it("requires a secret only for the slots that must be created", () => {
+    const errors = checkSlotPasswords({ tutorAn: pw.tutorAn }, ["tutorAn", "tutorNguyen"]);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("NEW_PASSWORD_TUTOR_NGUYEN");
+    expect(checkSlotPasswords({ tutorAn: pw.tutorAn, tutorNguyen: pw.tutorNguyen }, ["tutorAn", "tutorNguyen"])).toEqual([]);
+  });
+
+  it("needs at least 12 characters for every provided secret", () => {
+    const errors = checkSlotPasswords({ tutorAn: "short", tutorNguyen: "exactly-12-ch" }, ["tutorAn", "tutorNguyen"]);
+    expect(errors).toEqual(["NEW_PASSWORD_TUTOR_AN phải có ít nhất 12 ký tự."]);
+    // a provided but unneeded short secret is also a mistake worth stopping for
+    expect(checkSlotPasswords({ parent: "tiny" }, [])).toHaveLength(1);
+  });
+
+  it("refuses any two provided secrets that are equal (even when one slot is not created)", () => {
+    const same = "the-same-password-1";
+    const errors = checkSlotPasswords({ tutorAn: same, tutorNguyen: same }, ["tutorAn", "tutorNguyen"]);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(/NEW_PASSWORD_TUTOR_AN và NEW_PASSWORD_TUTOR_NGUYEN/);
+    expect(checkSlotPasswords({ ...pw, parent: pw.tutorAn }, ["tutorAn"])).toHaveLength(1);
+    expect(checkSlotPasswords(pw, ["tutorAn"])).toEqual([]);
+  });
+
+  it("never echoes a password value in any message", () => {
+    const all = checkSlotPasswords({ tutorAn: "short-secret", tutorNguyen: "short-secret" }, ["tutorAn", "tutorNguyen", "parent"]).join("\n");
+    expect(all).not.toContain("short-secret");
   });
 });

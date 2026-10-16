@@ -1,4 +1,5 @@
 import type { ClientBase } from "pg";
+import { SLOT_LABEL, type Slot } from "./realFamilyInput";
 
 /**
  * The REAL family (is_test = false). Fixed ids so re-running changes nothing.
@@ -14,13 +15,7 @@ export const REAL_LEARNER_NGUYEN_ID = "f0000000-0000-4000-8000-00000000b001";
  */
 export const REAL_CONSENT_VERSION = "pilot-2026-10";
 
-export type RealFamilyUsers = {
-  parent: string;
-  tutorAn: string;
-  tutorNguyen: string;
-  studentAn: string;
-  studentNguyen: string;
-};
+export type RealFamilyUsers = Record<Slot, string>;
 
 export type RealFamilyNames = { tutorAn: string; tutorNguyen: string };
 
@@ -35,18 +30,15 @@ export const REAL_ACCOUNTS: Record<keyof RealFamilyUsers, { role: Role; displayN
   studentNguyen: { role: "student", displayName: "Nguyên", color: "#2F5D9E" },
 };
 
-const ROLE_LABEL: Record<keyof RealFamilyUsers, string> = {
-  parent: "phụ huynh",
-  tutorAn: "gia sư của An",
-  tutorNguyen: "gia sư của Nguyên",
-  studentAn: "An",
-  studentNguyen: "Nguyên",
-};
+const ROLE_LABEL = SLOT_LABEL;
 
 const LEARNERS = [
   { id: REAL_LEARNER_AN_ID, key: "studentAn", tutorKey: "tutorAn", alias: "An", track: "A", ref: "skillgrow:child:an", targetSet: "A-v1" },
   { id: REAL_LEARNER_NGUYEN_ID, key: "studentNguyen", tutorKey: "tutorNguyen", alias: "Nguyên", track: "B", ref: "skillgrow:child:nguyen", targetSet: "B-v1" },
 ] as const;
+
+/** Target sets the real learners are given at creation (published by migration 0006). */
+export const REAL_TARGET_SETS: readonly string[] = LEARNERS.map((l) => l.targetSet);
 
 export type RealFamilyResult = {
   familyId: string;
@@ -54,7 +46,11 @@ export type RealFamilyResult = {
   members: Record<keyof RealFamilyUsers, string>;
   /** Rows written by THIS run (0 on an idempotent re-run). */
   inserted: number;
+  /** Things the run deliberately left alone because they already have a history (Vietnamese, for the summary). */
+  kept: string[];
 };
+
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /**
  * Read-only checks. Throws (with a Vietnamese message, no emails) when the real family cannot be created or
@@ -96,6 +92,11 @@ export async function checkRealFamilyConflicts(client: ClientBase, users: Partia
       [l.id],
     );
     const bound = learner.rows[0]?.user_id;
+    if (learner.rowCount && !bound) {
+      throw new Error(
+        `Hồ sơ học sinh của ${ROLE_LABEL[l.key]} đã có nhưng chưa gắn với tài khoản học sinh nào — dừng, cần sửa tay (không qua công cụ này).`,
+      );
+    }
     if (learner.rowCount && bound && users[l.key] && bound !== users[l.key]) {
       throw new Error(`${ROLE_LABEL[l.key]} đã gắn với một tài khoản khác — dừng, không đổi người.`);
     }
@@ -127,6 +128,7 @@ export async function createRealFamily(
   try {
     await checkRealFamilyConflicts(client, users);
     let inserted = 0;
+    const kept: string[] = [];
     const count = (n: number | null) => {
       inserted += n ?? 0;
     };
@@ -172,27 +174,42 @@ export async function createRealFamily(
       );
     }
 
-    // Target sets (S1). The function does nothing when the set is already current; count rows to know.
+    // Target sets (S1). Assigned only to a learner with NO target_sets row at all: a re-run must never move a learner
+    // back to A-v1/B-v1 after a later set (e.g. B-v2) was assigned on purpose.
     for (const l of LEARNERS) {
-      const before = await client.query<{ n: number }>(
-        "select count(*)::int as n from english.target_sets where learner_id = $1",
+      const current = await client.query<{ definition_id: string }>(
+        "select definition_id from english.target_sets where learner_id = $1 order by effective_from desc, seq desc limit 1",
         [l.id],
       );
-      await client.query("select english.eng_assign_target_set($1, $2)", [l.id, l.targetSet]);
-      const after = await client.query<{ n: number }>(
-        "select count(*)::int as n from english.target_sets where learner_id = $1",
-        [l.id],
-      );
-      inserted += (after.rows[0]?.n ?? 0) - (before.rows[0]?.n ?? 0);
+      const now = current.rows[0]?.definition_id;
+      if (!now) {
+        await client.query("select english.eng_assign_target_set($1, $2)", [l.id, l.targetSet]);
+        inserted += 1;
+      } else if (now !== l.targetSet) {
+        kept.push(`Bộ kỹ năng của ${l.alias}: không đổi (đã có lịch sử, đang theo bộ khác).`);
+      }
     }
 
-    const rels: [string, string, "parent" | "tutor"][] = [
-      [members.parent, REAL_LEARNER_AN_ID, "parent"],
-      [members.parent, REAL_LEARNER_NGUYEN_ID, "parent"],
-      [members.tutorAn, REAL_LEARNER_AN_ID, "tutor"],
-      [members.tutorNguyen, REAL_LEARNER_NGUYEN_ID, "tutor"],
+    const rels: [string, string, "parent" | "tutor", Slot][] = [
+      [members.parent, REAL_LEARNER_AN_ID, "parent", "parent"],
+      [members.parent, REAL_LEARNER_NGUYEN_ID, "parent", "parent"],
+      [members.tutorAn, REAL_LEARNER_AN_ID, "tutor", "tutorAn"],
+      [members.tutorNguyen, REAL_LEARNER_NGUYEN_ID, "tutor", "tutorNguyen"],
     ];
-    for (const [memberId, learnerId, relation] of rels) {
+    for (const [memberId, learnerId, relation, slot] of rels) {
+      // Parent: only when this parent has NO relationship row at all for the learner (active or ended).
+      // Tutor: only when the learner has NO tutor relationship row at all (active or ended, any tutor).
+      if (relation === "tutor") {
+        const any = await client.query("select 1 from english.relationships where learner_id = $1 and relation = 'tutor'", [learnerId]);
+        if (any.rowCount) {
+          const active = await client.query(
+            "select 1 from english.relationships where learner_id = $1 and relation = 'tutor' and member_id = $2 and valid_to is null",
+            [learnerId, memberId],
+          );
+          if (!active.rowCount) kept.push(`${capitalize(ROLE_LABEL[slot])}: không đổi (đã có lịch sử).`);
+          continue;
+        }
+      }
       count(
         (
           await client.query(
@@ -200,7 +217,7 @@ export async function createRealFamily(
              select $1, $2, $3
              where not exists (
                select 1 from english.relationships
-               where member_id = $1 and learner_id = $2 and relation = $3 and valid_to is null)`,
+               where member_id = $1 and learner_id = $2 and relation = $3)`,
             [memberId, learnerId, relation],
           )
         ).rowCount,
@@ -245,6 +262,7 @@ export async function createRealFamily(
       learners: { an: REAL_LEARNER_AN_ID, nguyen: REAL_LEARNER_NGUYEN_ID },
       members,
       inserted,
+      kept,
     };
   } catch (err) {
     await client.query("rollback");

@@ -7,10 +7,14 @@ name: Create real family
 #
 # Accounts are looked up by email (case-insensitive). The Launcher already has logins for the parent and the children:
 # type those emails and one login works for both apps — existing accounts are NOT changed (no password reset, no metadata
-# overwrite). Only emails with no account yet are created, with the temporary password in secret NEW_ACCOUNT_TEMP_PASSWORD.
-# Idempotent — running again changes nothing. A person who already belongs to another family stops the run.
+# overwrite). Only emails with no account yet are created, each with ITS OWN temporary password (one secret per person,
+# so one new tutor can never log in as another).
+# Idempotent — running again changes nothing. A person who already belongs to another family stops the run; so does a
+# different email for a place already filled. All checks are read-only and run before the first account is created.
 #
-# Secrets: DATABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEW_ACCOUNT_TEMP_PASSWORD (≥ 12 characters; needed only if some account is created)
+# Secrets: DATABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and one temporary password per person whose account must be CREATED
+#   (each ≥ 12 characters, all different from each other; a secret is needed only for people with no account yet):
+#   NEW_PASSWORD_PARENT, NEW_PASSWORD_AN, NEW_PASSWORD_NGUYEN, NEW_PASSWORD_TUTOR_AN, NEW_PASSWORD_TUTOR_NGUYEN
 # Variables: NEXT_PUBLIC_SUPABASE_URL
 
 on:
@@ -80,7 +84,11 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          NEW_ACCOUNT_TEMP_PASSWORD: ${{ secrets.NEW_ACCOUNT_TEMP_PASSWORD }}
+          NEW_PASSWORD_PARENT: ${{ secrets.NEW_PASSWORD_PARENT }}
+          NEW_PASSWORD_AN: ${{ secrets.NEW_PASSWORD_AN }}
+          NEW_PASSWORD_NGUYEN: ${{ secrets.NEW_PASSWORD_NGUYEN }}
+          NEW_PASSWORD_TUTOR_AN: ${{ secrets.NEW_PASSWORD_TUTOR_AN }}
+          NEW_PASSWORD_TUTOR_NGUYEN: ${{ secrets.NEW_PASSWORD_TUTOR_NGUYEN }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
           # Inputs go through env (never interpolated into the shell script) and are validated by the script.
           PARENT_EMAIL: ${{ inputs.parent_email }}
@@ -107,11 +115,16 @@ jobs:
             echo
             if [ "$status" -eq 0 ]; then
               echo "Người **đã có tài khoản (dùng chung Launcher)**: đăng nhập như cũ, không đổi gì."
-              echo "Người **tạo mới**: đăng nhập bằng email trên, mật khẩu = giá trị secret NEW_ACCOUNT_TEMP_PASSWORD (nên đổi sau; trang đổi mật khẩu sẽ làm sau)."
+              echo "Người **tạo mới**: đăng nhập bằng email trên, mật khẩu tạm = giá trị secret riêng của người đó (tên secret ghi ở dòng của người đó). Đăng nhập xong, bấm **Đổi mật khẩu** ở đầu trang và đặt mật khẩu của riêng mình."
+              echo "Dòng ghi *tạo ở lần chạy trước bởi công cụ này*: tài khoản đó đã được tạo ở một lần chạy bị lỗi giữa chừng — vẫn dùng mật khẩu tạm của lần chạy đó."
               echo
               echo "Bước kế: Vercel → Production → đặt \`ALLOW_REAL_LEARNERS=true\` (Preview giữ \`false\`) rồi Redeploy; sau đó vào trang **Giao bài** để giao tuần đầu."
             else
-              echo "Không có gì bị ghi vào database. Sửa theo dòng báo lỗi ở trên rồi chạy lại."
+              if grep -q "^CẢNH BÁO: đã tạo" /tmp/family.txt; then
+                echo "**Có tài khoản đăng nhập đã được tạo** trước khi gặp lỗi (xem dòng CẢNH BÁO ở trên); database của app (schema english) không bị ghi gì. Sửa theo dòng báo lỗi rồi chạy lại — các tài khoản đó sẽ được dùng lại, không tạo trùng."
+              else
+                echo "Chưa có tài khoản nào được tạo và chưa ghi gì vào database. Sửa theo dòng báo lỗi ở trên rồi chạy lại."
+              fi
             fi
           } >> "$GITHUB_STEP_SUMMARY"
           cat /tmp/family.txt | grep -v -i "postgres://\|postgresql://\|sb_secret_\|eyJ" || true

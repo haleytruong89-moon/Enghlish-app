@@ -10,6 +10,30 @@ export type RealFamilyInput = {
   tutorNguyenName: string;
 };
 
+/** The five people (slots) of the real family. */
+export type Slot = "parent" | "tutorAn" | "tutorNguyen" | "studentAn" | "studentNguyen";
+export const SLOTS: readonly Slot[] = ["parent", "tutorAn", "tutorNguyen", "studentAn", "studentNguyen"];
+
+export const SLOT_LABEL: Record<Slot, string> = {
+  parent: "phụ huynh",
+  studentAn: "An",
+  studentNguyen: "Nguyên",
+  tutorAn: "gia sư của An",
+  tutorNguyen: "gia sư của Nguyên",
+};
+
+/**
+ * One temporary-password secret PER slot. A shared password would let one new tutor log in as another, so every
+ * account that has to be created needs its own secret, and no two provided secrets may be equal.
+ */
+export const PASSWORD_ENV: Record<Slot, string> = {
+  parent: "NEW_PASSWORD_PARENT",
+  studentAn: "NEW_PASSWORD_AN",
+  studentNguyen: "NEW_PASSWORD_NGUYEN",
+  tutorAn: "NEW_PASSWORD_TUTOR_AN",
+  tutorNguyen: "NEW_PASSWORD_TUTOR_NGUYEN",
+};
+
 export type RealFamilyRawInput = { [K in keyof RealFamilyInput]?: string | undefined };
 
 const FIELD_LABELS: Record<keyof RealFamilyInput, string> = {
@@ -63,12 +87,39 @@ export function validateRealFamilyInput(raw: RealFamilyRawInput): ValidationResu
   return errors.length ? { ok: false, errors } : { ok: true, value };
 }
 
-/** The temporary password is only needed when at least one account has to be created. */
-export function checkTempPassword(password: string | undefined, accountsToCreate: number): string | null {
-  if (accountsToCreate === 0) return null;
-  if (!password) return "Cần secret NEW_ACCOUNT_TEMP_PASSWORD vì có tài khoản phải tạo mới.";
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    return `NEW_ACCOUNT_TEMP_PASSWORD phải có ít nhất ${MIN_PASSWORD_LENGTH} ký tự.`;
+export type SlotPasswords = Partial<Record<Slot, string | undefined>>;
+
+/** Read the per-slot secrets from the environment (empty string = not provided, as GitHub passes unset secrets). */
+export function passwordsFromEnv(env: Record<string, string | undefined>): SlotPasswords {
+  const out: SlotPasswords = {};
+  for (const slot of SLOTS) out[slot] = env[PASSWORD_ENV[slot]] || undefined;
+  return out;
+}
+
+/**
+ * Temporary passwords. A slot's secret is required only when that slot's account must be created; every provided
+ * secret must have at least 12 characters, and all provided secrets must differ from each other.
+ * Messages name the secret (env name), never its value.
+ */
+export function checkSlotPasswords(passwords: SlotPasswords, slotsToCreate: readonly Slot[]): string[] {
+  const errors: string[] = [];
+  for (const slot of slotsToCreate) {
+    if (!passwords[slot]) errors.push(`Cần secret ${PASSWORD_ENV[slot]} vì tài khoản của ${SLOT_LABEL[slot]} phải tạo mới.`);
   }
-  return null;
+  const provided = SLOTS.filter((s) => passwords[s]);
+  for (const slot of provided) {
+    if ((passwords[slot] as string).length < MIN_PASSWORD_LENGTH) {
+      errors.push(`${PASSWORD_ENV[slot]} phải có ít nhất ${MIN_PASSWORD_LENGTH} ký tự.`);
+    }
+  }
+  for (let i = 0; i < provided.length; i++) {
+    for (let j = i + 1; j < provided.length; j++) {
+      const a = provided[i] as Slot;
+      const b = provided[j] as Slot;
+      if (passwords[a] === passwords[b]) {
+        errors.push(`${PASSWORD_ENV[a]} và ${PASSWORD_ENV[b]} đang giống nhau — mỗi người một mật khẩu tạm riêng.`);
+      }
+    }
+  }
+  return errors;
 }

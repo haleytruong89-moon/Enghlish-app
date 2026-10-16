@@ -417,7 +417,7 @@ Phụ huynh chọn chạy sao lưu **hằng tuần** (02:17 sáng Chủ nhật) 
 
 ## S1b — Tạo gia đình THẬT (16/10/2026)
 
-**Trạng thái:** code + test xong (không có migration mới). **Chờ phụ huynh** bấm chạy workflow và đặt biến trên Vercel.
+**Trạng thái:** code + test xong (không có migration mới); đã sửa theo review Opus (mật khẩu riêng từng người, kiểm tra trước khi tạo tài khoản, chạy lại không đảo ngược thay đổi sau này, trang **Đổi mật khẩu**). **Chờ phụ huynh** bấm chạy workflow và đặt biến trên Vercel.
 
 ### Làm gì
 
@@ -426,17 +426,20 @@ Một workflow bấm tay **"Create real family"** (GitHub → Actions) tạo tro
 Quy tắc an toàn:
 
 - **Tài khoản đã có thì dùng lại** (tìm theo email, không phân biệt hoa/thường). Launcher đã có tài khoản của phụ huynh và 2 em → gõ đúng email đăng nhập Launcher thì **một tài khoản dùng cho cả hai app**; không đổi mật khẩu, không sửa gì của tài khoản đó.
-- Email chưa có tài khoản → tạo mới, mật khẩu tạm = secret `NEW_ACCOUNT_TEMP_PASSWORD`.
-- Ai đã thuộc gia đình khác trong app (kể cả gia đình THỬ) → **dừng**, chưa tạo gì (kể cả tài khoản mới). Không bao giờ chuyển người giữa các gia đình. Nếu chạy lại với một gia sư/phụ huynh/em *khác* người đã gán → cũng dừng (đổi gia sư làm riêng).
+- Email chưa có tài khoản → tạo mới, **mỗi người một mật khẩu tạm riêng** (mỗi người một secret, xem dưới). Dùng chung một mật khẩu thì gia sư này đăng nhập được vào tài khoản gia sư kia — nên công cụ **từ chối** nếu hai secret giống nhau.
+- **Mọi kiểm tra chạy trước khi tạo tài khoản đầu tiên** (chỉ đọc, không ghi gì): mật khẩu hợp lệ; database đã áp đủ migration và bộ A-v1/B-v1 đã công bố; không ai thuộc gia đình khác (kể cả gia đình THỬ); **email gõ vào khớp với người đã có chỗ** (nếu chỗ đó đã có người mà gõ email khác — kể cả email chưa có tài khoản — thì dừng, chưa tạo gì; đổi gia sư làm riêng); hồ sơ em đã có nhưng chưa gắn tài khoản học sinh → dừng.
+- **Chạy lại không đảo ngược thay đổi sau này:** bộ kỹ năng chỉ gán cho em chưa có bộ nào; quan hệ gia sư chỉ tạo khi em chưa có dòng gia sư nào (kể cả đã kết thúc). Nếu đã có lịch sử, công cụ giữ nguyên và ghi "không đổi (đã có lịch sử)".
+- Nếu lỗi xảy ra **sau khi đã tạo tài khoản đăng nhập**, kết quả ghi rõ "CẢNH BÁO: đã tạo N tài khoản …"; các tài khoản đó vẫn còn, chạy lại sẽ dùng lại (không tạo trùng). Database của app (schema `english`) không bị ghi nửa chừng.
+- Nếu bên Supabase có trigger trên `auth.users` ghi vào schema `public` (ví dụ Launcher tạo hồ sơ cho mỗi tài khoản mới), kết quả có dòng "Lưu ý: Launcher có thể tự tạo hồ sơ cho tài khoản mới". Công cụ **không** đụng vào `public`.
 - Tên hiển thị của em cố định "An" / "Nguyên" (chỉ hai tên này mới được gửi cho AI sau này).
 
 ### Phụ huynh cần làm
 
-1. **GitHub → Settings → Secrets and variables → Actions:** có sẵn `DATABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, biến `NEXT_PUBLIC_SUPABASE_URL`. Thêm secret **`NEW_ACCOUNT_TEMP_PASSWORD`** (≥ 12 ký tự) — *chỉ cần nếu có người chưa có tài khoản* (thường là 2 gia sư).
+1. **GitHub → Settings → Secrets and variables → Actions:** có sẵn `DATABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, biến `NEXT_PUBLIC_SUPABASE_URL`. Thêm **mật khẩu tạm riêng cho từng người phải tạo mới** (mỗi cái ≥ 12 ký tự, **đôi một khác nhau**): `NEW_PASSWORD_PARENT`, `NEW_PASSWORD_AN`, `NEW_PASSWORD_NGUYEN`, `NEW_PASSWORD_TUTOR_AN`, `NEW_PASSWORD_TUTOR_NGUYEN`. Chỉ cần secret của người **chưa có tài khoản** (thường là 2 gia sư: `NEW_PASSWORD_TUTOR_AN`, `NEW_PASSWORD_TUTOR_NGUYEN`). Không cần secret cho người đã có tài khoản Launcher.
 2. Đã áp `0001`–`0012` trên Supabase (xem các mục trên). Nên bấm chạy tay *Weekly backup* trước (thay đổi dữ liệu thật đầu tiên).
 3. **Actions → "Create real family" → Run workflow**, điền: `confirm` = `CREATE`; email đăng nhập (Launcher) của phụ huynh, An, Nguyên; email + tên hiển thị (vd "Cô Lan") của gia sư An và gia sư Nguyên. 5 email phải khác nhau.
-4. Mở trang kết quả (Summary): mỗi người có dòng "đã có tài khoản (dùng chung Launcher)" hoặc "tạo mới — mật khẩu tạm = secret NEW_ACCOUNT_TEMP_PASSWORD".
-5. **Gia sư lấy mật khẩu thế nào:** Supabase không gửi được email cho địa chỉ bất kỳ, nên phụ huynh **tự đưa** mật khẩu tạm (giá trị secret) cho từng gia sư — nên qua kênh riêng, không gửi nhóm. Trang đổi mật khẩu sẽ làm sau; đến lúc đó, nếu muốn đổi: Supabase → Authentication → Users → chọn người → đặt mật khẩu mới.
+4. Mở trang kết quả (Summary): mỗi người có một dòng cho biết **tài khoản tạo mới ở lần chạy này** (kèm tên secret là mật khẩu tạm của người đó), **tạo ở lần chạy trước bởi công cụ này** (lần trước lỗi giữa chừng; dùng mật khẩu tạm của lần đó), hoặc **đã có sẵn (dùng chung Launcher)**.
+5. **Gia sư lấy mật khẩu thế nào:** Supabase không gửi được email cho địa chỉ bất kỳ, nên phụ huynh **tự đưa** mật khẩu tạm (giá trị secret của đúng người đó) cho từng gia sư — nên qua kênh riêng, không gửi nhóm. Đăng nhập xong, mỗi người bấm **Đổi mật khẩu** (đầu trang, mọi vai trò) và đặt mật khẩu của riêng mình (≥ 12 ký tự, nhập 2 lần). Sau đó có thể xóa các secret `NEW_PASSWORD_*`.
 6. **Vercel → Settings → Environment Variables:** `ALLOW_REAL_LEARNERS=true` chỉ cho **Production** (Preview giữ `false`), rồi **Redeploy** Production. Không đặt `true` cho Preview.
 7. Đăng nhập bằng tài khoản phụ huynh trên Production: thấy An và Nguyên; vào **Giao bài** để giao tuần đầu (baseline). Dữ liệu thử vẫn nằm riêng trong "Gia đình thử" và không lẫn.
 
@@ -449,7 +452,11 @@ select r.relation, m.display_name, l.alias from english.relationships r
   where l.is_test = false order by l.alias, r.relation;                  -- 4 dòng
 ```
 
+### Trang "Đổi mật khẩu"
+
+`/account/password`, có liên kết **Đổi mật khẩu** ở đầu mọi trang (phụ huynh, gia sư, học sinh). Chỉ đổi mật khẩu của phiên đang đăng nhập (không hỏi mật khẩu cũ — phiên đang mở là bằng chứng), nhập mật khẩu mới 2 lần, ≥ 12 ký tự. Chạy ngay trên trình duyệt với phiên của chính người đó (khóa công khai + cookie phiên; không dùng service role, mật khẩu không đi qua máy chủ của app).
+
 ### Ghi chú
 
 - Cần quyết định #13 (văn bản thông báo đồng ý) trước khi bật AI; hiện chỉ ghi phiên bản.
-- Ngoài phạm vi: trang đổi mật khẩu, email mời, giao diện quản trị.
+- Ngoài phạm vi: email mời / quên mật khẩu, giao diện quản trị.

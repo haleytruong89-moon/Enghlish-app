@@ -1,6 +1,12 @@
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { listMigrations } from "../../scripts/lib/migrate";
+import {
+  checkPrerequisites,
+  checkRealFamilyEmails,
+  findAuthUsersTriggersWritingPublic,
+} from "../../scripts/lib/realFamilyPrecheck";
 import {
   checkRealFamilyConflicts,
   createRealFamily,
@@ -182,13 +188,142 @@ describe("S1b: create the real family", () => {
     expect((await rowsAs(db.client, "authenticated", users.parent, "select id from english.consents")).length).toBe(2);
     expect(await rowsAs(db.client, "authenticated", users.tutorAn, "select id from english.consents")).toEqual([]);
   });
+
+  it("a learner without a student account stops the run with a clear message", async () => {
+    await db.client.query("update english.learners set member_id = null where id = $1", [REAL_LEARNER_AN_ID]);
+    try {
+      await expect(checkRealFamilyConflicts(db.client, {})).rejects.toThrow(/chưa gắn với tài khoản học sinh/);
+      await expect(createRealFamily(db.client, users, NAMES)).rejects.toThrow(/chưa gắn với tài khoản học sinh/);
+    } finally {
+      await db.client.query("update english.learners set member_id = (select id from english.members where user_id = $2) where id = $1", [
+        REAL_LEARNER_AN_ID,
+        users.studentAn,
+      ]);
+    }
+  });
+
+  it("email pre-check: an email that differs from the person already in a slot is refused; the same email passes", async () => {
+    const emailOfUser = async (id: string) =>
+      ((await q<{ email: string }>("select email from auth.users where id = $1", [id]))[0]?.email ?? null)?.toLowerCase() ?? null;
+    const same = {
+      parent: "bo-me@example.com",
+      studentAn: "an@example.com",
+      studentNguyen: "nguyen@example.com",
+      tutorAn: "co-lan@example.com",
+      tutorNguyen: "thay-minh@example.com",
+    };
+    await expect(checkRealFamilyEmails(db.client, same, emailOfUser)).resolves.toBeUndefined();
+    // a brand-new email (no account anywhere) for each filled slot
+    for (const slot of Object.keys(same) as (keyof typeof same)[]) {
+      await expect(checkRealFamilyEmails(db.client, { ...same, [slot]: "new-person@example.com" }, emailOfUser)).rejects.toThrow(
+        /đã có người, nhưng email bạn nhập khác/,
+      );
+    }
+  });
+
+  it("re-run never moves a learner back to A-v1/B-v1 after a later target set was assigned", async () => {
+    // a later set for Track B (clone of B-v1; definitions are immutable once published, so this stays in this throwaway DB)
+    await db.client.query(
+      `insert into english.target_set_definitions(id, track_id, version, descriptor_version, catalogue_version, target_ids, tracking_only, source_hash, published_at)
+       select 'B-v2', track_id, 2, descriptor_version, catalogue_version, target_ids, tracking_only, 'test-hash-b-v2', now()
+       from english.target_set_definitions where id = 'B-v1'`,
+    );
+    await db.client.query("select english.eng_assign_target_set($1, 'B-v2')", [REAL_LEARNER_NGUYEN_ID]);
+    const before = await snapshot(REAL_FAMILY_ID);
+    const again = await createRealFamily(db.client, users, NAMES);
+    expect(again.inserted).toBe(0);
+    expect(again.kept).toContain("Bộ kỹ năng của Nguyên: không đổi (đã có lịch sử, đang theo bộ khác).");
+    expect(await snapshot(REAL_FAMILY_ID)).toEqual(before);
+    const current = await q<{ definition_id: string }>(
+      "select definition_id from english.target_sets where learner_id = $1 order by effective_from desc, seq desc limit 1",
+      [REAL_LEARNER_NGUYEN_ID],
+    );
+    expect(current[0]?.definition_id).toBe("B-v2");
+  });
+
+  it("re-run leaves a tutor relationship with history alone (ended, or a different tutor) and reports it", async () => {
+    await db.client.query(
+      "update english.relationships set valid_to = now() + interval '1 second' where learner_id = $1 and relation = 'tutor'",
+      [REAL_LEARNER_AN_ID],
+    );
+    const tutorRows = () =>
+      q("select member_id, valid_to is not null as ended from english.relationships where learner_id = $1 and relation = 'tutor'", [REAL_LEARNER_AN_ID]);
+    const before = await tutorRows();
+    expect(before).toHaveLength(1);
+
+    // same tutor, relationship ended: not re-created
+    const same = await createRealFamily(db.client, users, NAMES);
+    expect(same.inserted).toBe(0);
+    expect(same.kept).toContain("Gia sư của An: không đổi (đã có lịch sử).");
+    expect(await tutorRows()).toEqual(before);
+
+    // another tutor requested for the same learner: the member row is made, the history is still not touched
+    const newTutor = await createAuthUser(db.client, "co-moi@example.com");
+    const other = await createRealFamily(db.client, { ...users, tutorAn: newTutor }, NAMES);
+    expect(other.kept).toContain("Gia sư của An: không đổi (đã có lịch sử).");
+    expect(await tutorRows()).toEqual(before);
+    expect(await n("select count(*)::int as n from english.relationships where learner_id = $1 and relation = 'tutor'", [REAL_LEARNER_AN_ID])).toBe(1);
+  });
 });
 
-describe("S1b: CLI with the stub auth (reuses existing accounts, never touches them)", () => {
+describe("S1b: prerequisites and Launcher trigger pre-checks (read-only)", () => {
   let db: TestDb;
-  let test: Seeded;
+  beforeAll(async () => {
+    db = await createTestDb();
+  });
+  afterAll(async () => {
+    await db?.drop();
+  });
+  const versions = async () => (await listMigrations()).map((m) => m.version);
 
-  const env = (extra: Record<string, string> = {}): Record<string, string> => ({
+  it("refuses a database without the english schema or with migrations missing", async () => {
+    await expect(checkPrerequisites(db.client, await versions())).rejects.toThrow(/chưa áp đủ migration \(còn thiếu: 0001/);
+    await migrate(db.client);
+    await db.client.query("delete from english.schema_migrations where version = (select max(version) from english.schema_migrations)");
+    await expect(checkPrerequisites(db.client, await versions())).rejects.toThrow(/chưa áp đủ migration/);
+    await migrate(db.client);
+    await expect(checkPrerequisites(db.client, await versions())).resolves.toBeUndefined();
+  });
+
+  it("refuses when A-v1 / B-v1 are not published", async () => {
+    await db.client.query("alter table english.target_set_definitions disable trigger user");
+    try {
+      await db.client.query("update english.target_set_definitions set published_at = null where id = 'B-v1'");
+      await expect(checkPrerequisites(db.client, await versions())).rejects.toThrow(/B-v1 chưa được công bố/);
+    } finally {
+      await db.client.query("update english.target_set_definitions set published_at = now() where id = 'B-v1'");
+      await db.client.query("alter table english.target_set_definitions enable trigger user");
+    }
+    await expect(checkPrerequisites(db.client, await versions())).resolves.toBeUndefined();
+  });
+
+  it("reports triggers on auth.users that write to schema public, and ignores others", async () => {
+    expect(await findAuthUsersTriggersWritingPublic(db.client)).toEqual([]);
+    await db.client.query(`
+      create schema other_app;
+      create function other_app.harmless() returns trigger language plpgsql as $$ begin return new; end $$;
+      create trigger harmless_t after insert on auth.users for each row execute function other_app.harmless();`);
+    expect(await findAuthUsersTriggersWritingPublic(db.client)).toEqual([]);
+    await db.client.query(`
+      create function other_app.make_profile() returns trigger language plpgsql as $$
+      begin insert into public.audit_log(actor, action) values (new.id, 'new_user'); return new; end $$;
+      create trigger make_profile_t after insert on auth.users for each row execute function other_app.make_profile();`);
+    const found = await findAuthUsersTriggersWritingPublic(db.client);
+    expect(found.map((f) => f.trigger)).toEqual(["make_profile_t"]);
+  });
+});
+
+const PASSWORDS = {
+  NEW_PASSWORD_PARENT: "parent-secret-pw-001",
+  NEW_PASSWORD_AN: "an-secret-pw-0000002",
+  NEW_PASSWORD_NGUYEN: "nguyen-secret-pw-003",
+  NEW_PASSWORD_TUTOR_AN: "tutor-an-secret-pw-04",
+  NEW_PASSWORD_TUTOR_NGUYEN: "tutor-nguyen-secret-5",
+};
+const ALL_PASSWORD_VALUES = Object.values(PASSWORDS);
+
+function cliEnv(db: TestDb, extra: Record<string, string> = {}): Record<string, string> {
+  return {
     PATH: process.env.PATH ?? "",
     DATABASE_URL: db.url,
     PARENT_EMAIL: "Bo.Me@Example.com", // typed with capitals: the lookup is case-insensitive
@@ -198,11 +333,25 @@ describe("S1b: CLI with the stub auth (reuses existing accounts, never touches t
     TUTOR_AN_NAME: "Cô Lan",
     TUTOR_NGUYEN_EMAIL: "thay-minh@example.com",
     TUTOR_NGUYEN_NAME: "Thầy Minh",
-    NEW_ACCOUNT_TEMP_PASSWORD: "super-secret-temp-pw-123",
+    ...PASSWORDS,
     ...extra,
-  });
-  const run = (extra: Record<string, string> = {}) =>
-    spawnSync(TSX, ["scripts/create-real-family.ts", "--auth=stub"], { cwd: ROOT, env: env(extra) as NodeJS.ProcessEnv, encoding: "utf8" });
+  };
+}
+function runCli(db: TestDb, extra: Record<string, string> = {}) {
+  return spawnSync(TSX, ["scripts/create-real-family.ts", "--auth=stub"], { cwd: ROOT, env: cliEnv(db, extra) as NodeJS.ProcessEnv, encoding: "utf8" });
+}
+const noPasswordLeak = (r: { stdout: string; stderr: string }) => {
+  for (const v of ALL_PASSWORD_VALUES) {
+    expect(r.stdout).not.toContain(v);
+    expect(r.stderr).not.toContain(v);
+  }
+};
+
+describe("S1b: CLI with the stub auth (reuses existing accounts, never touches them)", () => {
+  let db: TestDb;
+  let test: Seeded;
+
+  const run = (extra: Record<string, string> = {}) => runCli(db, extra);
   const authRows = async () => (await db.client.query("select id, email from auth.users order by email")).rows;
 
   beforeAll(async () => {
@@ -223,6 +372,23 @@ describe("S1b: CLI with the stub auth (reuses existing accounts, never touches t
     expect(r.stderr).toMatch(/tên gia sư của An/);
   });
 
+  it("stops before creating any account when a needed password is missing, short or shared", async () => {
+    const before = await authRows();
+    const missing = run({ NEW_PASSWORD_TUTOR_NGUYEN: "" });
+    expect(missing.status).toBe(1);
+    expect(missing.stderr).toContain("NEW_PASSWORD_TUTOR_NGUYEN");
+    const short = run({ NEW_PASSWORD_NGUYEN: "short" });
+    expect(short.status).toBe(1);
+    expect(short.stderr).toMatch(/NEW_PASSWORD_NGUYEN phải có ít nhất 12/);
+    // one shared password for both tutors would let one log in as the other
+    const shared = run({ NEW_PASSWORD_TUTOR_NGUYEN: PASSWORDS.NEW_PASSWORD_TUTOR_AN });
+    expect(shared.status).toBe(1);
+    expect(shared.stderr).toMatch(/NEW_PASSWORD_TUTOR_AN và NEW_PASSWORD_TUTOR_NGUYEN đang giống nhau/);
+    for (const r of [missing, short, shared]) noPasswordLeak(r);
+    expect(await authRows()).toEqual(before);
+    expect(await db.client.query("select 1 from english.families where id = $1", [REAL_FAMILY_ID])).toHaveProperty("rowCount", 0);
+  });
+
   it("stops before creating any account when an existing login belongs to another family", async () => {
     const before = await authRows();
     const r = run({ PARENT_EMAIL: "PARENT@test.local" }); // the TEST family's parent login
@@ -239,10 +405,11 @@ describe("S1b: CLI with the stub auth (reuses existing accounts, never touches t
     const out = r.stdout + r.stderr;
     expect(out).toContain("Đã tạo gia đình THẬT");
     expect(out).toContain(REAL_CONSENT_VERSION);
-    expect(out).not.toContain("super-secret-temp-pw-123");
-    expect(out).toMatch(/Phụ huynh\s+bo\.me@example\.com\s+đã có tài khoản/);
-    expect(out).toMatch(/An\s+an@example\.com\s+đã có tài khoản/);
-    expect(out).toMatch(/Nguyên\s+nguyen@example\.com\s+tạo mới/);
+    noPasswordLeak(r);
+    expect(out).toMatch(/Phụ huynh\s+bo\.me@example\.com\s+đã có sẵn \(dùng chung Launcher\)/);
+    expect(out).toMatch(/An\s+an@example\.com\s+đã có sẵn \(dùng chung Launcher\)/);
+    expect(out).toMatch(/Nguyên\s+nguyen@example\.com\s+tài khoản tạo mới ở lần chạy này — mật khẩu tạm = secret NEW_PASSWORD_NGUYEN/);
+    expect(out).toMatch(/Gia sư của An\s+co-lan@example\.com\s+tài khoản tạo mới ở lần chạy này — mật khẩu tạm = secret NEW_PASSWORD_TUTOR_AN/);
 
     const after = await authRows();
     expect(after.length).toBe(before.length + 3);
@@ -252,12 +419,118 @@ describe("S1b: CLI with the stub auth (reuses existing accounts, never touches t
     expect(test.familyId).not.toBe(REAL_FAMILY_ID);
   });
 
-  it("running it again changes nothing", async () => {
+  it("running it again changes nothing (and needs no password: every account exists)", async () => {
     const before = await authRows();
-    const r = run();
+    const r = run(Object.fromEntries(Object.keys(PASSWORDS).map((k) => [k, ""])));
     expect(r.status, r.stderr).toBe(0);
     expect(r.stdout).toContain("không đổi gì");
+    expect(r.stdout).toMatch(/Gia sư của An\s+co-lan@example\.com\s+tạo bởi công cụ này|đã có sẵn/);
     expect(await authRows()).toEqual(before);
     expect((await db.client.query("select count(*)::int as n from english.audit_log where action = 'family.create_real'")).rows[0]).toEqual({ n: 1 });
+  });
+
+  it("refuses a NEW email for a slot already filled, and creates no auth user", async () => {
+    const before = await authRows();
+    for (const [name, email] of [
+      ["TUTOR_AN_EMAIL", "co-moi@example.com"],
+      ["TUTOR_NGUYEN_EMAIL", "thay-moi@example.com"],
+      ["PARENT_EMAIL", "me-moi@example.com"],
+      ["AN_EMAIL", "an-moi@example.com"],
+      ["NGUYEN_EMAIL", "nguyen-moi@example.com"],
+    ] as const) {
+      const r = run({ [name]: email });
+      expect(r.status, name).toBe(1);
+      expect(r.stderr, name).toMatch(/đã có người, nhưng email bạn nhập khác/);
+      noPasswordLeak(r);
+    }
+    expect(await authRows()).toEqual(before);
+    expect((await db.client.query("select count(*)::int as n from english.members where family_id = $1", [REAL_FAMILY_ID])).rows[0]).toEqual({ n: 5 });
+  });
+});
+
+describe("S1b: CLI on a database that is not ready", () => {
+  let db: TestDb;
+  beforeAll(async () => {
+    db = await createTestDb(); // stub only: no english schema
+  });
+  afterAll(async () => {
+    await db?.drop();
+  });
+
+  it("refuses before creating any account when migrations are missing", async () => {
+    const r = runCli(db);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/chưa áp đủ migration/);
+    expect(r.stderr).not.toMatch(/CẢNH BÁO/);
+    expect((await db.client.query("select count(*)::int as n from auth.users")).rows[0]).toEqual({ n: 0 });
+  });
+
+  it("refuses when the target sets A-v1 / B-v1 are not published", async () => {
+    await migrate(db.client);
+    await db.client.query("alter table english.target_set_definitions disable trigger user");
+    await db.client.query("update english.target_set_definitions set published_at = null where id = 'A-v1'");
+    const r = runCli(db);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/A-v1 chưa được công bố/);
+    expect((await db.client.query("select count(*)::int as n from auth.users")).rows[0]).toEqual({ n: 0 });
+  });
+});
+
+describe("S1b: CLI summary wording, Launcher trigger warning, failure after accounts were created", () => {
+  let db: TestDb;
+  let test: Seeded;
+  beforeAll(async () => {
+    db = await createTestDb();
+    await migrate(db.client);
+    test = await seed(db.client);
+    // The real Supabase column that holds user_metadata; the stub has none until a test adds it.
+    await db.client.query("alter table auth.users add column raw_user_meta_data jsonb");
+    // A tutor account made by an earlier run of this tool (not in the family yet) and a Launcher login without metadata.
+    await db.client.query(
+      "insert into auth.users(email, raw_user_meta_data) values ('co-lan@example.com', '{\"app\":\"learning-os\"}'), ('bo.me@example.com', '{}')",
+    );
+    // Like the Launcher's "profile for every new user" trigger.
+    await db.client.query(`
+      create function public.make_profile() returns trigger language plpgsql as $$
+      begin insert into public.audit_log(actor, action) values (new.id, 'new_user'); return new; end $$;
+      create trigger make_profile_t after insert on auth.users for each row execute function public.make_profile();`);
+  });
+  afterAll(async () => {
+    await db?.drop();
+  });
+  const authCount = async () => ((await db.client.query("select count(*)::int as n from auth.users")).rows[0] as { n: number }).n;
+
+  it("a failure AFTER accounts were created says so (and the database stays rolled back)", async () => {
+    await db.client.query("update english.learners set external_ref = 'skillgrow:child:an' where id = $1", [test.learners.an]);
+    const before = await authCount();
+    const r = runCli(db);
+    await db.client.query("update english.learners set external_ref = 'skillgrow:child:an:test' where id = $1", [test.learners.an]);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/^CẢNH BÁO: đã tạo 3 tài khoản đăng nhập/m);
+    expect(await authCount()).toBe(before + 3);
+    noPasswordLeak(r);
+    expect((await db.client.query("select count(*)::int as n from english.members where family_id = $1", [REAL_FAMILY_ID])).rows[0]).toEqual({ n: 0 });
+    // the accounts stay; the next run reuses them (no duplicates)
+    await db.client.query("delete from auth.users where email in ('an@example.com', 'nguyen@example.com', 'thay-minh@example.com')");
+  });
+
+  it("tells apart: new in this run / made by this tool earlier / existing Launcher login; warns about the Launcher trigger", async () => {
+    const r = runCli(db);
+    expect(r.status, r.stderr).toBe(0);
+    const out = r.stdout;
+    noPasswordLeak(r);
+    expect(out).toMatch(/Lưu ý: Launcher có thể tự tạo hồ sơ cho tài khoản mới \(trigger make_profile_t/);
+    expect(out).toMatch(/Phụ huynh\s+bo\.me@example\.com\s+đã có sẵn \(dùng chung Launcher\)/);
+    expect(out).toMatch(/Gia sư của An\s+co-lan@example\.com\s+tạo ở lần chạy trước bởi công cụ này \(metadata app=learning-os, chưa có trong gia đình\)/);
+    expect(out).toMatch(/Nguyên\s+nguyen@example\.com\s+tài khoản tạo mới ở lần chạy này/);
+    expect(out).toMatch(/Gia sư của Nguyên\s+thay-minh@example\.com\s+tài khoản tạo mới ở lần chạy này/);
+  });
+
+  it("on the next run the tool-made tutor is reported as already in the family", () => {
+    const r = runCli(db);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toMatch(/Gia sư của An\s+co-lan@example\.com\s+tạo bởi công cụ này ở lần chạy trước, đã có trong gia đình/);
+    expect(r.stdout).toContain("không đổi gì");
+    expect(r.stdout).not.toContain("Lưu ý: Launcher"); // nothing to create → nothing to warn about
   });
 });
