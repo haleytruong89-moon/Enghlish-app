@@ -63,7 +63,7 @@ npm run doctor            # kiểm tra cài đặt cloud 1 lần: bảng ✓/✗
 | Tình huống | Cách quay lại | Mất tối đa |
 |---|---|---|
 | Code hỏng sau khi deploy | Vercel → Deployments → chọn bản trước → **Promote to Production** (tức thì). Sau đó `git revert` PR lỗi để main sạch. | 0 dữ liệu |
-| Database lỗi / xóa nhầm | Tải artifact sao lưu đêm (GitHub Actions, giữ 30 ngày) → `age -d` bằng khóa offline → `pg_restore` vào project thử, đối chiếu, rồi mới khôi phục schema `english`. Migration chỉ thêm (expand/contract) nên không có bước "down". **Chưa gồm `auth.users`** — chờ phụ huynh quyết (PROGRESS). | ≤ ~24 giờ |
+| Database lỗi / xóa nhầm | Tải artifact sao lưu **hằng tuần** (sáng Chủ nhật; GitHub Actions, giữ 30 ngày ≈ 4 bản) → `age -d` bằng khóa offline → `pg_restore` vào project thử, đối chiếu, rồi mới khôi phục schema `english`. Migration chỉ thêm (expand/contract) nên không có bước "down". **Chưa gồm `auth.users`** — chờ phụ huynh quyết (PROGRESS). | ≤ ~7 ngày (phụ huynh chọn chạy hằng tuần 16/10) — trước thay đổi lớn: bấm chạy tay |
 | Ai quyết | **Phụ huynh** quyết và bấm. Claude chỉ chuẩn bị lệnh/kiểm tra; không tự khôi phục, không tự xóa dữ liệu. | — |
 
 ## Phân vai model (`.claude/agents/`)
