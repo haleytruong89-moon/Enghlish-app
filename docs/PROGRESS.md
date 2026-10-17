@@ -478,6 +478,9 @@ Kế hoạch: `docs/plans/s5b1-tutor-work.md` · mockup: canvas "Màn gia sư �
 
 Giả định chờ phụ huynh xác nhận khi duyệt PR: 2 ô nhận xét (lời nhắn cho em / ghi chú cho phụ huynh), câu bỏ trống =
 sai, bài làm trong buổi chỉ gia sư lưu, gắn nhãn khi chấm bài viết, ghi kết quả kiểm tra lại trong "Ghi buổi học".
+Thêm (17/10, sau review): ghi buổi học mới **luôn chia sẻ** cho phụ huynh; kiểm tra lại "ổn" đổi nhãn "Lặp lại" thành "Ổn" cho các dấu có ngày **trước** lần kiểm tra; `support_level` của ghi chú buổi học được để trống; đăng nhập tên ngắn có chênh lệch thời gian rất nhỏ giữa "tên có tồn tại" và "tên lạ" (cùng một câu báo lỗi, chấp nhận ở quy mô gia đình).
+
+**Mật khẩu của các em phải mạnh** (dài, không phải ngày sinh/tên): tên đăng nhập ngắn dễ đoán nên mật khẩu là lớp bảo vệ chính.
 
 ## S5b-1 PR A — Tên đăng nhập ngắn, ghi kết quả bài, ghi buổi học, điểm cần chú ý (17/10/2026)
 
@@ -486,8 +489,8 @@ Nhánh `feature/s5b1a-login-results` (chưa đẩy lên GitHub, chưa mở PR �
 ### Gia sư và phụ huynh làm được gì bây giờ
 
 - **Đăng nhập bằng tên ngắn:** `an`, `nguyen`, `giasu-an`, `giasu-nguyen` (hoặc vẫn gõ email như cũ). Ô duy nhất tên "Tên đăng nhập hoặc email". Tên lạ và mật khẩu sai báo **cùng một câu lỗi**. Email không bao giờ gửi xuống trình duyệt.
-- **Trang chủ = "Hôm nay"** (gia sư và phụ huynh): hai việc chính (**Ghi buổi học**, **Ghi kết quả bài**), mục **Cần chú ý** (điểm lặp lại ≥ 2 nguồn, câu sai chờ gắn nhãn, nhãn đến hạn kiểm tra lại), buổi học gần nhất, bài gần nhất. Phụ huynh chỉ thấy câu "chờ gắn nhãn" **sau 2 ngày** (gia sư gắn trước, phụ huynh dự phòng); việc lọc này làm ở máy chủ.
-- **Ghi kết quả bài** (`/learners/<em>/results/new`): *Đề có khung* — bấm các câu sai trên lưới (điểm từng phần, điểm tổng, thang của đề, "Sai theo nhãn"); *Nhập nhanh* — tên bài, tổng số câu, số đúng, số các câu sai, nhãn cho từng câu sai (để trống được → vào "Chờ gắn nhãn"); lần đầu/làm lại, có Hint không, ở nhà/trong buổi (**trong buổi chỉ gia sư**, phụ huynh không thấy lựa chọn này và database cũng chặn). Ô "+ nhãn khác" tạo nhãn riêng của gia đình. Mục **Chờ gắn nhãn** nằm ngay dưới. Sau khi lưu, form khóa lại tới khi bấm "Ghi bài khác" (tránh ghi trùng).
+- **Trang chủ = "Hôm nay"** (gia sư và phụ huynh): hai việc chính (**Ghi buổi học**, **Ghi kết quả bài**), mục **Cần chú ý** (điểm lặp lại ≥ 2 nguồn, câu sai chờ gắn nhãn, nhãn đến hạn kiểm tra lại), buổi học gần nhất, bài gần nhất. Câu "chờ gắn nhãn" **do chính phụ huynh ghi** hiện ngay cho phụ huynh; câu **do gia sư ghi** chỉ hiện cho phụ huynh **sau 2 ngày** (gia sư gắn trước, phụ huynh dự phòng); việc lọc này làm ở máy chủ.
+- **Ghi kết quả bài** (`/learners/<em>/results/new`): *Đề có khung* — bấm các câu sai trên lưới (điểm từng phần, điểm tổng, thang của đề, "Sai theo nhãn"); *Nhập nhanh* — tên bài, tổng số câu, số đúng, số các câu sai, nhãn cho từng câu sai (để trống được → vào "Chờ gắn nhãn"); *Bài kiểm tra | Bài luyện* (mặc định Bài luyện), lần đầu/làm lại, có Hint không, ở nhà/trong buổi (**trong buổi chỉ gia sư**, phụ huynh không thấy lựa chọn này và database cũng chặn). Ô "+ nhãn khác" tạo nhãn riêng của gia đình. Mục **Chờ gắn nhãn** nằm ngay dưới. Sau khi lưu, form khóa lại tới khi bấm "Ghi bài khác" (tránh ghi trùng).
 - **Ghi buổi học** (`/learners/<em>/notes/new`): ngày, hôm nay học, ≤ 3 nhãn cần củng cố (chip + tìm + thêm), lời nhắn cho em (≤ 500 ký tự), ghi chú cho phụ huynh (≤ 1000, em không thấy), khung "Đến hạn kiểm tra lại" (đã hỏi · ổn / còn sai / chưa hỏi). "Còn sai" đưa nhãn trở lại danh sách cần chú ý. Gia sư **hoặc** phụ huynh ghi được; luôn chia sẻ cho phụ huynh.
 - **Điểm cần chú ý** (`/learners/<em>/weak`): bảng nhãn × nguồn (Bài kiểm tra / Buổi học / Bài viết / Bài luyện) + trạng thái Lặp lại / Theo dõi / Ổn; chọn 4 tuần / 8 tuần / từ đầu; bấm tên nhãn xem dòng thời gian và hạn kiểm tra lại. Hạn kiểm tra lại = lần gần nhất + số ngày của chính sách đánh giá (AP-0.2-pilot: 14), **đọc từ database, không viết cứng**.
 - **Nhãn cho bài viết** ngay trên màn duyệt bài (chỉ bài Viết / Sửa bài; tối đa 3 nhãn, đã lưu thì không bỏ được).
@@ -525,12 +528,12 @@ Nhánh `feature/s5b1a-login-results` (chưa đẩy lên GitHub, chưa mở PR �
 ### Đối chiếu với plan — chỗ khác và vì sao (cần Opus/phụ huynh xem)
 
 - **Chưa có thẻ "Giao bài" và danh sách "Bài luyện đang mở"** trên Hôm nay, và **chưa có "Bài nào"** (chọn bài đã giao) / ảnh em gửi bên cạnh "Nhập nhanh": thuộc PR B. Hiện chỉ có "Bài trên giấy / bài link (ghi tay)".
-- **Nguồn của dấu nhãn:** đề có khung → `test` (Bài kiểm tra); nhập nhanh → `practice` (Bài luyện). Plan chưa nói rõ; chọn như vậy vì khung đề = đề đầy đủ.
+- **Nguồn của dấu nhãn:** đề có khung → luôn `test` (Bài kiểm tra); nhập nhanh → gia sư/phụ huynh chọn *Bài kiểm tra | Bài luyện* (mặc định Bài luyện), lưu ở cột mới `results.source` (có ràng buộc: bài có khung chỉ được là `test`).
 - `lesson_notes.support_level` được nới "không bắt buộc" (ghi buổi học mới không có ô này); hàm cũ vẫn truyền giá trị, ràng buộc giá trị hợp lệ giữ nguyên.
 - Ghi buổi học (mới) **luôn chia sẻ** với phụ huynh vì có ô "ghi chú cho phụ huynh".
-- Quy tắc "phụ huynh chỉ thấy câu chờ gắn nhãn sau 2 ngày" là **quy tắc giao diện/máy chủ**, không phải database (plan ghi vậy): phụ huynh vẫn gắn được nhãn nếu gọi trực tiếp API.
+- Quy tắc "phụ huynh chỉ thấy câu chờ gắn nhãn của **gia sư** sau 2 ngày" là **quy tắc giao diện/máy chủ**, không phải database (plan ghi vậy): phụ huynh vẫn gắn được nhãn nếu gọi trực tiếp API. Câu phụ huynh tự ghi thì thấy ngay.
 - Hàm ghi thêm cột `marked_on` (ngày của sự việc) và `title`/`assignment_id` ở bảng kết quả so với bản phác trong plan, để "đến hạn kiểm tra lại" tính theo ngày thật.
-- Nhãn riêng của gia đình có key bắt đầu `x-` (tạo ở máy chủ từ tên) nên không bao giờ đụng nhãn có sẵn.
+- Nhãn riêng của gia đình có key `x-<tên rút gọn>-<5 ký tự ngẫu nhiên>` (máy chủ tạo phần đầu, database thêm đuôi ngẫu nhiên) nên không bao giờ đụng nhãn có sẵn hay nhãn của gia đình khác.
 - Số migration kế tiếp cho nội dung cấu hình mới (`npm run gen:config -- --new`) giờ là **0016**.
 - Trong môi trường này không có Docker/Supabase nên **chưa chạy được e2e và chưa mở trang thật**; đã có `next build` xanh, test database và test render. E2E chạy trong CI.
 
@@ -538,3 +541,20 @@ Nhánh `feature/s5b1a-login-results` (chưa đẩy lên GitHub, chưa mở PR �
 
 - PR B (`feature/s5b1b-practice-files`): `0016` (bucket `english-work`, `files`, `assignments`, `submissions`), màn Giao bài, màn Bài luyện của em, ảnh kết quả bên cạnh "Nhập nhanh", thẻ Giao bài + danh sách bài đang mở trên Hôm nay.
 - S7 (trạng thái, đề xuất bậc) **không được đọc** `results` / `tag_marks` / `recheck_events` làm bằng chứng.
+
+### Sửa theo review Opus của PR A (17/10/2026)
+
+Vì `0013`–`0015` chưa áp lên database thật nên sửa **ngay trong file** (không thêm migration mới). Đổi so với plan:
+
+- **Nhãn riêng (MAJOR):** key = `x-<tên rút gọn>-<5 ký tự ngẫu nhiên>`, **duy nhất toàn hệ thống** (`unique(track_id, key)`). Plan viết "key sinh từ tên" và chỉ unique theo gia đình — đổi vì key trùng giữa 2 gia đình làm lộ nhãn của gia đình khác qua lỗi 409. Chống tạo trùng **trong một gia đình** bằng chỉ mục riêng trên tên đã chuẩn hóa (chỉ cho nhãn còn dùng; nhãn đã ngưng dùng + tên giống = nhãn mới). Tạo cùng tên lần hai trong gia đình trả lại nhãn đang có, không tạo thêm.
+- **Thay thế một kết quả (`supersedes_id`) (MAJOR):** chỉ **chính người đã ghi**, cùng em, mới thay được; kết quả "trong buổi" còn cần gia sư đang có quan hệ với em. Phụ huynh không thay được kết quả lớp của gia sư; thành viên khác cũng không.
+- **Lần đầu trùng (MAJOR):** với đề có khung, một em chỉ có **một** kết quả "lần đầu" còn hiệu lực cho mỗi họ khung (mọi phiên bản khung), trừ khi bản mới thay bản cũ. Trả 409 với câu "Bài này đã được ghi lần đầu — chọn “Làm lại” hoặc sửa bản đã ghi".
+- **Hạn kiểm tra lại (MAJOR):** `last_recheck` và danh sách nhãn bỏ qua các lần kiểm tra thuộc **ghi chú đã bị thay**; kiểm tra lại được tính theo **ngày của buổi học** (`session_date`), và một ghi chú không được vừa đánh "cần củng cố" vừa "ổn" cho cùng một nhãn.
+- **Cột mới `results.source`** (`test` / `practice`) cho Nhập nhanh, xem trên.
+- **Gắn nhãn cho bài viết trong buổi / bài kiểm tra trực tiếp** (`eng_tag_episode`): chỉ gia sư (D15).
+- **Ghi chú cũ (v1) không thay được ghi chú mới (v2)** — chặn cả ở máy chủ lẫn trong database. Vì `eng_write_lesson_note` (v1) được tạo lại trong `0014` (thêm đúng một kiểm tra), không sửa `0010`; có test so từng dòng như hàm xóa dữ liệu.
+- **Xóa dữ liệu một em** nay cũng xóa dòng tên đăng nhập của em đó (`login_names`), và biên nhận ghi số dòng.
+- `eng_valid_item_list` chỉ còn quyền cho `service_role` (đã thu lại của `authenticated`).
+- `npm run db:seed-dev`: nếu tên `thu-*` đang gắn với tài khoản khác thì **cảnh báo và bỏ qua tên đó** (các phần khác vẫn tạo), không làm hỏng cả lần seed. Gia đình THẬT vẫn dừng hẳn như trước.
+- Giao diện: "Chờ gắn nhãn" lưu từng phần và tự tải lại; "Bài gần nhất" không lấy bài đã bị thay; thẻ Hôm nay không hiện một nhãn hai lần (lặp lại ưu tiên hơn đến hạn); chữ thay thế khi nhãn lạ lấy từ `fallbackLabels`.
+- Không chạy được e2e ở đây (không Docker/Supabase); `tests/e2e/tutorWork.spec.ts` chỉ được liệt kê (`--list`), CI sẽ chạy.

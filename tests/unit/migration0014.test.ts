@@ -24,6 +24,12 @@ describe("0014_tutor_work.sql", () => {
   const sql = read("0014_tutor_work.sql");
   const code = sql.split("\n").filter((l) => !l.trim().startsWith("--")).join("\n");
 
+  it("eng_valid_item_list is a helper: revoked from everyone, then granted to service_role only", () => {
+    expect(code).toContain("revoke execute on function english.eng_valid_item_list(int[], int) from public, anon, authenticated, service_role;");
+    expect(code).toContain("grant execute on function english.eng_valid_item_list(int[], int) to service_role;");
+    expect(code).not.toMatch(/grant execute on function english\.eng_valid_item_list[^;]*authenticated/);
+  });
+
   it("eng_purge_learner keeps EVERY line of the 0010 version (0014 only adds), and deletes the new tables before lesson_notes and learners", () => {
     const old = fnText(read("0010_review.sql"), "eng_purge_learner", PURGE_END);
     const now = fnText(sql, "eng_purge_learner", PURGE_END);
