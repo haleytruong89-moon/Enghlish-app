@@ -84,10 +84,11 @@ describe("migrations", () => {
       [
         "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
         "app_errors", "artifact_versions", "assessment_policies", "assistance_events", "attempt_auto_checks",
-        "attempts", "audit_log", "catalogue_versions", "consents", "dimensions", "episodes", "exposure_log",
+        "attempts", "audit_log", "catalogue_versions", "consents", "dimensions", "episodes", "error_tags", "exposure_log",
         "families", "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "lesson_notes", "login_names", "members",
-        "observations", "relationships", "schema_migrations", "source_transcripts", "sources", "target_set_definitions",
-        "target_sets", "targets", "template_item_keys", "template_step_sources", "tracks", "validation_decisions", "working_drafts",
+        "observations", "recheck_events", "relationships", "results", "schema_migrations", "source_transcripts", "sources", "tag_marks",
+        "target_set_definitions", "target_sets", "targets", "template_item_keys", "template_step_sources", "test_frames", "tracks",
+        "validation_decisions", "working_drafts",
       ],
     );
     for (const r of rows) expect(r.relrowsecurity, r.relname).toBe(true);
@@ -116,10 +117,11 @@ describe("migrations", () => {
     expect(readable).toEqual([
       "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
       "artifact_versions", "assessment_policies", "assistance_events", "attempt_auto_checks", "attempts",
-      "audit_log", "catalogue_versions", "consents", "dimensions", "episodes", "exposure_log", "families",
+      "audit_log", "catalogue_versions", "consents", "dimensions", "episodes", "error_tags", "exposure_log", "families",
       "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "lesson_notes", "members", "observations",
-      "relationships", "source_transcripts", "sources", "target_set_definitions", "target_sets", "targets",
-      "template_item_keys", "template_step_sources", "tracks", "validation_decisions", "working_drafts",
+      "recheck_events", "relationships", "results", "source_transcripts", "sources", "tag_marks", "target_set_definitions",
+      "target_sets", "targets", "template_item_keys", "template_step_sources", "test_frames", "tracks", "validation_decisions",
+      "working_drafts",
     ]);
     expect(rows.some((r) => r.w)).toBe(false);
   });

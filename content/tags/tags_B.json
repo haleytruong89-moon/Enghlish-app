@@ -1,0 +1,16 @@
+{
+  "track": "B",
+  "note": "Tag set for Track B (Nguyên, B2→C1). Source: grammar points of the Destination C1 & C2 Progress Test answer key + two writing/speaking tags. Not part of the locked catalogue; seeded by migration 0015.",
+  "tags": [
+    { "key": "cau-dieu-kien-dao-ngu", "label_vi": "Câu điều kiện & đảo ngữ", "group_vi": "Ngữ pháp" },
+    { "key": "wish-would-rather", "label_vi": "Wish / would rather / had better", "group_vi": "Ngữ pháp" },
+    { "key": "modal-suy-doan", "label_vi": "Động từ khuyết thiếu (suy đoán, khả năng)", "group_vi": "Ngữ pháp" },
+    { "key": "bi-dong-nho-tuong-thuat", "label_vi": "Bị động, nhờ ai làm, tường thuật", "group_vi": "Ngữ pháp" },
+    { "key": "dang-tu", "label_vi": "Dạng từ", "group_vi": "Từ vựng" },
+    { "key": "tu-vung-ngu-canh", "label_vi": "Từ vựng theo ngữ cảnh", "group_vi": "Từ vựng" },
+    { "key": "cum-dong-tu", "label_vi": "Cụm động từ", "group_vi": "Từ vựng" },
+    { "key": "thanh-ngu", "label_vi": "Thành ngữ", "group_vi": "Từ vựng" },
+    { "key": "tu-noi-lap-luan", "label_vi": "Từ nối & lập luận", "group_vi": "Viết & nói" },
+    { "key": "phat-am", "label_vi": "Phát âm", "group_vi": "Viết & nói" }
+  ]
+}
