@@ -42,7 +42,7 @@ test.describe("parent: tracked skills of both learners", () => {
     test(`opens the page for ${alias} from the home card`, async ({ page }) => {
       await loginAs(page, "parent");
       const card = page.getByRole("listitem").filter({ hasText: learnerWithTrack(alias, track) });
-      await card.getByRole("link", { name: targetsPage.link }).click();
+      await card.getByRole("link", { name: targetsPage.link, exact: true }).click();
       await expect(page).toHaveURL(new RegExp(`${targetsUrl(who)}$`));
       await expectTargetsPage(page, who);
     });
@@ -76,7 +76,7 @@ test.describe("students never get this page", () => {
   ] as const) {
     test(`${key}: no link on the home page, own and other URL are 404`, async ({ page }) => {
       await loginAs(page, key);
-      await expect(page.getByRole("link", { name: targetsPage.link })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: targetsPage.link, exact: true })).toHaveCount(0);
       await notFound(page, targetsUrl(own));
       await notFound(page, targetsUrl(other));
     });
