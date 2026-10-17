@@ -31,6 +31,8 @@ export type SeedResult = {
   familyId: string;
   learners: { an: string; nguyen: string };
   members: Record<keyof SeedUsers, string>;
+  /** Short login names that could not be given (already used for another account): a warning, never a failure of the seed. */
+  loginWarnings: string[];
 };
 
 /**
@@ -74,13 +76,15 @@ export async function seedTestFamily(client: ClientBase, users: SeedUsers): Prom
       members[key] = (ins.rows[0] as { id: string }).id;
     }
 
-    await upsertLoginNames(
+    // A "thu-…" name that already belongs to another account is a warning (that name is skipped), never a failure of the whole seed.
+    const loginNames = await upsertLoginNames(
       client,
       (Object.keys(SEED_ACCOUNTS) as (keyof SeedUsers)[]).map((key) => ({
         label: SEED_ACCOUNTS[key].displayName,
         name: SEED_ACCOUNTS[key].loginName,
         userId: users[key],
       })),
+      { onConflict: "skip" },
     );
 
     const learners: [string, string, string, string, string, string][] = [
@@ -147,6 +151,7 @@ export async function seedTestFamily(client: ClientBase, users: SeedUsers): Prom
       familyId: TEST_FAMILY_ID,
       learners: { an: TEST_LEARNER_AN_ID, nguyen: TEST_LEARNER_NGUYEN_ID },
       members,
+      loginWarnings: loginNames.skipped,
     };
   } catch (err) {
     await client.query("rollback");

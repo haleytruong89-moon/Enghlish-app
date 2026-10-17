@@ -99,9 +99,9 @@ describe("S5b-1 step 1: login names (0013)", () => {
 
   it("upsert adds missing names, is idempotent, and never moves a name", async () => {
     const first = await upsertLoginNames(db.client, [{ label: "B", name: "bbb", userId: userB }, { label: "A", name: "abc", userId: userA }]);
-    expect(first).toEqual({ inserted: ["bbb"], existing: ["abc"] });
+    expect(first).toEqual({ inserted: ["bbb"], existing: ["abc"], skipped: [] });
     const again = await upsertLoginNames(db.client, [{ label: "B", name: "bbb", userId: userB }]);
-    expect(again).toEqual({ inserted: [], existing: ["bbb"] });
+    expect(again).toEqual({ inserted: [], existing: ["bbb"], skipped: [] });
     await expect(upsertLoginNames(db.client, [{ label: "B", name: "abc", userId: userB }])).rejects.toThrow(/đã được dùng/);
     expect((await q("select auth_user_id from english.login_names where login_name = 'abc'"))[0]).toEqual({ auth_user_id: userA });
   });
@@ -188,5 +188,29 @@ describe("S5b-1 step 1: create-real-family writes the login names", () => {
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(/đã có tên đăng nhập khác \("an"\)/);
     expect({ names: await names(), accounts: await accounts() }).toEqual(before);
+  });
+});
+
+describe("seeding the test family when a thu-* name is already taken by another account", () => {
+  let db: TestDb;
+  beforeAll(async () => {
+    db = await createTestDb();
+    await migrate(db.client);
+  });
+  afterAll(async () => {
+    await db?.drop();
+  });
+
+  it("is a warning: that one name is skipped, every other name and the family are still made", async () => {
+    const stranger = await createAuthUser(db.client, "stranger@test.local");
+    await db.client.query("insert into english.login_names(login_name, auth_user_id) values ('thu-an', $1)", [stranger]);
+    const s = await seed(db.client);
+    expect(s.loginWarnings).toHaveLength(1);
+    expect(s.loginWarnings[0]).toMatch(/thu-an/);
+    const rows = (await db.client.query<{ login_name: string }>("select login_name from english.login_names order by 1")).rows.map((r) => r.login_name);
+    expect(rows).toEqual(["thu-an", "thu-giasu-an", "thu-giasu-nguyen", "thu-nguyen", "thu-phuhuynh"]);
+    // thu-an still belongs to the stranger; An's own account got no name
+    expect((await db.client.query("select 1 from english.login_names where login_name = 'thu-an' and auth_user_id = $1", [stranger])).rowCount).toBe(1);
+    expect((await db.client.query("select 1 from english.learners where family_id = $1", [s.familyId])).rowCount).toBe(2);
   });
 });

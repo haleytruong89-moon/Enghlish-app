@@ -85,6 +85,7 @@ async function main() {
     const users = mode === "stub" ? await stubUsers(db) : await supabaseUsers();
     const result = await seedTestFamily(db, users);
     console.log("Đã tạo gia đình THỬ:", result.familyId);
+    for (const w of result.loginWarnings) console.log(`  Cảnh báo: ${w} (bỏ qua tên này, các phần khác vẫn tạo bình thường)`);
     for (const r of await assignDevInquiries(db, result)) {
       console.log(
         r.instanceId

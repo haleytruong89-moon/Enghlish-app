@@ -46,11 +46,19 @@ export async function checkLoginNames(client: ClientBase, entries: readonly Logi
   return errors.length ? { ok: false, errors } : { ok: true };
 }
 
-export type LoginNameResult = { inserted: string[]; existing: string[] };
+export type LoginNameResult = { inserted: string[]; existing: string[]; skipped: string[] };
 
-/** Insert the missing names; names already pointing at the same account are left as they are. Call after the accounts exist. */
-export async function upsertLoginNames(client: ClientBase, entries: readonly (LoginNameEntry & { userId: string })[]): Promise<LoginNameResult> {
-  const out: LoginNameResult = { inserted: [], existing: [] };
+/**
+ * Insert the missing names; names already pointing at the same account are left as they are.
+ * Call after the accounts exist. `onConflict: "throw"` (default, the real family) stops on a name or account that is already used
+ * for something else; `"skip"` (test data) leaves that name out and lists it in `skipped` as a warning text.
+ */
+export async function upsertLoginNames(
+  client: ClientBase,
+  entries: readonly (LoginNameEntry & { userId: string })[],
+  options: { onConflict?: "throw" | "skip" } = {},
+): Promise<LoginNameResult> {
+  const out: LoginNameResult = { inserted: [], existing: [], skipped: [] };
   for (const e of entries) {
     const res = await client.query(
       "insert into english.login_names(login_name, auth_user_id) values ($1, $2) on conflict do nothing",
@@ -62,7 +70,14 @@ export async function upsertLoginNames(client: ClientBase, entries: readonly (Lo
     }
     // Nothing inserted: it must be the very same pairing (the pre-check normally stops anything else; this is the safety net).
     const same = await client.query("select 1 from english.login_names where login_name = $1 and auth_user_id = $2", [e.name, e.userId]);
-    if (!same.rowCount) throw new Error(`Không gán được tên đăng nhập "${e.name}" cho ${e.label}: tên hoặc tài khoản đã được dùng cho việc khác.`);
+    if (!same.rowCount) {
+      const why = `Không gán được tên đăng nhập "${e.name}" cho ${e.label}: tên hoặc tài khoản đã được dùng cho việc khác.`;
+      if (options.onConflict === "skip") {
+        out.skipped.push(why);
+        continue;
+      }
+      throw new Error(why);
+    }
     out.existing.push(e.name);
   }
   return out;
