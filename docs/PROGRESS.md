@@ -460,3 +460,21 @@ select r.relation, m.display_name, l.alias from english.relationships r
 
 - Cần quyết định #13 (văn bản thông báo đồng ý) trước khi bật AI; hiện chỉ ghi phiên bản.
 - Ngoài phạm vi: email mời / quên mật khẩu, giao diện quản trị.
+
+## S5b — Bài của gia sư: quyết định của phụ huynh (16–17/10/2026)
+
+Kế hoạch: `docs/plans/s5b1-tutor-work.md` · mockup: canvas "Màn gia sư — S5b (mockup)".
+
+| # | Quyết định | Ngày |
+|---|---|---|
+| 1 | Mức **b**: insight theo nhãn ngữ pháp/từ vựng; thư viện nguồn + gợi ý để S5b-2 | 16/10 |
+| 2 | Cả gia sư và phụ huynh nhập; gắn nhãn câu sai: **gia sư trước, phụ huynh dự phòng** | 17/10 |
+| 3 | Làm S5b trước S6; S5b-1 gồm luôn đăng nhập bằng tên ngắn | 17/10 |
+| 4 | Gia sư dùng **máy tính**; **một thiết kế chung** cho gia sư của An và Nguyên (khác nhau chỉ bộ nhãn) | 17/10 |
+| 5 | Đề PDF: gia sư tải lên, em tải về. Bài link: em gửi **ảnh trang kết quả** (+2 câu: lần đầu? có Hint?), không phải gõ số câu sai | 17/10 |
+| 6 | **Chưa** dùng AI đọc ảnh kết quả (bổ sung sau nếu cần) | 17/10 |
+| 7 | File tải lên (ảnh, PDF) **chưa** cần sao lưu | 17/10 |
+| 8 | Tên đăng nhập: `an`, `nguyen`, `giasu-an`, `giasu-nguyen` → email `haley.truong89+…@gmail.com` (gia sư đánh số `…1`) | 17/10 |
+
+Giả định chờ phụ huynh xác nhận khi duyệt PR: 2 ô nhận xét (lời nhắn cho em / ghi chú cho phụ huynh), câu bỏ trống =
+sai, bài làm trong buổi chỉ gia sư lưu, gắn nhãn khi chấm bài viết, ghi kết quả kiểm tra lại trong "Ghi buổi học".
