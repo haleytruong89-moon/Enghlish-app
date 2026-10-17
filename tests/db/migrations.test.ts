@@ -87,7 +87,7 @@ describe("migrations", () => {
         "attempts", "audit_log", "catalogue_versions", "consents", "dimensions", "episodes", "error_tags", "exposure_log",
         "families", "files", "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "lesson_notes", "login_names", "members",
         "observations", "recheck_events", "relationships", "results", "schema_migrations", "source_transcripts", "sources", "submissions", "tag_marks",
-        "target_set_definitions", "target_sets", "targets", "template_item_keys", "template_step_sources", "test_frames", "tracks",
+        "target_set_definitions", "target_sets", "targets", "template_item_keys", "template_step_sources", "test_frames", "tracks", "upload_tickets",
         "validation_decisions", "working_drafts",
       ],
     );

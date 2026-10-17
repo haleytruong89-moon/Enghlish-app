@@ -63,7 +63,8 @@ export const retractBodySchema = z.strictObject({ reason: z.string().trim().max(
 const submissionCore = {
   client_id: clientId,
   attempt: z.enum(["first", "retry"]),
-  used_hint: z.boolean(),
+  /** Link assignments ask "did you press Hint?"; a PDF has no such question and sends null. */
+  used_hint: z.boolean().nullable(),
   link_url: httpsUrl.nullable().optional(),
   files: z.array(fileMetaSchema).max(MAX_FILES_PER_SUBMISSION).default([]),
 };

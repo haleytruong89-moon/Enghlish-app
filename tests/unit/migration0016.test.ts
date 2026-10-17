@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { MIGRATIONS_DIR } from "../../scripts/lib/migrate";
+import { UPLOAD_LINKS_PER_DAY } from "../../lib/storage/rules";
 
 const read = (file: string) => readFileSync(path.join(MIGRATIONS_DIR, file), "utf8");
 
@@ -40,7 +41,11 @@ describe("0016_practice_files.sql", () => {
     expect(code.match(/insert into storage\.buckets/g)).toHaveLength(1);
     expect(code).toContain("values ('english-work', 'english-work', false, 15728640, array['application/pdf', 'image/png', 'image/jpeg', 'image/webp'])");
     expect(code).not.toMatch(/create\s+policy[^;]*storage\./i);
-    expect(code).not.toMatch(/storage\.objects/);
+    // the ONLY thing 0016 does with storage.objects is to READ the policies of other people and warn about them (never create / change one)
+    expect([...code.matchAll(/storage\.objects/g)].length).toBeGreaterThan(0);
+    expect(code).toContain("raise warning 'storage.objects has policies without a bucket_id condition");
+    expect(code).not.toMatch(/(create|alter|drop)\s+policy[^;]*on\s+storage\./i);
+    expect(code).not.toMatch(/(insert\s+into|update|delete\s+from)\s+storage\.objects/i);
     expect(code).not.toMatch(/delete\s+from\s+storage|update\s+storage|drop\s+\w+\s+storage/i);
   });
 
@@ -59,7 +64,7 @@ describe("0016_practice_files.sql", () => {
     for (const m of code.matchAll(/create or replace function english\.(\w+)\(([\s\S]*?)\n\$\$;/g)) {
       expect(m[0], `${m[1]} search_path`).toMatch(/set search_path = ''/);
     }
-    for (const fn of ["eng_create_assignment", "eng_retract_assignment", "eng_submit_practice", "eng_assignment_overview"]) {
+    for (const fn of ["eng_create_assignment", "eng_retract_assignment", "eng_submit_practice", "eng_assignment_overview", "eng_issue_upload_ticket"]) {
       expect(code, fn).toMatch(new RegExp(`revoke execute on function english\\.${fn}\\([^)]*\\) from public, anon, authenticated;`));
       expect(code, fn).toMatch(new RegExp(`grant execute on function english\\.${fn}\\([^)]*\\) to service_role;`));
     }
@@ -71,21 +76,28 @@ describe("0016_practice_files.sql", () => {
   });
 
   it("the four new tables are append-only, have RLS with staff-only select, and nothing may write them directly", () => {
-    expect(code).toContain("array['files', 'assignments', 'assignment_events', 'submissions']");
-    for (const t of ["files", "assignments", "assignment_events", "submissions"]) {
+    expect(code).toContain("array['files', 'assignments', 'assignment_events', 'submissions', 'upload_tickets']");
+    for (const t of ["files", "assignments", "assignment_events", "submissions", "upload_tickets"]) {
       expect(code).toContain(`alter table english.${t} enable row level security;`);
     }
-    expect(code).toContain("revoke insert, update, delete, truncate on\n  english.files, english.assignments, english.assignment_events, english.submissions\n  from public, anon, authenticated, service_role;");
+    expect(code).toContain("revoke insert, update, delete, truncate on\n  english.files, english.assignments, english.assignment_events, english.submissions, english.upload_tickets\n  from public, anon, authenticated, service_role;");
     expect(code).not.toMatch(/to authenticated\s+using \(\s*true/i);
     // no policy mentions the student role: students have no select policy at all
     expect(code).not.toMatch(/role\s*=\s*'student'[^;]*create policy/i);
   });
 
   it("the student read functions return no tags, frame, result, answer key or note for the parent", () => {
-    const mine = code.slice(code.indexOf("function english.eng_my_practice()"), code.indexOf("function english.eng_my_practice_file"));
+    const mine = code.slice(code.indexOf("function english.eng_my_practice(p_assignment uuid default null)"), code.indexOf("function english.eng_my_practice_file"));
     for (const word of ["tag_keys", "frame_id", "result_id", "answer_file", "note_for_parent", "assigned_by"]) expect(mine, word).not.toContain(`'${word}'`);
     const review = code.slice(code.indexOf("function english.eng_my_review_points()"), code.indexOf("-- Quyền thực thi"));
     expect(review).not.toContain("note_for_parent");
+  });
+
+  it("the daily upload-link limit in the function is the number the app documents (UPLOAD_LINKS_PER_DAY)", () => {
+    const fn = fnText(sql, "eng_issue_upload_ticket", "\n$$;").join("\n");
+    expect(fn).toContain(`if v_n >= ${UPLOAD_LINKS_PER_DAY} then`);
+    expect(fn).toContain("interval '24 hours'");
+    expect(fn).toContain("(upload_limit)");
   });
 
   it("records its version last", () => {

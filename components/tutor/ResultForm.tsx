@@ -75,7 +75,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, canClass, tod
     if (!a) return;
     if (a.submission) {
       setAttempt(a.submission.attempt);
-      setUsedHint(a.submission.usedHint);
+      setUsedHint(a.submission.usedHint ?? false); // null = a PDF, no Hint question: stays "no" unless the grown-up says otherwise
     }
     if (a.frameId && frames.some((f) => f.id === a.frameId)) {
       setMode("frame");

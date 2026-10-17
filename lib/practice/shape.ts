@@ -29,7 +29,7 @@ const submissionRow = z.object({
   id: text,
   created_at: text,
   attempt: z.enum(["first", "retry"]),
-  used_hint: z.boolean(),
+  used_hint: z.boolean().nullable().optional().transform((v) => v ?? null),
   link_url: nullableText,
   by_role: z.enum(["student", "tutor", "parent"]),
   files: z.array(fileRow).default([]),
@@ -98,7 +98,7 @@ const studentRow = z.object({
     .object({
       submitted_at: text,
       attempt: z.enum(["first", "retry"]),
-      used_hint: z.boolean(),
+      used_hint: z.boolean().nullable().optional().transform((v) => v ?? null),
       file_count: z.number().int(),
       has_link: z.boolean(),
     })

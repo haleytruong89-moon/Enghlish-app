@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { TagChips } from "@/components/tutor/TagChips";
 import { useTags } from "@/components/tutor/useTags";
 import { assignPage, sourceLabels } from "@/lib/copy/vi";
-import { codeOf, practiceErrorText, uploadAll } from "@/lib/practice/client";
+import { codeOf, nextAttempt, practiceErrorText, uploadAll, type SendAttempt, type UploadCache } from "@/lib/practice/client";
 import { detectLinkSource } from "@/lib/practice/link";
 import { addDays } from "@/lib/inquiries/dates";
 import { prepareFile, type Prepared } from "@/lib/storage/clientUpload";
@@ -42,7 +42,8 @@ export function AssignForm({
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState<"upload" | "save" | null>(null);
-  const clientId = useRef<string>(crypto.randomUUID());
+  const attempt = useRef<SendAttempt | null>(null);
+  const uploaded = useRef<UploadCache>(new Map());
   const pdfInput = useRef<HTMLInputElement>(null);
   const answerInput = useRef<HTMLInputElement>(null);
 
@@ -66,7 +67,8 @@ export function AssignForm({
     setFrameId("");
     setError(null);
     setDone(false);
-    clientId.current = crypto.randomUUID();
+    attempt.current = null;
+    uploaded.current = new Map();
   }
 
   async function submit(e: React.FormEvent) {
@@ -78,7 +80,6 @@ export function AssignForm({
     if (kind === "pdf" && pdf?.mime !== "application/pdf") return setError(practiceErrorText("file_type", "staff"));
 
     const body: Record<string, unknown> = {
-      client_id: clientId.current,
       kind,
       title: title.trim(),
       tags: picked,
@@ -89,14 +90,15 @@ export function AssignForm({
       body.url = url.trim();
     } else {
       setBusy("upload");
-      const main = await uploadAll([pdf as Prepared], `/api/learners/${learnerId}/files`, { purpose: "assignment_pdf" });
+      // Files already uploaded on an earlier try stay in storage (see uploaded): only the missing ones are sent now.
+      const main = await uploadAll([pdf as Prepared], `/api/learners/${learnerId}/files`, { purpose: "assignment_pdf" }, uploaded.current);
       if (!main.ok) {
         setBusy(null);
         return setError(practiceErrorText(main.error, "staff"));
       }
       body.file = main.files[0];
       if (answer) {
-        const key = await uploadAll([answer], `/api/learners/${learnerId}/files`, { purpose: "answer_key" });
+        const key = await uploadAll([answer], `/api/learners/${learnerId}/files`, { purpose: "answer_key" }, uploaded.current);
         if (!key.ok) {
           setBusy(null);
           return setError(practiceErrorText(key.error, "staff"));
@@ -104,6 +106,9 @@ export function AssignForm({
         body.answer_file = key.files[0];
       }
     }
+    // A retry of the same work (a lost answer) reuses the client id; changing anything makes it new work.
+    attempt.current = nextAttempt(attempt.current, JSON.stringify(body));
+    body.client_id = attempt.current.id;
     setBusy("save");
     const r = await postJson(`/api/learners/${learnerId}/assignments`, body);
     setBusy(null);

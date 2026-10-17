@@ -18,7 +18,12 @@
 --  3. Một bài nộp = link và/hoặc 1-6 file của CHÍNH em đó; file không dùng lại cho bài nộp khác. Nộp lại = dòng mới thay dòng cũ.
 --  4. Bài đã rút (assignment_events) không hiện cho em và không nộp được.
 --  5. Gia sư / phụ huynh có thể "nộp thay" cho em (ghi rõ vai người nộp).
---  6. Ghi chỉ qua hàm security definer (service_role sau requireAccess; hàm kiểm lại người thao tác). Mọi bảng ở đây chỉ thêm.
+--  6. Mỗi em tối đa 60 link tải lên mỗi 24 giờ (bảng upload_tickets) - chặn việc tải file tràn lan; file tải lên mà không gửi sẽ thành "mồ côi"
+--     (xem npm run storage:orphans, docs/PROGRESS.md).
+--  7. Đề PDF không có câu hỏi "có bấm Hint không?": submissions.used_hint để NULL cho bài PDF (bắt buộc có giá trị cho bài link).
+--  8. Một bài giao chỉ có MỘT kết quả "lần đầu" còn hiệu lực (muốn sửa = thay bản cũ bằng supersedes_id), và bài đã rút không ghi kết quả được.
+--  9. Nếu storage.objects đã có policy KHÔNG nhắc tới bucket_id (của dự án dùng chung), migration chỉ cảnh báo (raise warning); xem npm run doctor.
+--  Ghi chỉ qua hàm security definer (service_role sau requireAccess; hàm kiểm lại người thao tác). Mọi bảng ở đây chỉ thêm.
 -- Idempotent. Chỉ THÊM (expand). Không dùng grant hàng loạt.
 
 -- Bucket -----------------------------------------------------------------------------------------------------------------------------
@@ -33,6 +38,29 @@ begin
     exception when others then
       -- Không để việc tạo kho làm hỏng cả migration: app tự tạo bucket này ở lần dùng đầu tiên nếu thiếu.
       raise warning 'english-work bucket was not created here (%): the app creates it on first use', sqlerrm;
+    end;
+  end if;
+end
+$$;
+
+-- Cảnh báo (không dừng migration): dự án Supabase này dùng chung với Study Launcher. Policy trên storage.objects được CỘNG với nhau (OR):
+-- chỉ một policy "cho mọi người đã đăng nhập đọc objects" mà KHÔNG nhắc tới bucket_id là đủ để người đó đọc cả bucket english-work
+-- bằng token của họ qua Storage API. Liệt kê các policy như vậy để phụ huynh xem (npm run doctor kiểm lại).
+do $$
+declare
+  v_names text;
+begin
+  if pg_catalog.to_regclass('storage.objects') is not null then
+    begin
+      select pg_catalog.string_agg(p.policyname || ' (' || p.cmd || ')', ', ' order by p.policyname) into v_names
+      from pg_catalog.pg_policies p
+      where p.schemaname = 'storage' and p.tablename = 'objects'
+        and (coalesce(p.qual, '') || ' ' || coalesce(p.with_check, '')) not like '%bucket_id%';
+      if v_names is not null then
+        raise warning 'storage.objects has policies without a bucket_id condition: %. They may let signed-in users reach every bucket, including english-work. Review them in Storage -> Policies (also "Other policies").', v_names;
+      end if;
+    exception when others then
+      raise warning 'could not read the policies of storage.objects (%): check Storage -> Policies by hand', sqlerrm;
     end;
   end if;
 end
@@ -96,12 +124,13 @@ create table if not exists english.assignment_events (
 create unique index if not exists assignment_events_retract_once on english.assignment_events(assignment_id) where kind = 'retracted';
 
 -- Bài em gửi (hoặc gia sư nộp thay). attempt / used_hint là lời KHAI của em ("lần đầu?", "có bấm Hint?"); gia sư xác nhận khi ghi kết quả.
+-- used_hint NULL = không áp dụng (đề PDF không có Hint).
 create table if not exists english.submissions (
   id uuid primary key default gen_random_uuid(),
   assignment_id uuid not null references english.assignments(id),
   learner_id uuid not null references english.learners(id),
   attempt text not null check (attempt in ('first', 'retry')),
-  used_hint boolean not null,
+  used_hint boolean,
   link_url text check (link_url is null or (pg_catalog.length(link_url) <= 2000 and link_url ~* '^https://[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:[0-9]{1,5})?([/?#][^[:space:]]*)?$')),
   -- Không có khóa ngoại cho từng phần tử mảng: eng_submit_practice kiểm từng file (của đúng em, đúng loại, chưa dùng).
   file_ids uuid[] not null default '{}' check (cardinality(file_ids) <= 6),
@@ -116,6 +145,15 @@ create table if not exists english.submissions (
 create unique index if not exists submissions_supersedes_once on english.submissions(supersedes_id) where supersedes_id is not null;
 create index if not exists submissions_assignment_idx on english.submissions(assignment_id, created_at desc);
 
+-- Mỗi link tải lên đã cấp = một dòng (chỉ để đếm giới hạn mỗi ngày của từng em; không chứa tên file hay đường dẫn).
+create table if not exists english.upload_tickets (
+  id uuid primary key default gen_random_uuid(),
+  learner_id uuid not null references english.learners(id),
+  member_id uuid not null,
+  created_at timestamptz not null default clock_timestamp()
+);
+create index if not exists upload_tickets_learner_idx on english.upload_tickets(learner_id, created_at desc);
+
 -- Kết quả bài (0014) nay có khóa ngoại tới bài được giao + phải cùng một em.
 do $$
 begin
@@ -129,9 +167,23 @@ create or replace function english.eng_check_result_assignment() returns trigger
 language plpgsql set search_path = ''
 as $$
 begin
-  if new.assignment_id is not null
-     and not exists (select 1 from english.assignments a where a.id = new.assignment_id and a.learner_id = new.learner_id) then
+  if new.assignment_id is null then
+    return new;
+  end if;
+  if not exists (select 1 from english.assignments a where a.id = new.assignment_id and a.learner_id = new.learner_id) then
     raise exception 'results: the assignment does not belong to this learner' using errcode = '23514';
+  end if;
+  -- Bài đã rút: không ghi kết quả (cả khi sửa kết quả cũ).
+  if exists (select 1 from english.assignment_events e where e.assignment_id = new.assignment_id and e.kind = 'retracted') then
+    raise exception 'results: this assignment was retracted (assignment_retracted)' using errcode = '23514';
+  end if;
+  -- Một bài giao chỉ có MỘT kết quả "lần đầu" còn hiệu lực; lần nữa phải là "làm lại" hoặc thay đúng bản đã ghi (supersedes_id).
+  if new.attempt = 'first' and exists (
+    select 1 from english.results r
+    where r.assignment_id = new.assignment_id and r.attempt = 'first'
+      and not exists (select 1 from english.results r2 where r2.supersedes_id = r.id)
+      and r.id is distinct from new.supersedes_id) then
+    raise exception 'results: this assignment already has a first attempt (duplicate_first)' using errcode = '23505';
   end if;
   return new;
 end
@@ -145,7 +197,7 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['files', 'assignments', 'assignment_events', 'submissions'] loop
+  foreach t in array array['files', 'assignments', 'assignment_events', 'submissions', 'upload_tickets'] loop
     execute format('drop trigger if exists %I on english.%I', t || '_forbid_mutation', t);
     execute format(
       'create trigger %I before update or delete on english.%I for each row execute function english.eng_forbid_mutation(%L)',
@@ -212,6 +264,44 @@ begin
   insert into english.files(id, family_id, learner_id, kind, path, mime, bytes, uploaded_by_member)
   values (v_id, p_family, p_learner, p_kind, p_family::text || '/' || coalesce(p_learner::text, 'shared') || '/' || v_id::text || '.' || v_ext, v_mime, v_bytes, p_by);
   return v_id;
+end
+$$;
+
+-- Cấp một "vé" tải lên cho em: đếm số link tải lên đã cấp trong 24 giờ qua; từ 60 trở lên thì từ chối (54000, thông báo có (upload_limit)).
+-- Chỉ gọi SAU requireAccess (service_role). Em: chỉ cho chính em; gia sư / phụ huynh: em trong phạm vi.
+create or replace function english.eng_issue_upload_ticket(p_learner uuid, p_by uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_learner english.learners%rowtype;
+  v_member english.members%rowtype;
+  v_n int;
+begin
+  if p_learner is null or p_by is null then
+    raise exception 'eng_issue_upload_ticket: learner and actor are required' using errcode = '22004';
+  end if;
+  select * into v_learner from english.learners l where l.id = p_learner for update;
+  if not found then
+    raise exception 'eng_issue_upload_ticket: learner not found' using errcode = 'P0002';
+  end if;
+  select * into v_member from english.members m where m.id = p_by;
+  if v_member.id is null then
+    raise exception 'eng_issue_upload_ticket: learner not found' using errcode = 'P0002';
+  end if;
+  if v_member.role = 'student' then
+    if v_learner.member_id is distinct from v_member.id then
+      raise exception 'eng_issue_upload_ticket: learner not found' using errcode = 'P0002';
+    end if;
+  elsif v_member.role not in ('tutor', 'parent') or not english.eng_actor_may_manage(p_by, p_learner) then
+    raise exception 'eng_issue_upload_ticket: this member may not upload for this learner' using errcode = '42501';
+  end if;
+  select pg_catalog.count(*) into v_n from english.upload_tickets t
+  where t.learner_id = p_learner and t.created_at > pg_catalog.clock_timestamp() - interval '24 hours';
+  if v_n >= 60 then
+    raise exception 'eng_issue_upload_ticket: too many upload links in the last 24 hours (upload_limit)' using errcode = '54000';
+  end if;
+  insert into english.upload_tickets(learner_id, member_id) values (p_learner, p_by);
+  return pg_catalog.jsonb_build_object('issued', v_n + 1);
 end
 $$;
 
@@ -407,8 +497,8 @@ declare
   v_file jsonb;
   v_fid uuid;
 begin
-  if p_assignment is null or p_by is null or p_attempt is null or p_used_hint is null then
-    raise exception 'eng_submit_practice: assignment, actor, attempt and hint are required' using errcode = '22004';
+  if p_assignment is null or p_by is null or p_attempt is null then
+    raise exception 'eng_submit_practice: assignment, actor and attempt are required' using errcode = '22004';
   end if;
   if p_client_id is null or pg_catalog.length(pg_catalog.btrim(p_client_id)) < 8 or pg_catalog.length(p_client_id) > 100 then
     raise exception 'eng_submit_practice: client_id must be 8..100 characters' using errcode = '22023';
@@ -447,6 +537,13 @@ begin
   if v_a.kind = 'pdf' and v_link is not null then
     raise exception 'eng_submit_practice: work on a PDF is sent as photos or files, not a link' using errcode = '22023';
   end if;
+  -- "Có bấm Hint không?" chỉ có ở bài link; đề PDF để NULL.
+  if v_a.kind = 'link' and p_used_hint is null then
+    raise exception 'eng_submit_practice: say whether Hint was used' using errcode = '22004';
+  end if;
+  if v_a.kind = 'pdf' and p_used_hint is not null then
+    raise exception 'eng_submit_practice: a PDF has no Hint question' using errcode = '22023';
+  end if;
   if v_link is null and pg_catalog.jsonb_array_length(v_files) = 0 then
     raise exception 'eng_submit_practice: send a screenshot, a photo or a link' using errcode = '23514';
   end if;
@@ -455,7 +552,7 @@ begin
   -- Gửi lại: cùng bài nộp (cùng bài, khai báo, link và tập file).
   select s.* into v_existing from english.submissions s where s.learner_id = v_a.learner_id and s.client_id = p_client_id;
   if found then
-    if v_existing.assignment_id <> p_assignment or v_existing.attempt <> p_attempt or v_existing.used_hint <> p_used_hint
+    if v_existing.assignment_id <> p_assignment or v_existing.attempt <> p_attempt or v_existing.used_hint is distinct from p_used_hint
        or v_existing.link_url is distinct from v_link or v_existing.submitted_by_member <> p_by
        or (select coalesce(array_agg(x order by x), '{}') from unnest(v_existing.file_ids) x)
           is distinct from (select coalesce(array_agg((f ->> 'id')::uuid order by (f ->> 'id')::uuid), '{}')
@@ -534,9 +631,9 @@ as $$
 $$;
 
 -- Đường đọc của học sinh ---------------------------------------------------------------------------------------------------------------
--- Chỉ bài của CHÍNH em, chỉ bài chưa rút. Không trả: nhãn, khung đề, kết quả, số câu sai, file đáp án. Có "reviewed" (đã được xem) để em biết
+-- Chỉ bài của CHÍNH em, chỉ bài chưa rút (tối đa 40 bài mới nhất; hỏi riêng một bài bằng p_assignment thì không bị giới hạn 40 - dùng để kiểm quyền tải lên / nộp bài). Không trả: nhãn, khung đề, kết quả, số câu sai, file đáp án. Có "reviewed" (đã được xem) để em biết
 -- không nộp lại được nữa - không kèm con số nào.
-create or replace function english.eng_my_practice() returns jsonb
+create or replace function english.eng_my_practice(p_assignment uuid default null) returns jsonb
 language sql stable security definer set search_path = ''
 as $$
   select coalesce(pg_catalog.jsonb_agg(t.obj order by t.created_at desc, t.id), '[]'::jsonb)
@@ -564,9 +661,10 @@ as $$
     join english.learners l on l.member_id = m.id
     join english.assignments a on a.learner_id = l.id
     where m.user_id = auth.uid() and m.role = 'student'
+      and (p_assignment is null or a.id = p_assignment)
       and not exists (select 1 from english.assignment_events e where e.assignment_id = a.id and e.kind = 'retracted')
     order by a.created_at desc, a.id
-    limit 40
+    limit case when p_assignment is null then 40 else 1 end
   ) t
 $$;
 
@@ -618,15 +716,17 @@ revoke execute on function english.eng_create_assignment(uuid, text, text, text,
 revoke execute on function english.eng_retract_assignment(uuid, text, uuid) from public, anon, authenticated;
 revoke execute on function english.eng_submit_practice(uuid, uuid, text, text, boolean, text, jsonb) from public, anon, authenticated;
 revoke execute on function english.eng_assignment_overview(uuid, uuid) from public, anon, authenticated;
+revoke execute on function english.eng_issue_upload_ticket(uuid, uuid) from public, anon, authenticated;
 grant execute on function english.eng_create_assignment(uuid, text, text, text, text[], date, uuid, jsonb, uuid, text) to service_role;
 grant execute on function english.eng_retract_assignment(uuid, text, uuid) to service_role;
 grant execute on function english.eng_submit_practice(uuid, uuid, text, text, boolean, text, jsonb) to service_role;
 grant execute on function english.eng_assignment_overview(uuid, uuid) to service_role;
+grant execute on function english.eng_issue_upload_ticket(uuid, uuid) to service_role;
 -- Hàm đọc của học sinh: CHỈ authenticated (người gọi nhận diện bằng auth.uid() bên trong hàm); không anon, không public, không service_role.
-revoke execute on function english.eng_my_practice() from public, anon, service_role;
+revoke execute on function english.eng_my_practice(uuid) from public, anon, service_role;
 revoke execute on function english.eng_my_practice_file(uuid) from public, anon, service_role;
 revoke execute on function english.eng_my_review_points() from public, anon, service_role;
-grant execute on function english.eng_my_practice() to authenticated;
+grant execute on function english.eng_my_practice(uuid) to authenticated;
 grant execute on function english.eng_my_practice_file(uuid) to authenticated;
 grant execute on function english.eng_my_review_points() to authenticated;
 
@@ -672,6 +772,7 @@ declare
   n_assignment_events int := 0;
   n_assignments int := 0;
   n_files int := 0;
+  n_upload_tickets int := 0;
   v_receipt jsonb;
 begin
   if p_learner_id is null then
@@ -733,6 +834,9 @@ begin
 
   delete from english.files fl where fl.learner_id = p_learner_id;
   get diagnostics n_files = row_count;
+
+  delete from english.upload_tickets ut where ut.learner_id = p_learner_id;
+  get diagnostics n_upload_tickets = row_count;
 
   delete from english.lesson_notes ln where ln.learner_id = p_learner_id;
   get diagnostics n_notes = row_count;
@@ -821,6 +925,7 @@ begin
       'assignment_events', n_assignment_events,
       'assignments', n_assignments,
       'files', n_files,
+      'upload_tickets', n_upload_tickets,
       'login_names', n_login_names,
       'learners', 1,
       'members', n_members
@@ -843,6 +948,7 @@ alter table english.files enable row level security;
 alter table english.assignments enable row level security;
 alter table english.assignment_events enable row level security;
 alter table english.submissions enable row level security;
+alter table english.upload_tickets enable row level security; -- không có policy: không ai đọc trực tiếp
 
 -- Phụ huynh / gia sư trong phạm vi của em. Học sinh: không bao giờ (em đọc qua eng_my_*). File dùng chung (learner_id NULL): nhân viên của gia đình.
 drop policy if exists files_select on english.files;
@@ -869,8 +975,9 @@ create policy submissions_select on english.submissions
 -- Grant theo từng bảng; ghi chỉ qua hàm security definer ở trên (và migration / script của chủ sở hữu).
 grant select on english.files, english.assignments, english.assignment_events, english.submissions to authenticated;
 revoke insert, update, delete, truncate on
-  english.files, english.assignments, english.assignment_events, english.submissions
+  english.files, english.assignments, english.assignment_events, english.submissions, english.upload_tickets
   from public, anon, authenticated, service_role;
-revoke all on english.files, english.assignments, english.assignment_events, english.submissions from anon;
+revoke all on english.files, english.assignments, english.assignment_events, english.submissions, english.upload_tickets from anon;
+revoke all on english.upload_tickets from authenticated; -- nhân viên cũng không đọc trực tiếp: chỉ để đếm giới hạn
 
 insert into english.schema_migrations(version) values ('0016') on conflict do nothing;

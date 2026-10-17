@@ -64,10 +64,11 @@ function makeStore(over: Partial<PracticeStore> = {}) {
       id === FILE_KEY ? { learnerId: AN, path: pathOf(AN, FILE_KEY, "pdf"), mime: "application/pdf", kind: "answer_key" } : null),
     overview: vi.fn(async (_l: string, a: string | null) =>
       [assignmentRow({}), assignmentRow({ id: A_PDF, kind: "pdf", url: null, source_key: null, title: "Đề 3", file: { id: FILE_OTHER, mime: "application/pdf", bytes: 100 } })].filter((r) => !a || r.id === a)),
+    issueUploadTicket: vi.fn(async () => ({ issued: 1 })),
     createAssignment: vi.fn(async () => ({ id: A_LINK, replayed: false })),
     retractAssignment: vi.fn(async () => ({ replayed: false })),
     submit: vi.fn(async () => ({ id: "s1", replayed: false })),
-    myPractice: vi.fn(async () => [studentRow({}), studentRow({ assignment_id: A_PDF, kind: "pdf", url: null, has_file: true, source_key: null, title: "Đề 3" })]),
+    myPractice: vi.fn(async (_assignmentId?: string) => [studentRow({}), studentRow({ assignment_id: A_PDF, kind: "pdf", url: null, has_file: true, source_key: null, title: "Đề 3" })]),
     myPracticeFile: vi.fn(async (a: string) => (a === A_PDF ? { file_id: FILE_OTHER, path: pathOf(AN, FILE_OTHER, "pdf"), mime: "application/pdf", title: "Đề 3" } : null)),
     myReviewPoints: vi.fn(async () => ({ session_date: "2026-10-15", message: "Cố lên", labels: ["Câu điều kiện"] })),
     ...over,
@@ -184,6 +185,50 @@ describe("retract", () => {
   });
 });
 
+describe("upload links: daily limit, ids come from the session", () => {
+  it("asks the database for a ticket (the child's own member id for a student) before making any link", async () => {
+    const s = makeStore();
+    const st = makeStorage();
+    expect((await handleStudentUploadUrl(deps("studentAn", s, st), { assignment_id: A_LINK, mime: "image/png", bytes: 10 })).status).toBe(201);
+    expect(s.issueUploadTicket).toHaveBeenCalledWith({ learnerId: AN, byMemberId: "m-studentAn" });
+    expect((await handleStaffUploadUrl(deps("tutorAn", s, st), AN, { purpose: "assignment_pdf", mime: "application/pdf", bytes: 10 })).status).toBe(201);
+    expect(s.issueUploadTicket).toHaveBeenLastCalledWith({ learnerId: AN, byMemberId: "m-tutorAn" });
+  });
+
+  it("past the daily limit the answer is 429 upload_limit and NO link is made", async () => {
+    const s = makeStore({
+      issueUploadTicket: vi.fn(async () => {
+        throw new ReviewDbError("54000", "eng_issue_upload_ticket: too many upload links in the last 24 hours (upload_limit)");
+      }),
+    });
+    const st = makeStorage();
+    const r = await handleStaffUploadUrl(deps("tutorAn", s, st), AN, { purpose: "assignment_pdf", mime: "application/pdf", bytes: 10 });
+    expect(r.status).toBe(429);
+    expect(r.body).toMatchObject({ error: "upload_limit" });
+    expect((await handleStudentUploadUrl(deps("studentAn", s, st), { assignment_id: A_LINK, mime: "image/png", bytes: 10 })).status).toBe(429);
+    expect(st.createUpload).not.toHaveBeenCalled();
+  });
+
+  it("the student's upload and send ask for THAT assignment by id, so more than 40 assignments cannot lock an older one out", async () => {
+    const s = makeStore();
+    await handleStudentUploadUrl(deps("studentAn", s, makeStorage()), { assignment_id: A_PDF, mime: "image/png", bytes: 10 });
+    expect(s.myPractice).toHaveBeenLastCalledWith(A_PDF);
+    await handleStudentSubmit(deps("studentAn", s, makeStorage()), { assignment_id: A_LINK, ...goodSubmit });
+    expect(s.myPractice).toHaveBeenLastCalledWith(A_LINK);
+  });
+});
+
+describe("the Hint question: link assignments only", () => {
+  it("a link needs true / false; a PDF needs null (the database refuses the other way round too)", async () => {
+    const d = deps("parent", makeStore(), makeStorage());
+    expect((await handleStaffSubmit(d, AN, A_LINK, { ...goodSubmit, used_hint: null })).body).toMatchObject({ error: "invalid_body" });
+    expect((await handleStaffSubmit(d, AN, A_LINK, { ...goodSubmit, used_hint: true })).status).toBe(201);
+    const pdfFile = { id: FILE_OTHER, mime: "application/pdf", bytes: 100 };
+    expect((await handleStaffSubmit(d, AN, A_PDF, { ...goodSubmit, used_hint: false, files: [pdfFile] })).body).toMatchObject({ error: "invalid_body" });
+    expect((await handleStaffSubmit(d, AN, A_PDF, { ...goodSubmit, used_hint: null, files: [pdfFile] })).status).toBe(201);
+  });
+});
+
 describe("staff submit on behalf of the student", () => {
   it("needs a link or a file, and checks the stored file", async () => {
     const s = makeStore();
@@ -200,7 +245,7 @@ describe("staff submit on behalf of the student", () => {
     expect((await handleStaffSubmit(d, AN, A_PDF, { client_id: "client-0001", attempt: "first", used_hint: false, link_url: "https://a.b/c", files: [] })).status).toBe(400);
     const pdfFile = { id: FILE_OTHER, mime: "application/pdf", bytes: 100 };
     expect((await handleStaffSubmit(d, AN, A_LINK, { ...goodSubmit, files: [pdfFile] })).body).toMatchObject({ error: "file_type" });
-    expect((await handleStaffSubmit(d, AN, A_PDF, { ...goodSubmit, files: [pdfFile] })).status).toBe(201);
+    expect((await handleStaffSubmit(d, AN, A_PDF, { ...goodSubmit, used_hint: null, files: [pdfFile] })).status).toBe(201);
   });
 
   it("an assignment of another child is 404; a retracted one is 404", async () => {
@@ -215,7 +260,7 @@ describe("open a stored file (staff)", () => {
     const st = makeStorage();
     const ok = await handleStaffFile(deps("tutorAn", makeStore(), st), FILE_NEW);
     expect(ok.status).toBe(200);
-    expect(st.createDownload).toHaveBeenCalledWith(pathOf(AN, FILE_NEW, "png"));
+    expect(st.createDownload).toHaveBeenCalledWith(pathOf(AN, FILE_NEW, "png"), undefined);
     expect((await handleStaffFile(deps("parent", makeStore(), makeStorage()), FILE_NEW)).status).toBe(200);
     expect((await handleStaffFile(deps("tutorNguyen", makeStore(), makeStorage()), FILE_NEW)).status).toBe(404);
     const st2 = makeStorage();
@@ -224,6 +269,20 @@ describe("open a stored file (staff)", () => {
     expect((await handleStaffFile(deps(null, makeStore(), st2), FILE_NEW)).status).toBe(401);
     expect((await handleStaffFile(deps("tutorAn", makeStore(), st2), "nope")).status).toBe(404);
     expect(st2.createDownload).not.toHaveBeenCalled();
+  });
+
+  it("a PDF that someone SENT (work photo / result image) is offered as a download, never opened inside the site; images and the tutor's own sheets are not", async () => {
+    const sentPdf = makeStore({ getFile: vi.fn(async () => ({ learnerId: AN, path: pathOf(AN, FILE_KEY, "pdf"), mime: "application/pdf", kind: "work_photo" })) });
+    const st = makeStorage();
+    await handleStaffFile(deps("tutorAn", sentPdf, st), FILE_KEY);
+    expect(st.createDownload).toHaveBeenCalledWith(pathOf(AN, FILE_KEY, "pdf"), { downloadName: "bai-em-gui.pdf" });
+    const st2 = makeStorage();
+    await handleStaffFile(deps("tutorAn", makeStore(), st2), FILE_NEW); // a PNG screenshot
+    expect(st2.createDownload).toHaveBeenCalledWith(pathOf(AN, FILE_NEW, "png"), undefined);
+    const own = makeStore({ getFile: vi.fn(async () => ({ learnerId: AN, path: pathOf(AN, FILE_OTHER, "pdf"), mime: "application/pdf", kind: "assignment_pdf" })) });
+    const st3 = makeStorage();
+    await handleStaffFile(deps("tutorAn", own, st3), FILE_OTHER);
+    expect(st3.createDownload).toHaveBeenCalledWith(pathOf(AN, FILE_OTHER, "pdf"), undefined);
   });
 
   it("a file that is not registered, or belongs to no child, is 404", async () => {

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { practiceStudent } from "@/lib/copy/vi";
-import { codeOf, practiceErrorText, uploadAll } from "@/lib/practice/client";
+import { codeOf, nextAttempt, practiceErrorText, uploadAll, type SendAttempt, type UploadCache } from "@/lib/practice/client";
 import { parseHttpsUrl } from "@/lib/practice/link";
 import { postJson } from "@/lib/tutorwork/client";
 import { ImagePicker, type PickedItem } from "./ImagePicker";
@@ -15,7 +15,7 @@ type Props = {
   assignmentId: string;
   kind: "link" | "pdf";
   /** When the student sends again, start from what they said before. */
-  initial?: { attempt: "first" | "retry"; usedHint: boolean };
+  initial?: { attempt: "first" | "retry"; usedHint: boolean | null };
   onDone?: () => void;
 };
 
@@ -31,7 +31,9 @@ export function SubmitPanel({ variant, learnerId, assignmentId, kind, initial, o
   const [hint, setHint] = useState(initial?.usedHint ?? false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"upload" | "send" | null>(null);
-  const clientId = useRef<string>(crypto.randomUUID());
+  // Kept across retries: a lost answer is retried with the same id and only the files that failed are sent again.
+  const attempt = useRef<SendAttempt | null>(null);
+  const uploaded = useRef<UploadCache>(new Map());
   const who = variant;
 
   async function send(e: React.FormEvent) {
@@ -42,29 +44,33 @@ export function SubmitPanel({ variant, learnerId, assignmentId, kind, initial, o
     if (items.length === 0 && !linkClean) return setError(practiceStudent.needImage);
 
     setBusy("upload");
+    const files = items.map((i) => i.file);
     const up =
       variant === "student"
-        ? await uploadAll(items.map((i) => i.file), "/api/student/files", { assignment_id: assignmentId })
-        : await uploadAll(items.map((i) => i.file), `/api/learners/${learnerId}/files`, { purpose: "submission", assignment_id: assignmentId });
+        ? await uploadAll(files, "/api/student/files", { assignment_id: assignmentId }, uploaded.current)
+        : await uploadAll(files, `/api/learners/${learnerId}/files`, { purpose: "submission", assignment_id: assignmentId }, uploaded.current);
     if (!up.ok) {
       setBusy(null);
       return setError(practiceErrorText(up.error, who));
     }
     setBusy("send");
-    const common = {
-      client_id: clientId.current,
+    const body = {
       attempt: first ? "first" : "retry",
-      used_hint: kind === "link" ? hint : false,
+      // The Hint question exists only for link assignments; a PDF sends null.
+      used_hint: kind === "link" ? hint : null,
       link_url: kind === "link" && linkClean ? linkClean : null,
       files: up.files,
     };
+    attempt.current = nextAttempt(attempt.current, JSON.stringify(body));
+    const common = { client_id: attempt.current.id, ...body };
     const r =
       variant === "student"
         ? await postJson("/api/student/submissions", { assignment_id: assignmentId, ...common })
         : await postJson(`/api/learners/${learnerId}/assignments/${assignmentId}/submissions`, common);
     setBusy(null);
     if (!r.ok) return setError(practiceErrorText(codeOf(r), who));
-    clientId.current = crypto.randomUUID();
+    attempt.current = null;
+    uploaded.current = new Map();
     setItems([]);
     setLink("");
     router.refresh();

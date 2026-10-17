@@ -46,21 +46,21 @@ describe("S5b-1 PR B: practice assignments, submissions, files (migration 0016)"
     svc<Svc>("select english.eng_create_assignment($1, 'pdf', null, $2, $3::text[], $4::date, $5, $6::jsonb, $7, $8) as r", [
       o.learner ?? NG(), o.title ?? "KET Reading", o.tags ?? [], o.due === undefined ? null : o.due, o.frame ?? null, JSON.stringify(files), o.by ?? M().tutorNguyen, o.clientId ?? randomUUID(),
     ]);
-  type SubOpts = { by?: string; clientId?: string; attempt?: string; hint?: boolean; link?: string | null; files?: FileJson[] };
+  type SubOpts = { by?: string; clientId?: string; attempt?: string; hint?: boolean | null; link?: string | null; files?: FileJson[] };
   const submit = (assignment: string, o: SubOpts = {}) =>
     svc<Svc>("select english.eng_submit_practice($1, $2, $3, $4, $5, $6, $7::jsonb) as r", [
-      assignment, o.by ?? M().studentNguyen, o.clientId ?? randomUUID(), o.attempt ?? "first", o.hint ?? false, o.link === undefined ? null : o.link, JSON.stringify(o.files ?? [png()]),
+      assignment, o.by ?? M().studentNguyen, o.clientId ?? randomUUID(), o.attempt ?? "first", o.hint === undefined ? false : o.hint, o.link === undefined ? null : o.link, JSON.stringify(o.files ?? [png()]),
     ]);
   type Overview = {
     id: string; kind: string; title: string; source_key: string | null; retracted_at: string | null; result_id: string | null;
     file: FileJson | null; answer_file: FileJson | null;
-    submission: { id: string; attempt: string; used_hint: boolean; by_role: string; link_url: string | null; files: FileJson[] } | null;
+    submission: { id: string; attempt: string; used_hint: boolean | null; by_role: string; link_url: string | null; files: FileJson[] } | null;
   }[];
   const overview = (learner: string, assignment: string | null = null) => svc<Overview>("select english.eng_assignment_overview($1, $2) as r", [learner, assignment]);
   const mine = (userId: string) => asUser<Record<string, unknown>[]>(userId, "select english.eng_my_practice() as r");
-  const record = (assignment: string | null, learner = NG(), by = M().tutorNguyen) =>
-    svc<{ id: string }>("select english.eng_record_result($1, 'quick', null, 'Linked', 10, 8, '{4,7}'::int[], '[]'::jsonb, 'home', 'first', false, $2::date, $3, null, $4, $5, null) as r", [
-      learner, TODAY, assignment, by, randomUUID(),
+  const record = (assignment: string | null, learner = NG(), by = M().tutorNguyen, o: { attempt?: string; supersedes?: string | null } = {}) =>
+    svc<{ id: string }>("select english.eng_record_result($1, 'quick', null, 'Linked', 10, 8, '{4,7}'::int[], '[]'::jsonb, 'home', $6, false, $2::date, $3, $7, $4, $5, null) as r", [
+      learner, TODAY, assignment, by, randomUUID(), o.attempt ?? "first", o.supersedes ?? null,
     ]);
 
   beforeAll(async () => {
@@ -108,6 +108,39 @@ describe("S5b-1 PR B: practice assignments, submissions, files (migration 0016)"
       } finally {
         await own.drop();
       }
+    });
+  });
+
+  describe("shared Supabase project: policies on storage.objects without a bucket condition", () => {
+    const WARN = /policies without a bucket_id condition/;
+    async function warningsFor(setup: string): Promise<string[]> {
+      const own = await createTestDb();
+      const messages: string[] = [];
+      own.client.on("notice", (n: { message?: string }) => messages.push(n.message ?? ""));
+      try {
+        await own.client.query(`
+          create schema storage;
+          create table storage.buckets (id text primary key, name text not null unique, public boolean default false, file_size_limit bigint, allowed_mime_types text[]);
+          create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text, name text);
+          alter table storage.objects enable row level security;
+          ${setup}`);
+        await migrate(own.client);
+        return messages.filter((m) => WARN.test(m));
+      } finally {
+        await own.drop();
+      }
+    }
+    it("warns, naming the policy, when one has no bucket_id in its condition; says nothing for policies that name a bucket or for none", async () => {
+      const bad = await warningsFor(`
+        create policy "Anyone signed in can read" on storage.objects for select to authenticated using (true);
+        create policy "launcher read" on storage.objects for select to authenticated using (bucket_id = 'launcher-files');
+        create policy "launcher write" on storage.objects for insert to authenticated with check (bucket_id = 'launcher-files');`);
+      expect(bad).toHaveLength(1);
+      expect(bad[0]).toContain("Anyone signed in can read");
+      expect(bad[0]).not.toContain("launcher read");
+      expect(bad[0]).not.toContain("launcher write");
+      expect(await warningsFor(`create policy "launcher read" on storage.objects for select to authenticated using (bucket_id = 'launcher-files');`)).toEqual([]);
+      expect(await warningsFor("")).toEqual([]);
     });
   });
 
@@ -347,12 +380,12 @@ describe("S5b-1 PR B: practice assignments, submissions, files (migration 0016)"
       const a = await makePdf({ main: pdf() }, { title: "Paper work" });
       const photo = png();
       const filled = pdf();
-      await submit(a.id, { files: [photo, filled] });
+      await submit(a.id, { files: [photo, filled], hint: null });
       const kinds = await q1<{ id: string; kind: string }>("select id, kind from english.files where id = any($1::uuid[])", [[photo.id, filled.id]]);
       expect(kinds.map((k) => k.kind)).toEqual(["work_photo", "work_photo"]);
       const l = await makeLink("https://example.org/img-only");
       await fail(submit(l.id, { files: [pdf()] }), "22023", /screenshot must be an image/);
-      await fail(submit(a.id, { link: "https://example.org/x", files: [png()] }), "22023", /photos or files, not a link/);
+      await fail(submit(a.id, { link: "https://example.org/x", files: [png()], hint: null }), "22023", /photos or files, not a link/);
     });
 
     it("a student cannot submit for another child's assignment, another family's, or one that does not exist", async () => {
@@ -450,6 +483,108 @@ describe("S5b-1 PR B: practice assignments, submissions, files (migration 0016)"
   });
 
   // -------------------------------------------------------------------------------------------------------------
+  describe("the Hint question exists only for link assignments", () => {
+    it("a PDF submission stores used_hint = NULL (shown as 'not applicable'); a link needs true / false; the wrong way round is refused; a replay still matches", async () => {
+      const p = await makePdf({ main: pdf() }, { title: "Hint-free PDF" });
+      const clientId = randomUUID();
+      const photo = png();
+      const r = await submit(p.id, { hint: null, files: [photo], clientId });
+      expect((await overview(NG(), p.id))[0]?.submission?.used_hint).toBeNull();
+      expect(await submit(p.id, { hint: null, files: [photo], clientId })).toEqual({ id: r.id, replayed: true });
+      expect((await q1<{ used_hint: boolean | null }>("select used_hint from english.submissions where id = $1", [r.id]))[0]?.used_hint).toBeNull();
+      const item = (await mine(s.users.studentNguyen)).find((x) => x.assignment_id === p.id) as { submission: { used_hint: boolean | null } };
+      expect(item.submission.used_hint).toBeNull();
+      await fail(submit(p.id, { hint: false }), "22023", /no Hint question/);
+      const l = await makeLink("https://example.org/hint-needed");
+      await fail(submit(l.id, { hint: null }), "22004", /whether Hint was used/);
+      expect((await submit(l.id, { hint: true })).replayed).toBe(false);
+    });
+  });
+
+  // -------------------------------------------------------------------------------------------------------------
+  describe("a lot of assignments never lock a child out of an older one (eng_my_practice(p_assignment))", () => {
+    it("the list shows the 40 newest; asking for one assignment by id finds it whatever its age, and only if it is the caller's", async () => {
+      const kid = ((await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status, member_id) values ($1, 'Busy child', 'B', true, 'active', $2) returning id", [s.familyId, null]))[0] as { id: string }).id;
+      const kidUser = await createAuthUser(db.client, "busy-child@test.local");
+      const kidMember = ((await q1<{ id: string }>("insert into english.members(user_id, family_id, role, display_name) values ($1, $2, 'student', 'Busy') returning id", [kidUser, s.familyId]))[0] as { id: string }).id;
+      await q1("update english.learners set member_id = $1 where id = $2", [kidMember, kid]);
+      await q1("insert into english.relationships(member_id, learner_id, relation) values ($1, $2, 'parent')", [M().parent, kid]);
+      const oldest = await makeLink("https://example.org/oldest", { learner: kid, by: M().parent, title: "Oldest" });
+      for (let i = 0; i < 44; i += 1) await makeLink(`https://example.org/b${i}`, { learner: kid, by: M().parent, title: `B${i}` });
+      const all = await asUser<Record<string, unknown>[]>(kidUser, "select english.eng_my_practice() as r");
+      expect(all).toHaveLength(40);
+      expect(all.map((x) => x.assignment_id)).not.toContain(oldest.id);
+      const one = await asUser<Record<string, unknown>[]>(kidUser, "select english.eng_my_practice($1) as r", [oldest.id]);
+      expect(one.map((x) => x.assignment_id)).toEqual([oldest.id]);
+      // somebody else's assignment id finds nothing; a retracted one too
+      expect(await asUser(kidUser, "select english.eng_my_practice($1) as r", [(await makeLink("https://example.org/not-mine")).id])).toEqual([]);
+      await svc("select english.eng_retract_assignment($1, null, $2) as r", [oldest.id, M().parent]);
+      expect(await asUser(kidUser, "select english.eng_my_practice($1) as r", [oldest.id])).toEqual([]);
+    });
+  });
+
+  // -------------------------------------------------------------------------------------------------------------
+  describe("upload links: at most 60 per child per 24 hours", () => {
+    const ticket = (learner: string, by: string) => svc<{ issued: number }>("select english.eng_issue_upload_ticket($1, $2) as r", [learner, by]);
+    it("counts per child, refuses the 61st with 54000 (upload_limit), forgets links older than 24 hours, and checks who is asking", async () => {
+      const kid = ((await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1, 'Ticket child', 'A', true, 'active') returning id", [s.familyId]))[0] as { id: string }).id;
+      await q1("insert into english.relationships(member_id, learner_id, relation) values ($1, $2, 'parent')", [M().parent, kid]);
+      // 25 hours old: does not count
+      await q1("insert into english.upload_tickets(learner_id, member_id, created_at) values ($1, $2, clock_timestamp() - interval '25 hours')", [kid, M().parent]);
+      for (let i = 1; i <= 60; i += 1) expect((await ticket(kid, M().parent)).issued).toBe(i);
+      await fail(ticket(kid, M().parent), "54000", /upload_limit/);
+      // another child of the same family is not affected
+      expect((await ticket(NG(), M().tutorNguyen)).issued).toBeGreaterThanOrEqual(1);
+      // who may ask: the child's own student account, their tutor, the parent - not the other tutor, not another family, not the other student
+      await fail(ticket(NG(), M().tutorAn), "42501");
+      await fail(ticket(NG(), parent2Member), "42501");
+      await fail(ticket(NG(), M().studentAn), "P0002");
+      expect((await ticket(NG(), M().studentNguyen)).issued).toBeGreaterThan(1);
+    });
+
+    it("nobody reads or writes the tickets table directly, and the function is service-role only", async () => {
+      await expect(rowsAs(db.client, "authenticated", s.users.parent, "select count(*)::int as n from english.upload_tickets")).rejects.toThrow(/permission denied/);
+      await expect(rowsAs(db.client, "authenticated", s.users.studentNguyen, "select english.eng_issue_upload_ticket($1, $2)", [NG(), M().studentNguyen])).rejects.toThrow(/permission denied/);
+      await expect(db.client.query("update english.upload_tickets set member_id = member_id")).rejects.toThrow();
+    });
+  });
+
+  // -------------------------------------------------------------------------------------------------------------
+  describe("one first result per assignment; nothing for a retracted assignment", () => {
+    it("a second FIRST result for the same assignment is refused (duplicate_first) unless it replaces the live one; retries are fine", async () => {
+      const a = await makeLink("https://example.org/one-first", { title: "One first" });
+      const r1 = await record(a.id);
+      await fail(record(a.id), "23505", /duplicate_first/);
+      // a retry (marked 'retry') is allowed and does not count as the first
+      const retry = await record(a.id, NG(), M().tutorNguyen, { attempt: "retry" });
+      expect(retry.id).toBeTruthy();
+      // replacing the live first one is allowed ONCE; the new one is then the live first
+      const r2 = await record(a.id, NG(), M().tutorNguyen, { supersedes: r1.id });
+      expect((await overview(NG(), a.id))[0]?.result_id).toBe(r2.id);
+      await fail(record(a.id), "23505", /duplicate_first/);
+      await fail(record(a.id, NG(), M().tutorNguyen, { supersedes: r1.id }), "23505");
+      const r3 = await record(a.id, NG(), M().tutorNguyen, { supersedes: r2.id });
+      expect((await overview(NG(), a.id))[0]?.result_id).toBe(r3.id);
+      // another assignment, and paper work with no assignment, are not affected
+      const b = await makeLink("https://example.org/other-first");
+      expect((await record(b.id)).id).toBeTruthy();
+      expect((await record(null)).id).toBeTruthy();
+      expect((await record(null)).id).toBeTruthy();
+    });
+
+    it("a result cannot be recorded (or replaced) for a retracted assignment", async () => {
+      const a = await makeLink("https://example.org/retracted-result", { title: "Retracted" });
+      const r = await record(a.id);
+      await svc("select english.eng_retract_assignment($1, null, $2) as r", [a.id, M().tutorNguyen]);
+      await fail(record(a.id, NG(), M().tutorNguyen, { attempt: "retry" }), "23514", /assignment_retracted/);
+      await fail(record(a.id, NG(), M().tutorNguyen, { supersedes: r.id }), "23514", /assignment_retracted/);
+      const gone = await makeLink("https://example.org/retracted-before");
+      await svc("select english.eng_retract_assignment($1, null, $2) as r", [gone.id, M().tutorNguyen]);
+      await fail(record(gone.id), "23514", /assignment_retracted/);
+    });
+  });
+
+  // -------------------------------------------------------------------------------------------------------------
   describe("'Việc cần ôn' and the message (eng_my_review_points)", () => {
     const note = (learner: string, by: string, over: { weak?: string[]; message?: string | null; parent?: string | null; supersedes?: string | null; date?: string } = {}) =>
       svc<Svc>("select english.eng_write_lesson_note_v2($1, $2::date, 'Unit 13', $3::text[], $4, $5, '[]'::jsonb, $6, $7, $8) as r", [
@@ -524,7 +659,7 @@ describe("S5b-1 PR B: practice assignments, submissions, files (migration 0016)"
       const a1 = await makePdf({ main: pdf(), answer: pdf() }, { learner: victim, by: M().parent });
       const a2 = await makeLink("https://example.org/purge", { learner: victim, by: M().parent });
       await svc("select english.eng_retract_assignment($1, null, $2) as r", [a2.id, M().parent]);
-      await submit(a1.id, { by: M().parent, files: [png(), png()] });
+      await submit(a1.id, { by: M().parent, files: [png(), png()], hint: null });
       await record(a1.id, victim, M().parent);
       // a family file that belongs to no child
       const sharedId = randomUUID();
@@ -538,9 +673,10 @@ describe("S5b-1 PR B: practice assignments, submissions, files (migration 0016)"
         await count("select count(*)::int as n from english.assignment_events where learner_id <> $1", [victim]),
         await count("select count(*)::int as n from english.results where learner_id <> $1", [victim]),
       ];
+      await svc("select english.eng_issue_upload_ticket($1, $2) as r", [victim, M().parent]);
       const receipt = await svc<{ deleted: Record<string, number> }>("select english.eng_purge_learner($1, null) as r", [victim]);
-      expect(receipt.deleted).toMatchObject({ files: 4, assignments: 2, assignment_events: 1, submissions: 1, results: 1 });
-      for (const t of ["files", "assignments", "submissions", "assignment_events", "results"]) {
+      expect(receipt.deleted).toMatchObject({ files: 4, assignments: 2, assignment_events: 1, submissions: 1, results: 1, upload_tickets: 1 });
+      for (const t of ["files", "assignments", "submissions", "assignment_events", "results", "upload_tickets"]) {
         expect(await count(`select count(*)::int as n from english.${t} where learner_id = $1`, [victim]), t).toBe(0);
       }
       expect([

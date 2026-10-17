@@ -79,9 +79,15 @@ export function createSupabasePracticeStore(): PracticeStore {
       return data;
     },
 
-    async myPractice() {
+    async issueUploadTicket(a) {
+      const { data, error } = await db().rpc("eng_issue_upload_ticket", { p_learner: a.learnerId, p_by: a.byMemberId });
+      if (error) dbError("eng_issue_upload_ticket", error);
+      return data;
+    },
+
+    async myPractice(assignmentId) {
       const c = await createUserClient();
-      const { data, error } = await c.rpc("eng_my_practice");
+      const { data, error } = await c.rpc("eng_my_practice", { p_assignment: assignmentId ?? null });
       if (error) dbError("eng_my_practice", error);
       return data;
     },

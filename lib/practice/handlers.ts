@@ -11,7 +11,7 @@
  * never becomes a row. The service role is used only inside the stores, only after the access check here.
  */
 import { AccessError, requireAccess, type AccessDeps, type AccessGrant, type AccessUser, type Action, type Role } from "@/lib/auth/requireAccess";
-import { apiErrors } from "@/lib/copy/vi";
+import { apiErrors, downloadNames } from "@/lib/copy/vi";
 import { fromDbError, ReviewDbError, type HandlerResult } from "@/lib/review/handlers";
 import { checkFile, buildPath, safeDownloadName, type AllowedMime, type FileKind } from "@/lib/storage/rules";
 import type { FileStorage } from "@/lib/storage/types";
@@ -44,10 +44,16 @@ export interface PracticeStore {
   }): Promise<unknown>;
   retractAssignment(args: { assignmentId: string; reason: string | null; byMemberId: string }): Promise<unknown>;
   submit(args: {
-    assignmentId: string; byMemberId: string; clientId: string; attempt: string; usedHint: boolean; linkUrl: string | null; files: FileMeta[];
+    assignmentId: string; byMemberId: string; clientId: string; attempt: string; usedHint: boolean | null; linkUrl: string | null; files: FileMeta[];
   }): Promise<unknown>;
-  /** english.eng_my_practice / eng_my_practice_file / eng_my_review_points as the signed-in student (they check auth.uid() themselves). */
-  myPractice(): Promise<unknown>;
+  /** english.eng_issue_upload_ticket: counts the upload links of the last 24 hours for this learner and refuses past the daily limit (54000). */
+  issueUploadTicket(args: { learnerId: string; byMemberId: string }): Promise<unknown>;
+  /**
+   * english.eng_my_practice / eng_my_practice_file / eng_my_review_points as the signed-in student (they check auth.uid() themselves).
+   * With an assignment id the list is that ONE assignment (or empty) and is not cut off at the 40 newest, so a student with many
+   * assignments can still upload and send for an older one.
+   */
+  myPractice(assignmentId?: string): Promise<unknown>;
   myPracticeFile(assignmentId: string): Promise<unknown>;
   myReviewPoints(): Promise<unknown>;
 }
@@ -62,7 +68,7 @@ export type PracticeDeps = {
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-type FailStatus = 400 | 401 | 403 | 404 | 409;
+type FailStatus = 400 | 401 | 403 | 404 | 409 | 429;
 const fail = (status: FailStatus, error: string): HandlerResult => ({ status, body: { error, message: apiErrors[status] } });
 
 type Guard = { ok: true; grant: AccessGrant } | { ok: false; result: HandlerResult };
@@ -116,6 +122,13 @@ function fileKindOf(assignmentKind: "link" | "pdf"): FileKind {
 async function makeUpload(deps: PracticeDeps, grant: AccessGrant, kind: FileKind, mime: AllowedMime, bytes: number): Promise<HandlerResult> {
   const c = checkFile(kind, mime, bytes);
   if (!c.ok) return fail(400, FILE_ERRORS[c.reason]);
+  // At most 60 upload links per child per 24 hours (counted in the database); more is refused with a clear code.
+  try {
+    await deps.store.issueUploadTicket({ learnerId: grant.learner.id, byMemberId: grant.member.id });
+  } catch (err) {
+    if (err instanceof ReviewDbError && err.code === "54000") return fail(429, "upload_limit");
+    return fromDbError(err);
+  }
   const fileId = (deps.newId ?? (() => crypto.randomUUID()))();
   const { url } = await deps.storage.createUpload(pathFor(grant, fileId, mime));
   return { status: 201, body: { file_id: fileId, upload_url: url, mime } };
@@ -134,6 +147,8 @@ async function submitCore(
     if (!link) return fail(400, "invalid_link");
   }
   if (assignment.kind === "pdf" && link) return fail(400, "invalid");
+  // "Did you press Hint?" exists only for link assignments; a PDF sends null.
+  if ((assignment.kind === "link") === (body.used_hint === null)) return fail(400, "invalid_body");
   if (!link && body.files.length === 0) return fail(400, "empty_submission");
   const kind = fileKindOf(assignment.kind);
   for (const f of body.files) {
@@ -264,7 +279,11 @@ export async function handleStaffFile(deps: PracticeDeps, fileId: string): Promi
   if (!file || !file.learnerId) return fail(404, "not_found");
   const g = await guard(deps, file.learnerId, "practice:read");
   if (!g.ok) return g.result;
-  return { status: 200, body: { url: await deps.storage.createDownload(file.path) } };
+  // A PDF that a child (or someone for the child) SENT is untrusted content: it is saved, never opened inside our site. Images and the
+  // tutor's own sheets / answer keys open in the browser as before.
+  const sent = (file.kind === "work_photo" || file.kind === "result_image") && file.mime === "application/pdf";
+  const opts = sent ? { downloadName: safeDownloadName(downloadNames.studentWork, "application/pdf") } : undefined;
+  return { status: 200, body: { url: await deps.storage.createDownload(file.path, opts) } };
 }
 
 /** The assignments of one learner (the Giao bài page and the "Ghi kết quả bài" screen). */
@@ -295,7 +314,7 @@ export async function handleStudentUploadUrl(deps: PracticeDeps, rawBody: unknow
   if (!g.ok) return g.result;
   const parsed = studentUploadBodySchema.safeParse(rawBody);
   if (!parsed.success) return fail(400, "invalid_body");
-  const item = parseStudentPractice(await deps.store.myPractice()).find((i) => i.assignmentId === parsed.data.assignment_id);
+  const item = parseStudentPractice(await deps.store.myPractice(parsed.data.assignment_id)).find((i) => i.assignmentId === parsed.data.assignment_id);
   if (!item) return fail(404, "not_found");
   if (item.reviewed) return fail(409, "already_reviewed");
   return makeUpload(deps, g.grant, fileKindOf(item.kind), parsed.data.mime, parsed.data.bytes);
@@ -307,7 +326,7 @@ export async function handleStudentSubmit(deps: PracticeDeps, rawBody: unknown):
   if (!g.ok) return g.result;
   const parsed = studentSubmitBodySchema.safeParse(rawBody);
   if (!parsed.success) return fail(400, "invalid_body");
-  const item = parseStudentPractice(await deps.store.myPractice()).find((i) => i.assignmentId === parsed.data.assignment_id);
+  const item = parseStudentPractice(await deps.store.myPractice(parsed.data.assignment_id)).find((i) => i.assignmentId === parsed.data.assignment_id);
   if (!item) return fail(404, "not_found");
   return submitCore(deps, g.grant, { id: item.assignmentId, kind: item.kind }, parsed.data);
 }

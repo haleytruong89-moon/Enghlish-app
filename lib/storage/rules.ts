@@ -13,6 +13,8 @@ export const MAX_FILE_BYTES = 15 * 1024 * 1024;
 export const SIGNED_URL_TTL_SECONDS = 300;
 /** Photos and screenshots are shrunk in the browser so their longest side is at most this many pixels. */
 export const MAX_IMAGE_SIDE = 1600;
+/** Upload links the server hands out per child per 24 hours (counted in the database; the same number is in migration 0016). */
+export const UPLOAD_LINKS_PER_DAY = 60;
 /** Files in one submission. */
 export const MAX_FILES_PER_SUBMISSION = 6;
 

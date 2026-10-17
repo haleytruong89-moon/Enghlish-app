@@ -513,6 +513,7 @@ export const apiErrors = {
   403: "Tài khoản này không làm được việc đó.",
   404: "Không tìm thấy.",
   409: "Yêu cầu này bị trùng với một yêu cầu trước đó.",
+  429: "Bạn đã thử quá nhiều lần hôm nay. Bạn chờ đến mai hoặc nhờ người lớn nhé.",
   500: "Có lỗi xảy ra. Bạn thử lại sau ít phút.",
 } as const;
 
@@ -678,6 +679,7 @@ export const resultPage = {
   sentRetry: "Em khai: làm lại",
   sentHint: "Em khai: có bấm Hint",
   sentNoHint: "Em khai: không bấm Hint",
+  sentHintNA: "Không áp dụng (đề PDF)",
   sentLink: "Link em gửi",
   sentImage: (n: number) => `Ảnh ${n} em gửi`,
   sentFile: (n: number) => `File ${n} em gửi`,
@@ -856,6 +858,11 @@ export const writingTags = {
 
 // ---------- S5b-1 PR B: giao bài luyện (link / đề PDF), em gửi ảnh kết quả ----------------------------------------------------
 /** Tên nguồn của một bài link (nhận ra từ tên miền). */
+/** Names offered to the browser when it saves a file that someone SENT (never opened inside the site). */
+export const downloadNames = {
+  studentWork: "bai-em-gui",
+} as const;
+
 export const sourceLabels = {
   "test-english": "test-english",
   notebooklm: "NotebookLM",
@@ -910,6 +917,9 @@ export const assignPage = {
     empty_submission: "Bạn thêm ít nhất một ảnh hoặc một link nhé.",
     already_reviewed: "Bài này đã có kết quả nên em không gửi lại được.",
     uploadFailed: "Chưa tải file lên được. Bạn kiểm tra mạng rồi thử lại nhé.",
+    unreadable: "Không đọc được ảnh này. Bạn chọn ảnh khác nhé.",
+    upload_limit: "Hôm nay đã tải lên quá nhiều file (tối đa 60 lần mỗi ngày cho mỗi em). Thử lại ngày mai.",
+    generic: "Chưa lưu được. Bạn thử lại sau ít phút.",
   } as Record<string, string>,
   // bảng "Bài luyện đã giao"
   listTitle: "Bài luyện đã giao",
@@ -924,7 +934,7 @@ export const assignPage = {
   statusSent: "Em đã gửi",
   statusRecorded: "Đã ghi kết quả",
   statusRetracted: "Đã rút",
-  sentLine: (when: string, first: boolean, hint: boolean, files: number, byRole: "student" | "tutor" | "parent") =>
+  sentLine: (when: string, first: boolean, hint: boolean | null, files: number, byRole: "student" | "tutor" | "parent") =>
     `${when} · ${first ? "lần đầu" : "làm lại"}${hint ? " · có Hint" : ""}${files > 0 ? ` · ${files} ảnh/file` : ""}${byRole === "student" ? "" : byRole === "tutor" ? ` · ${tutorHonorific} nộp thay` : " · phụ huynh nộp thay"}`,
   nothingSent: "—",
   recordResult: "Ghi kết quả",
@@ -1002,6 +1012,8 @@ export const practiceStudent = {
     empty_submission: "Bạn thêm ít nhất một ảnh (hoặc dán link bài đã làm) nhé.",
     already_reviewed: `${tutorHonorificCap} đã xem bài này nên bạn không gửi lại được nữa.`,
     uploadFailed: "Chưa tải ảnh lên được. Bạn kiểm tra mạng rồi thử lại nhé.",
+    upload_limit: "Hôm nay bạn đã gửi quá nhiều ảnh rồi. Bạn thử lại ngày mai nhé.",
+    generic: "Chưa gửi được. Bạn thử lại sau ít phút nhé.",
     tooMany: (max: number) => `Gửi tối đa ${max} ảnh một lần nhé.`,
   },
 } as const;

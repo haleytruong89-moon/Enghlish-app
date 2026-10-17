@@ -22,7 +22,7 @@ export function SubmissionPreview({ assignment }: { assignment: AssignmentView }
           <p className="text-sm text-muted">{resultPage.sentNote}</p>
           <ul className="flex flex-col gap-0.5 text-sm" data-testid="submission-claims">
             <li>{sub.attempt === "first" ? resultPage.sentFirst : resultPage.sentRetry}</li>
-            <li>{sub.usedHint ? resultPage.sentHint : resultPage.sentNoHint}</li>
+            <li>{sub.usedHint === null ? resultPage.sentHintNA : sub.usedHint ? resultPage.sentHint : resultPage.sentNoHint}</li>
             {resultPage.sentBy(sub.byRole) ? <li>{resultPage.sentBy(sub.byRole)}</li> : null}
           </ul>
           <p className="text-xs text-muted">{resultPage.sentConfirm}</p>

@@ -7,7 +7,8 @@ export type SubmissionView = {
   id: string;
   createdAt: string;
   attempt: "first" | "retry";
-  usedHint: boolean;
+  /** null = not asked (a PDF has no Hint). */
+  usedHint: boolean | null;
   linkUrl: string | null;
   byRole: "student" | "tutor" | "parent";
   files: StoredFile[];
@@ -44,7 +45,7 @@ export type StudentPracticeItem = {
   assignedOn: string;
   /** The tutor has looked at it: the student can no longer change what was sent. */
   reviewed: boolean;
-  submission: { submittedAt: string; attempt: "first" | "retry"; usedHint: boolean; fileCount: number; hasLink: boolean } | null;
+  submission: { submittedAt: string; attempt: "first" | "retry"; usedHint: boolean | null; fileCount: number; hasLink: boolean } | null;
 };
 
 /** "Việc cần ôn" + the tutor's message to the student (english.eng_my_review_points). */
