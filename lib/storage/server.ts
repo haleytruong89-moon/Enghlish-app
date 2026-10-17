@@ -30,6 +30,15 @@ async function ensureBucket(storage: StorageApi): Promise<void> {
     allowedMimeTypes: [...ALLOWED_MIMES],
   });
   if (error && !/already exists|duplicate/i.test(error.message)) throw new Error(`storage: could not prepare the bucket (${error.message})`);
+  // Read it back: a bucket that already existed under this name (made by hand, or by another app of the shared project) may be PUBLIC.
+  // Never carry on with a public bucket: files of the children would be readable by anyone with the address.
+  const { data, error: readError } = await storage.getBucket(BUCKET);
+  if (readError || !data) throw new Error(`storage: could not read the bucket back (${readError?.message ?? "no data"})`);
+  if (data.public !== false) throw new Error(`storage: the bucket ${BUCKET} is public - make it private in Supabase (Storage) before using it`);
+}
+
+function normalizeMime(raw: unknown): string {
+  return typeof raw === "string" ? (raw.split(";")[0] ?? "").trim().toLowerCase() : "";
 }
 
 export function createFileStorage(client: AdminClient = createAdminClient()): FileStorage {
@@ -46,12 +55,25 @@ export function createFileStorage(client: AdminClient = createAdminClient()): Fi
     },
 
     async stat(path) {
-      const { data, error } = await bucket().info(path);
-      if (error || !data) return null;
-      const bytes = typeof data.size === "number" ? data.size : Number.NaN;
-      const mime = typeof data.contentType === "string" ? (data.contentType.split(";")[0] ?? "").trim().toLowerCase() : "";
-      if (!Number.isFinite(bytes) || !mime) return null;
-      return { bytes, mime };
+      // 1. The object info endpoint (exact size and type recorded by Storage).
+      const info = await bucket().info(path);
+      if (!info.error && info.data) {
+        const bytes = typeof info.data.size === "number" ? info.data.size : Number.NaN;
+        const mime = normalizeMime(info.data.contentType);
+        if (Number.isFinite(bytes) && mime) return { bytes, mime };
+      }
+      // 2. Older Storage versions have no /object/info (it answers like "not found"): look the object up in its folder listing instead.
+      //    The same numbers (metadata.size / metadata.mimetype); an object that really is missing is missing here too.
+      const slash = path.lastIndexOf("/");
+      const folder = slash >= 0 ? path.slice(0, slash) : "";
+      const name = slash >= 0 ? path.slice(slash + 1) : path;
+      const listed = await bucket().list(folder, { limit: 100, search: name });
+      if (listed.error) return null;
+      const hit = (listed.data ?? []).find((o) => o.name === name && o.id !== null);
+      const meta = (hit?.metadata ?? null) as { size?: unknown; mimetype?: unknown } | null;
+      const bytes = typeof meta?.size === "number" ? meta.size : Number.NaN;
+      const mime = normalizeMime(meta?.mimetype);
+      return Number.isFinite(bytes) && mime ? { bytes, mime } : null;
     },
 
     async createDownload(path, opts) {

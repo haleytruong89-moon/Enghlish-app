@@ -6,10 +6,10 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => { throw new Er
 import { createFileStorage } from "@/lib/storage/server";
 import { BUCKET, MAX_FILE_BYTES } from "@/lib/storage/rules";
 
-type Obj = { id: string | null; name: string };
+type Obj = { id: string | null; name: string; metadata?: { size?: number; mimetype?: string } | null };
 
 /** A fake of the part of the Supabase storage client the app uses, recording every call. */
-function fakeClient(opts: { missingBucketOnce?: boolean; objects?: Obj[]; info?: unknown } = {}) {
+function fakeClient(opts: { missingBucketOnce?: boolean; objects?: Obj[]; info?: unknown; publicBucket?: boolean; readBackError?: boolean } = {}) {
   const calls: string[] = [];
   let missing = opts.missingBucketOnce ?? false;
   let objects = [...(opts.objects ?? [])];
@@ -24,9 +24,9 @@ function fakeClient(opts: { missingBucketOnce?: boolean; objects?: Obj[]; info?:
       return { data: { signedUrl: `http://storage.test/sign/${path}` }, error: null };
     }),
     info: vi.fn(async () => ({ data: opts.info ?? null, error: opts.info ? null : { message: "not found" } })),
-    list: vi.fn(async (folder: string) => {
-      calls.push(`list:${folder}`);
-      return { data: objects.slice(0, 100), error: null };
+    list: vi.fn(async (folder: string, o?: { search?: string }) => {
+      calls.push(`list:${folder}${o?.search ? `?search=${o.search}` : ""}`);
+      return { data: objects.filter((x) => !o?.search || x.name.includes(o.search)).slice(0, 100), error: null };
     }),
     remove: vi.fn(async (names: string[]) => {
       calls.push(`remove:${names.join(",")}`);
@@ -38,6 +38,10 @@ function fakeClient(opts: { missingBucketOnce?: boolean; objects?: Obj[]; info?:
     from: vi.fn((b: string) => {
       calls.push(`from:${b}`);
       return bucketApi;
+    }),
+    getBucket: vi.fn(async (id: string) => {
+      calls.push(`getBucket:${id}`);
+      return opts.readBackError ? { data: null, error: { message: "boom" } } : { data: { id, public: opts.publicBucket ?? false }, error: null };
     }),
     createBucket: vi.fn(async (id: string, o: unknown) => {
       calls.push(`createBucket:${id}:${JSON.stringify(o)}`);
@@ -94,5 +98,42 @@ describe("createFileStorage (service-role helper for the bucket english-work)", 
     const removed = f.calls.filter((c) => c.startsWith("remove:")).flatMap((c) => c.slice(7).split(","));
     expect(removed).toHaveLength(130);
     expect(removed.every((p) => p.startsWith("fam/lea/"))).toBe(true);
+  });
+});
+
+describe("stat(): works with and without the object-info endpoint", () => {
+  const PATH = "fam/lea/file.png";
+  it("uses the info endpoint when it answers (no listing)", async () => {
+    const f = fakeClient({ info: { size: 1234, contentType: "image/PNG; charset=binary" } });
+    expect(await createFileStorage(f.client).stat(PATH)).toEqual({ bytes: 1234, mime: "image/png" });
+    expect(f.bucketApi.list).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the folder listing when /object/info is not available (older Storage): same size and type", async () => {
+    const f = fakeClient({ objects: [{ id: "o1", name: "file.png", metadata: { size: 4321, mimetype: "image/png" } }, { id: "o2", name: "file.png.bak", metadata: { size: 1, mimetype: "image/png" } }] });
+    expect(await createFileStorage(f.client).stat(PATH)).toEqual({ bytes: 4321, mime: "image/png" });
+    expect(f.calls).toContain("list:fam/lea?search=file.png");
+  });
+
+  it("an object that is really missing (or a folder entry without an id, or without metadata) is null", async () => {
+    expect(await createFileStorage(fakeClient().client).stat(PATH)).toBeNull();
+    expect(await createFileStorage(fakeClient({ objects: [{ id: null, name: "file.png", metadata: { size: 5, mimetype: "image/png" } }] }).client).stat(PATH)).toBeNull();
+    expect(await createFileStorage(fakeClient({ objects: [{ id: "o", name: "file.png", metadata: null }] }).client).stat(PATH)).toBeNull();
+    expect(await createFileStorage(fakeClient({ objects: [{ id: "o", name: "file.png", metadata: { size: 5 } }] }).client).stat(PATH)).toBeNull();
+  });
+});
+
+describe("ensureBucket reads the bucket back and refuses a public one", () => {
+  it("carries on when the bucket is private", async () => {
+    const f = fakeClient({ missingBucketOnce: true });
+    await createFileStorage(f.client).createUpload("fam/lea/file.png");
+    expect(f.calls).toContain(`getBucket:${BUCKET}`);
+  });
+
+  it("throws (and makes no upload link) when the bucket is public, or cannot be read back", async () => {
+    const pub = fakeClient({ missingBucketOnce: true, publicBucket: true });
+    await expect(createFileStorage(pub.client).createUpload("fam/lea/file.png")).rejects.toThrow(/is public/);
+    const broken = fakeClient({ missingBucketOnce: true, readBackError: true });
+    await expect(createFileStorage(broken.client).createUpload("fam/lea/file.png")).rejects.toThrow(/read the bucket back/);
   });
 });
