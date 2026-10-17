@@ -11,6 +11,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { Client } from "pg";
+import { DESTINATION_FRAME_FILE, importFrameFile } from "./lib/frameImport";
 import { pgConfigFromUrl, requireEnv } from "./lib/pg";
 import { assignDevInquiries, SEED_ACCOUNTS, seedDevReviewWork, seedTestFamily, type SeedUsers } from "./lib/seed";
 
@@ -97,6 +98,13 @@ async function main() {
         ? "  An (thử) đã nộp 1 bài viết luyện tập (A-W4-PLANETS, bước 7) để thử màn Duyệt bài"
         : `  Chưa tạo bài mẫu để duyệt (${review.skipped ?? "bỏ qua"})`,
     );
+    // S5b-1: the Destination U1–12 test frame (no question text), so "Ghi kết quả bài → Đề có khung" can be tried on the preview.
+    try {
+      const frame = await importFrameFile(db, result.familyId, DESTINATION_FRAME_FILE);
+      console.log(`  Khung đề mẫu cho Nguyên (thử): ${frame.title} (${frame.action === "unchanged" ? "đã có" : "đã nhập"})`);
+    } catch (err) {
+      console.log(`  Chưa nhập khung đề mẫu (${(err as Error).message.split("\n")[0]})`);
+    }
     for (const key of keys) {
       console.log(
         `  ${SEED_ACCOUNTS[key].role.padEnd(7)} ${emailFor(SEED_ACCOUNTS[key].emailLocal)}  (tên đăng nhập: ${SEED_ACCOUNTS[key].loginName})`,
