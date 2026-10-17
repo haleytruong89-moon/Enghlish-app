@@ -24,7 +24,7 @@ export default async function NotesPage({ params }: { params: Promise<{ id: stri
 
   const { member, learner } = access.grant;
   const canWrite = member.role === "tutor";
-  const { notes, targets } = await loadNotesPage(learner.id);
+  const { notes, targets, tagLabels } = await loadNotesPage(learner.id, learner.trackId);
   const today = todayVn();
 
   return (
@@ -37,7 +37,12 @@ export default async function NotesPage({ params }: { params: Promise<{ id: stri
         <h1 className="mt-2 text-2xl font-bold">{notesPage.title(learner.alias)}</h1>
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
         <p className="mt-4 text-muted">{canWrite ? notesPage.intro : notesPage.introParent}</p>
-        <LessonNotes learnerId={learner.id} notes={notes} targets={targets} canWrite={canWrite} memberId={member.id} today={today} minDate={addDays(today, -120)} />
+        {member.role !== "student" ? (
+          <Link href={`/learners/${learner.id}/notes/new`} data-testid="notes-write-new" className="mt-4 inline-flex min-h-11 items-center rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent">
+            {notesPage.writeNew}
+          </Link>
+        ) : null}
+        <LessonNotes learnerId={learner.id} notes={notes} targets={targets} canWrite={canWrite} memberId={member.id} today={today} minDate={addDays(today, -120)} tagLabels={tagLabels} />
       </main>
     </>
   );

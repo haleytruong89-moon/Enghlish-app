@@ -15,6 +15,7 @@ export function LessonNotes({
   memberId,
   today,
   minDate,
+  tagLabels = {},
 }: {
   learnerId: string;
   notes: LessonNoteView[];
@@ -24,6 +25,8 @@ export function LessonNotes({
   memberId: string;
   today: string;
   minDate: string;
+  /** Tag key → label, for the "Điểm cần củng cố" of notes written with "Ghi buổi học" (v2). */
+  tagLabels?: Record<string, string>;
 }) {
   const [editing, setEditing] = useState<LessonNoteView | null>(null);
   const titleOf = new Map(targets.map((t) => [t.id, t.title]));
@@ -45,10 +48,26 @@ export function LessonNotes({
           {current.map((n) => (
             <li key={n.id} className="rounded-xl border border-line bg-white px-5 py-4" data-testid={`note-${n.id}`}>
               <p className="font-semibold">
-                {formatDateVi(n.sessionDate)} · {notesPage.supportLevels[n.supportLevel]}
+                {formatDateVi(n.sessionDate)}
+                {n.supportLevel ? ` · ${notesPage.supportLevels[n.supportLevel]}` : ""}
                 <span className="ml-2 rounded-full border border-line px-2 py-0.5 text-xs font-normal">{n.published ? notesPage.sharedTag : notesPage.privateTag}</span>
               </p>
               {n.goals ? <p className="mt-2 text-sm">{n.goals}</p> : null}
+              {n.weakTagKeys.length > 0 ? (
+                <p className="mt-1 text-sm" data-testid="note-weak-tags">
+                  {notesPage.reinforceTitle}: {n.weakTagKeys.map((k) => tagLabels[k] ?? fallbackLabels.tag).join("; ")}
+                </p>
+              ) : null}
+              {n.messageToLearner ? (
+                <p className="mt-1 text-sm">
+                  {notesPage.messageTitle}: “{n.messageToLearner}”
+                </p>
+              ) : null}
+              {n.noteForParent ? (
+                <p className="mt-1 text-sm text-muted" data-testid="note-for-parent">
+                  {notesPage.noteForParentTitle}: {n.noteForParent}
+                </p>
+              ) : null}
               {n.observed ? <p className="mt-1 text-sm text-muted">{n.observed}</p> : null}
               {n.nextActions.length > 0 ? (
                 <div className="mt-2">
@@ -65,7 +84,7 @@ export function LessonNotes({
                   {notesPage.practisedTitle}: {n.practisedTargetIds.map((k) => titleOf.get(k) ?? fallbackLabels.skill).join("; ")}
                 </p>
               ) : null}
-              {canWrite && n.tutorMemberId === memberId ? (
+              {canWrite && n.tutorMemberId === memberId && n.supportLevel !== null ? (
                 <button type="button" data-testid={`note-edit-${n.id}`} onClick={() => setEditing(n)} className="mt-2 min-h-11 rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent">
                   {notesPage.edit}
                 </button>

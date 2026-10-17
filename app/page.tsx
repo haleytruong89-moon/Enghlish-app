@@ -3,7 +3,10 @@ import { AppHeader } from "@/components/AppHeader";
 import { LearnerCard } from "@/components/LearnerCard";
 import { StudentHome } from "@/components/student/StudentHome";
 import Link from "next/link";
-import { home, reviewPage } from "@/lib/copy/vi";
+import { home, reviewPage, todayPage } from "@/lib/copy/vi";
+import { todayVn } from "@/lib/inquiries/dates";
+import { formatDay } from "@/lib/review/format";
+import { loadToday, type TodayData } from "@/lib/tutorwork/load";
 import { loadHome } from "@/lib/home/loadHome";
 import { countToDecide } from "@/lib/review/load";
 import { safeColor } from "@/lib/home/visible";
@@ -60,11 +63,22 @@ export default async function HomePage() {
   } catch {
     toDecide = null;
   }
+  // "Hôm nay" numbers per child. One failed lookup must not take the whole page down: that card just leaves out its attention part.
+  const role = isParent ? "parent" : "tutor";
+  const todays = await Promise.all(
+    data.learners.map(async (l): Promise<TodayData | null> => {
+      try {
+        return await loadToday(l.id, l.trackId, role);
+      } catch {
+        return null;
+      }
+    }),
+  );
   return (
     <>
       <AppHeader name={data.displayName} showTestBadge={anyTest} />
-      <main className="mx-auto max-w-2xl px-4 py-10">
-        <h1 className="text-2xl font-bold">{isParent ? home.parentTitle : home.tutorTitle}</h1>
+      <main className="mx-auto max-w-4xl px-4 py-10" data-testid="today-page">
+        <h1 className="text-2xl font-bold">{todayPage.title(formatDay(todayVn()))}</h1>
         {isParent ? <p className="mt-2 text-muted">{home.parentSummary(data.learners.length)}</p> : null}
         {data.learners.length === 0 && !isParent ? <p className="mt-4 text-muted">{home.tutorEmpty}</p> : null}
         <Link
@@ -75,8 +89,8 @@ export default async function HomePage() {
           {toDecide === null ? reviewPage.link : reviewPage.linkCount(toDecide)}
         </Link>
         <ul className="mt-6 flex flex-col gap-3">
-          {data.learners.map((l) => (
-            <LearnerCard key={l.id} learner={l} />
+          {data.learners.map((l, i) => (
+            <LearnerCard key={l.id} learner={l} today={todays[i] ?? null} role={role} />
           ))}
         </ul>
       </main>

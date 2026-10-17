@@ -112,7 +112,7 @@ async function guardByRef(
 }
 
 /** Map a database error from the write functions to an HTTP answer; anything unknown is rethrown (→ 500, logged). */
-function fromDbError(err: unknown): HandlerResult {
+export function fromDbError(err: unknown): HandlerResult {
   if (err instanceof ReviewDbError) {
     switch (err.code) {
       case "42501":

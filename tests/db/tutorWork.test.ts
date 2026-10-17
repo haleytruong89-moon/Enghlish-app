@@ -4,6 +4,8 @@ import { addDays, daysBetween, todayVn } from "../../lib/inquiries/dates";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { CONTENT_DIR } from "../../lib/config/content";
+import { parseNotes } from "../../lib/review/shape";
+import { parseFrames, parseLastNote, parseRecentResult, parseTags, parseUntagged, parseWeakPoints } from "../../lib/tutorwork/shape";
 import type { InquiryTemplate } from "../../lib/config/schemas";
 import { asCommit, createAuthUser, createTestDb, errorAs, migrate, rowsAs, seed, type Seeded, type TestDb } from "./helpers";
 
@@ -763,6 +765,54 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
 
     it("lesson_notes stays append-only after the new columns", async () => {
       await expect(db.client.query("update english.lesson_notes set message_to_learner = 'x'")).rejects.toThrow(/append-only/);
+    });
+  });
+
+  // -------------------------------------------------------------------------------------------------------------
+  describe("the queries behind the screens return what the page parsers expect (and staff only)", () => {
+    it("tags, frames, last result, last note, weak points and the untagged queue all parse", async () => {
+      await quick(M().tutorNguyen, { tags: [{ n: 4, tag_key: "dang-tu" }, { n: 7, tag_key: null }], clientId: "screen-quick-0001" });
+      await noteV2(M().tutorNguyen, { weak: ["dang-tu"], message: "Ôn dạng từ nhé", parent: "Em tiến bộ", clientId: "screen-note-00001" });
+      const asStaff = (user: string, sql: string, params: unknown[] = []) => rowsAs(db.client, "authenticated", user, sql, params);
+
+      // the same selects the loaders make (dates as text, as PostgREST returns them)
+      const tags = parseTags(await asStaff(s.users.tutorNguyen, "select key, label_vi, group_vi, origin from english.error_tags where track_id = 'B' and retired_at is null order by origin desc, created_at"));
+      expect(tags.length).toBeGreaterThanOrEqual(10);
+      expect(tags.slice(0, 10).every((t) => !t.custom)).toBe(true);
+      expect(tags.find((t) => t.key === "dang-tu")?.label).toBe("Dạng từ");
+
+      const frames = parseFrames(await asStaff(s.users.parent, "select id, title, total_items, parts, items, scale, supersedes_id from english.test_frames where track_id = 'B' order by created_at"));
+      const tiny = frames.find((f) => f.id === frameId);
+      expect(tiny).toMatchObject({ title: "Tiny B test", totalItems: 10 });
+      expect(tiny?.items).toHaveLength(10);
+      expect(tiny?.parts[0]).toEqual({ key: "A", name: "Grammar", from: 1, to: 5 });
+      expect(tiny?.scale?.[0]).toEqual({ min: 8, max: 10, label: "Tốt" });
+
+      const recent = parseRecentResult(await asStaff(s.users.tutorNguyen, "select id, title, taken_on::text as taken_on, total_items, correct from english.results where learner_id = $1 order by taken_on desc, created_at desc limit 1", [NG()]));
+      expect(recent?.takenOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+      const lastNote = parseLastNote(await asStaff(s.users.parent, "select id, session_date::text as session_date, goals, weak_tag_keys, message_to_learner, author_role, supersedes_id from english.lesson_notes where learner_id = $1 order by session_date desc, created_at desc limit 20", [NG()]));
+      expect(lastNote).toMatchObject({ message: "Ôn dạng từ nhé", weakTagKeys: ["dang-tu"], authorRole: "tutor" });
+
+      const notes = parseNotes(await asStaff(s.users.parent, "select id, learner_id, tutor_member_id, session_date::text as session_date, goals, observed, support_level, next_actions, practised_target_ids, published, supersedes_id, created_at::text as created_at, weak_tag_keys, message_to_learner, note_for_parent, author_role from english.lesson_notes where learner_id = $1", [NG()]));
+      expect(notes.length).toBeGreaterThan(0);
+      expect(notes.some((n) => n.supportLevel === null && n.noteForParent === "Em tiến bộ")).toBe(true);
+
+      const view = parseWeakPoints(await svc("select english.eng_weak_points($1, null) as r", [NG()]));
+      expect(view.policyDays).toBeGreaterThan(0);
+      expect(view.tags.length).toBeGreaterThan(0);
+      const queue = parseUntagged(await svc("select english.eng_untagged_queue($1) as r", [NG()]));
+      expect(queue.some((i) => i.title === "Link practice" && i.items.includes(7))).toBe(true);
+    });
+
+    it("the same selects return nothing to a student", async () => {
+      for (const sql of [
+        "select 1 from english.error_tags",
+        "select 1 from english.test_frames",
+        "select 1 from english.results",
+        "select 1 from english.tag_marks",
+        "select 1 from english.lesson_notes",
+      ]) expect(await rowsAs(db.client, "authenticated", s.users.studentNguyen, sql), sql).toEqual([]);
     });
   });
 

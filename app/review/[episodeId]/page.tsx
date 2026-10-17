@@ -4,11 +4,14 @@ import { AppHeader } from "@/components/AppHeader";
 import { ScoringPanel, type PanelTarget } from "@/components/review/ScoringPanel";
 import { SupportForm } from "@/components/review/SupportForm";
 import { WorkPanel } from "@/components/review/WorkPanel";
+import { WritingTags } from "@/components/tutor/WritingTags";
 import { activityLabels, app, fallbackLabels, inquiriesPage, learnerWithTrack, modeLabels, provenanceLabels, purposeLabels, reviewPage, type Mode } from "@/lib/copy/vi";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { formatWhen, skillLabel } from "@/lib/review/format";
 import { findEpisodeLearner, loadEpisode } from "@/lib/review/load";
 import { createUserClient } from "@/lib/supabase/server";
+import { loadTags, loadWritingTagKeys } from "@/lib/tutorwork/load";
+import { TAGGABLE_ACTIVITIES } from "@/lib/tutorwork/types";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +41,11 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
   const scorable = targets.filter((t) => t.scorable);
   const mode = view.attempt.mode as Mode;
   const checkpoint = view.episode.facets.checkpoint === true;
+  // Tag chips for written work (tutor or parent). A failed lookup leaves the chips out; it never blocks the review itself.
+  const taggable = (TAGGABLE_ACTIVITIES as readonly string[]).includes(view.activity.activityType);
+  const writing = taggable
+    ? await Promise.all([loadTags(learner.trackId), loadWritingTagKeys(learner.id, view.episode.id)]).catch(() => null)
+    : null;
 
   return (
     <>
@@ -82,6 +90,7 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <div className="flex flex-col gap-4">
             <WorkPanel view={view} />
+            {writing ? <WritingTags learnerId={learner.id} episodeId={view.episode.id} tags={writing[0]} saved={writing[1]} /> : null}
             {scorable.length > 0 && view.viewer.canDecide ? <SupportForm attemptId={view.attempt.id} skills={scorable.map((t) => ({ key: t.key, label: t.label }))} /> : null}
           </div>
           <ScoringPanel

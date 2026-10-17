@@ -22,6 +22,8 @@ export type Action =
   | "work:review" //         tutor/parent review evidence (S5); the database narrows it further (D15)
   | "notes:read" //         lesson notes — tutor (all versions) and parent (published ones; RLS decides) (S5)
   | "notes:write" //        write a lesson note — tutor only (S5)
+  | "tutorwork:read" //     weak points, results, tags and test frames — tutor and parent (S5b-1); never students
+  | "tutorwork:write" //    record a result / a v2 session note / tags — tutor and parent; the database narrows in-class work to tutors (D15)
   | "targets:read" //        tracked-skills page (target set) — parent and tutor only
   | "inquiries:read" //     assigned inquiries + assignable templates — parent and tutor only
   | "inquiries:assign" //   assign an inquiry template — parent and tutor only
@@ -40,6 +42,8 @@ export const ACTIONS_BY_ROLE: Record<Role, readonly Action[]> = {
     "work:review",
     "notes:read",
     "notes:write",
+    "tutorwork:read",
+    "tutorwork:write",
   ],
   parent: [
     "learner:read",
@@ -49,6 +53,8 @@ export const ACTIONS_BY_ROLE: Record<Role, readonly Action[]> = {
     "activities:event",
     "work:review",
     "notes:read",
+    "tutorwork:read",
+    "tutorwork:write",
     "consent:read",
     "admin",
   ],

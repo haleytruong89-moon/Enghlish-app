@@ -18,3 +18,11 @@ export function formatWhen(iso: string): string {
 export function skillLabel(key: string, titleVi: string | null): string {
   return skillNames[key]?.staff ?? titleVi ?? fallbackLabels.skill;
 }
+
+/** "Thứ Bảy 17/10" for a calendar date "YYYY-MM-DD" (no time zone involved). */
+export function formatDay(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  return `${weekdayNames[d.getUTCDay()]} ${m[3]}/${m[2]}`;
+}

@@ -478,3 +478,63 @@ Kế hoạch: `docs/plans/s5b1-tutor-work.md` · mockup: canvas "Màn gia sư �
 
 Giả định chờ phụ huynh xác nhận khi duyệt PR: 2 ô nhận xét (lời nhắn cho em / ghi chú cho phụ huynh), câu bỏ trống =
 sai, bài làm trong buổi chỉ gia sư lưu, gắn nhãn khi chấm bài viết, ghi kết quả kiểm tra lại trong "Ghi buổi học".
+
+## S5b-1 PR A — Tên đăng nhập ngắn, ghi kết quả bài, ghi buổi học, điểm cần chú ý (17/10/2026)
+
+Nhánh `feature/s5b1a-login-results` (chưa đẩy lên GitHub, chưa mở PR — chờ review Opus). Kế hoạch: `docs/plans/s5b1-tutor-work.md` (bước 1–4). Phần **giao bài link/PDF, em gửi ảnh kết quả, kho file** là PR B (migration `0016`), chưa làm ở đây.
+
+### Gia sư và phụ huynh làm được gì bây giờ
+
+- **Đăng nhập bằng tên ngắn:** `an`, `nguyen`, `giasu-an`, `giasu-nguyen` (hoặc vẫn gõ email như cũ). Ô duy nhất tên "Tên đăng nhập hoặc email". Tên lạ và mật khẩu sai báo **cùng một câu lỗi**. Email không bao giờ gửi xuống trình duyệt.
+- **Trang chủ = "Hôm nay"** (gia sư và phụ huynh): hai việc chính (**Ghi buổi học**, **Ghi kết quả bài**), mục **Cần chú ý** (điểm lặp lại ≥ 2 nguồn, câu sai chờ gắn nhãn, nhãn đến hạn kiểm tra lại), buổi học gần nhất, bài gần nhất. Phụ huynh chỉ thấy câu "chờ gắn nhãn" **sau 2 ngày** (gia sư gắn trước, phụ huynh dự phòng); việc lọc này làm ở máy chủ.
+- **Ghi kết quả bài** (`/learners/<em>/results/new`): *Đề có khung* — bấm các câu sai trên lưới (điểm từng phần, điểm tổng, thang của đề, "Sai theo nhãn"); *Nhập nhanh* — tên bài, tổng số câu, số đúng, số các câu sai, nhãn cho từng câu sai (để trống được → vào "Chờ gắn nhãn"); lần đầu/làm lại, có Hint không, ở nhà/trong buổi (**trong buổi chỉ gia sư**, phụ huynh không thấy lựa chọn này và database cũng chặn). Ô "+ nhãn khác" tạo nhãn riêng của gia đình. Mục **Chờ gắn nhãn** nằm ngay dưới. Sau khi lưu, form khóa lại tới khi bấm "Ghi bài khác" (tránh ghi trùng).
+- **Ghi buổi học** (`/learners/<em>/notes/new`): ngày, hôm nay học, ≤ 3 nhãn cần củng cố (chip + tìm + thêm), lời nhắn cho em (≤ 500 ký tự), ghi chú cho phụ huynh (≤ 1000, em không thấy), khung "Đến hạn kiểm tra lại" (đã hỏi · ổn / còn sai / chưa hỏi). "Còn sai" đưa nhãn trở lại danh sách cần chú ý. Gia sư **hoặc** phụ huynh ghi được; luôn chia sẻ cho phụ huynh.
+- **Điểm cần chú ý** (`/learners/<em>/weak`): bảng nhãn × nguồn (Bài kiểm tra / Buổi học / Bài viết / Bài luyện) + trạng thái Lặp lại / Theo dõi / Ổn; chọn 4 tuần / 8 tuần / từ đầu; bấm tên nhãn xem dòng thời gian và hạn kiểm tra lại. Hạn kiểm tra lại = lần gần nhất + số ngày của chính sách đánh giá (AP-0.2-pilot: 14), **đọc từ database, không viết cứng**.
+- **Nhãn cho bài viết** ngay trên màn duyệt bài (chỉ bài Viết / Sửa bài; tối đa 3 nhãn, đã lưu thì không bỏ được).
+- Trang "Ghi chú buổi học" cũ vẫn dùng được; ghi chú viết bằng mẫu mới hiện thêm Củng cố / Lời nhắn / Ghi chú cho phụ huynh và không có nút "Sửa" (bản mới sửa bằng cách ghi buổi mới).
+
+### Luật đo lường (ép trong database, có test)
+
+- Kết quả bài chỉ là **tín hiệu**: không ghi vào `observations` / `validation_decisions`, không đổi bậc kỹ năng.
+- **Chỉ lần làm đầu** vào "Điểm cần chú ý"; làm lại lưu `retry` (không tính). Bài bị thay thế không tính. Có Hint vẫn tính, kèm dấu "có gợi ý".
+- Học sinh **không đọc được** bảng nào mới (RLS; test cho thấy 0 dòng) và không có màn mới nào cho học sinh trong PR này.
+- Không lưu chữ của đề thi: khung đề chỉ có số câu → phần → nhãn.
+
+### Đã làm (4 commit, mỗi bước plan một commit)
+
+1. Đăng nhập tên ngắn: `0013_login_names.sql`, form đăng nhập, mở rộng "Create real family" (ô nhập tên ngắn tùy chọn, mặc định `an`/`nguyen`/`giasu-an`/`giasu-nguyen`; chạy lại an toàn).
+2. `0014_tutor_work.sql` + `0015_seed_tags.sql`: nhãn lỗi (10 nhãn cho mỗi track), khung đề, kết quả, dấu nhãn, kiểm tra lại, mở rộng `lesson_notes`, các hàm ghi/đọc, mở rộng hàm xóa dữ liệu một em; 49 test database.
+3. Nhập khung đề: `npm run db:import-frame`, workflow **Import test frame**, khung **Destination C1&C2 Progress Test U1–12** (60 câu, 7 phần, thang 54–60 / 45–53 / 36–44 / 0–35).
+4. Màn hình (bước này): Hôm nay, Ghi kết quả bài, Chờ gắn nhãn, Ghi buổi học, Điểm cần chú ý, nhãn cho bài viết; API tương ứng (`/api/learners/<em>/results`, `/session-notes`, `/tags`, `/api/results/<id>/tags`, `/api/review/episodes/<id>/tags`); chữ giao diện trong `lib/copy/vi.ts`; 48 test đơn vị mới + 2 test database + 8 kịch bản e2e (`tests/e2e/tutorWork.spec.ts`).
+
+### Phụ huynh cần làm (SQL cần áp, đúng thứ tự)
+
+1. GitHub → Actions → **Apply database migrations** (gõ APPLY): áp `0013_login_names.sql`, `0014_tutor_work.sql`, `0015_seed_tags.sql` (cùng lúc với 0001–0012 nếu chưa áp). Hoặc dán từng file vào SQL Editor theo thứ tự 0013 → 0014 → 0015. Chỉ **thêm** bảng/cột/hàm, không sửa dữ liệu cũ.
+2. **Tên đăng nhập ngắn cho gia đình THẬT:** chạy lại workflow **Create real family** (gõ CREATE) với các email đã dùng — tài khoản đã có được dùng lại, chỉ thêm tên ngắn. Muốn tên khác thì điền vào các ô tên đăng nhập. Gia đình **thử** (preview): chạy lại workflow seed gia đình thử, tên là `thu-an`, `thu-nguyen`, `thu-giasu-an`, `thu-giasu-nguyen`, `thu-phuhuynh`.
+3. **Nhập khung đề Destination:** Actions → **Import test frame** (gõ IMPORT), chọn `family = test` để thử trước, rồi `real`. Chạy lại không đổi gì.
+
+### Cách thử trên preview (gia đình thử)
+
+1. Đăng nhập `thu-giasu-nguyen` (mật khẩu seed). Trang chủ là **Hôm nay · …**; thẻ Nguyên (thử) có hai nút lớn.
+2. **Ghi kết quả bài** → thấy lưới 60 câu: bấm vài câu, điểm/thang đổi ngay → **Lưu kết quả**. Bấm **Nhập nhanh**: tên bài, 10 câu, đúng 8, sai "4, 7", chọn nhãn cho câu 4, để trống câu 7 → lưu → câu 7 xuất hiện ở **Chờ gắn nhãn**, chọn nhãn và lưu.
+3. **Ghi buổi học**: chọn 1–3 nhãn, viết lời nhắn và ghi chú → lưu. Đăng nhập `thu-phuhuynh`, mở **Ghi chú buổi học** của Nguyên: thấy cả hai ô.
+4. **Điểm cần chú ý**: bảng có các nhãn vừa ghi; bấm tên nhãn xem dòng thời gian. Một nhãn sai ở ≥ 2 nguồn → "Lặp lại".
+5. Thử là học sinh (`thu-nguyen`): không có trang nào ở trên (404), và không thấy điểm/nhãn nào.
+6. Là phụ huynh: ô "Trong buổi học" không xuất hiện ở Ghi kết quả bài.
+
+### Đối chiếu với plan — chỗ khác và vì sao (cần Opus/phụ huynh xem)
+
+- **Chưa có thẻ "Giao bài" và danh sách "Bài luyện đang mở"** trên Hôm nay, và **chưa có "Bài nào"** (chọn bài đã giao) / ảnh em gửi bên cạnh "Nhập nhanh": thuộc PR B. Hiện chỉ có "Bài trên giấy / bài link (ghi tay)".
+- **Nguồn của dấu nhãn:** đề có khung → `test` (Bài kiểm tra); nhập nhanh → `practice` (Bài luyện). Plan chưa nói rõ; chọn như vậy vì khung đề = đề đầy đủ.
+- `lesson_notes.support_level` được nới "không bắt buộc" (ghi buổi học mới không có ô này); hàm cũ vẫn truyền giá trị, ràng buộc giá trị hợp lệ giữ nguyên.
+- Ghi buổi học (mới) **luôn chia sẻ** với phụ huynh vì có ô "ghi chú cho phụ huynh".
+- Quy tắc "phụ huynh chỉ thấy câu chờ gắn nhãn sau 2 ngày" là **quy tắc giao diện/máy chủ**, không phải database (plan ghi vậy): phụ huynh vẫn gắn được nhãn nếu gọi trực tiếp API.
+- Hàm ghi thêm cột `marked_on` (ngày của sự việc) và `title`/`assignment_id` ở bảng kết quả so với bản phác trong plan, để "đến hạn kiểm tra lại" tính theo ngày thật.
+- Nhãn riêng của gia đình có key bắt đầu `x-` (tạo ở máy chủ từ tên) nên không bao giờ đụng nhãn có sẵn.
+- Số migration kế tiếp cho nội dung cấu hình mới (`npm run gen:config -- --new`) giờ là **0016**.
+- Trong môi trường này không có Docker/Supabase nên **chưa chạy được e2e và chưa mở trang thật**; đã có `next build` xanh, test database và test render. E2E chạy trong CI.
+
+### Ghi chú cho PR B và các lát sau
+
+- PR B (`feature/s5b1b-practice-files`): `0016` (bucket `english-work`, `files`, `assignments`, `submissions`), màn Giao bài, màn Bài luyện của em, ảnh kết quả bên cạnh "Nhập nhanh", thẻ Giao bài + danh sách bài đang mở trên Hôm nay.
+- S7 (trạng thái, đề xuất bậc) **không được đọc** `results` / `tag_marks` / `recheck_events` làm bằng chứng.

@@ -126,7 +126,8 @@ export type LessonNoteView = {
   sessionDate: string;
   goals: string | null;
   observed: string | null;
-  supportLevel: SupportLevel;
+  /** null for a note written with "Ghi buổi học" (v2), which has no support-level field. */
+  supportLevel: SupportLevel | null;
   nextActions: string[];
   practisedTargetIds: string[];
   published: boolean;
@@ -134,6 +135,11 @@ export type LessonNoteView = {
   createdAt: string;
   /** false = a newer version replaced it. */
   current: boolean;
+  /** v2 fields (empty / null on older notes). */
+  weakTagKeys: string[];
+  messageToLearner: string | null;
+  noteForParent: string | null;
+  authorRole: "tutor" | "parent";
 };
 
 export const OFFLINE_ASSISTANCE = ["none", "notes", "dictionary", "asked_someone", "ai_outside", "unknown"] as const;
