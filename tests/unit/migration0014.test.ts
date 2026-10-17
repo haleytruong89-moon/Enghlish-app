@@ -38,6 +38,18 @@ describe("0014_tutor_work.sql", () => {
     for (const key of ["tag_marks", "recheck_events", "results"]) expect(body, key).toContain(`'${key}'`);
   });
 
+  it("eng_write_lesson_note (v1) keeps EVERY line of the 0010 version; 0014 adds only the check that refuses to replace a v2 note", () => {
+    const end = "\nend\n$$;";
+    const old = fnText(read("0010_review.sql"), "eng_write_lesson_note", end);
+    const now = fnText(sql, "eng_write_lesson_note", end);
+    const r = isSubsequence(old, now);
+    expect(r.ok, `lost line: ${old[r.i]}`).toBe(true);
+    const added = now.filter((l) => !old.includes(l)).join("\n");
+    expect(added).toContain("v_prev.support_level is null");
+    expect(added).toContain("(v2) cannot be edited with this form");
+    expect(added.split("\n").filter((l) => l.trim() && !l.trim().startsWith("--")).length).toBeLessThanOrEqual(8);
+  });
+
   it("is expand-only: no drop of a table or column, no data deletes outside the purge function", () => {
     expect(code).not.toMatch(/drop\s+table|drop\s+column|rename\s+(to|column)/i);
     const withoutPurge = code.replace(/create or replace function english\.eng_purge_learner[\s\S]*?\n\$\$;/, "");

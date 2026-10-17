@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { CONTENT_DIR } from "../../lib/config/content";
 import { parseNotes } from "../../lib/review/shape";
+import { customTagKey } from "../../lib/tutorwork/frameScore";
 import { parseFrames, parseLastNote, parseRecentResult, parseTags, parseUntagged, parseWeakPoints } from "../../lib/tutorwork/shape";
 import type { InquiryTemplate } from "../../lib/config/schemas";
 import { asCommit, createAuthUser, createTestDb, errorAs, migrate, rowsAs, seed, type Seeded, type TestDb } from "./helpers";
@@ -67,6 +68,7 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
   let family2: string;
   let learner2: string;
   let frameId: string;
+  let menhKey = ""; // key of the first custom tag (made by the database)
   let r1: string;
   let b0: string;
   let ep6: string;
@@ -130,13 +132,19 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
     supersedes?: string | null;
     clientId?: string;
     learner?: string;
+    source?: "test" | "practice" | null;
   };
-  const record = (by: string, o: ResultOpts = {}) =>
-    svc<Res>("select english.eng_record_result($1, $2, $3, $4, $5, $6, $7::int[], $8::jsonb, $9, $10, $11, $12::date, null, $13, $14, $15) as r", [
-      o.learner ?? NG(), o.mode ?? "frame", o.frame === undefined ? frameId : o.frame, o.title ?? null, o.total ?? null, o.correct ?? null,
+  // A framed first attempt can be recorded once per test (and learner), so each default call gets its own frame (same items and tags).
+  let frameSeq = 0;
+  const freshFrame = () => insertFrame(s.familyId, "B", frameB({ title: `Tiny B test #${(frameSeq += 1)}` }));
+  const record = async (by: string, o: ResultOpts = {}) => {
+    const frame = o.frame === undefined ? await freshFrame() : o.frame;
+    return svc<Res>("select english.eng_record_result($1, $2, $3, $4, $5, $6, $7::int[], $8::jsonb, $9, $10, $11, $12::date, null, $13, $14, $15, $16) as r", [
+      o.learner ?? NG(), o.mode ?? "frame", frame, o.title ?? null, o.total ?? null, o.correct ?? null,
       o.wrong ?? [], o.tags === undefined || o.tags === null ? null : JSON.stringify(o.tags), o.context ?? "home", o.attempt ?? "first", o.hint ?? false,
-      o.on ?? TODAY, o.supersedes ?? null, by, o.clientId ?? randomUUID(),
+      o.on ?? TODAY, o.supersedes ?? null, by, o.clientId ?? randomUUID(), o.source ?? null,
     ]);
+  };
   const quick = (by: string, o: ResultOpts = {}) =>
     record(by, { mode: "quick", frame: null, title: "Link practice", total: 10, correct: 8, wrong: [4, 7], ...o });
   const weak = (learner: string, since: string | null = null) =>
@@ -274,7 +282,7 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
       expect(r.untagged).toBe(0);
       const row = (await q1<{ correct: number; total_items: number; wrong_items: number[]; item_tags: { n: number; tag_key: string }[]; used_hint: boolean; recorded_role: string; title: string; context: string; attempt: string }>(
         "select * from english.results where id = $1", [r.id]))[0];
-      expect(row).toMatchObject({ correct: 6, total_items: 10, wrong_items: [2, 3, 5, 7], used_hint: true, recorded_role: "tutor", title: "Tiny B test", context: "home", attempt: "first" });
+      expect(row).toMatchObject({ correct: 6, total_items: 10, wrong_items: [2, 3, 5, 7], used_hint: true, recorded_role: "tutor", title: expect.stringMatching(/^Tiny B test/), context: "home", attempt: "first" });
       expect(row?.item_tags).toEqual([
         { n: 2, tag_key: "cau-dieu-kien-dao-ngu" }, { n: 3, tag_key: "cau-dieu-kien-dao-ngu" }, { n: 5, tag_key: "wish-would-rather" }, { n: 7, tag_key: "dang-tu" },
       ]);
@@ -305,10 +313,11 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
     });
 
     it("gives the same receipt when sent again; a different body under the same id is refused", async () => {
-      const a = await record(M().tutorNguyen, { wrong: [4], clientId: "res-replay-0001" });
-      const b = await record(M().tutorNguyen, { wrong: [4], clientId: "res-replay-0001" });
+      const rf = await freshFrame();
+      const a = await record(M().tutorNguyen, { frame: rf, wrong: [4], clientId: "res-replay-0001" });
+      const b = await record(M().tutorNguyen, { frame: rf, wrong: [4], clientId: "res-replay-0001" });
       expect(b).toEqual({ ...a, replayed: true });
-      await fail(record(M().tutorNguyen, { wrong: [5], clientId: "res-replay-0001" }), "23505");
+      await fail(record(M().tutorNguyen, { frame: rf, wrong: [5], clientId: "res-replay-0001" }), "23505");
       expect(await count("select count(*)::int as n from english.results where client_id = 'res-replay-0001'")).toBe(1);
       expect(await count("select count(*)::int as n from english.tag_marks where source_id = $1", [a.id])).toBe(1);
     });
@@ -452,7 +461,7 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
       let w = await weak(wl);
       const t1 = tagOf(w, "cau-dieu-kien-dao-ngu");
       expect(t1).toMatchObject({ sources: 1, status: "watch", by_source: { test: 1, practice: 0, lesson: 0, writing: 0 }, items_wrong: { test: 3, practice: 0 } });
-      expect(t1?.events[0]).toMatchObject({ source: "test", items: [1, 2, 3], title: "Tiny B test", date: daysAgo(10) });
+      expect(t1?.events[0]).toMatchObject({ source: "test", items: [1, 2, 3], title: expect.stringMatching(/^Tiny B test/), date: daysAgo(10) });
       // a note in the session names the same tag: a second, different source
       await noteV2(M().parent, { learner: wl, date: daysAgo(8), weak: ["cau-dieu-kien-dao-ngu"], clientId: "weak-note-0001" });
       w = await weak(wl);
@@ -653,19 +662,59 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
   });
 
   // -------------------------------------------------------------------------------------------------------------
-  describe("custom tags", () => {
+  describe("custom tags (keys are made with a random tail, so they never collide)", () => {
+    // the real path: the server turns the label into "x-<slug>" (customTagKey) and the function adds the tail
+    const add = (learner: string, label: string, by: string) =>
+      svc<{ key: string; label_vi: string; created: boolean }>("select english.eng_add_error_tag($1, $2, $3, $4) as r", [learner, customTagKey(label), label, by]);
+
     it("staff add a tag for the child's track; the same label returns the existing one; seed labels are not duplicated", async () => {
-      const a = await svc<{ key: string; label_vi: string; created: boolean }>("select english.eng_add_error_tag($1, 'x-menh-de-quan-he-ab12', 'Mệnh đề quan hệ', $2) as r", [NG(), M().tutorNguyen]);
-      expect(a).toEqual({ key: "x-menh-de-quan-he-ab12", label_vi: "Mệnh đề quan hệ", created: true });
-      const again = await svc<{ key: string; created: boolean }>("select english.eng_add_error_tag($1, 'x-menh-de-quan-he-zz99', ' mệnh đề quan hệ ', $2) as r", [NG(), M().parent]);
-      expect(again).toMatchObject({ key: "x-menh-de-quan-he-ab12", created: false });
-      const seedDup = await svc<{ key: string; created: boolean }>("select english.eng_add_error_tag($1, 'x-dang-tu-1234', 'Dạng từ', $2) as r", [NG(), M().tutorNguyen]);
+      const a = await add(NG(), "Mệnh đề quan hệ", M().tutorNguyen);
+      expect(a).toMatchObject({ label_vi: "Mệnh đề quan hệ", created: true });
+      expect(a.key).toMatch(/^x-menh-de-quan-he-[0-9a-f]{5}$/);
+      menhKey = a.key;
+      const again = await add(NG(), " mệnh  đề   quan hệ ", M().parent);
+      expect(again).toMatchObject({ key: menhKey, created: false });
+      const seedDup = await add(NG(), "Dạng từ", M().tutorNguyen);
       expect(seedDup).toMatchObject({ key: "dang-tu", created: false });
       await fail(svc("select english.eng_add_error_tag($1, 'khong-x', 'Nhãn', $2) as r", [NG(), M().tutorNguyen]), "22023");
+      await fail(svc("select english.eng_add_error_tag($1, 'x-ok', 'N', $2) as r", [NG(), M().tutorNguyen]), "22023"); // label too short
       // the new tag is usable straight away, but only for that family and track
-      await quick(M().tutorNguyen, { tags: [{ n: 4, tag_key: "x-menh-de-quan-he-ab12" }, { n: 7, tag_key: null }], clientId: "res-custom-0001" });
-      await fail(quick(M().tutorAn, { learner: AN(), tags: [{ n: 4, tag_key: "x-menh-de-quan-he-ab12" }] }), "23514", /does not exist/);
-      await fail(quick(parent2Member, { learner: learner2, tags: [{ n: 4, tag_key: "x-menh-de-quan-he-ab12" }] }), "23514", /does not exist/);
+      await quick(M().tutorNguyen, { tags: [{ n: 4, tag_key: menhKey }, { n: 7, tag_key: null }], clientId: "res-custom-0001" });
+      await fail(quick(M().tutorAn, { learner: AN(), tags: [{ n: 4, tag_key: menhKey }] }), "23514", /does not exist/);
+      await fail(quick(parent2Member, { learner: learner2, tags: [{ n: 4, tag_key: menhKey }] }), "23514", /does not exist/);
+    });
+
+    it("the same label in two families gives two different keys, and neither family ever sees the other's tag or an error", async () => {
+      const other = await add(learner2, "Mệnh đề quan hệ", parent2Member);
+      expect(other).toMatchObject({ label_vi: "Mệnh đề quan hệ", created: true });
+      expect(other.key).toMatch(/^x-menh-de-quan-he-[0-9a-f]{5}$/);
+      expect(other.key).not.toBe(menhKey);
+      // each family keeps its own; the second family's call did not return the first family's tag
+      const again = await add(learner2, "mệnh đề quan hệ", parent2Member);
+      expect(again).toMatchObject({ key: other.key, created: false });
+      expect(await rowsAs(db.client, "authenticated", parent2User, "select 1 from english.error_tags where key = $1", [menhKey])).toEqual([]);
+      expect(await rowsAs(db.client, "authenticated", s.users.parent, "select 1 from english.error_tags where key = $1", [other.key])).toEqual([]);
+    });
+
+    it("two near-identical labels in one family become two tags (no clash on the slug)", async () => {
+      const a = await add(NG(), "Đảo ngữ", M().tutorNguyen);
+      const b = await add(NG(), "Dao ngu!", M().tutorNguyen);
+      expect(a.created && b.created).toBe(true);
+      expect(a.key).not.toBe(b.key);
+      expect(a.key).toMatch(/^x-dao-ngu-[0-9a-f]{5}$/);
+      expect(b.key).toMatch(/^x-dao-ngu-[0-9a-f]{5}$/);
+      expect(await add(NG(), "đảo ngữ", M().parent)).toMatchObject({ key: a.key, created: false });
+    });
+
+    it("a retired tag is never handed back: the same label makes a fresh active tag", async () => {
+      const a = await add(NG(), "Thì quá khứ hoàn thành", M().tutorNguyen);
+      await q1("update english.error_tags set retired_at = now() where key = $1", [a.key]);
+      const b = await add(NG(), "Thì quá khứ hoàn thành", M().tutorNguyen);
+      expect(b.created).toBe(true);
+      expect(b.key).not.toBe(a.key);
+      // the retired one cannot be used any more, the fresh one can
+      await fail(quick(M().tutorNguyen, { tags: [{ n: 4, tag_key: a.key }] }), "23514", /does not exist/);
+      await quick(M().tutorNguyen, { tags: [{ n: 4, tag_key: b.key }] });
     });
   });
 
@@ -695,7 +744,7 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
       const tags = await rowsAs<{ family_id: string | null }>(db.client, "authenticated", parent2User, "select family_id from english.error_tags");
       expect(tags.every((t) => t.family_id === null || t.family_id === family2)).toBe(true);
       // the parent of family 2 sees family 2's own custom tag but not the first family's
-      expect(await rowsAs(db.client, "authenticated", parent2User, "select 1 from english.error_tags where key = 'x-menh-de-quan-he-ab12'")).toEqual([]);
+      expect(await rowsAs(db.client, "authenticated", parent2User, "select 1 from english.error_tags where key = $1", [menhKey])).toEqual([]);
       expect(await rowsAs(db.client, "authenticated", parent2User, "select 1 from english.error_tags where key = 'x-other-fam-tag'")).toHaveLength(1);
     });
 
@@ -749,6 +798,145 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
       );
       expect(rls).toHaveLength(6);
       expect(rls.every((r) => r.relrowsecurity)).toBe(true);
+    });
+  });
+
+  // -------------------------------------------------------------------------------------------------------------
+  describe("review fixes: replacing results, duplicate first attempts, rechecks, source, D15 on writing tags, v1 vs v2 notes", () => {
+    let child: string; // a clean Track B child of the test family
+    beforeAll(async () => {
+      child = ((await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1, 'Fix child', 'B', true, 'active') returning id", [s.familyId]))[0] as { id: string }).id;
+      await q1("insert into english.relationships(member_id, learner_id, relation) values ($1, $2, 'parent')", [M().parent, child]);
+      await q1("insert into english.relationships(member_id, learner_id, relation) values ($1, $2, 'tutor')", [M().tutorNguyen, child]);
+      await q1("select english.eng_assign_target_set($1, 'B-v1')", [child]);
+    });
+
+    it("replacing a result: only the member who recorded it, and only for the same learner", async () => {
+      const cls = await quick(M().tutorNguyen, { learner: child, context: "class", clientId: "fix-class-0001", title: "In class" });
+      // a parent cannot replace a tutor's class result; neither can another tutor
+      await fail(quick(M().parent, { learner: child, supersedes: cls.id, clientId: "fix-class-0002" }), "42501", /may replace/);
+      await fail(quick(M().tutorAn, { learner: child, supersedes: cls.id, clientId: "fix-class-0003" }), "42501");
+      await fail(quick(M().studentNguyen, { learner: child, supersedes: cls.id, clientId: "fix-class-0004" }), "42501");
+      // the parent cannot replace it with a class result either
+      await fail(quick(M().parent, { learner: child, supersedes: cls.id, context: "class", clientId: "fix-class-0005" }), "42501");
+      // a result of another child cannot be replaced from this child (the learner must be the same)
+      await fail(quick(M().tutorAn, { learner: AN(), supersedes: cls.id, clientId: "fix-class-0006" }), "P0002");
+      // the author (a tutor with an active relationship) can; the class result is then replaced exactly once
+      const fixed = await quick(M().tutorNguyen, { learner: child, supersedes: cls.id, context: "class", clientId: "fix-class-0007", title: "In class (fixed)" });
+      expect(fixed.replayed).toBe(false);
+      await fail(quick(M().tutorNguyen, { learner: child, supersedes: cls.id, clientId: "fix-class-0008" }), "23505");
+
+      // a home result the parent made: the tutor may not replace it, the parent may
+      const home = await quick(M().parent, { learner: child, clientId: "fix-home-0001", title: "Home" });
+      await fail(quick(M().tutorNguyen, { learner: child, supersedes: home.id, clientId: "fix-home-0002" }), "42501", /may replace/);
+      await quick(M().parent, { learner: child, supersedes: home.id, clientId: "fix-home-0003", title: "Home (fixed)" });
+    });
+
+    it("a second FIRST attempt of the same test is refused (409 by code 23505 duplicate_first) unless it replaces the earlier one; retries are fine", async () => {
+      const f = await freshFrame();
+      const first = await record(M().tutorNguyen, { learner: child, frame: f, wrong: [1], clientId: "fix-first-0001" });
+      await fail(record(M().tutorNguyen, { learner: child, frame: f, wrong: [2], clientId: "fix-first-0002" }), "23505", /duplicate_first/);
+      await fail(record(M().parent, { learner: child, frame: f, wrong: [2], clientId: "fix-first-0003" }), "23505", /duplicate_first/);
+      // the same request again is still a replay, not a duplicate
+      expect(await record(M().tutorNguyen, { learner: child, frame: f, wrong: [1], clientId: "fix-first-0001" })).toEqual({ ...first, replayed: true });
+      // a retry is a different kind of attempt
+      await record(M().tutorNguyen, { learner: child, frame: f, wrong: [2], attempt: "retry", clientId: "fix-first-0004" });
+      // a new version of the frame is the same test: still a duplicate
+      const v2 = await insertFrame(s.familyId, "B", frameB({ title: "Tiny B test (v2)" }), f);
+      await fail(record(M().tutorNguyen, { learner: child, frame: v2, wrong: [2], clientId: "fix-first-0005" }), "23505", /duplicate_first/);
+      // replacing the earlier first attempt is how to correct it; afterwards the replacement is the current one
+      const fixed = await record(M().tutorNguyen, { learner: child, frame: v2, wrong: [2, 3], supersedes: first.id, clientId: "fix-first-0006" });
+      await fail(record(M().tutorNguyen, { learner: child, frame: v2, wrong: [4], clientId: "fix-first-0007" }), "23505", /duplicate_first/);
+      expect(fixed.replayed).toBe(false);
+      // another child may take the same test; quick results are never "duplicates"
+      const sibling = ((await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1, 'Sibling', 'B', true, 'active') returning id", [s.familyId]))[0] as { id: string }).id;
+      await q1("insert into english.relationships(member_id, learner_id, relation) values ($1, $2, 'parent')", [M().parent, sibling]);
+      await record(M().parent, { learner: sibling, frame: v2, wrong: [1], clientId: "fix-first-0008" });
+      await quick(M().parent, { learner: child, clientId: "fix-first-0009", title: "Same quick title" });
+      await quick(M().parent, { learner: child, clientId: "fix-first-0010", title: "Same quick title" });
+    });
+
+    it("the source of a quick result is a choice (test or practice, default practice); a framed result is always a test; late tags keep the source", async () => {
+      const dflt = await quick(M().tutorNguyen, { learner: child, tags: [{ n: 4, tag_key: "dang-tu" }], clientId: "fix-src-0001", title: "Default source" });
+      const test = await quick(M().tutorNguyen, { learner: child, tags: [{ n: 4, tag_key: "dang-tu" }, { n: 7, tag_key: null }], source: "test", clientId: "fix-src-0002", title: "Quick test" });
+      const sources = async (id: string) => (await q1<{ source: string }>("select distinct source from english.tag_marks where source_id = $1", [id])).map((r) => r.source);
+      expect(await sources(dflt.id)).toEqual(["practice"]);
+      expect(await sources(test.id)).toEqual(["test"]);
+      expect((await q1<{ source: string }>("select source from english.results where id = $1", [test.id]))[0]?.source).toBe("test");
+      expect((await queue(child)).items.find((i) => i.result_id === test.id)?.source).toBe("test");
+      await tagItems(M().tutorNguyen, test.id, [{ n: 7, tag_key: "cum-dong-tu" }]);
+      expect(await sources(test.id)).toEqual(["test"]);
+      expect((await q1<{ n: number }>("select count(*)::int as n from english.tag_marks where source_id = $1", [test.id]))[0]?.n).toBe(2);
+      const framed = await record(M().tutorNguyen, { learner: child, wrong: [1], source: "test", clientId: "fix-src-0003" });
+      expect((await q1<{ source: string }>("select source from english.results where id = $1", [framed.id]))[0]?.source).toBe("test");
+      await fail(record(M().tutorNguyen, { learner: child, wrong: [1], source: "practice", clientId: "fix-src-0004" }), "22023", /always a test/);
+      await fail(quick(M().tutorNguyen, { learner: child, source: "exam" as never, clientId: "fix-src-0005" }), "22023");
+      // the same request with another source is a different request
+      await fail(quick(M().tutorNguyen, { learner: child, tags: [{ n: 4, tag_key: "dang-tu" }], source: "practice", clientId: "fix-src-0002", title: "Quick test" }), "23505");
+      // the weak-point table counts the quick test as a "test" source
+      const w = await weak(child);
+      expect(tagOf(w, "dang-tu")?.by_source.test).toBeGreaterThanOrEqual(1);
+    });
+
+    it("the untagged queue says who recorded each result (the parent's own items are not made to wait)", async () => {
+      const mine = await quick(M().parent, { learner: child, clientId: "fix-queue-0001", title: "Parent entry" });
+      const item = (await queue(child)).items.find((i) => i.result_id === mine.id) as unknown as { recorded_by_member: string; recorded_role: string };
+      expect(item).toMatchObject({ recorded_by_member: M().parent, recorded_role: "parent" });
+    });
+
+    it("rechecks recorded in a note that was later replaced stop counting (last_recheck and the tag list)", async () => {
+      const lc = ((await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1, 'Recheck fix', 'B', true, 'active') returning id", [s.familyId]))[0] as { id: string }).id;
+      await q1("insert into english.relationships(member_id, learner_id, relation) values ($1, $2, 'parent')", [M().parent, lc]);
+      await q1("select english.eng_assign_target_set($1, 'B-v1')", [lc]);
+      await noteV2(M().parent, { learner: lc, date: daysAgo(20), weak: ["cum-dong-tu"], clientId: "fix-rc-note-01" });
+      const ok = await noteV2(M().parent, { learner: lc, date: daysAgo(3), rechecks: [{ tag_key: "cum-dong-tu", result: "ok" }, { tag_key: "phat-am", result: "ok" }], clientId: "fix-rc-note-02" });
+      let w = await weak(lc);
+      expect(tagOf(w, "cum-dong-tu")).toMatchObject({ status: "ok", last_recheck: { result: "ok" } });
+      expect(tagOf(w, "phat-am")).toMatchObject({ status: "ok" }); // asked, fine: listed as ok
+      // the note is replaced by one without those rechecks: the old rechecks no longer count
+      await noteV2(M().parent, { learner: lc, date: daysAgo(3), studied: "Corrected", supersedes: ok.id, clientId: "fix-rc-note-03" });
+      w = await weak(lc);
+      expect(tagOf(w, "cum-dong-tu")).toMatchObject({ status: "watch", last_recheck: null });
+      expect(tagOf(w, "phat-am")).toBeUndefined();
+    });
+
+    it("a recheck is placed by the day of the session, not by the day it was typed in", async () => {
+      const lc = ((await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1, 'Recheck date', 'B', true, 'active') returning id", [s.familyId]))[0] as { id: string }).id;
+      await q1("insert into english.relationships(member_id, learner_id, relation) values ($1, $2, 'parent')", [M().parent, lc]);
+      await q1("select english.eng_assign_target_set($1, 'B-v1')", [lc]);
+      // typed in later, but it happened EARLIER (20 days ago): it must not hide the 10-day-old "ok"
+      await noteV2(M().parent, { learner: lc, date: daysAgo(10), rechecks: [{ tag_key: "thanh-ngu", result: "ok" }], clientId: "fix-rd-note-01" });
+      await noteV2(M().parent, { learner: lc, date: daysAgo(20), rechecks: [{ tag_key: "thanh-ngu", result: "still_wrong" }], clientId: "fix-rd-note-02" });
+      expect(tagOf(await weak(lc), "thanh-ngu")).toMatchObject({ status: "ok", last_recheck: { result: "ok" }, last_seen: daysAgo(20) });
+    });
+
+    it("one tag cannot be both 'to reinforce' and 're-checked: ok' in the same note (still wrong is fine)", async () => {
+      await fail(noteV2(M().parent, { learner: child, weak: ["dang-tu"], rechecks: [{ tag_key: "dang-tu", result: "ok" }], clientId: "fix-both-0001" }), "23514", /both to reinforce/);
+      await noteV2(M().parent, { learner: child, weak: ["dang-tu"], rechecks: [{ tag_key: "dang-tu", result: "still_wrong" }], clientId: "fix-both-0002" });
+      await noteV2(M().parent, { learner: child, weak: ["dang-tu"], rechecks: [{ tag_key: "cum-dong-tu", result: "ok" }], clientId: "fix-both-0003" });
+    });
+
+    it("writing tags on a checkpoint episode are tutor-only (D15); other writing can be tagged by the parent", async () => {
+      const facet = (await q1<{ cp: boolean | null; od: boolean }>("select (facets ->> 'checkpoint')::boolean as cp, observed_directly as od from english.episodes where id = $1", [ep11]))[0];
+      expect(facet?.cp === true || facet?.od === true, "the fixture episode is a checkpoint").toBe(true);
+      await fail(tagEpisode(M().parent, ep11, ["viet-cau"]), "42501", /D15/);
+      await fail(tagEpisode(M().studentAn, ep11, ["viet-cau"]), "42501");
+      expect((await tagEpisode(M().tutorAn, ep11, ["viet-cau"])).replayed).toBe(true); // already tagged by the tutor earlier
+      const plain = (await q1<{ cp: boolean | null; od: boolean }>("select (facets ->> 'checkpoint')::boolean as cp, observed_directly as od from english.episodes where id = $1", [ep6]))[0];
+      expect(plain?.cp === true || plain?.od === true).toBe(false);
+      await tagEpisode(M().parent, ep6, ["viet-cau"]);
+    });
+
+    it("the old lesson-note form cannot replace a note written with the session form (v2)", async () => {
+      const v2 = await noteV2(M().tutorNguyen, { learner: child, weak: ["dang-tu"], message: "Nhắn em", clientId: "fix-v1v2-0001" });
+      const v1 = (supersedes: string | null, client: string) =>
+        svc<NoteRes>("select english.eng_write_lesson_note($1, $2::date, 'Goal', null, 'light', '{}'::text[], '{}'::text[], true, $3, $4, $5) as r", [child, TODAY, supersedes, M().tutorNguyen, client]);
+      await fail(v1(v2.id, "fix-v1v2-0002"), "23514", /session form/);
+      // the old form still works for old notes, including editing them
+      const old = await v1(null, "fix-v1v2-0003");
+      expect((await v1(old.id, "fix-v1v2-0004")).replayed).toBe(false);
+      // and the v2 note is untouched
+      expect((await q1<{ n: number }>("select count(*)::int as n from english.lesson_notes where supersedes_id = $1", [v2.id]))[0]?.n).toBe(0);
     });
   });
 
@@ -840,6 +1028,20 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
         await count("select count(*)::int as n from english.tag_marks where learner_id <> $1", [victim]),
         await count("select count(*)::int as n from english.test_frames"),
       ]).toEqual(others);
+    });
+
+    it("also removes the short login name of the learner's own (student) account, and no other name", async () => {
+      const user = await createAuthUser(db.client, "purge-student@test.local");
+      const member = ((await q1<{ id: string }>("insert into english.members(user_id, family_id, role, display_name) values ($1, $2, 'student', 'Purge student') returning id", [user, s.familyId]))[0] as { id: string }).id;
+      const victim = ((await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status, member_id) values ($1, 'Purge named', 'B', true, 'active', $2) returning id", [s.familyId, member]))[0] as { id: string }).id;
+      await q1("insert into english.login_names(login_name, auth_user_id) values ('thu-purge-student', $1)", [user]);
+      const before = await count("select count(*)::int as n from english.login_names");
+      const receipt = await svc<{ deleted: Record<string, number> }>("select english.eng_purge_learner($1, null) as r", [victim]);
+      expect(receipt.deleted).toMatchObject({ login_names: 1, members: 1 });
+      expect(await count("select count(*)::int as n from english.login_names where login_name = 'thu-purge-student'")).toBe(0);
+      expect(await count("select count(*)::int as n from english.login_names")).toBe(before - 1);
+      // the name can be given again
+      await q1("insert into english.login_names(login_name, auth_user_id) values ('thu-purge-student', $1)", [user]);
     });
   });
 });

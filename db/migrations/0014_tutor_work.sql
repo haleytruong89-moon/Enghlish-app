@@ -32,7 +32,9 @@ create table if not exists english.error_tags (
     (origin = 'seed' and family_id is null and key !~ '^x-') or (origin = 'custom' and family_id is not null and key ~ '^x-'))
 );
 create unique index if not exists error_tags_key_once on english.error_tags(track_id, key);
-create unique index if not exists error_tags_label_once on english.error_tags(track_id, coalesce(family_id, '00000000-0000-0000-0000-000000000000'::uuid), pg_catalog.lower(label_vi));
+-- Chỉ nhãn còn dùng: nhãn đã nghỉ dùng (retired_at) không chặn việc tạo lại nhãn cùng tên.
+create unique index if not exists error_tags_label_once on english.error_tags(track_id, coalesce(family_id, '00000000-0000-0000-0000-000000000000'::uuid), pg_catalog.lower(label_vi))
+  where retired_at is null;
 
 -- Khung đề -------------------------------------------------------------------------------------------------------------------------------
 -- parts: [{key, name, from, to}]; items: [{n, part, tag_key}] (đủ 1..total_items, mỗi số đúng một lần); scale: null hoặc
@@ -168,6 +170,18 @@ as $$
      and (select pg_catalog.count(distinct x) from unnest(p_arr) x) = cardinality(p_arr)
 $$;
 
+-- Gốc của một chuỗi phiên bản khung đề (mọi phiên bản của cùng một đề có cùng gốc). Hàm nội bộ.
+create or replace function english.eng_frame_root(p_frame uuid) returns uuid
+language sql stable security definer set search_path = ''
+as $$
+  with recursive up(id, supersedes_id) as (
+    select f.id, f.supersedes_id from english.test_frames f where f.id = p_frame
+    union all
+    select f.id, f.supersedes_id from english.test_frames f join up on f.id = up.supersedes_id
+  )
+  select up.id from up where up.supersedes_id is null
+$$;
+
 -- Kết quả một bài ------------------------------------------------------------------------------------------------------------------------
 -- mode 'frame': câu → nhãn lấy từ khung đề; 'quick': điểm + số câu sai + nhãn từng câu sai (câu chưa có nhãn = chờ gắn nhãn).
 -- item_tags chỉ chứa CÁC CÂU SAI: [{n, tag_key | null}]. Chỉ thêm; sửa = dòng mới trỏ supersedes_id.
@@ -180,6 +194,8 @@ create table if not exists english.results (
   mode text not null check (mode in ('frame', 'quick')),
   context text not null check (context in ('home', 'class')),
   attempt text not null check (attempt in ('first', 'retry')),
+  -- Nguồn của dấu nhãn: 'test' (bài kiểm tra) hoặc 'practice' (bài luyện). Đề có khung luôn là 'test'; nhập nhanh do người ghi chọn (mặc định 'practice').
+  source text not null default 'practice' check (source in ('test', 'practice')),
   used_hint boolean not null default false,
   title text not null check (pg_catalog.length(pg_catalog.btrim(title)) between 1 and 200),
   total_items int not null check (total_items between 1 and 500),
@@ -197,7 +213,8 @@ create table if not exists english.results (
     correct between 0 and total_items
     and cardinality(wrong_items) = total_items - correct
     and english.eng_valid_item_list(wrong_items, total_items)),
-  constraint results_mode_frame check ((mode = 'frame') = (frame_id is not null))
+  constraint results_mode_frame check ((mode = 'frame') = (frame_id is not null)),
+  constraint results_source_frame check (mode <> 'frame' or source = 'test')
 );
 create unique index if not exists results_supersedes_once on english.results(supersedes_id) where supersedes_id is not null;
 create index if not exists results_learner_idx on english.results(learner_id, taken_on desc);
@@ -269,16 +286,20 @@ $$;
 
 -- Hàm ghi ---------------------------------------------------------------------------------------------------------------------------------
 
--- Thêm nhãn riêng của gia đình (ô "+ nhãn khác"). Gia sư hoặc phụ huynh của em; nhãn thuộc track của em. Trùng tên → trả nhãn đã có.
--- p_key do server sinh (bắt đầu "x-", chữ thường không dấu).
+-- Thêm nhãn riêng của gia đình (ô "+ nhãn khác"). Gia sư hoặc phụ huynh của em; nhãn thuộc track của em.
+-- p_key là PHẦN ĐẦU "x-<tên-không-dấu>" do máy chủ làm từ tên nhãn; hàm TỰ THÊM đuôi ngẫu nhiên 5 ký tự để key luôn duy nhất toàn cục
+-- (hai gia đình, hoặc hai tên gần giống nhau như "Đảo ngữ" / "Dao ngu!", không bao giờ đụng nhau) và không để lộ nhãn của gia đình khác.
+-- Cùng tên (không phân biệt hoa/thường và khoảng trắng thừa) trong gia đình (hoặc trùng nhãn có sẵn) → trả nhãn đang dùng, không tạo thêm.
+-- Nhãn đã nghỉ dùng không được trả lại: tạo nhãn mới còn dùng.
 create or replace function english.eng_add_error_tag(p_learner uuid, p_key text, p_label text, p_by uuid) returns jsonb
 language plpgsql volatile security definer set search_path = ''
 as $$
 declare
   v_learner english.learners%rowtype;
-  v_label text := pg_catalog.btrim(coalesce(p_label, ''));
+  v_label text := pg_catalog.regexp_replace(pg_catalog.btrim(coalesce(p_label, '')), '\s+', ' ', 'g');
   v_existing english.error_tags%rowtype;
-  v_id uuid;
+  v_key text;
+  v_try int := 0;
 begin
   if p_learner is null or p_key is null or p_by is null then
     raise exception 'eng_add_error_tag: learner, key and actor are required' using errcode = '22004';
@@ -290,20 +311,35 @@ begin
   if not exists (select 1 from english.members m where m.id = p_by and m.role in ('tutor', 'parent')) or not english.eng_actor_may_manage(p_by, p_learner) then
     raise exception 'eng_add_error_tag: this member may not add tags for this learner' using errcode = '42501';
   end if;
-  if p_key !~ '^x-[a-z0-9][a-z0-9-]{0,56}$' or pg_catalog.length(v_label) not between 2 and 120 then
+  if p_key !~ '^x-[a-z0-9][a-z0-9-]{0,44}$' or pg_catalog.length(v_label) not between 2 and 120 then
     raise exception 'eng_add_error_tag: key must look like x-name and the label be 2 to 120 characters' using errcode = '22023';
   end if;
+
+  -- Hai lần thêm cùng tên cùng lúc trong một gia đình xếp hàng (khóa theo gia đình + tên).
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('error_tag:' || v_learner.family_id::text || ':' || v_learner.track_id || ':' || pg_catalog.lower(v_label), 0));
   select * into v_existing from english.error_tags t
   where t.track_id = v_learner.track_id and (t.family_id is null or t.family_id = v_learner.family_id)
-    and pg_catalog.lower(t.label_vi) = pg_catalog.lower(v_label)
+    and t.retired_at is null and pg_catalog.lower(t.label_vi) = pg_catalog.lower(v_label)
   order by t.family_id nulls first limit 1;
   if found then
     return pg_catalog.jsonb_build_object('key', v_existing.key, 'label_vi', v_existing.label_vi, 'created', false);
   end if;
-  insert into english.error_tags(track_id, key, label_vi, group_vi, family_id, origin, created_by)
-  values (v_learner.track_id, p_key, v_label, 'Nhãn riêng', v_learner.family_id, 'custom', p_by)
-  returning id into v_id;
-  return pg_catalog.jsonb_build_object('key', p_key, 'label_vi', v_label, 'created', true);
+
+  loop
+    v_try := v_try + 1;
+    v_key := p_key || '-' || pg_catalog.substr(pg_catalog.md5(pg_catalog.random()::text || pg_catalog.clock_timestamp()::text || v_try::text), 1, 5);
+    begin
+      insert into english.error_tags(track_id, key, label_vi, group_vi, family_id, origin, created_by)
+      values (v_learner.track_id, v_key, v_label, 'Nhãn riêng', v_learner.family_id, 'custom', p_by);
+      exit;
+    exception when unique_violation then
+      -- Chỉ có thể là key trùng (cùng tên đã được khóa ở trên): thử đuôi khác, không báo lỗi để lộ nhãn của nhà khác.
+      if v_try >= 10 then
+        raise exception 'eng_add_error_tag: could not make a unique key, try again' using errcode = 'P0001';
+      end if;
+    end;
+  end loop;
+  return pg_catalog.jsonb_build_object('key', v_key, 'label_vi', v_label, 'created', true);
 end
 $$;
 
@@ -324,7 +360,9 @@ create or replace function english.eng_record_result(
   p_assignment uuid,
   p_supersedes uuid,
   p_by uuid,
-  p_client_id text
+  p_client_id text,
+  -- 'test' | 'practice' cho nhập nhanh (NULL = 'practice'); đề có khung luôn là 'test'.
+  p_source text default null
 ) returns jsonb
 language plpgsql volatile security definer set search_path = ''
 as $$
@@ -332,6 +370,8 @@ declare
   v_learner english.learners%rowtype;
   v_member english.members%rowtype;
   v_frame english.test_frames%rowtype;
+  v_old english.results%rowtype;
+  v_src text;
   v_existing english.results%rowtype;
   v_title text := nullif(pg_catalog.btrim(coalesce(p_title, '')), '');
   v_total int;
@@ -352,6 +392,13 @@ begin
   if p_mode not in ('frame', 'quick') or p_context not in ('home', 'class') or p_attempt not in ('first', 'retry') then
     raise exception 'eng_record_result: unknown mode, context or attempt' using errcode = '22023';
   end if;
+  if p_source is not null and p_source not in ('test', 'practice') then
+    raise exception 'eng_record_result: unknown source' using errcode = '22023';
+  end if;
+  if p_mode = 'frame' and p_source is not null and p_source <> 'test' then
+    raise exception 'eng_record_result: a framed result is always a test' using errcode = '22023';
+  end if;
+  v_src := case when p_mode = 'frame' then 'test' else coalesce(p_source, 'practice') end;
 
   -- Khóa dòng em: hai lần ghi cùng lúc xếp hàng.
   select * into v_learner from english.learners l where l.id = p_learner for update;
@@ -450,7 +497,7 @@ begin
   select r.* into v_existing from english.results r where r.learner_id = p_learner and r.client_id = p_client_id;
   if found then
     if v_existing.mode <> p_mode or v_existing.frame_id is distinct from p_frame or v_existing.context <> p_context
-       or v_existing.attempt <> p_attempt or v_existing.used_hint <> p_used_hint or v_existing.taken_on <> p_taken_on
+       or v_existing.attempt <> p_attempt or v_existing.source <> v_src or v_existing.used_hint <> p_used_hint or v_existing.taken_on <> p_taken_on
        or v_existing.total_items <> v_total or v_existing.wrong_items <> v_wrong or v_existing.item_tags <> v_tags
        or v_existing.recorded_by_member <> p_by or v_existing.supersedes_id is distinct from p_supersedes then
       raise exception 'eng_record_result: client_id was already used for a different result' using errcode = '23505';
@@ -459,9 +506,28 @@ begin
     return pg_catalog.jsonb_build_object('id', v_existing.id, 'replayed', true, 'untagged', v_untagged);
   end if;
 
+  -- Một bài kiểm tra có khung chỉ có MỘT lần làm đầu hiện hành cho mỗi em (mọi phiên bản của khung đề): lần nữa phải là "làm lại"
+  -- hoặc thay chính bản đã ghi (supersedes). Thông báo có (duplicate_first) để máy chủ trả mã riêng.
+  if p_mode = 'frame' and p_attempt = 'first' and exists (
+    select 1 from english.results r2
+    where r2.learner_id = p_learner and r2.mode = 'frame' and r2.attempt = 'first'
+      and english.eng_frame_root(r2.frame_id) = english.eng_frame_root(p_frame)
+      and not exists (select 1 from english.results r3 where r3.supersedes_id = r2.id)
+      and r2.id is distinct from p_supersedes) then
+    raise exception 'eng_record_result: this test already has a first attempt (duplicate_first)' using errcode = '23505';
+  end if;
+
+  -- Thay một kết quả: cùng em, CHỈ người đã ghi bản gốc được thay; bản gốc làm trong buổi (class) chỉ gia sư (D15).
   if p_supersedes is not null then
-    if not exists (select 1 from english.results r where r.id = p_supersedes and r.learner_id = p_learner) then
+    select * into v_old from english.results r where r.id = p_supersedes and r.learner_id = p_learner;
+    if not found then
       raise exception 'eng_record_result: the result to replace was not found' using errcode = 'P0002';
+    end if;
+    if v_old.recorded_by_member <> p_by then
+      raise exception 'eng_record_result: only the member who recorded a result may replace it' using errcode = '42501';
+    end if;
+    if v_old.context = 'class' and v_member.role <> 'tutor' then
+      raise exception 'eng_record_result: only a tutor may replace work done in the session (D15)' using errcode = '42501';
     end if;
     if exists (select 1 from english.results r where r.supersedes_id = p_supersedes) then
       raise exception 'eng_record_result: that result was already replaced' using errcode = '23505';
@@ -469,13 +535,13 @@ begin
   end if;
 
   insert into english.results(
-    id, learner_id, assignment_id, frame_id, mode, context, attempt, used_hint, title, total_items, correct, wrong_items, item_tags,
+    id, learner_id, assignment_id, frame_id, mode, context, attempt, source, used_hint, title, total_items, correct, wrong_items, item_tags,
     taken_on, recorded_by_member, recorded_role, supersedes_id, client_id)
-  values (v_id, p_learner, p_assignment, case when p_mode = 'frame' then p_frame else null end, p_mode, p_context, p_attempt, p_used_hint,
+  values (v_id, p_learner, p_assignment, case when p_mode = 'frame' then p_frame else null end, p_mode, p_context, p_attempt, v_src, p_used_hint,
           v_title, v_total, v_correct, v_wrong, v_tags, p_taken_on, p_by, v_member.role, p_supersedes, p_client_id);
 
-  -- Dấu nhãn cho các câu sai ĐÃ có nhãn. counts = false cho làm lại. Khung đề (có đề đầy đủ) = "bài kiểm tra"; còn lại = "bài luyện".
-  v_source := case when p_mode = 'frame' then 'test' else 'practice' end;
+  -- Dấu nhãn cho các câu sai ĐÃ có nhãn. counts = false cho làm lại. Đề có khung = "bài kiểm tra"; nhập nhanh theo lựa chọn (mặc định "bài luyện").
+  v_source := v_src;
   insert into english.tag_marks(learner_id, tag_key, source, source_id, item_no, counts, marked_on, recorded_by_member)
   select p_learner, x ->> 'tag_key', v_source, v_id, (x ->> 'n')::int, p_attempt = 'first', p_taken_on, p_by
   from pg_catalog.jsonb_array_elements(v_tags) x
@@ -525,7 +591,7 @@ begin
   if exists (select 1 from english.results r2 where r2.supersedes_id = v_r.id) then
     raise exception 'eng_tag_result_items: this result was replaced by a newer one' using errcode = '23505';
   end if;
-  v_source := case when v_r.mode = 'frame' then 'test' else 'practice' end;
+  v_source := v_r.source;
 
   for v_item in select x from pg_catalog.jsonb_array_elements(p_items) x loop
     if pg_catalog.jsonb_typeof(v_item) <> 'object' or (v_item ->> 'n') is null or (v_item ->> 'n') !~ '^[0-9]+$'
@@ -593,6 +659,10 @@ begin
   select * into v_member from english.members m where m.id = p_by;
   if v_member.id is null or v_member.role not in ('tutor', 'parent') or not english.eng_actor_may_manage(p_by, v_e.learner_id) then
     raise exception 'eng_tag_episode: this member may not tag work of this learner' using errcode = '42501';
+  end if;
+  -- D15: bài kiểm tra trong buổi (checkpoint) và bài quan sát trực tiếp: chỉ gia sư gắn nhãn (cùng luật với duyệt bài).
+  if v_member.role <> 'tutor' and (coalesce((v_e.facets ->> 'checkpoint')::boolean, false) or v_e.observed_directly) then
+    raise exception 'eng_tag_episode: only a tutor may tag work checked in the session or watched live (D15)' using errcode = '42501';
   end if;
   select a.activity_type, t.submitted_at into v_type, v_at
   from english.attempts t join english.activity_instances a on a.id = t.activity_instance_id where t.id = v_e.attempt_id;
@@ -708,6 +778,12 @@ begin
   if (select pg_catalog.count(distinct x ->> 'tag_key') from pg_catalog.jsonb_array_elements(v_rechecks) x) <> pg_catalog.jsonb_array_length(v_rechecks) then
     raise exception 'eng_write_lesson_note_v2: a tag can be rechecked once per note' using errcode = '22023';
   end if;
+  -- Một nhãn không thể vừa "cần củng cố" vừa "hỏi lại: ổn" trong cùng ghi chú (mâu thuẫn).
+  if exists (
+    select 1 from pg_catalog.jsonb_array_elements(v_rechecks) x
+    where x ->> 'result' = 'ok' and (x ->> 'tag_key') = any (v_weak)) then
+    raise exception 'eng_write_lesson_note_v2: a tag cannot be both to reinforce and re-checked as ok' using errcode = '23514';
+  end if;
 
   if v_studied is null and v_message is null and v_parent is null and cardinality(v_weak) = 0 and pg_catalog.jsonb_array_length(v_rechecks) = 0 then
     raise exception 'eng_write_lesson_note_v2: write at least one thing (what was studied, a tag, a message, a note or a recheck)' using errcode = '23514';
@@ -769,6 +845,149 @@ begin
 end
 $$;
 
+-- Hàm ghi chú buổi học CŨ (v1) của 0010, giữ nguyên từng dòng + MỘT kiểm tra thêm: không thay một ghi chú v2 (có test đối chiếu từng dòng).
+create or replace function english.eng_write_lesson_note(
+  p_learner uuid,
+  p_session_date date,
+  p_goals text,
+  p_observed text,
+  p_support_level text,
+  p_next_actions text[],
+  p_practised text[],
+  p_published boolean,
+  p_supersedes uuid,
+  p_by uuid,
+  p_client_id text
+) returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_learner english.learners%rowtype;
+  v_member english.members%rowtype;
+  v_goals text := nullif(pg_catalog.btrim(coalesce(p_goals, '')), '');
+  v_observed text := nullif(pg_catalog.btrim(coalesce(p_observed, '')), '');
+  v_actions text[];
+  v_practised text[];
+  v_prev english.lesson_notes%rowtype;
+  v_existing english.lesson_notes%rowtype;
+  v_id uuid;
+  v_new_targets text[];
+  v_at timestamptz;
+begin
+  if p_learner is null or p_session_date is null or p_by is null or p_published is null or p_support_level is null then
+    raise exception 'eng_write_lesson_note: learner, date, actor, support level and published are required' using errcode = '22004';
+  end if;
+  if p_client_id is null or pg_catalog.length(pg_catalog.btrim(p_client_id)) < 8 or pg_catalog.length(p_client_id) > 100 then
+    raise exception 'eng_write_lesson_note: client_id must be 8..100 characters' using errcode = '22023';
+  end if;
+  if p_support_level not in ('none', 'light', 'moderate', 'heavy') then
+    raise exception 'eng_write_lesson_note: unknown support level' using errcode = '22023';
+  end if;
+
+  select * into v_learner from english.learners l where l.id = p_learner for update;
+  if not found then
+    raise exception 'eng_write_lesson_note: learner not found' using errcode = 'P0002';
+  end if;
+  select * into v_member from english.members m where m.id = p_by;
+  if v_member.id is null or v_member.role <> 'tutor' or not english.eng_actor_may_manage(p_by, p_learner) then
+    raise exception 'eng_write_lesson_note: only a tutor of this learner may write a lesson note' using errcode = '42501';
+  end if;
+
+  if p_session_date > english.eng_today_vn() or p_session_date < english.eng_today_vn() - 120 then
+    raise exception 'eng_write_lesson_note: the session date must be within the last 120 days, not in the future' using errcode = '23514';
+  end if;
+  if (v_goals is not null and pg_catalog.length(v_goals) > 1000) or (v_observed is not null and pg_catalog.length(v_observed) > 2000) then
+    raise exception 'eng_write_lesson_note: the text is too long' using errcode = '22023';
+  end if;
+
+  -- Việc tiếp theo: bỏ dòng trống, tối đa 3, mỗi việc 1..200 ký tự.
+  select coalesce(array_agg(pg_catalog.btrim(x) order by o), '{}') into v_actions
+  from unnest(coalesce(p_next_actions, '{}')) with ordinality as t(x, o)
+  where pg_catalog.btrim(coalesce(x, '')) <> '';
+  if cardinality(v_actions) > 3 or not english.eng_all_len_between(v_actions, 1, 200) then
+    raise exception 'eng_write_lesson_note: at most 3 next actions of up to 200 characters' using errcode = '23514';
+  end if;
+  if v_goals is null and v_observed is null and cardinality(v_actions) = 0 then
+    raise exception 'eng_write_lesson_note: write at least one of goals, what was observed, or a next action' using errcode = '23514';
+  end if;
+
+  -- Kỹ năng đã luyện: bỏ trùng (giữ thứ tự), phải thuộc track của em.
+  select coalesce(array_agg(k order by mo), '{}') into v_practised
+  from (select pg_catalog.btrim(x) as k, min(o) as mo
+        from unnest(coalesce(p_practised, '{}')) with ordinality as t(x, o)
+        where pg_catalog.btrim(coalesce(x, '')) <> '' group by pg_catalog.btrim(x)) s;
+  if exists (
+    select 1 from unnest(v_practised) k
+    where not exists (select 1 from english.targets t where t.id = k and t.track_id = v_learner.track_id)) then
+    raise exception 'eng_write_lesson_note: a practised skill is not a skill of this learner''s track' using errcode = '23514';
+  end if;
+
+  -- Gửi lại: cùng ghi chú.
+  select n.* into v_existing from english.lesson_notes n where n.learner_id = p_learner and n.client_id = p_client_id;
+  if found then
+    if v_existing.tutor_member_id <> p_by or v_existing.session_date <> p_session_date
+       or v_existing.goals is distinct from v_goals or v_existing.observed is distinct from v_observed
+       or v_existing.support_level <> p_support_level or v_existing.next_actions <> v_actions
+       or v_existing.practised_target_ids <> v_practised or v_existing.published <> p_published
+       or v_existing.supersedes_id is distinct from p_supersedes then
+      raise exception 'eng_write_lesson_note: client_id was already used for a different note' using errcode = '23505';
+    end if;
+    return pg_catalog.jsonb_build_object('id', v_existing.id, 'replayed', true);
+  end if;
+
+  if p_supersedes is not null then
+    select n.* into v_prev from english.lesson_notes n where n.id = p_supersedes and n.learner_id = p_learner;
+    if not found then
+      raise exception 'eng_write_lesson_note: the note to replace was not found' using errcode = 'P0002';
+    end if;
+    if v_prev.tutor_member_id <> p_by then
+      raise exception 'eng_write_lesson_note: only the author may edit a note' using errcode = '42501';
+    end if;
+    -- S5b-1: ghi chú viết bằng "Ghi buổi học" (v2: không có mức hỗ trợ, có nhãn / lời nhắn / ghi chú cho phụ huynh) không sửa được bằng
+    -- mẫu cũ - mẫu cũ sẽ làm mất các trường của v2. (author_role luôn có giá trị nên không dùng để nhận biết; support_level NULL là dấu của v2.)
+    if v_prev.support_level is null or v_prev.author_role <> 'tutor' or cardinality(v_prev.weak_tag_keys) > 0
+       or v_prev.message_to_learner is not null or v_prev.note_for_parent is not null then
+      raise exception 'eng_write_lesson_note: a note written with the session form (v2) cannot be edited with this form' using errcode = '23514';
+    end if;
+    if exists (select 1 from english.lesson_notes n where n.supersedes_id = p_supersedes) then
+      raise exception 'eng_write_lesson_note: the note was already replaced by a newer version' using errcode = '23505';
+    end if;
+    if not (v_prev.practised_target_ids <@ v_practised) then
+      raise exception 'eng_write_lesson_note: skills already logged as practised cannot be removed' using errcode = '23514';
+    end if;
+  end if;
+
+  insert into english.lesson_notes(
+    learner_id, tutor_member_id, session_date, goals, observed, support_level, next_actions,
+    practised_target_ids, published, supersedes_id, client_id)
+  values (p_learner, p_by, p_session_date, v_goals, v_observed, p_support_level, v_actions,
+          v_practised, p_published, p_supersedes, p_client_id)
+  returning id into v_id;
+
+  -- Lần tiếp xúc cho kỹ năng MỚI của bản này (bản trước đã ghi phần còn lại).
+  select coalesce(array_agg(k order by k), '{}') into v_new_targets
+  from unnest(v_practised) k
+  where p_supersedes is null or not (k = any (v_prev.practised_target_ids));
+  if cardinality(v_new_targets) > 0 then
+    v_at := english.eng_session_ts(p_session_date);
+    insert into english.exposure_log(learner_id, target_key, at, source, attempt_id, lesson_note_id)
+    select p_learner, k, v_at, 'lesson', null, v_id from unnest(v_new_targets) k;
+  end if;
+
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_member.user_id, v_member.role, 'lesson_note.written', v_learner.family_id, p_learner,
+          pg_catalog.jsonb_build_object('note', v_id, 'published', p_published, 'supersedes', p_supersedes));
+
+  return pg_catalog.jsonb_build_object('id', v_id, 'replayed', false);
+end
+$$;
+
+revoke execute on function english.eng_write_lesson_note(uuid, date, text, text, text, text[], text[], boolean, uuid, uuid, text) from public, anon, authenticated;
+grant execute on function english.eng_write_lesson_note(uuid, date, text, text, text, text[], text[], boolean, uuid, uuid, text) to service_role;
+
 -- Hàm đọc (server gọi bằng service_role SAU requireAccess; p_learner phải đã được cấp quyền) ----------------------------------------------
 
 -- Số ngày "kiểm tra lại" của chính sách đánh giá của em (delayedMinDaysFromLastExposure), hoặc NULL nếu em chưa có bộ kỹ năng.
@@ -823,11 +1042,14 @@ begin
   last_all as (
     select l.tag_key, max(l.marked_on) as last_seen from live l group by l.tag_key
   ),
+  -- Lần hỏi lại gần nhất theo NGÀY CỦA BUỔI HỌC (không phải ngày nhập), bỏ các lần ghi trong ghi chú đã bị bản mới thay thế.
   last_recheck as (
-    select distinct on (e.tag_key) e.tag_key, e.result, (e.created_at at time zone 'Asia/Ho_Chi_Minh')::date as on_date
+    select distinct on (e.tag_key) e.tag_key, e.result, n.session_date as on_date
     from english.recheck_events e
+    join english.lesson_notes n on n.id = e.lesson_note_id
     where e.learner_id = p_learner
-    order by e.tag_key, e.created_at desc, e.id desc
+      and not exists (select 1 from english.lesson_notes n2 where n2.supersedes_id = n.id)
+    order by e.tag_key, n.session_date desc, e.created_at desc, e.id desc
   ),
   seen as (
     select i.tag_key, count(*)::int as asked, (count(*) filter (where i.n = any (r.wrong_items)))::int as wrong
@@ -927,7 +1149,7 @@ as $$
     select pg_catalog.jsonb_agg(
       pg_catalog.jsonb_build_object(
         'result_id', r.id, 'title', r.title, 'taken_on', r.taken_on, 'created_at', r.created_at,
-        'source', case when r.mode = 'frame' then 'test' else 'practice' end,
+        'source', r.source, 'recorded_by_member', r.recorded_by_member, 'recorded_role', r.recorded_role,
         'used_hint', r.used_hint, 'in_class', r.context = 'class', 'items', x.items)
       order by r.created_at)
     from english.results r
@@ -947,18 +1169,19 @@ $$;
 -- Quyền thực thi: chỉ service_role (server gọi SAU requireAccess). Hàm nội bộ: không ai ngoài các hàm khác.
 revoke execute on function english.eng_tag_exists(text, uuid, text) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_valid_item_list(int[], int) from public, anon, authenticated, service_role;
+revoke execute on function english.eng_frame_root(uuid) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_recheck_days(uuid) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_mark_is_live(text, uuid, boolean) from public, anon, authenticated, service_role;
-grant execute on function english.eng_valid_item_list(int[], int) to authenticated, service_role;
+grant execute on function english.eng_valid_item_list(int[], int) to service_role;
 revoke execute on function english.eng_add_error_tag(uuid, text, text, uuid) from public, anon, authenticated;
-revoke execute on function english.eng_record_result(uuid, text, uuid, text, int, int, int[], jsonb, text, text, boolean, date, uuid, uuid, uuid, text) from public, anon, authenticated;
+revoke execute on function english.eng_record_result(uuid, text, uuid, text, int, int, int[], jsonb, text, text, boolean, date, uuid, uuid, uuid, text, text) from public, anon, authenticated;
 revoke execute on function english.eng_tag_result_items(uuid, jsonb, uuid) from public, anon, authenticated;
 revoke execute on function english.eng_tag_episode(uuid, text[], uuid) from public, anon, authenticated;
 revoke execute on function english.eng_write_lesson_note_v2(uuid, date, text, text[], text, text, jsonb, uuid, uuid, text) from public, anon, authenticated;
 revoke execute on function english.eng_weak_points(uuid, date) from public, anon, authenticated;
 revoke execute on function english.eng_untagged_queue(uuid) from public, anon, authenticated;
 grant execute on function english.eng_add_error_tag(uuid, text, text, uuid) to service_role;
-grant execute on function english.eng_record_result(uuid, text, uuid, text, int, int, int[], jsonb, text, text, boolean, date, uuid, uuid, uuid, text) to service_role;
+grant execute on function english.eng_record_result(uuid, text, uuid, text, int, int, int[], jsonb, text, text, boolean, date, uuid, uuid, uuid, text, text) to service_role;
 grant execute on function english.eng_tag_result_items(uuid, jsonb, uuid) to service_role;
 grant execute on function english.eng_tag_episode(uuid, text[], uuid) to service_role;
 grant execute on function english.eng_write_lesson_note_v2(uuid, date, text, text[], text, text, jsonb, uuid, uuid, text) to service_role;
@@ -1002,6 +1225,7 @@ declare
   n_tag_marks int := 0;
   n_rechecks int := 0;
   n_results int := 0;
+  n_login_names int := 0;
   v_receipt jsonb;
 begin
   if p_learner_id is null then
@@ -1092,6 +1316,13 @@ begin
 
   delete from english.learners l where l.id = p_learner_id;
 
+  -- S5b-1: tên đăng nhập ngắn của tài khoản học sinh bị xóa (không đụng auth.users).
+  if v_member is not null then
+    delete from english.login_names ln
+    where ln.auth_user_id = (select m.user_id from english.members m where m.id = v_member and m.role = 'student');
+    get diagnostics n_login_names = row_count;
+  end if;
+
   -- Tài khoản học sinh trong app này (không đụng auth.users).
   if v_member is not null then
     delete from english.members m where m.id = v_member and m.role = 'student';
@@ -1126,6 +1357,7 @@ begin
       'tag_marks', n_tag_marks,
       'recheck_events', n_rechecks,
       'results', n_results,
+      'login_names', n_login_names,
       'learners', 1,
       'members', n_members
     ),
