@@ -119,6 +119,54 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     await expect(page.getByTestId(`status-${assignmentId}`)).toHaveText(assignPage.statusRecorded);
   });
 
+  test("'Sửa kết quả' opens the recorded result filled in and replaces it; a second FIRST result for the same assignment is refused", async ({ page }) => {
+    await loginAs(page, "tutorNguyen");
+    await page.goto(`/learners/${NG}/assign`);
+    await expect(page.getByTestId(`record-${assignmentId}`)).toHaveText(assignPage.editResult);
+    await page.getByTestId(`record-${assignmentId}`).click();
+    await expect(page.getByTestId("supersede-notice")).toBeVisible();
+    await expect(page.getByTestId("quick-title")).toHaveValue(title);
+    await expect(page.getByTestId("quick-total")).toHaveValue("5");
+    await expect(page.getByTestId("quick-wrong")).toHaveValue("2");
+    await page.getByTestId("quick-correct").fill("3");
+    await page.getByTestId("quick-wrong").fill("2, 4");
+    await page.getByTestId("quick-tag-2").selectOption("thanh-ngu");
+    await page.getByTestId("result-save").click();
+    await expect(page.getByTestId("result-saved")).toContainText(resultPage.saved(1));
+
+    // recording it again as a plain new FIRST result (not a replacement) is a conflict
+    const again = await page.request.post(`/api/learners/${NG}/results`, {
+      data: {
+        client_id: randomUUID(), mode: "quick", title, total_items: 5, correct: 5, wrong_items: [], context: "home", attempt: "first", used_hint: false,
+        taken_on: todayVn(), assignment_id: assignmentId,
+      },
+    });
+    expect(again.status()).toBe(409);
+    expect(((await again.json()) as { error: string }).error).toBe("duplicate_first");
+  });
+
+  test("an upload link works once: a second PUT to the same link is refused by storage", async ({ page }) => {
+    await loginAs(page, "tutorNguyen");
+    const ticket = await page.request.post(`/api/learners/${NG}/files`, { data: { purpose: "assignment_pdf", mime: "application/pdf", bytes: PDF.length } });
+    expect(ticket.status()).toBe(201);
+    const { upload_url: url } = (await ticket.json()) as { upload_url: string };
+    // the same request the app makes from the browser (FormData with an empty-named part, x-upsert false)
+    const put = () =>
+      page.evaluate(
+        async ([u, b64]) => {
+          const bytes = Uint8Array.from(atob(b64 as string), (c) => c.charCodeAt(0));
+          const form = new FormData();
+          form.append("cacheControl", "3600");
+          form.append("", new Blob([bytes], { type: "application/pdf" }));
+          const res = await fetch(u as string, { method: "PUT", headers: { "x-upsert": "false" }, body: form });
+          return res.status;
+        },
+        [url, PDF.toString("base64")],
+      );
+    expect(await put()).toBeLessThan(300);
+    expect(await put()).toBeGreaterThanOrEqual(400);
+  });
+
   test("the child still sees no score, no tags - and cannot open the staff file route", async ({ page }) => {
     await loginAs(page, "studentNguyen");
     await page.goto("/practice");

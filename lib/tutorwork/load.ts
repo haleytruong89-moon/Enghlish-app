@@ -3,8 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createUserClient } from "@/lib/supabase/server";
 import { loadAssignments } from "@/lib/practice/load";
 import type { AssignmentView } from "@/lib/practice/types";
-import { parseFrames, parseLastNote, parseRecentResult, parseTags, parseUntagged, parseWeakPoints } from "./shape";
-import { type FrameView, type LastNote, type RecentResult, type TagInfo, type UntaggedItem, type WeakPointsView } from "./types";
+import { parseFrames, parseLastNote, parseRecentResult, parseResultEdit, parseTags, parseUntagged, parseWeakPoints } from "./shape";
+import { type FrameView, type LastNote, type RecentResult, type ResultEdit, type TagInfo, type UntaggedItem, type WeakPointsView } from "./types";
 import type { WeakWindow } from "./schemas";
 import { filterUntagged, windowSince } from "./window";
 
@@ -64,6 +64,19 @@ export async function loadUntagged(learnerId: string, viewer: { role: "tutor" | 
   });
   if (error) fail("eng_untagged_queue", error);
   return filterUntagged(parseUntagged(data), viewer, now);
+}
+
+/** One result of this learner, in the shape the form needs to open it for correction (RLS: staff in scope only). Null when not found. */
+export async function loadResultForEdit(learnerId: string, resultId: string): Promise<ResultEdit | null> {
+  const db = await createUserClient();
+  const { data, error } = await db
+    .from("results")
+    .select("id, mode, frame_id, context, attempt, source, used_hint, title, total_items, correct, wrong_items, item_tags, taken_on, assignment_id")
+    .eq("learner_id", learnerId)
+    .eq("id", resultId)
+    .maybeSingle();
+  if (error) fail("results lookup", error);
+  return parseResultEdit(data);
 }
 
 /** The newest result that no later result replaced. */

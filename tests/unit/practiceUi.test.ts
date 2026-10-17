@@ -3,9 +3,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { AppHeader } from "@/components/AppHeader";
 import { LearnerCard } from "@/components/LearnerCard";
+import { AssignmentTable } from "@/components/practice/AssignmentTable";
 import { SubmissionPreview } from "@/components/practice/SubmissionPreview";
+import { ResultForm } from "@/components/tutor/ResultForm";
+import { parseResultEdit } from "@/lib/tutorwork/shape";
 import { StudentPractice } from "@/components/student/StudentPractice";
-import { assignPage, practiceStudent, sourceLabels, todayPage } from "@/lib/copy/vi";
+import { assignPage, practiceStudent, resultPage, sourceLabels, todayPage } from "@/lib/copy/vi";
 import type { AssignmentView, ReviewPoints, StudentPracticeItem } from "@/lib/practice/types";
 import { fitWithin, outputMime } from "@/lib/storage/clientUpload";
 import { MAX_IMAGE_SIDE } from "@/lib/storage/rules";
@@ -178,5 +181,55 @@ describe("browser upload helpers", () => {
     expect(outputMime("image/png")).toBe("image/png");
     expect(outputMime("image/webp")).toBe("image/jpeg");
     expect(outputMime("image/jpeg")).toBe("image/jpeg");
+  });
+});
+
+describe("a PDF has no Hint question", () => {
+  it("the preview says 'not applicable' for a PDF submission, and the Hint answer for a link", () => {
+    const sub = (usedHint: boolean | null) =>
+      assignment({ submission: { id: "s", createdAt: "2026-10-16T09:00:00Z", attempt: "first", usedHint, linkUrl: null, byRole: "student", files: [] } });
+    expect(render(createElement(SubmissionPreview, { assignment: sub(null) }))).toContain(resultPage.sentHintNA);
+    expect(render(createElement(SubmissionPreview, { assignment: sub(true) }))).toContain(resultPage.sentHint);
+    expect(render(createElement(SubmissionPreview, { assignment: sub(false) }))).not.toContain(resultPage.sentHintNA);
+  });
+});
+
+describe("recorded assignment: 'Sửa kết quả' (the new result replaces the live one)", () => {
+  const recorded = assignment({ resultId: "e0000000-0000-4000-8000-000000000001" });
+  it("the table offers 'Sửa kết quả' for a recorded row and 'Ghi kết quả' for the others", () => {
+    const html = render(
+      createElement(AssignmentTable, { learnerId: "a0000000-0000-4000-8000-000000000001", assignments: [recorded, assignment({ id: "c0000000-0000-4000-8000-000000000009" })], tagLabels: {} }),
+    );
+    expect(html.match(new RegExp(assignPage.editResult, "g"))).toHaveLength(1);
+    expect(html.match(new RegExp(`>${assignPage.recordResult}<`, "g"))).toHaveLength(1);
+  });
+
+  const edit = parseResultEdit({
+    id: "e0000000-0000-4000-8000-000000000001", mode: "quick", frame_id: null, context: "home", attempt: "retry", source: "test", used_hint: true, title: "Unless",
+    total_items: 10, correct: 8, wrong_items: [7, 4], item_tags: [{ n: 4, tag_key: "dang-tu" }, { n: 7, tag_key: null }], taken_on: "2026-10-10", assignment_id: "c0000000-0000-4000-8000-000000000001",
+  });
+  const form = (over: Record<string, unknown>) =>
+    render(
+      createElement(ResultForm, {
+        learnerId: "a0000000-0000-4000-8000-000000000001", frames: [], tags: [{ key: "dang-tu", label: "Dạng từ", group: null, custom: false }],
+        canClass: true, today: "2026-10-17", minDate: "2026-06-17", assignments: [recorded], initialAssignmentId: recorded.id, ...over,
+      }),
+    );
+
+  it("opens filled in with the recorded values and a notice, with the assignment locked", () => {
+    expect(edit?.wrongItems).toEqual([4, 7]);
+    const html = form({ supersede: edit });
+    expect(html).toContain('data-testid="supersede-notice"');
+    expect(html).toContain(resultPage.supersedeTitle);
+    expect(html).toContain(`results/new?assignment=${recorded.id}&amp;again=1`);
+    expect(html).toContain('value="Unless"');
+    expect(html).toContain('value="4, 7"');
+    expect(html).toContain('value="2026-10-10"');
+    expect(html).toMatch(/data-testid="assignment-pick"[^>]*disabled|disabled=""[^>]*data-testid="assignment-pick"/);
+  });
+
+  it("without supersede there is no notice; with initialRetry the attempt starts as 'Làm lại'", () => {
+    expect(form({})).not.toContain("supersede-notice");
+    expect(form({ initialRetry: true })).toMatch(/aria-pressed="true"[^>]*data-testid="attempt-retry"|data-testid="attempt-retry"[^>]*aria-pressed="true"/);
   });
 });

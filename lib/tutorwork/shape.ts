@@ -3,7 +3,7 @@
  * zod strips unknown keys; anything unexpected throws (→ 500, logged) rather than showing a half-right page.
  */
 import { z } from "zod";
-import type { FrameView, LastNote, RecentResult, TagInfo, UntaggedItem, WeakPointsView } from "./types";
+import type { FrameView, LastNote, RecentResult, ResultEdit, TagInfo, UntaggedItem, WeakPointsView } from "./types";
 
 const text = z.string();
 const nullableText = z
@@ -172,6 +172,44 @@ const recentResult = z.object({
   total_items: int,
   correct: int,
 });
+
+const resultEditRow = z.object({
+  id: text,
+  mode: z.enum(["frame", "quick"]),
+  frame_id: nullableText,
+  context: z.enum(["home", "class"]),
+  attempt: z.enum(["first", "retry"]),
+  source: z.enum(["test", "practice"]),
+  used_hint: z.boolean(),
+  title: text,
+  total_items: int,
+  correct: int,
+  wrong_items: z.array(int),
+  item_tags: z.array(z.object({ n: int, tag_key: nullableText })),
+  taken_on: text,
+  assignment_id: nullableText,
+});
+
+export function parseResultEdit(raw: unknown): ResultEdit | null {
+  if (raw === null || raw === undefined) return null;
+  const r = resultEditRow.parse(raw);
+  return {
+    id: r.id,
+    mode: r.mode,
+    frameId: r.frame_id,
+    context: r.context,
+    attempt: r.attempt,
+    source: r.source,
+    usedHint: r.used_hint,
+    title: r.title,
+    total: r.total_items,
+    correct: r.correct,
+    wrongItems: [...r.wrong_items].sort((a, b) => a - b),
+    itemTags: r.item_tags.map((t) => ({ n: t.n, tagKey: t.tag_key })),
+    takenOn: r.taken_on,
+    assignmentId: r.assignment_id,
+  };
+}
 
 export function parseRecentResult(raw: unknown): RecentResult | null {
   const rows = z.array(recentResult).parse(raw ?? []);

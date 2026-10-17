@@ -103,7 +103,7 @@ export function AssignmentTable({ learnerId, assignments, tagLabels }: { learner
                 {status !== "retracted" ? (
                   <>
                     <Link href={`/learners/${learnerId}/results/new?assignment=${a.id}`} data-testid={`record-${a.id}`} className={linkClass}>
-                      {assignPage.recordResult}
+                      {status === "recorded" ? assignPage.editResult : assignPage.recordResult}
                     </Link>
                     <button type="button" onClick={() => setOpen(open === a.id ? null : a.id)} data-testid={`submit-for-${a.id}`} className={`${linkClass} bg-transparent`}>
                       {assignPage.submitFor}

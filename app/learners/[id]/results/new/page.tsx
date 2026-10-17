@@ -5,15 +5,15 @@ import { ResultForm } from "@/components/tutor/ResultForm";
 import { learnerWithTrack, resultPage } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { loadAssignments } from "@/lib/practice/load";
-import { loadFrames, loadTags, loadUntagged } from "@/lib/tutorwork/load";
+import { loadFrames, loadResultForEdit, loadTags, loadUntagged } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
 export const dynamic = "force-dynamic";
 
 /** "Ghi kết quả bài": tutor or parent. In-class results are tutor-only (the database refuses a parent as well). */
-export default async function NewResultPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ assignment?: string }> }) {
+export default async function NewResultPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ assignment?: string; again?: string }> }) {
   const { id } = await params;
-  const { assignment } = await searchParams;
+  const { assignment, again } = await searchParams;
   const { member, learner } = await requireLearnerPage(id, "tutorwork:write");
   const role = member.role === "tutor" ? "tutor" : "parent";
   const [frames, tags, pending, allAssignments] = await Promise.all([
@@ -25,6 +25,9 @@ export default async function NewResultPage({ params, searchParams }: { params: 
   // Open assignments only: not retracted, and not yet recorded (unless this very one was asked for, e.g. to record a second attempt).
   const assignments = allAssignments.filter((a) => !a.retractedAt && (a.resultId === null || a.id === assignment));
   const initialAssignmentId = assignment && assignments.some((a) => a.id === assignment) ? assignment : null;
+  // An assignment that already has a result opens in "Sửa kết quả" (the new result replaces the live one), unless ?again=1 asks for one more attempt.
+  const picked = assignments.find((a) => a.id === initialAssignmentId);
+  const supersede = picked?.resultId && again !== "1" ? await loadResultForEdit(learner.id, picked.resultId) : null;
   const today = todayVn();
 
   return (
@@ -47,6 +50,8 @@ export default async function NewResultPage({ params, searchParams }: { params: 
             minDate={addDays(today, -120)}
             assignments={assignments}
             initialAssignmentId={initialAssignmentId}
+            supersede={supersede}
+            initialRetry={again === "1" && Boolean(picked?.resultId)}
           />
           <PendingTags learnerId={learner.id} items={pending} tags={tags} isParent={role === "parent"} />
         </div>
