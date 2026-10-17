@@ -55,7 +55,7 @@ export function createSupabaseReviewStore(): ReviewStore {
       const db = await createUserClient();
       const { data, error } = await db
         .from("lesson_notes")
-        .select("id, learner_id, tutor_member_id, session_date, goals, observed, support_level, next_actions, practised_target_ids, published, supersedes_id, created_at")
+        .select("id, learner_id, tutor_member_id, session_date, goals, observed, support_level, next_actions, practised_target_ids, published, supersedes_id, created_at, weak_tag_keys, message_to_learner, note_for_parent, author_role")
         .eq("learner_id", learnerId)
         .order("session_date", { ascending: false })
         .order("created_at", { ascending: false })

@@ -18,6 +18,10 @@
  *   NEW_PASSWORD_PARENT, NEW_PASSWORD_AN, NEW_PASSWORD_NGUYEN,
  *   NEW_PASSWORD_TUTOR_AN, NEW_PASSWORD_TUTOR_NGUYEN
  *                                                  (mỗi cái ≥ 12 ký tự, đôi một khác nhau; chỉ bắt buộc cho người PHẢI tạo mới)
+ *   LOGIN_AN, LOGIN_NGUYEN, LOGIN_TUTOR_AN, LOGIN_TUTOR_NGUYEN, LOGIN_PARENT
+ *                                                  (tùy chọn) tên đăng nhập ngắn; mặc định an / nguyen / giasu-an / giasu-nguyen,
+ *                                                  phụ huynh không có tên (đăng nhập bằng email). Ghi vào english.login_names, chạy lại không đổi gì.
+ *                                                  Tên đã trỏ tới tài khoản khác → dừng ở bước kiểm tra, trước khi tạo bất cứ thứ gì.
  */
 import { createClient } from "@supabase/supabase-js";
 import { Client } from "pg";
@@ -31,12 +35,15 @@ import {
   findAuthUsersTriggersWritingPublic,
   LAUNCHER_PROFILE_WARNING,
 } from "./lib/realFamilyPrecheck";
+import { checkLoginNames, upsertLoginNames, type LoginNameEntry } from "./lib/loginNames";
 import {
   checkSlotPasswords,
+  loginsFromEnv,
   PASSWORD_ENV,
   passwordsFromEnv,
   SLOT_LABEL,
   SLOTS,
+  validateLoginNames,
   validateRealFamilyInput,
   type RealFamilyInput,
   type Slot,
@@ -168,6 +175,12 @@ async function main() {
     process.exit(1);
   }
   const input = parsed.value;
+  const loginsParsed = validateLoginNames(loginsFromEnv(process.env));
+  if (!loginsParsed.ok) {
+    for (const e of loginsParsed.errors) console.error(e);
+    process.exit(1);
+  }
+  const logins = loginsParsed.value;
   const emails = emailsOf(input);
   const passwords = passwordsFromEnv(process.env);
 
@@ -197,6 +210,13 @@ async function main() {
     }
     await checkRealFamilyConflicts(db, existingIds);
     await checkRealFamilyEmails(db, emails, resolver.emailOfUser);
+    const loginEntries = (): LoginNameEntry[] =>
+      SLOTS.flatMap((slot) => {
+        const name = logins[slot];
+        return name ? [{ label: ROLE_TEXT[slot], name, userId: resolver.existing[slot]?.id ?? null }] : [];
+      });
+    const loginCheck = await checkLoginNames(db, loginEntries());
+    if (!loginCheck.ok) throw new Error(loginCheck.errors.join("\n"));
     const inFamilyBefore = new Set(
       (await db.query<{ user_id: string }>("select user_id from english.members where family_id = $1", [REAL_FAMILY_ID])).rows.map(
         (r) => r.user_id,
@@ -226,6 +246,14 @@ async function main() {
 
     const result = await createRealFamily(db, users, { tutorAn: input.tutorAnName, tutorNguyen: input.tutorNguyenName });
 
+    const loginResult = await upsertLoginNames(
+      db,
+      SLOTS.flatMap((slot) => {
+        const name = logins[slot];
+        return name ? [{ label: ROLE_TEXT[slot], name, userId: users[slot] }] : [];
+      }),
+    );
+
     console.log(
       result.inserted > 0
         ? `Đã tạo gia đình THẬT (${result.inserted} dòng mới). Phiên bản thông báo đồng ý: ${REAL_CONSENT_VERSION}.`
@@ -244,6 +272,14 @@ async function main() {
       else status = "đã có sẵn (dùng chung Launcher)";
       console.log(`  ${label} ${emails[slot]}  ${status}`);
     }
+
+    const names = SLOTS.filter((s) => logins[s]).map((s) => `${logins[s]} (${ROLE_TEXT[s]})`);
+    console.log(
+      loginResult.inserted.length
+        ? `Tên đăng nhập ngắn: đã thêm ${loginResult.inserted.length} (${loginResult.inserted.join(", ")}).`
+        : "Tên đăng nhập ngắn: đã có đủ từ trước — không đổi gì.",
+    );
+    if (names.length) console.log(`  Đăng nhập được bằng: ${names.join(", ")}${logins.parent ? "" : "; phụ huynh dùng email"}.`);
   } catch (err) {
     if (created().length) {
       console.error(

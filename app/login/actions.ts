@@ -1,27 +1,30 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { z } from "zod";
-import { auth } from "@/lib/copy/vi";
+import { decideLogin } from "@/lib/auth/login";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createUserClient } from "@/lib/supabase/server";
 
-export type LoginState = { error: string | null; email: string };
-
-const LoginSchema = z.object({
-  email: z.string().trim().email(),
-  password: z.string().min(1),
-});
+/** `login` is what the person typed (a login name or an email) — never the resolved email. */
+export type LoginState = { error: string | null; login: string };
 
 export async function signIn(_prev: LoginState, formData: FormData): Promise<LoginState> {
-  const email = String(formData.get("email") ?? "");
-  const parsed = LoginSchema.safeParse({ email, password: formData.get("password") });
-  if (!parsed.success) return { error: auth.errorMissing, email };
+  const login = String(formData.get("login") ?? "");
+  const password = String(formData.get("password") ?? "");
 
   const supabase = await createUserClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) {
-    const invalid = error.status === 400 || error.code === "invalid_credentials";
-    return { error: invalid ? auth.errorInvalid : auth.errorGeneric, email };
-  }
+  const outcome = await decideLogin(login, password, {
+    async emailForName(name) {
+      const { data, error } = await createAdminClient().rpc("eng_login_email", { p_name: name });
+      if (error) throw new Error(`eng_login_email failed: ${error.code ?? "error"}`);
+      return typeof data === "string" && data ? data : null;
+    },
+    async signIn(email, pw) {
+      const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
+      if (!error) return { ok: true };
+      return { ok: false, invalid: error.status === 400 || error.code === "invalid_credentials" };
+    },
+  });
+  if (!outcome.ok) return { error: outcome.error, login };
   redirect("/");
 }

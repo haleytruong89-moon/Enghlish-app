@@ -1,4 +1,5 @@
 /** Input validation for `npm run db:create-family` (pure: no database, no network). */
+import { normalizeLoginName } from "../../lib/auth/loginName";
 
 export type RealFamilyInput = {
   parentEmail: string;
@@ -33,6 +34,56 @@ export const PASSWORD_ENV: Record<Slot, string> = {
   tutorAn: "NEW_PASSWORD_TUTOR_AN",
   tutorNguyen: "NEW_PASSWORD_TUTOR_NGUYEN",
 };
+
+/** Short login names per slot (optional workflow inputs). null = this person gets no login name (the parent by default). */
+export type RealFamilyLogins = Record<Slot, string | null>;
+
+export const DEFAULT_LOGIN_NAMES: Record<Slot, string | null> = {
+  parent: null,
+  studentAn: "an",
+  studentNguyen: "nguyen",
+  tutorAn: "giasu-an",
+  tutorNguyen: "giasu-nguyen",
+};
+
+/** Environment variable of each slot's login name. */
+export const LOGIN_ENV: Record<Slot, string> = {
+  parent: "LOGIN_PARENT",
+  studentAn: "LOGIN_AN",
+  studentNguyen: "LOGIN_NGUYEN",
+  tutorAn: "LOGIN_TUTOR_AN",
+  tutorNguyen: "LOGIN_TUTOR_NGUYEN",
+};
+
+export type LoginsResult = { ok: true; value: RealFamilyLogins } | { ok: false; errors: string[] };
+
+/**
+ * Optional login names. Empty/missing = the default of that slot (the parent has none by default). A name is trimmed and
+ * lower-cased and must look like `an` / `giasu-an` (letters, digits, "-"; 2–31 characters). Two people cannot share a name.
+ */
+export function validateLoginNames(raw: Partial<Record<Slot, string | undefined>>): LoginsResult {
+  const errors: string[] = [];
+  const value = {} as RealFamilyLogins;
+  for (const slot of SLOTS) {
+    const typed = (raw[slot] ?? "").trim().toLowerCase();
+    if (!typed) {
+      value[slot] = DEFAULT_LOGIN_NAMES[slot];
+      continue;
+    }
+    const name = normalizeLoginName(typed);
+    if (!name) errors.push(`Tên đăng nhập của ${SLOT_LABEL[slot]} chưa đúng dạng: dùng chữ thường không dấu, số và dấu "-", dài 2–31 ký tự (ví dụ: giasu-an).`);
+    value[slot] = name;
+  }
+  const filled = SLOTS.map((s) => value[s]).filter((v): v is string => !!v);
+  if (new Set(filled).size !== filled.length) errors.push("Mỗi người một tên đăng nhập riêng — hai người đang trùng tên.");
+  return errors.length ? { ok: false, errors } : { ok: true, value };
+}
+
+export function loginsFromEnv(env: Record<string, string | undefined>): Partial<Record<Slot, string | undefined>> {
+  const out: Partial<Record<Slot, string | undefined>> = {};
+  for (const slot of SLOTS) out[slot] = env[LOGIN_ENV[slot]] || undefined;
+  return out;
+}
 
 export type RealFamilyRawInput = { [K in keyof RealFamilyInput]?: string | undefined };
 

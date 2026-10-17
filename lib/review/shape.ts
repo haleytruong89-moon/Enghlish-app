@@ -263,12 +263,16 @@ const noteRow = z.object({
   session_date: text,
   goals: nullableText,
   observed: nullableText,
-  support_level: z.enum(["none", "light", "moderate", "heavy"]),
+  support_level: z.enum(["none", "light", "moderate", "heavy"]).nullable().optional().transform((v) => v ?? null),
   next_actions: z.array(text),
   practised_target_ids: z.array(text),
   published: z.boolean(),
   supersedes_id: nullableText,
   created_at: text,
+  weak_tag_keys: z.array(text).nullable().optional().transform((v) => v ?? []),
+  message_to_learner: nullableText,
+  note_for_parent: nullableText,
+  author_role: z.enum(["tutor", "parent"]).nullable().optional().transform((v) => v ?? "tutor"),
 });
 
 /** Notes as stored (every version) → views with `current` computed (not superseded by any row in the list). */
@@ -290,6 +294,10 @@ export function parseNotes(raw: unknown): LessonNoteView[] {
       supersedesId: r.supersedes_id,
       createdAt: r.created_at,
       current: !replaced.has(r.id),
+      weakTagKeys: r.weak_tag_keys,
+      messageToLearner: r.message_to_learner,
+      noteForParent: r.note_for_parent,
+      authorRole: r.author_role,
     }))
     .sort((a, b) => (a.sessionDate === b.sessionDate ? b.createdAt.localeCompare(a.createdAt) : b.sessionDate.localeCompare(a.sessionDate)));
 }

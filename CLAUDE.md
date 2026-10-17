@@ -80,6 +80,7 @@ npm run doctor            # kiểm tra cài đặt cloud 1 lần: bảng ✓/✗
 **S4 (em làm bài: Việc tiếp theo, đọc/nghe + câu hỏi, viết có tự lưu, khai báo gợi ý, nộp bài có biên nhận bất biến, tự chấm câu đóng chỉ gia sư/phụ huynh thấy) code xong trên nhánh `feature/s4-student-work`**, chờ phụ huynh áp `0009` và xác nhận bảng bước→bài đọc/nghe (xem `docs/PROGRESS.md`).
 **S5 (hộp duyệt, chấm 0–4/không có cơ hội theo từng kỹ năng, D15 trong DB, ghi bài làm ngoài app, ghi chú buổi học) code xong trên nhánh `feature/s5-review`**, chờ review Opus + phụ huynh áp `0010` (xem `docs/PROGRESS.md`).
 - Chờ phụ huynh: Supabase (schema `english`, tắt sign-up, áp 0001–0012), Vercel, khóa sao lưu + GitHub Secrets (xem `docs/PROGRESS.md`).
-- Tiếp theo theo thứ tự ưu tiên để 2 em dùng sớm: **S6 (góp ý cho em, sửa bài)** rồi S7 (trạng thái, đề xuất bậc).
+- **S5b-1 PR A (tên đăng nhập ngắn, ghi kết quả bài, ghi buổi học có nhãn, điểm cần chú ý; migration 0013–0015)** trên nhánh `feature/s5b1a-login-results`, chờ phụ huynh duyệt. Kế hoạch `docs/plans/s5b1-tutor-work.md`; mockup canvas "Màn gia sư — S5b".
+- Tiếp theo: **S5b-1 PR B** (giao bài link/PDF, kho file `english-work`, em gửi ảnh kết quả; migration 0016) → S5b-2 (thư viện nguồn, gợi ý) → S6 (góp ý cho em, sửa bài) → S7.
 - Seed cấu hình sinh tự động và **khóa phiên bản**: bản đã công bố (danh mục 0.2.1-draft, ngưỡng AP-0.2-pilot, bộ A-v1/B-v1) nằm trong `content/config.lock.json` — KHÔNG sửa nội dung của chúng (CI báo đỏ). Muốn đổi = thêm phiên bản mới (file mới, id mới như `B-v2`) rồi `npm run gen:config -- --new` để sinh migration kế tiếp (số kế tiếp, hiện là 0013…); không sửa tay các migration seed.
 - Pilot thủ công cả 2 em chạy song song từ 17–19/10/2026 (Pilot Kit A/B v0.2 trong hub).

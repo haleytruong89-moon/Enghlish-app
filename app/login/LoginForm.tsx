@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { auth } from "@/lib/copy/vi";
 import { signIn, type LoginState } from "./actions";
 
-const initial: LoginState = { error: null, email: "" };
+const initial: LoginState = { error: null, login: "" };
 
 export function LoginForm() {
   const [state, action, pending] = useActionState(signIn, initial);
@@ -12,17 +12,19 @@ export function LoginForm() {
   return (
     <form action={action} className="flex flex-col gap-5" noValidate>
       <div className="flex flex-col gap-2">
-        <label htmlFor="email" className="text-sm font-medium">
-          {auth.email}
+        <label htmlFor="login" className="text-sm font-medium">
+          {auth.login}
         </label>
         <input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          inputMode="email"
+          id="login"
+          name="login"
+          type="text"
+          autoComplete="username"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
           required
-          defaultValue={state.email}
+          defaultValue={state.login}
           aria-invalid={state.error ? true : undefined}
           aria-describedby={state.error ? "login-error" : undefined}
           className="min-h-12 rounded-lg border border-line bg-white px-4 text-base"

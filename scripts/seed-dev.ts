@@ -11,6 +11,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { Client } from "pg";
+import { DESTINATION_FRAME_FILE, importFrameFile } from "./lib/frameImport";
 import { pgConfigFromUrl, requireEnv } from "./lib/pg";
 import { assignDevInquiries, SEED_ACCOUNTS, seedDevReviewWork, seedTestFamily, type SeedUsers } from "./lib/seed";
 
@@ -84,6 +85,7 @@ async function main() {
     const users = mode === "stub" ? await stubUsers(db) : await supabaseUsers();
     const result = await seedTestFamily(db, users);
     console.log("Đã tạo gia đình THỬ:", result.familyId);
+    for (const w of result.loginWarnings) console.log(`  Cảnh báo: ${w} (bỏ qua tên này, các phần khác vẫn tạo bình thường)`);
     for (const r of await assignDevInquiries(db, result)) {
       console.log(
         r.instanceId
@@ -97,8 +99,17 @@ async function main() {
         ? "  An (thử) đã nộp 1 bài viết luyện tập (A-W4-PLANETS, bước 7) để thử màn Duyệt bài"
         : `  Chưa tạo bài mẫu để duyệt (${review.skipped ?? "bỏ qua"})`,
     );
+    // S5b-1: the Destination U1–12 test frame (no question text), so "Ghi kết quả bài → Đề có khung" can be tried on the preview.
+    try {
+      const frame = await importFrameFile(db, result.familyId, DESTINATION_FRAME_FILE);
+      console.log(`  Khung đề mẫu cho Nguyên (thử): ${frame.title} (${frame.action === "unchanged" ? "đã có" : "đã nhập"})`);
+    } catch (err) {
+      console.log(`  Chưa nhập khung đề mẫu (${(err as Error).message.split("\n")[0]})`);
+    }
     for (const key of keys) {
-      console.log(`  ${SEED_ACCOUNTS[key].role.padEnd(7)} ${emailFor(SEED_ACCOUNTS[key].emailLocal)}`);
+      console.log(
+        `  ${SEED_ACCOUNTS[key].role.padEnd(7)} ${emailFor(SEED_ACCOUNTS[key].emailLocal)}  (tên đăng nhập: ${SEED_ACCOUNTS[key].loginName})`,
+      );
     }
     if (mode !== "stub") console.log("Mật khẩu: giá trị SEED_DEV_PASSWORD bạn đã đặt (không in ra đây).");
   } finally {

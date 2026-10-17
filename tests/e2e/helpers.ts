@@ -26,7 +26,7 @@ export function seedPassword(): string {
 /** Fill the login form through the UI and submit it. Does not wait for the result. */
 export async function submitLogin(page: Page, email: string, password: string): Promise<void> {
   await page.goto("/login");
-  await page.getByLabel(auth.email).fill(email);
+  await page.getByLabel(auth.login).fill(email);
   await page.getByLabel(auth.password).fill(password);
   await page.getByRole("button", { name: auth.submit, exact: true }).click();
 }

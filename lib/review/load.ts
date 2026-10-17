@@ -1,6 +1,7 @@
 import "server-only";
 import { allowRealLearners } from "@/lib/env";
 import { loadTargetsView } from "@/lib/targets/loadTargets";
+import { loadTags } from "@/lib/tutorwork/load";
 import { parseEpisode, parseInbox, parseNotes } from "./shape";
 import { createSupabaseReviewStore } from "./supabaseStore";
 import { PAGE_SIZE } from "./inbox";
@@ -27,10 +28,15 @@ export async function loadEpisode(episodeId: string): Promise<ReviewEpisodeView 
   return raw === null || raw === undefined ? null : parseEpisode(raw);
 }
 
-export async function loadNotesPage(learnerId: string): Promise<{
+export async function loadNotesPage(learnerId: string, trackId: string): Promise<{
   notes: LessonNoteView[];
   targets: { id: string; title: string }[];
+  tagLabels: Record<string, string>;
 }> {
-  const [rawNotes, targets] = await Promise.all([createSupabaseReviewStore().listNotes(learnerId), loadTargetsView(learnerId)]);
-  return { notes: parseNotes(rawNotes), targets: (targets?.rows ?? []).map((r) => ({ id: r.id, title: r.title })) };
+  const [rawNotes, targets, tags] = await Promise.all([createSupabaseReviewStore().listNotes(learnerId), loadTargetsView(learnerId), loadTags(trackId)]);
+  return {
+    notes: parseNotes(rawNotes),
+    targets: (targets?.rows ?? []).map((r) => ({ id: r.id, title: r.title })),
+    tagLabels: Object.fromEntries(tags.map((t) => [t.key, t.label])),
+  };
 }

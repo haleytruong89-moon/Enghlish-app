@@ -1,0 +1,16 @@
+{
+  "track": "A",
+  "note": "Tag set for Track A (An, A2→B1, KET/A2). Not part of the locked catalogue; seeded by migration 0015.",
+  "tags": [
+    { "key": "hien-tai-don", "label_vi": "Hiện tại đơn", "group_vi": "Ngữ pháp" },
+    { "key": "hien-tai-don-s-es", "label_vi": "Hiện tại đơn: thêm -s / -es", "group_vi": "Ngữ pháp" },
+    { "key": "gioi-tu-thoi-gian", "label_vi": "Giới từ chỉ thời gian: in / on / at", "group_vi": "Ngữ pháp" },
+    { "key": "qua-khu-don", "label_vi": "Quá khứ đơn", "group_vi": "Ngữ pháp" },
+    { "key": "so-sanh", "label_vi": "So sánh", "group_vi": "Ngữ pháp" },
+    { "key": "tu-vung-chu-de", "label_vi": "Từ vựng theo chủ đề", "group_vi": "Từ vựng" },
+    { "key": "doc-hieu", "label_vi": "Đọc hiểu (KET Reading)", "group_vi": "Kỹ năng" },
+    { "key": "viet-cau", "label_vi": "Viết câu / đoạn ngắn", "group_vi": "Kỹ năng" },
+    { "key": "nghe", "label_vi": "Nghe", "group_vi": "Kỹ năng" },
+    { "key": "phat-am", "label_vi": "Phát âm", "group_vi": "Kỹ năng" }
+  ]
+}

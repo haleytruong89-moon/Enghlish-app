@@ -1,0 +1,95 @@
+name: Import test frame
+
+# Manual only — the parent presses "Run workflow" and types IMPORT to confirm.
+# Runs `npm run db:import-frame` against the real Supabase project: puts ONE "khung đề" (test frame) from content/frames/
+# into a family. A frame is only item number → part → tag (+ the test's own scale): NO question text, so no copyright issue.
+# Idempotent — the same file again changes nothing; an edited file becomes a NEW version (the old one stays).
+# It changes nothing about any child's data.
+#
+# Secrets: DATABASE_URL
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Gõ IMPORT để xác nhận nhập khung đề'
+        required: true
+        default: ''
+      file:
+        description: 'File trong content/frames/ (mặc định: khung bài kiểm tra Destination U1–12)'
+        required: true
+        default: 'destination-c1-c2-progress-test-u1-12.json'
+      family:
+        description: 'Nhập vào gia đình nào: real (gia đình thật) hoặc test (gia đình thử)'
+        required: true
+        default: 'real'
+        type: choice
+        options:
+          - real
+          - test
+
+permissions:
+  contents: read
+
+concurrency:
+  group: import-frame
+  cancel-in-progress: false
+
+jobs:
+  import:
+    if: ${{ inputs.confirm == 'IMPORT' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check secrets are present (without printing them)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::missing: DATABASE_URL"
+            echo "Thiếu: DATABASE_URL — thêm ở Settings → Secrets and variables → Actions." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+      - name: Import the frame
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Inputs go through env (never interpolated into the shell script); the script validates them.
+          FRAME_FILE: ${{ inputs.file }}
+          FRAME_FAMILY: ${{ inputs.family }}
+        run: |
+          set -uo pipefail
+          status=0
+          npm run db:import-frame -- "$FRAME_FILE" --family="$FRAME_FAMILY" > /tmp/frame.txt 2>&1 || status=$?
+          {
+            if [ "$status" -eq 0 ]; then
+              echo "## Khung đề đã xử lý"
+            else
+              echo "## Chưa nhập được khung đề"
+            fi
+            echo
+            echo '```'
+            grep -v -i "postgres://\|postgresql://\|sb_secret_\|eyJ" /tmp/frame.txt | grep -v "^>" || true
+            echo '```'
+            echo
+            if [ "$status" -eq 0 ]; then
+              echo "Mở trang **Ghi kết quả bài** của em: khung đề xuất hiện ở ô *Đề có khung*."
+            else
+              echo "Chưa ghi gì vào database. Sửa theo dòng báo lỗi ở trên rồi chạy lại."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          grep -v -i "postgres://\|postgresql://\|sb_secret_\|eyJ" /tmp/frame.txt || true
+          exit "$status"
+
+  not-confirmed:
+    if: ${{ inputs.confirm != 'IMPORT' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          echo "Chưa nhập gì: ô xác nhận phải là IMPORT." >> "$GITHUB_STEP_SUMMARY"
+          exit 1

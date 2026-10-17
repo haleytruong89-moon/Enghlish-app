@@ -81,6 +81,7 @@ describe("S5 review polish: lesson notes can be edited only by their author", ()
   const note = (id: string, tutorMemberId: string): LessonNoteView => ({
     id, learnerId: "l1", tutorMemberId, sessionDate: "2026-10-14", goals: "Goal", observed: null, supportLevel: "light", nextActions: [], practisedTargetIds: [],
     published: false, supersedesId: null, createdAt: "2026-10-14T01:00:00Z", current: true,
+    weakTagKeys: [], messageToLearner: null, noteForParent: null, authorRole: "tutor",
   });
   const render = (memberId: string, canWrite = true) =>
     renderToStaticMarkup(createElement(LessonNotes, { learnerId: "l1", notes: [note("n-mine", "m-1"), note("n-other", "m-2")], targets: [], canWrite, memberId, today: "2026-10-14", minDate: "2026-06-16" }));

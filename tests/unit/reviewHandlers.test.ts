@@ -125,6 +125,17 @@ describe("S5 handlers: 401 / 404 / 403 come before anything else", () => {
     expect((await handleInbox({ user: { id: "u-stranger" }, store: s, access: { store: access, allowRealLearners: false, now: NOW } })).status).toBe(404);
   });
 
+  it("the old note form cannot replace a note written with the session form (v2): 400, nothing written; old notes still can be", async () => {
+    const v2 = { id: EP_AN, learner_id: AN, tutor_member_id: "m-tutorAn", session_date: "2026-10-13", goals: "Unit 7", observed: null, support_level: null, next_actions: [], practised_target_ids: [], published: true, supersedes_id: null, created_at: "2026-10-13T01:00:00Z", weak_tag_keys: ["dang-tu"], message_to_learner: "Ôn nhé", note_for_parent: null, author_role: "tutor" };
+    const s = makeStore({ listNotes: vi.fn(async () => [v2]) });
+    const r = await handleWriteNote(deps("tutorAn", s), AN, { ...goodNote, supersedes_id: EP_AN });
+    expect(r.status).toBe(400);
+    expect(r.body).toMatchObject({ error: "note_is_v2" });
+    expect(s.writeNote).not.toHaveBeenCalled();
+    const old = makeStore({ listNotes: vi.fn(async () => [{ ...v2, support_level: "light", weak_tag_keys: [], message_to_learner: null }]) });
+    expect((await handleWriteNote(deps("tutorAn", old), AN, { ...goodNote, supersedes_id: EP_AN })).status).toBe(201);
+  });
+
   it("a parent may not write lesson notes (403), but may read them", async () => {
     const s = makeStore();
     expect((await handleWriteNote(deps("parent", s), AN, goodNote)).status).toBe(403);

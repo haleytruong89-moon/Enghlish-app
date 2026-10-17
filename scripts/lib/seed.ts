@@ -1,4 +1,5 @@
 import type { ClientBase } from "pg";
+import { upsertLoginNames } from "./loginNames";
 import { addDays, daysBetween, dateWindow, todayVn } from "../../lib/inquiries/dates";
 
 /** Fixed IDs so the dev seed is idempotent. Only TEST data — never real learners. */
@@ -16,19 +17,22 @@ export type SeedUsers = {
 
 export const SEED_ACCOUNTS: Record<
   keyof SeedUsers,
-  { emailLocal: string; role: "parent" | "tutor" | "student"; displayName: string; color: string | null }
+  { emailLocal: string; loginName: string; role: "parent" | "tutor" | "student"; displayName: string; color: string | null }
 > = {
-  parent: { emailLocal: "phuhuynh", role: "parent", displayName: "Phụ huynh (thử)", color: null },
-  tutorAn: { emailLocal: "giasu-an", role: "tutor", displayName: "Cô của An (thử)", color: null },
-  tutorNguyen: { emailLocal: "giasu-nguyen", role: "tutor", displayName: "Cô của Nguyên (thử)", color: null },
-  studentAn: { emailLocal: "an", role: "student", displayName: "An (thử)", color: "#9A4A15" },
-  studentNguyen: { emailLocal: "nguyen", role: "student", displayName: "Nguyên (thử)", color: "#2F5D9E" },
+  // loginName: always "thu-…" so a test name can never collide with the real family's an / nguyen / giasu-an / giasu-nguyen.
+  parent: { emailLocal: "phuhuynh", loginName: "thu-phuhuynh", role: "parent", displayName: "Phụ huynh (thử)", color: null },
+  tutorAn: { emailLocal: "giasu-an", loginName: "thu-giasu-an", role: "tutor", displayName: "Cô của An (thử)", color: null },
+  tutorNguyen: { emailLocal: "giasu-nguyen", loginName: "thu-giasu-nguyen", role: "tutor", displayName: "Cô của Nguyên (thử)", color: null },
+  studentAn: { emailLocal: "an", loginName: "thu-an", role: "student", displayName: "An (thử)", color: "#9A4A15" },
+  studentNguyen: { emailLocal: "nguyen", loginName: "thu-nguyen", role: "student", displayName: "Nguyên (thử)", color: "#2F5D9E" },
 };
 
 export type SeedResult = {
   familyId: string;
   learners: { an: string; nguyen: string };
   members: Record<keyof SeedUsers, string>;
+  /** Short login names that could not be given (already used for another account): a warning, never a failure of the seed. */
+  loginWarnings: string[];
 };
 
 /**
@@ -71,6 +75,17 @@ export async function seedTestFamily(client: ClientBase, users: SeedUsers): Prom
       );
       members[key] = (ins.rows[0] as { id: string }).id;
     }
+
+    // A "thu-…" name that already belongs to another account is a warning (that name is skipped), never a failure of the whole seed.
+    const loginNames = await upsertLoginNames(
+      client,
+      (Object.keys(SEED_ACCOUNTS) as (keyof SeedUsers)[]).map((key) => ({
+        label: SEED_ACCOUNTS[key].displayName,
+        name: SEED_ACCOUNTS[key].loginName,
+        userId: users[key],
+      })),
+      { onConflict: "skip" },
+    );
 
     const learners: [string, string, string, string, string, string][] = [
       [TEST_LEARNER_AN_ID, members.studentAn, "An (thử)", "A", "skillgrow:child:an:test", "A-v1"],
@@ -136,6 +151,7 @@ export async function seedTestFamily(client: ClientBase, users: SeedUsers): Prom
       familyId: TEST_FAMILY_ID,
       learners: { an: TEST_LEARNER_AN_ID, nguyen: TEST_LEARNER_NGUYEN_ID },
       members,
+      loginWarnings: loginNames.skipped,
     };
   } catch (err) {
     await client.query("rollback");
