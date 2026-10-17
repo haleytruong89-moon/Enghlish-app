@@ -1,6 +1,8 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createUserClient } from "@/lib/supabase/server";
+import { loadAssignments } from "@/lib/practice/load";
+import type { AssignmentView } from "@/lib/practice/types";
 import { parseFrames, parseLastNote, parseRecentResult, parseTags, parseUntagged, parseWeakPoints } from "./shape";
 import { type FrameView, type LastNote, type RecentResult, type TagInfo, type UntaggedItem, type WeakPointsView } from "./types";
 import type { WeakWindow } from "./schemas";
@@ -111,17 +113,20 @@ export type TodayData = {
   untagged: UntaggedItem[];
   lastNote: LastNote | null;
   recent: RecentResult | null;
+  /** Assignments given in the app that are not retracted and have no result yet (what the student still owes, or what waits for the tutor). */
+  practice: AssignmentView[];
   tagLabels: Record<string, string>;
 };
 
 /** Everything the "Hôm nay" card of one learner needs. */
 export async function loadToday(learnerId: string, trackId: string, viewer: { role: "tutor" | "parent"; memberId: string }): Promise<TodayData> {
-  const [weak, untagged, lastNote, recent, tags] = await Promise.all([
+  const [weak, untagged, lastNote, recent, tags, assignments] = await Promise.all([
     loadWeakPoints(learnerId, "all"),
     loadUntagged(learnerId, viewer),
     loadLastNote(learnerId),
     loadRecentResult(learnerId),
     loadTags(trackId),
+    loadAssignments(learnerId),
   ]);
   return {
     weak,
@@ -130,6 +135,7 @@ export async function loadToday(learnerId: string, trackId: string, viewer: { ro
     untagged,
     lastNote,
     recent,
+    practice: assignments.filter((a) => !a.retractedAt && a.resultId === null),
     tagLabels: Object.fromEntries(tags.map((t) => [t.key, t.label])),
   };
 }

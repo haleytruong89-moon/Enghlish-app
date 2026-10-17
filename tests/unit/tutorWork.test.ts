@@ -242,6 +242,16 @@ describe("S5b-1 handlers: writes", () => {
     }
   });
 
+  it("a result can name the assignment it is about (a uuid, passed on); without one it is null; a bad id is 400", async () => {
+    const ASSIGNMENT = "c0000000-0000-4000-8000-000000000001";
+    const s = makeStore();
+    expect((await handleRecordResult(deps("tutorAn", s), AN, { ...goodQuick, assignment_id: ASSIGNMENT })).status).toBe(201);
+    expect(s.recordResult).toHaveBeenLastCalledWith(expect.objectContaining({ assignmentId: ASSIGNMENT }));
+    await handleRecordResult(deps("tutorAn", s), AN, goodQuick);
+    expect(s.recordResult).toHaveBeenLastCalledWith(expect.objectContaining({ assignmentId: null }));
+    expect((await handleRecordResult(deps("tutorAn", s), AN, { ...goodQuick, assignment_id: "x" })).status).toBe(400);
+  });
+
   it("a bad body is 400 and the store is not touched; a replay is 200", async () => {
     const s = makeStore();
     expect((await handleRecordResult(deps("tutorAn", s), AN, { ...goodQuick, wrong_items: "4,7" })).status).toBe(400);

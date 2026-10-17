@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { fallbackLabels, home, inquiriesPage, learnerWithTrack, notesPage, targetsPage, todayPage, tutorHonorific, weakPage } from "@/lib/copy/vi";
+import { assignPage, fallbackLabels, home, inquiriesPage, learnerWithTrack, notesPage, sourceLabels, targetsPage, todayPage, tutorHonorific, weakPage } from "@/lib/copy/vi";
 import { safeColor, type LearnerSummary } from "@/lib/home/visible";
+import { todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi } from "@/lib/inquiries/format";
+import { formatHm } from "@/lib/work/view";
 import { itemList } from "@/lib/tutorwork/frameScore";
 import type { TodayData } from "@/lib/tutorwork/load";
 
@@ -10,6 +12,19 @@ const linkClass = "inline-flex min-h-11 items-center text-sm font-medium text-ac
 function Attention({ learnerId, today, role }: { learnerId: string; today: TodayData; role: "tutor" | "parent" }) {
   const label = (key: string) => today.tagLabels[key] ?? fallbackLabels.tag;
   const rows: { key: string; href: string; badge: string; badgeClass: string; rowClass: string; title: string; line: string }[] = [
+    // The student sent a picture / file: the tutor (or parent) reads it and fills in the result and the tags.
+    ...today.practice
+      .filter((a) => a.submission !== null)
+      .slice(0, 3)
+      .map((a) => ({
+        key: `sent-${a.id}`,
+        href: `/learners/${learnerId}/results/new?assignment=${a.id}`,
+        badge: todayPage.submittedBadge,
+        badgeClass: "bg-accent text-white",
+        rowClass: "bg-[#e5efe9]",
+        title: a.title,
+        line: `${todayPage.submittedLine(a.title, a.submission ? `${formatDateVi(todayVn(new Date(a.submission.createdAt)))} ${formatHm(a.submission.createdAt)}` : "")} · ${todayPage.submittedNote}`,
+      })),
     ...today.repeats.map((t) => ({
       key: `repeat-${t.tagKey}`,
       href: `/learners/${learnerId}/weak`,
@@ -81,7 +96,7 @@ export function LearnerCard({ learner, today, role }: { learner: LearnerSummary;
         <span className="text-sm text-muted">{learner.status === "active" ? home.learnerActive : home.learnerDraft}</span>
       </div>
 
-      <div className="mt-2 grid gap-3 sm:grid-cols-2" role="group" aria-label={todayPage.actionsLabel}>
+      <div className="mt-2 grid gap-3 sm:grid-cols-3" role="group" aria-label={todayPage.actionsLabel}>
         <Link
           href={`/learners/${learner.id}/notes/new`}
           data-testid={`action-note-${learner.id}`}
@@ -98,9 +113,40 @@ export function LearnerCard({ learner, today, role }: { learner: LearnerSummary;
           <span className="text-lg font-semibold text-accent">{todayPage.resultAction}</span>
           <span className="text-sm text-muted">{todayPage.resultHint}</span>
         </Link>
+        <Link
+          href={`/learners/${learner.id}/assign`}
+          data-testid={`action-assign-${learner.id}`}
+          className="flex min-h-24 flex-col gap-1 rounded-xl border border-line bg-white px-5 py-4 text-ink no-underline hover:border-accent"
+        >
+          <span className="text-lg font-semibold text-accent">{todayPage.assignAction}</span>
+          <span className="text-sm text-muted">{todayPage.assignHint}</span>
+        </Link>
       </div>
 
       {today ? <Attention learnerId={learner.id} today={today} role={role} /> : null}
+
+      {today ? (
+        <section className="mt-4 flex flex-col gap-2" aria-label={todayPage.practiceTitle} data-testid={`practice-${learner.id}`}>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-base font-semibold">{todayPage.practiceTitle}</h3>
+            <Link href={`/learners/${learner.id}/assign`} className={linkClass}>
+              {todayPage.practiceManage}
+            </Link>
+          </div>
+          {today.practice.length === 0 ? <p className="text-sm text-muted">{todayPage.practiceNone}</p> : null}
+          <ul className="flex flex-col gap-1 text-sm">
+            {today.practice.slice(0, 5).map((a) => (
+              <li key={a.id} className="flex flex-wrap items-baseline justify-between gap-x-3">
+                <span>
+                  <b className="font-semibold">{a.title}</b>{" "}
+                  <span className="text-muted">{todayPage.practiceLine(assignPage.kindLabel(a.kind, a.sourceKey ? sourceLabels[a.sourceKey] : null), a.dueOn ? formatDateVi(a.dueOn) : null)}</span>
+                </span>
+                <span className="text-muted">{a.submission ? todayPage.submittedBadge : todayPage.practiceNotDone}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {today ? (
         <section className="mt-4 flex flex-col gap-1 text-sm" data-testid={`last-session-${learner.id}`}>
