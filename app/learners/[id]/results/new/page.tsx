@@ -14,7 +14,7 @@ export default async function NewResultPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const { member, learner } = await requireLearnerPage(id, "tutorwork:write");
   const role = member.role === "tutor" ? "tutor" : "parent";
-  const [frames, tags, pending] = await Promise.all([loadFrames(learner.trackId), loadTags(learner.trackId), loadUntagged(learner.id, role)]);
+  const [frames, tags, pending] = await Promise.all([loadFrames(learner.trackId), loadTags(learner.trackId), loadUntagged(learner.id, { role, memberId: member.id })]);
   const today = todayVn();
 
   return (

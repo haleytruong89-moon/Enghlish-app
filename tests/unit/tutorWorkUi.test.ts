@@ -38,7 +38,7 @@ const weakTag = (over: Partial<WeakPoint> = {}): WeakPoint => ({
 });
 const weakView = (t: WeakPoint[], policyDays: number | null = 14): WeakPointsView => ({ policyDays, since: null, today: "2026-10-17", tags: t });
 
-const untagged: UntaggedItem = { resultId: "r1", title: "Unless, even if…", takenOn: "2026-10-08", createdAt: "2026-10-08T01:00:00Z", source: "practice", usedHint: false, inClass: false, items: [4, 7] };
+const untagged: UntaggedItem = { resultId: "r1", recordedByMember: "m-tutor", recordedRole: "tutor", own: false, title: "Unless, even if…", takenOn: "2026-10-08", createdAt: "2026-10-08T01:00:00Z", source: "practice", usedHint: false, inClass: false, items: [4, 7] };
 const today = (over: Partial<TodayData> = {}): TodayData => {
   const w = weakView([weakTag(), weakTag({ tagKey: "cum-dong-tu", label: "Cụm động từ", sources: 1, status: "watch", recheckDue: true, recheckDueOn: "2026-10-16" })]);
   return {
@@ -71,6 +71,20 @@ describe("S5b-1 'Hôm nay' card", () => {
     expect(html).toContain(todayPage.untaggedParentBadge);
     expect(html).toContain(todayPage.untaggedParentLine("Unless, even if…", "08/10/2026", "4, 7"));
     expect(html).not.toContain(todayPage.untaggedTutorLine("Unless, even if…", "08/10/2026", "4, 7"));
+  });
+  it("parent: items she recorded herself are not 'waiting for the tutor'", () => {
+    const own = { ...untagged, recordedByMember: "m-parent", recordedRole: "parent" as const, own: true };
+    const html = render(createElement(LearnerCard, { learner, today: today({ untagged: [own] }), role: "parent" }));
+    expect(html).toContain(todayPage.untaggedBadge);
+    expect(html).not.toContain(todayPage.untaggedParentBadge);
+    expect(html).toContain(todayPage.untaggedTutorLine("Unless, even if…", "08/10/2026", "4, 7"));
+  });
+  it("a tag that is a repeat AND due for a re-check shows once (the repeat row wins)", () => {
+    const both = weakTag({ recheckDue: true });
+    const w = weakView([both]);
+    const html = render(createElement(LearnerCard, { learner, today: today({ weak: w, repeats: [both], due: [both], untagged: [], lastNote: null }), role: "tutor" }));
+    expect(html.match(/Câu điều kiện &amp; đảo ngữ/g)).toHaveLength(1);
+    expect(html).not.toContain(todayPage.recheckBadge);
   });
   it("never shows a raw tag key: an unknown tag gets a neutral word", () => {
     const html = render(createElement(LearnerCard, { learner, today: today(), role: "tutor" }));
@@ -129,6 +143,13 @@ describe("S5b-1 'Ghi kết quả bài'", () => {
     expect(html).toContain(resultPage.scaleLine("Rất tốt"));
     expect(html).toContain('data-testid="context-class"');
     expect(html).toContain(resultPage.gridHelp);
+  });
+  it("quick entry asks 'Bài kiểm tra | Bài luyện' and starts on 'Bài luyện'", () => {
+    const html = render(createElement(ResultForm, { learnerId: LEARNER, tags, today: "2026-10-17", minDate: "2026-06-19", frames: [], canClass: true }));
+    const btn = (id: string) => html.match(new RegExp(`<button[^>]*data-testid="${id}"[^>]*>`))?.[0] ?? "";
+    expect(btn("source-practice")).toContain('aria-pressed="true"');
+    expect(btn("source-test")).toContain('aria-pressed="false"');
+    expect(html).toContain(resultPage.kind);
   });
   it("a parent does not get the 'in class' option (D15), and is told why", () => {
     const html = render(createElement(ResultForm, { ...props, frames: [frame()], canClass: false }));

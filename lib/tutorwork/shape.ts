@@ -137,6 +137,8 @@ const untagged = z.object({
   items: z.array(
     z.object({
       result_id: text,
+      recorded_by_member: text,
+      recorded_role: z.enum(["tutor", "parent"]),
       title: text,
       taken_on: text,
       created_at: text,
@@ -151,6 +153,8 @@ const untagged = z.object({
 export function parseUntagged(raw: unknown): UntaggedItem[] {
   return untagged.parse(raw ?? { items: [] }).items.map((i) => ({
     resultId: i.result_id,
+    recordedByMember: i.recorded_by_member,
+    recordedRole: i.recorded_role,
     title: i.title,
     takenOn: i.taken_on,
     createdAt: i.created_at,

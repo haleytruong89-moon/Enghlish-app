@@ -28,6 +28,7 @@ export async function postJson<T = Record<string, unknown>>(url: string, payload
 export function failText(r: PostFail): string {
   if (r.status === 0) return tutorWorkErrors.offline;
   if (r.error === "tutor_only") return tutorWorkErrors.classTutorOnly;
+  if (r.error === "duplicate_first") return tutorWorkErrors.duplicateFirst;
   if (r.status === 403) return tutorWorkErrors.forbidden;
   if (r.status === 409) return tutorWorkErrors.conflict;
   if (r.status === 400) return tutorWorkErrors.invalid;

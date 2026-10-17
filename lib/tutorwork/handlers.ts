@@ -8,7 +8,7 @@
  */
 import { AccessError, requireAccess, type AccessDeps, type AccessGrant, type AccessUser, type Action } from "@/lib/auth/requireAccess";
 import { apiErrors } from "@/lib/copy/vi";
-import { fromDbError, type HandlerResult } from "@/lib/review/handlers";
+import { fromDbError, ReviewDbError, type HandlerResult } from "@/lib/review/handlers";
 import { addTagBodySchema, resultBodySchema, sessionNoteBodySchema, tagItemsBodySchema, writingTagsBodySchema } from "./schemas";
 import { customTagKey } from "./frameScore";
 
@@ -25,6 +25,7 @@ export interface TutorWorkStore {
     correct: number | null;
     wrong: number[];
     tags: { n: number; tag_key: string | null }[];
+    source: string | null;
     context: string;
     attempt: string;
     usedHint: boolean;
@@ -95,6 +96,7 @@ export async function handleRecordResult(deps: TutorWorkDeps, learnerId: string,
       correct: b.correct ?? null,
       wrong: b.wrong_items,
       tags: b.tags,
+      source: b.source ?? null,
       context: b.context,
       attempt: b.attempt,
       usedHint: b.used_hint,
@@ -108,6 +110,8 @@ export async function handleRecordResult(deps: TutorWorkDeps, learnerId: string,
       body: { id: r.id, replayed: r.replayed, untagged: r.untagged },
     };
   } catch (err) {
+    // A second FIRST attempt of the same test: its own answer, so the form can say "choose 'Làm lại' or fix the saved one".
+    if (err instanceof ReviewDbError && err.code === "23505" && /\(duplicate_first\)/.test(err.detail)) return fail(409, "duplicate_first");
     return fromDbError(err);
   }
 }

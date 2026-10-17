@@ -2,11 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
-import { resultPage } from "@/lib/copy/vi";
+import { fallbackLabels, resultPage } from "@/lib/copy/vi";
 import { failText, postJson } from "@/lib/tutorwork/client";
 import { itemList, parseItemNumbers, scoreFrame } from "@/lib/tutorwork/frameScore";
 import { scaleBand } from "@/lib/frames/frame";
-import type { FrameView, ResultAttempt, ResultContext, ResultMode, TagInfo } from "@/lib/tutorwork/types";
+import type { FrameView, ResultAttempt, ResultContext, ResultMode, ResultSource, TagInfo } from "@/lib/tutorwork/types";
 import { TagSelect } from "./TagSelect";
 import { useTags } from "./useTags";
 
@@ -37,6 +37,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, canClass, tod
   const [correct, setCorrect] = useState("");
   const [wrongText, setWrongText] = useState("");
   const [itemTags, setItemTags] = useState<Record<number, string | null>>({});
+  const [source, setSource] = useState<ResultSource>("practice");
   const [attempt, setAttempt] = useState<ResultAttempt>("first");
   const [usedHint, setUsedHint] = useState(false);
   const [context, setContext] = useState<ResultContext>("home");
@@ -109,6 +110,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, canClass, tod
       payload = {
         ...common,
         mode: "quick",
+        source,
         title: title.trim(),
         total_items: totalN,
         correct: correctN,
@@ -241,7 +243,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, canClass, tod
                     {score.tags.map((t) => (
                       <li key={t.tagKey} className="flex flex-wrap justify-between gap-2">
                         <span>
-                          {labelOf.get(t.tagKey) ?? t.tagKey} <span className="text-muted">· {resultPage.byTagLine(itemList(t.items))}</span>
+                          {labelOf.get(t.tagKey) ?? fallbackLabels.tag} <span className="text-muted">· {resultPage.byTagLine(itemList(t.items))}</span>
                         </span>
                         <span className="font-semibold">{t.items.length}</span>
                       </li>
@@ -265,6 +267,17 @@ export function ResultForm({ learnerId, frames, tags: initialTags, canClass, tod
                 className={field}
               />
             </label>
+            <fieldset className="flex flex-col gap-2">
+              <legend className="text-sm text-muted">{resultPage.kind}</legend>
+              <div className="flex gap-2">
+                <button type="button" aria-pressed={source === "test"} data-testid="source-test" onClick={() => setSource("test")} className={seg(source === "test")}>
+                  {resultPage.kindTest}
+                </button>
+                <button type="button" aria-pressed={source === "practice"} data-testid="source-practice" onClick={() => setSource("practice")} className={seg(source === "practice")}>
+                  {resultPage.kindPractice}
+                </button>
+              </div>
+            </fieldset>
             <div className="grid grid-cols-2 gap-3">
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-muted">{resultPage.quickCorrect}</span>

@@ -285,6 +285,13 @@ export async function handleWriteNote(deps: HandlerDeps, learnerId: string, rawB
   const parsed = noteBodySchema.safeParse(rawBody);
   if (!parsed.success) return fail(400, "invalid_body");
   const body: NoteBody = parsed.data;
+  // A note written with "Ghi buổi học" (v2) cannot be edited with this older form: it would lose the v2 fields. The database refuses it too.
+  if (body.supersedes_id) {
+    const target = parseNotes(await deps.store.listNotes(g.grant.learner.id)).find((n) => n.id === body.supersedes_id);
+    if (target && (target.supportLevel === null || target.weakTagKeys.length > 0 || target.messageToLearner !== null || target.noteForParent !== null)) {
+      return fail(400, "note_is_v2");
+    }
+  }
   try {
     const r = (await deps.store.writeNote({
       learnerId: g.grant.learner.id,

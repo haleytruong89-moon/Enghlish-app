@@ -9,11 +9,13 @@ export function windowSince(window: WeakWindow, today: string = todayVn()): stri
 }
 
 /**
- * Wrong items still waiting for a tag. The tutor sees all of them; the parent only those older than PARENT_TAG_WAIT_DAYS
- * (the tutor tags first, the parent is the fallback). Applied on the server, never in the browser.
+ * Wrong items still waiting for a tag, as the viewer may see them. The tutor sees all of them. The parent sees at once what she recorded
+ * herself, and what the tutor recorded only after PARENT_TAG_WAIT_DAYS (the tutor tags first, the parent is the fallback).
+ * Applied on the server, never in the browser. Each item is marked `own` when the viewer recorded it.
  */
-export function filterUntagged(items: UntaggedItem[], role: "tutor" | "parent", now: Date = new Date()): UntaggedItem[] {
-  if (role === "tutor") return items;
+export function filterUntagged(items: UntaggedItem[], viewer: { role: "tutor" | "parent"; memberId: string }, now: Date = new Date()): UntaggedItem[] {
   const today = todayVn(now);
-  return items.filter((i) => daysBetween(todayVn(new Date(i.createdAt)), today) >= PARENT_TAG_WAIT_DAYS);
+  return items
+    .map((i) => ({ ...i, own: i.recordedByMember === viewer.memberId }))
+    .filter((i) => viewer.role === "tutor" || i.own || daysBetween(todayVn(new Date(i.createdAt)), today) >= PARENT_TAG_WAIT_DAYS);
 }

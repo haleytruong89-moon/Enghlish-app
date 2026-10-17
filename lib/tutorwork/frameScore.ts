@@ -63,7 +63,10 @@ export function parseItemNumbers(raw: string, total: number): { ok: true; items:
   return { ok: true, items: [...out].sort((a, b) => a - b) };
 }
 
-/** x-key for a family's own tag: "Đảo ngữ với 'hardly'" → "x-dao-ngu-voi-hardly". Empty after cleaning → null. */
+/**
+ * First part of the key of a family's own tag: "Đảo ngữ với 'hardly'" → "x-dao-ngu-voi-hardly". The database adds a random 5-character tail
+ * (so two families, or "Đảo ngữ" and "Dao ngu!", never collide). Empty after cleaning → null.
+ */
 export function customTagKey(label: string): string | null {
   const slug = label
     .normalize("NFD")
@@ -73,7 +76,7 @@ export function customTagKey(label: string): string | null {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 50)
+    .slice(0, 44)
     .replace(/-+$/g, "");
   return slug ? `x-${slug}` : null;
 }

@@ -41,6 +41,7 @@ export function createSupabaseTutorWorkStore(): TutorWorkStore {
         p_supersedes: a.supersedes,
         p_by: a.byMemberId,
         p_client_id: a.clientId,
+        p_source: a.source,
       });
       if (error) dbError("eng_record_result", error);
       return data;

@@ -9,6 +9,7 @@ import {
   RESULT_ATTEMPTS,
   RESULT_CONTEXTS,
   RESULT_MODES,
+  RESULT_SOURCES,
   STUDIED_MAX,
 } from "./types";
 
@@ -29,6 +30,8 @@ export const resultBodySchema = z
   .strictObject({
     client_id: clientId,
     mode: z.enum(RESULT_MODES),
+    /** Quick results only: counts as a test or as a practice (default practice). A framed result is always a test. */
+    source: z.enum(RESULT_SOURCES).optional(),
     frame_id: uuid.optional(),
     title: z.string().trim().max(200).optional(),
     total_items: z.number().int().min(1).max(500).optional(),
@@ -44,7 +47,7 @@ export const resultBodySchema = z
     taken_on: isoDate,
     supersedes_id: uuid.optional(),
   })
-  .refine((b) => (b.mode === "frame" ? Boolean(b.frame_id) && b.tags.length === 0 : !b.frame_id), {
+  .refine((b) => (b.mode === "frame" ? Boolean(b.frame_id) && b.tags.length === 0 && (b.source === undefined || b.source === "test") : !b.frame_id), {
     message: "a framed result has a frame and takes its tags from it; a quick result has none",
     path: ["mode"],
   });

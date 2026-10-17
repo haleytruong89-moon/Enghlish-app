@@ -68,7 +68,7 @@ export default async function HomePage() {
   const todays = await Promise.all(
     data.learners.map(async (l): Promise<TodayData | null> => {
       try {
-        return await loadToday(l.id, l.trackId, role);
+        return await loadToday(l.id, l.trackId, { role, memberId: data.memberId });
       } catch {
         return null;
       }

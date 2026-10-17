@@ -611,6 +611,7 @@ export const tutorWorkErrors = {
   classTutorOnly: `Chỉ ${tutorHonorific} mới ghi được bài làm trong buổi học.`,
   forbidden: "Tài khoản này không làm được việc đó.",
   conflict: "Việc này đã được ghi trước đó (hoặc nhãn bị trùng). Bạn tải lại trang để xem.",
+  duplicateFirst: "Bài này đã được ghi lần đầu — chọn “Làm lại” hoặc sửa bản đã ghi",
   offline: "Không kết nối được. Bạn kiểm tra mạng rồi thử lại nhé.",
 } as const;
 
@@ -686,6 +687,9 @@ export const resultPage = {
   tagItem: (n: number) => `Câu ${n}`,
   tagNone: "Chưa gắn nhãn",
   tagPick: "Chọn nhãn",
+  kind: "Tính là",
+  kindTest: "Bài kiểm tra",
+  kindPractice: "Bài luyện",
   attempt: "Lần làm",
   attemptFirst: "Lần đầu",
   attemptRetry: "Làm lại",
@@ -762,6 +766,7 @@ export const sessionNotePage = {
   recheckAsk: "Hôm nay đã hỏi lại chưa?",
   recheckOptions: { ok: "Đã hỏi · ổn", still_wrong: "Còn sai", not_asked: "Chưa hỏi" } as const,
   recheckNote: "“Còn sai” sẽ đưa điểm này trở lại danh sách cần chú ý.",
+  recheckConflict: "Một điểm không thể vừa “cần củng cố” vừa “đã hỏi · ổn”. Bạn bỏ một trong hai nhé.",
   recheckNone: "Chưa có điểm nào đến hạn kiểm tra lại.",
   homeworkTitle: "Chấm bài làm trong buổi",
   recordResult: "Ghi kết quả bài",

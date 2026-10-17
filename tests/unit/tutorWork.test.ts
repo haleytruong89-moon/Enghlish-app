@@ -140,7 +140,8 @@ describe("S5b-1 quick entry helpers", () => {
     expect(customTagKey("  Cụm từ cố định  ")).toBe("x-cum-tu-co-dinh");
     expect(customTagKey("!!!")).toBeNull();
     const long = customTagKey("a".repeat(200));
-    expect(long).toMatch(/^x-[a-z0-9][a-z0-9-]{0,56}$/);
+    expect(long?.length).toBeLessThanOrEqual(46); // the database adds "-" and 5 random characters (≤ 58 in all)
+    expect(long).toMatch(/^x-[a-z0-9][a-z0-9-]{0,44}$/);
   });
 });
 
@@ -277,6 +278,36 @@ describe("S5b-1 handlers: writes", () => {
     await expect(run("XX000")).rejects.toBeInstanceOf(ReviewDbError);
   });
 
+  it("a second first attempt of the same test is 409 duplicate_first (its own code, no database text)", async () => {
+    const s = makeStore({
+      recordResult: vi.fn(async () => {
+        throw new ReviewDbError("23505", "eng_record_result: this test already has a first attempt (duplicate_first)");
+      }),
+    });
+    const r = await handleRecordResult(deps("tutorAn", s), AN, goodFrame);
+    expect(r.status).toBe(409);
+    expect(r.body).toMatchObject({ error: "duplicate_first" });
+    expect(JSON.stringify(r.body)).not.toContain("eng_record_result");
+    // any other 23505 stays the generic conflict
+    const other = makeStore({
+      recordResult: vi.fn(async () => {
+        throw new ReviewDbError("23505", "eng_record_result: that result was already replaced");
+      }),
+    });
+    expect((await handleRecordResult(deps("tutorAn", other), AN, goodQuick)).body).toMatchObject({ error: "conflict" });
+  });
+
+  it("the choice 'Bài kiểm tra / Bài luyện' of a quick result is passed on; a framed result takes none but 'test'", async () => {
+    const s = makeStore();
+    await handleRecordResult(deps("tutorAn", s), AN, { ...goodQuick, source: "test" });
+    expect(s.recordResult).toHaveBeenLastCalledWith(expect.objectContaining({ mode: "quick", source: "test" }));
+    await handleRecordResult(deps("tutorAn", s), AN, goodQuick);
+    expect(s.recordResult).toHaveBeenLastCalledWith(expect.objectContaining({ source: null }));
+    expect((await handleRecordResult(deps("tutorAn", s), AN, { ...goodQuick, source: "exam" })).status).toBe(400);
+    expect((await handleRecordResult(deps("tutorAn", s), AN, { ...goodFrame, source: "practice" })).status).toBe(400);
+    expect((await handleRecordResult(deps("tutorAn", s), AN, { ...goodFrame, source: "test" })).status).toBe(201);
+  });
+
   it("'+ nhãn khác': the key is made on the server from the label; a label with no letters is refused", async () => {
     const s = makeStore();
     const r = await handleAddTag(deps("tutorAn", s), AN, { label: "Đảo ngữ với hardly" });
@@ -338,7 +369,7 @@ describe("S5b-1 parsing what the database returns", () => {
   it("untagged queue: empty or null is an empty list", () => {
     expect(parseUntagged(null)).toEqual([]);
     expect(parseUntagged({ items: [] })).toEqual([]);
-    const [one] = parseUntagged({ items: [{ result_id: "r1", title: "T", taken_on: "2026-10-10", created_at: "2026-10-10T01:00:00Z", source: "practice", used_hint: true, in_class: false, items: [4, 7] }] });
+    const [one] = parseUntagged({ items: [{ result_id: "r1", recorded_by_member: "m1", recorded_role: "parent", title: "T", taken_on: "2026-10-10", created_at: "2026-10-10T01:00:00Z", source: "practice", used_hint: true, in_class: false, items: [4, 7] }] });
     expect(one).toMatchObject({ resultId: "r1", items: [4, 7], usedHint: true, source: "practice" });
   });
   it("notes written with 'Ghi buổi học' (no support level, new columns) parse; old notes still do", () => {
@@ -364,16 +395,26 @@ describe("S5b-1 window and parent wait", () => {
     expect(windowSince("8", "2026-10-17")).toBe("2026-08-22");
     expect(windowSince("all", "2026-10-17")).toBeNull();
   });
-  const item = (id: string, createdAt: string): UntaggedItem => ({ resultId: id, title: id, takenOn: "2026-10-10", createdAt, source: "practice", usedHint: false, inClass: false, items: [1] });
+  const item = (id: string, createdAt: string, by = "m-tutorNguyen"): UntaggedItem => ({
+    resultId: id, recordedByMember: by, recordedRole: by === "m-parent" ? "parent" : "tutor", title: id, takenOn: "2026-10-10", createdAt, source: "practice", usedHint: false, inClass: false, items: [1],
+  });
+  const tutor = { role: "tutor", memberId: "m-tutorNguyen" } as const;
+  const parent = { role: "parent", memberId: "m-parent" } as const;
   it("the tutor sees every untagged item; the parent only those older than 2 days (waiting for the tutor first)", () => {
     const items = [item("today", "2026-10-17T01:00:00Z"), item("yesterday", "2026-10-16T01:00:00Z"), item("two-days", "2026-10-15T01:00:00Z"), item("old", "2026-10-01T01:00:00Z")];
-    expect(filterUntagged(items, "tutor", NOW).map((i) => i.resultId)).toEqual(["today", "yesterday", "two-days", "old"]);
-    expect(filterUntagged(items, "parent", NOW).map((i) => i.resultId)).toEqual(["two-days", "old"]);
+    expect(filterUntagged(items, tutor, NOW).map((i) => i.resultId)).toEqual(["today", "yesterday", "two-days", "old"]);
+    expect(filterUntagged(items, parent, NOW).map((i) => i.resultId)).toEqual(["two-days", "old"]);
+  });
+  it("the parent sees what she recorded herself at once (the wait is only for the tutor's items), and they are marked as hers", () => {
+    const items = [item("mine-today", "2026-10-17T01:00:00Z", "m-parent"), item("tutor-today", "2026-10-17T01:00:00Z"), item("mine-old", "2026-10-01T01:00:00Z", "m-parent")];
+    const seen = filterUntagged(items, parent, NOW);
+    expect(seen.map((i) => [i.resultId, i.own])).toEqual([["mine-today", true], ["mine-old", true]]);
+    expect(filterUntagged(items, tutor, NOW).map((i) => [i.resultId, i.own])).toEqual([["mine-today", false], ["tutor-today", true], ["mine-old", false]]);
   });
   it("the day is counted in Vietnam time (an item made at 20:00 UTC is already the next day there)", () => {
     const late = item("late", "2026-10-14T20:00:00Z"); // 15/10 03:00 in Vietnam → 2 days before 17/10
-    expect(filterUntagged([late], "parent", NOW)).toHaveLength(1);
+    expect(filterUntagged([late], parent, NOW)).toHaveLength(1);
     const notYet = item("not-yet", "2026-10-15T20:00:00Z"); // 16/10 03:00 in Vietnam → 1 day
-    expect(filterUntagged([notYet], "parent", NOW)).toHaveLength(0);
+    expect(filterUntagged([notYet], parent, NOW)).toHaveLength(0);
   });
 });

@@ -4,6 +4,9 @@ export const RESULT_MODES = ["frame", "quick"] as const;
 export type ResultMode = (typeof RESULT_MODES)[number];
 export const RESULT_CONTEXTS = ["home", "class"] as const;
 export type ResultContext = (typeof RESULT_CONTEXTS)[number];
+/** Where a quick result counts from: a test or a practice (framed results are always tests). */
+export const RESULT_SOURCES = ["test", "practice"] as const;
+export type ResultSource = (typeof RESULT_SOURCES)[number];
 export const RESULT_ATTEMPTS = ["first", "retry"] as const;
 export type ResultAttempt = (typeof RESULT_ATTEMPTS)[number];
 export const RECHECK_RESULTS = ["ok", "still_wrong", "not_asked"] as const;
@@ -78,6 +81,11 @@ export type WeakPointsView = {
 
 export type UntaggedItem = {
   resultId: string;
+  /** english.members id of who recorded the result. */
+  recordedByMember: string;
+  recordedRole: "tutor" | "parent";
+  /** Set by filterUntagged: the viewer recorded this result himself/herself. */
+  own?: boolean;
   title: string;
   takenOn: string;
   createdAt: string;

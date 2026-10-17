@@ -7,7 +7,7 @@ import { visibleLearners, type LearnerSummary } from "./visible";
 export type HomeData =
   | { kind: "signed-out" }
   | { kind: "no-member"; email: string | null }
-  | { kind: Role; displayName: string; learners: LearnerSummary[] };
+  | { kind: Role; displayName: string; memberId: string; learners: LearnerSummary[] };
 
 type LearnerRow = {
   id: string;
@@ -32,9 +32,9 @@ export async function loadHome(): Promise<HomeData> {
 
   const { data: member, error: memberError } = await supabase
     .from("members")
-    .select("role, display_name")
+    .select("id, role, display_name")
     .eq("user_id", user.id)
-    .maybeSingle<{ role: Role; display_name: string }>();
+    .maybeSingle<{ id: string; role: Role; display_name: string }>();
   if (memberError) throw new Error(`members lookup failed: ${memberError.code}`);
   if (!member) return { kind: "no-member", email: user.email ?? null };
 
@@ -56,5 +56,5 @@ export async function loadHome(): Promise<HomeData> {
     allowRealLearners(),
   );
 
-  return { kind: member.role, displayName: member.display_name, learners };
+  return { kind: member.role, displayName: member.display_name, memberId: member.id, learners };
 }

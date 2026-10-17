@@ -53,28 +53,31 @@ export async function loadWeakPoints(learnerId: string, window: WeakWindow = "al
 }
 
 /**
- * Wrong items still waiting for a tag. The tutor sees all of them; the parent only those older than PARENT_TAG_WAIT_DAYS
- * (the tutor tags first, the parent is the fallback). The filter is applied here, on the server.
+ * Wrong items still waiting for a tag, as this viewer may see them: the tutor sees all; the parent sees her own at once and the
+ * tutor's only after PARENT_TAG_WAIT_DAYS (the tutor tags first, the parent is the fallback). Filtered here, on the server.
  */
-export async function loadUntagged(learnerId: string, role: "tutor" | "parent", now: Date = new Date()): Promise<UntaggedItem[]> {
+export async function loadUntagged(learnerId: string, viewer: { role: "tutor" | "parent"; memberId: string }, now: Date = new Date()): Promise<UntaggedItem[]> {
   const { data, error } = await createAdminClient().rpc("eng_untagged_queue", {
     p_learner: learnerId,
   });
   if (error) fail("eng_untagged_queue", error);
-  return filterUntagged(parseUntagged(data), role, now);
+  return filterUntagged(parseUntagged(data), viewer, now);
 }
 
+/** The newest result that no later result replaced. */
 export async function loadRecentResult(learnerId: string): Promise<RecentResult | null> {
   const db = await createUserClient();
   const { data, error } = await db
     .from("results")
-    .select("id, title, taken_on, total_items, correct")
+    .select("id, title, taken_on, total_items, correct, supersedes_id")
     .eq("learner_id", learnerId)
     .order("taken_on", { ascending: false })
     .order("created_at", { ascending: false })
-    .limit(1);
+    .limit(20);
   if (error) fail("results lookup", error);
-  return parseRecentResult(data);
+  const rows = (data ?? []) as { id: string; supersedes_id: string | null }[];
+  const replaced = new Set(rows.map((r) => r.supersedes_id).filter((x): x is string => x !== null));
+  return parseRecentResult(rows.filter((r) => !replaced.has(r.id)));
 }
 
 /** The newest session note that is not replaced by a later version (RLS: parents see shared ones only). */
@@ -112,10 +115,10 @@ export type TodayData = {
 };
 
 /** Everything the "Hôm nay" card of one learner needs. */
-export async function loadToday(learnerId: string, trackId: string, role: "tutor" | "parent"): Promise<TodayData> {
+export async function loadToday(learnerId: string, trackId: string, viewer: { role: "tutor" | "parent"; memberId: string }): Promise<TodayData> {
   const [weak, untagged, lastNote, recent, tags] = await Promise.all([
     loadWeakPoints(learnerId, "all"),
-    loadUntagged(learnerId, role),
+    loadUntagged(learnerId, viewer),
     loadLastNote(learnerId),
     loadRecentResult(learnerId),
     loadTags(trackId),

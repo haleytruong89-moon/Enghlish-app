@@ -22,16 +22,18 @@ function Attention({ learnerId, today, role }: { learnerId: string; today: Today
     ...today.untagged.slice(0, 3).map((u) => ({
       key: `untagged-${u.resultId}`,
       href: `/learners/${learnerId}/results/new#pending`,
-      badge: role === "parent" ? todayPage.untaggedParentBadge : todayPage.untaggedBadge,
+      // The parent's own entries are hers to tag; only the tutor's are "waiting for the tutor".
+      badge: role === "parent" && !u.own ? todayPage.untaggedParentBadge : todayPage.untaggedBadge,
       badgeClass: "bg-[#2f5d9e] text-white",
       rowClass: "bg-paper",
       title: u.title,
       line:
-        role === "parent"
+        role === "parent" && !u.own
           ? todayPage.untaggedParentLine(u.title, formatDateVi(u.takenOn), itemList(u.items))
           : todayPage.untaggedTutorLine(u.title, formatDateVi(u.takenOn), itemList(u.items)),
     })),
-    ...today.due.map((t) => ({
+    // A tag that is both a repeat and due for a re-check shows once, as the repeat.
+    ...today.due.filter((t) => !today.repeats.some((r) => r.tagKey === t.tagKey)).map((t) => ({
       key: `due-${t.tagKey}`,
       href: `/learners/${learnerId}/notes/new`,
       badge: todayPage.recheckBadge,

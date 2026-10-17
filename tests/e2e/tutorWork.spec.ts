@@ -71,7 +71,8 @@ test.describe.serial("S5b-1 tutor work", () => {
     await expect(pending).toBeVisible();
     await pending.locator("select").first().selectOption("dang-tu");
     await pending.getByRole("button", { name: resultPage.pendingSave }).click();
-    await expect(pending.getByTestId("pending-saved")).toBeVisible();
+    await expect(page.getByTestId("pending-saved")).toBeVisible();
+    await expect(pending).toHaveCount(0); // fully tagged: gone from the list after the refresh
   });
 
   test("a family tag: '+ nhãn khác' on the session screen creates it and ticks it", async ({ page }) => {

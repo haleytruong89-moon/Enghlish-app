@@ -58,6 +58,7 @@ export function SessionNoteForm({
     setError(null);
     const answered = Object.entries(rechecks).flatMap(([tag_key, result]) => (result ? [{ tag_key, result }] : []));
     if (!studied.trim() && weak.length === 0 && !message.trim() && !parentNote.trim() && answered.length === 0) return setError(sessionNotePage.empty);
+    if (answered.some((a) => a.result === "ok" && weak.includes(a.tag_key))) return setError(sessionNotePage.recheckConflict);
     setBusy(true);
     const r = await postJson<{ id: string }>(`/api/learners/${learnerId}/session-notes`, {
       client_id: clientId.current,
