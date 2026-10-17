@@ -558,3 +558,80 @@ Vì `0013`–`0015` chưa áp lên database thật nên sửa **ngay trong file*
 - `npm run db:seed-dev`: nếu tên `thu-*` đang gắn với tài khoản khác thì **cảnh báo và bỏ qua tên đó** (các phần khác vẫn tạo), không làm hỏng cả lần seed. Gia đình THẬT vẫn dừng hẳn như trước.
 - Giao diện: "Chờ gắn nhãn" lưu từng phần và tự tải lại; "Bài gần nhất" không lấy bài đã bị thay; thẻ Hôm nay không hiện một nhãn hai lần (lặp lại ưu tiên hơn đến hạn); chữ thay thế khi nhãn lạ lấy từ `fallbackLabels`.
 - Không chạy được e2e ở đây (không Docker/Supabase); `tests/e2e/tutorWork.spec.ts` chỉ được liệt kê (`--list`), CI sẽ chạy.
+
+## S5b-1 PR B — Giao bài link/PDF, em gửi ảnh kết quả, kho file riêng tư (17/10/2026)
+
+Nhánh `feature/s5b1b-practice-files` (xuất phát từ PR A `feature/s5b1a-login-results`, nên **PR A phải được duyệt/áp trước**). Kế hoạch: `docs/plans/s5b1-tutor-work.md` (bước 6–8). **Chưa có review Opus**, chưa push, chưa mở PR; chưa áp lên database thật.
+
+### Gia sư, phụ huynh và các em làm được gì bây giờ
+
+- **Giao bài luyện** (`/learners/<em>/assign`, nút thứ ba trên **Hôm nay**): chọn **Link** (dán link; app tự nhận nguồn *test-english*, *NotebookLM*, *Gemini*, còn lại *Link khác*; chỉ nhận `https`) hoặc **Đề PDF** (tải lên, có thể kèm đáp án chỉ gia sư/phụ huynh thấy). Có tên bài, tối đa 3 nhãn luyện, hạn nộp, khung đề (không bắt buộc). Bảng **Bài luyện đã giao**: trạng thái *Chưa làm / Em đã gửi / Đã ghi kết quả / Đã rút*, mở link/PDF/đáp án, **Ghi kết quả**, **Nộp thay** (gia sư/phụ huynh gửi ảnh thay em, ghi rõ ai nộp), **Rút bài**.
+- **Bài luyện** của em (`/practice`, mục thứ hai trên thanh trên cùng, cạnh "Việc tiếp theo"): **Mở bài** (link, tab mới) hoặc **Tải đề về** (PDF, qua app). Làm xong thì gửi **ảnh trang kết quả**: chụp màn hình rồi **Ctrl + V** vào khung, hoặc **Chọn ảnh từ máy**; link bài đã làm (không bắt buộc); hai cái bấm: *lần đầu?* và *có bấm Hint không?*. Bài PDF: chụp ảnh bài làm trên giấy hoặc chọn file (tối đa 6). Ảnh được **thu nhỏ trên máy** còn tối đa 1600 px trước khi gửi. Còn có cột **Việc cần ôn** (các nhãn gia sư đã chọn ở buổi học gần nhất) và **Lời nhắn** của gia sư. **Em không thấy điểm, số câu sai, tên nhãn nào ngoài "Việc cần ôn", cũng không thấy đáp án.** Gia sư đã xem thì em không gửi lại được nữa.
+- **Ghi kết quả bài**: ô **Bài đã giao** (hoặc bấm *Ghi kết quả* từ bảng / từ dòng *Em đã gửi* trên Hôm nay). **Ảnh em gửi hiện ngay bên cạnh** form (kèm "xem to"), cùng hai ý em tự khai; gia sư/phụ huynh **tự đọc ảnh** rồi gõ điểm, câu sai, nhãn. **Không có AI đọc ảnh.** Tên bài, lần đầu/làm lại, Hint, khung đề được điền sẵn từ bài đã giao (sửa được). Kết quả lưu kèm bài đã giao nên bảng chuyển sang *Đã ghi kết quả*.
+- **Hôm nay**: nút **Giao bài luyện**, mục **Bài luyện đang mở** (chưa làm / em đã gửi) và hàng cần chú ý **Em đã gửi · cần ghi kết quả**.
+- Một thiết kế chung cho gia sư của An và Nguyên (không có `if (track === …)`; chỉ bộ nhãn khác nhau). Gắn nhãn: gia sư trước, phụ huynh dự phòng (như PR A).
+
+### Kho file (Supabase Storage) — chính xác cái gì được tạo
+
+`0016_practice_files.sql` tạo **đúng một thứ** trong Storage:
+
+| Thứ được tạo | Giá trị |
+|---|---|
+| Bucket | `english-work` — **riêng tư** (không public) |
+| Giới hạn | 15 MB mỗi file; chỉ `application/pdf`, `image/png`, `image/jpeg`, `image/webp` |
+| Policy trên `storage.objects` | **Không có policy nào**: không tài khoản nào (kể cả đã đăng nhập) đọc/ghi thẳng được |
+| Bucket/đối tượng khác | Không đụng; không đụng schema `public` |
+
+Cách hoạt động: máy chủ kiểm quyền ở phía `english` trước, rồi mới dùng service role (**chỉ ở máy chủ**) để cấp (a) link **tải lên** dùng một lần cho đúng một đường dẫn do máy chủ tự dựng `{family}/{em|shared}/{uuid}.{đuôi}` (trình duyệt gửi file thẳng lên, không qua máy chủ app), (b) link **tải xuống sống 300 giây** (mỗi lần xem là một link mới). Khi đăng ký bài, máy chủ **hỏi lại Storage** loại file và kích cỡ thật, lệch thì từ chối. Nếu lúc áp migration mà Storage chưa sẵn (hoặc môi trường chỉ có Postgres trơn) thì bước tạo bucket được bỏ qua, và **app tự tạo bucket** ở lần dùng đầu — cùng cấu hình trên.
+
+Nếu muốn kiểm tra tay trên Supabase: Storage → bucket `english-work` phải ghi **Private**; Storage → Policies của bucket phải **trống**.
+
+### File tải lên KHÔNG nằm trong bản sao lưu
+
+Bản sao lưu hằng tuần (`pg_dump`) chỉ chứa **bảng**, không chứa file trong Storage (quyết định của phụ huynh 17/10: chưa cần). Hệ quả: nếu Storage hỏng/xóa nhầm thì **mất ảnh/PDF đã tải lên**, nhưng **kết quả đã ghi (số liệu, nhãn) vẫn còn** vì đó là bảng. PDF đề nên giữ bản gốc ở máy gia sư.
+
+**Xóa dữ liệu một em:** hàm `english.eng_purge_learner` nay cũng xóa các dòng bài giao/bài nộp/file của em (chỉ thêm dòng xóa, có test so từng dòng với bản 0014). **File thật trong Storage nằm ngoài database** nên cần thêm bước xóa thư mục `{family}/{em}/` — đã có hàm `deleteLearnerFolder` (`lib/storage/purge.ts`, có test) nhưng **chưa có nút/route nào gọi**, vì app chưa có màn xóa dữ liệu (xem "Cần phụ huynh/Opus quyết").
+
+### Đã làm (3 commit, mỗi bước plan một commit)
+
+1. **Bước 6:** `0016_practice_files.sql` (bucket, bảng `files` / `assignments` / `assignment_events` / `submissions` chỉ-thêm, hàm giao/rút/nộp/xem, 3 hàm cho em, ràng buộc kết quả↔bài giao cùng một em, mở rộng hàm xóa dữ liệu), lớp lưu trữ `lib/storage/*`, nhận diện nguồn link `lib/practice/link.ts`, test database và đơn vị.
+2. **Bước 7:** các màn hình trên, API tương ứng, quyền `practice:read` / `practice:write` (gia sư + phụ huynh; học sinh không có), 36 test đơn vị mới (quyền 401/403/404, file lệch loại/kích cỡ, em không dùng được đường của gia sư, đáp án không bao giờ tới em, chữ của em không có từ về điểm).
+3. **Bước 8 (commit này):** kịch bản e2e `tests/e2e/practice.spec.ts` (gia sư giao PDF → em tải PDF → em gửi ảnh PNG → gia sư mở Nhập nhanh từ bài đã gửi, thấy ảnh, ghi kết quả có nhãn → nhãn hiện ở "Điểm cần chú ý"; em không thấy điểm và không mở được đường file của gia sư; em/gia sư của bạn kia nhận 404; bài đã rút biến mất và không nộp được), bật Storage trong `supabase/config.toml` cho CI, thêm bước chờ Storage trong `.github/workflows/ci.yml`.
+
+### Phụ huynh cần làm (SQL cần áp)
+
+1. Sau khi PR A đã áp `0013`–`0015`: GitHub → Actions → **Apply database migrations** (gõ APPLY) để áp `0016_practice_files.sql` (hoặc dán file vào SQL Editor). Chỉ **thêm**; chạy lại an toàn. Nó tạo bucket `english-work` như bảng trên.
+2. Nếu SQL Editor báo cảnh báo "english-work bucket was not created here": không sao, app tự tạo bucket ở lần giao PDF đầu tiên. Kiểm tra lại bucket **Private** và **không có policy**.
+3. Không cần bật gì thêm trong Supabase (không đổi Auth, không đổi `public`).
+
+### Cách thử trên preview (gia đình thử)
+
+1. Đăng nhập `thu-giasu-nguyen` → **Giao bài luyện**. Chọn *Đề PDF*, chọn một file PDF nhỏ, đặt tên, chọn 1 nhãn → **Giao bài**. Bấm **Mở file đề**: PDF mở được.
+2. Thử *Link*: dán `https://notebooklm.google.com/…` → dòng "Nguồn: NotebookLM" hiện ngay; dán `http://…` → báo cần `https`.
+3. Đăng xuất, đăng nhập `thu-nguyen` → **Bài luyện**: thấy bài, **Tải đề về** ra file PDF. Chụp một ảnh bất kỳ, kéo vào khung hoặc **Chọn ảnh từ máy** (hoặc Ctrl + V ảnh đã chụp), bấm *Lần đầu* và *Không* (Hint) → **Nộp bài làm**. Em chỉ thấy "Đã gửi lúc …", **không** có điểm/nhãn.
+4. Đăng nhập lại `thu-giasu-nguyen`: **Hôm nay** có dòng **Em đã gửi · cần ghi kết quả** → bấm vào: ảnh em gửi nằm cạnh form **Nhập nhanh**. Điền tổng 5, đúng 4, sai "2", chọn một nhãn → **Lưu kết quả**.
+5. Mở **Điểm cần chú ý**: nhãn vừa chọn hiện. Mở **Giao bài luyện**: bài ở trạng thái *Đã ghi kết quả*.
+6. Thử **Nộp thay** (gia sư/phụ huynh gửi ảnh thay em) và **Rút bài** (em không còn thấy bài).
+7. Là `thu-an` (em kia) hoặc `thu-giasu-an`: không mở được bài/file của Nguyên (404).
+
+### Đối chiếu với plan — chỗ khác và vì sao (cần Opus/phụ huynh xem)
+
+- **Bài PDF chỉ hỏi "lần đầu?"**, không hỏi "có Hint?" (Hint là của trang test-english/NotebookLM); lưu `used_hint = false`. Muốn hỏi cả hai cho PDF thì sửa một dòng ở `SubmitPanel`.
+- **Hàm xóa dữ liệu** chỉ xóa **dòng** trong database; file thật cần `deleteLearnerFolder` (có sẵn, chưa gắn nút/route vì app chưa có màn xóa).
+- **Không có policy trên `storage.objects` và không có tài khoản nào đọc thẳng được** — đúng phương án đã duyệt, nhưng khác cách làm "policy theo thư mục" thường thấy.
+- Bucket tạo bằng `insert` trong `0016` **chỉ khi** schema `storage` có sẵn; có đường dự phòng app tự tạo (xem trên).
+- **Không thêm kiểm tra bucket vào `npm run doctor`** (ngoài phạm vi bước 8; có thể thêm sau nếu muốn một bảng ✓/✗ cho Storage).
+- **Chưa có việc dọn tệp mồ côi:** nếu em tải ảnh lên nhưng không bấm Gửi thì file nằm lại trong bucket (không có dòng trong database, không ai mở được). Dung lượng nhỏ ở quy mô gia đình; dọn định kỳ để sau.
+- **Không chạy được e2e ở đây** (không Docker/Supabase): `tests/e2e/practice.spec.ts` chỉ được liệt kê (`--list`), CI chạy với Storage thật. Cần CI xác nhận 2 chỗ chưa thử được: link tải lên/tải xuống ký tên đi qua `127.0.0.1:54321` đúng, và bucket do `0016` tạo khi Storage khởi động xong trước bước áp migration.
+- Số migration kế tiếp cho nội dung cấu hình mới (`npm run gen:config -- --new`) giờ là **0017**.
+
+### Cần phụ huynh/Opus quyết
+
+1. **Màn/route xóa dữ liệu một em** (gọi `eng_purge_learner` rồi `deleteLearnerFolder`): chưa có, và chưa có trong plan nào. Cần quyết khi nào làm (trước khi dùng cho con thật?).
+2. **Sao lưu file**: hiện chưa (quyết định #7). Nếu sau này muốn, cần quyết nơi lưu (không dùng dịch vụ bên thứ ba nhận dữ liệu của con).
+3. Có muốn thêm kiểm tra Storage vào `doctor` và dọn tệp mồ côi định kỳ không.
+
+### Ghi chú cho S5b-2 và các lát sau
+
+- S7 (trạng thái, đề xuất bậc) **không được đọc** `results` / `tag_marks` / `submissions` làm bằng chứng; ảnh em gửi chỉ để người đọc, không phải điểm AI/đánh giá.
+- Thư viện nguồn + gợi ý (S5b-2) dùng được `assignments.source_key` và `tag_keys` đã lưu từ PR này.
