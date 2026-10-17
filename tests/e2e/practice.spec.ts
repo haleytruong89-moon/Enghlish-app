@@ -221,3 +221,28 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     await expect(page.getByText(practiceStudent.title)).toBeVisible();
   });
 });
+
+// On a phone (390 px) nothing may make the page scroll sideways. These tests only read pages, so they do not depend on the serial flow above
+// (which shares one seeded database with the other spec files running at the same time).
+test.describe("no sideways scrolling on a phone", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+  const fits = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+
+  test("the student's home and 'Bài luyện' page, with the two-link navigation", async ({ page }) => {
+    await loginAs(page, "studentNguyen");
+    await expect(page.getByTestId("student-nav")).toBeVisible();
+    expect(await fits(page)).toBe(true);
+    await page.getByTestId("nav-practice").click();
+    await expect(page.getByTestId("practice-page")).toBeVisible();
+    await expect(page.getByTestId("student-nav")).toBeVisible();
+    expect(await fits(page)).toBe(true);
+  });
+
+  test("the tutor's 'Giao bài luyện' page", async ({ page }) => {
+    await loginAs(page, "tutorNguyen");
+    await page.goto(`/learners/${NG}/assign`);
+    await expect(page.getByTestId("assign-page")).toBeVisible();
+    await page.getByTestId("kind-pdf").click();
+    expect(await fits(page)).toBe(true);
+  });
+});

@@ -3,8 +3,9 @@ import { account, app, auth, practiceStudent } from "@/lib/copy/vi";
 
 export function AppHeader({ name, showTestBadge, studentNav }: { name?: string; showTestBadge?: boolean; studentNav?: "next" | "practice" }) {
   return (
-    <header className="flex items-center justify-between gap-4 border-b border-line px-4 py-3 sm:px-6">
-      <div className="flex items-center gap-3">
+    <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line px-4 py-3 sm:px-6">
+      {/* Wraps on a phone: the student nav drops to its own row instead of pushing the page sideways. */}
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
         <span className="font-semibold text-accent">{app.name}</span>
         {showTestBadge ? (
           <span className="rounded-full border border-accent/40 px-2 py-0.5 text-xs font-medium text-accent">
@@ -12,7 +13,7 @@ export function AppHeader({ name, showTestBadge, studentNav }: { name?: string; 
           </span>
         ) : null}
         {studentNav ? (
-          <nav aria-label={app.name} className="flex gap-1" data-testid="student-nav">
+          <nav aria-label={app.name} className="flex basis-full gap-1 sm:basis-auto" data-testid="student-nav">
             <Link
               href="/"
               aria-current={studentNav === "next" ? "page" : undefined}
@@ -31,7 +32,7 @@ export function AppHeader({ name, showTestBadge, studentNav }: { name?: string; 
           </nav>
         ) : null}
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
         {name ? <span className="hidden text-sm text-muted sm:inline">{name}</span> : null}
         <Link
           href="/account/password"
