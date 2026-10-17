@@ -484,7 +484,7 @@ Thêm (17/10, sau review): ghi buổi học mới **luôn chia sẻ** cho phụ 
 
 ## S5b-1 PR A — Tên đăng nhập ngắn, ghi kết quả bài, ghi buổi học, điểm cần chú ý (17/10/2026)
 
-Nhánh `feature/s5b1a-login-results` (chưa đẩy lên GitHub, chưa mở PR — chờ review Opus). Kế hoạch: `docs/plans/s5b1-tutor-work.md` (bước 1–4). Phần **giao bài link/PDF, em gửi ảnh kết quả, kho file** là PR B (migration `0016`), chưa làm ở đây.
+Nhánh `feature/s5b1a-login-results` — đã review Opus và sửa, CI xanh (gồm E2E), PR chờ phụ huynh duyệt. Kế hoạch: `docs/plans/s5b1-tutor-work.md` (bước 1–4). Phần **giao bài link/PDF, em gửi ảnh kết quả, kho file** là PR B (migration `0016`), chưa làm ở đây.
 
 ### Gia sư và phụ huynh làm được gì bây giờ
 
