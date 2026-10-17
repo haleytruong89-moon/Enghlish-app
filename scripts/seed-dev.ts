@@ -98,7 +98,9 @@ async function main() {
         : `  Chưa tạo bài mẫu để duyệt (${review.skipped ?? "bỏ qua"})`,
     );
     for (const key of keys) {
-      console.log(`  ${SEED_ACCOUNTS[key].role.padEnd(7)} ${emailFor(SEED_ACCOUNTS[key].emailLocal)}`);
+      console.log(
+        `  ${SEED_ACCOUNTS[key].role.padEnd(7)} ${emailFor(SEED_ACCOUNTS[key].emailLocal)}  (tên đăng nhập: ${SEED_ACCOUNTS[key].loginName})`,
+      );
     }
     if (mode !== "stub") console.log("Mật khẩu: giá trị SEED_DEV_PASSWORD bạn đã đặt (không in ra đây).");
   } finally {

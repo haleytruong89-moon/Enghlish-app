@@ -16,6 +16,8 @@ const tplFile = (id: string) => path.join(paths.contentDir, "inquiries", `${id}.
 const readTpl = (id: string) => JSON.parse(readFileSync(tplFile(id), "utf8")) as InquiryTemplate;
 const writeTpl = (id: string, t: unknown) => writeFileSync(tplFile(id), JSON.stringify(t, null, 2) + "\n");
 const migrations = () => readdirSync(paths.migrationsDir).filter((f) => f.endsWith(".sql")).sort();
+/** The number --new will use: one after the newest migration on disk (so adding migrations never breaks these tests). */
+const nextNo = () => String(Math.max(...migrations().map((f) => Number(f.slice(0, 4)))) + 1).padStart(4, "0");
 
 /** A copy of A-W1 under a new id (a "new week"). */
 function addTemplate(id: string, patch: (t: InquiryTemplate) => void = () => undefined) {
@@ -90,12 +92,13 @@ describe("inquiry templates in the version lock", () => {
     addTemplate("A-W5-NEWWEEK");
     const before = await checkConfig(paths);
     expect(before.unlocked).toEqual(["inquiry template A-W5-NEWWEEK@1"]);
+    const no = nextNo();
     const res = await generateNew(paths);
-    expect(res).toEqual({ file: "0013_seed_a_w5_newweek_1.sql", ids: ["A-W5-NEWWEEK@1"] });
-    const sql = readFileSync(path.join(paths.migrationsDir, "0013_seed_a_w5_newweek_1.sql"), "utf8");
+    expect(res).toEqual({ file: `${no}_seed_a_w5_newweek_1.sql`, ids: ["A-W5-NEWWEEK@1"] });
+    const sql = readFileSync(path.join(paths.migrationsDir, `${no}_seed_a_w5_newweek_1.sql`), "utf8");
     expect(sql).toContain("Inquiry template A-W5-NEWWEEK v1");
     expect(sql).not.toContain("A-W1-VOLCANOES");
-    expect(sql.trim().endsWith("values ('0013') on conflict do nothing;")).toBe(true);
+    expect(sql.trim().endsWith(`values ('${no}') on conflict do nothing;`)).toBe(true);
     expect(await checkConfig(paths)).toEqual({ problems: [], unlocked: [] });
     expect(migrations().filter((f) => f.startsWith("0008"))).toEqual(["0008_seed_inquiries_pilot_v1.sql"]);
   });
@@ -103,8 +106,9 @@ describe("inquiry templates in the version lock", () => {
   it("--name sets the readable part of the file name and refuses odd characters", async () => {
     addTemplate("A-W5-NEWWEEK");
     await expect(generateNew(paths, undefined, "Bad Name!")).rejects.toThrow(/--name/);
+    const no = nextNo();
     const res = await generateNew(paths, undefined, "week5");
-    expect(res?.file).toBe("0013_seed_week5.sql");
+    expect(res?.file).toBe(`${no}_seed_week5.sql`);
   });
 
   it("a published template that breaks the evidence-task whitelist is a generator error and a check error", async () => {
@@ -116,7 +120,7 @@ describe("inquiry templates in the version lock", () => {
     const { problems } = await checkConfig(paths);
     expect(problems.some((p) => p.includes("A-W6-BADTASK@1") && p.includes("is not an evidence task of A-L3-CAUSE-W"))).toBe(true);
     await expect(generateNew(paths)).rejects.toThrow(/breaks catalogue rules[\s\S]*not an evidence task of A-L3-CAUSE-W/);
-    expect(migrations()).not.toContain("0013_seed_a_w6_badtask_1.sql");
+    expect(migrations().some((f) => f.includes("a_w6_badtask"))).toBe(false);
     // …the same content as a draft is just a draft: no error, never seeded
     const t = readTpl("A-W6-BADTASK");
     t.status = "draft";

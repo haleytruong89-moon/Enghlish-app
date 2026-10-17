@@ -43,7 +43,7 @@ describe("S1 configuration (DESIGN §4, §8)", () => {
   describe("migrations 0005 + 0006", () => {
     it("are recorded, and a second full apply is a no-op that keeps the same data", async () => {
       const files = await listMigrations();
-      expect(files.map((f) => f.version)).toEqual(["0001", "0002", "0003", "0004", "0005", "0006", "0007", "0008", "0009", "0010", "0011", "0012"]);
+      expect(files.map((f) => f.version)).toEqual(Array.from({ length: files.length }, (_, i) => String(i + 1).padStart(4, "0"))); // no gaps, no duplicates
       expect(await migrate(db.client)).toEqual([]);
       expect(await migrate(db.client, true)).toEqual(files.map((f) => f.version));
       expect(await count("select count(*)::int as n from english.targets")).toBe(70);

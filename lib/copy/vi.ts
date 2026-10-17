@@ -24,14 +24,14 @@ export const app = {
 // ---------- Đăng nhập / đăng xuất -------------------------------------------------
 export const auth = {
   title: "Đăng nhập",
-  intro: "Dùng email và mật khẩu bố mẹ đã tạo cho bạn.",
-  email: "Email",
+  intro: "Dùng tên đăng nhập (hoặc email) và mật khẩu bố mẹ đã tạo cho bạn.",
+  login: "Tên đăng nhập hoặc email",
   password: "Mật khẩu",
   submit: "Đăng nhập",
   submitting: "Đang đăng nhập…",
   signOut: "Đăng xuất",
-  errorInvalid: "Email hoặc mật khẩu chưa đúng. Bạn thử lại nhé.",
-  errorMissing: "Bạn nhập cả email và mật khẩu nhé.",
+  errorInvalid: "Tên đăng nhập hoặc mật khẩu chưa đúng. Bạn thử lại nhé.",
+  errorMissing: "Bạn nhập cả tên đăng nhập và mật khẩu nhé.",
   errorGeneric: "Chưa đăng nhập được. Bạn thử lại sau ít phút.",
 } as const;
 

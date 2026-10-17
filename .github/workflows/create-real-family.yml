@@ -9,6 +9,9 @@ name: Create real family
 # type those emails and one login works for both apps — existing accounts are NOT changed (no password reset, no metadata
 # overwrite). Only emails with no account yet are created, each with ITS OWN temporary password (one secret per person,
 # so one new tutor can never log in as another).
+# Tên đăng nhập ngắn (tùy chọn): an, nguyen, giasu-an, giasu-nguyen — mỗi tên trỏ tới đúng một tài khoản (bảng english.login_names,
+# migration 0013). Bỏ trống ô = dùng tên mặc định; phụ huynh mặc định không có tên (đăng nhập bằng email). Một tên đã trỏ tới tài
+# khoản khác làm dừng lần chạy ở bước kiểm tra, trước khi tạo bất cứ thứ gì.
 # Idempotent — running again changes nothing. A person who already belongs to another family stops the run; so does a
 # different email for a place already filled. All checks are read-only and run before the first account is created.
 #
@@ -45,6 +48,26 @@ on:
       tutor_nguyen_name:
         description: 'Tên hiển thị gia sư của Nguyên (ví dụ: Thầy Minh)'
         required: true
+      an_login:
+        description: 'Tên đăng nhập ngắn của An (bỏ trống = an)'
+        required: false
+        default: ''
+      nguyen_login:
+        description: 'Tên đăng nhập ngắn của Nguyên (bỏ trống = nguyen)'
+        required: false
+        default: ''
+      tutor_an_login:
+        description: 'Tên đăng nhập ngắn của gia sư An (bỏ trống = giasu-an)'
+        required: false
+        default: ''
+      tutor_nguyen_login:
+        description: 'Tên đăng nhập ngắn của gia sư Nguyên (bỏ trống = giasu-nguyen)'
+        required: false
+        default: ''
+      parent_login:
+        description: 'Tên đăng nhập ngắn của phụ huynh (bỏ trống = không có, đăng nhập bằng email)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -98,6 +121,11 @@ jobs:
           TUTOR_AN_NAME: ${{ inputs.tutor_an_name }}
           TUTOR_NGUYEN_EMAIL: ${{ inputs.tutor_nguyen_email }}
           TUTOR_NGUYEN_NAME: ${{ inputs.tutor_nguyen_name }}
+          LOGIN_AN: ${{ inputs.an_login }}
+          LOGIN_NGUYEN: ${{ inputs.nguyen_login }}
+          LOGIN_TUTOR_AN: ${{ inputs.tutor_an_login }}
+          LOGIN_TUTOR_NGUYEN: ${{ inputs.tutor_nguyen_login }}
+          LOGIN_PARENT: ${{ inputs.parent_login }}
         run: |
           set -uo pipefail
           status=0
