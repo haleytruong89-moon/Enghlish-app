@@ -606,7 +606,7 @@ Bản sao lưu hằng tuần (`pg_dump`) chỉ chứa **bảng**, không chứa 
 
 ### Cách thử trên preview (gia đình thử)
 
-1. Đăng nhập `thu-giasu-nguyen` → **Giao bài luyện**. Chọn *Đề PDF*, chọn một file PDF nhỏ, đặt tên, chọn 1 nhãn → **Giao bài**. Bấm **Mở file đề**: PDF mở được.
+1. Đăng nhập `thu-giasu-nguyen` → **Giao bài luyện**. Chọn *Đề PDF*, chọn một file PDF nhỏ, đặt tên, chọn 1 nhãn → **Giao cho Nguyên (thử)**. Bấm **Mở file đề**: PDF mở được.
 2. Thử *Link*: dán `https://notebooklm.google.com/…` → dòng "Nguồn: NotebookLM" hiện ngay; dán `http://…` → báo cần `https`.
 3. Đăng xuất, đăng nhập `thu-nguyen` → **Bài luyện**: thấy bài, **Tải đề về** ra file PDF. Chụp một ảnh bất kỳ, kéo vào khung hoặc **Chọn ảnh từ máy** (hoặc Ctrl + V ảnh đã chụp), bấm *Lần đầu* và *Không* (Hint) → **Nộp bài làm**. Em chỉ thấy "Đã gửi lúc …", **không** có điểm/nhãn.
 4. Đăng nhập lại `thu-giasu-nguyen`: **Hôm nay** có dòng **Em đã gửi · cần ghi kết quả** → bấm vào: ảnh em gửi nằm cạnh form **Nhập nhanh**. Điền tổng 5, đúng 4, sai "2", chọn một nhãn → **Lưu kết quả**.
