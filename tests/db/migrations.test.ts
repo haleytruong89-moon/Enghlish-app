@@ -83,10 +83,10 @@ describe("migrations", () => {
     expect(rows.map((r) => r.relname).sort()).toEqual(
       [
         "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
-        "app_errors", "artifact_versions", "assessment_policies", "assistance_events", "attempt_auto_checks",
+        "app_errors", "artifact_versions", "assessment_policies", "assignment_events", "assignments", "assistance_events", "attempt_auto_checks",
         "attempts", "audit_log", "catalogue_versions", "consents", "dimensions", "episodes", "error_tags", "exposure_log",
-        "families", "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "lesson_notes", "login_names", "members",
-        "observations", "recheck_events", "relationships", "results", "schema_migrations", "source_transcripts", "sources", "tag_marks",
+        "families", "files", "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "lesson_notes", "login_names", "members",
+        "observations", "recheck_events", "relationships", "results", "schema_migrations", "source_transcripts", "sources", "submissions", "tag_marks",
         "target_set_definitions", "target_sets", "targets", "template_item_keys", "template_step_sources", "test_frames", "tracks",
         "validation_decisions", "working_drafts",
       ],
@@ -116,10 +116,10 @@ describe("migrations", () => {
     const readable = rows.filter((r) => r.s).map((r) => r.relname);
     expect(readable).toEqual([
       "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
-      "artifact_versions", "assessment_policies", "assistance_events", "attempt_auto_checks", "attempts",
-      "audit_log", "catalogue_versions", "consents", "dimensions", "episodes", "error_tags", "exposure_log", "families",
+      "artifact_versions", "assessment_policies", "assignment_events", "assignments", "assistance_events", "attempt_auto_checks", "attempts",
+      "audit_log", "catalogue_versions", "consents", "dimensions", "episodes", "error_tags", "exposure_log", "families", "files",
       "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "lesson_notes", "members", "observations",
-      "recheck_events", "relationships", "results", "source_transcripts", "sources", "tag_marks", "target_set_definitions",
+      "recheck_events", "relationships", "results", "source_transcripts", "sources", "submissions", "tag_marks", "target_set_definitions",
       "target_sets", "targets", "template_item_keys", "template_step_sources", "test_frames", "tracks", "validation_decisions",
       "working_drafts",
     ]);
