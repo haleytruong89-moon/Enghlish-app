@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { fallbackLabels, offlineForm } from "@/lib/copy/vi";
+import { backdateReasonToSend, needsBackdateReason } from "@/lib/review/offlineReason";
 import { OFFLINE_ASSISTANCE } from "@/lib/review/types";
 
 /**
@@ -49,6 +50,19 @@ export function OfflineForm({
   const clientId = useRef<string>(crypto.randomUUID());
   const base = activityId;
 
+  // A new date (or another kind of work) is a new question for the server: forget "the step was not open" and the old error, so a reason
+  // that is no longer needed is neither shown nor sent.
+  function changeDate(value: string) {
+    setDate(value);
+    setStepNotOpen(false);
+    setError(null);
+  }
+  function changeProvenance(value: "tutor_live" | "manual_import") {
+    setProvenance(value);
+    setStepNotOpen(false);
+    setError(null);
+  }
+
   function toggleHelp(h: string, on: boolean) {
     setHelp((cur) => {
       if (!on) return cur.filter((x) => x !== h);
@@ -59,13 +73,14 @@ export function OfflineForm({
   }
 
   const paper = provenance === "manual_import";
-  const needsReason = paper && (date < minDate || stepNotOpen);
+  const needsReason = needsBackdateReason({ paper, date, minDate, stepNotOpen });
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (text.trim().length === 0) return setError(offlineForm.textRequired);
     if (help.length === 0) return setError(offlineForm.helpRequired);
     if (needsReason && reason.trim().length < 5) return setError(offlineForm.backdateRequired);
+    const sendReason = backdateReasonToSend({ paper, date, minDate, stepNotOpen, reason });
     setBusy(true);
     setError(null);
     try {
@@ -78,7 +93,7 @@ export function OfflineForm({
           provenance,
           text: text.trim(),
           session_date: date,
-          ...(needsReason ? { backdate_reason: reason.trim() } : {}),
+          ...(sendReason ? { backdate_reason: sendReason } : {}),
           assistance: help,
           ...(duration.trim() !== "" ? { duration_sec: Number(duration) } : {}),
           ...(words.trim() !== "" ? { word_count: Number(words) } : {}),
@@ -155,13 +170,13 @@ export function OfflineForm({
         <legend className="text-sm text-muted">{offlineForm.kind}</legend>
         {isTutor ? (
           <label className="flex min-h-11 items-center gap-2 text-sm">
-            <input type="radio" name={`kind-${base}`} className="size-4" checked={provenance === "tutor_live"} onChange={() => setProvenance("tutor_live")} />
+            <input type="radio" name={`kind-${base}`} className="size-4" checked={provenance === "tutor_live"} onChange={() => changeProvenance("tutor_live")} />
             {offlineForm.kindLive}
           </label>
         ) : null}
         {liveOnly ? null : (
           <label className="flex min-h-11 items-center gap-2 text-sm">
-            <input type="radio" name={`kind-${base}`} className="size-4" checked={provenance === "manual_import"} onChange={() => setProvenance("manual_import")} />
+            <input type="radio" name={`kind-${base}`} className="size-4" checked={provenance === "manual_import"} onChange={() => changeProvenance("manual_import")} />
             {offlineForm.kindPaper}
           </label>
         )}
@@ -178,7 +193,7 @@ export function OfflineForm({
           min={paper ? backdateMinDate : minDate}
           max={maxDate}
           value={date}
-          onChange={(e) => setDate(e.target.value)}
+          onChange={(e) => changeDate(e.target.value)}
           className="min-h-11 rounded-lg border border-line px-3"
         />
       </div>

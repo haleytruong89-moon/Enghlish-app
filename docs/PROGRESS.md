@@ -705,6 +705,14 @@ Nhánh `feature/s5c-readiness`. Kế hoạch `docs/plans/s5c-readiness.md`; ki�
 - **Không có AI**, không có Studio trong lát này. Thứ tự sau S5c theo E8 (PRD D31): spike AI → đưa gia sư vào + mockup Studio → Studio 1 → Studio 2 → S6 → S7 → S8.
 - Số migration kế tiếp cho nội dung cấu hình mới (`npm run gen:config -- --new`) giờ là **0018**.
 
+### Để sau (ghi nhận từ review Opus, không làm trong S5c)
+
+- **Chưa có màn cho phụ huynh đổi số ngày "Hỏi lại điểm yếu"** (hiện đổi bằng SQL qua `eng_set_tutorwork_setting`; mặc định 14).
+- **"Quá hạn" chỉ áp cho bài luyện (S5b)**, chưa cho hạn của chủ đề S2.
+- **Kiểm tra khôi phục lệch số dòng khi có ghi đồng thời**: so sánh dùng khoảng [trước, sau] lúc sao lưu, nên một bản sao lưu trúng đúng lúc có nhiều thao tác ghi vẫn có thể báo MISMATCH giả; chạy lại là hết.
+- **Khôi phục thử không kiểm tra nội dung**, chỉ số dòng của mọi bảng `english` + `auth.users` và lỗi khôi phục thuộc schema `english`/`auth`; lỗi ở schema `public` của Launcher chỉ được đếm.
+- **File ảnh/PDF chưa sao lưu** (A4, xem lại sau ~1 tháng dùng thật).
+
 ### Tiêu chí đạt
 
 `typecheck`, `lint`, `test` (gồm test database trên Postgres thật), `gen:config` xanh; CI (gồm E2E và bước áp migration hai lần) xanh; phụ huynh áp `0017` và chạy sao lưu thử có bảng *Restore check* ghi PASSED.
