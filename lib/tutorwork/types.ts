@@ -95,6 +95,24 @@ export type UntaggedItem = {
   items: number[];
 };
 
+/** A recorded result, as the form needs it to open "Sửa kết quả" (the new result replaces this one). */
+export type ResultEdit = {
+  id: string;
+  mode: ResultMode;
+  frameId: string | null;
+  context: ResultContext;
+  attempt: ResultAttempt;
+  source: ResultSource;
+  usedHint: boolean;
+  title: string;
+  total: number;
+  correct: number;
+  wrongItems: number[];
+  itemTags: { n: number; tagKey: string | null }[];
+  takenOn: string;
+  assignmentId: string | null;
+};
+
 export type RecentResult = {
   id: string;
   title: string;

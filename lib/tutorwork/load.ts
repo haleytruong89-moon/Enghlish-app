@@ -1,8 +1,10 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createUserClient } from "@/lib/supabase/server";
-import { parseFrames, parseLastNote, parseRecentResult, parseTags, parseUntagged, parseWeakPoints } from "./shape";
-import { type FrameView, type LastNote, type RecentResult, type TagInfo, type UntaggedItem, type WeakPointsView } from "./types";
+import { loadAssignments } from "@/lib/practice/load";
+import type { AssignmentView } from "@/lib/practice/types";
+import { parseFrames, parseLastNote, parseRecentResult, parseResultEdit, parseTags, parseUntagged, parseWeakPoints } from "./shape";
+import { type FrameView, type LastNote, type RecentResult, type ResultEdit, type TagInfo, type UntaggedItem, type WeakPointsView } from "./types";
 import type { WeakWindow } from "./schemas";
 import { filterUntagged, windowSince } from "./window";
 
@@ -64,6 +66,19 @@ export async function loadUntagged(learnerId: string, viewer: { role: "tutor" | 
   return filterUntagged(parseUntagged(data), viewer, now);
 }
 
+/** One result of this learner, in the shape the form needs to open it for correction (RLS: staff in scope only). Null when not found. */
+export async function loadResultForEdit(learnerId: string, resultId: string): Promise<ResultEdit | null> {
+  const db = await createUserClient();
+  const { data, error } = await db
+    .from("results")
+    .select("id, mode, frame_id, context, attempt, source, used_hint, title, total_items, correct, wrong_items, item_tags, taken_on, assignment_id")
+    .eq("learner_id", learnerId)
+    .eq("id", resultId)
+    .maybeSingle();
+  if (error) fail("results lookup", error);
+  return parseResultEdit(data);
+}
+
 /** The newest result that no later result replaced. */
 export async function loadRecentResult(learnerId: string): Promise<RecentResult | null> {
   const db = await createUserClient();
@@ -111,17 +126,20 @@ export type TodayData = {
   untagged: UntaggedItem[];
   lastNote: LastNote | null;
   recent: RecentResult | null;
+  /** Assignments given in the app that are not retracted and have no result yet (what the student still owes, or what waits for the tutor). */
+  practice: AssignmentView[];
   tagLabels: Record<string, string>;
 };
 
 /** Everything the "Hôm nay" card of one learner needs. */
 export async function loadToday(learnerId: string, trackId: string, viewer: { role: "tutor" | "parent"; memberId: string }): Promise<TodayData> {
-  const [weak, untagged, lastNote, recent, tags] = await Promise.all([
+  const [weak, untagged, lastNote, recent, tags, assignments] = await Promise.all([
     loadWeakPoints(learnerId, "all"),
     loadUntagged(learnerId, viewer),
     loadLastNote(learnerId),
     loadRecentResult(learnerId),
     loadTags(trackId),
+    loadAssignments(learnerId),
   ]);
   return {
     weak,
@@ -130,6 +148,7 @@ export async function loadToday(learnerId: string, trackId: string, viewer: { ro
     untagged,
     lastNote,
     recent,
+    practice: assignments.filter((a) => !a.retractedAt && a.resultId === null),
     tagLabels: Object.fromEntries(tags.map((t) => [t.key, t.label])),
   };
 }

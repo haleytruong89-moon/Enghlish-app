@@ -37,7 +37,7 @@ test.describe("parent: assign and schedule", () => {
   test("opens An's page from the home card, sees the seeded inquiry, and assigns another one", async ({ page }) => {
     await loginAs(page, "parent");
     const card = page.getByRole("listitem").filter({ hasText: learnerWithTrack(AN, "A") });
-    await card.getByRole("link", { name: inquiriesPage.link }).click();
+    await card.getByRole("link", { name: inquiriesPage.link, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`${url("an")}$`));
     await expect(page.getByRole("heading", { level: 1, name: inquiriesPage.title(AN) })).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: inquiriesPage.availableTitle })).toBeVisible();
@@ -153,7 +153,7 @@ test.describe("students never get this page or these routes", () => {
   ] as const) {
     test(`${key}: no link, pages are 404, routes refuse`, async ({ page }) => {
       await loginAs(page, key);
-      await expect(page.getByRole("link", { name: inquiriesPage.link })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: inquiriesPage.link, exact: true })).toHaveCount(0);
       await notFound(page, url(own));
       await notFound(page, url(other));
 

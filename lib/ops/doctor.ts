@@ -257,6 +257,77 @@ export async function checkPublicClean(db: DbHandle): Promise<CheckResult> {
   }
 }
 
+/** Is there a schema `storage` with objects and buckets? (A project without Supabase Storage has none.) */
+async function hasStorage(q: Query): Promise<boolean> {
+  const res = await q(
+    `select count(*)::int as n from information_schema.tables where table_schema = 'storage' and table_name in ('objects', 'buckets')`,
+  );
+  return Number(res.rows[0]?.n ?? 0) === 2;
+}
+
+/**
+ * The project is shared with the Launcher. Policies on storage.objects are OR-ed: one policy that does not name a bucket (for example
+ * "signed-in users can read objects") opens EVERY bucket, english-work included, to anyone with a login token. Read-only check.
+ */
+export async function checkStoragePolicies(db: DbHandle): Promise<CheckResult> {
+  const label = "Không có policy nào trên storage.objects thiếu điều kiện bucket";
+  const h = queryOf(db);
+  if ("why" in h) return skip("storage-policies", label, h.why);
+  try {
+    if (!(await hasStorage(h.q))) return { id: "storage-policies", status: "ok", label, detail: "dự án chưa có kho Storage" };
+    const res = await h.q(
+      `select p.policyname, p.cmd from pg_catalog.pg_policies p
+       where p.schemaname = 'storage' and p.tablename = 'objects'
+         and (coalesce(p.qual, '') || ' ' || coalesce(p.with_check, '')) not like '%bucket_id%'
+       order by 1`,
+    );
+    const bad = res.rows.map((r) => `${String(r.policyname)} (${String(r.cmd)})`);
+    return bad.length === 0
+      ? { id: "storage-policies", status: "ok", label }
+      : {
+          id: "storage-policies",
+          status: "fail",
+          label,
+          detail: `policy không nhắc tới bucket: ${bad.join("; ")}`,
+          hint: "Supabase → Storage → Policies (cả mục “Other policies”): sửa các policy này để chỉ áp cho bucket của chúng (thêm điều kiện bucket_id = '…'). Nhờ dev xem trước khi sửa — Launcher có thể đang dùng chúng.",
+        };
+  } catch (err) {
+    return { id: "storage-policies", status: "fail", label, detail: errText(err), hint: "Thử chạy lại; nếu vẫn lỗi, nhờ dev xem." };
+  }
+}
+
+/** The private bucket for the children's files (migration 0016 creates it; the app also creates it on first use). */
+export async function checkWorkBucket(db: DbHandle): Promise<CheckResult> {
+  const label = "Bucket english-work tồn tại và riêng tư";
+  const h = queryOf(db);
+  if ("why" in h) return skip("storage-bucket", label, h.why);
+  try {
+    if (!(await hasStorage(h.q))) return skip("storage-bucket", label, "chưa thấy kho Storage trong dự án");
+    const res = await h.q(`select b.public from storage.buckets b where b.id = 'english-work'`);
+    const row = res.rows[0];
+    if (!row) {
+      return {
+        id: "storage-bucket",
+        status: "fail",
+        label,
+        detail: "chưa có bucket english-work",
+        hint: "Áp migration 0016 (Actions → Apply database migrations); nếu đã áp, bucket cũng tự được tạo khi gia sư giao đề PDF đầu tiên.",
+      };
+    }
+    return row.public === false
+      ? { id: "storage-bucket", status: "ok", label }
+      : {
+          id: "storage-bucket",
+          status: "fail",
+          label,
+          detail: "bucket english-work đang để CÔNG KHAI",
+          hint: "Supabase → Storage → english-work → Edit bucket → tắt “Public bucket”. Làm ngay: file của các em không được công khai.",
+        };
+  } catch (err) {
+    return { id: "storage-bucket", status: "fail", label, detail: errText(err), hint: "Thử chạy lại; nếu vẫn lỗi, nhờ dev xem." };
+  }
+}
+
 export async function checkPgVersion(db: DbHandle): Promise<CheckResult> {
   const label = `Phiên bản Postgres ≤ ${MAX_PG_MAJOR} (để sao lưu bằng pg_dump ${MAX_PG_MAJOR} chạy được)`;
   const h = queryOf(db);
@@ -451,6 +522,8 @@ export async function runDoctor(deps: DoctorDeps): Promise<CheckResult[]> {
     await checkPgVersion(db),
     await checkDataApi(env, deps.fetch),
     await checkSignupDisabled(env, deps.fetch),
+    await checkStoragePolicies(db),
+    await checkWorkBucket(db),
     await checkLearnerCounts(db),
   ];
   if (deps.includeBackupKey) results.push(checkBackupRecipient(env));
