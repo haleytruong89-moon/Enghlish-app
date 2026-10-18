@@ -66,6 +66,8 @@ export const offlineBodySchema = z.strictObject({
   duration_sec: z.number().int().min(0).max(7200).optional(),
   word_count: z.number().int().min(0).max(20000).optional(),
   session_date: isoDate,
+  /** Why the work is dated before the inquiry was assigned (paper work only; the database allows up to 14 days before). */
+  backdate_reason: z.string().trim().min(5).max(200).optional(),
   assistance: z
     .array(z.enum(OFFLINE_ASSISTANCE))
     .min(1)

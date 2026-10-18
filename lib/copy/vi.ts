@@ -419,7 +419,12 @@ export const offlineForm = {
   error: "Chưa ghi được. Bước này có thể chưa mở, đã làm xong (bài tự làm chỉ một lần) hoặc ngày chưa hợp lệ.",
   errorForbidden: `Chỉ ${tutorHonorific} ghi được bài do ${tutorHonorific} trực tiếp nghe hoặc xem.`,
   errorDateBeforeLast: "Ngày này sớm hơn lần làm gần nhất của bước này. Bạn chọn ngày bằng hoặc sau ngày đó nhé.",
-  errorStepNotOpen: "Bước này chưa mở vào ngày bạn chọn. Bạn chọn ngày từ lúc bước mở nhé.",
+  errorStepNotOpen: "Bước này chưa mở vào ngày bạn chọn. Bạn chọn ngày từ lúc bước mở nhé. Nếu đây là bài trên giấy làm trước đó, hãy ghi lý do ở ô bên dưới.",
+  backdateReason: "Lý do ghi ngày sớm hơn ngày giao",
+  backdateHint: "Ví dụ: Nhập từ phiếu giấy pilot 17–19/10",
+  backdateHelp: "Chỉ dùng cho bài trên giấy làm trước khi giao bài, tối đa 14 ngày trước ngày giao.",
+  backdateRequired: "Bạn ghi lý do (ít nhất 5 ký tự) để lưu bài có ngày sớm hơn ngày giao nhé.",
+  errorBackdateTooEarly: "Ngày này sớm hơn ngày giao quá 14 ngày. Bạn chọn ngày gần hơn nhé.",
   /** Shown to a parent instead of the form on a checkpoint step or a live-speaking step (D15, stricter for now). */
   tutorOnlyNote: `Chỉ ${tutorHonorific} ghi bài này.`,
 } as const;

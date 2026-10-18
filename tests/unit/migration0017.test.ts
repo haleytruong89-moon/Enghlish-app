@@ -47,4 +47,18 @@ describe("0017_readiness.sql", () => {
     expect(code).not.toMatch(/create\s+policy[^;]*tutorwork_settings/i);
     expect(code).not.toMatch(/grant\s+[a-z, ]+on english\.tutorwork_settings/i);
   });
+
+  it("step 4: the paper-import backdate needs a reason, is limited to 14 days and to manual_import, and the 9-argument function is replaced", () => {
+    const fn = code.slice(code.indexOf("create or replace function english.eng_record_offline_attempt("));
+    expect(code).toContain("drop function if exists english.eng_record_offline_attempt(uuid, text, text, int, int, date, text[], uuid, uuid);");
+    expect(fn).toContain("p_backdate_reason text default null");
+    expect(fn).toContain("pg_catalog.length(v_reason) not between 5 and 200");
+    expect(fn).toContain("p_provenance <> 'manual_import'");
+    expect(fn).toContain("p_session_date < v_assigned - 14");
+    expect(fn).toContain("(backdate_too_early)");
+    expect(fn).toContain("p_session_date > english.eng_today_vn()");
+    expect(fn).toContain("(date_before_last_attempt)"); // the order of attempts is unchanged
+    expect(code).toContain("revoke execute on function english.eng_record_offline_attempt(uuid, text, text, int, int, date, text[], uuid, uuid, text) from public, anon, authenticated;");
+    expect(code).toContain("grant execute on function english.eng_record_offline_attempt(uuid, text, text, int, int, date, text[], uuid, uuid, text) to service_role;");
+  });
 });

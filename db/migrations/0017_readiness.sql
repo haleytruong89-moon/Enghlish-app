@@ -506,4 +506,196 @@ revoke execute on function english.eng_set_tutorwork_setting(text, jsonb, uuid) 
 grant execute on function english.eng_tutorwork_settings(uuid) to service_role;
 grant execute on function english.eng_set_tutorwork_setting(text, jsonb, uuid) to service_role;
 
+-- 4. Bài nhập từ phiếu giấy pilot: lùi ngày làm bài tới 14 ngày trước ngày giao (A2) -------------------------------------------------------
+-- Pilot giấy chạy 17-19/10 trước khi gia đình thật có trong app: bài làm xảy ra TRƯỚC ngày giao. Luật cũ chỉ cho ngày >= ngày giao - 1.
+-- Giờ, với 'manual_import' và có LÝ DO (5-200 ký tự, p_backdate_reason), ngày làm bài được lùi tới 14 ngày trước ngày giao và bước không
+-- cần "đã mở vào ngày đó". Các luật khác giữ nguyên: ngày <= hôm nay, không sớm hơn lần làm gần nhất của bước (date_before_last_attempt),
+-- bước phải đang mở hôm nay. Lý do nằm trong nội dung bài (và dấu băm), trong audit_log; hàm cũ (9 tham số) bị thay bằng hàm 10 tham số
+-- (p_backdate_reason ở CUỐI, mặc định NULL) nên mọi lời gọi cũ vẫn chạy.
+drop function if exists english.eng_record_offline_attempt(uuid, text, text, int, int, date, text[], uuid, uuid);
+
+create or replace function english.eng_record_offline_attempt(
+  p_activity uuid,
+  p_provenance text,
+  p_text text,
+  p_duration_sec int,
+  p_word_count int,
+  p_session_date date,
+  p_assistance text[],
+  p_by uuid,
+  p_client_id uuid,
+  -- Lý do khi bài làm có ngày TRƯỚC ngày giao (bài trên phiếu giấy); chỉ với manual_import.
+  p_backdate_reason text default null
+) returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_act english.activity_instances%rowtype;
+  v_member english.members%rowtype;
+  v_learner english.learners%rowtype;
+  v_snapshot jsonb;
+  v_assigned date;
+  v_last_date date;
+  v_assist text[];
+  v_content jsonb;
+  v_hash text;
+  v_existing english.attempts%rowtype;
+  v_id uuid := pg_catalog.gen_random_uuid();
+  v_no int;
+  v_parent uuid;
+  v_family uuid;
+  v_first boolean;
+  v_at timestamptz;
+  v_item text;
+  v_episode uuid;
+  v_verification text;
+  v_reason text := nullif(pg_catalog.btrim(coalesce(p_backdate_reason, '')), '');
+  v_backdated boolean := false;
+begin
+  if p_activity is null or p_by is null or p_client_id is null or p_session_date is null then
+    raise exception 'eng_record_offline_attempt: activity, actor, client id and date are required' using errcode = '22004';
+  end if;
+  if p_provenance is null or p_provenance not in ('tutor_live', 'manual_import') then
+    raise exception 'eng_record_offline_attempt: provenance must be tutor_live or manual_import' using errcode = '22023';
+  end if;
+  if p_text is null or pg_catalog.btrim(p_text) = '' or pg_catalog.length(p_text) > 20000 then
+    raise exception 'eng_record_offline_attempt: the text must be 1 to 20000 characters' using errcode = '22023';
+  end if;
+  if p_duration_sec is not null and (p_duration_sec < 0 or p_duration_sec > 7200) then
+    raise exception 'eng_record_offline_attempt: duration must be 0 to 7200 seconds' using errcode = '22023';
+  end if;
+  if p_word_count is not null and (p_word_count < 0 or p_word_count > 20000) then
+    raise exception 'eng_record_offline_attempt: word count must be 0 to 20000' using errcode = '22023';
+  end if;
+
+  if v_reason is not null and pg_catalog.length(v_reason) not between 5 and 200 then
+    raise exception 'eng_record_offline_attempt: the reason for an earlier date must be 5 to 200 characters' using errcode = '22023';
+  end if;
+  if v_reason is not null and p_provenance <> 'manual_import' then
+    raise exception 'eng_record_offline_attempt: only work on paper (manual_import) can be dated before the inquiry' using errcode = '22023';
+  end if;
+
+  -- Gợi ý đã dùng: bắt buộc nói rõ. 'none' (không dùng gì) và 'unknown' (chưa rõ) đứng một mình.
+  select coalesce(array_agg(distinct x order by x), '{}') into v_assist from unnest(p_assistance) as x;
+  if cardinality(v_assist) = 0
+     or not (v_assist <@ array['none', 'notes', 'dictionary', 'asked_someone', 'ai_outside', 'unknown'])
+     or (('none' = any (v_assist) or 'unknown' = any (v_assist)) and cardinality(v_assist) > 1) then
+    raise exception 'eng_record_offline_attempt: say which help was used (or none / unknown)' using errcode = '22023';
+  end if;
+
+  -- Khóa dòng bước: hai lần ghi cùng lúc xếp hàng; cùng khóa với eng_submit_attempt của học sinh.
+  select a.* into v_act from english.activity_instances a where a.id = p_activity for no key update;
+  if not found then
+    raise exception 'eng_record_offline_attempt: activity not found' using errcode = 'P0002';
+  end if;
+  select * into v_learner from english.learners l where l.id = v_act.learner_id;
+  select * into v_member from english.members m where m.id = p_by;
+
+  if v_member.id is null or not english.eng_actor_may_manage(p_by, v_act.learner_id)
+     or (p_provenance = 'tutor_live' and v_member.role <> 'tutor') then
+    raise exception 'eng_record_offline_attempt: this member may not record this work' using errcode = '42501';
+  end if;
+  -- D15 cho bài ghi ngoài app (chặt hơn, phụ huynh có thể nới sau): bước kiểm tra trong buổi (purpose có checkpoint) hoặc bước nói trực
+  -- tiếp với gia sư (ACT-SPEAK-LIVE) CHỈ gia sư còn quan hệ hiệu lực ghi được; bước nói trực tiếp chỉ nhận provenance 'tutor_live'.
+  if (v_act.purpose @> array['checkpoint'] or v_act.activity_type = 'ACT-SPEAK-LIVE') and v_member.role <> 'tutor' then
+    raise exception 'eng_record_offline_attempt: only a tutor may record this step (D15)' using errcode = '42501';
+  end if;
+  if v_act.activity_type = 'ACT-SPEAK-LIVE' and p_provenance <> 'tutor_live' then
+    raise exception 'eng_record_offline_attempt: a live speaking step is recorded as tutor_live only' using errcode = '22023';
+  end if;
+
+  v_content := pg_catalog.jsonb_build_object('text', p_text, 'session_date', p_session_date)
+    || case when p_duration_sec is not null then pg_catalog.jsonb_build_object('duration_sec', p_duration_sec) else '{}'::jsonb end
+    || case when p_word_count is not null then pg_catalog.jsonb_build_object('word_count', p_word_count) else '{}'::jsonb end
+    || case when v_reason is not null then pg_catalog.jsonb_build_object('backdate_reason', v_reason) else '{}'::jsonb end;
+  v_hash := pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(v_content::text, 'UTF8')), 'hex');
+
+  -- Gửi lại: cùng biên nhận.
+  select t.* into v_existing from english.attempts t
+  where t.learner_id = v_act.learner_id and t.client_submission_id = p_client_id;
+  if found then
+    if v_existing.activity_instance_id <> p_activity
+       or v_existing.content_hash <> v_hash
+       or v_existing.declared_assistance is distinct from v_assist
+       or v_existing.provenance is distinct from p_provenance then
+      raise exception 'eng_record_offline_attempt: client id was already used for a different record' using errcode = '23505';
+    end if;
+    return pg_catalog.jsonb_build_object(
+      'attempt_id', v_existing.id, 'episode_id', (select e.id from english.episodes e where e.attempt_id = v_existing.id),
+      'attempt_no', v_existing.attempt_no, 'submitted_at', v_existing.submitted_at, 'hash', v_existing.content_hash, 'replayed', true);
+  end if;
+
+  if not english.eng_activity_released(p_activity) then
+    raise exception 'eng_record_offline_attempt: this step is not open (not yet due, or skipped)' using errcode = '23514';
+  end if;
+
+  select i.snapshot, (i.assigned_at at time zone 'Asia/Ho_Chi_Minh')::date into v_snapshot, v_assigned
+  from english.inquiry_instances i where i.id = v_act.inquiry_instance_id;
+  -- S5c: có lý do (bài trên giấy) thì ngày được lùi tới 14 ngày trước ngày giao, và bước không cần "đã mở vào ngày đó".
+  v_backdated := v_reason is not null and (p_session_date < v_assigned - 1 or english.eng_step_effective_date(p_activity) > p_session_date);
+  if p_session_date > english.eng_today_vn() or (not v_backdated and p_session_date < v_assigned - 1) then
+    raise exception 'eng_record_offline_attempt: the date must be from the day before the inquiry was assigned until today' using errcode = '23514';
+  end if;
+  if v_backdated and p_session_date < v_assigned - 14 then
+    raise exception 'eng_record_offline_attempt: the date may be at most 14 days before the inquiry was assigned (backdate_too_early)' using errcode = '23514';
+  end if;
+  -- Ngày của buổi phải khớp với bước: bước đã mở vào ngày đó (ngày hiệu lực của bước <= ngày ghi) ...
+  if not v_backdated and english.eng_step_effective_date(p_activity) > p_session_date then
+    raise exception 'eng_record_offline_attempt: the step was not open on that date (step_not_open_on_date)' using errcode = '23514';
+  end if;
+  -- ... và không được lùi trước lần làm gần nhất của chính bước này (kể cả bài em nộp trong app): thứ tự lần làm phải theo thời gian thật,
+  -- vì "≥ 14 ngày kể từ lần luyện gần nhất" và số lần dựa vào đó.
+  select (max(t.submitted_at) at time zone 'Asia/Ho_Chi_Minh')::date into v_last_date from english.attempts t where t.activity_instance_id = p_activity;
+  if v_last_date is not null and p_session_date < v_last_date then
+    raise exception 'eng_record_offline_attempt: the date is earlier than the last recorded attempt of this step (date_before_last_attempt)' using errcode = '23514';
+  end if;
+
+  select s.o_no, s.o_parent, s.o_family, s.o_first into v_no, v_parent, v_family, v_first
+  from english.eng_attempt_slot(p_activity, v_act.mode, v_id, 'eng_record_offline_attempt') s;
+  v_at := english.eng_session_ts(p_session_date);
+
+  insert into english.attempts(
+    id, activity_instance_id, learner_id, attempt_no, parent_attempt_id, learning_family_id, mode, provenance,
+    declared_assistance, submitted_at, content_hash, client_submission_id)
+  values (v_id, p_activity, v_act.learner_id, v_no, v_parent, v_family, v_act.mode, p_provenance,
+          v_assist, v_at, v_hash, p_client_id);
+
+  insert into english.artifact_versions(attempt_id, learner_id, kind, version, content, is_raw, created_by)
+  values (v_id, v_act.learner_id, 'text', 1, v_content, true, p_by);
+
+  -- Hỗ trợ: gia sư thấy tận mắt trong buổi → 'observed'; bài trên giấy do người khác kể lại → 'declared'; chưa rõ → 'unknown'.
+  v_verification := case when p_provenance = 'tutor_live' then 'observed' else 'declared' end;
+  foreach v_item in array v_assist loop
+    if v_item = 'unknown' then
+      insert into english.assistance_events(learner_id, attempt_id, kind, detail, affects_target_keys, verification, recorded_by)
+      values (v_act.learner_id, v_id, 'external_declared', null, v_act.target_ids, 'unknown', p_by);
+    elsif v_item <> 'none' then
+      insert into english.assistance_events(learner_id, attempt_id, kind, detail, affects_target_keys, verification, recorded_by)
+      values (v_act.learner_id, v_id, case when v_item = 'notes' then 'notes' else 'external_declared' end,
+              v_item, v_act.target_ids, v_verification, p_by);
+    end if;
+  end loop;
+
+  perform english.eng_record_attempt_effects(
+    v_id, v_act.learner_id, v_act.target_ids, v_act.purpose, v_snapshot -> 'template' ->> 'id', v_no, v_first, v_at,
+    p_provenance = 'tutor_live');
+  select e.id into v_episode from english.episodes e where e.attempt_id = v_id;
+
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_member.user_id, v_member.role, 'attempt.recorded_offline', v_learner.family_id, v_act.learner_id,
+          pg_catalog.jsonb_build_object('attempt', v_id, 'attempt_no', v_no, 'activity_instance', p_activity, 'provenance', p_provenance)
+          || case when v_backdated then pg_catalog.jsonb_build_object('backdated', true, 'backdate_reason', v_reason) else '{}'::jsonb end);
+
+  return pg_catalog.jsonb_build_object(
+    'attempt_id', v_id, 'episode_id', v_episode, 'attempt_no', v_no, 'submitted_at', v_at, 'hash', v_hash, 'replayed', false);
+end
+$$;
+
+
+revoke execute on function english.eng_record_offline_attempt(uuid, text, text, int, int, date, text[], uuid, uuid, text) from public, anon, authenticated;
+grant execute on function english.eng_record_offline_attempt(uuid, text, text, int, int, date, text[], uuid, uuid, text) to service_role;
+
 insert into english.schema_migrations(version) values ('0017') on conflict do nothing;

@@ -112,6 +112,7 @@ export function createSupabaseReviewStore(): ReviewStore {
         p_assistance: a.assistance,
         p_by: a.byMemberId,
         p_client_id: a.clientId,
+        p_backdate_reason: a.backdateReason,
       });
       if (error) dbError("eng_record_offline_attempt", error);
       return data;

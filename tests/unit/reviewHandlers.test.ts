@@ -335,11 +335,20 @@ describe("S5 handlers: writes", () => {
     expect(denied.status).toBe(403);
     expect((denied.body as { error: string }).error).toBe("tutor_only");
     // the two date rules get their own answers so the form can say what to change
-    for (const [token, code] of [["date_before_last_attempt", "date_before_last_attempt"], ["step_not_open_on_date", "step_not_open_on_date"]] as const) {
+    for (const [token, code] of [["date_before_last_attempt", "date_before_last_attempt"], ["step_not_open_on_date", "step_not_open_on_date"], ["backdate_too_early", "backdate_too_early"]] as const) {
       const st = makeStore({ recordOffline: vi.fn(async () => { throw new ReviewDbError("23514", `eng_record_offline_attempt: x (${token})`); }) });
       const r = await handleOffline(deps("tutorAn", st), AN, goodOffline);
       expect(r.status).toBe(400);
       expect((r.body as { error: string }).error).toBe(code);
+    }
+    // paper work dated before the assignment carries its reason (5-200 characters) to the database; nothing else changes
+    const paper = makeStore();
+    expect((await handleOffline(deps("parent", paper), AN, { ...goodOffline, provenance: "manual_import", backdate_reason: "  Nhập từ phiếu giấy pilot  " })).status).toBe(201);
+    expect(paper.recordOffline).toHaveBeenCalledWith(expect.objectContaining({ backdateReason: "Nhập từ phiếu giấy pilot" }));
+    await handleOffline(deps("parent", paper), AN, { ...goodOffline, provenance: "manual_import" });
+    expect(paper.recordOffline).toHaveBeenLastCalledWith(expect.objectContaining({ backdateReason: null }));
+    for (const reason of ["abcd", "x".repeat(201), 5]) {
+      expect((await handleOffline(deps("parent", paper), AN, { ...goodOffline, provenance: "manual_import", backdate_reason: reason })).status, String(reason)).toBe(400);
     }
     const other = makeStore({ recordOffline: vi.fn(async () => { throw new ReviewDbError("23514", "this step is not open"); }) });
     expect(((await handleOffline(deps("tutorAn", other), AN, goodOffline)).body as { error: string }).error).toBe("invalid");

@@ -61,7 +61,7 @@ export interface ReviewStore {
   recordSupport(args: { attemptId: string; targets: string[]; kind: string; note: string | null; byMemberId: string; clientId: string | null }): Promise<unknown>;
   recordOffline(args: {
     activityId: string; provenance: string; text: string; durationSec: number | null; wordCount: number | null;
-    sessionDate: string; assistance: string[]; byMemberId: string; clientId: string;
+    sessionDate: string; assistance: string[]; byMemberId: string; clientId: string; backdateReason: string | null;
   }): Promise<unknown>;
   writeNote(args: {
     learnerId: string; sessionDate: string; goals: string | null; observed: string | null; supportLevel: string; nextActions: string[];
@@ -123,9 +123,10 @@ export function fromDbError(err: unknown): HandlerResult {
       case "23505":
         return fail(409, "conflict");
       case "23514":
-        // Two date rules of work recorded outside the app get their own answer so the form can say what to change.
+        // Three date rules of work recorded outside the app get their own answer so the form can say what to change.
         if (/\(date_before_last_attempt\)/.test(err.detail)) return fail(400, "date_before_last_attempt");
         if (/\(step_not_open_on_date\)/.test(err.detail)) return fail(400, "step_not_open_on_date");
+        if (/\(backdate_too_early\)/.test(err.detail)) return fail(400, "backdate_too_early");
         return fail(400, "invalid");
       case "22023":
         return /\(note_too_long\)/.test(err.detail) ? fail(400, "note_too_long") : fail(400, "invalid");
@@ -263,6 +264,7 @@ export async function handleOffline(deps: HandlerDeps, learnerId: string, rawBod
       assistance: body.assistance,
       byMemberId: g.grant.member.id,
       clientId: body.client_id,
+      backdateReason: body.backdate_reason ?? null,
     })) as { attempt_id: string; episode_id: string; attempt_no: number; replayed: boolean };
     return {
       status: r.replayed ? 200 : 201,

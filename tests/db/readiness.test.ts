@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { addDays, todayVn } from "../../lib/inquiries/dates";
+import { CONTENT_DIR } from "../../lib/config/content";
+import type { InquiryTemplate } from "../../lib/config/schemas";
+import { addDays, daysBetween, todayVn } from "../../lib/inquiries/dates";
 import { asCommit, createTestDb, migrate, seed, type Seeded, type TestDb } from "./helpers";
 
 const TODAY = todayVn();
@@ -184,6 +188,100 @@ describe("S5c readiness (migration 0017)", () => {
            from pg_proc p join pg_namespace n on n.oid = p.pronamespace, unnest(array['anon', 'authenticated', 'service_role']) r
           where n.nspname = 'english' and p.proname in ('eng_tutorwork_settings', 'eng_set_tutorwork_setting')`);
       expect(exec.filter((x) => x.ok).map((x) => `${x.fn}:${x.r}`).sort()).toEqual(["eng_set_tutorwork_setting:service_role", "eng_tutorwork_settings:service_role"]);
+    });
+  });
+
+  // -------------------------------------------------------------------------------------------------------------
+  describe("4. paper import: work dated up to 14 days before the assignment, with a reason", () => {
+    const template = (id: string): InquiryTemplate => JSON.parse(readFileSync(path.join(CONTENT_DIR, "inquiries", `${id}.json`), "utf8")) as InquiryTemplate;
+    const dueReleasingAll = (id: string) => {
+      const t = template(id);
+      const last = t.steps.map((st) => st.planned_date ?? "").sort().at(-1) ?? "";
+      return addDays(TODAY, daysBetween(last, t.dates.to));
+    };
+    let seq = 0;
+    const assign = async (templateId: string, due: string) =>
+      ((await q1<{ id: string }>("select english.eng_assign_inquiry($1, $2, 1, $3, $4, $5) as id", [AN(), templateId, due, M().parent, `s5c-assign-${(seq += 1)}`]))[0] as { id: string }).id;
+    const step = async (instance: string, n: number) =>
+      ((await q1<{ id: string }>("select id from english.activity_instances where inquiry_instance_id = $1 and step_no = $2", [instance, n]))[0] as { id: string }).id;
+    type Offline = { attempt_id: string; episode_id: string; attempt_no: number; submitted_at: string; replayed: boolean };
+    const offline = (by: string, act: string, o: { prov?: string; date?: string; reason?: string | null; clientId?: string; text?: string } = {}) =>
+      svc<Offline>("select english.eng_record_offline_attempt($1, $2, $3, null, null, $4::date, '{none}'::text[], $5, $6, $7) as r", [
+        act, o.prov ?? "manual_import", o.text ?? "Paper work from the pilot", o.date ?? TODAY, by, o.clientId ?? randomUUID(), o.reason ?? null,
+      ]);
+    let w1: string;
+    let w3: string;
+    beforeAll(async () => {
+      w1 = await assign("A-W1-VOLCANOES", dueReleasingAll("A-W1-VOLCANOES"));
+      const w3planned = template("A-W3-EARTHQUAKES").steps[6]?.planned_date as string;
+      w3 = await assign("A-W3-EARTHQUAKES", addDays(TODAY, daysBetween(w3planned, template("A-W3-EARTHQUAKES").dates.to)));
+    });
+
+    it("without a reason the old rule stands: not earlier than the day before the assignment", async () => {
+      await fail(offline(M().tutorAn, await step(w1, 4), { date: daysAgo(5) }), "23514", /day before the inquiry was assigned/);
+      await fail(offline(M().parent, await step(w1, 4), { date: daysAgo(5), reason: "   " }), "23514", /day before the inquiry was assigned/);
+    });
+
+    it("with a reason (5-200 characters) a tutor or a parent can import paper work dated before the assignment", async () => {
+      const act = await step(w1, 5);
+      const r = await offline(M().tutorAn, act, { date: daysAgo(5), reason: "Nhập từ phiếu giấy pilot 17–19/10", clientId: "9a1f0c52-0000-4000-8000-000000000001" });
+      expect(r.attempt_no).toBe(1);
+      expect(new Date(r.submitted_at).toISOString()).toBe(new Date(`${daysAgo(5)}T05:00:00.000Z`).toISOString());
+      const art = (await q1<{ content: Record<string, unknown> }>("select content from english.artifact_versions where attempt_id = $1", [r.attempt_id]))[0]?.content;
+      expect(art).toMatchObject({ text: "Paper work from the pilot", session_date: daysAgo(5), backdate_reason: "Nhập từ phiếu giấy pilot 17–19/10" });
+      const log = (await q1<{ payload: Record<string, unknown> }>("select payload from english.audit_log where action = 'attempt.recorded_offline' and payload ->> 'attempt' = $1", [r.attempt_id]))[0]?.payload;
+      expect(log).toMatchObject({ backdated: true, backdate_reason: "Nhập từ phiếu giấy pilot 17–19/10", provenance: "manual_import" });
+      const parentCase = await offline(M().parent, await step(w1, 6), { date: daysAgo(3), reason: "Phiếu giấy làm ở nhà" });
+      expect(parentCase.attempt_no).toBe(1);
+    });
+
+    it("at most 14 days before the assignment; never in the future; the reason has 5 to 200 characters", async () => {
+      await fail(offline(M().tutorAn, await step(w1, 4), { date: daysAgo(15), reason: "Phiếu giấy cũ" }), "23514", /backdate_too_early/);
+      expect((await offline(M().tutorAn, await step(w1, 4), { date: daysAgo(14), reason: "Phiếu giấy cũ" })).attempt_no).toBe(1);
+      await fail(offline(M().tutorAn, await step(w1, 7), { date: addDays(TODAY, 1), reason: "Phiếu giấy cũ" }), "23514", /until today/);
+      await fail(offline(M().tutorAn, await step(w1, 7), { date: daysAgo(5), reason: "abcd" }), "22023", /5 to 200/);
+      await fail(offline(M().tutorAn, await step(w1, 7), { date: daysAgo(5), reason: "x".repeat(201) }), "22023", /5 to 200/);
+      expect((await offline(M().tutorAn, await step(w1, 7), { date: daysAgo(5), reason: "x".repeat(200) })).attempt_no).toBe(1);
+    });
+
+    it("only paper work (manual_import) can be backdated - 'watched live' is always about today's session", async () => {
+      await fail(offline(M().tutorAn, await step(w1, 5), { prov: "tutor_live", date: daysAgo(6), reason: "Phiếu giấy cũ" }), "22023", /only work on paper/);
+    });
+
+    it("the order of attempts is still real: not earlier than the last attempt of the same step", async () => {
+      const act = await step(w1, 5); // already has an attempt dated 5 days ago
+      await fail(offline(M().tutorAn, act, { date: daysAgo(9), reason: "Phiếu giấy cũ" }), "23514", /date_before_last_attempt/);
+      expect((await offline(M().tutorAn, act, { date: daysAgo(5), reason: "Phiếu giấy làm lại" })).attempt_no).toBe(2);
+      expect((await offline(M().tutorAn, act, { date: daysAgo(2), reason: "Phiếu giấy làm lại" })).attempt_no).toBe(3);
+    });
+
+    it("a step that opens today can take paper work from before it opened - with a reason only", async () => {
+      const act = await step(w3, 7);
+      await fail(offline(M().tutorAn, act, { date: daysAgo(1) }), "23514", /step_not_open_on_date/);
+      expect((await offline(M().tutorAn, act, { date: daysAgo(1), reason: "Phiếu giấy làm hôm qua" })).attempt_no).toBe(1);
+    });
+
+    it("sent twice it is the same record; the same id with another reason is refused; the old 9-argument call still works", async () => {
+      const act = await step(w1, 6);
+      const id = "9a1f0c52-0000-4000-8000-000000000002";
+      const a = await offline(M().parent, act, { date: daysAgo(3), reason: "Phiếu giấy làm ở nhà", clientId: id });
+      expect(a.replayed).toBe(false);
+      expect(await offline(M().parent, act, { date: daysAgo(3), reason: "Phiếu giấy làm ở nhà", clientId: id })).toMatchObject({ attempt_id: a.attempt_id, replayed: true });
+      await fail(offline(M().parent, act, { date: daysAgo(3), reason: "Lý do khác hẳn", clientId: id }), "23505");
+      const old = await svc<Offline>("select english.eng_record_offline_attempt($1, 'manual_import', 'Old style call', null, null, $2::date, '{none}'::text[], $3, $4) as r", [
+        act, TODAY, M().parent, randomUUID(),
+      ]);
+      expect(old.attempt_no).toBeGreaterThan(1);
+      expect(await count("select count(*)::int as n from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'english' and p.proname = 'eng_record_offline_attempt'")).toBe(1);
+    });
+
+    it("a student cannot call it; a paper import by a tutor still cannot be backdated on a tutor-only (checkpoint) step by a parent", async () => {
+      const priv = await q1<{ r: string; ok: boolean }>(
+        `select r, has_function_privilege(r, p.oid, 'execute') as ok
+           from pg_proc p join pg_namespace n on n.oid = p.pronamespace, unnest(array['anon', 'authenticated', 'service_role']) r
+          where n.nspname = 'english' and p.proname = 'eng_record_offline_attempt'`);
+      expect(Object.fromEntries(priv.map((x) => [x.r, x.ok]))).toEqual({ anon: false, authenticated: false, service_role: true });
+      await fail(offline(M().parent, await step(w1, 11), { date: daysAgo(5), reason: "Phiếu giấy cũ" }), "42501", /D15/);
     });
   });
 });
