@@ -132,6 +132,18 @@ describe("S5c readiness (migration 0017)", () => {
       expect(await quick(M().tutorNguyen, { title: "Destination Unit 3", clientId: "s5c-dup-0001" })).toEqual({ ...a, replayed: true });
     });
 
+    it("a title typed with combining accents (NFD) is the same title as the precomposed one (NFC), and spacing is collapsed before trimming", async () => {
+      const nfc = "Bài ôn Café Unit 9"; // precomposed letters
+      const nfd = nfc.normalize("NFD"); // base letter + combining mark
+      expect(nfd).not.toBe(nfc);
+      await quick(M().tutorNguyen, { title: nfc, clientId: "s5c-dup-nfc-1" });
+      await fail(quick(M().parent, { title: nfd }), "23505", /duplicate_first/);
+      await fail(quick(M().parent, { title: `  ${nfd.replace(/ /g, "  ")}   ` }), "23505", /duplicate_first/);
+      // and the other way round: first written as NFD, repeated as NFC
+      await quick(M().tutorNguyen, { title: "Ôn tập Unit 10".normalize("NFD"), clientId: "s5c-dup-nfd-1" });
+      await fail(quick(M().parent, { title: "Ôn tập Unit 10".normalize("NFC") }), "23505", /duplicate_first/);
+    });
+
     it("another title, another day, another learner, or a retry are all fine", async () => {
       await quick(M().tutorNguyen, { title: "Destination Unit 4", clientId: "s5c-dup-0002" });
       await quick(M().tutorNguyen, { title: "Destination Unit 5", clientId: "s5c-dup-0003" });
@@ -260,6 +272,37 @@ describe("S5c readiness (migration 0017)", () => {
       const act = await step(w3, 7);
       await fail(offline(M().tutorAn, act, { date: daysAgo(1) }), "23514", /step_not_open_on_date/);
       expect((await offline(M().tutorAn, act, { date: daysAgo(1), reason: "Phiếu giấy làm hôm qua" })).attempt_no).toBe(1);
+    });
+
+    it("the reason only works for a step that opened WITH the assignment (S1): a step that opened later is refused", async () => {
+      const inst = await assign("A-W4-PLANETS", dueReleasingAll("A-W4-PLANETS"));
+      // The inquiry was assigned 2 days ago: steps that were due before that opened with it, later ones did not.
+      // (a test-only back-dating: the table is append-only, so the guard trigger is switched off for this one statement)
+      await q1(`alter table english.inquiry_instances disable trigger user;
+                update english.inquiry_instances set assigned_at = assigned_at - interval '2 days' where id = '${inst}';
+                alter table english.inquiry_instances enable trigger user`);
+      const early = await step(inst, 4);
+      const later = await step(inst, 7);
+      const eff = (a: string) => q1<{ d: string }>("select english.eng_step_effective_date($1)::text as d", [a]).then((r) => r[0]?.d as string);
+      expect((await eff(early)) <= daysAgo(2)).toBe(true);
+      expect(await eff(later) > daysAgo(2)).toBe(true);
+      await fail(offline(M().tutorAn, later, { date: daysAgo(8), reason: "Phiếu giấy pilot" }), "23514", /backdate_not_allowed_for_step/);
+      await fail(offline(M().tutorAn, later, { date: daysAgo(2), reason: "Phiếu giấy pilot" }), "23514", /backdate_not_allowed_for_step/); // 'opens after the day I wrote it' is not allowed either
+      expect((await offline(M().tutorAn, early, { date: daysAgo(8), reason: "Phiếu giấy pilot" })).attempt_no).toBe(1);
+    });
+
+    it("the reason never works for a delayed check or a transfer check (S1), even when the step opened with the assignment", async () => {
+      const inst = await assign("A-W3-EARTHQUAKES", dueReleasingAll("A-W3-EARTHQUAKES"));
+      const delayed = await step(inst, 9); // purpose: delayed_check + checkpoint, opens today = the assignment day
+      const purpose = (await q1<{ purpose: string[] }>("select purpose from english.activity_instances where id = $1", [delayed]))[0]?.purpose ?? [];
+      expect(purpose).toContain("delayed_check");
+      await fail(offline(M().tutorAn, delayed, { date: daysAgo(1), reason: "Phiếu giấy pilot" }), "23514", /backdate_not_allowed_for_step/);
+      await fail(offline(M().tutorAn, delayed, { date: daysAgo(6), reason: "Phiếu giấy pilot" }), "23514", /backdate_not_allowed_for_step/);
+      // today itself is the normal rule and still works (no backdating needed)
+      expect((await offline(M().tutorAn, delayed, { date: TODAY })).attempt_no).toBe(1);
+      // the same guard is written for transfer checks: the function text names both purposes
+      const fn = (await q1<{ src: string }>("select pg_get_functiondef(p.oid) as src from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'english' and p.proname = 'eng_record_offline_attempt'"))[0]?.src ?? "";
+      expect(fn).toContain("'delayed_check', 'transfer_check'");
     });
 
     it("sent twice it is the same record; the same id with another reason is refused; the old 9-argument call still works", async () => {

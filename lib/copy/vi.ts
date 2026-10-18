@@ -426,6 +426,7 @@ export const offlineForm = {
   backdateHelp: "Chỉ dùng cho bài trên giấy làm trước khi giao bài, tối đa 14 ngày trước ngày giao.",
   backdateRequired: "Bạn ghi lý do (ít nhất 5 ký tự) để lưu bài có ngày sớm hơn ngày giao nhé.",
   errorBackdateTooEarly: "Ngày này sớm hơn ngày giao quá 14 ngày. Bạn chọn ngày gần hơn nhé.",
+  errorBackdateNotAllowed: "Chỉ ghi lùi ngày được với bước đã mở cùng lúc giao bài, và không với bài ôn sau 2 tuần hay bài chuyển sang chủ đề mới. Bạn chọn ngày từ lúc bước mở nhé.",
   /** Shown to a parent instead of the form on a checkpoint step or a live-speaking step (D15, stricter for now). */
   tutorOnlyNote: `Chỉ ${tutorHonorific} ghi bài này.`,
 } as const;

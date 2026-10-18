@@ -335,7 +335,7 @@ describe("S5 handlers: writes", () => {
     expect(denied.status).toBe(403);
     expect((denied.body as { error: string }).error).toBe("tutor_only");
     // the two date rules get their own answers so the form can say what to change
-    for (const [token, code] of [["date_before_last_attempt", "date_before_last_attempt"], ["step_not_open_on_date", "step_not_open_on_date"], ["backdate_too_early", "backdate_too_early"]] as const) {
+    for (const [token, code] of [["date_before_last_attempt", "date_before_last_attempt"], ["step_not_open_on_date", "step_not_open_on_date"], ["backdate_too_early", "backdate_too_early"], ["backdate_not_allowed_for_step", "backdate_not_allowed_for_step"]] as const) {
       const st = makeStore({ recordOffline: vi.fn(async () => { throw new ReviewDbError("23514", `eng_record_offline_attempt: x (${token})`); }) });
       const r = await handleOffline(deps("tutorAn", st), AN, goodOffline);
       expect(r.status).toBe(400);

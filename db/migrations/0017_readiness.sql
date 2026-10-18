@@ -379,8 +379,8 @@ begin
     select 1 from english.results r2
     where r2.learner_id = p_learner and r2.mode = 'quick' and r2.attempt = 'first' and r2.assignment_id is null
       and r2.taken_on = p_taken_on
-      and pg_catalog.lower(pg_catalog.regexp_replace(pg_catalog.btrim(r2.title), '\s+', ' ', 'g'))
-          = pg_catalog.lower(pg_catalog.regexp_replace(pg_catalog.btrim(v_title), '\s+', ' ', 'g'))
+      and pg_catalog.lower(pg_catalog.btrim(pg_catalog.regexp_replace(normalize(r2.title, NFC), '\s+', ' ', 'g')))
+          = pg_catalog.lower(pg_catalog.btrim(pg_catalog.regexp_replace(normalize(v_title, NFC), '\s+', ' ', 'g')))
       and not exists (select 1 from english.results r3 where r3.supersedes_id = r2.id)
       and r2.id is distinct from p_supersedes) then
     raise exception 'eng_record_result: this quick result already has a first attempt (duplicate_first)' using errcode = '23505';
@@ -554,6 +554,8 @@ declare
   v_verification text;
   v_reason text := nullif(pg_catalog.btrim(coalesce(p_backdate_reason, '')), '');
   v_backdated boolean := false;
+  v_eff date;
+  v_needs boolean;
 begin
   if p_activity is null or p_by is null or p_client_id is null or p_session_date is null then
     raise exception 'eng_record_offline_attempt: activity, actor, client id and date are required' using errcode = '22004';
@@ -634,8 +636,16 @@ begin
 
   select i.snapshot, (i.assigned_at at time zone 'Asia/Ho_Chi_Minh')::date into v_snapshot, v_assigned
   from english.inquiry_instances i where i.id = v_act.inquiry_instance_id;
-  -- S5c: có lý do (bài trên giấy) thì ngày được lùi tới 14 ngày trước ngày giao, và bước không cần "đã mở vào ngày đó".
-  v_backdated := v_reason is not null and (p_session_date < v_assigned - 1 or english.eng_step_effective_date(p_activity) > p_session_date);
+  -- S5c: có lý do (bài trên giấy) thì ngày được lùi tới 14 ngày trước ngày giao, và bước không cần "đã mở vào ngày đó" - NHƯNG chỉ với bước
+  -- đã mở cùng lúc với bài giao (ngày hiệu lực <= ngày giao) và không bao giờ với bước kiểm tra trễ / chuyển giao (delayed_check,
+  -- transfer_check): hai loại này phụ thuộc vào ngày thật nên không được "lùi" bằng lý do.
+  v_eff := english.eng_step_effective_date(p_activity);
+  v_needs := p_session_date < v_assigned - 1 or v_eff > p_session_date;
+  if v_reason is not null and v_needs
+     and (v_eff > v_assigned or v_act.purpose && array['delayed_check', 'transfer_check']) then
+    raise exception 'eng_record_offline_attempt: an earlier date is only allowed for a step that opened with the assignment, and never for a delayed or transfer check (backdate_not_allowed_for_step)' using errcode = '23514';
+  end if;
+  v_backdated := v_reason is not null and v_needs;
   if p_session_date > english.eng_today_vn() or (not v_backdated and p_session_date < v_assigned - 1) then
     raise exception 'eng_record_offline_attempt: the date must be from the day before the inquiry was assigned until today' using errcode = '23514';
   end if;
@@ -643,7 +653,7 @@ begin
     raise exception 'eng_record_offline_attempt: the date may be at most 14 days before the inquiry was assigned (backdate_too_early)' using errcode = '23514';
   end if;
   -- Ngày của buổi phải khớp với bước: bước đã mở vào ngày đó (ngày hiệu lực của bước <= ngày ghi) ...
-  if not v_backdated and english.eng_step_effective_date(p_activity) > p_session_date then
+  if not v_backdated and v_eff > p_session_date then
     raise exception 'eng_record_offline_attempt: the step was not open on that date (step_not_open_on_date)' using errcode = '23514';
   end if;
   -- ... và không được lùi trước lần làm gần nhất của chính bước này (kể cả bài em nộp trong app): thứ tự lần làm phải theo thời gian thật,

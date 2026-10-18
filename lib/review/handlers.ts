@@ -127,6 +127,7 @@ export function fromDbError(err: unknown): HandlerResult {
         if (/\(date_before_last_attempt\)/.test(err.detail)) return fail(400, "date_before_last_attempt");
         if (/\(step_not_open_on_date\)/.test(err.detail)) return fail(400, "step_not_open_on_date");
         if (/\(backdate_too_early\)/.test(err.detail)) return fail(400, "backdate_too_early");
+        if (/\(backdate_not_allowed_for_step\)/.test(err.detail)) return fail(400, "backdate_not_allowed_for_step");
         return fail(400, "invalid");
       case "22023":
         return /\(note_too_long\)/.test(err.detail) ? fail(400, "note_too_long") : fail(400, "invalid");

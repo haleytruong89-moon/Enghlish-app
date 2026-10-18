@@ -95,7 +95,9 @@ export function OfflineForm({
               ? offlineForm.errorStepNotOpen
               : code === "backdate_too_early"
                 ? offlineForm.errorBackdateTooEarly
-                : offlineForm.error,
+                : code === "backdate_not_allowed_for_step"
+                  ? offlineForm.errorBackdateNotAllowed
+                  : offlineForm.error,
         );
       }
       const body = (await res.json()) as { episode_id?: string };
