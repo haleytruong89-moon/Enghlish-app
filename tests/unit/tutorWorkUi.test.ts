@@ -45,6 +45,7 @@ const today = (over: Partial<TodayData> = {}): TodayData => {
     weak: w, repeats: w.tags.filter((t) => t.status === "repeat"), due: w.tags.filter((t) => t.recheckDue), untagged: [untagged],
     lastNote: { id: "n1", sessionDate: "2026-10-15", studied: "Unit 7", weakTagKeys: ["cau-dieu-kien-dao-ngu", "x-gone"], message: "Had it not been for + N", authorRole: "tutor" },
     recent: { id: "r0", title: "Destination U1-12", takenOn: "2026-10-16", total: 60, correct: 50 },
+    practice: [],
     tagLabels: { "cau-dieu-kien-dao-ngu": "Câu điều kiện & đảo ngữ", "cum-dong-tu": "Cụm động từ" }, ...over,
   };
 };

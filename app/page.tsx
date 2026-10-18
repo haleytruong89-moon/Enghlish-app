@@ -40,7 +40,7 @@ export default async function HomePage() {
     if (work.kind === "login") redirect("/login");
     return (
       <>
-        <AppHeader showTestBadge={anyTest} />
+        <AppHeader showTestBadge={anyTest} studentNav="next" />
         {work.kind === "ok" ? (
           <StudentHome alias={alias} color={color} data={work.home} />
         ) : (

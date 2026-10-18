@@ -31,6 +31,7 @@ export interface TutorWorkStore {
     usedHint: boolean;
     takenOn: string;
     supersedes: string | null;
+    assignmentId: string | null;
     byMemberId: string;
     clientId: string;
   }): Promise<unknown>;
@@ -102,6 +103,7 @@ export async function handleRecordResult(deps: TutorWorkDeps, learnerId: string,
       usedHint: b.used_hint,
       takenOn: b.taken_on,
       supersedes: b.supersedes_id ?? null,
+      assignmentId: b.assignment_id ?? null,
       byMemberId: g.grant.member.id,
       clientId: b.client_id,
     })) as { id: string; replayed: boolean; untagged: number };

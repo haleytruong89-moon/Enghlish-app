@@ -4,6 +4,8 @@ import {
   checkDataApi,
   checkDbConnect,
   checkEnv,
+  checkStoragePolicies,
+  checkWorkBucket,
   checkLearnerCounts,
   checkMigrations,
   checkPgVersion,
@@ -299,6 +301,31 @@ describe("masking", () => {
   });
 });
 
+describe("storage checks (shared project: policies without a bucket condition, and the private bucket)", () => {
+  const withStorage: [RegExp, Record<string, unknown>[] | Error] = [/information_schema\.tables/, [{ n: 2 }]];
+  it("policies: ok when none lack a bucket condition, or when there is no Storage at all; fail naming them otherwise", async () => {
+    expect((await checkStoragePolicies(fakeDb([withStorage, [/pg_policies/, []]]))).status).toBe("ok");
+    expect((await checkStoragePolicies(fakeDb([[/information_schema\.tables/, [{ n: 0 }]]]))).status).toBe("ok");
+    const bad = await checkStoragePolicies(fakeDb([withStorage, [/pg_policies/, [{ policyname: "Anyone can read", cmd: "SELECT" }]]]));
+    expect(bad).toMatchObject({ id: "storage-policies", status: "fail", label: "Không có policy nào trên storage.objects thiếu điều kiện bucket" });
+    expect(bad.detail).toContain("Anyone can read (SELECT)");
+    expect(bad.hint).toContain("bucket_id");
+    expect((await checkStoragePolicies(fakeDb([withStorage, [/pg_policies/, new Error("boom")]]))).status).toBe("fail");
+    expect((await checkStoragePolicies(null)).status).toBe("skip");
+  });
+
+  it("bucket: ok when it exists and is private; fail when missing or public; skip without Storage", async () => {
+    expect((await checkWorkBucket(fakeDb([withStorage, [/storage\.buckets/, [{ public: false }]]]))).status).toBe("ok");
+    const pub = await checkWorkBucket(fakeDb([withStorage, [/storage\.buckets/, [{ public: true }]]]));
+    expect(pub.status).toBe("fail");
+    expect(pub.detail).toContain("CÔNG KHAI");
+    const missing = await checkWorkBucket(fakeDb([withStorage, [/storage\.buckets/, []]]));
+    expect(missing).toMatchObject({ status: "fail", label: "Bucket english-work tồn tại và riêng tư" });
+    expect((await checkWorkBucket(fakeDb([[/information_schema\.tables/, [{ n: 0 }]]]))).status).toBe("skip");
+    expect((await checkWorkBucket(null)).status).toBe("skip");
+  });
+});
+
 describe("runDoctor / exit code / formatting", () => {
   const goodDb = fakeDb([
     [/to_regclass/, [{ exists: true }]],
@@ -336,7 +363,7 @@ describe("runDoctor / exit code / formatting", () => {
     const results = await runDoctor({ env: {}, db: null, fetch: throwingFetch, migrationVersions: ["0001"] });
     const byId = (id: string) => results.find((r) => r.id === id) as CheckResult;
     expect(byId("env").status).toBe("fail");
-    for (const id of ["db", "migrations", "rls", "public-clean", "pg-version", "data-api", "signup", "learners"]) {
+    for (const id of ["db", "migrations", "rls", "public-clean", "pg-version", "data-api", "signup", "storage-policies", "storage-bucket", "learners"]) {
       expect(byId(id).status, id).toBe("skip");
     }
     expect(exitCode(results)).toBe(1);

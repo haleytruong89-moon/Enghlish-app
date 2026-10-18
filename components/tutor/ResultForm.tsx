@@ -6,7 +6,10 @@ import { fallbackLabels, resultPage } from "@/lib/copy/vi";
 import { failText, postJson } from "@/lib/tutorwork/client";
 import { itemList, parseItemNumbers, scoreFrame } from "@/lib/tutorwork/frameScore";
 import { scaleBand } from "@/lib/frames/frame";
-import type { FrameView, ResultAttempt, ResultContext, ResultMode, ResultSource, TagInfo } from "@/lib/tutorwork/types";
+import { SubmissionPreview } from "@/components/practice/SubmissionPreview";
+import type { AssignmentView } from "@/lib/practice/types";
+import Link from "next/link";
+import type { FrameView, ResultAttempt, ResultContext, ResultEdit, ResultMode, ResultSource, TagInfo } from "@/lib/tutorwork/types";
 import { TagSelect } from "./TagSelect";
 import { useTags } from "./useTags";
 
@@ -18,30 +21,49 @@ type Props = {
   canClass: boolean;
   today: string;
   minDate: string;
+  /** Assignments given in the app that are still open (not retracted), so a result can be tied to one. */
+  assignments?: AssignmentView[];
+  /** From ?assignment= on the page (the "Ghi kết quả" link of the assignment list). */
+  initialAssignmentId?: string | null;
+  /** The live result of the chosen assignment: the form opens filled in, and what is saved REPLACES it ("Sửa kết quả"). */
+  supersede?: ResultEdit | null;
+  /** Record one more attempt of an assignment that already has a result (does not replace it): starts as "Làm lại". */
+  initialRetry?: boolean;
 };
 
 /**
  * "Ghi kết quả bài": two ways in one screen. "Đề có khung" = click the wrong items on a grid (tags come from the frame);
  * "Nhập nhanh" = score + wrong numbers + a tag per wrong item. Only first attempts feed "Điểm cần chú ý"; the screen says so.
  */
-export function ResultForm({ learnerId, frames, tags: initialTags, canClass, today, minDate }: Props) {
+export function ResultForm({ learnerId, frames, tags: initialTags, canClass, today, minDate, assignments = [], initialAssignmentId = null, supersede = null, initialRetry = false }: Props) {
   const router = useRouter();
   const { tags, add } = useTags(learnerId, initialTags);
   const labelOf = useMemo(() => new Map(tags.map((t) => [t.key, t.label])), [tags]);
 
-  const [mode, setMode] = useState<ResultMode>(frames.length > 0 ? "frame" : "quick");
-  const [frameId, setFrameId] = useState<string>(frames[0]?.id ?? "");
-  const [wrong, setWrong] = useState<Set<number>>(new Set());
-  const [title, setTitle] = useState("");
-  const [total, setTotal] = useState("");
-  const [correct, setCorrect] = useState("");
-  const [wrongText, setWrongText] = useState("");
-  const [itemTags, setItemTags] = useState<Record<number, string | null>>({});
-  const [source, setSource] = useState<ResultSource>("practice");
-  const [attempt, setAttempt] = useState<ResultAttempt>("first");
-  const [usedHint, setUsedHint] = useState(false);
-  const [context, setContext] = useState<ResultContext>("home");
-  const [date, setDate] = useState(today);
+  const initial = assignments.find((a) => a.id === initialAssignmentId) ?? null;
+  const [assignmentId, setAssignmentId] = useState<string>(initial?.id ?? "");
+  const chosen = assignments.find((a) => a.id === assignmentId) ?? null;
+  const initialFrame = initial?.frameId && frames.some((f) => f.id === initial.frameId) ? initial.frameId : null;
+  // "Sửa kết quả": every field starts as the recorded result had it; saving sends supersedes_id.
+  const edit = supersede;
+  const editFrame = edit?.mode === "frame" ? edit.frameId : null;
+
+  const [mode, setMode] = useState<ResultMode>(edit ? edit.mode : initialFrame ? "frame" : initial ? "quick" : frames.length > 0 ? "frame" : "quick");
+  const [frameId, setFrameId] = useState<string>(editFrame ?? initialFrame ?? frames[0]?.id ?? "");
+  const [wrong, setWrong] = useState<Set<number>>(new Set(edit?.mode === "frame" ? edit.wrongItems : []));
+  const [title, setTitle] = useState(edit && edit.mode === "quick" ? edit.title : initial && !initialFrame ? initial.title : "");
+  const [total, setTotal] = useState(edit && edit.mode === "quick" ? String(edit.total) : "");
+  const [correct, setCorrect] = useState(edit && edit.mode === "quick" ? String(edit.correct) : "");
+  const [wrongText, setWrongText] = useState(edit && edit.mode === "quick" ? edit.wrongItems.join(", ") : "");
+  const [itemTags, setItemTags] = useState<Record<number, string | null>>(
+    edit && edit.mode === "quick" ? Object.fromEntries(edit.itemTags.map((t) => [t.n, t.tagKey])) : {},
+  );
+  const [source, setSource] = useState<ResultSource>(edit?.source ?? "practice");
+  const [attempt, setAttempt] = useState<ResultAttempt>(edit ? edit.attempt : initialRetry ? "retry" : (initial?.submission?.attempt ?? "first"));
+  const [usedHint, setUsedHint] = useState(edit ? edit.usedHint : (initial?.submission?.usedHint ?? false));
+  const [context, setContext] = useState<ResultContext>(edit?.context ?? "home");
+  const [date, setDate] = useState(edit?.takenOn ?? today);
+  const [superseding, setSuperseding] = useState<string | null>(edit?.id ?? null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -57,7 +79,28 @@ export function ResultForm({ learnerId, frames, tags: initialTags, canClass, tod
   const quickWrong = wrongParsed.ok ? wrongParsed.items : [];
   const expectedWrong = totalN !== null && correctN !== null ? totalN - correctN : null;
 
+  /** Pick an assignment (or none): fill in what the student already told us; the tutor can still change every field. */
+  function pickAssignment(id: string) {
+    setAssignmentId(id);
+    const a = assignments.find((x) => x.id === id) ?? null;
+    if (!a) return;
+    if (a.submission) {
+      setAttempt(a.submission.attempt);
+      setUsedHint(a.submission.usedHint ?? false); // null = a PDF, no Hint question: stays "no" unless the grown-up says otherwise
+    }
+    if (a.frameId && frames.some((f) => f.id === a.frameId)) {
+      setMode("frame");
+      setFrameId(a.frameId);
+      setWrong(new Set());
+    } else {
+      setMode("quick");
+      setTitle(a.title);
+    }
+  }
+
   function reset() {
+    setSuperseding(null);
+    setAssignmentId("");
     setWrong(new Set());
     setTitle("");
     setTotal("");
@@ -91,6 +134,8 @@ export function ResultForm({ learnerId, frames, tags: initialTags, canClass, tod
       attempt,
       used_hint: usedHint,
       taken_on: date,
+      ...(assignmentId ? { assignment_id: assignmentId } : {}),
+      ...(superseding ? { supersedes_id: superseding } : {}),
     };
     if (mode === "frame") {
       if (!frame || !score) return setError(resultPage.needFrame);
@@ -139,7 +184,32 @@ export function ResultForm({ learnerId, frames, tags: initialTags, canClass, tod
       <fieldset disabled={saved !== null} className="m-0 flex min-w-0 flex-col gap-6 border-0 p-0">
         <section className="flex flex-col gap-2 rounded-xl border border-line bg-white p-4">
           <h2 className="text-lg font-semibold">{resultPage.source}</h2>
-          <p className="text-sm">{resultPage.paperOnly}</p>
+          {superseding ? (
+            <div className="flex flex-col gap-1 rounded-lg bg-[#fbf0dc] p-3 text-sm" data-testid="supersede-notice">
+              <b>{resultPage.supersedeTitle}</b>
+              <span>{resultPage.supersedeNote}</span>
+              {assignmentId ? (
+                <Link href={`/learners/${learnerId}/results/new?assignment=${assignmentId}&again=1`} className="inline-flex min-h-11 items-center font-medium text-accent underline" data-testid="supersede-again">
+                  {resultPage.supersedeAgain}
+                </Link>
+              ) : null}
+            </div>
+          ) : null}
+          {assignments.length > 0 ? (
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-muted">{resultPage.assignmentPick}</span>
+              <select value={assignmentId} disabled={superseding !== null} onChange={(e) => pickAssignment(e.target.value)} data-testid="assignment-pick" className={field}>
+                <option value="">{resultPage.assignmentPaper}</option>
+                {assignments.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {resultPage.assignmentOption(a.title, a.submission !== null && a.resultId === null)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <p className="text-sm">{resultPage.paperOnly}</p>
+          )}
           <p className="text-xs text-muted">{resultPage.paperNote}</p>
         </section>
 
@@ -155,6 +225,8 @@ export function ResultForm({ learnerId, frames, tags: initialTags, canClass, tod
           </div>
         </section>
 
+        <div className={chosen?.submission ? "grid items-start gap-4 lg:grid-cols-2" : "flex flex-col gap-6"}>
+          {chosen ? <SubmissionPreview assignment={chosen} /> : null}
         {mode === "frame" ? (
           frames.length === 0 || !frame || !score ? (
             <p className="rounded-xl border border-line bg-white p-4 text-sm" data-testid="no-frames">
@@ -326,6 +398,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, canClass, tod
             ) : null}
           </section>
         )}
+        </div>
 
         <section className="grid gap-4 rounded-xl border border-line bg-white p-4 sm:grid-cols-2">
           <fieldset className="flex flex-col gap-2">

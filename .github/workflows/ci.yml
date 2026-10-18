@@ -105,6 +105,19 @@ jobs:
           set -o pipefail
           supabase start --ignore-health-check 2>&1 | tee -a "$RUNNER_TEMP/e2e.log"
 
+      # Migration 0016 creates the private bucket only when schema `storage` exists (the Storage service creates it on start).
+      # Wait for it so the bucket is made by the migration; if it is still late, the app creates the bucket on first use.
+      - name: Wait until Storage has created its schema
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            have=$(psql "$DATABASE_URL" -Atqc "select coalesce(to_regclass('storage.buckets')::text, '')" || true)
+            echo "attempt $i: storage.buckets=${have:-none}"
+            if [ -n "$have" ]; then exit 0; fi
+            sleep 2
+          done
+          echo "Storage schema did not appear (the app will create the bucket on first use)"; exit 0
+
       - name: Apply our migrations on real Supabase Postgres (twice — 2nd must be a no-op)
         run: |
           set -euo pipefail
@@ -174,7 +187,7 @@ jobs:
           {
             # Errors only from the containers (a full tail is mostly request noise); the app log goes last so the
             # annotation, which keeps the end of this file, always shows it.
-            for c in $(docker ps -a --format '{{.Names}}' | grep -E 'auth|rest|db' || true); do
+            for c in $(docker ps -a --format '{{.Names}}' | grep -E 'auth|rest|db|storage' || true); do
               echo "=== container $c (errors) ==="; docker logs --tail 400 "$c" 2>&1 | grep -E 'ERROR|FATAL|PANIC|"status":(4|5)[0-9][0-9]' | grep -v 'level":"info' | tail -n 8 | cut -c1-400 || true
             done
             echo "=== next.log ==="; tail -n 40 "$RUNNER_TEMP/next.log" 2>&1 || true

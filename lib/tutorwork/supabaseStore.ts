@@ -37,7 +37,7 @@ export function createSupabaseTutorWorkStore(): TutorWorkStore {
         p_attempt: a.attempt,
         p_used_hint: a.usedHint,
         p_taken_on: a.takenOn,
-        p_assignment: null,
+        p_assignment: a.assignmentId,
         p_supersedes: a.supersedes,
         p_by: a.byMemberId,
         p_client_id: a.clientId,

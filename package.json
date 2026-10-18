@@ -21,7 +21,8 @@
     "db:create-family": "tsx --env-file-if-exists=.env.local scripts/create-real-family.ts",
     "db:import-frame": "tsx --env-file-if-exists=.env.local scripts/import-frame.ts",
     "gen:config": "tsx scripts/gen-config-sql.ts",
-    "doctor": "tsx --env-file-if-exists=.env.local scripts/doctor.ts"
+    "doctor": "tsx --env-file-if-exists=.env.local scripts/doctor.ts",
+    "storage:orphans": "tsx --env-file-if-exists=.env.local scripts/storage-orphans.ts"
   },
   "dependencies": {
     "@fontsource/be-vietnam-pro": "^5.3.0",

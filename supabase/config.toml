@@ -31,7 +31,13 @@ enabled = false
 [inbucket]
 enabled = false
 
+# Storage is ON only so the e2e test can really upload / download files of the private bucket "english-work"
+# (migration 0016 creates that bucket; the app creates it itself if this stack was too slow to have Storage ready).
 [storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[storage.image_transformation]
 enabled = false
 
 [edge_runtime]

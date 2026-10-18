@@ -46,6 +46,8 @@ export const resultBodySchema = z
     used_hint: z.boolean(),
     taken_on: isoDate,
     supersedes_id: uuid.optional(),
+    /** The assignment (link / PDF given in the app) this result is about; the database checks it is the same learner's. */
+    assignment_id: uuid.optional(),
   })
   .refine((b) => (b.mode === "frame" ? Boolean(b.frame_id) && b.tags.length === 0 && (b.source === undefined || b.source === "test") : !b.frame_id), {
     message: "a framed result has a frame and takes its tags from it; a quick result has none",
