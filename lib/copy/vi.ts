@@ -632,6 +632,8 @@ export const purgePage = {
     "Việc này xóa vĩnh viễn bài làm, kết quả, ghi chú buổi học, bài luyện, file ảnh/PDF và tên đăng nhập ngắn của em trong app. Không hoàn tác được.",
   keepsAccount: "Tài khoản đăng nhập (email) của em và của mọi người KHÔNG bị xóa. Phần của Study Launcher không bị đụng tới.",
   backupNote: "Bản sao lưu hằng tuần vẫn còn dữ liệu cũ cho đến khi tự hết hạn (khoảng 30 ngày).",
+  needsMigration:
+    "Màn này cần cập nhật cơ sở dữ liệu trước (SQL 0017). Bạn chưa xóa gì cả. Hãy áp file 0017_readiness.sql (Actions → Apply database migrations) rồi mở lại trang này.",
   countsTitle: "Sẽ bị xóa",
   countLine: (label: string, n: number) => `${label}: ${n}`,
   countsNone: "Không có dữ liệu nào để xóa ngoài hồ sơ của em.",

@@ -675,6 +675,7 @@ Nhánh `feature/s5c-readiness`. Kế hoạch `docs/plans/s5c-readiness.md`; ki�
 
 ### SQL cần áp
 
+- **ÁP `0017` TRƯỚC khi thử trên preview hoặc gộp PR.** `0017` tương thích ngược với code của `main` (hàm cũ vẫn chạy với lời gọi cũ), nên áp trước không làm hỏng bản đang chạy. Ngược lại, nếu code mới chạy khi `0017` chưa áp thì: ghi buổi học/ghi bài ngoài app vẫn chạy như cũ (chỉ không có phần mới); trang "Xóa dữ liệu của em" hiện câu "cần áp 0017" thay vì báo lỗi.
 - **`db/migrations/0017_readiness.sql`** — Actions → **Apply database migrations** (gõ APPLY) hoặc dán vào SQL Editor. Chỉ **thêm/thay hàm** (`create or replace`) và một bảng mới `tutorwork_settings` (có sẵn giá trị 14); chạy lại an toàn; không sửa dữ liệu cũ. Nên bấm chạy tay *Weekly backup* **trước** khi áp.
 - Áp xong, **không** cần chạy lại bước nào khác. (Hàm ghi buổi học bản cũ và các lời gọi cũ vẫn chạy được.)
 

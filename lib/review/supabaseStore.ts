@@ -112,7 +112,8 @@ export function createSupabaseReviewStore(): ReviewStore {
         p_assistance: a.assistance,
         p_by: a.byMemberId,
         p_client_id: a.clientId,
-        p_backdate_reason: a.backdateReason,
+        // Sent only when a reason was given (see the same note in lib/tutorwork/supabaseStore.ts): the pre-0017 9-argument function still matches.
+        ...(a.backdateReason ? { p_backdate_reason: a.backdateReason } : {}),
       });
       if (error) dbError("eng_record_offline_attempt", error);
       return data;

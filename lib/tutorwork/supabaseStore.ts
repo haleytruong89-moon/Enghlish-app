@@ -90,7 +90,9 @@ export function createSupabaseTutorWorkStore(): TutorWorkStore {
         p_supersedes: a.supersedes,
         p_by: a.byMemberId,
         p_client_id: a.clientId,
-        p_practised_target_ids: a.practisedTargetIds,
+        // Sent only when there is something to log: the call then also works against the previous (pre-0017) signature, so the code can be
+        // deployed before the SQL is applied.
+        ...(a.practisedTargetIds.length > 0 ? { p_practised_target_ids: a.practisedTargetIds } : {}),
       });
       if (error) dbError("eng_write_lesson_note_v2", error);
       return data;
