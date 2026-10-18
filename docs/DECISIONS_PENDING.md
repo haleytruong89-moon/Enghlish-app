@@ -1,4 +1,6 @@
-# Các quyết định đang chờ phụ huynh — có đề xuất và lý do (18/10/2026)
+# Các quyết định của phụ huynh — có đề xuất và lý do (18/10/2026)
+
+> **ĐÃ QUYẾT 18/10/2026 21:53: phụ huynh đồng ý tất cả đề xuất A1–A10, B1–B11, C1–C8, D1–D4.** Bổ sung cùng lúc: yêu cầu "app phải rất thuận tiện cho gia sư" (soạn bài từ PDF, tự chấm, gợi ý và soạn bài bổ sung theo điểm yếu, kiểu luyện phù hợp từng loại lỗi) — đề xuất xử lý ở mục E (chờ duyệt).
 
 Cách trả lời nhanh: "**đồng ý tất cả**", hoặc "đồng ý tất cả trừ #x, #y" kèm lựa chọn của bạn.
 Nguồn: audit 18/10 (`docs/AUDIT_2026-10-18.md`), PROGRESS (bảng quyết định #1–#13, S4 "cần xác nhận"), PR #12, PR #14.
@@ -55,3 +57,18 @@ Nguồn: audit 18/10 (`docs/AUDIT_2026-10-18.md`), PROGRESS (bảng quyết đ�
 | D2 | Cách đưa gia sư vào | **Hướng dẫn 1 trang + buổi 30 phút mỗi gia sư**, có bạn ngồi cùng | Cổng G4: gia sư hiểu thang chấm, quy tắc "không ghi điểm trong lời nhắn cho em" |
 | D3 | Đổi gia sư | **Chưa làm công cụ**; Claude viết hướng dẫn thao tác khi nào cần | Việc hiếm, tốn công làm trước |
 | D4 | Hạn nộp, nộp muộn | **Chỉ hiển thị "quá hạn" cho gia sư**, không trừ điểm, không chặn nộp | App gia đình, không cần phạt. Gia sư biết để nhắc |
+
+## E. Đề xuất mới 18/10: "Studio bài tập" — app soạn bài, tự chấm, gợi ý cho gia sư (CHỜ DUYỆT)
+
+Mục tiêu (lời phụ huynh): gia sư thấy app **tiện và muốn dùng**. Gia sư chỉ việc tải lên → xem lại → duyệt. App lo phần soạn bài, chấm và gợi ý.
+
+| # | Câu hỏi | Đề xuất | Lý do |
+|---|---|---|---|
+| E1 | Có làm "Studio bài tập" không | **Có, chia 3 bước nhỏ**, làm sau S5c và **trước** S6/S7 | Gia sư có dùng app hay không là rủi ro lớn nhất hiện nay. Bài làm và chấm trong app cũng tạo ra bằng chứng tốt hơn cho S7 |
+| E2 | Bước 1: tải PDF/Word đề + đáp án → app tạo bài làm trên app, tự chấm, tự gắn nhãn câu sai | **Làm đầu tiên**, sau **thử nhanh nửa ngày** bằng đề Destination thật để đo độ chính xác và chi phí | Lợi ích lớn nhất. Nền tự chấm theo đáp án đã có từ S4. Đây là điểm chưa biết, nên phải thử trước khi hứa |
+| E3 | Bước 2: theo điểm yếu → AI **soạn nháp** bài bổ sung (8–12 câu + đáp án + giải thích ngắn) và gợi ý nguồn; gia sư sửa/duyệt rồi mới giao | **Làm thứ hai**. Gộp luôn phần "gợi ý nguồn" của S5b-2 vào đây | AI chỉ đề xuất, người duyệt (đúng nguyên tắc của app). Câu do AI viết mới nên không vướng bản quyền |
+| E4 | Bước 3: **kiểu luyện phù hợp từng loại điểm yếu** (vd. câu điều kiện thì so sánh cặp câu và chuyển tình huống thật sang câu giả định; idiom thì đoán nghĩa từ ngữ cảnh, nhóm theo chủ đề, ôn giãn cách) | **Claude soạn "thư viện kiểu luyện" dạng tài liệu trước**, gia sư góp ý, sau đó AI dùng nó khi soạn bài | Phương pháp dạy cần người dạy đồng ý. Có thư viện thì bài AI soạn đúng kiểu, không ngẫu nhiên |
+| E5 | Lưu **nội dung đề** của sách có bản quyền (Destination…) trong app | **Cho phép, chỉ dùng riêng trong gia đình**: không chia sẻ, không xuất ra ngoài, ghi rõ nguồn. Đề thi chính thức thì chỉ dùng bản gia sư tự cung cấp | Khác với quyết định trước đây là "không lưu chữ của đề". Nếu không lưu thì không làm được bài trên app |
+| E6 | Bật AI (Claude) | **Bật cho việc của gia sư** (đọc đề, soạn nháp). **Không gửi tên hay thông tin của con**, chỉ gửi nội dung bài và tên nhãn lỗi. Giữ trần $10/tháng, có nút tắt | Cần văn bản đồng ý AI (A8 viết gộp luôn). Chi phí ước tính vài cent đến vài chục cent mỗi đề; con số thật sẽ đo khi thử nhanh |
+| E7 | Học sinh có thấy câu nào sai sau khi làm bài trong app không | **Thấy "các câu cần xem lại" và lời giải thích do gia sư duyệt, không thấy điểm số** | Học được ngay từ lỗi, vẫn giữ quy tắc "học sinh không thấy điểm". Chỗ giao với S6 sẽ chốt khi lên kế hoạch |
+| E8 | Thứ tự mới | **S5c → thử nhanh AI (nửa ngày) → đưa gia sư vào, cho xem mockup Studio → Studio bước 1 → bước 2 → S6 → S7 → S8** | Gia sư được dùng sớm cái đang có, và góp ý cho Studio trước khi code |
