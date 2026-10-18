@@ -4,9 +4,12 @@ name: Weekly backup (encrypted)
 # tables auth.users and auth.identities (S5c, decision A3: without them a restored database has nobody who can sign in) → age-encrypted →
 # private workflow artifact kept 30 days. Data is never printed to the log: only row COUNTS reach the log and the run summary.
 #
-# S5c (G0): before anything is encrypted, the job RESTORES both dumps into a throwaway Postgres 17 service container (it lives only for
-# this job) and compares the row counts of english.learners, english.members and auth.users with the live database. A mismatch fails
-# the job (red run + email); the encrypted files are still produced and uploaded so a possibly-good backup is never lost.
+# S5c (G0): before anything is encrypted, the job RESTORES the dumps into a throwaway Postgres 17 service container (it lives only for
+# this job) and compares the row counts of EVERY table of schema english plus auth.users with the live database
+# (scripts/ops/restore-check.sh; unit-tested). A count mismatch, or a restore error that names schema english or auth, fails the job
+# (red run + email); the encrypted files are still produced and uploaded so a possibly-good backup is never lost.
+# The main dump (public + english) and the login-table dump are separate steps: if the login-table dump fails, the main dump is still
+# checked, encrypted and uploaded, and the run is marked red at the end.
 # The plain dumps exist only in /dev/shm (RAM-backed, mode 700) of the one-off runner VM, are never uploaded, and are shredded at the end
 # (step "Remove the plain dumps"). The artifact holds only *.dump.age files, encrypted for the age public key below.
 #
@@ -46,6 +49,8 @@ jobs:
           --health-timeout 5s
           --health-retries 12
     steps:
+      - uses: actions/checkout@v5
+
       - name: Check secrets are present (without printing them)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -65,8 +70,8 @@ jobs:
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
           sudo apt-get install -y -qq "postgresql-client-${PG_MAJOR}" > /dev/null
 
-      - name: Dump public + english, and the login tables (plain files only in RAM-backed temp)
-        id: dump
+      - name: Dump public + english (plain file only in RAM-backed temp)
+        id: main_dump
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PGSSLMODE: require
@@ -77,96 +82,50 @@ jobs:
           plain="$(mktemp -d -p /dev/shm backup-plain.XXXXXX)"
           echo "PLAIN_DIR=$plain" >> "$GITHUB_ENV"
           echo "BACKUP_STAMP=$(date -u +%Y%m%dT%H%M%SZ)" >> "$GITHUB_ENV"
-          # Row counts of the live database before and after the dumps (numbers only): a row written while we dump is not a failure.
-          counts() { "$bin/psql" "$DATABASE_URL" -qtAF ' ' -c "select (select count(*) from english.learners), (select count(*) from english.members), (select count(*) from auth.users)"; }
-          counts > "$plain/counts.before"
-          # Custom format → restore with pg_restore.
+          # Row counts of every english table of the live database before and after the dump (numbers only): a row written while we dump is not a failure.
+          "$bin/psql" "$DATABASE_URL" -qtA -v ON_ERROR_STOP=1 -f scripts/ops/counts-english.sql > "$plain/counts.before"
+          # Custom format -> restore with pg_restore.
           "$bin/pg_dump" "$DATABASE_URL" --format=custom --no-owner \
               --schema=public --schema=english --file="$plain/main.dump"
-          # The login tables go in their own dump (pg_dump ignores --schema when --table is used). Without them nobody could sign in after a restore.
-          "$bin/pg_dump" "$DATABASE_URL" --format=custom --no-owner \
-              --table=auth.users --table=auth.identities --file="$plain/auth.dump"
-          counts > "$plain/counts.after"
+          "$bin/psql" "$DATABASE_URL" -qtA -v ON_ERROR_STOP=1 -f scripts/ops/counts-english.sql > "$plain/counts.after"
           test "$(stat -c %s "$plain/main.dump")" -gt 1024 || { echo "::error::main dump is suspiciously small"; exit 1; }
-          test "$(stat -c %s "$plain/auth.dump")" -gt 512 || { echo "::error::login-tables dump is suspiciously small"; exit 1; }
-          echo "dumps ok (sizes: main $(stat -c %s "$plain/main.dump") bytes, login tables $(stat -c %s "$plain/auth.dump") bytes; kept in RAM until encrypted)"
+          echo "main dump ok ($(stat -c %s "$plain/main.dump") bytes, kept in RAM until encrypted)"
 
-      - name: Restore check - restore both dumps into the throwaway Postgres 17 and compare row counts
-        id: restore_check
+      # May fail without stopping the rest: the main dump is still checked, encrypted and uploaded. The last step turns this into a red run.
+      - name: Dump the login tables auth.users + auth.identities (own step)
+        id: auth_dump
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PGSSLMODE: require
         run: |
           set -euo pipefail
           umask 077
           bin="/usr/lib/postgresql/${PG_MAJOR}/bin"
           plain="$PLAIN_DIR"
-          export PGSSLMODE=disable PGPASSWORD=throwaway-inside-this-job
-          rc=(-h 127.0.0.1 -U postgres)
-          "$bin/psql" "${rc[@]}" -qAt -v ON_ERROR_STOP=1 -d postgres -c "create database restore_check" > /dev/null
-          rcdb=(-h 127.0.0.1 -U postgres -d restore_check)
+          trap 'rm -f "$plain/auth.dump.part" "$plain/auth.dump"' ERR
+          "$bin/psql" "$DATABASE_URL" -qtA -v ON_ERROR_STOP=1 -f scripts/ops/counts-auth.sql > "$plain/auth.counts.before"
+          # pg_dump ignores --schema when --table is used, hence a dump of its own. Without these tables nobody could sign in after a restore.
+          "$bin/pg_dump" "$DATABASE_URL" --format=custom --no-owner \
+              --table=auth.users --table=auth.identities --file="$plain/auth.dump.part"
+          "$bin/psql" "$DATABASE_URL" -qtA -v ON_ERROR_STOP=1 -f scripts/ops/counts-auth.sql > "$plain/auth.counts.after"
+          test "$(stat -c %s "$plain/auth.dump.part")" -gt 512 || { echo "::error::login-tables dump is suspiciously small"; exit 1; }
+          mv "$plain/auth.dump.part" "$plain/auth.dump"
+          echo "login-tables dump ok ($(stat -c %s "$plain/auth.dump") bytes)"
 
-          # What the dump expects to find on Supabase: the API roles, the auth schema with auth.uid() (policies call it), nothing else.
-          # auth.users and auth.identities themselves come from the login-tables dump, not from here.
-          "$bin/psql" "${rcdb[@]}" -q -v ON_ERROR_STOP=1 > /dev/null <<'SQL'
-          create role anon nologin;
-          create role authenticated nologin;
-          create role service_role nologin;
-          create role authenticator nologin;
-          create role supabase_auth_admin nologin;
-          drop schema public cascade; -- the dump creates public itself
-          create schema auth;
-          create function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
-          create function auth.role() returns text language sql stable as $$ select null::text $$;
-          create function auth.jwt() returns jsonb language sql stable as $$ select null::jsonb $$;
-          SQL
-
-          # Restore order: login tables first (english.members points at auth.users), then public + english.
-          # Triggers of auth.users are left out of the login restore: they call functions of the Launcher that are not restored yet.
-          "$bin/pg_restore" -l "$plain/auth.dump" | { grep -v ' TRIGGER ' || true; } > "$plain/auth.list"
-          set +e
-          "$bin/pg_restore" --no-owner --no-acl -L "$plain/auth.list" "${rcdb[@]}" "$plain/auth.dump" 2> "$plain/auth.err"
-          "$bin/pg_restore" --no-owner --no-acl "${rcdb[@]}" "$plain/main.dump" 2> "$plain/main.err"
-          set -e
-          # Error messages can quote data, so none is printed - only how many there were, and object-name errors that carry no row data.
-          errors=$(cat "$plain/auth.err" "$plain/main.err" | grep -c '^pg_restore: error:' || true)
-          cat "$plain/auth.err" "$plain/main.err" \
-            | grep -E '^pg_restore: error: could not execute query: ERROR:  (relation|schema|role|type|function|extension|policy|trigger) "[A-Za-z0-9_.]+" (does not exist|already exists)$' \
-            | head -n 10 || true
-
-          # Counts: restored database vs. the live one (before and after the dumps; a value in between is fine).
-          read -r rl rme ru < <("$bin/psql" "${rcdb[@]}" -qtAF ' ' -c "select (select count(*) from english.learners), (select count(*) from english.members), (select count(*) from auth.users)")
-          read -r bl bm bu < "$plain/counts.before"
-          read -r al am au < "$plain/counts.after"
-          within() { # restored, before, after
-            local lo=$2 hi=$3
-            if [ "$lo" -gt "$hi" ]; then lo=$3; hi=$2; fi
-            [ "$1" -ge "$lo" ] && [ "$1" -le "$hi" ]
-          }
-          failed=0
-          {
-            echo "## Restore check (throwaway Postgres 17 inside this job)"
-            echo
-            echo "| Table | Live (before / after dump) | Restored | Result |"
-            echo "|---|---|---|---|"
-            for row in "english.learners:$bl:$al:$rl" "english.members:$bm:$am:$rme" "auth.users:$bu:$au:$ru"; do
-              IFS=: read -r name before after restored <<< "$row"
-              if within "$restored" "$before" "$after"; then res="OK"; else res="MISMATCH"; failed=1; fi
-              echo "| $name | $before / $after | $restored | $res |"
-            done
-            echo
-            echo "Errors reported by pg_restore (count only, text not shown): $errors"
-            if [ "$failed" -eq 0 ]; then
-              echo
-              echo "Restore check PASSED. The encrypted files below can be restored."
-            else
-              echo
-              echo "**Restore check FAILED.** The encrypted files were still saved, but do not rely on this backup until the cause is found."
-            fi
-          } | tee -a "$GITHUB_STEP_SUMMARY"
-          if [ "$failed" -ne 0 ]; then echo "::error::restore check failed: row counts differ from the live database"; exit 1; fi
+      - name: Restore check - restore the dumps into the throwaway Postgres 17 and compare row counts
+        id: restore_check
+        if: ${{ steps.main_dump.outcome == 'success' }}
+        env:
+          RC_PASSWORD: throwaway-inside-this-job
+        run: |
+          set -euo pipefail
+          PG_BIN="/usr/lib/postgresql/${PG_MAJOR}/bin" bash scripts/ops/restore-check.sh
 
       # Runs even when the restore check failed (the plain dumps are still there): a possibly-good backup is better than none.
       - name: Encrypt with age
         id: encrypt
-        if: ${{ always() && steps.dump.outcome == 'success' }}
+        if: ${{ always() && steps.main_dump.outcome == 'success' }}
         env:
           BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
         run: |
@@ -174,10 +133,14 @@ jobs:
           umask 077
           mkdir -p backup
           main="backup/learning-os-${BACKUP_STAMP}.dump.age"
-          auth="backup/learning-os-auth-${BACKUP_STAMP}.dump.age"
           age --encrypt --recipient "$BACKUP_AGE_RECIPIENT" --output "$main" "$PLAIN_DIR/main.dump"
-          age --encrypt --recipient "$BACKUP_AGE_RECIPIENT" --output "$auth" "$PLAIN_DIR/auth.dump"
-          for f in "$main" "$auth"; do
+          files=("$main")
+          if [ -f "$PLAIN_DIR/auth.dump" ]; then
+            auth="backup/learning-os-auth-${BACKUP_STAMP}.dump.age"
+            age --encrypt --recipient "$BACKUP_AGE_RECIPIENT" --output "$auth" "$PLAIN_DIR/auth.dump"
+            files+=("$auth")
+          fi
+          for f in "${files[@]}"; do
             size="$(stat -c %s "$f")"
             test "$size" -gt 512 || { echo "::error::$(basename "$f") is suspiciously small"; exit 1; }
             echo "backup ok: $(basename "$f") (${size} bytes, encrypted)"
@@ -202,3 +165,12 @@ jobs:
             rm -rf "$PLAIN_DIR"
           fi
           echo "plain dumps removed"
+
+      # The login-table dump step is allowed to fail without stopping the upload above; here the run is turned red so it cannot go unnoticed.
+      - name: Mark the run red if the login-table dump failed
+        if: ${{ always() && steps.auth_dump.outcome == 'failure' }}
+        run: |
+          echo "::error::the login-table dump (auth.users, auth.identities) FAILED: the artifact holds the main dump only, so a restore could not sign anybody in"
+          echo "## Login-table dump FAILED" >> "$GITHUB_STEP_SUMMARY"
+          echo "The artifact has the main dump only. Re-run the workflow; do not rely on this backup to bring back sign-in." >> "$GITHUB_STEP_SUMMARY"
+          exit 1

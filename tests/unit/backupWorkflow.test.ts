@@ -16,22 +16,30 @@ describe("backup workflow (S5c: login tables + verified restore)", () => {
     expect(yml).toMatch(/permissions:\s+contents: read/);
   });
 
-  it("dumps public + english and, separately, the two login tables", () => {
-    expect(yml).toContain("--schema=public --schema=english");
-    expect(yml).toContain("--table=auth.users --table=auth.identities");
-    expect(yml).toContain("learning-os-auth-");
-  });
-
-  it("restores into a throwaway Postgres 17 service container BEFORE encrypting, and fails the job on a count mismatch", () => {
+  it("restores into a throwaway Postgres 17 service container BEFORE encrypting, by calling the tested script", () => {
     expect(yml).toContain("image: postgres:17");
     expect(yml).toContain('PG_MAJOR: "17"');
-    expect(at("Restore check - restore both dumps")).toBeGreaterThan(at("id: dump"));
-    expect(at("Restore check - restore both dumps")).toBeLessThan(at("name: Encrypt with age"));
-    for (const t of ["english.learners", "english.members", "auth.users"]) expect(yml, t).toContain(t);
-    expect(yml).toContain("exit 1");
-    expect(yml).toContain("restore check failed: row counts differ");
+    expect(yml).toContain("actions/checkout@v5"); // the script lives in the repo
+    expect(at("id: restore_check")).toBeGreaterThan(at("id: main_dump"));
+    expect(at("id: restore_check")).toBeGreaterThan(at("id: auth_dump"));
+    expect(at("id: restore_check")).toBeLessThan(at("id: encrypt"));
+    expect(yml).toContain("bash scripts/ops/restore-check.sh");
+    // the pass/fail decision is NOT in a piped sub-shell any more (it was, and the job could never fail): no `| tee` around a flag
+    expect(yml).not.toMatch(/failed=1/);
+    expect(yml).not.toMatch(/\|\s*tee\s+-a/);
     // the encrypted copy is kept even when the check fails (the job still goes red), so a good backup is never lost
-    expect(yml).toMatch(/Encrypt with age\s+id: encrypt\s+if: \$\{\{ always\(\) && steps\.dump\.outcome == 'success' \}\}/);
+    expect(yml).toMatch(/Encrypt with age\s+id: encrypt\s+if: \$\{\{ always\(\) && steps\.main_dump\.outcome == 'success' \}\}/);
+  });
+
+  it("dumps public + english first in its own step; the login tables are a separate step that may fail without stopping the upload, and turns the run red at the end", () => {
+    expect(yml).toContain("--schema=public --schema=english");
+    expect(yml).toContain("--table=auth.users --table=auth.identities");
+    expect(at("id: main_dump")).toBeLessThan(at("id: auth_dump"));
+    expect(yml).toMatch(/id: auth_dump\s+continue-on-error: true/);
+    expect(yml).toMatch(/if: \$\{\{ always\(\) && steps\.auth_dump\.outcome == 'failure' \}\}/);
+    expect(at("Mark the run red")).toBeGreaterThan(at("name: Upload encrypted artifact"));
+    // the encrypt step takes the login dump only if it exists
+    expect(yml).toContain('if [ -f "$PLAIN_DIR/auth.dump" ]');
   });
 
   it("keeps encryption: plain dumps only in RAM-backed temp, only *.dump.age uploaded, plain files shredded", () => {
@@ -49,12 +57,15 @@ describe("backup workflow (S5c: login tables + verified restore)", () => {
     expect(yml).toContain("age1*)");
   });
 
-  it("prints counts only: no table content, no dump text, no secret", () => {
-    // nothing selects row data; the only SELECTs are count(*) and the error text of pg_restore is never echoed except object-name errors
-    const selects = [...yml.matchAll(/select [^\n"]*/g)].map((m) => m[0]);
-    expect(selects.length).toBeGreaterThan(0);
-    for (const s of selects) expect(s, s).toMatch(/count\(\*\)|null::|^select 1/);
-    expect(yml).toContain("count only, text not shown");
+  it("prints counts only: the SQL files select counts, the workflow echoes no secret", () => {
+    for (const f of ["counts-english.sql", "counts-auth.sql"]) {
+      const sql = readFileSync(path.join(process.cwd(), "scripts", "ops", f), "utf8").replace(/^--.*$/gm, "");
+      expect(sql, f).toMatch(/count\(\*\)/);
+      expect(sql, f).not.toMatch(/select\s+\*|email|password|encrypted_password|identity_data/i);
+    }
+    const script = readFileSync(path.join(process.cwd(), "scripts", "ops", "restore-check.sh"), "utf8");
+    expect(script).toContain("Error text and row data are never shown.");
+    expect(script).not.toMatch(/cat\s+"?\$work\/(main|auth)\.err/);
     expect(yml).not.toMatch(/echo[^\n]*\$\{?DATABASE_URL|echo[^\n]*\$\{?BACKUP_AGE_RECIPIENT|set -x/);
     expect(yml).toContain("POSTGRES_PASSWORD: throwaway-inside-this-job");
   });
