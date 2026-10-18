@@ -90,6 +90,7 @@ export function createSupabaseTutorWorkStore(): TutorWorkStore {
         p_supersedes: a.supersedes,
         p_by: a.byMemberId,
         p_client_id: a.clientId,
+        p_practised_target_ids: a.practisedTargetIds,
       });
       if (error) dbError("eng_write_lesson_note_v2", error);
       return data;

@@ -172,6 +172,16 @@ describe("S5b-1 request bodies", () => {
     ).toBe(false);
     expect(sessionNoteBodySchema.safeParse({ ...goodNote, rechecks: [{ tag_key: "dang-tu", result: "maybe" }] }).success).toBe(false);
   });
+  it("session note: practised skills are optional, at most 30, and reach the store", async () => {
+    expect(sessionNoteBodySchema.parse(goodNote).practised_target_ids).toEqual([]);
+    expect(sessionNoteBodySchema.safeParse({ ...goodNote, practised_target_ids: ["B-W-1", "B-A3-REVISE"] }).success).toBe(true);
+    expect(sessionNoteBodySchema.safeParse({ ...goodNote, practised_target_ids: Array.from({ length: 31 }, (_, i) => `T-${i}`) }).success).toBe(false);
+    expect(sessionNoteBodySchema.safeParse({ ...goodNote, practised_target_ids: [""] }).success).toBe(false);
+    const s = makeStore();
+    const r = await handleWriteSessionNote(deps("tutorAn", s), AN, { ...goodNote, practised_target_ids: ["A-W-1"] });
+    expect(r.status).toBe(201);
+    expect(s.writeSessionNote).toHaveBeenCalledWith(expect.objectContaining({ practisedTargetIds: ["A-W-1"] }));
+  });
   it("tags for writing: 1..3; tagging wrong items needs at least one", () => {
     expect(writingTagsBodySchema.safeParse({ tags: ["a", "b", "c"] }).success).toBe(true);
     expect(writingTagsBodySchema.safeParse({ tags: ["a", "b", "c", "d"] }).success).toBe(false);
@@ -349,7 +359,7 @@ describe("S5b-1 handlers: writes", () => {
       expect(r.status).toBe(201);
       expect(s.writeSessionNote).toHaveBeenCalledWith({
         learnerId: AN, sessionDate: "2026-10-16", studied: "Unit 7", weakTags: ["dang-tu"], message: "Ôn dạng từ", noteForParent: "Em tiến bộ",
-        rechecks: [{ tag_key: "cum-dong-tu", result: "ok" }], supersedes: null, byMemberId: `m-${who}`, clientId: "client-0003",
+        rechecks: [{ tag_key: "cum-dong-tu", result: "ok" }], practisedTargetIds: [], supersedes: null, byMemberId: `m-${who}`, clientId: "client-0003",
       });
     }
   });

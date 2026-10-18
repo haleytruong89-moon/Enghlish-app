@@ -91,6 +91,7 @@ test.describe.serial("S5b-1 tutor work", () => {
     await page.goto(`/learners/${NG}/notes/new`);
     await expect(page.getByRole("heading", { level: 1, name: sessionNotePage.title("Nguyên (thử)") })).toBeVisible();
     await page.getByTestId("session-studied").fill(studied);
+    await page.locator('button[data-testid^="session-practised-"]').first().click(); // "practised today" (optional) - logged as an exposure
     await page.getByTestId("tag-chip-dang-tu").click();
     await page.getByTestId("tag-chip-cum-dong-tu").click();
     await page.getByTestId("tag-chip-phat-am").click();

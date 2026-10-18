@@ -180,7 +180,7 @@ describe("S5b-1 'Chờ gắn nhãn' and 'Ghi buổi học' and writing tags", ()
     expect(render(createElement(PendingTags, { learnerId: LEARNER, items: [], tags, isParent: false }))).toContain(resultPage.pendingEmpty);
   });
 
-  const note = { learnerId: LEARNER, tags, previous: null, today: "2026-10-17", minDate: "2026-06-19" };
+  const note = { learnerId: LEARNER, tags, skills: [{ id: "B-W-1", title: "Viết đoạn lập luận" }], previous: null, today: "2026-10-17", minDate: "2026-06-19" };
   it("session note: fields with the real limits, the three answers for each tag due, links to the result screen", () => {
     const html = render(createElement(SessionNoteForm, { ...note, due: [weakTag({ tagKey: "cum-dong-tu", label: "Cụm động từ", recheckDue: true })] }));
     expect(html).toContain('maxLength="500"');
@@ -191,6 +191,11 @@ describe("S5b-1 'Chờ gắn nhãn' and 'Ghi buổi học' and writing tags", ()
     expect(html).toContain(sessionNotePage.recheckOptions.still_wrong);
     expect(html).toContain(`href="/learners/${LEARNER}/results/new"`);
     expect(html).toContain(sessionNotePage.previousNone);
+    // "practised today" chips: skills of the current target set, optional
+    expect(html).toContain(sessionNotePage.practisedTitle);
+    expect(html).toContain('data-testid="session-practised-B-W-1"');
+    expect(html).toContain("Viết đoạn lập luận");
+    expect(render(createElement(SessionNoteForm, { ...note, skills: [], due: [] }))).toContain(sessionNotePage.practisedNone);
   });
   it("session note without anything due says so; the previous session shows tag labels, never keys", () => {
     const html = render(

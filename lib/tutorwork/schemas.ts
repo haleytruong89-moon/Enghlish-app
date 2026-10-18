@@ -1,6 +1,7 @@
 /** Request bodies for the S5b-1 routes (zod). Parsed AFTER requireAccess, so outsiders always get 404. */
 import { z } from "zod";
 import {
+  MAX_PRACTISED_PER_NOTE,
   MAX_WEAK_TAGS_PER_NOTE,
   MAX_WRITING_TAGS,
   MESSAGE_MAX,
@@ -87,6 +88,8 @@ export const sessionNoteBodySchema = z.strictObject({
     .refine((r) => new Set(r.map((x) => x.tag_key)).size === r.length, {
       message: "each tag once",
     }),
+  /** Skills (targets.id) practised in the session; the database checks they belong to the learner's track. */
+  practised_target_ids: z.array(z.string().trim().min(1).max(100)).max(MAX_PRACTISED_PER_NOTE).default([]),
   supersedes_id: uuid.optional(),
 });
 export type SessionNoteBody = z.infer<typeof sessionNoteBodySchema>;

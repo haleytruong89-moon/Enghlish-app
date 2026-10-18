@@ -7,6 +7,7 @@ import { fallbackLabels, sessionNotePage } from "@/lib/copy/vi";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { failText, postJson } from "@/lib/tutorwork/client";
 import {
+  MAX_PRACTISED_PER_NOTE,
   MAX_WEAK_TAGS_PER_NOTE,
   MESSAGE_MAX,
   PARENT_NOTE_MAX,
@@ -27,6 +28,7 @@ import { useTags } from "./useTags";
 export function SessionNoteForm({
   learnerId,
   tags: initialTags,
+  skills,
   due,
   previous,
   today,
@@ -34,6 +36,8 @@ export function SessionNoteForm({
 }: {
   learnerId: string;
   tags: TagInfo[];
+  /** Skills of the learner's current target set (id + title from the catalogue): the "practised today" chips. */
+  skills: { id: string; title: string }[];
   due: WeakPoint[];
   previous: LastNote | null;
   today: string;
@@ -44,6 +48,7 @@ export function SessionNoteForm({
   const [date, setDate] = useState(today);
   const [studied, setStudied] = useState("");
   const [weak, setWeak] = useState<string[]>([]);
+  const [practised, setPractised] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [parentNote, setParentNote] = useState("");
   const [rechecks, setRechecks] = useState<Record<string, RecheckResult | null>>({});
@@ -57,7 +62,7 @@ export function SessionNoteForm({
     e.preventDefault();
     setError(null);
     const answered = Object.entries(rechecks).flatMap(([tag_key, result]) => (result ? [{ tag_key, result }] : []));
-    if (!studied.trim() && weak.length === 0 && !message.trim() && !parentNote.trim() && answered.length === 0) return setError(sessionNotePage.empty);
+    if (!studied.trim() && weak.length === 0 && practised.length === 0 && !message.trim() && !parentNote.trim() && answered.length === 0) return setError(sessionNotePage.empty);
     if (answered.some((a) => a.result === "ok" && weak.includes(a.tag_key))) return setError(sessionNotePage.recheckConflict);
     setBusy(true);
     const r = await postJson<{ id: string }>(`/api/learners/${learnerId}/session-notes`, {
@@ -65,6 +70,7 @@ export function SessionNoteForm({
       session_date: date,
       ...(studied.trim() ? { studied: studied.trim() } : {}),
       weak_tags: weak,
+      practised_target_ids: practised,
       ...(message.trim() ? { message: message.trim() } : {}),
       ...(parentNote.trim() ? { note_for_parent: parentNote.trim() } : {}),
       rechecks: answered,
@@ -107,6 +113,38 @@ export function SessionNoteForm({
             className={`min-h-11 ${field}`}
           />
         </label>
+
+        <div className="flex flex-col gap-1" data-testid="session-practised">
+          <h2 className="text-base font-semibold">{sessionNotePage.practisedTitle}</h2>
+          <p className="text-sm text-muted">{sessionNotePage.practisedHelp}</p>
+          {skills.length === 0 ? (
+            <p className="text-sm text-muted">{sessionNotePage.practisedNone}</p>
+          ) : (
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {skills.map((t) => {
+                const on = practised.includes(t.id);
+                return (
+                  <li key={t.id}>
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={on}
+                      disabled={!on && practised.length >= MAX_PRACTISED_PER_NOTE}
+                      onClick={() => setPractised((cur) => (cur.includes(t.id) ? cur.filter((k) => k !== t.id) : [...cur, t.id]))}
+                      data-testid={`session-practised-${t.id}`}
+                      className={`min-h-11 rounded-full border px-4 text-sm ${
+                        on ? "border-accent bg-accent font-semibold text-white" : "border-line bg-white text-ink hover:border-accent"
+                      }`}
+                    >
+                      {on ? "✓ " : ""}
+                      {t.title}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
 
         <div className="flex flex-col gap-1">
           <h2 className="text-base font-semibold">{sessionNotePage.weakTitle}</h2>
