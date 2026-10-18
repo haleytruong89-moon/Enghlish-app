@@ -241,6 +241,7 @@ export const fallbackLabels = {
   modality: "Tài liệu khác",
   autoResult: "Cần người xem",
   tag: "Nhãn khác",
+  record: "Dữ liệu khác",
 } as const;
 
 /** Nhãn nguồn của một bài (provenance). Học sinh không thấy các nhãn này. */
@@ -619,6 +620,68 @@ export const tutorWorkErrors = {
   conflict: "Việc này đã được ghi trước đó (hoặc nhãn bị trùng). Bạn tải lại trang để xem.",
   duplicateFirst: "Bài này đã được ghi lần đầu — chọn “Làm lại” hoặc sửa bản đã ghi",
   offline: "Không kết nối được. Bạn kiểm tra mạng rồi thử lại nhé.",
+} as const;
+
+/** Màn "Xóa dữ liệu của em" (S5c, chỉ phụ huynh). */
+export const purgePage = {
+  link: "Xóa dữ liệu của em",
+  title: (alias: string) => `Xóa dữ liệu · ${alias}`,
+  back: "Về trang chủ",
+  intro:
+    "Việc này xóa vĩnh viễn bài làm, kết quả, ghi chú buổi học, bài luyện, file ảnh/PDF và tên đăng nhập ngắn của em trong app. Không hoàn tác được.",
+  keepsAccount: "Tài khoản đăng nhập (email) của em và của mọi người KHÔNG bị xóa. Phần của Study Launcher không bị đụng tới.",
+  backupNote: "Bản sao lưu hằng tuần vẫn còn dữ liệu cũ cho đến khi tự hết hạn (khoảng 30 ngày).",
+  countsTitle: "Sẽ bị xóa",
+  countLine: (label: string, n: number) => `${label}: ${n}`,
+  countsNone: "Không có dữ liệu nào để xóa ngoài hồ sơ của em.",
+  countLabels: {
+    audit_log: "Nhật ký thao tác về em",
+    target_sets: "Bộ kỹ năng theo dõi",
+    inquiry_instances: "Chủ đề được giao",
+    activity_instances: "Bước trong chủ đề",
+    instance_item_keys: "Khóa câu hỏi của bài",
+    activity_instance_events: "Lần dời / bỏ qua bước",
+    consents: "Đồng ý đã ghi",
+    relationships: "Quan hệ với phụ huynh / gia sư",
+    attempt_auto_checks: "Kết quả tự chấm",
+    episodes: "Bài làm chờ duyệt",
+    exposure_log: "Lần luyện kỹ năng",
+    assistance_events: "Gợi ý đã dùng",
+    artifact_versions: "Nội dung bài làm",
+    attempts: "Lần nộp bài",
+    working_drafts: "Bản nháp",
+    validation_decisions: "Điểm do người chấm",
+    observations: "Quan sát",
+    lesson_notes: "Ghi chú buổi học",
+    tag_marks: "Điểm cần chú ý",
+    recheck_events: "Lần hỏi lại điểm yếu",
+    results: "Kết quả bài",
+    submissions: "Bài em gửi",
+    assignment_events: "Lần giao / thu hồi bài luyện",
+    assignments: "Bài luyện",
+    files: "File ảnh / PDF",
+    upload_tickets: "Phiếu tải file",
+    login_names: "Tên đăng nhập ngắn",
+    learners: "Hồ sơ của em",
+    members: "Tài khoản của em trong app",
+  } as Record<string, string>,
+  testNote: "Đây là hồ sơ thử.",
+  realTitle: "Đây là em thật, không phải hồ sơ thử",
+  realConfirm: "Tôi hiểu đây là dữ liệu thật của em và việc xóa không hoàn tác được.",
+  nameLabel: (alias: string) => `Gõ đúng tên “${alias}” để xác nhận`,
+  submit: "Xóa dữ liệu của em",
+  submitting: "Đang xóa…",
+  done: "Đã xóa dữ liệu của em.",
+  doneFiles: (n: number) => `Đã xóa ${n} file trong kho.`,
+  filesLeft:
+    "Dữ liệu trong database đã xóa, nhưng chưa xóa được file trong kho. Nhờ người hỗ trợ chạy lệnh dọn file mồ côi (npm run storage:orphans).",
+  homeLink: "Về trang chủ",
+  errors: {
+    name_mismatch: "Tên gõ chưa khớp. Bạn gõ lại đúng tên của em nhé.",
+    real_needs_confirmation: "Bạn tích ô xác nhận (em thật) trước khi xóa.",
+    generic: "Chưa xóa được. Bạn thử lại sau ít phút; dữ liệu chưa bị thay đổi nếu lần này báo lỗi.",
+    offline: "Không kết nối được. Bạn kiểm tra mạng rồi thử lại nhé.",
+  } as const,
 } as const;
 
 export const todayPage = {

@@ -61,4 +61,18 @@ describe("0017_readiness.sql", () => {
     expect(code).toContain("revoke execute on function english.eng_record_offline_attempt(uuid, text, text, int, int, date, text[], uuid, uuid, text) from public, anon, authenticated;");
     expect(code).toContain("grant execute on function english.eng_record_offline_attempt(uuid, text, text, int, int, date, text[], uuid, uuid, text) to service_role;");
   });
+
+  it("step 5: the dry run counts exactly the tables the 0016 purge deletes, reads nothing but counts, and the purge itself is not redefined here", () => {
+    const purge = readFileSync(path.join(MIGRATIONS_DIR, "0016_practice_files.sql"), "utf8");
+    const deletes = [...purge.slice(purge.indexOf("create or replace function english.eng_purge_learner(")).matchAll(/delete from english\.(\w+)/g)].map((m) => m[1] as string);
+    const fn = code.slice(code.indexOf("create or replace function english.eng_purge_preview("), code.indexOf("create or replace function english.eng_audit_purge_files("));
+    const counted = [...fn.matchAll(/'(\w+)', \(select pg_catalog\.count\(\*\) from english\.(\w+)/g)];
+    expect([...counted.map((m) => m[2]), "learners"].sort()).toEqual([...deletes].sort()); // the learner row itself is the literal 1
+    expect(counted.every((m) => m[1] === m[2] || m[2] === "members" || m[2] === "login_names")).toBe(true);
+    expect(fn).not.toMatch(/\b(insert|update|delete)\b/i);
+    expect(code).not.toContain("create or replace function english.eng_purge_learner(");
+    expect(code).not.toMatch(/auth\.users/); // the login account is never part of a purge
+    expect(code).toContain("grant execute on function english.eng_purge_preview(uuid) to service_role;");
+    expect(code).toContain("grant execute on function english.eng_audit_purge_files(uuid, uuid, uuid, int) to service_role;");
+  });
 });

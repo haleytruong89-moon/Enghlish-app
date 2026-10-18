@@ -72,6 +72,9 @@ describe("S5b-1 'Hôm nay' card", () => {
     expect(html).toContain(todayPage.untaggedParentBadge);
     expect(html).toContain(todayPage.untaggedParentLine("Unless, even if…", "08/10/2026", "4, 7"));
     expect(html).not.toContain(todayPage.untaggedTutorLine("Unless, even if…", "08/10/2026", "4, 7"));
+    // only the parent has the "delete the child's data" link (S5c); the tutor's card has none
+    expect(html).toContain(`href="/learners/${learner.id}/delete"`);
+    expect(render(createElement(LearnerCard, { learner, today: today(), role: "tutor" }))).not.toContain("/delete");
   });
   it("parent: items she recorded herself are not 'waiting for the tutor'", () => {
     const own = { ...untagged, recordedByMember: "m-parent", recordedRole: "parent" as const, own: true };

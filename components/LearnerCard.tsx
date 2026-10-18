@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { assignPage, fallbackLabels, home, inquiriesPage, learnerWithTrack, notesPage, sourceLabels, targetsPage, todayPage, tutorHonorific, weakPage } from "@/lib/copy/vi";
+import { assignPage, fallbackLabels, home, inquiriesPage, learnerWithTrack, notesPage, purgePage, sourceLabels, targetsPage, todayPage, tutorHonorific, weakPage } from "@/lib/copy/vi";
 import { safeColor, type LearnerSummary } from "@/lib/home/visible";
 import { todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi } from "@/lib/inquiries/format";
@@ -196,6 +196,11 @@ export function LearnerCard({ learner, today, role }: { learner: LearnerSummary;
         <Link href={`/learners/${learner.id}/notes`} className={linkClass}>
           {notesPage.link}
         </Link>
+        {role === "parent" ? (
+          <Link href={`/learners/${learner.id}/delete`} data-testid={`delete-link-${learner.id}`} className={linkClass}>
+            {purgePage.link}
+          </Link>
+        ) : null}
       </div>
     </li>
   );

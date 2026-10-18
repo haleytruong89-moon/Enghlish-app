@@ -23,5 +23,10 @@ export default defineConfig({
     locale: "vi-VN",
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", testIgnore: /purge\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
+    // The purge spec creates and deletes a throwaway learner in the test family (the parent's home then lists 3 children for a moment),
+    // so it runs only after every other spec has finished.
+    { name: "purge", testMatch: /purge\.spec\.ts/, dependencies: ["chromium"], use: { ...devices["Desktop Chrome"] } },
+  ],
 });

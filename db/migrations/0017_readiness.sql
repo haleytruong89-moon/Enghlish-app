@@ -698,4 +698,85 @@ $$;
 revoke execute on function english.eng_record_offline_attempt(uuid, text, text, int, int, date, text[], uuid, uuid, text) from public, anon, authenticated;
 grant execute on function english.eng_record_offline_attempt(uuid, text, text, int, int, date, text[], uuid, uuid, text) to service_role;
 
+-- 5. Màn xóa dữ liệu một em (A5, A6) -----------------------------------------------------------------------------------------------------
+-- eng_purge_learner (0016) KHÔNG đổi. Hai hàm nhỏ phục vụ màn "Xóa dữ liệu của em" (chỉ service_role gọi, sau requireAccess 'admin'):
+--  * eng_purge_preview: đếm số dòng sẽ bị xóa theo ĐÚNG các khóa của biên nhận purge (có test đối chiếu: đếm trước = biên nhận sau). Không
+--    xóa gì, không đọc nội dung bài - chỉ số lượng. Tài khoản đăng nhập (auth.users) KHÔNG nằm trong danh sách: không bao giờ bị xóa.
+--  * eng_audit_purge_files: ghi nhật ký số file đã xóa khỏi kho Storage sau khi purge xong (kho nằm ngoài database).
+create or replace function english.eng_purge_preview(p_learner uuid) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_user uuid;
+begin
+  if p_learner is null then
+    raise exception 'eng_purge_preview: learner id is required' using errcode = '22004';
+  end if;
+  select * into v_l from english.learners l where l.id = p_learner;
+  if not found then
+    raise exception 'eng_purge_preview: learner not found' using errcode = 'P0002';
+  end if;
+  select m.user_id into v_user from english.members m where m.id = v_l.member_id and m.role = 'student';
+
+  return pg_catalog.jsonb_build_object(
+    'learner_id', p_learner,
+    'alias', v_l.alias,
+    'is_test', v_l.is_test,
+    'counts', pg_catalog.jsonb_build_object(
+      'audit_log', (select pg_catalog.count(*) from english.audit_log x where x.learner_id = p_learner),
+      'target_sets', (select pg_catalog.count(*) from english.target_sets x where x.learner_id = p_learner),
+      'inquiry_instances', (select pg_catalog.count(*) from english.inquiry_instances x where x.learner_id = p_learner),
+      'activity_instances', (select pg_catalog.count(*) from english.activity_instances x where x.learner_id = p_learner),
+      'instance_item_keys', (select pg_catalog.count(*) from english.instance_item_keys x where x.learner_id = p_learner),
+      'activity_instance_events', (select pg_catalog.count(*) from english.activity_instance_events x where x.learner_id = p_learner),
+      'consents', (select pg_catalog.count(*) from english.consents x where x.learner_id = p_learner),
+      'relationships', (select pg_catalog.count(*) from english.relationships x where x.learner_id = p_learner),
+      'attempt_auto_checks', (select pg_catalog.count(*) from english.attempt_auto_checks x where x.learner_id = p_learner),
+      'episodes', (select pg_catalog.count(*) from english.episodes x where x.learner_id = p_learner),
+      'exposure_log', (select pg_catalog.count(*) from english.exposure_log x where x.learner_id = p_learner),
+      'assistance_events', (select pg_catalog.count(*) from english.assistance_events x where x.learner_id = p_learner),
+      'artifact_versions', (select pg_catalog.count(*) from english.artifact_versions x where x.learner_id = p_learner),
+      'attempts', (select pg_catalog.count(*) from english.attempts x where x.learner_id = p_learner),
+      'working_drafts', (select pg_catalog.count(*) from english.working_drafts x where x.learner_id = p_learner),
+      'validation_decisions', (select pg_catalog.count(*) from english.validation_decisions x where x.learner_id = p_learner),
+      'observations', (select pg_catalog.count(*) from english.observations x where x.learner_id = p_learner),
+      'lesson_notes', (select pg_catalog.count(*) from english.lesson_notes x where x.learner_id = p_learner),
+      'tag_marks', (select pg_catalog.count(*) from english.tag_marks x where x.learner_id = p_learner),
+      'recheck_events', (select pg_catalog.count(*) from english.recheck_events x where x.learner_id = p_learner),
+      'results', (select pg_catalog.count(*) from english.results x where x.learner_id = p_learner),
+      'submissions', (select pg_catalog.count(*) from english.submissions x where x.learner_id = p_learner),
+      'assignment_events', (select pg_catalog.count(*) from english.assignment_events x where x.learner_id = p_learner),
+      'assignments', (select pg_catalog.count(*) from english.assignments x where x.learner_id = p_learner),
+      'files', (select pg_catalog.count(*) from english.files x where x.learner_id = p_learner),
+      'upload_tickets', (select pg_catalog.count(*) from english.upload_tickets x where x.learner_id = p_learner),
+      'login_names', (select pg_catalog.count(*) from english.login_names x where x.auth_user_id = v_user),
+      'learners', 1,
+      'members', (select pg_catalog.count(*) from english.members x where x.id = v_l.member_id and x.role = 'student')));
+end
+$$;
+
+create or replace function english.eng_audit_purge_files(p_family uuid, p_learner uuid, p_actor_user uuid, p_removed int) returns void
+language plpgsql volatile security definer set search_path = ''
+as $$
+begin
+  if p_family is null or p_learner is null or p_actor_user is null or p_removed is null or p_removed < 0 then
+    raise exception 'eng_audit_purge_files: family, learner, actor and a count are required' using errcode = '22004';
+  end if;
+  -- Chỉ sau một lần purge thật: em đã biến mất và nhật ký có biên nhận purge của chính em này, do chính người này làm.
+  if exists (select 1 from english.learners l where l.id = p_learner)
+     or not exists (select 1 from english.audit_log a where a.learner_id = p_learner and a.action = 'learner.purged' and a.actor_user_id = p_actor_user) then
+    raise exception 'eng_audit_purge_files: there is no finished purge of this learner by this user' using errcode = '23514';
+  end if;
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (p_actor_user, (select m.role from english.members m where m.user_id = p_actor_user), 'learner.files_deleted', p_family, p_learner,
+          pg_catalog.jsonb_build_object('removed', p_removed));
+end
+$$;
+
+revoke execute on function english.eng_purge_preview(uuid) from public, anon, authenticated;
+revoke execute on function english.eng_audit_purge_files(uuid, uuid, uuid, int) from public, anon, authenticated;
+grant execute on function english.eng_purge_preview(uuid) to service_role;
+grant execute on function english.eng_audit_purge_files(uuid, uuid, uuid, int) to service_role;
+
 insert into english.schema_migrations(version) values ('0017') on conflict do nothing;

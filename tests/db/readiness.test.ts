@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CONTENT_DIR } from "../../lib/config/content";
 import type { InquiryTemplate } from "../../lib/config/schemas";
 import { addDays, daysBetween, todayVn } from "../../lib/inquiries/dates";
+import { seedThrowawayLearner } from "../../scripts/lib/seed";
 import { asCommit, createTestDb, migrate, seed, type Seeded, type TestDb } from "./helpers";
 
 const TODAY = todayVn();
@@ -282,6 +283,86 @@ describe("S5c readiness (migration 0017)", () => {
           where n.nspname = 'english' and p.proname = 'eng_record_offline_attempt'`);
       expect(Object.fromEntries(priv.map((x) => [x.r, x.ok]))).toEqual({ anon: false, authenticated: false, service_role: true });
       await fail(offline(M().parent, await step(w1, 11), { date: daysAgo(5), reason: "Phiếu giấy cũ" }), "42501", /D15/);
+    });
+  });
+
+  // -------------------------------------------------------------------------------------------------------------
+  describe("5. 'Xóa dữ liệu của em': the dry run matches the purge, the login account stays, the audit says who did it", () => {
+    let victim: string;
+    let studentUser: string;
+    let studentMember: string;
+    const preview = (learner: string) => svc<{ learner_id: string; alias: string; is_test: boolean; counts: Record<string, number> }>("select english.eng_purge_preview($1) as r", [learner]);
+
+    beforeAll(async () => {
+      studentUser = (await q1<{ id: string }>("insert into auth.users(email) values ('s5c-purge-student@test.local') returning id"))[0]?.id as string;
+      studentMember = ((await q1<{ id: string }>("insert into english.members(user_id, family_id, role, display_name) values ($1, $2, 'student', 'Purge student') returning id", [studentUser, s.familyId]))[0] as { id: string }).id;
+      victim = ((await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status, member_id) values ($1, 'Em thử xóa', 'B', true, 'active', $2) returning id", [s.familyId, studentMember]))[0] as { id: string }).id;
+      await q1("insert into english.relationships(member_id, learner_id, relation) values ($1, $2, 'parent')", [M().parent, victim]);
+      await q1("insert into english.login_names(login_name, auth_user_id) values ('thu-xoa-em', $1)", [studentUser]);
+      await q1("select english.eng_assign_target_set($1, 'B-v1')", [victim]);
+      await svc("select english.eng_record_result($1, 'quick', null, 'Purge sample', 10, 8, '{4,7}'::int[], '[{\"n\":4,\"tag_key\":\"dang-tu\"}]'::jsonb, 'home', 'first', false, $2::date, null, null, $3, 'purge-sample-0001', null) as r", [victim, TODAY, M().parent]);
+      await svc("select english.eng_write_lesson_note_v2($1, $2::date, 'Unit 1', '{dang-tu}'::text[], null, null, '[]'::jsonb, null, $3, 'purge-note-0001', '{B-T7-ARGUE}'::text[]) as r", [victim, TODAY, M().parent]);
+    });
+
+    it("the dry run reports counts under exactly the keys of the purge receipt, and they are the numbers the purge then deletes", async () => {
+      const dry = await preview(victim);
+      expect(dry).toMatchObject({ learner_id: victim, alias: "Em thử xóa", is_test: true });
+      expect(dry.counts).toMatchObject({ results: 1, lesson_notes: 1, tag_marks: 2, exposure_log: 1, relationships: 1, target_sets: 1, login_names: 1, members: 1, learners: 1 });
+      const before = await count("select count(*)::int as n from english.results where learner_id = $1", [victim]);
+      expect(before).toBe(1); // the dry run deleted nothing
+      const receipt = await svc<{ deleted: Record<string, number> }>("select english.eng_purge_learner($1, $2) as r", [victim, s.users.parent]);
+      expect(Object.keys(dry.counts).sort()).toEqual(Object.keys(receipt.deleted).sort());
+      // the receipt counts the audit rows that existed when it ran; the dry run counted the same rows
+      expect(receipt.deleted).toEqual(dry.counts);
+    });
+
+    it("never touches the login account: the auth user is still there, the short name and the student membership are gone", async () => {
+      expect(await count("select count(*)::int as n from auth.users where id = $1", [studentUser])).toBe(1);
+      expect(await count("select count(*)::int as n from english.login_names where auth_user_id = $1", [studentUser])).toBe(0);
+      expect(await count("select count(*)::int as n from english.members where id = $1", [studentMember])).toBe(0);
+      expect(await count("select count(*)::int as n from english.members where role in ('parent', 'tutor')")).toBeGreaterThan(0);
+      // the family's other children are untouched
+      expect(await count("select count(*)::int as n from english.learners where id = any($1::uuid[])", [[AN(), NG()]])).toBe(2);
+    });
+
+    it("the audit log keeps who purged (a receipt with counts, no content), then the number of stored files removed - only after a finished purge", async () => {
+      const receipt = (await q1<{ actor_user_id: string; actor_role: string; payload: { deleted: Record<string, number> } }>(
+        "select actor_user_id, actor_role, payload from english.audit_log where action = 'learner.purged' and learner_id = $1", [victim]))[0];
+      expect(receipt).toMatchObject({ actor_user_id: s.users.parent, actor_role: "parent" });
+      expect(JSON.stringify(receipt?.payload)).not.toContain("Purge sample");
+      const files = (a: { fam?: string; learner?: string; user?: string; n?: number }) =>
+        svc("select english.eng_audit_purge_files($1, $2, $3, $4) as r", [a.fam ?? s.familyId, a.learner ?? victim, a.user ?? s.users.parent, a.n ?? 3]);
+      await fail(files({ user: s.users.tutorNguyen }), "23514", /no finished purge/); // another person
+      await fail(files({ learner: NG() }), "23514", /no finished purge/); // a learner who still exists
+      await fail(files({ learner: randomUUID() }), "23514", /no finished purge/); // never purged
+      await fail(files({ n: -1 }), "22004");
+      await files({});
+      expect((await q1<{ payload: { removed: number }; family_id: string }>("select payload, family_id from english.audit_log where action = 'learner.files_deleted' and learner_id = $1", [victim]))[0]).toEqual({
+        payload: { removed: 3 }, family_id: s.familyId,
+      });
+    });
+
+    it("the throwaway learner of the e2e purge spec is a test learner of the test family with data, and purging it leaves An and Nguyên alone", async () => {
+      const t = await seedThrowawayLearner(db.client, { alias: "Em thử xóa e2e" });
+      expect((await q1<{ is_test: boolean; family_id: string; track_id: string }>("select is_test, family_id, track_id from english.learners where id = $1", [t.learnerId]))[0]).toEqual({
+        is_test: true, family_id: s.familyId, track_id: "A",
+      });
+      const dry = await preview(t.learnerId);
+      expect(dry.counts).toMatchObject({ results: 1, lesson_notes: 1, relationships: 1, target_sets: 1, members: 0, login_names: 0 });
+      const anBefore = await count("select count(*)::int as n from english.results where learner_id = $1", [AN()]);
+      const receipt = await svc<{ deleted: Record<string, number> }>("select english.eng_purge_learner($1, $2) as r", [t.learnerId, s.users.parent]);
+      expect(receipt.deleted).toEqual(dry.counts);
+      expect(await count("select count(*)::int as n from english.learners where id = $1", [t.learnerId])).toBe(0);
+      expect(await count("select count(*)::int as n from english.results where learner_id = $1", [AN()])).toBe(anBefore);
+    });
+
+    it("the preview of a learner that does not exist is refused; both functions are closed to everyone but service_role", async () => {
+      await fail(svc("select english.eng_purge_preview($1) as r", [randomUUID()]), "P0002");
+      const exec = await q1<{ fn: string; r: string; ok: boolean }>(
+        `select p.proname as fn, r, has_function_privilege(r, p.oid, 'execute') as ok
+           from pg_proc p join pg_namespace n on n.oid = p.pronamespace, unnest(array['anon', 'authenticated', 'service_role']) r
+          where n.nspname = 'english' and p.proname in ('eng_purge_preview', 'eng_audit_purge_files')`);
+      expect(exec.filter((x) => x.ok).map((x) => `${x.fn}:${x.r}`).sort()).toEqual(["eng_audit_purge_files:service_role", "eng_purge_preview:service_role"]);
     });
   });
 });
