@@ -712,6 +712,9 @@ Nhánh `feature/s5c-readiness`. Kế hoạch `docs/plans/s5c-readiness.md`; ki�
 - **Kiểm tra khôi phục lệch số dòng khi có ghi đồng thời**: so sánh dùng khoảng [trước, sau] lúc sao lưu, nên một bản sao lưu trúng đúng lúc có nhiều thao tác ghi vẫn có thể báo MISMATCH giả; chạy lại là hết.
 - **Khôi phục thử không kiểm tra nội dung**, chỉ số dòng của mọi bảng `english` + `auth.users` và lỗi khôi phục thuộc schema `english`/`auth`; lỗi ở schema `public` của Launcher chỉ được đếm.
 - **File ảnh/PDF chưa sao lưu** (A4, xem lại sau ~1 tháng dùng thật).
+- **Cài đặt "Hỏi lại điểm yếu" là chung cho cả app** (N2): `eng_set_tutorwork_setting` cho phụ huynh của bất kỳ gia đình nào đổi số ngày dùng chung, và dòng nhật ký nằm dưới gia đình đó. Hiện chưa có màn nào gọi; nếu làm màn thì đổi khóa thành (gia đình, khóa).
+- **`eng_audit_purge_files` kiểm tra lỏng** (N4): không đối chiếu gia đình với biên nhận `learner.purged` và gọi lặp được. Chỉ server gọi được nên rủi ro thấp.
+- **Sửa ngày của một ghi chú buổi học** (N7): ghi chú thay thế đổi `session_date` thì các lần luyện của bản cũ vẫn nằm ở ngày cũ (giống bản v1). Cần xử lý khi làm S8 (lịch ôn).
 
 ### Tiêu chí đạt
 
