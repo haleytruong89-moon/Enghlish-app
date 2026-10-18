@@ -261,7 +261,7 @@ computeTargetState(input: {
 |---|---|
 | Region | Chọn khi tạo project chung (đề xuất Singapore) |
 | Backup | GitHub Actions **hằng tuần** (sáng Chủ nhật — phụ huynh quyết 16/10/2026, mất tối đa ~7 ngày; chạy tay trước thay đổi lớn): `pg_dump` schema `public` + `english` **và hai bảng đăng nhập `auth.users`, `auth.identities`** (S5c, D30) → **khôi phục thử vào Postgres 17 tạm trong chính job và đối chiếu số dòng** → mã hóa `age` (khóa công khai trong repo, khóa riêng phụ huynh giữ offline) → artifact riêng tư `retention-days: 30` |
-| Khôi phục thử | **Tự động mỗi lần chạy** (S5c): restore vào container Postgres tạm, đối chiếu số dòng `english.learners`, `english.members`, `auth.users` (chỉ số lượng vào log/summary, không dữ liệu); lệch → job đỏ nhưng file mã hóa vẫn được lưu. Thêm **1 lần diễn tập giải mã bằng khóa offline** do phụ huynh làm (PROGRESS, mục S5c). File tải lên ở kho `english-work` **chưa** được sao lưu (D30) |
+| Khôi phục thử | **Tự động mỗi lần chạy** (S5c): restore vào container Postgres tạm, đối chiếu số dòng của **mọi bảng `english`** và `auth.users` (chỉ số lượng vào log/summary, không dữ liệu), và coi lỗi khôi phục thuộc schema `english`/`auth` là lỗi (logic ở `scripts/ops/restore-check.sh`, có unit test); lệch → job đỏ nhưng file mã hóa vẫn được lưu. Dump tài khoản là bước riêng: hỏng thì dump chính vẫn được lưu và run báo đỏ. Thêm **1 lần diễn tập giải mã bằng khóa offline** do phụ huynh làm (PROGRESS, mục S5c). File tải lên ở kho `english-work` **chưa** được sao lưu (D30) |
 | Giữ project không ngủ | GitHub Actions ping hằng ngày (như App Toán) |
 | Log | Không ghi transcript/bài làm vào log Vercel; lỗi vào `english.app_errors` |
 | Consent | Bản ghi có version; đổi nội dung thông báo = version mới |
@@ -337,7 +337,7 @@ Bucket `english-work`: **riêng tư**, 15 MB mỗi file, chỉ PDF/PNG/JPEG/WebP
 - **Ghi buổi học v2** nhận `p_practised_target_ids` (≤ 30, cùng track với em); mỗi mục mới ghi một dòng `exposure_log` source `lesson` vào lúc 12:00 giờ Việt Nam của ngày buổi học (`eng_session_ts`).
 - **Một "lần đầu" mỗi (em, tên bài đã chuẩn hóa, ngày)** cho kết quả nhập nhanh không gắn bài giao/khung: lần thứ hai → `23505 duplicate_first`, trừ khi thay đúng bản đang có.
 - **`eng_recheck_days`** đọc `tutorwork_settings.recheck_days` (không đọc `assessment_policies`). Không đổi ngưỡng delayed (policy AP-0.2-pilot). Nhãn giao diện "Hỏi lại điểm yếu".
-- **Nhập từ pilot giấy:** `eng_record_offline_attempt(…, p_backdate_reason)` cho ngày làm sớm hơn ngày giao tối đa 14 ngày khi có lý do 5–200 ký tự (ghi vào `audit_log` và metadata); các luật ngày khác (≤ hôm nay, thứ tự theo lần làm gần nhất) giữ nguyên.
+- **Nhập từ pilot giấy:** `eng_record_offline_attempt(…, p_backdate_reason)` cho ngày làm sớm hơn ngày giao tối đa 14 ngày khi có lý do 5–200 ký tự (ghi vào `audit_log` và metadata); các luật ngày khác (≤ hôm nay, thứ tự theo lần làm gần nhất) giữ nguyên. **Ngoại lệ chỉ áp cho bước đã mở cùng lúc với bài giao** (ngày hiệu lực ≤ ngày giao) và **không bao giờ cho bước kiểm tra trễ / chuyển giao** (`delayed_check`, `transfer_check`) → `backdate_not_allowed_for_step`.
 - **"Quá hạn":** nhãn hiển thị cho nhân viên khi `due_on` < hôm nay (giờ Việt Nam) và bài chưa có bài nộp/kết quả/chưa rút. Không trừ điểm, không chặn nộp, học sinh không thấy gì mới (D4).
 
 ### 19.4. Cài đặt
