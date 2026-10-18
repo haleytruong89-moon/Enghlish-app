@@ -8,6 +8,7 @@ import { todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi, safeExternalUrl } from "@/lib/inquiries/format";
 import { postJson } from "@/lib/tutorwork/client";
 import { codeOf, practiceErrorText } from "@/lib/practice/client";
+import { isOverdue } from "@/lib/practice/overdue";
 import type { AssignmentView } from "@/lib/practice/types";
 import { formatHm } from "@/lib/work/view";
 import { SubmitPanel } from "./SubmitPanel";
@@ -20,7 +21,18 @@ export function statusOf(a: AssignmentView): "retracted" | "recorded" | "sent" |
 }
 
 /** "Bài luyện đã giao": what was given, what the student sent back, and the actions (record the result, submit for the student, retract). */
-export function AssignmentTable({ learnerId, assignments, tagLabels }: { learnerId: string; assignments: AssignmentView[]; tagLabels: Record<string, string> }) {
+export function AssignmentTable({
+  learnerId,
+  assignments,
+  tagLabels,
+  today = todayVn(),
+}: {
+  learnerId: string;
+  assignments: AssignmentView[];
+  tagLabels: Record<string, string>;
+  /** Today in Vietnam (YYYY-MM-DD), from the server page; used only for the "Quá hạn" label. */
+  today?: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -70,8 +82,15 @@ export function AssignmentTable({ learnerId, assignments, tagLabels }: { learner
                   <span className="text-xs text-muted">{assignPage.kindLabel(a.kind, a.sourceKey ? sourceLabels[a.sourceKey] : null)}</span>
                   <b className="font-semibold">{a.title}</b>
                 </span>
-                <span className="rounded-full bg-paper px-3 py-0.5 text-sm font-semibold" data-testid={`status-${a.id}`}>
-                  {statusText[status]}
+                <span className="flex flex-wrap items-center gap-2">
+                  {isOverdue(a, today) ? (
+                    <span className="rounded-full bg-[#7a4a00] px-3 py-0.5 text-sm font-semibold text-white" data-testid={`overdue-${a.id}`}>
+                      {assignPage.overdue}
+                    </span>
+                  ) : null}
+                  <span className="rounded-full bg-paper px-3 py-0.5 text-sm font-semibold" data-testid={`status-${a.id}`}>
+                    {statusText[status]}
+                  </span>
                 </span>
               </div>
               <dl className="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-1 text-sm">

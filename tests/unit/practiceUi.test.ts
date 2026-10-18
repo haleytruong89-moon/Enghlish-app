@@ -9,6 +9,7 @@ import { ResultForm } from "@/components/tutor/ResultForm";
 import { parseResultEdit } from "@/lib/tutorwork/shape";
 import { StudentPractice } from "@/components/student/StudentPractice";
 import { assignPage, practiceStudent, resultPage, sourceLabels, todayPage } from "@/lib/copy/vi";
+import { isOverdue } from "@/lib/practice/overdue";
 import type { AssignmentView, ReviewPoints, StudentPracticeItem } from "@/lib/practice/types";
 import { fitWithin, outputMime } from "@/lib/storage/clientUpload";
 import { MAX_IMAGE_SIDE } from "@/lib/storage/rules";
@@ -231,5 +232,50 @@ describe("recorded assignment: 'Sửa kết quả' (the new result replaces the 
   it("without supersede there is no notice; with initialRetry the attempt starts as 'Làm lại'", () => {
     expect(form({})).not.toContain("supersede-notice");
     expect(form({ initialRetry: true })).toMatch(/aria-pressed="true"[^>]*data-testid="attempt-retry"|data-testid="attempt-retry"[^>]*aria-pressed="true"/);
+  });
+});
+
+describe("'Quá hạn' (D4): only a label for the tutor and the parent", () => {
+  const SENT = { id: "s1", createdAt: "2026-10-16T09:00:00Z", attempt: "first" as const, usedHint: false, linkUrl: null, byRole: "student" as const, files: [] };
+  it("overdue = due date before today, nothing sent, no result, not retracted; the due day itself is not late", () => {
+    const base = assignment({ dueOn: "2026-10-17" });
+    expect(isOverdue(base, "2026-10-18")).toBe(true);
+    expect(isOverdue(base, "2026-10-17")).toBe(false); // due today
+    expect(isOverdue(base, "2026-10-16")).toBe(false);
+    expect(isOverdue({ ...base, dueOn: null }, "2026-10-18")).toBe(false); // no due date
+    expect(isOverdue({ ...base, submission: SENT }, "2026-10-18")).toBe(false);
+    expect(isOverdue({ ...base, resultId: "e0000000-0000-4000-8000-000000000001" }, "2026-10-18")).toBe(false);
+    expect(isOverdue({ ...base, retractedAt: "2026-10-17T00:00:00Z" }, "2026-10-18")).toBe(false);
+  });
+  it("the Vietnamese day decides: 17:30 UTC on the 17th is already the 18th in Hà Nội", async () => {
+    const { todayVn } = await import("@/lib/inquiries/dates");
+    expect(todayVn(new Date("2026-10-17T16:59:00Z"))).toBe("2026-10-17");
+    expect(todayVn(new Date("2026-10-17T17:01:00Z"))).toBe("2026-10-18");
+    expect(isOverdue(assignment({ dueOn: "2026-10-17" }), todayVn(new Date("2026-10-17T16:59:00Z")))).toBe(false);
+    expect(isOverdue(assignment({ dueOn: "2026-10-17" }), todayVn(new Date("2026-10-17T17:01:00Z")))).toBe(true);
+  });
+  it("the assignment table and the home card show the label for an overdue one, and not for the others", () => {
+    const late = assignment({ id: "c0000000-0000-4000-8000-0000000000a1", dueOn: "2026-10-10" });
+    const fine = assignment({ id: "c0000000-0000-4000-8000-0000000000a2", dueOn: "2026-10-30" });
+    const sent = assignment({ id: "c0000000-0000-4000-8000-0000000000a3", dueOn: "2026-10-10", submission: SENT });
+    const table = render(createElement(AssignmentTable, { learnerId: "a0000000-0000-4000-8000-000000000001", assignments: [late, fine, sent], tagLabels: {}, today: "2026-10-18" }));
+    expect(table).toContain(`data-testid="overdue-${late.id}"`);
+    expect(table).not.toContain(`data-testid="overdue-${fine.id}"`);
+    expect(table).not.toContain(`data-testid="overdue-${sent.id}"`);
+    expect(table).toContain(assignPage.overdue);
+
+    const learner = { id: "a0000000-0000-4000-8000-000000000001", alias: "An", trackId: "A" as const, status: "active" as const, isTest: true, color: "#9a4a15" };
+    const data: TodayData = { weak: { policyDays: 14, since: null, today: "2026-10-18", tags: [] }, repeats: [], due: [], untagged: [], lastNote: null, recent: null, practice: [late, fine], tagLabels: {} };
+    for (const role of ["tutor", "parent"] as const) {
+      const card = render(createElement(LearnerCard, { learner, today: data, role, todayIso: "2026-10-18" }));
+      expect(card, role).toContain(`data-testid="overdue-${late.id}"`);
+      expect(card, role).not.toContain(`data-testid="overdue-${fine.id}"`);
+    }
+  });
+  it("the student's practice page never shows it, even for a late item", () => {
+    const html = render(createElement(StudentPractice, { items: [{ ...link, dueOn: "2020-01-01" }], review }));
+    expect(html).not.toContain(assignPage.overdue);
+    expect(html).not.toContain(todayPage.practiceOverdue);
+    expect(html).not.toMatch(/quá hạn|trễ|muộn/i);
   });
 });
