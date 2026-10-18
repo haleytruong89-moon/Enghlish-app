@@ -56,11 +56,13 @@ test.describe("S5c purge screen", () => {
     expect((await page.goto(`/learners/${t.learnerId}/delete`))?.status()).toBe(404);
   });
 
-  test("a wrong name deletes nothing; a tutor and a student get no page and no API", async ({ page }) => {
+  test("a wrong name deletes nothing; a tutor and a student get no page and no API; a request from another site gets 403", async ({ page }) => {
     const t = await withDb((db) => seedThrowawayLearner(db));
+    // The purge route refuses requests that do not say they come from this site (Origin); the screen's own fetch always does.
+    const same = { origin: new URL(process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000").origin };
     try {
       await loginAs(page, "parent");
-      const wrong = await page.request.post(`/api/learners/${t.learnerId}/purge`, { data: { confirm_name: "không đúng" } });
+      const wrong = await page.request.post(`/api/learners/${t.learnerId}/purge`, { data: { confirm_name: "không đúng" }, headers: same });
       expect(wrong.status()).toBe(400);
       expect(((await wrong.json()) as { error: string }).error).toBe("name_mismatch");
       expect(await exists(t.learnerId)).toBe(true);
@@ -68,13 +70,19 @@ test.describe("S5c purge screen", () => {
       await page.context().clearCookies();
       await loginAs(page, "tutorAn");
       expect((await page.goto(`/learners/${t.learnerId}/delete`))?.status()).toBe(404);
-      expect((await page.request.post(`/api/learners/${t.learnerId}/purge`, { data: { confirm_name: t.alias } })).status()).toBe(404);
+      expect((await page.request.post(`/api/learners/${t.learnerId}/purge`, { data: { confirm_name: t.alias }, headers: same })).status()).toBe(404);
       await expect(page.getByTestId(`delete-link-${TEST_LEARNER_AN_ID}`)).toHaveCount(0); // no link on a tutor's card
       await page.context().clearCookies();
       await loginAs(page, "studentAn");
       expect((await page.goto(`/learners/${TEST_LEARNER_AN_ID}/delete`))?.status()).toBe(404);
-      expect((await page.request.post(`/api/learners/${TEST_LEARNER_AN_ID}/purge`, { data: { confirm_name: "An (thử)", client: randomUUID() } })).status()).toBe(403);
+      expect((await page.request.post(`/api/learners/${TEST_LEARNER_AN_ID}/purge`, { data: { confirm_name: "An (thử)", client: randomUUID() }, headers: same })).status()).toBe(403);
       expect(await exists(TEST_LEARNER_AN_ID)).toBe(true);
+      expect(await exists(t.learnerId)).toBe(true);
+      // a cross-site request is refused before anything else, even for the right parent with the right name
+      await page.context().clearCookies();
+      await loginAs(page, "parent");
+      const cross = await page.request.post(`/api/learners/${t.learnerId}/purge`, { data: { confirm_name: t.alias }, headers: { origin: "https://evil.example" } });
+      expect(cross.status()).toBe(403);
       expect(await exists(t.learnerId)).toBe(true);
     } finally {
       // always clean up the throwaway learner, whatever happened above

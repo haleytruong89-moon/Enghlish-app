@@ -6,7 +6,7 @@ import { fallbackLabels, purgePage } from "@/lib/copy/vi";
 import { nameMatches } from "@/lib/purge/name";
 import { postJson } from "@/lib/tutorwork/client";
 
-type Done = { filesRemoved: number | null; filesOk: boolean };
+type Done = { filesRemoved: number | null; filesOk: boolean; auditOk: boolean };
 
 /**
  * "Xóa dữ liệu của em": the numbers come from the dry run; the parent types the child's name (and, for a real child, ticks a second
@@ -37,13 +37,13 @@ export function PurgeForm({
     if (!ready) return;
     setBusy(true);
     setError(null);
-    const r = await postJson<{ files_removed: number | null; files_ok: boolean }>(`/api/learners/${learnerId}/purge`, {
+    const r = await postJson<{ files_removed: number | null; files_ok: boolean; audit_ok?: boolean }>(`/api/learners/${learnerId}/purge`, {
       confirm_name: typed,
       ...(isTest ? {} : { confirm_real: real }),
     });
     setBusy(false);
     if (!r.ok) return setError(r.status === 0 ? purgePage.errors.offline : ((purgePage.errors as Record<string, string | undefined>)[r.error] ?? purgePage.errors.generic));
-    setDone({ filesRemoved: r.body.files_removed, filesOk: r.body.files_ok });
+    setDone({ filesRemoved: r.body.files_removed, filesOk: r.body.files_ok, auditOk: r.body.audit_ok !== false });
   }
 
   if (done) {
@@ -51,6 +51,11 @@ export function PurgeForm({
       <div role="status" className="mt-6 flex flex-col gap-2 rounded-xl border border-accent bg-white p-4" data-testid="purge-done">
         <p className="font-semibold text-accent">{purgePage.done}</p>
         {done.filesOk ? <p className="text-sm">{purgePage.doneFiles(done.filesRemoved ?? 0)}</p> : <p className="text-sm text-red-700">{purgePage.filesLeft}</p>}
+        {done.filesOk && !done.auditOk ? (
+          <p className="text-sm text-amber-800" data-testid="purge-audit-warning">
+            {purgePage.auditWarning}
+          </p>
+        ) : null}
         <Link href="/" className="inline-flex min-h-11 items-center text-sm font-medium text-accent underline">
           {purgePage.homeLink}
         </Link>

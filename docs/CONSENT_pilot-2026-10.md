@@ -9,7 +9,7 @@
 3. Âm thanh giọng nói của con không bao giờ được lưu hay gửi khỏi thiết bị của con; ứng dụng chỉ nhận chữ và vài chỉ số.
 4. Trí tuệ nhân tạo (AI) đang **tắt**; chỉ khi phụ huynh đồng ý riêng và bật lên thì mới dùng, và chỉ với nội dung bài làm, không kèm họ tên hay thông tin nhận dạng của con.
 5. Khi thầy/cô giao bài qua trang bên ngoài (ví dụ test-english, NotebookLM, Gemini), con làm bài trên trang đó và trang đó tự xử lý dữ liệu theo quy định của họ; ứng dụng chỉ lưu đường link và ảnh chụp kết quả con gửi lại.
-6. Phụ huynh có thể xem lại, và có thể xóa toàn bộ dữ liệu của con trong ứng dụng bất cứ lúc nào bằng chức năng "Xóa dữ liệu của em" (không xóa tài khoản đăng nhập); các bản sao lưu đã mã hóa sẽ tự hết hạn sau 30 ngày.
+6. Phụ huynh có thể xem lại, và có thể xóa toàn bộ dữ liệu của con trong ứng dụng bất cứ lúc nào bằng chức năng "Xóa dữ liệu của em" (không xóa tài khoản đăng nhập), khi đó app chỉ giữ lại một biên nhận nhỏ gồm mã và số lượng, không có nội dung; các bản sao lưu đã mã hóa sẽ tự hết hạn sau 30 ngày.
 7. Bằng việc tiếp tục sử dụng, phụ huynh xác nhận đã đọc và đồng ý với nội dung trên cho con.
 
 ## Ghi chú cho phụ huynh khi duyệt (không phải một phần của văn bản)

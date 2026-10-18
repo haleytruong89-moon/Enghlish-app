@@ -49,10 +49,22 @@ export async function handlePurgeLearner(deps: PurgeDeps, learnerId: string, raw
   let filesRemoved: number | null = null;
   try {
     filesRemoved = await deps.store.removeFiles({ familyId: learner.familyId, learnerId: learner.id });
-    await deps.store.auditFiles({ familyId: learner.familyId, learnerId: learner.id, actorUserId: member.userId, removed: filesRemoved });
   } catch {
     // The rows are already gone. Say so, and let the screen tell the parent how the leftover files are cleaned.
     filesRemoved = null;
   }
-  return { status: 200, body: { deleted: receipt.deleted ?? {}, files_removed: filesRemoved, files_ok: filesRemoved !== null } };
+  // Writing the "files deleted" line of the audit log is a separate matter: if it fails AFTER the files were removed, the files ARE gone
+  // (do not say they are not) - report the removal and a warning that the audit note is missing.
+  let auditOk = true;
+  if (filesRemoved !== null) {
+    try {
+      await deps.store.auditFiles({ familyId: learner.familyId, learnerId: learner.id, actorUserId: member.userId, removed: filesRemoved });
+    } catch {
+      auditOk = false;
+    }
+  }
+  return {
+    status: 200,
+    body: { deleted: receipt.deleted ?? {}, files_removed: filesRemoved, files_ok: filesRemoved !== null, audit_ok: auditOk },
+  };
 }

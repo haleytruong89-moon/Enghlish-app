@@ -94,7 +94,7 @@ describe("POST purge (handler)", () => {
     const s = makeStore();
     const r = await handlePurgeLearner(deps("parent", s), TEST_CHILD, { confirm_name: " an (THỬ) " });
     expect(r.status).toBe(200);
-    expect(r.body).toEqual({ deleted: { results: 2, learners: 1 }, files_removed: 3, files_ok: true });
+    expect(r.body).toEqual({ deleted: { results: 2, learners: 1 }, files_removed: 3, files_ok: true, audit_ok: true });
     expect(s.purge).toHaveBeenCalledWith({ learnerId: TEST_CHILD, actorUserId: "u-parent" });
     expect(s.removeFiles).toHaveBeenCalledWith({ familyId: FAMILY, learnerId: TEST_CHILD });
     expect(s.auditFiles).toHaveBeenCalledWith({ familyId: FAMILY, learnerId: TEST_CHILD, actorUserId: "u-parent", removed: 3 });
@@ -118,6 +118,13 @@ describe("POST purge (handler)", () => {
     expect(r.status).toBe(200);
     expect(r.body).toMatchObject({ files_removed: null, files_ok: false });
     expect(s.auditFiles).not.toHaveBeenCalled();
+  });
+
+  it("if only the audit note fails AFTER the files were removed, say the files are gone and report an audit warning (not 'files not deleted')", async () => {
+    const s = makeStore({ auditFiles: vi.fn(async () => { throw new Error("audit down"); }) });
+    const r = await handlePurgeLearner(deps("parent", s), TEST_CHILD, { confirm_name: "An (thử)" });
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({ deleted: { results: 2, learners: 1 }, files_removed: 3, files_ok: true, audit_ok: false });
   });
 
   it("a database refusal is an answer, not a crash; an unknown failure is rethrown (500, logged)", async () => {

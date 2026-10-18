@@ -629,7 +629,7 @@ export const purgePage = {
   title: (alias: string) => `Xóa dữ liệu · ${alias}`,
   back: "Về trang chủ",
   intro:
-    "Việc này xóa vĩnh viễn bài làm, kết quả, ghi chú buổi học, bài luyện, file ảnh/PDF và tên đăng nhập ngắn của em trong app. Không hoàn tác được.",
+    "Việc này xóa vĩnh viễn bài làm, kết quả, ghi chú buổi học, bài luyện, file ảnh/PDF và tên đăng nhập ngắn của em trong app. Không hoàn tác được. App chỉ giữ lại một biên nhận nhỏ (mã và số lượng, không có nội dung) để biết ai đã xóa và khi nào.",
   keepsAccount: "Tài khoản đăng nhập (email) của em và của mọi người KHÔNG bị xóa. Phần của Study Launcher không bị đụng tới.",
   backupNote: "Bản sao lưu hằng tuần vẫn còn dữ liệu cũ cho đến khi tự hết hạn (khoảng 30 ngày).",
   needsMigration:
@@ -678,6 +678,7 @@ export const purgePage = {
   doneFiles: (n: number) => `Đã xóa ${n} file trong kho.`,
   filesLeft:
     "Dữ liệu trong database đã xóa, nhưng chưa xóa được file trong kho. Nhờ người hỗ trợ chạy lệnh dọn file mồ côi (npm run storage:orphans).",
+  auditWarning: "Lưu ý: file đã xóa xong, nhưng chưa ghi được dòng \"đã xóa file\" vào nhật ký. Dữ liệu của em vẫn đã được xóa; bạn báo người hỗ trợ nếu cần bổ sung nhật ký.",
   homeLink: "Về trang chủ",
   errors: {
     name_mismatch: "Tên gõ chưa khớp. Bạn gõ lại đúng tên của em nhé.",
