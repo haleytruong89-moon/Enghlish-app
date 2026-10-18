@@ -53,12 +53,12 @@ Nguồn: audit 18/10 (`docs/AUDIT_2026-10-18.md`), PROGRESS (bảng quyết đ�
 
 | # | Câu hỏi | Đề xuất | Lý do |
 |---|---|---|---|
-| D1 | Thứ tự làm tiếp | **S5c → đưa gia sư vào → S6 → S7 → S8 → S5b-2** | Khép vòng học của con (S6) và có bằng chứng cho engine (S7) trước. Phần gợi ý bài (S5b-2) trùng với "việc tiếp theo" của S8 |
+| D1 | Thứ tự làm tiếp *(đã được E8 thay thế, 18/10 22:05)* | **S5c → đưa gia sư vào → S6 → S7 → S8 → S5b-2** | Khép vòng học của con (S6) và có bằng chứng cho engine (S7) trước. Phần gợi ý bài (S5b-2) trùng với "việc tiếp theo" của S8 |
 | D2 | Cách đưa gia sư vào | **Hướng dẫn 1 trang + buổi 30 phút mỗi gia sư**, có bạn ngồi cùng | Cổng G4: gia sư hiểu thang chấm, quy tắc "không ghi điểm trong lời nhắn cho em" |
 | D3 | Đổi gia sư | **Chưa làm công cụ**; Claude viết hướng dẫn thao tác khi nào cần | Việc hiếm, tốn công làm trước |
 | D4 | Hạn nộp, nộp muộn | **Chỉ hiển thị "quá hạn" cho gia sư**, không trừ điểm, không chặn nộp | App gia đình, không cần phạt. Gia sư biết để nhắc |
 
-## E. Đề xuất mới 18/10: "Studio bài tập" — app soạn bài, tự chấm, gợi ý cho gia sư (CHỜ DUYỆT)
+## E. Đề xuất mới 18/10: "Studio bài tập" — app soạn bài, tự chấm, gợi ý cho gia sư (ĐÃ DUYỆT 18/10/2026 22:05: đồng ý E1–E8)
 
 Mục tiêu (lời phụ huynh): gia sư thấy app **tiện và muốn dùng**. Gia sư chỉ việc tải lên → xem lại → duyệt. App lo phần soạn bài, chấm và gợi ý.
 

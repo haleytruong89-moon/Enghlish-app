@@ -658,7 +658,7 @@ Bản sao lưu hằng tuần (`pg_dump`) chỉ chứa **bảng**, không chứa 
 
 ## S5c — Sẵn sàng dùng thật (18/10/2026)
 
-Nhánh `feature/s5c-readiness`. Kế hoạch `docs/plans/s5c-readiness.md`; kiểm toán `docs/AUDIT_2026-10-18.md`; quyết định `docs/DECISIONS_PENDING.md` (phụ huynh đồng ý A–D ngày 18/10; mục E "Studio bài tập" **chưa duyệt** nên **không có việc AI nào** trong lát này). **Chưa có review Opus, chưa push, chưa mở PR, chưa áp lên database thật.**
+Nhánh `feature/s5c-readiness`. Kế hoạch `docs/plans/s5c-readiness.md`; kiểm toán `docs/AUDIT_2026-10-18.md`; quyết định `docs/DECISIONS_PENDING.md` (phụ huynh đồng ý A–D ngày 18/10, rồi đồng ý mục E "Studio bài tập" lúc 22:05 cùng ngày; Studio là lát riêng sau S5c nên **lát này không có việc AI nào**). **Chưa có review Opus, chưa push, chưa mở PR, chưa áp lên database thật.**
 
 ### Đã thay đổi gì (nói đơn giản)
 
@@ -701,7 +701,7 @@ Nhánh `feature/s5c-readiness`. Kế hoạch `docs/plans/s5c-readiness.md`; ki�
 - **`eng_recheck_days` nay là cài đặt chung** (không theo bộ kỹ năng của em), nên em chưa có bộ kỹ năng cũng có hạn "Hỏi lại". Chưa có màn để phụ huynh đổi số ngày (đổi bằng SQL qua `eng_set_tutorwork_setting`); nếu cần màn, nói để làm sau.
 - **Test e2e xóa dữ liệu** (`tests/e2e/purge.spec.ts`) chạy ở một project Playwright riêng sau các test khác và cần `DATABASE_URL` (để tạo em thử rồi xóa). Chưa chạy được ở máy này (không Docker/Supabase), chỉ `--list`; CI chạy.
 - **Mục nội dung C1/C5/C6** (bảng bước→bài đọc/nghe, đề thử 21/11, B-v2) không thuộc S5c — chưa làm.
-- **Không có AI**, không có Studio; thứ tự theo quyết định D1.
+- **Không có AI**, không có Studio trong lát này. Thứ tự sau S5c theo E8 (PRD D31): spike AI → đưa gia sư vào + mockup Studio → Studio 1 → Studio 2 → S6 → S7 → S8.
 - Số migration kế tiếp cho nội dung cấu hình mới (`npm run gen:config -- --new`) giờ là **0018**.
 
 ### Tiêu chí đạt

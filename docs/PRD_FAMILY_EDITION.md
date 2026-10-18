@@ -38,9 +38,9 @@ Giữ nguyên **kiến trúc** và **hợp đồng đo lường** (PRD §6). C�
 | D22 | Giữ nguyên quy tắc trạng thái PRD §6.4 (Independent: ≥3 first-attempt episode, ≥2 bối cảnh, trải ≥7 ngày, ≥1 checkpoint quan sát trực tiếp; delayed ≥14 ngày từ lần luyện gần nhất) — **là cấu hình pilot có version** | 11/10 | Rubric v0.1 §7 |
 | D29 | **Bài làm ở trang bên ngoài được chấp nhận:** gia sư giao bài qua link (test-english, NotebookLM, Gemini…) nên câu trả lời của con đi qua dịch vụ bên ngoài **do trang đó xử lý, không phải app**. App chỉ lưu **link và ảnh trang kết quả**, không gửi dữ liệu nào của con tới các trang đó. Lợi ích (gia sư dùng hằng tuần) lớn hơn rủi ro; phụ huynh đã chọn | 18/10 | Làm rõ CLAUDE.md "không bên thứ ba nhận dữ liệu" (áp dụng cho dữ liệu app gửi đi) |
 | D30 | **Sao lưu hằng tuần** (sáng Chủ nhật, mất tối đa ~7 ngày; chạy tay trước thay đổi lớn), **gồm `auth.users` + `auth.identities`** (mã hóa cùng khóa `age`), và mỗi lần chạy **tự khôi phục thử** vào một Postgres tạm trong job rồi đối chiếu số dòng trước khi mã hóa. **File tải lên (ảnh, PDF) chưa được sao lưu** (xem lại sau ~1 tháng dùng thật) | 16–18/10 | D14 ("hằng đêm"), NFR-05 |
-| D31 | **S5b (bài của gia sư: đăng nhập tên ngắn, ghi kết quả/buổi học, giao bài link/PDF, kho file) và S5c (sẵn sàng dùng thật) được chèn vào lộ trình.** Thứ tự đã duyệt: **S5c → đưa gia sư vào dùng → S6 → S7 → S8 → S5b-2** (thư viện nguồn, gợi ý). "Studio bài tập" (đề xuất E trong `DECISIONS_PENDING`) **chưa được duyệt**, chưa nằm trong lộ trình | 18/10 | §8 (bảng lát) |
+| D31 | **S5b (bài của gia sư: đăng nhập tên ngắn, ghi kết quả/buổi học, giao bài link/PDF, kho file) và S5c (sẵn sàng dùng thật) được chèn vào lộ trình.** Thứ tự đã duyệt (E8, 18/10 22:05, thay thứ tự D1): **S5c → thử nhanh AI (spike nửa ngày) → đưa gia sư vào, cho xem mockup Studio → Studio bước 1 → Studio bước 2 → S6 → S7 → S8**. "Studio bài tập" (đề xuất E1–E8 trong `DECISIONS_PENDING`) **đã duyệt**; S5b-2 (thư viện nguồn, gợi ý) gộp vào Studio bước 2 (E3) | 18/10 | §8 (bảng lát) |
 | D32 | **"Hỏi lại điểm yếu" (theo nhãn lỗi) ≠ kiểm tra trễ/delayed check (theo kỹ năng):** hai khái niệm, hai cài đặt. Số ngày của "Hỏi lại điểm yếu" nằm ở `tutorwork_settings.recheck_days` (mặc định 14); **không** đọc từ `assessment_policies`. Kết quả "hỏi lại" là tín hiệu, **không** là bằng chứng cho engine (S7) | 18/10 | Làm rõ D22 |
-| D33 | **File/PDF nằm trong phạm vi** qua S5b: gia sư tải đề PDF lên, em gửi ảnh kết quả, lưu trong bucket riêng tư `english-work` (không policy, link ký 5 phút). Không có audio (D13). Nội dung đề của sách có bản quyền: chỉ lưu khung số câu/phần/nhãn, không lưu chữ của đề (đề xuất E5 chưa duyệt) | 17–18/10 | FR-06 ("PDF → ○") |
+| D33 | **File/PDF nằm trong phạm vi** qua S5b: gia sư tải đề PDF lên, em gửi ảnh kết quả, lưu trong bucket riêng tư `english-work` (không policy, link ký 5 phút). Không có audio (D13). Nội dung đề của sách có bản quyền: chỉ lưu khung số câu/phần/nhãn, không lưu chữ của đề — từ Studio (E5, duyệt 18/10) được lưu nội dung đề có bản quyền **chỉ để dùng riêng trong gia đình**, không chia sẻ | 17–18/10 | FR-06 ("PDF → ○") |
 
 ---
 
@@ -157,7 +157,7 @@ Mỗi inquiry Track A thường gồm: SOURCE-QA → CANVAS-BASIC → SPEAK-MONO
 | Challenger | — | ⏸ | `REVIEWER_MODEL` | Bật cùng Track B |
 | Báo cáo tháng nháp | ○ | ○ | — | Sau pilot |
 
-*(Cột Track B khớp D17 và §2.1: Reviewer + Coach như Track A ngay từ bây giờ; Clarifier + Challenger ⏸ hè 2027. **AI hiện đang tắt cho cả hai em** và chỉ bật khi phụ huynh duyệt văn bản đồng ý `ai_text` — Studio/đề xuất E chưa duyệt.)*
+*(Cột Track B khớp D17 và §2.1: Reviewer + Coach như Track A ngay từ bây giờ; Clarifier + Challenger ⏸ hè 2027. **AI hiện đang tắt cho cả hai em** và chỉ bật khi phụ huynh duyệt văn bản đồng ý `ai_text` — Studio (E6, duyệt 18/10): AI được dùng cho việc của gia sư (đọc đề, soạn bài nháp) sau khi phụ huynh duyệt `ai_text`; không gửi danh tính của em, chỉ nội dung đề và tên nhãn; trần $10/tháng, có công tắc tắt.)*
 
 - **Không bao giờ:** AI chấm X1/X2/A1/A3/A5; AI tự đổi trạng thái; AI nói "con đạt B1"; AI đọc dữ liệu em kia.
 - **Ngân sách:** ước tính Track A ~$1–3/tháng; cảnh báo $8, dừng $10 (D18). Mỗi call ghi `ai_runs`.
@@ -212,8 +212,8 @@ Không chung dữ liệu. Ghi nhận: hai app có engine mastery riêng; nếu s
 | **II — Đo lường** | S7 | Episode, observation, engine trạng thái PRD §6.4, đề xuất → xác nhận, rebuild | FR-15 | |
 | | S8 | Hàng đợi delayed/transfer, exposure history, next action | FR-16/17 | |
 | | S9 | Màn phụ huynh + màn "vì sao", báo cáo tháng mẫu, export JSON, xóa, snapshot SkillGrow | FR-18/19/21, FX-01 | **~3 lát** |
-| *(sau S8, D31)* | S5b-2 | Thư viện nguồn + gợi ý bài theo điểm yếu (dùng `assignments.source_key` và nhãn đã lưu) | FR-05/06 | 1 lát |
-| *(chưa duyệt)* | Studio | Đề xuất E (`DECISIONS_PENDING`): tải đề lên → app tạo bài, tự chấm, gợi ý; cần AI → **chờ phụ huynh duyệt**, chưa nằm trong lộ trình | — | — |
+| *(sau S5c, trước S6 — D31/E8)* | Studio 1 | Gia sư tải đề PDF/Word + đáp án → AI đọc thành bản nháp → gia sư duyệt → em làm trong app, tự chấm câu đóng, tự gắn nhãn; em thấy "câu cần xem lại" + giải thích đã duyệt, không thấy điểm (E2, E7). Có spike AI nửa ngày trước | FR-05/06 (mở rộng) | 1 lát + spike |
+| | Studio 2 | Gợi ý bài bổ sung theo điểm yếu: AI soạn 8–12 câu + đáp án + giải thích theo "Thư viện kiểu luyện", gia sư duyệt; gộp S5b-2 (thư viện nguồn) (E3, E4) | FR-05/06 | 1 lát |
 | **III — Nói + AI** | Sp | Spike STT trên máy (chạy song song từ sớm, không cần DB) | — | |
 | | S10 | Studio nói: ghi âm cục bộ, STT, transcript version, chỉ số | FR-09 | |
 | | S11 | Dịch vụ AI: bảng jobs, worker, Reviewer, `ai_runs`, budget, kill switch | FR-12/23 | |
@@ -222,7 +222,7 @@ Không chung dữ liệu. Ghi nhận: hai app có engine mastery riêng; nếu s
 | **Track B — song song (v1.1)** | — | Cấu hình B + target set B-v1 vào S1; bài dạng đề + Canvas Advanced gọn vào S3; ô nhập điểm đề thử tháng vào S9 | FR-03/07/08 | +2–3 lát |
 | **Track B — hè 2027** | TB1–TB2 | Clarifier/Challenger, Canvas Advanced đầy đủ, 70/30 | FR-08/12/22 | ~2–3 lát |
 
-**Tổng cho 2 track: ~19–20 lát (đã tính S5b-1 hai PR, S5c, S5b-2; chưa tính Studio).** Thứ tự ưu tiên để 2 em dùng được sớm nhất: **S0 → S1 → S2 → S4 → S5 + phần câu hỏi đọc/bài dạng đề của S3** (giao bài → làm bài đọc/bài dạng đề/bài viết → duyệt) ≈ 6 lát ≈ **khoảng 3 tuần** là bản dùng được đầu tiên cho **cả An và Nguyên**; sau đó phần còn lại của S3, S6–S9, rồi nói + AI. Toàn bộ ≈ **7–9 tuần** với nhịp 2–3 lát/tuần (ước tính, chưa phải cam kết). Trước khi có S10, bài nói vào hệ thống qua ACT-SPEAK-LIVE (gia sư ghi). Trong lúc chờ: pilot thủ công (D27).
+**Tổng cho 2 track: ~20–21 lát (đã tính S5b-1 hai PR, S5c, Studio 2 bước; S5b-2 gộp vào Studio bước 2).** Thứ tự ưu tiên để 2 em dùng được sớm nhất: **S0 → S1 → S2 → S4 → S5 + phần câu hỏi đọc/bài dạng đề của S3** (giao bài → làm bài đọc/bài dạng đề/bài viết → duyệt) ≈ 6 lát ≈ **khoảng 3 tuần** là bản dùng được đầu tiên cho **cả An và Nguyên**; sau đó phần còn lại của S3, S6–S9, rồi nói + AI. Toàn bộ ≈ **7–9 tuần** với nhịp 2–3 lát/tuần (ước tính, chưa phải cam kết). Trước khi có S10, bài nói vào hệ thống qua ACT-SPEAK-LIVE (gia sư ghi). Trong lúc chờ: pilot thủ công (D27).
 
 **Cổng (rút gọn PRD §14):**
 
