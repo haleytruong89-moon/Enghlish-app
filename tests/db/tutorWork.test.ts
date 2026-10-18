@@ -145,8 +145,10 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
       o.on ?? TODAY, o.supersedes ?? null, by, o.clientId ?? randomUUID(), o.source ?? null,
     ]);
   };
+  // Each default quick entry gets its own title: since S5c a learner has one live "first" per quick title and day (0017).
+  let quickSeq = 0;
   const quick = (by: string, o: ResultOpts = {}) =>
-    record(by, { mode: "quick", frame: null, title: "Link practice", total: 10, correct: 8, wrong: [4, 7], ...o });
+    record(by, { mode: "quick", frame: null, title: `Link practice ${(quickSeq += 1)}`, total: 10, correct: 8, wrong: [4, 7], ...o });
   const weak = (learner: string, since: string | null = null) =>
     svc<Weak>("select english.eng_weak_points($1, $2::date) as r", [learner, since]);
   const tagOf = (w: Weak, key: string) => w.tags.find((t) => t.tag_key === key);
@@ -848,12 +850,16 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
       const fixed = await record(M().tutorNguyen, { learner: child, frame: v2, wrong: [2, 3], supersedes: first.id, clientId: "fix-first-0006" });
       await fail(record(M().tutorNguyen, { learner: child, frame: v2, wrong: [4], clientId: "fix-first-0007" }), "23505", /duplicate_first/);
       expect(fixed.replayed).toBe(false);
-      // another child may take the same test; quick results are never "duplicates"
+      // another child may take the same test
       const sibling = ((await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1, 'Sibling', 'B', true, 'active') returning id", [s.familyId]))[0] as { id: string }).id;
       await q1("insert into english.relationships(member_id, learner_id, relation) values ($1, $2, 'parent')", [M().parent, sibling]);
       await record(M().parent, { learner: sibling, frame: v2, wrong: [1], clientId: "fix-first-0008" });
+      // quick results: since S5c a second live first with the same title on the same day is refused (details in readiness.test.ts) ...
       await quick(M().parent, { learner: child, clientId: "fix-first-0009", title: "Same quick title" });
-      await quick(M().parent, { learner: child, clientId: "fix-first-0010", title: "Same quick title" });
+      await fail(quick(M().parent, { learner: child, clientId: "fix-first-0010", title: "Same quick title" }), "23505", /duplicate_first/);
+      // ... but another day, or a retry, is fine
+      await quick(M().parent, { learner: child, clientId: "fix-first-0011", title: "Same quick title", on: daysAgo(1) });
+      await quick(M().parent, { learner: child, clientId: "fix-first-0012", title: "Same quick title", attempt: "retry" });
     });
 
     it("the source of a quick result is a choice (test or practice, default practice); a framed result is always a test; late tags keep the source", async () => {
@@ -990,7 +996,7 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
       expect(view.policyDays).toBeGreaterThan(0);
       expect(view.tags.length).toBeGreaterThan(0);
       const queue = parseUntagged(await svc("select english.eng_untagged_queue($1) as r", [NG()]));
-      expect(queue.some((i) => i.title === "Link practice" && i.items.includes(7))).toBe(true);
+      expect(queue.some((i) => i.title.startsWith("Link practice") && i.items.includes(7))).toBe(true);
     });
 
     it("the same selects return nothing to a student", async () => {

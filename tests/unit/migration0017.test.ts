@@ -27,4 +27,12 @@ describe("0017_readiness.sql", () => {
     expect(code).toContain("drop function if exists english.eng_write_lesson_note_v2(uuid, date, text, text[], text, text, jsonb, uuid, uuid, text);");
     expect(code).toMatch(/insert into english\.exposure_log\(learner_id, target_key, at, source, attempt_id, lesson_note_id\)\s+select p_learner, k, english\.eng_session_ts\(p_session_date\), 'lesson'/);
   });
+
+  it("step 2: the quick-result duplicate rule covers only entries without an assignment or a frame, and lets a correction through", () => {
+    const fn = code.slice(code.indexOf("create or replace function english.eng_record_result("));
+    expect(fn).toContain("p_mode = 'quick' and p_attempt = 'first' and p_assignment is null");
+    expect(fn).toContain("r2.mode = 'quick' and r2.attempt = 'first' and r2.assignment_id is null");
+    expect(fn).toContain("r2.id is distinct from p_supersedes");
+    expect(fn).toContain("(duplicate_first)");
+  });
 });

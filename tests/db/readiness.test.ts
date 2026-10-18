@@ -107,4 +107,40 @@ describe("S5c readiness (migration 0017)", () => {
       expect(Object.fromEntries(priv.map((p) => [p.r, p.ok]))).toEqual({ anon: false, authenticated: false, service_role: true });
     });
   });
+
+  // -------------------------------------------------------------------------------------------------------------
+  describe("2. a quick result without an assignment has one 'first' per learner + title + day", () => {
+    type Res = { id: string; replayed: boolean; untagged: number };
+    const quick = (
+      by: string,
+      o: { learner?: string; title?: string; on?: string; attempt?: "first" | "retry"; supersedes?: string | null; clientId?: string; assignment?: string | null } = {},
+    ) =>
+      svc<Res>("select english.eng_record_result($1, 'quick', null, $2, 10, 8, '{4,7}'::int[], null, 'home', $3, false, $4::date, $5, $6, $7, $8, null) as r", [
+        o.learner ?? NG(), o.title ?? "Link practice", o.attempt ?? "first", o.on ?? TODAY, o.assignment ?? null, o.supersedes ?? null, by, o.clientId ?? randomUUID(),
+      ]);
+
+    it("the same learner, title (any case or spacing) and day cannot be a first attempt twice - tutor and parent alike", async () => {
+      const a = await quick(M().tutorNguyen, { title: "Destination Unit 3", clientId: "s5c-dup-0001" });
+      await fail(quick(M().parent, { title: "Destination Unit 3" }), "23505", /duplicate_first/);
+      await fail(quick(M().parent, { title: "  destination   UNIT 3 " }), "23505", /duplicate_first/);
+      // the same request sent again is a replay, not a duplicate
+      expect(await quick(M().tutorNguyen, { title: "Destination Unit 3", clientId: "s5c-dup-0001" })).toEqual({ ...a, replayed: true });
+    });
+
+    it("another title, another day, another learner, or a retry are all fine", async () => {
+      await quick(M().tutorNguyen, { title: "Destination Unit 4", clientId: "s5c-dup-0002" });
+      await quick(M().tutorNguyen, { title: "Destination Unit 5", clientId: "s5c-dup-0003" });
+      await quick(M().tutorNguyen, { title: "Destination Unit 4", on: daysAgo(1), clientId: "s5c-dup-0004" });
+      await quick(M().tutorAn, { learner: AN(), title: "Destination Unit 4", clientId: "s5c-dup-0005" });
+      await quick(M().parent, { title: "Destination Unit 4", attempt: "retry", clientId: "s5c-dup-0006" });
+    });
+
+    it("correcting the saved one (supersedes) is allowed once, and then the correction is the live first", async () => {
+      const a = await quick(M().tutorNguyen, { title: "Destination Unit 6", clientId: "s5c-dup-0007" });
+      const b = await quick(M().tutorNguyen, { title: "Destination Unit 6", supersedes: a.id, clientId: "s5c-dup-0008" });
+      expect(b.replayed).toBe(false);
+      await fail(quick(M().parent, { title: "Destination Unit 6", clientId: "s5c-dup-0009" }), "23505", /duplicate_first/);
+      await fail(quick(M().tutorNguyen, { title: "Destination Unit 6", supersedes: a.id, clientId: "s5c-dup-0010" }), "23505");
+    });
+  });
 });
