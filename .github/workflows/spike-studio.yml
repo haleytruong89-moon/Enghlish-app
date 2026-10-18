@@ -1,0 +1,38 @@
+name: Spike Studio AI
+
+# THROWAWAY spike (branch feature/spike-studio-ai only, never merged).
+# Sends ONLY the blank test + the tutor's answer key to the Claude API (no child data, no names)
+# and compares the extracted exercise with spike/gold.json. Results: run summary + annotations.
+# Secret: ANTHROPIC_API_KEY (parent-created key with a $10/month limit).
+
+on:
+  push:
+    branches: [feature/spike-studio-ai]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spike-studio
+  cancel-in-progress: true
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        model: [claude-sonnet-5-5, claude-haiku-5-5]
+        format: [pdf, text]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx --yes tsx@4 spike/studio-extract.ts
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SPIKE_MODEL: ${{ matrix.model }}
+          SPIKE_FORMAT: ${{ matrix.format }}

@@ -1,0 +1,495 @@
+{
+ "source": "Destination C1&C2 Progress Test U1-12 (family private use, spike only)",
+ "items": [
+  {
+   "n": 1,
+   "part": "A",
+   "kind": "mcq",
+   "key": "B",
+   "accepted": [],
+   "tag_key": "bi-dong-nho-tuong-thuat"
+  },
+  {
+   "n": 2,
+   "part": "A",
+   "kind": "mcq",
+   "key": "C",
+   "accepted": [],
+   "tag_key": "bi-dong-nho-tuong-thuat"
+  },
+  {
+   "n": 3,
+   "part": "A",
+   "kind": "mcq",
+   "key": "B",
+   "accepted": [],
+   "tag_key": "wish-would-rather"
+  },
+  {
+   "n": 4,
+   "part": "A",
+   "kind": "mcq",
+   "key": "B",
+   "accepted": [],
+   "tag_key": "cau-dieu-kien-dao-ngu"
+  },
+  {
+   "n": 5,
+   "part": "A",
+   "kind": "mcq",
+   "key": "A",
+   "accepted": [],
+   "tag_key": "cau-dieu-kien-dao-ngu"
+  },
+  {
+   "n": 6,
+   "part": "A",
+   "kind": "mcq",
+   "key": "B",
+   "accepted": [],
+   "tag_key": "cau-dieu-kien-dao-ngu"
+  },
+  {
+   "n": 7,
+   "part": "A",
+   "kind": "mcq",
+   "key": "C",
+   "accepted": [],
+   "tag_key": "bi-dong-nho-tuong-thuat"
+  },
+  {
+   "n": 8,
+   "part": "A",
+   "kind": "mcq",
+   "key": "B",
+   "accepted": [],
+   "tag_key": "modal-suy-doan"
+  },
+  {
+   "n": 9,
+   "part": "A",
+   "kind": "mcq",
+   "key": "B",
+   "accepted": [],
+   "tag_key": "modal-suy-doan"
+  },
+  {
+   "n": 10,
+   "part": "A",
+   "kind": "mcq",
+   "key": "A",
+   "accepted": [],
+   "tag_key": "modal-suy-doan"
+  },
+  {
+   "n": 11,
+   "part": "A",
+   "kind": "mcq",
+   "key": "C",
+   "accepted": [],
+   "tag_key": "cau-dieu-kien-dao-ngu"
+  },
+  {
+   "n": 12,
+   "part": "A",
+   "kind": "mcq",
+   "key": "A",
+   "accepted": [],
+   "tag_key": "cau-dieu-kien-dao-ngu"
+  },
+  {
+   "n": 13,
+   "part": "B",
+   "kind": "gap",
+   "key": "would",
+   "accepted": [],
+   "tag_key": "bi-dong-nho-tuong-thuat"
+  },
+  {
+   "n": 14,
+   "part": "B",
+   "kind": "gap",
+   "key": "was",
+   "accepted": [],
+   "tag_key": "bi-dong-nho-tuong-thuat"
+  },
+  {
+   "n": 15,
+   "part": "B",
+   "kind": "gap",
+   "key": "have",
+   "accepted": [],
+   "tag_key": "modal-suy-doan"
+  },
+  {
+   "n": 16,
+   "part": "B",
+   "kind": "gap",
+   "key": "had",
+   "accepted": [
+    "got"
+   ],
+   "tag_key": "bi-dong-nho-tuong-thuat"
+  },
+  {
+   "n": 17,
+   "part": "B",
+   "kind": "gap",
+   "key": "provided",
+   "accepted": [
+    "providing"
+   ],
+   "tag_key": "cau-dieu-kien-dao-ngu"
+  },
+  {
+   "n": 18,
+   "part": "B",
+   "kind": "gap",
+   "key": "but",
+   "accepted": [],
+   "tag_key": "cau-dieu-kien-dao-ngu"
+  },
+  {
+   "n": 19,
+   "part": "B",
+   "kind": "gap",
+   "key": "being",
+   "accepted": [],
+   "tag_key": "bi-dong-nho-tuong-thuat"
+  },
+  {
+   "n": 20,
+   "part": "B",
+   "kind": "gap",
+   "key": "Should",
+   "accepted": [],
+   "tag_key": "cau-dieu-kien-dao-ngu"
+  },
+  {
+   "n": 21,
+   "part": "B",
+   "kind": "gap",
+   "key": "would",
+   "accepted": [],
+   "tag_key": "wish-would-rather"
+  },
+  {
+   "n": 22,
+   "part": "B",
+   "kind": "gap",
+   "key": "had",
+   "accepted": [],
+   "tag_key": "wish-would-rather"
+  },
+  {
+   "n": 23,
+   "part": "C",
+   "kind": "transform",
+   "key": "is said to have written",
+   "accepted": [],
+   "tag_key": "bi-dong-nho-tuong-thuat"
+  },
+  {
+   "n": 24,
+   "part": "C",
+   "kind": "transform",
+   "key": "had his hair cut",
+   "accepted": [],
+   "tag_key": "bi-dong-nho-tuong-thuat"
+  },
+  {
+   "n": 25,
+   "part": "C",
+   "kind": "transform",
+   "key": "Had it not been for",
+   "accepted": [],
+   "tag_key": "cau-dieu-kien-dao-ngu"
+  },
+  {
+   "n": 26,
+   "part": "C",
+   "kind": "transform",
+   "key": "can't have left",
+   "accepted": [],
+   "tag_key": "modal-suy-doan"
+  },
+  {
+   "n": 27,
+   "part": "C",
+   "kind": "transform",
+   "key": "had better see",
+   "accepted": [],
+   "tag_key": "wish-would-rather"
+  },
+  {
+   "n": 28,
+   "part": "C",
+   "kind": "transform",
+   "key": "wish I had studied",
+   "accepted": [
+    "wish I'd studied"
+   ],
+   "tag_key": "wish-would-rather"
+  },
+  {
+   "n": 29,
+   "part": "C",
+   "kind": "transform",
+   "key": "being stared at",
+   "accepted": [],
+   "tag_key": "bi-dong-nho-tuong-thuat"
+  },
+  {
+   "n": 30,
+   "part": "C",
+   "kind": "transform",
+   "key": "may have been",
+   "accepted": [],
+   "tag_key": "modal-suy-doan"
+  },
+  {
+   "n": 31,
+   "part": "D",
+   "kind": "wordform",
+   "key": "predictions",
+   "accepted": [],
+   "tag_key": "dang-tu"
+  },
+  {
+   "n": 32,
+   "part": "D",
+   "kind": "wordform",
+   "key": "unprepared",
+   "accepted": [],
+   "tag_key": "dang-tu"
+  },
+  {
+   "n": 33,
+   "part": "D",
+   "kind": "wordform",
+   "key": "impassable",
+   "accepted": [],
+   "tag_key": "dang-tu"
+  },
+  {
+   "n": 34,
+   "part": "D",
+   "kind": "wordform",
+   "key": "disruption",
+   "accepted": [
+    "disruptions"
+   ],
+   "tag_key": "dang-tu"
+  },
+  {
+   "n": 35,
+   "part": "D",
+   "kind": "wordform",
+   "key": "unreliable",
+   "accepted": [],
+   "tag_key": "dang-tu"
+  },
+  {
+   "n": 36,
+   "part": "D",
+   "kind": "wordform",
+   "key": "sensational",
+   "accepted": [
+    "sensationalist"
+   ],
+   "tag_key": "dang-tu"
+  },
+  {
+   "n": 37,
+   "part": "D",
+   "kind": "wordform",
+   "key": "Fortunately",
+   "accepted": [],
+   "tag_key": "dang-tu"
+  },
+  {
+   "n": 38,
+   "part": "D",
+   "kind": "wordform",
+   "key": "coincidence",
+   "accepted": [],
+   "tag_key": "dang-tu"
+  },
+  {
+   "n": 39,
+   "part": "E",
+   "kind": "mcq",
+   "key": "C",
+   "accepted": [],
+   "tag_key": "tu-vung-ngu-canh"
+  },
+  {
+   "n": 40,
+   "part": "E",
+   "kind": "mcq",
+   "key": "A",
+   "accepted": [],
+   "tag_key": "tu-vung-ngu-canh"
+  },
+  {
+   "n": 41,
+   "part": "E",
+   "kind": "mcq",
+   "key": "B",
+   "accepted": [],
+   "tag_key": "tu-vung-ngu-canh"
+  },
+  {
+   "n": 42,
+   "part": "E",
+   "kind": "mcq",
+   "key": "D",
+   "accepted": [],
+   "tag_key": "tu-vung-ngu-canh"
+  },
+  {
+   "n": 43,
+   "part": "E",
+   "kind": "mcq",
+   "key": "B",
+   "accepted": [],
+   "tag_key": "tu-vung-ngu-canh"
+  },
+  {
+   "n": 44,
+   "part": "E",
+   "kind": "mcq",
+   "key": "C",
+   "accepted": [],
+   "tag_key": "tu-vung-ngu-canh"
+  },
+  {
+   "n": 45,
+   "part": "E",
+   "kind": "mcq",
+   "key": "B",
+   "accepted": [],
+   "tag_key": "tu-vung-ngu-canh"
+  },
+  {
+   "n": 46,
+   "part": "E",
+   "kind": "mcq",
+   "key": "C",
+   "accepted": [],
+   "tag_key": "tu-vung-ngu-canh"
+  },
+  {
+   "n": 47,
+   "part": "F",
+   "kind": "gap",
+   "key": "off",
+   "accepted": [],
+   "tag_key": "cum-dong-tu"
+  },
+  {
+   "n": 48,
+   "part": "F",
+   "kind": "gap",
+   "key": "over",
+   "accepted": [],
+   "tag_key": "cum-dong-tu"
+  },
+  {
+   "n": 49,
+   "part": "F",
+   "kind": "gap",
+   "key": "through",
+   "accepted": [],
+   "tag_key": "cum-dong-tu"
+  },
+  {
+   "n": 50,
+   "part": "F",
+   "kind": "gap",
+   "key": "across",
+   "accepted": [],
+   "tag_key": "cum-dong-tu"
+  },
+  {
+   "n": 51,
+   "part": "F",
+   "kind": "gap",
+   "key": "into",
+   "accepted": [],
+   "tag_key": "cum-dong-tu"
+  },
+  {
+   "n": 52,
+   "part": "F",
+   "kind": "gap",
+   "key": "up",
+   "accepted": [],
+   "tag_key": "cum-dong-tu"
+  },
+  {
+   "n": 53,
+   "part": "F",
+   "kind": "gap",
+   "key": "out",
+   "accepted": [],
+   "tag_key": "cum-dong-tu"
+  },
+  {
+   "n": 54,
+   "part": "G",
+   "kind": "gap",
+   "key": "chance",
+   "accepted": [],
+   "tag_key": "thanh-ngu"
+  },
+  {
+   "n": 55,
+   "part": "G",
+   "kind": "gap",
+   "key": "odds",
+   "accepted": [],
+   "tag_key": "thanh-ngu"
+  },
+  {
+   "n": 56,
+   "part": "G",
+   "kind": "gap",
+   "key": "teeth",
+   "accepted": [],
+   "tag_key": "thanh-ngu"
+  },
+  {
+   "n": 57,
+   "part": "G",
+   "kind": "gap",
+   "key": "dogs",
+   "accepted": [],
+   "tag_key": "thanh-ngu"
+  },
+  {
+   "n": 58,
+   "part": "G",
+   "kind": "gap",
+   "key": "headlines",
+   "accepted": [],
+   "tag_key": "thanh-ngu"
+  },
+  {
+   "n": 59,
+   "part": "G",
+   "kind": "gap",
+   "key": "lines",
+   "accepted": [],
+   "tag_key": "thanh-ngu"
+  },
+  {
+   "n": 60,
+   "part": "G",
+   "kind": "gap",
+   "key": "pace",
+   "accepted": [],
+   "tag_key": "thanh-ngu"
+  }
+ ]
+}
