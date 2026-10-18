@@ -692,7 +692,7 @@ Nhánh `feature/s5c-readiness`. Kế hoạch `docs/plans/s5c-readiness.md`; ki�
 1. Đăng nhập `thu-giasu-nguyen` → **Ghi buổi học**: có khung **Kỹ năng đã luyện hôm nay**; chọn 1–2 kỹ năng → lưu. (Trong database: `select target_key, source from english.exposure_log where source='lesson' order by at desc limit 5;`)
 2. **Ghi kết quả bài → Nhập nhanh**: ghi bài "Thử A" hôm nay lần đầu, rồi ghi lại cùng tên, cùng ngày, lần đầu → báo đã có lần đầu. Chọn "Làm lại" hoặc sửa bản đã ghi thì được.
 3. **Ghi bài ngoài app** cho một bài đã giao: chọn ngày sớm hơn ngày giao 3 ngày → hiện ô lý do; để trống → báo cần lý do; điền lý do → lưu được. Sớm hơn 14 ngày → báo không được.
-4. Đăng nhập `thu-phuhuynh` → thẻ của em → **Xóa dữ liệu** (chỉ dùng em thử mới tạo, **không dùng "An (thử)"/"Nguyên (thử)"**): số dòng hiện ra, gõ sai tên → không xóa; gõ đúng → xóa. Gia sư không thấy liên kết này.
+4. **Tạo một em thử để xóa:** GitHub → Actions → **Seed test family** → Run workflow → `mode` = **throwaway**, `confirm` = `SEED` → Summary in tên em, dạng "Em thử xóa xxxxxx" (trên máy: `npm run db:seed-throwaway`). Công cụ **từ chối** nếu gia đình THỬ có em nào không phải em thử. Rồi đăng nhập `thu-phuhuynh` → thẻ của em **Em thử xóa …** → **Xóa dữ liệu**: số dòng hiện ra, gõ sai tên → không xóa; gõ đúng → xóa. **Không dùng "An (thử)"/"Nguyên (thử)"**. Gia sư không thấy liên kết này.
 5. Bài luyện có hạn nộp là hôm qua và chưa nộp → hiện nhãn **Quá hạn** ở bảng bài giao và thẻ Hôm nay; đăng nhập là em → không có nhãn.
 
 ### Đối chiếu với plan — chỗ khác và vì sao

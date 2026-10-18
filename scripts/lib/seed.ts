@@ -302,6 +302,13 @@ export async function seedThrowawayLearner(client: ClientBase, opts: { alias?: s
   const alias = opts.alias ?? `Em thử xóa ${Math.random().toString(36).slice(2, 8)}`;
   const fam = await client.query<{ id: string }>("select id from english.families where id = $1", [TEST_FAMILY_ID]);
   if (!fam.rowCount) throw new Error("The test family does not exist - run the dev seed first");
+  // Never next to real children: the test family must hold test learners only, and it must have been seeded.
+  const kinds = await client.query<{ real: string; test: string }>(
+    "select count(*) filter (where not is_test) as real, count(*) filter (where is_test) as test from english.learners where family_id = $1",
+    [TEST_FAMILY_ID],
+  );
+  if (Number(kinds.rows[0]?.real ?? 0) > 0) throw new Error("Refusing: the test family contains a learner that is not marked is_test");
+  if (Number(kinds.rows[0]?.test ?? 0) === 0) throw new Error("The test family has no test learners - run the dev seed first");
   const parent = await client.query<{ id: string }>("select id from english.members where family_id = $1 and role = 'parent' order by created_at limit 1", [TEST_FAMILY_ID]);
   const parentId = parent.rows[0]?.id;
   if (!parentId) throw new Error("The test family has no parent member");

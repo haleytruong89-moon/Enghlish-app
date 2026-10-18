@@ -385,6 +385,16 @@ describe("S5c readiness (migration 0017)", () => {
       });
     });
 
+    it("the throwaway seeder refuses when the test family holds a learner that is not a test learner", async () => {
+      const real = (await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1, 'Em thật giả định', 'A', false, 'active') returning id", [s.familyId]))[0]?.id as string;
+      try {
+        await expect(seedThrowawayLearner(db.client)).rejects.toThrow(/not marked is_test/);
+      } finally {
+        await q1("delete from english.learners where id = $1", [real]);
+      }
+      expect(await count("select count(*)::int as n from english.learners where alias = 'Em thật giả định'")).toBe(0);
+    });
+
     it("the throwaway learner of the e2e purge spec is a test learner of the test family with data, and purging it leaves An and Nguyên alone", async () => {
       const t = await seedThrowawayLearner(db.client, { alias: "Em thử xóa e2e" });
       expect((await q1<{ is_test: boolean; family_id: string; track_id: string }>("select is_test, family_id, track_id from english.learners where id = $1", [t.learnerId]))[0]).toEqual({
