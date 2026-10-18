@@ -35,4 +35,16 @@ describe("0017_readiness.sql", () => {
     expect(fn).toContain("r2.id is distinct from p_supersedes");
     expect(fn).toContain("(duplicate_first)");
   });
+
+  it("step 3: the recheck wait comes from tutorwork_settings (seeded 14), not from the assessment policy, and the table has no direct access", () => {
+    const fn = code.slice(code.indexOf("create or replace function english.eng_recheck_days("), code.indexOf("create or replace function english.eng_tutorwork_settings("));
+    expect(fn).toContain("english.tutorwork_settings");
+    expect(fn).not.toContain("assessment_policies");
+    expect(fn).not.toContain("delayedMinDaysFromLastExposure");
+    expect(code).toContain("values ('recheck_days', '14'::jsonb) on conflict do nothing");
+    expect(code).toContain("alter table english.tutorwork_settings enable row level security;");
+    expect(code).toContain("revoke all on english.tutorwork_settings from public, anon, authenticated, service_role;");
+    expect(code).not.toMatch(/create\s+policy[^;]*tutorwork_settings/i);
+    expect(code).not.toMatch(/grant\s+[a-z, ]+on english\.tutorwork_settings/i);
+  });
 });

@@ -430,4 +430,80 @@ $$;
 revoke execute on function english.eng_record_result(uuid, text, uuid, text, int, int, int[], jsonb, text, text, boolean, date, uuid, uuid, uuid, text, text) from public, anon, authenticated;
 grant execute on function english.eng_record_result(uuid, text, uuid, text, int, int, int[], jsonb, text, text, boolean, date, uuid, uuid, uuid, text, text) to service_role;
 
+-- 3. Cài đặt riêng cho "Hỏi lại điểm yếu" (A10) ---------------------------------------------------------------------------------------------
+-- "Hỏi lại điểm yếu" (theo NHÃN lỗi, trong buổi học) KHÁC "Bài ôn lại sau 2 tuần" (theo KỸ NĂNG, chính sách đánh giá). Trước đây hai việc dùng chung
+-- một con số (delayedMinDaysFromLastExposure). Giờ số ngày hỏi lại nằm ở bảng cài đặt riêng của phần gia sư; đổi một bên không kéo theo bên kia.
+-- Bảng cài đặt: một dòng cho mỗi khóa, chung cho cả ứng dụng. RLS bật, KHÔNG có policy và KHÔNG grant cho authenticated: đọc qua hàm
+-- eng_tutorwork_settings (nhân viên), ghi qua eng_set_tutorwork_setting (chỉ phụ huynh); cả hai chỉ service_role gọi được sau requireAccess.
+create table if not exists english.tutorwork_settings (
+  key text primary key check (key ~ '^[a-z][a-z0-9_]{1,40}$'),
+  value jsonb not null,
+  updated_at timestamptz not null default clock_timestamp(),
+  -- id của english.members, KHÔNG có khóa ngoại (xóa tài khoản không làm hỏng lịch sử); NULL = giá trị gieo sẵn.
+  updated_by uuid
+);
+insert into english.tutorwork_settings(key, value) values ('recheck_days', '14'::jsonb) on conflict do nothing;
+
+alter table english.tutorwork_settings enable row level security;
+revoke all on english.tutorwork_settings from public, anon, authenticated, service_role;
+
+-- Số ngày chờ trước khi một điểm yếu "đến hạn hỏi lại". Tham số p_learner giữ lại cho khớp bản cũ (số ngày chung cho mọi em).
+create or replace function english.eng_recheck_days(p_learner uuid) returns int
+language sql stable security definer set search_path = ''
+as $$
+  select (s.value #>> '{}')::int from english.tutorwork_settings s where s.key = 'recheck_days'
+$$;
+
+-- Đọc cài đặt (gia sư hoặc phụ huynh). Trả {recheck_days: int}.
+create or replace function english.eng_tutorwork_settings(p_by uuid) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+begin
+  if p_by is null then
+    raise exception 'eng_tutorwork_settings: actor is required' using errcode = '22004';
+  end if;
+  if not exists (select 1 from english.members m where m.id = p_by and m.role in ('tutor', 'parent')) then
+    raise exception 'eng_tutorwork_settings: only a tutor or a parent may read the settings' using errcode = '42501';
+  end if;
+  return pg_catalog.jsonb_build_object('recheck_days', english.eng_recheck_days(null));
+end
+$$;
+
+-- Đổi cài đặt (chỉ phụ huynh). Chỉ khóa đã biết; recheck_days là số nguyên 1..180. Ghi audit_log.
+create or replace function english.eng_set_tutorwork_setting(p_key text, p_value jsonb, p_by uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_member english.members%rowtype;
+  v_old jsonb;
+begin
+  if p_key is null or p_value is null or p_by is null then
+    raise exception 'eng_set_tutorwork_setting: key, value and actor are required' using errcode = '22004';
+  end if;
+  select * into v_member from english.members m where m.id = p_by;
+  if v_member.id is null or v_member.role <> 'parent' then
+    raise exception 'eng_set_tutorwork_setting: only a parent may change the settings' using errcode = '42501';
+  end if;
+  if p_key <> 'recheck_days' then
+    raise exception 'eng_set_tutorwork_setting: unknown setting' using errcode = '22023';
+  end if;
+  if pg_catalog.jsonb_typeof(p_value) <> 'number' or (p_value #>> '{}') !~ '^[0-9]{1,3}$' or (p_value #>> '{}')::int not between 1 and 180 then
+    raise exception 'eng_set_tutorwork_setting: recheck_days must be a whole number of days from 1 to 180' using errcode = '22023';
+  end if;
+  select s.value into v_old from english.tutorwork_settings s where s.key = p_key for update;
+  insert into english.tutorwork_settings(key, value, updated_at, updated_by)
+  values (p_key, p_value, pg_catalog.clock_timestamp(), p_by)
+  on conflict (key) do update set value = excluded.value, updated_at = excluded.updated_at, updated_by = excluded.updated_by;
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, payload)
+  values (v_member.user_id, v_member.role, 'tutorwork_setting.changed', v_member.family_id,
+          pg_catalog.jsonb_build_object('key', p_key, 'from', v_old, 'to', p_value));
+  return pg_catalog.jsonb_build_object('key', p_key, 'value', p_value);
+end
+$$;
+
+revoke execute on function english.eng_tutorwork_settings(uuid) from public, anon, authenticated;
+revoke execute on function english.eng_set_tutorwork_setting(text, jsonb, uuid) from public, anon, authenticated;
+grant execute on function english.eng_tutorwork_settings(uuid) to service_role;
+grant execute on function english.eng_set_tutorwork_setting(text, jsonb, uuid) to service_role;
+
 insert into english.schema_migrations(version) values ('0017') on conflict do nothing;

@@ -550,20 +550,17 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
   });
 
   // -------------------------------------------------------------------------------------------------------------
-  describe("recheck due comes from the learner's assessment policy, not from a number in the code", () => {
+  describe("recheck due comes from its own setting (tutorwork_settings), not from a number in the code and not from the assessment policy (S5c)", () => {
     let rc: string;
     beforeAll(async () => {
       rc = ((await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1, 'Recheck child', 'B', true, 'active') returning id", [s.familyId]))[0] as { id: string }).id;
       await q1("insert into english.relationships(member_id, learner_id, relation) values ($1, $2, 'parent')", [M().parent, rc]);
       await q1("select english.eng_assign_target_set($1, 'B-v1')", [rc]);
     });
-    const policyDays = async () =>
-      Number((await q1<{ d: string }>(
-        `select p.config -> 'transferable' ->> 'delayedMinDaysFromLastExposure' as d
-         from english.assessment_policies p where p.version = 'AP-0.2-pilot'`))[0]?.d);
+    const settingDays = async () => Number((await q1<{ d: string }>("select value #>> '{}' as d from english.tutorwork_settings where key = 'recheck_days'"))[0]?.d);
 
-    it("the pilot policy says 14 and the function reports exactly that", async () => {
-      expect(await policyDays()).toBe(14);
+    it("the seeded setting says 14 and the function reports exactly that", async () => {
+      expect(await settingDays()).toBe(14);
       await quick(M().parent, { learner: rc, tags: [{ n: 4, tag_key: "cum-dong-tu" }, { n: 7, tag_key: "cum-dong-tu" }], on: daysAgo(10), clientId: "rc-mark-0001" });
       const w = await weak(rc);
       expect(w.policy_days).toBe(14);
@@ -573,11 +570,10 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
       expect(t?.recheck_due).toBe(false);
     });
 
-    it("a change in the policy changes the answer (no hard-coded 14): proven inside a transaction that is rolled back", async () => {
+    it("a change in the setting changes the answer (no hard-coded 14), a change in the assessment policy does not: both proven inside a rolled-back transaction", async () => {
       await db.client.query("begin");
       try {
-        await db.client.query("set local session_replication_role = replica"); // lets the owner bypass the 'published is immutable' trigger, for this test only
-        await db.client.query(`update english.assessment_policies set config = jsonb_set(config, '{transferable,delayedMinDaysFromLastExposure}', '7') where version = 'AP-0.2-pilot'`);
+        await db.client.query("update english.tutorwork_settings set value = '7' where key = 'recheck_days'");
         const w = (await db.client.query<{ r: Weak }>("select english.eng_weak_points($1, null) as r", [rc])).rows[0]?.r as Weak;
         expect(w.policy_days).toBe(7);
         const t = tagOf(w, "cum-dong-tu");
@@ -586,16 +582,24 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
       } finally {
         await db.client.query("rollback");
       }
+      await db.client.query("begin");
+      try {
+        await db.client.query("set local session_replication_role = replica"); // lets the owner bypass the 'published is immutable' trigger, for this test only
+        await db.client.query(`update english.assessment_policies set config = jsonb_set(config, '{transferable,delayedMinDaysFromLastExposure}', '7') where version = 'AP-0.2-pilot'`);
+        expect(((await db.client.query<{ r: Weak }>("select english.eng_weak_points($1, null) as r", [rc])).rows[0]?.r as Weak).policy_days).toBe(14);
+      } finally {
+        await db.client.query("rollback");
+      }
       expect((await weak(rc)).policy_days).toBe(14);
     });
 
-    it("a learner without a target set has no policy: no due date is invented", async () => {
+    it("a learner without a target set gets the same setting (it no longer depends on the skill set)", async () => {
       const bare = ((await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1, 'No set child', 'B', true, 'active') returning id", [s.familyId]))[0] as { id: string }).id;
       await q1("insert into english.relationships(member_id, learner_id, relation) values ($1, $2, 'parent')", [M().parent, bare]);
       await quick(M().parent, { learner: bare, clientId: "rc-bare-00001", tags: [{ n: 4, tag_key: "cum-dong-tu" }, { n: 7, tag_key: "cum-dong-tu" }], on: daysAgo(40) });
       const w = await weak(bare);
-      expect(w.policy_days).toBeNull();
-      expect(tagOf(w, "cum-dong-tu")).toMatchObject({ recheck_due_on: null, recheck_due: false });
+      expect(w.policy_days).toBe(14);
+      expect(tagOf(w, "cum-dong-tu")).toMatchObject({ recheck_due_on: addDays(daysAgo(40), 14), recheck_due: true });
     });
 
     it("due once the days have passed; 'not asked' keeps it due; 'ok' resolves it; 'still wrong' adds a counting mark and restarts the wait", async () => {

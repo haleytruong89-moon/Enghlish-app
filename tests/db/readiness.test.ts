@@ -143,4 +143,47 @@ describe("S5c readiness (migration 0017)", () => {
       await fail(quick(M().tutorNguyen, { title: "Destination Unit 6", supersedes: a.id, clientId: "s5c-dup-0010" }), "23505");
     });
   });
+
+  // -------------------------------------------------------------------------------------------------------------
+  describe("3. 'Hỏi lại điểm yếu' has its own setting", () => {
+    const settings = (by: string) => svc<{ recheck_days: number }>("select english.eng_tutorwork_settings($1) as r", [by]);
+    const set = (by: string, key: string, value: unknown) =>
+      svc<{ key: string; value: number }>("select english.eng_set_tutorwork_setting($1, $2::jsonb, $3) as r", [key, JSON.stringify(value), by]);
+
+    it("is seeded with 14 days and readable by a tutor or a parent only", async () => {
+      expect(await settings(M().tutorNguyen)).toEqual({ recheck_days: 14 });
+      expect(await settings(M().parent)).toEqual({ recheck_days: 14 });
+      await fail(settings(M().studentNguyen), "42501");
+      await fail(settings(randomUUID()), "42501");
+    });
+
+    it("only a parent changes it, only to a whole number of days 1..180, and the change is logged and used", async () => {
+      await fail(set(M().tutorNguyen, "recheck_days", 7), "42501", /only a parent/);
+      await fail(set(M().studentNguyen, "recheck_days", 7), "42501");
+      await fail(set(M().parent, "other_key", 7), "22023", /unknown setting/);
+      for (const bad of [0, 181, 7.5, -3, "7", null, { a: 1 }]) await fail(set(M().parent, "recheck_days", bad), "22023");
+      expect(await set(M().parent, "recheck_days", 10)).toEqual({ key: "recheck_days", value: 10 });
+      expect((await settings(M().tutorAn)).recheck_days).toBe(10);
+      expect(await count("select english.eng_recheck_days($1) as n", [NG()])).toBe(10);
+      const log = await q1<{ payload: { from: number; to: number } }>("select payload from english.audit_log where action = 'tutorwork_setting.changed' order by id desc limit 1");
+      expect(log[0]?.payload).toEqual({ key: "recheck_days", from: 14, to: 10 });
+      await set(M().parent, "recheck_days", 14); // put it back for the rest of the file
+    });
+
+    it("the table is closed: RLS on, nobody but the owner reads or writes it directly, and the assessment policy is no longer the source", async () => {
+      expect((await q1<{ relrowsecurity: boolean }>("select relrowsecurity from pg_class where oid = 'english.tutorwork_settings'::regclass"))[0]?.relrowsecurity).toBe(true);
+      const priv = await q1<{ r: string; p: string; ok: boolean }>(
+        `select r, p, has_table_privilege(r, 'english.tutorwork_settings', p) as ok
+           from unnest(array['anon', 'authenticated', 'service_role']) r, unnest(array['select', 'insert', 'update', 'delete', 'truncate']) p`);
+      expect(priv.filter((x) => x.ok)).toEqual([]);
+      const fn = (await q1<{ src: string }>("select pg_get_functiondef('english.eng_recheck_days(uuid)'::regprocedure) as src"))[0]?.src ?? "";
+      expect(fn).toContain("tutorwork_settings");
+      expect(fn).not.toContain("assessment_policies");
+      const exec = await q1<{ fn: string; r: string; ok: boolean }>(
+        `select p.proname as fn, r, has_function_privilege(r, p.oid, 'execute') as ok
+           from pg_proc p join pg_namespace n on n.oid = p.pronamespace, unnest(array['anon', 'authenticated', 'service_role']) r
+          where n.nspname = 'english' and p.proname in ('eng_tutorwork_settings', 'eng_set_tutorwork_setting')`);
+      expect(exec.filter((x) => x.ok).map((x) => `${x.fn}:${x.r}`).sort()).toEqual(["eng_set_tutorwork_setting:service_role", "eng_tutorwork_settings:service_role"]);
+    });
+  });
 });
