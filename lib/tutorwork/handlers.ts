@@ -46,6 +46,7 @@ export interface TutorWorkStore {
     message: string | null;
     noteForParent: string | null;
     rechecks: { tag_key: string; result: string }[];
+    practisedTargetIds: string[];
     supersedes: string | null;
     byMemberId: string;
     clientId: string;
@@ -201,6 +202,7 @@ export async function handleWriteSessionNote(deps: TutorWorkDeps, learnerId: str
       message: b.message ?? null,
       noteForParent: b.note_for_parent ?? null,
       rechecks: b.rechecks,
+      practisedTargetIds: b.practised_target_ids,
       supersedes: b.supersedes_id ?? null,
       byMemberId: g.grant.member.id,
       clientId: b.client_id,

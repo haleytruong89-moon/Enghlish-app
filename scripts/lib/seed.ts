@@ -290,3 +290,52 @@ export async function seedDevReviewWork(client: ClientBase, seeded: SeedResult, 
     throw err;
   }
 }
+
+export type ThrowawayLearner = { learnerId: string; alias: string };
+
+/**
+ * One extra TEST learner (Track A, no login of its own) in the test family, with a parent relationship, the A-v1 skill set, one quick
+ * result and one lesson note - so a test can delete it with the "Xóa dữ liệu của em" screen without touching "An (thử)" / "Nguyên (thử)".
+ * Never used by `db:seed-dev`; the e2e purge spec calls it and the DB tests use it too. Refuses to run outside the test family.
+ */
+export async function seedThrowawayLearner(client: ClientBase, opts: { alias?: string } = {}): Promise<ThrowawayLearner> {
+  const alias = opts.alias ?? `Em thử xóa ${Math.random().toString(36).slice(2, 8)}`;
+  const fam = await client.query<{ id: string }>("select id from english.families where id = $1", [TEST_FAMILY_ID]);
+  if (!fam.rowCount) throw new Error("The test family does not exist - run the dev seed first");
+  // Never next to real children: the test family must hold test learners only, and it must have been seeded.
+  const kinds = await client.query<{ real: string; test: string }>(
+    "select count(*) filter (where not is_test) as real, count(*) filter (where is_test) as test from english.learners where family_id = $1",
+    [TEST_FAMILY_ID],
+  );
+  if (Number(kinds.rows[0]?.real ?? 0) > 0) throw new Error("Refusing: the test family contains a learner that is not marked is_test");
+  if (Number(kinds.rows[0]?.test ?? 0) === 0) throw new Error("The test family has no test learners - run the dev seed first");
+  const parent = await client.query<{ id: string }>("select id from english.members where family_id = $1 and role = 'parent' order by created_at limit 1", [TEST_FAMILY_ID]);
+  const parentId = parent.rows[0]?.id;
+  if (!parentId) throw new Error("The test family has no parent member");
+
+  await client.query("begin");
+  try {
+    const l = await client.query<{ id: string }>(
+      `insert into english.learners(family_id, alias, track_id, is_test, ai_enabled, status)
+       values ($1, $2, 'A', true, false, 'active') returning id`,
+      [TEST_FAMILY_ID, alias],
+    );
+    const learnerId = (l.rows[0] as { id: string }).id;
+    await client.query("insert into english.relationships(member_id, learner_id, relation) values ($1, $2, 'parent')", [parentId, learnerId]);
+    await client.query("select english.eng_assign_target_set($1, 'A-v1')", [learnerId]);
+    await client.query(
+      `select english.eng_record_result($1, 'quick', null, 'Bài thử xóa', 10, 8, '{4,7}'::int[], '[]'::jsonb, 'home', 'first',
+                                        false, english.eng_today_vn(), null, null, $2, $3, null)`,
+      [learnerId, parentId, `throwaway-${learnerId}`],
+    );
+    await client.query(
+      `select english.eng_write_lesson_note_v2($1, english.eng_today_vn(), 'Ghi chú thử xóa', '{}'::text[], null, null, '[]'::jsonb, null, $2, $3)`,
+      [learnerId, parentId, `throwaway-note-${learnerId}`],
+    );
+    await client.query("commit");
+    return { learnerId, alias };
+  } catch (err) {
+    await client.query("rollback");
+    throw err;
+  }
+}

@@ -20,6 +20,8 @@ export type WeakSource = (typeof WEAK_SOURCES)[number];
 export const TAGGABLE_ACTIVITIES = ["ACT-WRITE", "ACT-REVISE"] as const;
 export const MAX_WEAK_TAGS_PER_NOTE = 3;
 export const MAX_WRITING_TAGS = 3;
+/** Skills that one session note can log as practised (same cap in eng_write_lesson_note_v2). */
+export const MAX_PRACTISED_PER_NOTE = 30;
 export const MESSAGE_MAX = 500;
 export const PARENT_NOTE_MAX = 1000;
 export const STUDIED_MAX = 300;

@@ -1,11 +1,22 @@
 name: Weekly backup (encrypted)
 
-# DESIGN §14 / NFR-05 (parent decision 16/10/2026: weekly, RPO ≤ 7 days): weekly pg_dump of schemas public + english → age-encrypted →
-# private workflow artifact kept 30 days. Data is never printed to the log.
+# DESIGN §14 / NFR-05 (parent decision 16/10/2026: weekly, RPO ≤ 7 days): weekly pg_dump of schemas public + english, plus the two login
+# tables auth.users and auth.identities (S5c, decision A3: without them a restored database has nobody who can sign in) → age-encrypted →
+# private workflow artifact kept 30 days. Data is never printed to the log: only row COUNTS reach the log and the run summary.
+#
+# S5c (G0): before anything is encrypted, the job RESTORES the dumps into a throwaway Postgres 17 service container (it lives only for
+# this job) and compares the row counts of EVERY table of schema english plus auth.users with the live database
+# (scripts/ops/restore-check.sh; unit-tested). A count mismatch, or a restore error that names schema english or auth, fails the job
+# (red run + email); the encrypted files are still produced and uploaded so a possibly-good backup is never lost.
+# The main dump (public + english) and the login-table dump are separate steps: if the login-table dump fails, the main dump is still
+# checked, encrypted and uploaded, and the run is marked red at the end.
+# The plain dumps exist only in /dev/shm (RAM-backed, mode 700) of the one-off runner VM, are never uploaded, and are shredded at the end
+# (step "Remove the plain dumps"). The artifact holds only *.dump.age files, encrypted for the age public key below.
 #
 # Secrets (names only — set values in GitHub → Settings → Secrets and variables → Actions):
 #   DATABASE_URL          Supabase "Session pooler" connection string (IPv4; port 5432)
 #   BACKUP_AGE_RECIPIENT  age PUBLIC key (age1…). The private key stays offline with the parent.
+# The service container password below is a throwaway value for a container that does not exist outside this job; it is not a secret.
 
 on:
   schedule:
@@ -24,9 +35,22 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      PG_MAJOR: "17" # pg_dump must be >= the Supabase server major version
-      PGSSLMODE: require
+      PG_MAJOR: "17" # pg_dump must be >= the Supabase server major version; the throwaway container below is the same major version
+    services:
+      restore-check:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: throwaway-inside-this-job
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     steps:
+      - uses: actions/checkout@v5
+
       - name: Check secrets are present (without printing them)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -46,27 +70,85 @@ jobs:
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
           sudo apt-get install -y -qq "postgresql-client-${PG_MAJOR}" > /dev/null
 
-      - name: Dump public + english, encrypt with age
+      - name: Dump public + english (plain file only in RAM-backed temp)
+        id: main_dump
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PGSSLMODE: require
+        run: |
+          set -euo pipefail
+          umask 077
+          bin="/usr/lib/postgresql/${PG_MAJOR}/bin"
+          plain="$(mktemp -d -p /dev/shm backup-plain.XXXXXX)"
+          echo "PLAIN_DIR=$plain" >> "$GITHUB_ENV"
+          echo "BACKUP_STAMP=$(date -u +%Y%m%dT%H%M%SZ)" >> "$GITHUB_ENV"
+          # Row counts of every english table of the live database before and after the dump (numbers only): a row written while we dump is not a failure.
+          "$bin/psql" "$DATABASE_URL" -qtA -v ON_ERROR_STOP=1 -f scripts/ops/counts-english.sql > "$plain/counts.before"
+          # Custom format -> restore with pg_restore.
+          "$bin/pg_dump" "$DATABASE_URL" --format=custom --no-owner \
+              --schema=public --schema=english --file="$plain/main.dump"
+          "$bin/psql" "$DATABASE_URL" -qtA -v ON_ERROR_STOP=1 -f scripts/ops/counts-english.sql > "$plain/counts.after"
+          test "$(stat -c %s "$plain/main.dump")" -gt 1024 || { echo "::error::main dump is suspiciously small"; exit 1; }
+          echo "main dump ok ($(stat -c %s "$plain/main.dump") bytes, kept in RAM until encrypted)"
+
+      # May fail without stopping the rest: the main dump is still checked, encrypted and uploaded. The last step turns this into a red run.
+      - name: Dump the login tables auth.users + auth.identities (own step)
+        id: auth_dump
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PGSSLMODE: require
+        run: |
+          set -euo pipefail
+          umask 077
+          bin="/usr/lib/postgresql/${PG_MAJOR}/bin"
+          plain="$PLAIN_DIR"
+          trap 'rm -f "$plain/auth.dump.part" "$plain/auth.dump"' ERR
+          "$bin/psql" "$DATABASE_URL" -qtA -v ON_ERROR_STOP=1 -f scripts/ops/counts-auth.sql > "$plain/auth.counts.before"
+          # pg_dump ignores --schema when --table is used, hence a dump of its own. Without these tables nobody could sign in after a restore.
+          "$bin/pg_dump" "$DATABASE_URL" --format=custom --no-owner \
+              --table=auth.users --table=auth.identities --file="$plain/auth.dump.part"
+          "$bin/psql" "$DATABASE_URL" -qtA -v ON_ERROR_STOP=1 -f scripts/ops/counts-auth.sql > "$plain/auth.counts.after"
+          test "$(stat -c %s "$plain/auth.dump.part")" -gt 512 || { echo "::error::login-tables dump is suspiciously small"; exit 1; }
+          mv "$plain/auth.dump.part" "$plain/auth.dump"
+          echo "login-tables dump ok ($(stat -c %s "$plain/auth.dump") bytes)"
+
+      - name: Restore check - restore the dumps into the throwaway Postgres 17 and compare row counts
+        id: restore_check
+        if: ${{ steps.main_dump.outcome == 'success' }}
+        env:
+          RC_PASSWORD: throwaway-inside-this-job
+        run: |
+          set -euo pipefail
+          PG_BIN="/usr/lib/postgresql/${PG_MAJOR}/bin" bash scripts/ops/restore-check.sh
+
+      # Runs even when the restore check failed (the plain dumps are still there): a possibly-good backup is better than none.
+      - name: Encrypt with age
+        id: encrypt
+        if: ${{ always() && steps.main_dump.outcome == 'success' }}
+        env:
           BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
         run: |
           set -euo pipefail
           umask 077
           mkdir -p backup
-          stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-          out="backup/learning-os-${stamp}.dump.age"
-          # Custom format → restore with pg_restore. Plain data never touches disk unencrypted.
-          "/usr/lib/postgresql/${PG_MAJOR}/bin/pg_dump" "$DATABASE_URL" \
-              --format=custom --no-owner \
-              --schema=public --schema=english \
-            | age --encrypt --recipient "$BACKUP_AGE_RECIPIENT" --output "$out"
-          size="$(stat -c %s "$out")"
-          test "$size" -gt 1024 || { echo "::error::backup file is suspiciously small"; exit 1; }
-          echo "backup ok: $(basename "$out") (${size} bytes, encrypted)"
-          echo "BACKUP_NAME=learning-os-${stamp}" >> "$GITHUB_ENV"
+          main="backup/learning-os-${BACKUP_STAMP}.dump.age"
+          age --encrypt --recipient "$BACKUP_AGE_RECIPIENT" --output "$main" "$PLAIN_DIR/main.dump"
+          files=("$main")
+          if [ -f "$PLAIN_DIR/auth.dump" ]; then
+            auth="backup/learning-os-auth-${BACKUP_STAMP}.dump.age"
+            age --encrypt --recipient "$BACKUP_AGE_RECIPIENT" --output "$auth" "$PLAIN_DIR/auth.dump"
+            files+=("$auth")
+          fi
+          for f in "${files[@]}"; do
+            size="$(stat -c %s "$f")"
+            test "$size" -gt 512 || { echo "::error::$(basename "$f") is suspiciously small"; exit 1; }
+            echo "backup ok: $(basename "$f") (${size} bytes, encrypted)"
+          done
+          echo "BACKUP_NAME=learning-os-${BACKUP_STAMP}" >> "$GITHUB_ENV"
 
       - name: Upload encrypted artifact (private, 30 days)
+        if: ${{ always() && steps.encrypt.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BACKUP_NAME }}
@@ -74,3 +156,21 @@ jobs:
           retention-days: 30
           if-no-files-found: error
           compression-level: 0
+
+      - name: Remove the plain dumps
+        if: ${{ always() }}
+        run: |
+          if [ -n "${PLAIN_DIR:-}" ] && [ -d "$PLAIN_DIR" ]; then
+            find "$PLAIN_DIR" -type f -exec shred -u {} + || true
+            rm -rf "$PLAIN_DIR"
+          fi
+          echo "plain dumps removed"
+
+      # The login-table dump step is allowed to fail without stopping the upload above; here the run is turned red so it cannot go unnoticed.
+      - name: Mark the run red if the login-table dump failed
+        if: ${{ always() && steps.auth_dump.outcome == 'failure' }}
+        run: |
+          echo "::error::the login-table dump (auth.users, auth.identities) FAILED: the artifact holds the main dump only, so a restore could not sign anybody in"
+          echo "## Login-table dump FAILED" >> "$GITHUB_STEP_SUMMARY"
+          echo "The artifact has the main dump only. Re-run the workflow; do not rely on this backup to bring back sign-in." >> "$GITHUB_STEP_SUMMARY"
+          exit 1

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { fallbackLabels, offlineForm } from "@/lib/copy/vi";
+import { backdateReasonToSend, needsBackdateReason } from "@/lib/review/offlineReason";
 import { OFFLINE_ASSISTANCE } from "@/lib/review/types";
 
 /**
@@ -17,6 +18,7 @@ export function OfflineForm({
   tutorOnly = false,
   liveOnly = false,
   minDate,
+  backdateMinDate,
   maxDate,
 }: {
   learnerId: string;
@@ -27,6 +29,8 @@ export function OfflineForm({
   /** Live speaking step: recorded as "watched live" only (no paper option). */
   liveOnly?: boolean;
   minDate: string;
+  /** Earliest date for paper work with a reason (14 days before the inquiry was assigned). */
+  backdateMinDate: string;
   maxDate: string;
 }) {
   const router = useRouter();
@@ -37,11 +41,27 @@ export function OfflineForm({
   const [duration, setDuration] = useState("");
   const [words, setWords] = useState("");
   const [help, setHelp] = useState<string[]>([]);
+  const [reason, setReason] = useState("");
+  // The reason box shows for paper work dated before the day the inquiry was assigned (or after the server says the step was not open yet).
+  const [stepNotOpen, setStepNotOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [episodeId, setEpisodeId] = useState<string | null>(null);
   const clientId = useRef<string>(crypto.randomUUID());
   const base = activityId;
+
+  // A new date (or another kind of work) is a new question for the server: forget "the step was not open" and the old error, so a reason
+  // that is no longer needed is neither shown nor sent.
+  function changeDate(value: string) {
+    setDate(value);
+    setStepNotOpen(false);
+    setError(null);
+  }
+  function changeProvenance(value: "tutor_live" | "manual_import") {
+    setProvenance(value);
+    setStepNotOpen(false);
+    setError(null);
+  }
 
   function toggleHelp(h: string, on: boolean) {
     setHelp((cur) => {
@@ -52,10 +72,15 @@ export function OfflineForm({
     });
   }
 
+  const paper = provenance === "manual_import";
+  const needsReason = needsBackdateReason({ paper, date, minDate, stepNotOpen });
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (text.trim().length === 0) return setError(offlineForm.textRequired);
     if (help.length === 0) return setError(offlineForm.helpRequired);
+    if (needsReason && reason.trim().length < 5) return setError(offlineForm.backdateRequired);
+    const sendReason = backdateReasonToSend({ paper, date, minDate, stepNotOpen, reason });
     setBusy(true);
     setError(null);
     try {
@@ -68,6 +93,7 @@ export function OfflineForm({
           provenance,
           text: text.trim(),
           session_date: date,
+          ...(sendReason ? { backdate_reason: sendReason } : {}),
           assistance: help,
           ...(duration.trim() !== "" ? { duration_sec: Number(duration) } : {}),
           ...(words.trim() !== "" ? { word_count: Number(words) } : {}),
@@ -76,8 +102,17 @@ export function OfflineForm({
       if (res.status === 403) return setError(offlineForm.errorForbidden);
       if (!res.ok) {
         const code = ((await res.json().catch(() => null)) as { error?: string } | null)?.error;
+        if (code === "step_not_open_on_date" && paper) setStepNotOpen(true);
         return setError(
-          code === "date_before_last_attempt" ? offlineForm.errorDateBeforeLast : code === "step_not_open_on_date" ? offlineForm.errorStepNotOpen : offlineForm.error,
+          code === "date_before_last_attempt"
+            ? offlineForm.errorDateBeforeLast
+            : code === "step_not_open_on_date"
+              ? offlineForm.errorStepNotOpen
+              : code === "backdate_too_early"
+                ? offlineForm.errorBackdateTooEarly
+                : code === "backdate_not_allowed_for_step"
+                  ? offlineForm.errorBackdateNotAllowed
+                  : offlineForm.error,
         );
       }
       const body = (await res.json()) as { episode_id?: string };
@@ -87,6 +122,8 @@ export function OfflineForm({
       setDuration("");
       setWords("");
       setHelp([]);
+      setReason("");
+      setStepNotOpen(false);
       setOpen(false);
       router.refresh();
     } catch {
@@ -133,13 +170,13 @@ export function OfflineForm({
         <legend className="text-sm text-muted">{offlineForm.kind}</legend>
         {isTutor ? (
           <label className="flex min-h-11 items-center gap-2 text-sm">
-            <input type="radio" name={`kind-${base}`} className="size-4" checked={provenance === "tutor_live"} onChange={() => setProvenance("tutor_live")} />
+            <input type="radio" name={`kind-${base}`} className="size-4" checked={provenance === "tutor_live"} onChange={() => changeProvenance("tutor_live")} />
             {offlineForm.kindLive}
           </label>
         ) : null}
         {liveOnly ? null : (
           <label className="flex min-h-11 items-center gap-2 text-sm">
-            <input type="radio" name={`kind-${base}`} className="size-4" checked={provenance === "manual_import"} onChange={() => setProvenance("manual_import")} />
+            <input type="radio" name={`kind-${base}`} className="size-4" checked={provenance === "manual_import"} onChange={() => changeProvenance("manual_import")} />
             {offlineForm.kindPaper}
           </label>
         )}
@@ -149,8 +186,36 @@ export function OfflineForm({
         <label htmlFor={`date-${base}`} className="text-sm text-muted">
           {offlineForm.date}
         </label>
-        <input id={`date-${base}`} type="date" min={minDate} max={maxDate} value={date} onChange={(e) => setDate(e.target.value)} className="min-h-11 rounded-lg border border-line px-3" />
+        <input
+          id={`date-${base}`}
+          data-testid={`offline-date-${activityId}`}
+          type="date"
+          min={paper ? backdateMinDate : minDate}
+          max={maxDate}
+          value={date}
+          onChange={(e) => changeDate(e.target.value)}
+          className="min-h-11 rounded-lg border border-line px-3"
+        />
       </div>
+
+      {needsReason ? (
+        <div className="flex flex-col gap-1" data-testid={`offline-backdate-${activityId}`}>
+          <label htmlFor={`reason-${base}`} className="text-sm text-muted">
+            {offlineForm.backdateReason}
+          </label>
+          <input
+            id={`reason-${base}`}
+            data-testid={`offline-backdate-reason-${activityId}`}
+            type="text"
+            maxLength={200}
+            value={reason}
+            placeholder={offlineForm.backdateHint}
+            onChange={(e) => setReason(e.target.value)}
+            className="min-h-11 rounded-lg border border-line px-3"
+          />
+          <p className="text-xs text-muted">{offlineForm.backdateHelp}</p>
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-1">
         <label htmlFor={`text-${base}`} className="text-sm text-muted">

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { formatScore, notesPage, offlineForm, reviewPage, scoreLabels } from "@/lib/copy/vi";
-import { todayVn } from "@/lib/inquiries/dates";
+import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { LEARNER_IDS, loginAs } from "./helpers";
 
 // S5: review inbox, scores per skill, who may decide (D15), work recorded outside the app, lesson notes.
@@ -226,6 +226,31 @@ test.describe.serial("S5 review", () => {
     });
     expect(res.status()).toBe(403);
     expect(((await res.json()) as { error: string }).error).toBe("tutor_only");
+  });
+
+  test("paper pilot import: a parent can date paper work before the assignment, but only with a reason", async ({ page }) => {
+    await loginAs(page, "parent");
+    const res = await page.request.get(`/api/learners/${LEARNER_IDS.an}/inquiries`);
+    expect(res.status()).toBe(200);
+    const data = (await res.json()) as { inquiries: { templateId: string; assignedAt: string; steps: { activityId: string; stepNo: number }[] }[] };
+    const q = data.inquiries.find((i) => i.templateId === "A-W4-PLANETS");
+    const activityId = q?.steps.find((s) => s.stepNo === 8)?.activityId; // ACT-SELF-REVIEW practice, not a checkpoint
+    expect(activityId, "A-W4-PLANETS step 8").toBeTruthy();
+    const earlier = addDays(todayVn(new Date(q!.assignedAt)), -5);
+
+    await page.goto(`/learners/${LEARNER_IDS.an}/inquiries`);
+    const step = page.getByTestId("step-A-W4-PLANETS-8").first();
+    await step.getByTestId(`offline-open-${activityId}`).click();
+    await expect(step.getByTestId(`offline-backdate-${activityId}`)).toHaveCount(0); // today: no reason needed
+    await step.getByTestId(`offline-date-${activityId}`).fill(earlier);
+    await expect(step.getByTestId(`offline-backdate-${activityId}`)).toBeVisible();
+    await step.getByTestId(`offline-text-${activityId}`).fill("I checked my writing. I added because and so.");
+    await step.getByTestId(`offline-help-${activityId}-none`).check();
+    await step.getByTestId(`offline-save-${activityId}`).click();
+    await expect(step.getByTestId(`offline-error-${activityId}`)).toHaveText(offlineForm.backdateRequired);
+    await step.getByTestId(`offline-backdate-reason-${activityId}`).fill("Nhập từ phiếu giấy pilot 17–19/10");
+    await step.getByTestId(`offline-save-${activityId}`).click();
+    await expect(step.getByTestId(`offline-done-${activityId}`)).toBeVisible();
   });
 
   test("a lesson note with 3 next actions; the parent sees it only when shared", async ({ page }) => {

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { assignPage, fallbackLabels, home, inquiriesPage, learnerWithTrack, notesPage, sourceLabels, targetsPage, todayPage, tutorHonorific, weakPage } from "@/lib/copy/vi";
+import { assignPage, fallbackLabels, home, inquiriesPage, learnerWithTrack, notesPage, purgePage, sourceLabels, targetsPage, todayPage, tutorHonorific, weakPage } from "@/lib/copy/vi";
 import { safeColor, type LearnerSummary } from "@/lib/home/visible";
 import { todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { formatHm } from "@/lib/work/view";
+import { isOverdue } from "@/lib/practice/overdue";
 import { itemList } from "@/lib/tutorwork/frameScore";
 import type { TodayData } from "@/lib/tutorwork/load";
 
@@ -84,7 +85,18 @@ function Attention({ learnerId, today, role }: { learnerId: string; today: Today
  * Staff view (parent/tutor): "An · Track A", the two main actions, what needs attention, the last session and the other pages.
  * `today` is null when its numbers could not be loaded: the card still works, only the attention part is left out.
  */
-export function LearnerCard({ learner, today, role }: { learner: LearnerSummary; today: TodayData | null; role: "tutor" | "parent" }) {
+export function LearnerCard({
+  learner,
+  today,
+  role,
+  todayIso = todayVn(),
+}: {
+  learner: LearnerSummary;
+  today: TodayData | null;
+  role: "tutor" | "parent";
+  /** Today in Vietnam (YYYY-MM-DD); only for the "Quá hạn" label. */
+  todayIso?: string;
+}) {
   const color = safeColor(learner.color);
   const note = today?.lastNote ?? null;
   return (
@@ -141,7 +153,14 @@ export function LearnerCard({ learner, today, role }: { learner: LearnerSummary;
                   <b className="font-semibold">{a.title}</b>{" "}
                   <span className="text-muted">{todayPage.practiceLine(assignPage.kindLabel(a.kind, a.sourceKey ? sourceLabels[a.sourceKey] : null), a.dueOn ? formatDateVi(a.dueOn) : null)}</span>
                 </span>
-                <span className="text-muted">{a.submission ? todayPage.submittedBadge : todayPage.practiceNotDone}</span>
+                <span className="text-muted">
+                  {a.submission ? todayPage.submittedBadge : todayPage.practiceNotDone}
+                  {isOverdue(a, todayIso) ? (
+                    <b className="ml-2 rounded-full bg-[#7a4a00] px-2 py-0.5 text-xs font-semibold text-white" data-testid={`overdue-${a.id}`}>
+                      {todayPage.practiceOverdue}
+                    </b>
+                  ) : null}
+                </span>
               </li>
             ))}
           </ul>
@@ -196,6 +215,11 @@ export function LearnerCard({ learner, today, role }: { learner: LearnerSummary;
         <Link href={`/learners/${learner.id}/notes`} className={linkClass}>
           {notesPage.link}
         </Link>
+        {role === "parent" ? (
+          <Link href={`/learners/${learner.id}/delete`} data-testid={`delete-link-${learner.id}`} className={linkClass}>
+            {purgePage.link}
+          </Link>
+        ) : null}
       </div>
     </li>
   );

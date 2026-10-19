@@ -58,9 +58,9 @@ describe("S5b-1 PR B: practice assignments, submissions, files (migration 0016)"
   }[];
   const overview = (learner: string, assignment: string | null = null) => svc<Overview>("select english.eng_assignment_overview($1, $2) as r", [learner, assignment]);
   const mine = (userId: string) => asUser<Record<string, unknown>[]>(userId, "select english.eng_my_practice() as r");
-  const record = (assignment: string | null, learner = NG(), by = M().tutorNguyen, o: { attempt?: string; supersedes?: string | null } = {}) =>
-    svc<{ id: string }>("select english.eng_record_result($1, 'quick', null, 'Linked', 10, 8, '{4,7}'::int[], '[]'::jsonb, 'home', $6, false, $2::date, $3, $7, $4, $5, null) as r", [
-      learner, TODAY, assignment, by, randomUUID(), o.attempt ?? "first", o.supersedes ?? null,
+  const record = (assignment: string | null, learner = NG(), by = M().tutorNguyen, o: { attempt?: string; supersedes?: string | null; title?: string } = {}) =>
+    svc<{ id: string }>("select english.eng_record_result($1, 'quick', null, $8, 10, 8, '{4,7}'::int[], '[]'::jsonb, 'home', $6, false, $2::date, $3, $7, $4, $5, null) as r", [
+      learner, TODAY, assignment, by, randomUUID(), o.attempt ?? "first", o.supersedes ?? null, o.title ?? "Linked",
     ]);
 
   beforeAll(async () => {
@@ -568,8 +568,9 @@ describe("S5b-1 PR B: practice assignments, submissions, files (migration 0016)"
       // another assignment, and paper work with no assignment, are not affected
       const b = await makeLink("https://example.org/other-first");
       expect((await record(b.id)).id).toBeTruthy();
-      expect((await record(null)).id).toBeTruthy();
-      expect((await record(null)).id).toBeTruthy();
+      // (a plain quick entry without an assignment has its own rule since S5c: one first per title and day - see readiness.test.ts)
+      expect((await record(null, NG(), M().tutorNguyen, { title: "Paper one" })).id).toBeTruthy();
+      expect((await record(null, NG(), M().tutorNguyen, { title: "Paper two" })).id).toBeTruthy();
     });
 
     it("a result cannot be recorded (or replaced) for a retracted assignment", async () => {

@@ -1,7 +1,7 @@
 # Learning OS (Family Edition) — DESIGN v0.2 (DRAFT)
 
 > Thiết kế kỹ thuật cho `PRD_FAMILY_EDITION_v1.0.md` (+ MVP PRD v1.0). Thay thế `DESIGN.md` v0.1.
-> Cập nhật: 11/10/2026; 16/10/2026: theo PRD v1.1 (13/10) Track B chạy ngay, không còn "nháp đến hè 2027". Đổi quyết định kiến trúc → bàn trên Claude.ai trước, rồi sửa file này.
+> Cập nhật: 11/10/2026; 16/10/2026: theo PRD v1.1 (13/10) Track B chạy ngay, không còn "nháp đến hè 2027"; **18/10/2026 (S5c): thêm §19 mô tả phần đã build ở S5b/S5c (bảng, kho file, cài đặt, xóa dữ liệu, sao lưu) và sửa các chỗ lệch ở §4–§7, §13, §14, §18 — khi đoạn cũ và §19 khác nhau, §19 là thực tế.** Đổi quyết định kiến trúc → bàn trên Claude.ai trước, rồi sửa file này.
 > Nguồn năng lực/rubric: `content/catalogue_v0.2.json` (đọc bằng code, không chép tay).
 
 ## 0. Tổng quan
@@ -79,12 +79,14 @@
 | `target_sets` | id, learner_id, version, target_keys jsonb, effective_from, published_by | Mẫu số coverage; đổi = version mới (PRD §7.1) |
 | `activity_templates` | id (8 loại, D19), track_ids, schema jsonb | |
 | `inquiry_templates` | id, version, track_id, big_question, domain_bucket, steps jsonb, target_keys, rubric_version, status (`draft`/`published`) | |
-| `sources` / `source_versions` | id; version, url, title, author, accessed_at, rights, modality, excerpt, review_status | PDF → P1 |
+| `sources` / `source_versions` | id; version, url, title, author, accessed_at, rights, modality, excerpt, review_status | PDF của gia sư: có từ S5b, lưu ở kho file riêng tư (§19.2), không nằm trong bảng này |
 | `schema_migrations` | version, applied_at | §2 luật 3 |
 
 Trigger: sau khi `published_at`/`status = published` thì chặn UPDATE nội dung.
 
 ## 5. Bài được giao và bài làm
+
+> **Thực tế đã build (S2/S4/S5):** bảng tên `inquiry_instances`, `activity_instances` (kèm `activity_instance_events`), `working_drafts`, `attempts`, `artifact_versions`, `assistance_events`, `exposure_log`, `attempt_auto_checks` (kết quả tự chấm câu đóng, chỉ nhân viên đọc). Học sinh **không SELECT được bảng nào ở đây**: mọi thứ em thấy đi qua các hàm `eng_my_*` (security definer) chỉ trả nhãn và nội dung đã phát hành, không có điểm/đáp án. Bài ngoài app và bài do gia sư/phụ huynh ghi: §19.
 
 | Bảng | Cột chính | Ghi chú |
 |---|---|---|
@@ -98,6 +100,8 @@ Trigger: sau khi `published_at`/`status = published` thì chặn UPDATE nội du
 | `exposure_log` | learner_id, target_key, at, source (`practice`/`lesson`/`retry`) | Cho luật delayed "≥14 ngày từ lần luyện gần nhất" |
 
 ## 6. Evidence, đánh giá, quyết định
+
+> **Thực tế đã build (S5):** `episodes`, `observations`, `validation_decisions` (D15 ép trong hàm database), `lesson_notes`, `audit_log`, `app_errors`. **Chưa có** (S7+): `mastery_decisions`, `competency_state`, `retention_tasks`, `recommendations`, `published_reports`, `ai_runs`, `jobs` — các bảng này là thiết kế, không phải hiện trạng. `speech_metrics`/`artifact_versions.kind='transcript'`: chờ S10.
 
 | Bảng | Cột chính | Ghi chú |
 |---|---|---|
@@ -116,7 +120,7 @@ Trigger: sau khi `published_at`/`status = published` thì chặn UPDATE nội du
 
 **Append-only:** trigger `english.eng_forbid_mutation()` trên `attempts`, `artifact_versions`, `speech_metrics`, `assistance_events`, `exposure_log`, `episodes`, `observations`, `validation_decisions`, `mastery_decisions`, `published_reports`, `ai_runs`, `audit_log` — chặn UPDATE/DELETE **và** TRUNCATE (statement trigger) + `revoke update, delete, truncate … from authenticated, anon`.
 
-**Purge (FR-21):** trigger cho phép xóa chỉ khi `current_setting('app.purge_learner', true) = <learner_id>`; giá trị đó chỉ được đặt bằng `set local` bên trong hàm `english.eng_purge_learner(learner_id)` (`security definer`, `search_path = ''`, `revoke execute` khỏi `public/anon/authenticated`; chỉ route server dùng service role gọi). Hàm ghi biên nhận vào `audit_log` (không chứa nội dung đã xóa). Backup cũ hết hạn theo vòng đời (§14) — giao diện nói rõ điều này.
+**Purge (FR-21):** trigger cho phép xóa chỉ khi `current_setting('app.purge_learner', true) = <learner_id>`; giá trị đó chỉ được đặt bằng `set local` bên trong hàm `english.eng_purge_learner(learner_id)` (`security definer`, `search_path = ''`, `revoke execute` khỏi `public/anon/authenticated`; chỉ route server dùng service role gọi). Hàm ghi biên nhận vào `audit_log` (không chứa nội dung đã xóa). Backup cũ hết hạn theo vòng đời (§14) — giao diện nói rõ điều này. Từ S5c có màn gọi hàm này (§19.5); mỗi migration thêm bảng có `learner_id` phải mở rộng hàm bằng bản `create or replace` kèm test so từng dòng với bản trước.
 
 ## 7. RLS (tóm tắt)
 
@@ -126,6 +130,8 @@ Trigger: sau khi `published_at`/`status = published` thì chặn UPDATE nội du
 | Gia sư | Mọi thứ của learner có relationship còn hiệu lực, trừ consent | Không ghi trực tiếp |
 | Phụ huynh | Mọi thứ của learner trong gia đình | Bảng quản trị qua route `/api/admin/*` |
 | `anon` | Không gì | Không gì |
+
+> **Thực tế:** học sinh không có `grant select` trên bảng nghiệp vụ; chỉ đọc qua hàm `eng_my_*`. Bảng của S5b/S5c có RLS bật và không policy cho học sinh (test: 0 dòng). Mọi route ghi đi qua `requireAccess` rồi service role; hàm SQL kiểm lại người thực hiện (`p_by`) bên trong.
 
 Học sinh **không** đọc được: `observations` (điểm AI/gia sư), `mastery_decisions`, `ai_runs`, `jobs`, `lesson_notes` chưa công bố, nội dung `model_answer` (chỉ trả qua route có ghi `assistance_events`).
 Mọi route gọi `requireAccess(user, learnerId, action)`; **test mỗi route** với user của em kia (UAT-01).
@@ -230,6 +236,8 @@ computeTargetState(input: {
 
 ## 13. API (route handlers chính)
 
+> **Thực tế đã build:** `/api/student/{home,activities/:id,practice,practice/:aid/file,files,submissions}`, `/api/drafts/:activityId`, `/api/attempts`, `/api/activities/:id/events`, `/api/review/{inbox,episodes/:id,episodes/:id/decisions,episodes/:id/tags,decisions/:id/modify,attempts/:id/support}`, `/api/learners/:id/{assignments,assignments/:aid/retract,assignments/:aid/submissions,files,inquiries,templates,lesson-notes,session-notes,offline-attempts,results,tags,purge}`, `/api/results/:id/tags`, `/api/files/:id`. Bảng dưới là thiết kế ban đầu; **xóa dữ liệu một em là `POST /api/learners/:id/purge`** (không phải `/api/admin/purge/…`). Chưa có: `/api/mastery/*`, `/api/reports`, `/api/coach/*`, `/api/jobs/sweep`, export, snapshot.
+
 | Route | Ai | Việc |
 |---|---|---|
 | `GET /api/student/home` | học sinh | Một "việc tiếp theo" + bước inquiry + check đến hạn + phản hồi mới |
@@ -252,8 +260,8 @@ computeTargetState(input: {
 | Việc | Cách |
 |---|---|
 | Region | Chọn khi tạo project chung (đề xuất Singapore) |
-| Backup | GitHub Actions **hằng tuần** (sáng Chủ nhật — phụ huynh quyết 16/10/2026, mất tối đa ~7 ngày; chạy tay trước thay đổi lớn): `pg_dump` schema `public` + `english` → mã hóa `age` (khóa công khai trong repo, khóa riêng phụ huynh giữ offline) → artifact riêng tư `retention-days: 30` |
-| Khôi phục thử | 1 lần trước pilot (G0): restore vào project thử, đối chiếu số dòng/ID |
+| Backup | GitHub Actions **hằng tuần** (sáng Chủ nhật — phụ huynh quyết 16/10/2026, mất tối đa ~7 ngày; chạy tay trước thay đổi lớn): `pg_dump` schema `public` + `english` **và hai bảng đăng nhập `auth.users`, `auth.identities`** (S5c, D30) → **khôi phục thử vào Postgres 17 tạm trong chính job và đối chiếu số dòng** → mã hóa `age` (khóa công khai trong repo, khóa riêng phụ huynh giữ offline) → artifact riêng tư `retention-days: 30` |
+| Khôi phục thử | **Tự động mỗi lần chạy** (S5c): restore vào container Postgres tạm, đối chiếu số dòng của **mọi bảng `english`** và `auth.users` (chỉ số lượng vào log/summary, không dữ liệu), và coi lỗi khôi phục thuộc schema `english`/`auth` là lỗi (logic ở `scripts/ops/restore-check.sh`, có unit test); lệch → job đỏ nhưng file mã hóa vẫn được lưu. Dump tài khoản là bước riêng: hỏng thì dump chính vẫn được lưu và run báo đỏ. Thêm **1 lần diễn tập giải mã bằng khóa offline** do phụ huynh làm (PROGRESS, mục S5c). File tải lên ở kho `english-work` **chưa** được sao lưu (D30) |
 | Giữ project không ngủ | GitHub Actions ping hằng ngày (như App Toán) |
 | Log | Không ghi transcript/bài làm vào log Vercel; lỗi vào `english.app_errors` |
 | Consent | Bản ghi có version; đổi nội dung thông báo = version mới |
@@ -301,3 +309,41 @@ Biến môi trường: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KE
 | Sp, S10 | §10 |
 | S11–S12 | §9, §11 |
 | S13 | Launcher slot, a11y, khôi phục thử |
+| S5b-1, S5c (chèn, PRD D31) | §19 |
+
+## 19. Phần đã build ở S5b-1 / S5c (thực tế, 18/10/2026)
+
+### 19.1. Bảng (migration 0013–0017)
+
+| Bảng | Dùng để | Ghi chú |
+|---|---|---|
+| `login_names` | Tên đăng nhập ngắn (`an`, `giasu-an`…) → tài khoản | Email không bao giờ gửi xuống trình duyệt; xóa theo hàm purge; không xóa tài khoản đăng nhập |
+| `error_tags` | Nhãn lỗi (10 nhãn mỗi track + nhãn riêng của gia đình `x-…`) | Seed `0015`; key duy nhất toàn hệ thống |
+| `test_frames` | Khung đề (số câu → phần → nhãn; **không lưu chữ của đề**) | Nhập bằng `npm run db:import-frame` |
+| `results` | Kết quả bài ghi tay / từ ảnh em gửi (tổng, đúng, sai, `attempt`: `first`/`retry`, `source`: `test`/`practice`, `supersedes_id`) | Append-only. **Tín hiệu**, không phải bằng chứng cho engine |
+| `tag_marks` | Dấu nhãn trên câu sai/bài viết/buổi học | Append-only; chỉ "lần đầu" vào "Điểm cần chú ý" |
+| `recheck_events` | Kết quả "Hỏi lại điểm yếu" nhập ở ghi buổi học | Gắn ghi chú; bỏ qua nếu ghi chú đã bị thay |
+| `lesson_notes` (mở rộng) | Mẫu v2: củng cố, lời nhắn cho em, ghi chú cho phụ huynh, **kỹ năng đã luyện** (S5c) | Ghi `exposure_log` (source `lesson`) cho kỹ năng đã luyện, chỉ cái mới so với bản bị thay |
+| `files`, `upload_tickets` | Siêu dữ liệu file ở kho riêng tư; vé tải lên dùng một lần (≤ 60/em/24 giờ) | §19.2 |
+| `assignments`, `assignment_events`, `submissions` | Bài luyện gia sư giao (link/PDF), sự kiện (giao/rút/…), bài em gửi (ảnh) | Chỉ-thêm; một kết quả "lần đầu" cho mỗi bài giao; bài đã rút không ghi kết quả được |
+| `tutorwork_settings` | Cài đặt của màn gia sư, hiện có `recheck_days` (mặc định 14) | RLS bật, không policy; chỉ đọc/ghi qua hàm cho nhân viên / service_role (S5c, D32) |
+
+### 19.2. Kho file (Supabase Storage)
+
+Bucket `english-work`: **riêng tư**, 15 MB mỗi file, chỉ PDF/PNG/JPEG/WebP, **không có policy nào** trên `storage.objects`. Máy chủ kiểm quyền ở schema `english` rồi dùng service role (chỉ ở server) để cấp link tải lên dùng một lần tới đường dẫn do server dựng `{family}/{learner|shared}/{uuid}.{đuôi}` và link tải xuống sống 300 giây. Khi đăng ký, server hỏi lại Storage loại file/kích cỡ thật. Em chỉ đi qua `eng_my_practice` (không tới đáp án). Mã: `lib/storage/*`. Dọn file mồ côi: `npm run storage:orphans` (liệt kê; `--delete --confirm` mới xóa). Doctor kiểm bucket riêng tư và không có policy thiếu điều kiện bucket.
+
+### 19.3. Quy tắc dữ liệu thêm ở S5c
+
+- **Ghi buổi học v2** nhận `p_practised_target_ids` (≤ 30, cùng track với em); mỗi mục mới ghi một dòng `exposure_log` source `lesson` vào lúc 12:00 giờ Việt Nam của ngày buổi học (`eng_session_ts`).
+- **Một "lần đầu" mỗi (em, tên bài đã chuẩn hóa, ngày)** cho kết quả nhập nhanh không gắn bài giao/khung: lần thứ hai → `23505 duplicate_first`, trừ khi thay đúng bản đang có.
+- **`eng_recheck_days`** đọc `tutorwork_settings.recheck_days` (không đọc `assessment_policies`). Không đổi ngưỡng delayed (policy AP-0.2-pilot). Nhãn giao diện "Hỏi lại điểm yếu".
+- **Nhập từ pilot giấy:** `eng_record_offline_attempt(…, p_backdate_reason)` cho ngày làm sớm hơn ngày giao tối đa 14 ngày khi có lý do 5–200 ký tự (ghi vào `audit_log` và metadata); các luật ngày khác (≤ hôm nay, thứ tự theo lần làm gần nhất) giữ nguyên. **Ngoại lệ chỉ áp cho bước đã mở cùng lúc với bài giao** (ngày hiệu lực ≤ ngày giao) và **không bao giờ cho bước kiểm tra trễ / chuyển giao** (`delayed_check`, `transfer_check`) → `backdate_not_allowed_for_step`.
+- **"Quá hạn":** nhãn hiển thị cho nhân viên khi `due_on` < hôm nay (giờ Việt Nam) và bài chưa có bài nộp/kết quả/chưa rút. Không trừ điểm, không chặn nộp, học sinh không thấy gì mới (D4).
+
+### 19.4. Cài đặt
+
+`tutorwork_settings(key, value jsonb, updated_at, updated_by)`; đọc qua `eng_tutorwork_settings(p_by)` (nhân viên), ghi qua `eng_set_tutorwork_setting(key, value, by)` (service_role; chưa có giao diện — đổi bằng SQL/hàm khi cần). Giá trị không hợp lệ bị từ chối (`22023`).
+
+### 19.5. Xóa dữ liệu một em
+
+Trang `/learners/<id>/delete` (chỉ phụ huynh; gia sư/học sinh 403, em ngoài phạm vi 404). Các bước: (1) **xem trước** số dòng theo nhóm bằng `eng_purge_preview` (chỉ đọc, không xóa); (2) gõ **tên em** (so khớp không phân biệt hoa/thường và khoảng trắng thừa, nhưng vẫn phải đúng dấu); (3) em **thật** (không phải `is_test`) cần thêm tick xác nhận lần hai; (4) `eng_purge_learner` (xóa dòng, biên nhận vào `audit_log`, xóa tên đăng nhập ngắn) rồi `deleteLearnerFolder` (xóa thư mục `{family}/{learner}` trong `english-work`), số file đã xóa ghi thêm bằng `eng_audit_purge_files`. **Không bao giờ xóa tài khoản đăng nhập** (dùng chung Launcher; quyết định A6 ngày 18/10). Nếu xóa file lỗi, dòng đã mất nên file thành "mồ côi" — dọn bằng `storage:orphans`. Mã: `lib/purge/*`, `components/admin/PurgeForm.tsx`; e2e `tests/e2e/purge.spec.ts` (xóa một em thử mới tạo, không đụng An/Nguyên thử).

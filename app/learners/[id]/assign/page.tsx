@@ -30,7 +30,7 @@ export default async function AssignPracticePage({ params }: { params: Promise<{
           <AssignForm learnerId={learner.id} alias={learner.alias} tags={tags} frames={frames} today={todayVn()} />
           <section className="flex flex-col gap-3" aria-label={assignPage.listTitle}>
             <h2 className="text-lg font-semibold">{assignPage.listTitle}</h2>
-            <AssignmentTable learnerId={learner.id} assignments={assignments} tagLabels={tagLabels} />
+            <AssignmentTable learnerId={learner.id} assignments={assignments} tagLabels={tagLabels} today={todayVn()} />
           </section>
         </div>
       </main>

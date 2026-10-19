@@ -47,7 +47,7 @@
    - Đừng bấm "Add" tích hợp Supabase trên Vercel (nó tạo DB mới / chèn `DATABASE_URL`).
 10. **Khóa sao lưu:** trên máy mình chạy `age-keygen -o learning-os-backup.key`. Giữ file này **offline** (USB/giấy). Dòng `Public key: age1…` là khóa công khai.
 11. **GitHub Secrets** (repo → Settings → Secrets and variables → Actions): `DATABASE_URL` (chuỗi Session pooler), `BACKUP_AGE_RECIPIENT` (khóa công khai `age1…`).
-12. **Chạy thử sao lưu:** tab Actions → *Weekly backup (encrypted)* → Run workflow → thấy artifact `learning-os-…`. Diễn tập khôi phục (G0): tải artifact, `age -d -i learning-os-backup.key file.dump.age > file.dump`, rồi `pg_restore` vào một project thử, đối chiếu số dòng.
+12. *(Cập nhật S5c 18/10: bước diễn tập khôi phục nay nằm trong workflow — xem mục "S5c" cuối file; chỉ còn việc giải mã thử bằng khóa offline.)* **Chạy thử sao lưu:** tab Actions → *Weekly backup (encrypted)* → Run workflow → thấy artifact `learning-os-…`. Diễn tập khôi phục (G0): tải artifact, `age -d -i learning-os-backup.key file.dump.age > file.dump`, rồi `pg_restore` vào một project thử, đối chiếu số dòng.
 
 ### File SQL cần áp (đúng thứ tự)
 
@@ -64,8 +64,8 @@
 |---|---|
 | Test chéo ID 2 em đạt | ✓ trên máy/CI (test DB + test `requireAccess`) |
 | Consent ghi được | Bảng có sẵn; màn/route ghi consent → làm cùng S1 hoặc lát quản trị |
-| Backup + khôi phục thử OK | Chờ bước 10–12 |
-| Câu trả lời rollback trong `CLAUDE.md` | ✓ (trừ `auth.users` — chờ quyết định) |
+| Backup + khôi phục thử OK | **S5c (18/10):** sao lưu nay gồm `auth.users` + `auth.identities` và tự khôi phục thử vào Postgres tạm trước khi mã hóa (xem mục S5c bên dưới). Còn chờ phụ huynh: chạy sao lưu tay 1 lần, đọc bảng "Restore check", và diễn tập giải mã bằng khóa offline 1 lần |
+| Câu trả lời rollback trong `CLAUDE.md` | ✓ (đã gồm `auth.users` từ S5c; áp dụng sau khi phụ huynh chạy sao lưu mới) |
 | Không có audio lên server | ✓ (chưa có tính năng nói; không có cột audio) |
 
 ### Ghi chú cho các lát sau
@@ -78,19 +78,19 @@
 
 | # | Việc | Hạn | Đề xuất |
 |---|---|---|---|
-| 1 | Sao lưu có kèm `auth.users` (mã hóa riêng) không | Trước G0 | Có — nếu không, khôi phục phải mời lại mọi tài khoản |
-| 2 | Xóa dữ liệu một em có xóa luôn tài khoản đăng nhập | Trước pilot thật | Xóa dữ liệu app trước; tài khoản phụ huynh tự xóa trên Supabase |
-| 3 | O-F1 quy tắc video | Trước S2 | Chỉ link YouTube/nguồn mở, không tải video lên |
-| 4 | Ngày đề thử tuần 4 của Nguyên | Trước 14/11 | 21/11 |
+| 1 | ~~Sao lưu có kèm `auth.users`~~ — **ĐÃ QUYẾT 18/10 (A3): có**, đã làm ở S5c | — | Xong (chờ phụ huynh chạy sao lưu thử) |
+| 2 | ~~Xóa dữ liệu một em có xóa luôn tài khoản đăng nhập~~ — **ĐÃ QUYẾT 18/10 (A6): không**; màn xóa đã làm ở S5c | — | Xong |
+| 3 | ~~O-F1 quy tắc video~~ — **ĐÃ QUYẾT 18/10 (C4)**: chỉ dùng link YouTube/nguồn mở, không tải video lên | — | Xong |
+| 4 | ~~Ngày đề thử tuần 4 của Nguyên~~ — **ĐÃ QUYẾT 18/10 (C5): 21/11** | — | Xong |
 | 5 | ~~B-W1…B-W4 còn nháp~~ — **ĐÃ QUYẾT 14/10, phương án (a)**: bước sửa bài → kỹ năng `B-A3-REVISE`; câu hỏi đánh giá độ tin cậy nguồn → loại `ACT-WRITE` với `B-T5-SOURCE` (B-W2 bước 4 tách đôi, B-W4 bước 9 đổi loại). 4 mẫu đã **công bố**, seed `0011`, nguồn của bước `0012` (chi tiết ở mục "Quyết định 14/10" trong phần S2). Còn lại: xác nhận bảng bước→bài đọc của `0012` | — | Đã xong; phụ huynh chỉ cần áp `0011`, `0012` sau `0010` |
-| 6 | **Ghi bài ngoài app ở bài kiểm tra trong buổi và bài nói trực tiếp**: chỉ thầy/cô ghi; phụ huynh không ghi được (màn hình hiện "Chỉ thầy/cô ghi bài này"). Bài nói trực tiếp chỉ ghi dạng "thầy/cô nghe trực tiếp" | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới**: nếu muốn phụ huynh ghi được bài giấy của bước kiểm tra, nói để nới sau |
-| 7 | **Bài do người lớn ghi giúp (bài giấy, bài nói trong buổi)**: học sinh không đọc được nội dung, người ghi hay gợi ý đi kèm; em chỉ thấy một dòng "bài này đã làm cùng thầy/cô hoặc trên giấy, đã ghi lại rồi" | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới**: nếu muốn em xem lại chữ thầy/cô đã ghi, nói để nới sau |
-| 8 | **Ngày ghi bài ngoài app** không được sớm hơn lần làm gần nhất của bước đó (kể cả bài em nộp trong app), và bước phải đã mở vào ngày ghi | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới**: nếu hay phải ghi bù theo thứ tự khác, nói để nới sau |
-| 9 | **Tiêu chí "thầy/cô nghe trực tiếp"** (vd. nói trôi chảy): chỉ tick được khi bài là bài thầy/cô nghe trực tiếp; bài khác chấm theo các tiêu chí còn lại | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới** |
-| 10 | **Ghi chú gợi ý quan sát được** tối đa 300 ký tự (một giới hạn ở mọi lớp: ô nhập, API, cơ sở dữ liệu) | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới** nếu thấy ngắn quá |
-| 11 | Điểm "sửa bài" (`B-A3-REVISE`) của Nguyên được chấm nhưng chưa nằm trong bộ theo dõi B-v1 (Track A có A3 trong "theo dõi thêm") | Sau baseline | Khi làm B-v2 sau baseline, thêm A3 vào "theo dõi thêm" của Nguyên |
-| 12 | `B-T5-SOURCE` chỉ có 2 cơ hội: 28/10 (B-W2) và kiểm tra trễ 23/11 trên nguồn mới C. Có tính kiểm tra trễ trên **nguồn mới** không? (quy định: cùng chủ đề/nguồn) | Trước 23/11 | Chờ phụ huynh/gia sư quyết; cho đến lúc đó không tự tính là kiểm tra trễ hợp lệ |
-| 13 | **Nội dung thông báo đồng ý (consent)**: app chưa có văn bản thông báo nào, bảng chỉ lưu *phiên bản*. Khi tạo gia đình thật, hệ thống ghi 1 bản đồng ý `data` cho mỗi em (do phụ huynh xác nhận) với phiên bản `pilot-2026-10`. Chưa ghi đồng ý `ai_text` (AI tắt cho cả hai em) | Trước khi bật AI | Soạn văn bản ngắn bằng tiếng Việt ứng với `pilot-2026-10`; khi đổi chữ thì đặt phiên bản mới và ghi dòng mới |
+| 6 | *(18/10: B7 — phụ huynh đồng ý giữ chặt.)* **Ghi bài ngoài app ở bài kiểm tra trong buổi và bài nói trực tiếp**: chỉ thầy/cô ghi; phụ huynh không ghi được (màn hình hiện "Chỉ thầy/cô ghi bài này"). Bài nói trực tiếp chỉ ghi dạng "thầy/cô nghe trực tiếp" | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới**: nếu muốn phụ huynh ghi được bài giấy của bước kiểm tra, nói để nới sau |
+| 7 | *(18/10: B8 — giữ chặt.)* **Bài do người lớn ghi giúp (bài giấy, bài nói trong buổi)**: học sinh không đọc được nội dung, người ghi hay gợi ý đi kèm; em chỉ thấy một dòng "bài này đã làm cùng thầy/cô hoặc trên giấy, đã ghi lại rồi" | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới**: nếu muốn em xem lại chữ thầy/cô đã ghi, nói để nới sau |
+| 8 | *(18/10: B9 — giữ; **ngoại lệ S5c**: bài nhập từ pilot giấy được lùi tới 14 ngày trước ngày giao nếu có lý do.)* **Ngày ghi bài ngoài app** không được sớm hơn lần làm gần nhất của bước đó (kể cả bài em nộp trong app), và bước phải đã mở vào ngày ghi | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới**: nếu hay phải ghi bù theo thứ tự khác, nói để nới sau |
+| 9 | *(18/10: B10 — giữ.)* **Tiêu chí "thầy/cô nghe trực tiếp"** (vd. nói trôi chảy): chỉ tick được khi bài là bài thầy/cô nghe trực tiếp; bài khác chấm theo các tiêu chí còn lại | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới** |
+| 10 | *(18/10: B11 — giữ.)* **Ghi chú gợi ý quan sát được** tối đa 300 ký tự (một giới hạn ở mọi lớp: ô nhập, API, cơ sở dữ liệu) | Khi nào cũng được | **Đang làm chặt — phụ huynh có thể nới** nếu thấy ngắn quá |
+| 11 | Điểm "sửa bài" (`B-A3-REVISE`) của Nguyên được chấm nhưng chưa nằm trong bộ theo dõi B-v1 | Sau baseline | **Đã quyết 18/10 (C6)**: thêm vào bộ B-v2 sau baseline (S5c không làm — nội dung cấu hình mới đi qua `gen:config -- --new`) |
+| 12 | *(Đã quyết 18/10, C7: KHÔNG tính kiểm tra trễ; tính là bài "chuyển sang nguồn mới".)* `B-T5-SOURCE` chỉ có 2 cơ hội: 28/10 (B-W2) và kiểm tra trễ 23/11 trên nguồn mới C. Có tính kiểm tra trễ trên **nguồn mới** không? (quy định: cùng chủ đề/nguồn) | Trước 23/11 | Chờ phụ huynh/gia sư quyết; cho đến lúc đó không tự tính là kiểm tra trễ hợp lệ |
+| 13 | **(S5c: đã có BẢN NHÁP `docs/CONSENT_pilot-2026-10.md`, chờ phụ huynh duyệt — chưa nối vào giao diện.)** **Nội dung thông báo đồng ý (consent)**: app chưa có văn bản thông báo nào, bảng chỉ lưu *phiên bản*. Khi tạo gia đình thật, hệ thống ghi 1 bản đồng ý `data` cho mỗi em (do phụ huynh xác nhận) với phiên bản `pilot-2026-10`. Chưa ghi đồng ý `ai_text` (AI tắt cho cả hai em) | Trước khi bật AI | Soạn văn bản ngắn bằng tiếng Việt ứng với `pilot-2026-10`; khi đổi chữ thì đặt phiên bản mới và ghi dòng mới |
 
 ## Nền vận hành (13/10/2026, đêm)
 
@@ -492,7 +492,7 @@ Nhánh `feature/s5b1a-login-results` — đã review Opus và sửa, CI xanh (g�
 - **Trang chủ = "Hôm nay"** (gia sư và phụ huynh): hai việc chính (**Ghi buổi học**, **Ghi kết quả bài**), mục **Cần chú ý** (điểm lặp lại ≥ 2 nguồn, câu sai chờ gắn nhãn, nhãn đến hạn kiểm tra lại), buổi học gần nhất, bài gần nhất. Câu "chờ gắn nhãn" **do chính phụ huynh ghi** hiện ngay cho phụ huynh; câu **do gia sư ghi** chỉ hiện cho phụ huynh **sau 2 ngày** (gia sư gắn trước, phụ huynh dự phòng); việc lọc này làm ở máy chủ.
 - **Ghi kết quả bài** (`/learners/<em>/results/new`): *Đề có khung* — bấm các câu sai trên lưới (điểm từng phần, điểm tổng, thang của đề, "Sai theo nhãn"); *Nhập nhanh* — tên bài, tổng số câu, số đúng, số các câu sai, nhãn cho từng câu sai (để trống được → vào "Chờ gắn nhãn"); *Bài kiểm tra | Bài luyện* (mặc định Bài luyện), lần đầu/làm lại, có Hint không, ở nhà/trong buổi (**trong buổi chỉ gia sư**, phụ huynh không thấy lựa chọn này và database cũng chặn). Ô "+ nhãn khác" tạo nhãn riêng của gia đình. Mục **Chờ gắn nhãn** nằm ngay dưới. Sau khi lưu, form khóa lại tới khi bấm "Ghi bài khác" (tránh ghi trùng).
 - **Ghi buổi học** (`/learners/<em>/notes/new`): ngày, hôm nay học, ≤ 3 nhãn cần củng cố (chip + tìm + thêm), lời nhắn cho em (≤ 500 ký tự), ghi chú cho phụ huynh (≤ 1000, em không thấy), khung "Đến hạn kiểm tra lại" (đã hỏi · ổn / còn sai / chưa hỏi). "Còn sai" đưa nhãn trở lại danh sách cần chú ý. Gia sư **hoặc** phụ huynh ghi được; luôn chia sẻ cho phụ huynh.
-- **Điểm cần chú ý** (`/learners/<em>/weak`): bảng nhãn × nguồn (Bài kiểm tra / Buổi học / Bài viết / Bài luyện) + trạng thái Lặp lại / Theo dõi / Ổn; chọn 4 tuần / 8 tuần / từ đầu; bấm tên nhãn xem dòng thời gian và hạn kiểm tra lại. Hạn kiểm tra lại = lần gần nhất + số ngày của chính sách đánh giá (AP-0.2-pilot: 14), **đọc từ database, không viết cứng**.
+- **Điểm cần chú ý** (`/learners/<em>/weak`): bảng nhãn × nguồn (Bài kiểm tra / Buổi học / Bài viết / Bài luyện) + trạng thái Lặp lại / Theo dõi / Ổn; chọn 4 tuần / 8 tuần / từ đầu; bấm tên nhãn xem dòng thời gian và hạn kiểm tra lại. Hạn kiểm tra lại = lần gần nhất + số ngày cài đặt (*S5c: nay là cài đặt riêng "Hỏi lại điểm yếu", `tutorwork_settings.recheck_days` = 14, không còn đọc từ chính sách đánh giá*), **đọc từ database, không viết cứng**.
 - **Nhãn cho bài viết** ngay trên màn duyệt bài (chỉ bài Viết / Sửa bài; tối đa 3 nhãn, đã lưu thì không bỏ được).
 - Trang "Ghi chú buổi học" cũ vẫn dùng được; ghi chú viết bằng mẫu mới hiện thêm Củng cố / Lời nhắn / Ghi chú cho phụ huynh và không có nút "Sửa" (bản mới sửa bằng cách ghi buổi mới).
 
@@ -534,7 +534,7 @@ Nhánh `feature/s5b1a-login-results` — đã review Opus và sửa, CI xanh (g�
 - Quy tắc "phụ huynh chỉ thấy câu chờ gắn nhãn của **gia sư** sau 2 ngày" là **quy tắc giao diện/máy chủ**, không phải database (plan ghi vậy): phụ huynh vẫn gắn được nhãn nếu gọi trực tiếp API. Câu phụ huynh tự ghi thì thấy ngay.
 - Hàm ghi thêm cột `marked_on` (ngày của sự việc) và `title`/`assignment_id` ở bảng kết quả so với bản phác trong plan, để "đến hạn kiểm tra lại" tính theo ngày thật.
 - Nhãn riêng của gia đình có key `x-<tên rút gọn>-<5 ký tự ngẫu nhiên>` (máy chủ tạo phần đầu, database thêm đuôi ngẫu nhiên) nên không bao giờ đụng nhãn có sẵn hay nhãn của gia đình khác.
-- Số migration kế tiếp cho nội dung cấu hình mới (`npm run gen:config -- --new`) giờ là **0016**.
+- Số migration kế tiếp cho nội dung cấu hình mới (`npm run gen:config -- --new`) giờ là **0016** *(lỗi thời: sau S5c là 0018, vì 0017 là migration S5c)*.
 - Trong môi trường này không có Docker/Supabase nên **chưa chạy được e2e và chưa mở trang thật**; đã có `next build` xanh, test database và test render. E2E chạy trong CI.
 
 ### Ghi chú cho PR B và các lát sau
@@ -593,7 +593,7 @@ Cách hoạt động: máy chủ kiểm quyền ở phía `english` trước, r�
 
 Bản sao lưu hằng tuần (`pg_dump`) chỉ chứa **bảng**, không chứa file trong Storage (quyết định của phụ huynh 17/10: chưa cần). Hệ quả: nếu Storage hỏng/xóa nhầm thì **mất ảnh/PDF đã tải lên**, nhưng **kết quả đã ghi (số liệu, nhãn) vẫn còn** vì đó là bảng. PDF đề nên giữ bản gốc ở máy gia sư.
 
-**Xóa dữ liệu một em — có một bước làm tay:** hàm `english.eng_purge_learner` nay cũng xóa các dòng bài giao/bài nộp/file/vé tải lên của em (chỉ thêm dòng xóa, có test so từng dòng với bản 0014). **File thật trong Storage nằm ngoài database**, nên **sau khi xóa dữ liệu một em, phải xóa thư mục `{family}/{learner}` trong Storage** (Supabase → Storage → `english-work` → thư mục của gia đình → thư mục của em → chọn tất cả → Delete), hoặc chạy helper `deleteLearnerFolder` (`lib/storage/purge.ts`, có test). Hiện **chưa có nút/route nào gọi helper** vì app chưa có màn xóa dữ liệu.
+**Xóa dữ liệu một em — có một bước làm tay:** hàm `english.eng_purge_learner` nay cũng xóa các dòng bài giao/bài nộp/file/vé tải lên của em (chỉ thêm dòng xóa, có test so từng dòng với bản 0014). **File thật trong Storage nằm ngoài database**, nên **sau khi xóa dữ liệu một em, phải xóa thư mục `{family}/{learner}` trong Storage** (Supabase → Storage → `english-work` → thư mục của gia đình → thư mục của em → chọn tất cả → Delete), hoặc chạy helper `deleteLearnerFolder` (`lib/storage/purge.ts`, có test). *(Cập nhật S5c 18/10: đã có màn xóa `/learners/<em>/delete` gọi helper này — xem mục S5c.)*
 
 **Giới hạn tải lên và file mồ côi:** mỗi em tối đa **60 link tải lên mỗi 24 giờ** (đếm trong database, bảng `upload_tickets`; quá thì báo “tải lên quá nhiều”). Nếu em chọn ảnh, ảnh lên Storage xong nhưng không bấm Gửi thì file nằm lại trong bucket (không có dòng trong database, không ai mở được) — gọi là *mồ côi*. Dọn tay, **không có lịch tự động**: `npm run storage:orphans` (cần `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` trong `.env.local`) **chỉ liệt kê** các file không có dòng trong `english.files` và cũ hơn 1 ngày; muốn xóa: `npm run storage:orphans -- --delete --confirm` (thiếu `--confirm` thì không xóa gì). File có đường dẫn lạ không bao giờ bị xóa.
 
@@ -629,12 +629,12 @@ Bản sao lưu hằng tuần (`pg_dump`) chỉ chứa **bảng**, không chứa 
 - **Không có policy trên `storage.objects` và không có tài khoản nào đọc thẳng được** — đúng phương án đã duyệt, nhưng khác cách làm "policy theo thư mục" thường thấy.
 - Bucket tạo bằng `insert` trong `0016` **chỉ khi** schema `storage` có sẵn; có đường dự phòng app tự tạo (xem trên).
 - **Không chạy được e2e ở đây** (không Docker/Supabase): `tests/e2e/practice.spec.ts` chỉ được liệt kê (`--list`), CI chạy với Storage thật. Cần CI xác nhận 2 chỗ chưa thử được: link tải lên/tải xuống ký tên đi qua `127.0.0.1:54321` đúng, và bucket do `0016` tạo khi Storage khởi động xong trước bước áp migration.
-- Số migration kế tiếp cho nội dung cấu hình mới (`npm run gen:config -- --new`) giờ là **0017**.
+- Số migration kế tiếp cho nội dung cấu hình mới (`npm run gen:config -- --new`) giờ là **0017** *(lỗi thời: sau S5c là 0018)*.
 - `0016` được **sửa tại chỗ** theo review (chưa áp ở đâu nên không thêm migration mới).
 
 ### Cần phụ huynh/Opus quyết
 
-1. **Làm màn xóa dữ liệu một em** (gọi `eng_purge_learner` rồi `deleteLearnerFolder`) **trước khi có file của con THẬT trong Storage** — hiện chưa có, chưa nằm trong plan nào, và nếu không có thì phải xóa tay thư mục như trên. Cần phụ huynh quyết.
+1. ~~Làm màn xóa dữ liệu một em~~ — **ĐÃ LÀM ở S5c** (phụ huynh quyết 18/10, A5).
 2. **Sao lưu file**: hiện chưa (quyết định #7). Nếu sau này muốn, cần quyết nơi lưu (không dùng dịch vụ bên thứ ba nhận dữ liệu của con).
 3. Có muốn đặt lịch tự động cho `npm run storage:orphans` không (hiện chỉ chạy tay; lịch tự động cần phụ huynh đồng ý riêng).
 
@@ -655,3 +655,69 @@ Bản sao lưu hằng tuần (`pg_dump`) chỉ chứa **bảng**, không chứa 
 - **PDF do người khác gửi** được tải về, không mở trong trang. `stat()` có đường dự phòng khi Storage không có `/object/info`. Tạo lại bucket thì đọc lại và **từ chối nếu bucket đang công khai**.
 - Chữ giao diện của các lỗi gửi file chuyển hết vào `lib/copy/vi.ts`.
 - E2E: so khớp tên liên kết chính xác (thẻ “Giao bài luyện” mới trên Hôm nay không còn trùng với liên kết “Giao bài” của chủ đề); thêm kịch bản sửa kết quả, “lần đầu” thứ hai bị từ chối, và link tải lên chỉ dùng được một lần.
+
+## S5c — Sẵn sàng dùng thật (18/10/2026)
+
+Nhánh `feature/s5c-readiness`. Kế hoạch `docs/plans/s5c-readiness.md`; kiểm toán `docs/AUDIT_2026-10-18.md`; quyết định `docs/DECISIONS_PENDING.md` (phụ huynh đồng ý A–D ngày 18/10, rồi đồng ý mục E "Studio bài tập" lúc 22:05 cùng ngày; Studio là lát riêng sau S5c nên **lát này không có việc AI nào**). **Chưa có review Opus, chưa push, chưa mở PR, chưa áp lên database thật.**
+
+### Đã thay đổi gì (nói đơn giản)
+
+| Việc | Vì sao | Nằm ở |
+|---|---|---|
+| **Ghi buổi học có ô "Kỹ năng đã luyện hôm nay"** (chọn trong bộ kỹ năng của em). Mỗi kỹ năng được ghi là một lần luyện | Sau này lịch ôn "≥ 14 ngày sau lần luyện gần nhất" (S7/S8) cần dữ liệu này; **không thể bù về sau** | `0017`, màn Ghi buổi học |
+| **Một "lần đầu" mỗi (tên bài, ngày)** khi ghi nhanh không gắn bài giao | Gia sư và phụ huynh cùng nhập một đề thì không bị tính "lần đầu" hai lần. Muốn sửa thì dùng "thay bản cũ" | `0017` |
+| **"Hỏi lại điểm yếu"** (đổi tên từ "Kiểm tra lại") có cài đặt số ngày **riêng** (mặc định 14), tách khỏi chính sách đánh giá | Hai khái niệm khác nhau; đổi một bên không kéo bên kia | `0017`, chữ trong `vi.ts` |
+| **Nhập bài từ pilot giấy 17–19/10**: ở màn Ghi bài ngoài app, nếu chọn ngày sớm hơn ngày giao thì hiện ô **lý do** (gợi ý "Nhập từ phiếu giấy pilot 17–19/10"); cho lùi tối đa **14 ngày**, lý do được lưu vào nhật ký. **Chỉ với bước đã mở cùng lúc giao bài, và không bao giờ với bài ôn sau 2 tuần (kiểm tra trễ) hay bài chuyển sang chủ đề mới**; bước mở muộn hơn ngày giao thì vẫn phải đúng ngày | Baseline là mốc đo tiến bộ, phải vào app | `0017`, màn Ghi bài |
+| **Màn "Xóa dữ liệu của em"** (chỉ phụ huynh): bấm từ thẻ của em → xem trước số dòng sẽ xóa → gõ tên em → (em thật) tick xác nhận lần hai → xóa dữ liệu, ảnh/PDF của em và tên đăng nhập ngắn. **Không xóa tài khoản đăng nhập** (dùng chung Launcher) | Cần có cách xóa an toàn trước khi dữ liệu thật vào | `0017`, `/learners/<em>/delete` |
+| **Sao lưu có tài khoản đăng nhập** (`auth.users`, `auth.identities`, mã hóa cùng khóa) và **tự khôi phục thử** vào một cơ sở dữ liệu tạm ngay trong lần chạy, đối chiếu số dòng của **mọi bảng `english`** và `auth.users` trước khi mã hóa, và coi lỗi khôi phục thuộc `english`/`auth` là lỗi; chỉ in **số lượng**, không in dữ liệu. Sao lưu chính (public + english) và sao lưu tài khoản là hai bước riêng: bước tài khoản hỏng thì bản chính vẫn được kiểm tra, mã hóa, lưu, và lần chạy báo đỏ | Chưa ai thử khôi phục; thiếu bảng đăng nhập thì khôi phục xong không ai đăng nhập được | `.github/workflows/backup.yml` |
+| **Nhãn "Quá hạn"** ở danh sách bài luyện của gia sư/phụ huynh và trên thẻ Hôm nay khi quá hạn nộp mà chưa có bài nộp/kết quả. Không trừ điểm, không chặn nộp, **em không thấy gì mới** | Gia sư biết để nhắc (D4) | giao diện, không migration |
+| **Tài liệu đồng bộ**: PRD thêm D29–D33; DESIGN thêm §19; CLAUDE.md status; bảng quyết định ở trên; bản nháp văn bản đồng ý | Audit #10, #11, #7 | `docs/` |
+
+### SQL cần áp
+
+- **ÁP `0017` TRƯỚC khi thử trên preview hoặc gộp PR.** `0017` tương thích ngược với code của `main` (hàm cũ vẫn chạy với lời gọi cũ), nên áp trước không làm hỏng bản đang chạy. Ngược lại, nếu code mới chạy khi `0017` chưa áp thì: ghi buổi học/ghi bài ngoài app vẫn chạy như cũ (chỉ không có phần mới); trang "Xóa dữ liệu của em" hiện câu "cần áp 0017" thay vì báo lỗi.
+- **`db/migrations/0017_readiness.sql`** — Actions → **Apply database migrations** (gõ APPLY) hoặc dán vào SQL Editor. Chỉ **thêm/thay hàm** (`create or replace`) và một bảng mới `tutorwork_settings` (có sẵn giá trị 14); chạy lại an toàn; không sửa dữ liệu cũ. Nên bấm chạy tay *Weekly backup* **trước** khi áp.
+- Áp xong, **không** cần chạy lại bước nào khác. (Hàm ghi buổi học bản cũ và các lời gọi cũ vẫn chạy được.)
+
+### Phụ huynh cần làm
+
+1. **Vercel → Settings → Deployment Protection:** bật cho **Preview** (Standard/Vercel Authentication). Lý do: Preview dùng chung database thật với khóa toàn quyền; bật lên thì chỉ người đăng nhập Vercel mới mở được. (Audit #8, quyết định A7.)
+2. **Duyệt văn bản đồng ý** `docs/CONSENT_pilot-2026-10.md` (5–7 câu): sửa chữ nếu cần rồi nói "duyệt". Văn bản chưa nối vào giao diện; khi đổi chữ thì phải đặt phiên bản mới (không sửa `pilot-2026-10` đã ghi).
+3. **Chạy sao lưu tay một lần** sau khi PR được gộp: GitHub → Actions → *Weekly backup (encrypted)* → Run workflow. Mở lần chạy, đọc phần **Summary**: bảng *Restore check* phải ghi **OK** ở mọi dòng (mỗi bảng của `english` và `auth.users`) và "Restore check PASSED". Nếu thấy **MISMATCH**: bản sao lưu vẫn được lưu nhưng **đừng tin** cho tới khi xem nguyên nhân (nhờ dev). Chạy này cần Secrets `DATABASE_URL`, `BACKUP_AGE_RECIPIENT` như cũ; không cần thêm gì.
+4. **Diễn tập giải mã một lần** (làm tay, trên máy có khóa offline): tải artifact `learning-os-…` về máy → `age -d -i learning-os-backup.key learning-os-<mốc>.dump.age > main.dump` và tương tự cho `learning-os-auth-<mốc>.dump.age` → `auth.dump`; chạy `pg_restore -l main.dump | head` để thấy danh sách đối tượng (không cần khôi phục thật). Xóa các file `.dump` sau khi xem. Mục đích: chắc rằng khóa offline thật sự giải mã được.
+5. **Khôi phục thật (khi cần):** làm trên một project THỬ, không phải project thật; Claude chỉ chuẩn bị lệnh, phụ huynh quyết và bấm (xem bảng "Quay lại khi hỏng" trong `CLAUDE.md`).
+
+### Cách thử trên preview (gia đình thử)
+
+1. Đăng nhập `thu-giasu-nguyen` → **Ghi buổi học**: có khung **Kỹ năng đã luyện hôm nay**; chọn 1–2 kỹ năng → lưu. (Trong database: `select target_key, source from english.exposure_log where source='lesson' order by at desc limit 5;`)
+2. **Ghi kết quả bài → Nhập nhanh**: ghi bài "Thử A" hôm nay lần đầu, rồi ghi lại cùng tên, cùng ngày, lần đầu → báo đã có lần đầu. Chọn "Làm lại" hoặc sửa bản đã ghi thì được.
+3. **Ghi bài ngoài app** cho một bài đã giao: chọn ngày sớm hơn ngày giao 3 ngày → hiện ô lý do; để trống → báo cần lý do; điền lý do → lưu được. Sớm hơn 14 ngày → báo không được. Bước mở muộn hơn ngày giao, hoặc bước ôn sau 2 tuần / chuyển sang chủ đề mới → báo "chỉ ghi lùi được với bước đã mở cùng lúc giao bài".
+4. **Tạo một em thử để xóa:** GitHub → Actions → **Seed test family** → Run workflow → `mode` = **throwaway**, `confirm` = `SEED` → Summary in tên em, dạng "Em thử xóa xxxxxx" (trên máy: `npm run db:seed-throwaway`). Công cụ **từ chối** nếu gia đình THỬ có em nào không phải em thử. Rồi đăng nhập `thu-phuhuynh` → thẻ của em **Em thử xóa …** → **Xóa dữ liệu**: số dòng hiện ra, gõ sai tên → không xóa; gõ đúng → xóa. **Không dùng "An (thử)"/"Nguyên (thử)"**. Gia sư không thấy liên kết này.
+5. Bài luyện có hạn nộp là hôm qua và chưa nộp → hiện nhãn **Quá hạn** ở bảng bài giao và thẻ Hôm nay; đăng nhập là em → không có nhãn.
+
+### Đối chiếu với plan — chỗ khác và vì sao
+
+- **Sao lưu khi khôi phục thử lệch:** job báo đỏ (email) nhưng vẫn mã hóa và lưu file, để một bản có thể tốt không bị mất. Plan chỉ nói "fail the job".
+- **"Quá hạn" chỉ áp cho bài luyện (S5b)**, không cho hạn của chủ đề S2 (S2 có luồng riêng cho em).
+- **`eng_recheck_days` nay là cài đặt chung** (không theo bộ kỹ năng của em), nên em chưa có bộ kỹ năng cũng có hạn "Hỏi lại". Chưa có màn để phụ huynh đổi số ngày (đổi bằng SQL qua `eng_set_tutorwork_setting`); nếu cần màn, nói để làm sau.
+- **Test e2e xóa dữ liệu** (`tests/e2e/purge.spec.ts`) chạy ở một project Playwright riêng sau các test khác và cần `DATABASE_URL` (để tạo em thử rồi xóa). Chưa chạy được ở máy này (không Docker/Supabase), chỉ `--list`; CI chạy.
+- **Mục nội dung C1/C5/C6** (bảng bước→bài đọc/nghe, đề thử 21/11, B-v2) không thuộc S5c — chưa làm.
+- **Không có AI**, không có Studio trong lát này. Thứ tự sau S5c theo E8 (PRD D31): spike AI → đưa gia sư vào + mockup Studio → Studio 1 → Studio 2 → S6 → S7 → S8.
+- Số migration kế tiếp cho nội dung cấu hình mới (`npm run gen:config -- --new`) giờ là **0018**.
+
+- **"Đăng xuất" chỉ đăng xuất máy đang dùng** (trước đây đăng xuất mọi máy của cùng tài khoản). Lý do: phụ huynh đăng xuất trên laptop chung không bị văng khỏi điện thoại; đồng thời sửa lỗi E2E chập chờn (test đăng xuất của phụ huynh làm rơi phiên phụ huynh ở test chạy song song). Phiên của máy này vẫn bị thu hồi trên server.
+
+### Để sau (ghi nhận từ review Opus, không làm trong S5c)
+
+- **Chưa có màn cho phụ huynh đổi số ngày "Hỏi lại điểm yếu"** (hiện đổi bằng SQL qua `eng_set_tutorwork_setting`; mặc định 14).
+- **"Quá hạn" chỉ áp cho bài luyện (S5b)**, chưa cho hạn của chủ đề S2.
+- **Kiểm tra khôi phục lệch số dòng khi có ghi đồng thời**: so sánh dùng khoảng [trước, sau] lúc sao lưu, nên một bản sao lưu trúng đúng lúc có nhiều thao tác ghi vẫn có thể báo MISMATCH giả; chạy lại là hết.
+- **Khôi phục thử không kiểm tra nội dung**, chỉ số dòng của mọi bảng `english` + `auth.users` và lỗi khôi phục thuộc schema `english`/`auth`; lỗi ở schema `public` của Launcher chỉ được đếm.
+- **File ảnh/PDF chưa sao lưu** (A4, xem lại sau ~1 tháng dùng thật).
+- **Cài đặt "Hỏi lại điểm yếu" là chung cho cả app** (N2): `eng_set_tutorwork_setting` cho phụ huynh của bất kỳ gia đình nào đổi số ngày dùng chung, và dòng nhật ký nằm dưới gia đình đó. Hiện chưa có màn nào gọi; nếu làm màn thì đổi khóa thành (gia đình, khóa).
+- **`eng_audit_purge_files` kiểm tra lỏng** (N4): không đối chiếu gia đình với biên nhận `learner.purged` và gọi lặp được. Chỉ server gọi được nên rủi ro thấp.
+- **Sửa ngày của một ghi chú buổi học** (N7): ghi chú thay thế đổi `session_date` thì các lần luyện của bản cũ vẫn nằm ở ngày cũ (giống bản v1). Cần xử lý khi làm S8 (lịch ôn).
+
+### Tiêu chí đạt
+
+`typecheck`, `lint`, `test` (gồm test database trên Postgres thật), `gen:config` xanh; CI (gồm E2E và bước áp migration hai lần) xanh; phụ huynh áp `0017` và chạy sao lưu thử có bảng *Restore check* ghi PASSED.

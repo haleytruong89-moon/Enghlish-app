@@ -145,6 +145,7 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
                           tutorOnly={s.purpose.includes("checkpoint")}
                           liveOnly={s.activityType === "ACT-SPEAK-LIVE"}
                           minDate={addDays(todayVn(new Date(q.assignedAt)), -1)}
+                          backdateMinDate={addDays(todayVn(new Date(q.assignedAt)), -14)}
                           maxDate={today}
                         />
                       )}
