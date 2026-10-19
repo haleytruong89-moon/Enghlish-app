@@ -705,6 +705,8 @@ Nhánh `feature/s5c-readiness`. Kế hoạch `docs/plans/s5c-readiness.md`; ki�
 - **Không có AI**, không có Studio trong lát này. Thứ tự sau S5c theo E8 (PRD D31): spike AI → đưa gia sư vào + mockup Studio → Studio 1 → Studio 2 → S6 → S7 → S8.
 - Số migration kế tiếp cho nội dung cấu hình mới (`npm run gen:config -- --new`) giờ là **0018**.
 
+- **"Đăng xuất" chỉ đăng xuất máy đang dùng** (trước đây đăng xuất mọi máy của cùng tài khoản). Lý do: phụ huynh đăng xuất trên laptop chung không bị văng khỏi điện thoại; đồng thời sửa lỗi E2E chập chờn (test đăng xuất của phụ huynh làm rơi phiên phụ huynh ở test chạy song song). Phiên của máy này vẫn bị thu hồi trên server.
+
 ### Để sau (ghi nhận từ review Opus, không làm trong S5c)
 
 - **Chưa có màn cho phụ huynh đổi số ngày "Hỏi lại điểm yếu"** (hiện đổi bằng SQL qua `eng_set_tutorwork_setting`; mặc định 14).
