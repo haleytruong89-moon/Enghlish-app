@@ -103,7 +103,8 @@ async function main() {
       model: MODEL,
       max_tokens: 32000,
       tools: [tool],
-      tool_choice: { type: "tool", name: "save_exercise" },
+      // Some models refuse a forced tool ("tool"/"any"); they get "auto" and the prompt asks for exactly one call.
+      tool_choice: process.env.SPIKE_TOOL_CHOICE === "auto" ? { type: "auto" } : { type: "tool", name: "save_exercise" },
       messages: [
         {
           role: "user",
@@ -128,6 +129,7 @@ async function main() {
 
   const c = { found: 0, part: 0, kind: 0, key: 0, accepted: 0, acceptedTotal: 0, options: 0, mcq: 0, tag: 0, tagHighWrong: 0, flagged: 0, flaggedWrong: 0, wrongTotal: 0, stem: 0 };
   const misses: string[] = [];
+  const tagMiss: string[] = [];
   for (const g of gold) {
     const x = byN.get(g.n);
     if (!x) { misses.push(`${g.n}: thiếu câu`); continue; }
@@ -141,7 +143,7 @@ async function main() {
     if (g.kind === "mcq") { c.mcq++; if ((x.options ?? []).length === 4) c.options++; else misses.push(`${g.n}: ${(x.options ?? []).length} lựa chọn`); }
     if ((x.stem ?? "").length > 8) c.stem++;
     const tagOk = x.tag_key === g.tag_key;
-    if (tagOk) c.tag++; else if (x.tag_confidence === "high") c.tagHighWrong++;
+    if (tagOk) c.tag++; else { tagMiss.push(`${g.n}: ${x.tag_key ?? "—"}${x.tag_confidence === "low" ? " (không chắc)" : ""} ≠ ${g.tag_key}`); if (x.tag_confidence === "high") c.tagHighWrong++; }
     if (x.needs_review) c.flagged++;
     if (!keyOk) { c.wrongTotal++; if (x.needs_review) c.flaggedWrong++; }
   }
@@ -169,6 +171,8 @@ async function main() {
     `| Ước tính chi phí | ${cost === null ? "xem Console → Usage" : `$${cost.toFixed(4)}`} |`,
     `| Thời gian | ${(ms / 1000).toFixed(1)} s |`,
     "",
+    "**Nhãn khác khung gia đình:** " + (tagMiss.length ? tagMiss.join(" · ") : "không có"),
+    "",
     "**Lệch so với đáp án mẫu:** " + (misses.length ? misses.join(" · ") : "không có"),
     "",
     "**5 giải thích mẫu (để gia sư đánh giá chất lượng):**",
@@ -179,6 +183,7 @@ async function main() {
   console.log(md);
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, md + "\n");
   console.log(`::notice title=${MODEL} ${FORMAT}::found ${c.found}/60 · key ${c.key}/60 · accepted ${c.accepted}/${c.acceptedTotal} · kind ${c.kind} · tag ${c.tag}/60 · flagged ${c.flagged} (wrong flagged ${c.flaggedWrong}/${c.wrongTotal}) · tokens ${u.input_tokens}/${u.output_tokens} · ${(ms / 1000).toFixed(0)}s${cost === null ? "" : ` · $${cost.toFixed(4)}`}`);
+  if (tagMiss.length) console.log(`::notice title=${MODEL} ${FORMAT} nhãn khác khung::${tagMiss.join(" | ")}`);
   if (misses.length) console.log(`::warning title=${MODEL} ${FORMAT} lệch::${misses.slice(0, 40).join(" | ")}`);
   console.log(`::notice title=${MODEL} ${FORMAT} giải thích::${[4, 16, 28, 41, 56].map((n) => `${n}: ${byN.get(n)?.explanation_vi ?? "—"}`).join(" | ")}`);
 }
