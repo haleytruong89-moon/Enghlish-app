@@ -621,6 +621,8 @@ export const tutorWorkErrors = {
   conflict: "Việc này đã được ghi trước đó (hoặc nhãn bị trùng). Bạn tải lại trang để xem.",
   duplicateFirst: "Bài này đã được ghi lần đầu — chọn “Làm lại” hoặc sửa bản đã ghi",
   offline: "Không kết nối được. Bạn kiểm tra mạng rồi thử lại nhé.",
+  duplicateMonth: "Tháng này đã có báo cáo. Tải lại trang để sửa bản đã lưu.",
+  badMonth: "Chọn một tháng trong 24 tháng gần đây, không phải tháng sau.",
 } as const;
 
 /** Màn "Xóa dữ liệu của em" (S5c, chỉ phụ huynh). */
@@ -924,6 +926,35 @@ export const weakPage = {
   pendingTitle: "Chờ gắn nhãn",
   pendingLink: "Gắn nhãn cho các câu sai",
 } as const;
+
+export const readingPage = {
+  link: "Nhập kỹ năng đọc tháng",
+  title: (alias: string) => `Kỹ năng đọc tháng · ${alias}`,
+  back: "Về Điểm cần chú ý",
+  intro: "Nhập số câu và % đúng của từng kỹ năng theo báo cáo đọc tháng (TOMO). Dòng để trống = tháng này không có câu.",
+  monthLabel: "Tháng",
+  colSkill: "Kỹ năng",
+  colQuestions: "Số câu",
+  colPct: "% đúng",
+  noteLabel: "Ghi chú (không bắt buộc)",
+  save: "Lưu báo cáo",
+  saveCorrection: "Lưu bản sửa",
+  saved: "Đã lưu.",
+  editing: (month: string) => `Tháng ${month} đã có báo cáo. Sửa các ô rồi bấm “Lưu bản sửa” (bản cũ vẫn được giữ trong lịch sử).`,
+  rowInvalid: "Số câu là số nguyên 1–500; % đúng là số nguyên 0–100; nhập cả hai hoặc để trống cả hai.",
+  needOneRow: "Nhập ít nhất một kỹ năng.",
+  sectionTitle: "Kỹ năng đọc",
+  sectionIntro: (month: string | null, source: string | null) =>
+    month ? `Theo báo cáo tháng ${month}${source ? ` (${source})` : ""}, so với tháng trước. Câu sai 6 tuần = từ bài kiểm tra và bài luyện.` : "Chưa có báo cáo kỹ năng đọc nào.",
+  colLatest: "Tháng này",
+  colPrev: "Tháng trước",
+  colWrong6w: "Câu sai 6 tuần",
+  status: { none: "Chưa có câu", thin: "Chưa đủ dữ liệu", weak: "Cần chú ý", ok: "Ổn" } as Record<string, string>,
+  pctLine: (pct: number, q: number) => `${pct}% · ${q} câu`,
+  rule: (min: number, pct: number) => `Dưới ${min} câu: chưa đủ dữ liệu để kết luận. Từ ${min} câu trở lên và dưới ${pct}%: cần chú ý. Đây là tín hiệu theo dõi, không đổi bậc kỹ năng.`,
+  enter: "Nhập báo cáo tháng",
+  monthGo: "Chọn",
+};
 
 export const writingTags = {
   title: "Nhãn cho bài viết",

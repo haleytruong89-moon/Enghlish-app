@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { ReadingSkillsTable } from "@/components/tutor/ReadingSkillsTable";
 import { WeakTable } from "@/components/tutor/WeakTable";
 import { learnerWithTrack, resultPage, weakPage } from "@/lib/copy/vi";
+import { loadReadingSkills } from "@/lib/reading/load";
 import { loadUntagged, loadWeakPoints } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 import { WEAK_WINDOWS, type WeakWindow } from "@/lib/tutorwork/schemas";
@@ -15,7 +17,11 @@ export default async function WeakPage({ params, searchParams }: { params: Promi
   const { member, learner } = await requireLearnerPage(id, "tutorwork:read");
   const window: WeakWindow = (WEAK_WINDOWS as readonly string[]).includes(weeks ?? "") ? (weeks as WeakWindow) : "8";
   const role = member.role === "tutor" ? "tutor" : "parent";
-  const [view, pending] = await Promise.all([loadWeakPoints(learner.id, window), loadUntagged(learner.id, { role, memberId: member.id })]);
+  const [view, pending, reading] = await Promise.all([
+    loadWeakPoints(learner.id, window),
+    loadUntagged(learner.id, { role, memberId: member.id }),
+    loadReadingSkills(learner.id),
+  ]);
 
   return (
     <>
@@ -54,6 +60,8 @@ export default async function WeakPage({ params, searchParams }: { params: Promi
         <div className="mt-5">
           <WeakTable view={view} />
         </div>
+
+        <ReadingSkillsTable view={reading} learnerId={learner.id} />
       </main>
     </>
   );
