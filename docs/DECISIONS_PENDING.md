@@ -72,3 +72,26 @@ Mục tiêu (lời phụ huynh): gia sư thấy app **tiện và muốn dùng**.
 | E6 | Bật AI (Claude) | **Bật cho việc của gia sư** (đọc đề, soạn nháp). **Không gửi tên hay thông tin của con**, chỉ gửi nội dung bài và tên nhãn lỗi. Giữ trần $10/tháng, có nút tắt | Cần văn bản đồng ý AI (A8 viết gộp luôn). Chi phí ước tính vài cent đến vài chục cent mỗi đề; con số thật sẽ đo khi thử nhanh |
 | E7 | Học sinh có thấy câu nào sai sau khi làm bài trong app không | **Thấy "các câu cần xem lại" và lời giải thích do gia sư duyệt, không thấy điểm số** | Học được ngay từ lỗi, vẫn giữ quy tắc "học sinh không thấy điểm". Chỗ giao với S6 sẽ chốt khi lên kế hoạch |
 | E8 | Thứ tự mới | **S5c → thử nhanh AI (nửa ngày) → đưa gia sư vào, cho xem mockup Studio → Studio bước 1 → bước 2 → S6 → S7 → S8** | Gia sư được dùng sớm cái đang có, và góp ý cho Studio trước khi code |
+
+## F. Kết quả thử nhanh AI (19/10/2026) và quyết định model
+
+Đề Destination C1&C2 Progress Test U1–12 (60 câu, bản trắng — đã bỏ bài làm và ghi chú của Nguyên) + đáp án của gia sư, gửi dạng PDF. So với đáp án mẫu 60 câu. Chạy bằng key riêng (workspace `learning-os`, trần $10/tháng), nhánh `feature/spike-studio-ai` (không gộp).
+
+| | Sonnet 5.5 | Haiku 5.5 |
+|---|---|---|
+| Đọc đủ câu / đáp án đúng | 60/60 · 60/60 | 60/60 · 60/60 |
+| Đáp án "chấp nhận" giữ được | 5/5 | 5/5 |
+| Dạng câu đúng | 60/60 | 60/60 |
+| Nhãn trùng khung gia đình | 58/60 (2 câu nằm giữa 2 nhãn: 12, 17) | 51–53/60 |
+| Thời gian | 66 s | 33 s |
+| Token vào / ra | ~14.600 / ~12.200 | ~14.700 / ~10.400 |
+
+| # | Câu hỏi | Quyết định | Lý do |
+|---|---|---|---|
+| F1 | Model đọc đề cho Studio bước 1 | **Sonnet 5.5** (ĐÃ DUYỆT 19/10/2026 23:18) | Nhãn nuôi "Điểm cần chú ý" và gợi ý bài bổ sung; 58/60 thì gia sư gần như không phải sửa nhãn. Mỗi đề đọc 1 lần nên chậm hơn 30 s không đáng kể; vẫn trong trần $10 |
+| F2 | Model soạn bài bổ sung (bước 2) | **Haiku 5.5** (dự kiến, chốt khi lên kế hoạch bước 2) | Chạy nhiều lần hơn, rẻ và nhanh |
+| F3 | Nhánh thử và file đề trên GitHub | Giữ đến khi Studio bước 1 xong rồi **xóa nhánh** | E5: đề có bản quyền chỉ dùng trong gia đình, không nằm lâu trong code |
+
+## G. Thiết kế Studio bước 1 (brainstorm 19–20/10/2026)
+
+Chi tiết: `docs/superpowers/specs/2026-10-20-studio-design.md` §1 (Q1–Q8). Tóm tắt: kết quả Studio là tín hiệu, bài "Kiểm tra chính thức" thêm đường bằng chứng; gia sư chọn Luyện/Kiểm tra; câu mở app chấm + gia sư xử câu lạ; em thấy câu cần xem lại ngay sau khi nộp; tự sinh khung đề; xây trên nền S5b; nhận PDF + .docx; **kỹ năng đọc theo khung TOMO (Nguyên 14, An 6), chỉ kỹ năng, Lexile/CEFR để sau**.

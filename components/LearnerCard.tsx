@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { assignPage, fallbackLabels, home, inquiriesPage, learnerWithTrack, notesPage, purgePage, sourceLabels, targetsPage, todayPage, tutorHonorific, weakPage } from "@/lib/copy/vi";
+import { assignPage, fallbackLabels, home, inquiriesPage, learnerWithTrack, notesPage, purgePage, readingPage, sourceLabels, targetsPage, todayPage, tutorHonorific, weakPage } from "@/lib/copy/vi";
 import { safeColor, type LearnerSummary } from "@/lib/home/visible";
 import { todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi } from "@/lib/inquiries/format";
@@ -205,6 +205,9 @@ export function LearnerCard({
       <div className="mt-2 flex flex-wrap gap-x-4">
         <Link href={`/learners/${learner.id}/weak`} className={linkClass}>
           {weakPage.link}
+        </Link>
+        <Link href={`/learners/${learner.id}/reading/new`} className={linkClass}>
+          {readingPage.link}
         </Link>
         <Link href={`/learners/${learner.id}/targets`} className={linkClass}>
           {targetsPage.link}

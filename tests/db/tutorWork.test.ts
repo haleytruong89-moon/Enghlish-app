@@ -190,8 +190,8 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
   // -------------------------------------------------------------------------------------------------------------
   describe("seed tags (0015)", () => {
     it("10 tags per track, global, none retired; keys never start with x-", async () => {
-      expect(await count("select count(*)::int as n from english.error_tags where track_id = 'A' and origin = 'seed' and family_id is null and retired_at is null")).toBe(10);
-      expect(await count("select count(*)::int as n from english.error_tags where track_id = 'B' and origin = 'seed' and family_id is null and retired_at is null")).toBe(10);
+      expect(await count("select count(*)::int as n from english.error_tags where track_id = 'A' and origin = 'seed' and family_id is null and retired_at is null and group_vi is distinct from 'Kỹ năng đọc'")).toBe(10); // 0018 adds the reading group on top of the 0015 tags
+      expect(await count("select count(*)::int as n from english.error_tags where track_id = 'B' and origin = 'seed' and family_id is null and retired_at is null and group_vi is distinct from 'Kỹ năng đọc'")).toBe(10); // 0018 adds the reading group on top of the 0015 tags
       expect(await count("select count(*)::int as n from english.error_tags where key like 'x-%' and origin = 'seed'")).toBe(0);
     });
   });

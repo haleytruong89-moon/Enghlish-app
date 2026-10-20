@@ -212,7 +212,7 @@ Không chung dữ liệu. Ghi nhận: hai app có engine mastery riêng; nếu s
 | **II — Đo lường** | S7 | Episode, observation, engine trạng thái PRD §6.4, đề xuất → xác nhận, rebuild | FR-15 | |
 | | S8 | Hàng đợi delayed/transfer, exposure history, next action | FR-16/17 | |
 | | S9 | Màn phụ huynh + màn "vì sao", báo cáo tháng mẫu, export JSON, xóa, snapshot SkillGrow | FR-18/19/21, FX-01 | **~3 lát** |
-| *(sau S5c, trước S6 — D31/E8)* | Studio 1 | Gia sư tải đề PDF/Word + đáp án → AI đọc thành bản nháp → gia sư duyệt → em làm trong app, tự chấm câu đóng, tự gắn nhãn; em thấy "câu cần xem lại" + giải thích đã duyệt, không thấy điểm (E2, E7). Có spike AI nửa ngày trước | FR-05/06 (mở rộng) | 1 lát + spike |
+| *(sau S5c, trước S6 — D31/E8)* | Studio 1 | Gia sư tải đề PDF/Word + đáp án → AI đọc thành bản nháp → gia sư duyệt → em làm trong app, tự chấm câu đóng, tự gắn nhãn; em thấy "câu cần xem lại" + giải thích đã duyệt, không thấy điểm (E2, E7). Có spike AI nửa ngày trước **Chia 2 PR: PR A = kỹ năng đọc (nhãn "Kỹ năng đọc" theo báo cáo TOMO, nhập báo cáo tháng, bảng trên Điểm cần chú ý; migration 0018, không AI); PR B = Studio (đề → bài).** | FR-05/06 (mở rộng) | 1 lát + spike |
 | | Studio 2 | Gợi ý bài bổ sung theo điểm yếu: AI soạn 8–12 câu + đáp án + giải thích theo "Thư viện kiểu luyện", gia sư duyệt; gộp S5b-2 (thư viện nguồn) (E3, E4) | FR-05/06 | 1 lát |
 | **III — Nói + AI** | Sp | Spike STT trên máy (chạy song song từ sớm, không cần DB) | — | |
 | | S10 | Studio nói: ghi âm cục bộ, STT, transcript version, chỉ số | FR-09 | |
