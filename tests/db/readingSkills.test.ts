@@ -47,4 +47,127 @@ describe("Studio 1A reading skills (migration 0018)", () => {
       expect((await q1<{ n: number }>("select count(*)::int as n from english.error_tags where group_vi = 'Kỹ năng đọc'"))[0]?.n).toBe(20);
     });
   });
+
+  type Rec = { id: string; replayed: boolean };
+  const TODAY = todayVn();
+  const thisMonth = `${TODAY.slice(0, 7)}-01`;
+  const lastMonth = (() => { const d = new Date(`${thisMonth}T00:00:00Z`); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 10); })();
+  const row = (tag_key: string, questions: number, correct_pct: number) => ({ tag_key, questions, correct_pct });
+  const record = (by: string, o: { learner?: string; month?: string; rows?: unknown; source?: string | null; note?: string | null; supersedes?: string | null; clientId?: string } = {}) =>
+    svc<Rec>("select english.eng_record_reading_report($1, $2::date, $3, $4::jsonb, $5, $6, $7, $8) as r", [
+      o.learner ?? NG(), o.month ?? thisMonth, o.source === undefined ? null : o.source,
+      JSON.stringify(o.rows ?? [row("doc-cause-effect", 5, 40), row("doc-sequence", 1, 0), row("doc-main-idea", 8, 75)]),
+      o.note ?? null, o.supersedes ?? null, by, o.clientId ?? randomUUID(),
+    ]);
+  const skills = () => svc<{
+    min_questions: number; weak_pct: number; latest_month: string | null; previous_month: string | null;
+    skills: { tag_key: string; questions: number | null; correct_pct: number | null; prev_correct_pct: number | null; status: string; wrong_6w: number }[];
+  }>("select english.eng_reading_skills($1) as r", [NG()]);
+
+  describe("2. recording a monthly report", () => {
+    it("a tutor or a parent records one; replaying the same client id returns it; another payload under the same id is refused", async () => {
+      const id = "reading-0001-aaaa";
+      const a = await record(M().tutorNguyen, { month: lastMonth, clientId: id, rows: [row("doc-cause-effect", 4, 75)] });
+      expect(a.replayed).toBe(false);
+      expect(await record(M().tutorNguyen, { month: lastMonth, clientId: id, rows: [row("doc-cause-effect", 4, 75)] })).toEqual({ id: a.id, replayed: true });
+      await fail(record(M().tutorNguyen, { month: lastMonth, clientId: id, rows: [row("doc-cause-effect", 4, 50)] }), "23505");
+      const b = await record(M().parent, { month: thisMonth });
+      expect(b.replayed).toBe(false);
+    });
+
+    it("one current report per month and source; a correction replaces it once; the source name keeps months apart", async () => {
+      await fail(record(M().tutorNguyen, { month: thisMonth }), "23505", /\(duplicate_month\)/);
+      const cur = (await q1<{ id: string }>("select id from english.reading_reports r where learner_id = $1 and month = $2 and not exists (select 1 from english.reading_reports r2 where r2.supersedes_id = r.id)", [NG(), thisMonth]))[0]!.id;
+      const fixed = await record(M().tutorNguyen, { month: thisMonth, supersedes: cur, rows: [row("doc-cause-effect", 5, 40), row("doc-sequence", 1, 0), row("doc-main-idea", 8, 75), row("doc-summarize", 6, 50)] });
+      await fail(record(M().tutorNguyen, { month: thisMonth, supersedes: cur }), "23514");
+      await fail(record(M().tutorNguyen, { month: lastMonth, supersedes: fixed.id }), "23514");
+      expect((await record(M().tutorNguyen, { month: thisMonth, source: "Lớp học" })).replayed).toBe(false);
+    });
+
+    it("refuses a bad month, a future month, an unknown or other-track skill, duplicates, bad numbers and extra keys", async () => {
+      const next = (() => { const d = new Date(`${thisMonth}T00:00:00Z`); d.setUTCMonth(d.getUTCMonth() + 1); return d.toISOString().slice(0, 10); })();
+      await fail(record(M().tutorNguyen, { month: `${TODAY.slice(0, 7)}-15` }), "23514", /\(bad_month\)/);
+      await fail(record(M().tutorNguyen, { month: next }), "23514", /\(bad_month\)/);
+      await fail(record(M().tutorNguyen, { month: lastMonth, source: "x1", rows: [row("doc-details", 4, 50)] }), "23514"); // Track A only
+      await fail(record(M().tutorNguyen, { month: lastMonth, source: "x2", rows: [row("dang-tu", 4, 50)] }), "23514"); // not a reading skill
+      await fail(record(M().tutorNguyen, { month: lastMonth, source: "x3", rows: [row("doc-sequence", 4, 50), row("doc-sequence", 2, 0)] }), "22023");
+      for (const bad of [[row("doc-sequence", 0, 50)], [row("doc-sequence", 4, 101)], [{ tag_key: "doc-sequence", questions: 4.5, correct_pct: 50 }],
+        [{ tag_key: "doc-sequence", questions: 4, correct_pct: 50, extra: 1 }], [], "x"]) {
+        await fail(record(M().tutorNguyen, { month: lastMonth, source: "x4", rows: bad }), "22023");
+      }
+      await fail(record(M().tutorNguyen, { month: lastMonth, source: "x5", note: "n".repeat(301) }), "22023", /\(note_too_long\)/);
+    });
+
+    it("only staff of this learner: a student, the other child's tutor and strangers are refused", async () => {
+      await fail(record(M().studentNguyen, { month: lastMonth, source: "s1" }), "42501");
+      await fail(record(M().tutorAn, { month: lastMonth, source: "s2" }), "42501");
+      await fail(record(randomUUID(), { month: lastMonth, source: "s3" }), "42501");
+      await fail(record(M().tutorNguyen, { learner: randomUUID(), month: lastMonth }), "P0002");
+    });
+
+    it("is append-only, writes an audit row without content, and both functions are closed to everyone but service_role", async () => {
+      const upd = await db.client.query("update english.reading_reports set note = 'x'").then(() => null, (e: unknown) => e);
+      expect(upd, "append-only: an update outside a purge must fail").not.toBeNull();
+      const log = await q1<{ payload: Record<string, unknown> }>("select payload from english.audit_log where action = 'reading_report.recorded' order by id desc limit 1");
+      expect(Object.keys(log[0]!.payload).sort()).toEqual(["month", "report_id", "skills", "source", "supersedes"]);
+      const acl = await q1<{ proname: string; anon: boolean; auth: boolean; svc: boolean }>(`
+        select p.proname, has_function_privilege('anon', p.oid, 'execute') as anon, has_function_privilege('authenticated', p.oid, 'execute') as auth,
+               has_function_privilege('service_role', p.oid, 'execute') as svc
+        from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'english' and p.proname in ('eng_record_reading_report', 'eng_reading_skills')`);
+      expect(acl).toHaveLength(2);
+      for (const a of acl) expect([a.anon, a.auth, a.svc]).toEqual([false, false, true]);
+    });
+  });
+
+  describe("3. the 'Kỹ năng đọc' table", () => {
+    it("lists every reading skill of the track with the latest report, last month's %, thresholds from settings", async () => {
+      const v = await skills();
+      expect(v.min_questions).toBe(4);
+      expect(v.weak_pct).toBe(60);
+      expect(v.latest_month).toBe(thisMonth);
+      expect(v.previous_month).toBe(lastMonth);
+      expect(v.skills).toHaveLength(14);
+      const by = new Map(v.skills.map((x) => [x.tag_key, x]));
+      expect(by.get("doc-cause-effect")).toMatchObject({ questions: 5, correct_pct: 40, prev_correct_pct: 75, status: "weak" });
+      expect(by.get("doc-sequence")).toMatchObject({ questions: 1, status: "thin" }); // 1 question: not enough to judge
+      expect(by.get("doc-main-idea")).toMatchObject({ questions: 8, correct_pct: 75, status: "ok" });
+      expect(by.get("doc-prediction")).toMatchObject({ questions: null, status: "none" });
+    });
+
+    it("counts wrong items tagged with a reading skill in the last 6 weeks (first attempts only)", async () => {
+      await svc("select english.eng_record_result($1, 'quick', null, 'Reading test', 10, 8, '{3,5}', $2::jsonb, 'home', 'first', false, $3::date, null, null, $4, $5, 'test') as r",
+        [NG(), JSON.stringify([{ n: 3, tag_key: "doc-cause-effect" }, { n: 5, tag_key: "doc-cause-effect" }]), addDays(TODAY, -3), M().tutorNguyen, randomUUID()]);
+      const by = new Map((await skills()).skills.map((x) => [x.tag_key, x]));
+      expect(by.get("doc-cause-effect")?.wrong_6w).toBe(2);
+    });
+
+    it("a learner with no report gets every skill as 'none'; Track A shows its 6", async () => {
+      const v = await svc<{ latest_month: string | null; skills: { status: string }[] }>("select english.eng_reading_skills($1) as r", [AN()]);
+      expect(v.latest_month).toBeNull();
+      expect(v.skills).toHaveLength(6);
+      expect(v.skills.every((x) => x.status === "none")).toBe(true);
+    });
+  });
+
+  describe("4. purge", () => {
+    it("the preview counts reading reports and the purge deletes them", async () => {
+      const prev = await svc<{ counts: Record<string, number> }>("select english.eng_purge_preview($1) as r", [NG()]);
+      expect(prev.counts.reading_reports).toBeGreaterThanOrEqual(3);
+      const fnSrc = (await q1<{ src: string }>("select pg_get_functiondef('english.eng_purge_learner(uuid, uuid)'::regprocedure) as src"))[0]?.src ?? "";
+      expect(fnSrc).toContain("delete from english.reading_reports");
+    });
+
+    it("a real purge deletes a report and its correction (self-reference) and the receipt counts them", async () => {
+      const l = (await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1, 'Em thử đọc', 'B', true, 'active') returning id", [s.familyId]))[0]!.id;
+      const first = await record(M().parent, { learner: l, month: thisMonth });
+      await record(M().parent, { learner: l, month: thisMonth, supersedes: first.id });
+      const dry = await svc<{ counts: Record<string, number> }>("select english.eng_purge_preview($1) as r", [l]);
+      expect(dry.counts.reading_reports).toBe(2);
+      const receipt = await svc<{ deleted: Record<string, number> }>("select english.eng_purge_learner($1, $2) as r", [l, s.users.parent]);
+      expect(receipt.deleted.reading_reports).toBe(2);
+      expect(receipt.deleted).toEqual(dry.counts);
+      expect((await q1<{ n: number }>("select count(*)::int as n from english.reading_reports where learner_id = $1", [l]))[0]?.n).toBe(0);
+    });
+  });
 });

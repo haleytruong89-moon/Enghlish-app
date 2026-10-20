@@ -164,7 +164,7 @@ describe("the dry run and the screen", () => {
     for (const key of [
       "audit_log", "target_sets", "inquiry_instances", "activity_instances", "instance_item_keys", "activity_instance_events", "consents", "relationships",
       "attempt_auto_checks", "episodes", "exposure_log", "assistance_events", "artifact_versions", "attempts", "working_drafts", "validation_decisions",
-      "observations", "lesson_notes", "tag_marks", "recheck_events", "results", "submissions", "assignment_events", "assignments", "files", "upload_tickets",
+      "observations", "lesson_notes", "tag_marks", "recheck_events", "results", "submissions", "assignment_events", "assignments", "files", "upload_tickets", "reading_reports",
       "login_names", "learners", "members",
     ]) expect(purgePage.countLabels[key], key).toBeTruthy();
   });

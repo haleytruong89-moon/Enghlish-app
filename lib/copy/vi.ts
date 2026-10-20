@@ -664,6 +664,7 @@ export const purgePage = {
     assignments: "Bài luyện",
     files: "File ảnh / PDF",
     upload_tickets: "Phiếu tải file",
+    reading_reports: "Báo cáo kỹ năng đọc tháng",
     login_names: "Tên đăng nhập ngắn",
     learners: "Hồ sơ của em",
     members: "Tài khoản của em trong app",

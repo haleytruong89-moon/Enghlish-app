@@ -86,7 +86,7 @@ describe("migrations", () => {
         "app_errors", "artifact_versions", "assessment_policies", "assignment_events", "assignments", "assistance_events", "attempt_auto_checks",
         "attempts", "audit_log", "catalogue_versions", "consents", "dimensions", "episodes", "error_tags", "exposure_log",
         "families", "files", "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "lesson_notes", "login_names", "members",
-        "observations", "recheck_events", "relationships", "results", "schema_migrations", "source_transcripts", "sources", "submissions", "tag_marks",
+        "observations", "reading_reports", "recheck_events", "relationships", "results", "schema_migrations", "source_transcripts", "sources", "submissions", "tag_marks",
         "target_set_definitions", "target_sets", "targets", "template_item_keys", "template_step_sources", "test_frames", "tracks", "tutorwork_settings", "upload_tickets",
         "validation_decisions", "working_drafts",
       ],
@@ -119,7 +119,7 @@ describe("migrations", () => {
       "artifact_versions", "assessment_policies", "assignment_events", "assignments", "assistance_events", "attempt_auto_checks", "attempts",
       "audit_log", "catalogue_versions", "consents", "dimensions", "episodes", "error_tags", "exposure_log", "families", "files",
       "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "lesson_notes", "members", "observations",
-      "recheck_events", "relationships", "results", "source_transcripts", "sources", "submissions", "tag_marks", "target_set_definitions",
+      "reading_reports", "recheck_events", "relationships", "results", "source_transcripts", "sources", "submissions", "tag_marks", "target_set_definitions",
       "target_sets", "targets", "template_item_keys", "template_step_sources", "test_frames", "tracks", "validation_decisions",
       "working_drafts",
     ]);
