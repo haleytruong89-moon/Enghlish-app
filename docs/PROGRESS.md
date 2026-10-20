@@ -721,3 +721,45 @@ Nhánh `feature/s5c-readiness`. Kế hoạch `docs/plans/s5c-readiness.md`; ki�
 ### Tiêu chí đạt
 
 `typecheck`, `lint`, `test` (gồm test database trên Postgres thật), `gen:config` xanh; CI (gồm E2E và bước áp migration hai lần) xanh; phụ huynh áp `0017` và chạy sao lưu thử có bảng *Restore check* ghi PASSED.
+
+## Studio 1 · PR A — Kỹ năng đọc (20/10/2026)
+
+Nhánh `feature/studio-1`. Thiết kế `docs/superpowers/specs/2026-10-20-studio-design.md` (§3); kế hoạch `docs/superpowers/plans/2026-10-20-studio-1a-reading-skills.md`. **Không có AI** trong PR này. Chưa review Opus, chưa mở PR, chưa áp lên database thật.
+
+### Đã thay đổi gì (nói đơn giản)
+
+| Việc | Vì sao | Nằm ở |
+|---|---|---|
+| **Bộ nhãn "Kỹ năng đọc"** (tên song ngữ như báo cáo TOMO): Track B 14 kỹ năng, Track A 6. Nhãn chung cũ của An "Đọc hiểu (KET Reading)" nghỉ dùng (dấu nhãn cũ vẫn hiện đúng tên) | Gia sư nhận ra ngay tên kỹ năng trong báo cáo TOMO; dùng được làm nhãn lỗi ở kết quả bài và ghi buổi học như mọi nhãn khác | `0018`, `content/tags/reading_A.json`, `reading_B.json` |
+| **Nhập báo cáo kỹ năng đọc tháng** (gia sư hoặc phụ huynh của em): mỗi kỹ năng một dòng, hai ô "Số câu" và "% đúng"; để trống = tháng đó không có câu. Nhập lại cùng tháng = sửa (bản cũ vẫn giữ trong lịch sử) | Thay cho việc chép tay báo cáo TOMO; không lưu Lexile/CEFR | `0018` (bảng `reading_reports`), trang `/learners/<em>/reading/new`, thẻ của em → "Nhập kỹ năng đọc tháng" |
+| **Bảng "Kỹ năng đọc" trên "Điểm cần chú ý"**: % đúng và số câu của báo cáo mới nhất, so với tháng trước, và số câu sai 6 tuần gần đây (từ kết quả bài/ghi buổi học). Dưới 4 câu → "Chưa đủ dữ liệu" (không tô đỏ); từ 4 câu và dưới 60% → "Cần chú ý" | Tín hiệu để gia sư biết kỹ năng nào cần thêm bài | `0018` (`eng_reading_skills`), trang Điểm cần chú ý |
+| **Ngưỡng nằm trong cài đặt**, không hard-code: `reading_min_questions = 4`, `reading_weak_pct = 60` | Đổi ngưỡng không cần sửa code | `0018`, bảng `tutorwork_settings` (chưa có màn đổi) |
+| **Xóa dữ liệu một em** nay xóa cả báo cáo kỹ năng đọc và đếm chúng ở bước xem trước | Dữ liệu mới của em phải xóa được | `0018` (purge + preview) |
+
+Báo cáo kỹ năng đọc là **tín hiệu, không phải bằng chứng**: engine S7 không đọc bảng này; em **không thấy** gì mới (chỉ gia sư và phụ huynh).
+
+### SQL cần áp
+
+- **`db/migrations/0018_reading_skills.sql`** — Actions → **Apply database migrations** (gõ APPLY) hoặc dán vào SQL Editor, **sau khi gộp PR**. Chỉ **thêm** (nhãn, 2 dòng cài đặt, 1 bảng mới, 2 hàm mới, thay hàm xóa dữ liệu + xem trước bằng bản có thêm một bảng); chạy lại an toàn; không sửa dữ liệu cũ. Việc duy nhất "đổi" là cho nhãn `A/doc-hieu` nghỉ dùng (không xóa; dấu nhãn cũ vẫn hiện tên). Code mới chạy khi `0018` chưa áp: trang Điểm cần chú ý sẽ báo lỗi, nên áp `0018` ngay sau khi gộp. Nên bấm chạy tay *Weekly backup* trước khi áp.
+
+### Cách thử trên preview (gia đình thử)
+
+1. Đăng nhập `thu-giasu-nguyen` → thẻ của Nguyên (thử) → **Nhập kỹ năng đọc tháng**: thấy 14 dòng; điền "Cause and Effect" 5 câu / 40%, "Chronology/Sequence" 1 câu / 0% → **Lưu báo cáo**. Trang **Điểm cần chú ý** hiện bảng "Kỹ năng đọc": Cause and Effect = "Cần chú ý", Chronology/Sequence = "Chưa đủ dữ liệu".
+2. Đăng nhập `thu-phuhuynh`, mở lại trang nhập cùng tháng: số cũ đã điền sẵn, nút là **Lưu bản sửa**; đổi 40 thành 60 → bảng hiện "Ổn".
+3. Đăng nhập `thu-giasu-an`: form của An có 6 kỹ năng; gõ thẳng địa chỉ trang nhập của Nguyên → "Không tìm thấy". Đăng nhập là em → cũng không vào được.
+
+### Đối chiếu với plan — chỗ khác và vì sao
+
+- **Học sinh gọi thẳng API ghi báo cáo của chính mình → 403**, không phải 404 như plan viết (`requireAccess` cho học sinh đọc hồ sơ của mình nên trả 403 khi thiếu quyền ghi). Trang giao diện thì vẫn 404 cho học sinh. Test handler sửa theo.
+- **Retire `A/doc-hieu` làm hỏng 3 test cũ** của S5b (`tests/db/tutorWork.test.ts`: đếm "10 nhãn mỗi track, không nhãn nào nghỉ dùng" và hai chỗ dùng `doc-hieu` làm ví dụ nhãn Track A). Sửa tối thiểu: test đếm nhãn đếm theo nhóm mà `0015` đã gieo (A: 10 trong đó 1 đã nghỉ dùng; B: 10) và dùng `so-sanh` thay `doc-hieu` làm ví dụ. Không đổi hành vi nào ngoài việc nhãn cũ nghỉ dùng.
+- **Danh sách bảng trong `tests/db/migrations.test.ts`** (RLS bật ở mọi bảng; `authenticated` chỉ SELECT) thêm `reading_reports`; **danh sách nhãn đếm xóa trong `tests/unit/purge.test.ts`** thêm `reading_reports`. (Test đối chiếu khóa xem trước = khóa biên nhận trong `readiness.test.ts` tự theo hàm nên không phải sửa.)
+- **Thêm một test xóa thật** (plan chỉ kiểm tra mã nguồn hàm): tạo em thử, ghi báo cáo + bản sửa (tự tham chiếu `supersedes_id`), xem trước = 2, xóa → biên nhận 2, còn 0 dòng.
+- Commit của Task 2 để `lint` đỏ tạm vì file test DB khai báo sẵn các hàm trợ giúp mà Task 3 mới dùng; Task 3 làm xanh lại. Trạng thái cuối của nhánh xanh.
+
+### Để sau
+
+- Lexile/CEFR (chưa lưu); màn đổi ngưỡng `reading_min_questions` / `reading_weak_pct` (đổi bằng SQL); nhập báo cáo bằng ảnh; PR B (Studio: đề PDF/Word → bài trong app).
+
+### Tiêu chí đạt
+
+`typecheck`, `lint`, `test` (gồm test database trên Postgres thật), `gen:config` xanh; CI (gồm E2E `tests/e2e/reading.spec.ts` và bước áp migration hai lần) xanh; review Opus; phụ huynh áp `0018` sau khi gộp rồi làm 3 bước thử ở trên.
