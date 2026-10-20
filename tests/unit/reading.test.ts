@@ -59,6 +59,8 @@ describe("handleRecordReadingReport", () => {
   it("maps database answers: duplicate month 409, bad month 400, replay 200", async () => {
     const dup = store({ recordReport: vi.fn(async () => { throw new ReviewDbError("23505", "x: this month already has a report from this source (duplicate_month)"); }) });
     expect(await handleRecordReadingReport(deps("tutorNguyen", dup), NGUYEN, good)).toMatchObject({ status: 409, body: { error: "duplicate_month" } });
+    const stale = store({ recordReport: vi.fn(async () => { throw new ReviewDbError("23505", "x: this report was already replaced by someone else (stale_report)"); }) });
+    expect(await handleRecordReadingReport(deps("tutorNguyen", stale), NGUYEN, good)).toMatchObject({ status: 409, body: { error: "stale_report" } });
     const bad = store({ recordReport: vi.fn(async () => { throw new ReviewDbError("23514", "x: (bad_month)"); }) });
     expect(await handleRecordReadingReport(deps("tutorNguyen", bad), NGUYEN, good)).toMatchObject({ status: 400, body: { error: "bad_month" } });
     const replay = store({ recordReport: vi.fn(async () => ({ id: "rr1", replayed: true })) });

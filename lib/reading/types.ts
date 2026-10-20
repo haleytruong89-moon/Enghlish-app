@@ -2,6 +2,8 @@
 export const READING_MAX_ROWS = 20;
 export const READING_NOTE_MAX = 300;
 export const READING_SOURCE_MAX = 40;
+/** How far back a monthly report may be dated (the database rule is the same: 24 months). */
+export const READING_MONTHS_BACK = 24;
 
 export type ReadingStatus = "none" | "thin" | "weak" | "ok";
 

@@ -2,11 +2,11 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { readingPage } from "@/lib/copy/vi";
+import { buildReadingRows, type ReadingCell } from "@/lib/reading/rows";
 import type { ReadingReportEdit } from "@/lib/reading/types";
 import { failText, postJson } from "@/lib/tutorwork/client";
 
-type Cell = { q: string; pct: string };
-const INT = /^\d{1,3}$/;
+type Cell = ReadingCell;
 
 /** One row per reading skill of the child's track: "Số câu" + "% đúng". Empty row = no question that month. Staff only. */
 export function ReadingReportForm({ learnerId, tags, month, existing }: {
@@ -30,22 +30,9 @@ export function ReadingReportForm({ learnerId, tags, month, existing }: {
   const [busy, setBusy] = useState(false);
   const [clientId] = useState(() => crypto.randomUUID());
 
-  function rows(): { tag_key: string; questions: number; correct_pct: number }[] | null {
-    const out: { tag_key: string; questions: number; correct_pct: number }[] = [];
-    for (const t of tags) {
-      const c = cells[t.key]!;
-      if (c.q === "" && c.pct === "") continue;
-      if (!INT.test(c.q) || !INT.test(c.pct)) return null;
-      const q = Number(c.q), pct = Number(c.pct);
-      if (q < 1 || q > 500 || pct > 100) return null;
-      out.push({ tag_key: t.key, questions: q, correct_pct: pct });
-    }
-    return out;
-  }
-
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    const r = rows();
+    const r = buildReadingRows(tags, cells);
     if (r === null) return setMsg({ ok: false, text: readingPage.rowInvalid });
     if (r.length === 0) return setMsg({ ok: false, text: readingPage.needOneRow });
     setBusy(true);

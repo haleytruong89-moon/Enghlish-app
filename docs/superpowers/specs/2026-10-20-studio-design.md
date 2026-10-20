@@ -62,7 +62,7 @@ Thêm vào `english.error_tags` bằng migration seed mới, `group_vi = 'Kỹ n
 
 **Track A — 6 kỹ năng (rút gọn, cùng key với Track B khi trùng):** `doc-main-idea`, `doc-details` (*Details — Tìm chi tiết*; không có trong TOMO, cần cho đề KET), `doc-inference`, `doc-author-purpose`, `doc-context-clues`, `doc-sequence`.
 
-Nhãn chung cũ `A / doc-hieu` ("Đọc hiểu (KET Reading)") được **nghỉ dùng** (`retired_at`) trong cùng migration; dấu nhãn cũ (nếu có) vẫn hiển thị đúng tên. Gia sư góp ý bộ nhãn trong buổi 30 phút; đổi tên/thêm = migration seed mới, không sửa migration đã áp.
+Nhãn chung cũ `A / doc-hieu` ("Đọc hiểu (KET Reading)") **vẫn dùng ở PR A** (không nghỉ dùng): `eng_tag_exists` từ chối nhãn đã nghỉ nên hỏi lại / sửa kết quả cũ / khung đề mới dùng nhãn này sẽ lỗi 400; sẽ cho nghỉ dùng ở migration sau, khi các đường đó chấp nhận nhãn đã nghỉ (đã chốt khi review PR A). Gia sư góp ý bộ nhãn trong buổi 30 phút; đổi tên/thêm = migration seed mới, không sửa migration đã áp.
 
 ### 3.2 Báo cáo kỹ năng đọc tháng
 - Bảng mới `english.reading_reports` (append-only, có `supersedes_id` để sửa): `learner_id`, `month` (ngày đầu tháng), `source` (text, mặc định `TOMO`), `rows jsonb` = `[{tag_key, questions int ≥ 0, correct_pct 0–100}]` (chỉ nhãn nhóm "Kỹ năng đọc" của track em), `note`, `recorded_by_member`, `recorded_at`, `client_id`. Một bản hiện hành mỗi (em, tháng, nguồn). Không lưu Lexile/CEFR (để sau).

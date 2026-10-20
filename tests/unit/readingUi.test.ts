@@ -38,7 +38,22 @@ describe("reading UI", () => {
     expect(html).toContain(readingPage.pctLine(40, 5));
     expect(html).toContain(readingPage.pctLine(75, 4));
     expect(html).toContain(readingPage.rule(4, 60));
+    // real months in the headers, not "this month / last month"
+    expect(html).toContain("Tháng 10/2026");
+    expect(html).toContain("Tháng 09/2026");
+    expect(html).toContain("so với báo cáo trước");
     expect(html).toContain('data-testid="reading-status-doc-sequence"');
     expect(html).not.toMatch(/data-testid="reading-status-doc-sequence"[^>]*bg-\[#7a4a00\]/);
+  });
+
+  it("a missing previous month shows a neutral header and dashes; no view at all shows the empty state instead of the table", () => {
+    const html = renderToStaticMarkup(createElement(ReadingSkillsTable, { view: { ...view, previousMonth: null, skills: [{ ...view.skills[1]!, prevQuestions: null, prevCorrectPct: null }] }, learnerId: LEARNER }));
+    expect(html).toContain(readingPage.colPrev(null));
+    expect(html).toContain("—");
+    const none = renderToStaticMarkup(createElement(ReadingSkillsTable, { view: null, learnerId: LEARNER }));
+    expect(none).toContain('data-testid="reading-unavailable"');
+    expect(none).toContain(readingPage.unavailable);
+    expect(none).not.toContain("<table");
+    expect(none).toContain('data-testid="reading-enter"'); // the entry link stays
   });
 });

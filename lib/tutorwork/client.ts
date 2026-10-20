@@ -31,6 +31,7 @@ export function failText(r: PostFail): string {
   if (r.error === "duplicate_first") return tutorWorkErrors.duplicateFirst;
   if (r.error === "duplicate_month") return tutorWorkErrors.duplicateMonth;
   if (r.error === "bad_month") return tutorWorkErrors.badMonth;
+  if (r.error === "stale_report") return tutorWorkErrors.staleReport;
   if (r.status === 403) return tutorWorkErrors.forbidden;
   if (r.status === 409) return tutorWorkErrors.conflict;
   if (r.status === 400) return tutorWorkErrors.invalid;

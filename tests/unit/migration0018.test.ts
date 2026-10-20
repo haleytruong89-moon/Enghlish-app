@@ -25,8 +25,10 @@ describe("0018_reading_skills.sql", () => {
     expect(code).toContain("'Kỹ năng đọc'");
   });
 
-  it("retires A's generic reading tag and seeds the two thresholds", () => {
-    expect(code).toMatch(/update english\.error_tags set retired_at = pg_catalog\.clock_timestamp\(\)\s+where track_id = 'A' and key = 'doc-hieu' and retired_at is null;/);
+  it("keeps A's generic reading tag active (retired tags are rejected by eng_tag_exists) and seeds the two thresholds", () => {
+    expect(code).not.toMatch(/retired_at\s*=/);
+    expect(code).toContain("on conflict (track_id, key) do nothing;");
+    expect(code).toContain("pg_catalog.clock_timestamp() + v.ord * interval '1 millisecond'");
     expect(code).toContain("('reading_min_questions', '4'::jsonb)");
     expect(code).toContain("('reading_weak_pct', '60'::jsonb)");
   });
@@ -34,7 +36,7 @@ describe("0018_reading_skills.sql", () => {
   it("reading_reports is append-only, staff-read only, and in the purge and its preview", () => {
     expect(code).toContain("create table if not exists english.reading_reports (");
     expect(code).toMatch(/create trigger reading_reports_forbid_mutation\s+before update or delete on english\.reading_reports\s+for each row execute function english\.eng_forbid_mutation\('learner_id'\);/);
-    expect(code).toContain("revoke update, delete, truncate on english.reading_reports from public, anon, authenticated, service_role;");
+    expect(code).toContain("revoke insert, update, delete, truncate on english.reading_reports from public, anon, authenticated, service_role;");
     expect(code).toMatch(/create policy reading_reports_select on english\.reading_reports\s+for select to authenticated\s+using \(english\.eng_is_staff_of\(learner_id\)\);/);
     expect(code).toContain("delete from english.reading_reports rr where rr.learner_id = p_learner_id;");
     expect(code).toContain("'reading_reports', n_reading_reports,");

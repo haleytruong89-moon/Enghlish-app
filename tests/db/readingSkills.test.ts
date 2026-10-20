@@ -30,13 +30,14 @@ describe("Studio 1A reading skills (migration 0018)", () => {
   });
 
   describe("1. tags and thresholds", () => {
-    it("Track B has 14 reading skills and Track A 6, in report order; A's generic doc-hieu is retired", async () => {
+    it("Track B has 14 reading skills and Track A 6, in report order; A's generic doc-hieu stays active", async () => {
       const keys = async (track: string) =>
         (await q1<{ key: string }>("select key from english.error_tags where track_id = $1 and group_vi = 'Kỹ năng đọc' and retired_at is null order by created_at, key", [track])).map((r) => r.key);
       expect(await keys("B")).toHaveLength(14);
       expect((await keys("B"))[0]).toBe("doc-author-purpose");
       expect(await keys("A")).toEqual(["doc-main-idea", "doc-details", "doc-inference", "doc-author-purpose", "doc-context-clues", "doc-sequence"]);
-      expect((await q1<{ retired: boolean }>("select retired_at is not null as retired from english.error_tags where track_id = 'A' and key = 'doc-hieu'"))[0]?.retired).toBe(true);
+      // The generic tag stays usable: eng_tag_exists rejects retired tags, which would break rechecks and corrections that mention it.
+      expect((await q1<{ retired: boolean }>("select retired_at is not null as retired from english.error_tags where track_id = 'A' and key = 'doc-hieu'"))[0]?.retired).toBe(false);
     });
 
     it("seeds the two thresholds and running the migration again changes nothing", async () => {
@@ -59,10 +60,10 @@ describe("Studio 1A reading skills (migration 0018)", () => {
       JSON.stringify(o.rows ?? [row("doc-cause-effect", 5, 40), row("doc-sequence", 1, 0), row("doc-main-idea", 8, 75)]),
       o.note ?? null, o.supersedes ?? null, by, o.clientId ?? randomUUID(),
     ]);
-  const skills = () => svc<{
+  const skills = (l: string = NG()) => svc<{
     min_questions: number; weak_pct: number; latest_month: string | null; previous_month: string | null;
     skills: { tag_key: string; questions: number | null; correct_pct: number | null; prev_correct_pct: number | null; status: string; wrong_6w: number }[];
-  }>("select english.eng_reading_skills($1) as r", [NG()]);
+  }>("select english.eng_reading_skills($1) as r", [l]);
 
   describe("2. recording a monthly report", () => {
     it("a tutor or a parent records one; replaying the same client id returns it; another payload under the same id is refused", async () => {
@@ -71,6 +72,8 @@ describe("Studio 1A reading skills (migration 0018)", () => {
       expect(a.replayed).toBe(false);
       expect(await record(M().tutorNguyen, { month: lastMonth, clientId: id, rows: [row("doc-cause-effect", 4, 75)] })).toEqual({ id: a.id, replayed: true });
       await fail(record(M().tutorNguyen, { month: lastMonth, clientId: id, rows: [row("doc-cause-effect", 4, 50)] }), "23505");
+      // the same client id from ANOTHER member is not a replay
+      await fail(record(M().parent, { month: lastMonth, clientId: id, rows: [row("doc-cause-effect", 4, 75)] }), "23505");
       const b = await record(M().parent, { month: thisMonth });
       expect(b.replayed).toBe(false);
     });
@@ -79,9 +82,10 @@ describe("Studio 1A reading skills (migration 0018)", () => {
       await fail(record(M().tutorNguyen, { month: thisMonth }), "23505", /\(duplicate_month\)/);
       const cur = (await q1<{ id: string }>("select id from english.reading_reports r where learner_id = $1 and month = $2 and not exists (select 1 from english.reading_reports r2 where r2.supersedes_id = r.id)", [NG(), thisMonth]))[0]!.id;
       const fixed = await record(M().tutorNguyen, { month: thisMonth, supersedes: cur, rows: [row("doc-cause-effect", 5, 40), row("doc-sequence", 1, 0), row("doc-main-idea", 8, 75), row("doc-summarize", 6, 50)] });
-      await fail(record(M().tutorNguyen, { month: thisMonth, supersedes: cur }), "23514");
+      await fail(record(M().tutorNguyen, { month: thisMonth, supersedes: cur }), "23505", /\(stale_report\)/); // already replaced: someone else fixed it first
       await fail(record(M().tutorNguyen, { month: lastMonth, supersedes: fixed.id }), "23514");
-      expect((await record(M().tutorNguyen, { month: thisMonth, source: "Lớp học" })).replayed).toBe(false);
+      // another source for LAST month, recorded after the TOMO one with very different numbers: it must never become the "previous" of the TOMO report
+      expect((await record(M().tutorNguyen, { month: lastMonth, source: "Lớp học", rows: [row("doc-cause-effect", 10, 99)] })).replayed).toBe(false);
     });
 
     it("refuses a bad month, a future month, an unknown or other-track skill, duplicates, bad numbers and extra keys", async () => {
@@ -108,6 +112,11 @@ describe("Studio 1A reading skills (migration 0018)", () => {
     it("is append-only, writes an audit row without content, and both functions are closed to everyone but service_role", async () => {
       const upd = await db.client.query("update english.reading_reports set note = 'x'").then(() => null, (e: unknown) => e);
       expect(upd, "append-only: an update outside a purge must fail").not.toBeNull();
+      // service_role cannot insert directly either: only the function writes
+      const ins = await asCommit(db.client, "service_role", null, (q) =>
+        q("insert into english.reading_reports(learner_id, month, rows, recorded_by_member, recorded_role, client_id) values ($1, $2::date, '[]'::jsonb, $3, 'tutor', 'direct-insert-1')", [NG(), thisMonth, M().tutorNguyen]),
+      ).then(() => null, (e: unknown) => e as { code?: string });
+      expect(ins?.code, "service_role INSERT must be denied").toBe("42501");
       const log = await q1<{ payload: Record<string, unknown> }>("select payload from english.audit_log where action = 'reading_report.recorded' order by id desc limit 1");
       expect(Object.keys(log[0]!.payload).sort()).toEqual(["month", "report_id", "skills", "source", "supersedes"]);
       const acl = await q1<{ proname: string; anon: boolean; auth: boolean; svc: boolean }>(`
@@ -140,6 +149,41 @@ describe("Studio 1A reading skills (migration 0018)", () => {
         [NG(), JSON.stringify([{ n: 3, tag_key: "doc-cause-effect" }, { n: 5, tag_key: "doc-cause-effect" }]), addDays(TODAY, -3), M().tutorNguyen, randomUUID()]);
       const by = new Map((await skills()).skills.map((x) => [x.tag_key, x]));
       expect(by.get("doc-cause-effect")?.wrong_6w).toBe(2);
+    });
+
+    it("'previous' is the latest earlier report of the SAME source as the latest one (a 'Lớp học' report never stands in for TOMO)", async () => {
+      const l = (await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1, 'Em thử nguồn', 'B', true, 'active') returning id", [s.familyId]))[0]!.id;
+      await record(M().parent, { learner: l, month: lastMonth, rows: [row("doc-sequence", 8, 50)] });
+      await record(M().parent, { learner: l, month: lastMonth, source: "Lớp học", rows: [row("doc-sequence", 8, 99)] });
+      await record(M().parent, { learner: l, month: thisMonth, rows: [row("doc-sequence", 8, 70)] });
+      const v = await skills(l);
+      expect(v.latest_month).toBe(thisMonth);
+      expect(v.previous_month).toBe(lastMonth);
+      expect(v.skills.find((x) => x.tag_key === "doc-sequence")).toMatchObject({ correct_pct: 70, prev_correct_pct: 50 });
+      // a latest report from another source with no earlier report of its own has no previous
+      const l2 = (await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1, 'Em thử nguồn 2', 'B', true, 'active') returning id", [s.familyId]))[0]!.id;
+      await record(M().parent, { learner: l2, month: lastMonth, rows: [row("doc-sequence", 8, 50)] });
+      await record(M().parent, { learner: l2, month: thisMonth, source: "Lớp học", rows: [row("doc-sequence", 8, 70)] });
+      expect((await skills(l2)).previous_month).toBeNull();
+    });
+
+    it("only wrong items from tests and practice count: a lesson-note tag on a reading skill does not", async () => {
+      await svc("select english.eng_write_lesson_note_v2($1, $2::date, 'Reading', '{doc-inference}'::text[], null, null, '[]'::jsonb, null, $3, $4) as r", [NG(), TODAY, M().tutorNguyen, randomUUID()]);
+      expect((await q1<{ n: number }>("select count(*)::int as n from english.tag_marks where learner_id = $1 and tag_key = 'doc-inference' and source = 'lesson'", [NG()]))[0]?.n).toBeGreaterThan(0);
+      const by = new Map((await skills()).skills.map((x) => [x.tag_key, x]));
+      expect(by.get("doc-inference")?.wrong_6w).toBe(0);
+    });
+
+    it("a setting that is not a whole number falls back to the default instead of failing the page", async () => {
+      try {
+        await q1("update english.tutorwork_settings set value = '\"abc\"'::jsonb where key = 'reading_min_questions'");
+        await q1("update english.tutorwork_settings set value = '60.5'::jsonb where key = 'reading_weak_pct'");
+        const v = await skills();
+        expect([v.min_questions, v.weak_pct]).toEqual([4, 60]);
+      } finally {
+        await q1("update english.tutorwork_settings set value = '4'::jsonb where key = 'reading_min_questions'");
+        await q1("update english.tutorwork_settings set value = '60'::jsonb where key = 'reading_weak_pct'");
+      }
     });
 
     it("a learner with no report gets every skill as 'none'; Track A shows its 6", async () => {

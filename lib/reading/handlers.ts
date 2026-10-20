@@ -49,6 +49,7 @@ export async function handleRecordReadingReport(deps: ReadingDeps, learnerId: st
     return { status: r.replayed ? 200 : 201, body: { id: r.id, replayed: r.replayed } };
   } catch (err) {
     if (err instanceof ReviewDbError && err.code === "23505" && /\(duplicate_month\)/.test(err.detail)) return fail(409, "duplicate_month");
+    if (err instanceof ReviewDbError && err.code === "23505" && /\(stale_report\)/.test(err.detail)) return fail(409, "stale_report");
     if (err instanceof ReviewDbError && err.code === "23514" && /\(bad_month\)/.test(err.detail)) return fail(400, "bad_month");
     return fromDbError(err);
   }

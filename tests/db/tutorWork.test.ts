@@ -190,11 +190,8 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
   // -------------------------------------------------------------------------------------------------------------
   describe("seed tags (0015)", () => {
     it("10 tags per track, global, none retired; keys never start with x-", async () => {
-      // Migration 0018 (Studio 1A) adds the "Kỹ năng đọc" group and retires A/doc-hieu: the 0015 tags are counted by what 0015 seeded.
-      const seeded15 = "origin = 'seed' and family_id is null and group_vi is distinct from 'Kỹ năng đọc'";
-      expect(await count(`select count(*)::int as n from english.error_tags where track_id = 'A' and ${seeded15} and (retired_at is null or key = 'doc-hieu')`)).toBe(10);
-      expect(await count(`select count(*)::int as n from english.error_tags where track_id = 'A' and ${seeded15} and retired_at is not null`)).toBe(1);
-      expect(await count(`select count(*)::int as n from english.error_tags where track_id = 'B' and ${seeded15} and retired_at is null`)).toBe(10);
+      expect(await count("select count(*)::int as n from english.error_tags where track_id = 'A' and origin = 'seed' and family_id is null and retired_at is null and group_vi is distinct from 'Kỹ năng đọc'")).toBe(10); // 0018 adds the reading group on top of the 0015 tags
+      expect(await count("select count(*)::int as n from english.error_tags where track_id = 'B' and origin = 'seed' and family_id is null and retired_at is null and group_vi is distinct from 'Kỹ năng đọc'")).toBe(10); // 0018 adds the reading group on top of the 0015 tags
       expect(await count("select count(*)::int as n from english.error_tags where key like 'x-%' and origin = 'seed'")).toBe(0);
     });
   });
@@ -532,11 +529,11 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
     it("writing tags: tutor or parent tag a written episode (max 3, first attempt counts); not other kinds of work; students cannot", async () => {
       expect(await tagEpisode(M().tutorAn, ep6, ["tu-vung-chu-de", "viet-cau"])).toEqual({ added: 2, replayed: false });
       expect(await tagEpisode(M().parent, ep6, ["viet-cau"])).toEqual({ added: 0, replayed: true });
-      await fail(tagEpisode(M().parent, ep6, ["so-sanh", "nghe"]), "23514", /at most 3/);
-      await tagEpisode(M().parent, ep6, ["so-sanh"]);
+      await fail(tagEpisode(M().parent, ep6, ["doc-hieu", "nghe"]), "23514", /at most 3/);
+      await tagEpisode(M().parent, ep6, ["doc-hieu"]);
       await fail(tagEpisode(M().tutorAn, ep11, ["khong-co"]), "23514", /does not exist/);
       await fail(tagEpisode(M().tutorAn, ep11, ["cau-dieu-kien-dao-ngu"]), "23514", /does not exist/); // a Track B tag on a Track A child
-      await fail(tagEpisode(M().tutorAn, ep3, ["so-sanh"]), "23514", /written work/);
+      await fail(tagEpisode(M().tutorAn, ep3, ["doc-hieu"]), "23514", /written work/);
       await fail(tagEpisode(M().tutorNguyen, ep6, ["viet-cau"]), "42501");
       await fail(tagEpisode(M().studentAn, ep6, ["viet-cau"]), "42501");
       await fail(tagEpisode(parent2Member, ep6, ["viet-cau"]), "42501");

@@ -1,7 +1,7 @@
 -- 0018_reading_skills.sql
 -- Studio bước 1 · PR A (spec docs/superpowers/specs/2026-10-20-studio-design.md §3): kỹ năng đọc.
 --   1. Nhãn "Kỹ năng đọc" (khung báo cáo TOMO mà gia sư đang dùng): Track B 14 kỹ năng, Track A 6. Nguồn: content/tags/reading_*.json
---      (test đối chiếu từng dòng). Nhãn chung cũ A/doc-hieu nghỉ dùng (dấu nhãn cũ vẫn hiện đúng tên).
+--      (test đối chiếu từng dòng). Nhãn chung cũ A/doc-hieu CÒN dùng (chưa nghỉ: eng_tag_exists từ chối nhãn đã nghỉ, sẽ làm hỏng ghi buổi học/sửa kết quả cũ).
 --   2. Ngưỡng trong tutorwork_settings (không hard-code): reading_min_questions = 4, reading_weak_pct = 60.
 --   3. Bảng append-only reading_reports (báo cáo kỹ năng đọc tháng: số câu + % mỗi kỹ năng; KHÔNG có Lexile/CEFR).
 --   4. eng_record_reading_report (ghi), eng_reading_skills (đọc cho bảng "Kỹ năng đọc"); cả hai chỉ service_role gọi sau requireAccess.
@@ -9,8 +9,10 @@
 -- Là TÍN HIỆU, không phải bằng chứng: engine S7 không đọc. Idempotent; chỉ thêm.
 
 -- 1. Nhãn kỹ năng đọc -----------------------------------------------------------------------------------------------------------------
-insert into english.error_tags(track_id, key, label_vi, group_vi, family_id, origin)
-select v.track_id, v.key, v.label_vi, 'Kỹ năng đọc', null, 'seed'
+insert into english.error_tags(track_id, key, label_vi, group_vi, family_id, origin, created_at)
+select v.track_id, v.key, v.label_vi, 'Kỹ năng đọc', null, 'seed',
+  -- created_at tường minh theo thứ tự báo cáo (cách nhau 1 ms): bảng hiện đúng thứ tự mà không phụ thuộc thứ tự chèn.
+  pg_catalog.clock_timestamp() + v.ord * interval '1 millisecond'
 from (values
   ('A', 1, 'doc-main-idea', 'Main Idea — Ý chính'),
   ('A', 2, 'doc-details', 'Details — Tìm chi tiết'),
@@ -33,12 +35,10 @@ from (values
   ('B', 13, 'doc-context-clues', 'Context Clues — Gợi ý từ văn bản'),
   ('B', 14, 'doc-synonyms', 'Synonyms — Từ đồng nghĩa')
 ) as v(track_id, ord, key, label_vi)
--- created_at = clock_timestamp() theo từng dòng: chèn theo thứ tự của báo cáo để bảng hiện đúng thứ tự.
-order by v.track_id, v.ord
-on conflict do nothing;
+-- Đích xung đột tường minh = chỉ mục duy nhất (track_id, key) của 0014; trùng nhãn (label_once) sẽ báo lỗi thay vì bị bỏ qua lặng lẽ.
+on conflict (track_id, key) do nothing;
 
-update english.error_tags set retired_at = pg_catalog.clock_timestamp()
-  where track_id = 'A' and key = 'doc-hieu' and retired_at is null;
+-- A/doc-hieu vẫn dùng: sẽ nghỉ dùng ở migration sau, khi các đường ghi buổi học / sửa kết quả / khung đề chấp nhận nhãn đã nghỉ.
 
 -- 2. Ngưỡng ----------------------------------------------------------------------------------------------------------------------------
 insert into english.tutorwork_settings(key, value) values
@@ -78,7 +78,7 @@ create trigger reading_reports_forbid_truncate
 
 alter table english.reading_reports enable row level security;
 revoke all on english.reading_reports from public, anon, authenticated;
-revoke update, delete, truncate on english.reading_reports from public, anon, authenticated, service_role;
+revoke insert, update, delete, truncate on english.reading_reports from public, anon, authenticated, service_role;
 grant select on english.reading_reports to authenticated;
 drop policy if exists reading_reports_select on english.reading_reports;
 create policy reading_reports_select on english.reading_reports
@@ -166,7 +166,7 @@ begin
 
   select * into v_old from english.reading_reports r where r.learner_id = p_learner and r.client_id = p_client_id;
   if found then
-    if v_old.month = p_month and v_old.source = v_source and v_old.rows = v_rows
+    if v_old.month = p_month and v_old.source = v_source and v_old.rows = v_rows and v_old.recorded_by_member = p_by
        and v_old.supersedes_id is not distinct from p_supersedes and v_old.note is not distinct from v_note then
       return pg_catalog.jsonb_build_object('id', v_old.id, 'replayed', true);
     end if;
@@ -175,9 +175,11 @@ begin
 
   if p_supersedes is not null then
     select * into v_prior from english.reading_reports r where r.id = p_supersedes;
-    if not found or v_prior.learner_id <> p_learner or v_prior.month <> p_month or v_prior.source <> v_source
-       or exists (select 1 from english.reading_reports r2 where r2.supersedes_id = v_prior.id) then
-      raise exception 'eng_record_reading_report: only the current report of the same month and source can be replaced' using errcode = '23514';
+    if not found or v_prior.learner_id <> p_learner or v_prior.month <> p_month or v_prior.source <> v_source then
+      raise exception 'eng_record_reading_report: only a report of the same learner, month and source can be replaced' using errcode = '23514';
+    end if;
+    if exists (select 1 from english.reading_reports r2 where r2.supersedes_id = v_prior.id) then
+      raise exception 'eng_record_reading_report: this report was already replaced by someone else (stale_report)' using errcode = '23505';
     end if;
   elsif exists (
     select 1 from english.reading_reports r
@@ -215,15 +217,18 @@ begin
   if not found then
     raise exception 'eng_reading_skills: learner not found' using errcode = 'P0002';
   end if;
-  v_min := coalesce((select (s.value #>> '{}')::int from english.tutorwork_settings s where s.key = 'reading_min_questions'), 4);
-  v_weak := coalesce((select (s.value #>> '{}')::int from english.tutorwork_settings s where s.key = 'reading_weak_pct'), 60);
+  -- Cài đặt không phải số nguyên (sửa tay sai) → dùng mặc định thay vì báo lỗi cả trang.
+  v_min := coalesce((select (s.value #>> '{}')::int from english.tutorwork_settings s
+                     where s.key = 'reading_min_questions' and (s.value #>> '{}') ~ '^[0-9]{1,4}$'), 4);
+  v_weak := coalesce((select (s.value #>> '{}')::int from english.tutorwork_settings s
+                      where s.key = 'reading_weak_pct' and (s.value #>> '{}') ~ '^[0-9]{1,3}$'), 60);
 
   select * into v_latest from english.reading_reports r
   where r.learner_id = p_learner and not exists (select 1 from english.reading_reports r2 where r2.supersedes_id = r.id)
   order by r.month desc, r.recorded_at desc limit 1;
   if v_latest.id is not null then
     select * into v_prev from english.reading_reports r
-    where r.learner_id = p_learner and r.month < v_latest.month
+    where r.learner_id = p_learner and r.month < v_latest.month and r.source = v_latest.source
       and not exists (select 1 from english.reading_reports r2 where r2.supersedes_id = r.id)
     order by r.month desc, r.recorded_at desc limit 1;
   end if;
@@ -248,7 +253,7 @@ begin
                          when cur.correct_pct < v_weak then 'weak'
                          else 'ok' end,
           'wrong_6w', (select count(*)::int from english.tag_marks m
-                       where m.learner_id = p_learner and m.tag_key = t.key and m.counts and m.marked_on >= v_since
+                       where m.learner_id = p_learner and m.tag_key = t.key and m.counts and m.source in ('test', 'practice') and m.marked_on >= v_since
                          and english.eng_mark_is_live(m.source, m.source_id, m.counts)))
         order by t.created_at, t.key)
       from english.error_tags t

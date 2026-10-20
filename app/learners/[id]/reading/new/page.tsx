@@ -4,6 +4,8 @@ import { ReadingReportForm } from "@/components/tutor/ReadingReportForm";
 import { learnerWithTrack, readingPage } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { loadReadingReport, loadReadingTags } from "@/lib/reading/load";
+import { monthsBack } from "@/lib/reading/months";
+import { READING_MONTHS_BACK } from "@/lib/reading/types";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +16,8 @@ export default async function ReadingNewPage({ params, searchParams }: { params:
   const { month: m } = await searchParams;
   const { member, learner } = await requireLearnerPage(id, "tutorwork:write");
   const thisMonth = todayVn().slice(0, 7);
-  const ym = m && /^\d{4}-(0[1-9]|1[0-2])$/.test(m) && m <= thisMonth ? m : thisMonth;
+  const earliest = monthsBack(thisMonth, READING_MONTHS_BACK); // the database accepts the last 24 months only
+  const ym = m && /^\d{4}-(0[1-9]|1[0-2])$/.test(m) && m <= thisMonth && m >= earliest ? m : thisMonth;
   const month = `${ym}-01`;
   const [tags, existing] = await Promise.all([loadReadingTags(learner.trackId), loadReadingReport(learner.id, month)]);
 
@@ -29,7 +32,7 @@ export default async function ReadingNewPage({ params, searchParams }: { params:
         <form method="get" className="mt-4 flex items-end gap-2">
           <label className="flex flex-col gap-1 text-sm">
             {readingPage.monthLabel}
-            <input type="month" name="month" defaultValue={ym} max={thisMonth} className="min-h-11 rounded-lg border border-line px-3" data-testid="reading-month" />
+            <input type="month" name="month" defaultValue={ym} min={earliest} max={thisMonth} className="min-h-11 rounded-lg border border-line px-3" data-testid="reading-month" />
           </label>
           <button type="submit" className="min-h-11 rounded-lg border border-line bg-white px-4 text-sm">{readingPage.monthGo}</button>
         </form>

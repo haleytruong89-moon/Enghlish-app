@@ -3,7 +3,9 @@ import { AppHeader } from "@/components/AppHeader";
 import { ReadingSkillsTable } from "@/components/tutor/ReadingSkillsTable";
 import { WeakTable } from "@/components/tutor/WeakTable";
 import { learnerWithTrack, resultPage, weakPage } from "@/lib/copy/vi";
+import { logAppError } from "@/lib/ops/logAppError";
 import { loadReadingSkills } from "@/lib/reading/load";
+import { loadSoft } from "@/lib/reading/soft";
 import { loadUntagged, loadWeakPoints } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 import { WEAK_WINDOWS, type WeakWindow } from "@/lib/tutorwork/schemas";
@@ -20,7 +22,8 @@ export default async function WeakPage({ params, searchParams }: { params: Promi
   const [view, pending, reading] = await Promise.all([
     loadWeakPoints(learner.id, window),
     loadUntagged(learner.id, { role, memberId: member.id }),
-    loadReadingSkills(learner.id),
+    // Fail soft: the reading table is an add-on; if it cannot be read the rest of the page still renders.
+    loadSoft(() => loadReadingSkills(learner.id), (error) => logAppError({ route: "GET /learners/[id]/weak (reading skills)", code: "reading_skills", error, userId: member.userId })),
   ]);
 
   return (

@@ -12,7 +12,7 @@ const badge: Record<ReadingStatus, string> = {
 const monthLabel = (iso: string | null) => (iso ? formatDateVi(iso).replace(/^\d{2}\//, "") : null);
 
 /** "Kỹ năng đọc" on the weak-points page: latest monthly report vs the previous one, plus wrong items of the last 6 weeks. Staff only. */
-export function ReadingSkillsTable({ view, learnerId }: { view: ReadingSkillsView; learnerId: string }) {
+export function ReadingSkillsTable({ view, learnerId }: { view: ReadingSkillsView | null; learnerId: string }) {
   return (
     <section className="mt-8" aria-label={readingPage.sectionTitle} data-testid="reading-section">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -21,14 +21,28 @@ export function ReadingSkillsTable({ view, learnerId }: { view: ReadingSkillsVie
           {readingPage.enter}
         </Link>
       </div>
+      {view === null ? (
+        <p className="mt-3 rounded-xl border border-line bg-white px-4 py-3 text-sm text-muted" role="status" data-testid="reading-unavailable">
+          {readingPage.unavailable}
+        </p>
+      ) : (
+        <ReadingRows view={view} />
+      )}
+    </section>
+  );
+}
+
+function ReadingRows({ view }: { view: ReadingSkillsView }) {
+  return (
+    <>
       <p className="mt-1 text-sm text-muted">{readingPage.sectionIntro(monthLabel(view.latestMonth), view.latestSource)}</p>
       <div className="mt-3 overflow-x-auto rounded-xl border border-line bg-white">
         <table className="w-full min-w-[560px] text-sm">
           <thead>
             <tr className="border-b border-line text-left text-muted">
               <th className="px-4 py-2 font-medium">{readingPage.colSkill}</th>
-              <th className="px-4 py-2 font-medium">{readingPage.colLatest}</th>
-              <th className="px-4 py-2 font-medium">{readingPage.colPrev}</th>
+              <th className="px-4 py-2 font-medium">{readingPage.colLatest(monthLabel(view.latestMonth))}</th>
+              <th className="px-4 py-2 font-medium">{readingPage.colPrev(monthLabel(view.previousMonth))}</th>
               <th className="px-4 py-2 font-medium">{readingPage.colWrong6w}</th>
             </tr>
           </thead>
@@ -52,6 +66,6 @@ export function ReadingSkillsTable({ view, learnerId }: { view: ReadingSkillsVie
         </table>
       </div>
       <p className="mt-2 text-xs text-muted">{readingPage.rule(view.minQuestions, view.weakPct)}</p>
-    </section>
+    </>
   );
 }

@@ -25,7 +25,8 @@ export async function loadReadingTags(trackId: string): Promise<{ key: string; l
     .eq("group_vi", "Kỹ năng đọc")
     .is("retired_at", null)
     .is("family_id", null)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .order("key", { ascending: true });
   if (error) fail("error_tags lookup", error);
   return ((data ?? []) as { key: string; label_vi: string }[]).map((t) => ({ key: t.key, label: t.label_vi }));
 }
