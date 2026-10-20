@@ -1,0 +1,13 @@
+{
+  "track": "A",
+  "group_vi": "Kỹ năng đọc",
+  "note": "Short reading-skill set for KET/A2 (names as in the TOMO report; 'Details' added because KET asks for it). Seeded by migration 0018.",
+  "tags": [
+    { "key": "doc-main-idea", "label_vi": "Main Idea — Ý chính" },
+    { "key": "doc-details", "label_vi": "Details — Tìm chi tiết" },
+    { "key": "doc-inference", "label_vi": "Make Inferences — Suy luận" },
+    { "key": "doc-author-purpose", "label_vi": "Author's Purpose — Mục đích của tác giả" },
+    { "key": "doc-context-clues", "label_vi": "Context Clues — Gợi ý từ văn bản" },
+    { "key": "doc-sequence", "label_vi": "Chronology/Sequence — Trình tự thời gian / sự kiện" }
+  ]
+}

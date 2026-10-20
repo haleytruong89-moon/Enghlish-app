@@ -1,0 +1,21 @@
+{
+  "track": "B",
+  "group_vi": "Kỹ năng đọc",
+  "note": "Reading skills as in the monthly TOMO report the tutor uses (order of the report). Seeded by migration 0018. Not part of the locked catalogue.",
+  "tags": [
+    { "key": "doc-author-purpose", "label_vi": "Author's Purpose — Mục đích của tác giả" },
+    { "key": "doc-compare-contrast", "label_vi": "Compare and Contrast — So sánh và đối lập" },
+    { "key": "doc-cause-effect", "label_vi": "Cause and Effect — Nguyên nhân – kết quả" },
+    { "key": "doc-sequence", "label_vi": "Chronology/Sequence — Trình tự thời gian / sự kiện" },
+    { "key": "doc-conclusions", "label_vi": "Draw Conclusions — Rút ra kết luận" },
+    { "key": "doc-fact-opinion", "label_vi": "Fact and Opinion — Sự kiện và ý kiến" },
+    { "key": "doc-main-idea", "label_vi": "Main Idea — Ý chính" },
+    { "key": "doc-inference", "label_vi": "Make Inferences — Suy luận" },
+    { "key": "doc-prediction", "label_vi": "Make Predictions — Dự đoán" },
+    { "key": "doc-summarize", "label_vi": "Summarize — Tóm tắt" },
+    { "key": "doc-evidence", "label_vi": "Use Evidence — Sử dụng chứng cứ" },
+    { "key": "doc-antonyms", "label_vi": "Antonyms — Từ trái nghĩa" },
+    { "key": "doc-context-clues", "label_vi": "Context Clues — Gợi ý từ văn bản" },
+    { "key": "doc-synonyms", "label_vi": "Synonyms — Từ đồng nghĩa" }
+  ]
+}
