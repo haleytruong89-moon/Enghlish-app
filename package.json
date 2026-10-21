@@ -20,6 +20,7 @@
     "db:seed-dev": "tsx --env-file-if-exists=.env.local scripts/seed-dev.ts",
     "db:seed-throwaway": "tsx --env-file-if-exists=.env.local scripts/seed-throwaway.ts",
     "db:create-family": "tsx --env-file-if-exists=.env.local scripts/create-real-family.ts",
+    "db:reset-password": "tsx --env-file-if-exists=.env.local scripts/reset-password.ts",
     "db:import-frame": "tsx --env-file-if-exists=.env.local scripts/import-frame.ts",
     "gen:config": "tsx scripts/gen-config-sql.ts",
     "doctor": "tsx --env-file-if-exists=.env.local scripts/doctor.ts",

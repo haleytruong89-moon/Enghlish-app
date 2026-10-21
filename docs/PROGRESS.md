@@ -766,3 +766,21 @@ Báo cáo kỹ năng đọc là **tín hiệu, không phải bằng chứng**: e
 ### Tiêu chí đạt
 
 `typecheck`, `lint`, `test` (gồm test database trên Postgres thật), `gen:config` xanh; CI (gồm E2E `tests/e2e/reading.spec.ts` và bước áp migration hai lần) xanh; review Opus; phụ huynh áp `0018` sau khi gộp rồi làm 3 bước thử ở trên.
+
+## Công cụ đặt lại mật khẩu (21/10/2026)
+
+App chưa có "quên mật khẩu", và một số tài khoản dùng chung với Study Launcher. Công cụ này đặt lại mật khẩu cho **một** người trong gia đình (workflow "Reset password", lệnh `npm run db:reset-password`). Không có migration mới, không cần áp SQL.
+
+### Cách dùng (phụ huynh)
+
+1. GitHub → Settings → Secrets and variables → Actions → **New repository secret** tên `RESET_PASSWORD`, giá trị là mật khẩu mới (**≥ 12 ký tự**).
+2. Actions → **Reset password** → Run workflow: `login` = tên đăng nhập ngắn (vd. `an`) hoặc email; `family` = `real` (gia đình thật; `test` chỉ để thử); ô xác nhận gõ `RESET`.
+3. Đọc phần tóm tắt của lần chạy: ghi vai trò và email đã che (vd. `ha***@gmail.com`), không bao giờ có mật khẩu. Đưa mật khẩu mới cho người đó qua kênh riêng; người đó đăng nhập xong nên bấm **Đổi mật khẩu** và đặt mật khẩu của riêng mình.
+4. **Xóa secret `RESET_PASSWORD` ngay sau khi dùng.**
+
+### Cần biết
+
+- Tài khoản dùng chung Study Launcher nên **mật khẩu bên Launcher cũng đổi**.
+- Chỉ đặt lại cho người **đã là thành viên** (có dòng trong `english.members`) của gia đình đã chọn; tài khoản chỉ có bên Launcher, hoặc thuộc gia đình khác, bị từ chối và không đổi gì.
+- Mỗi lần đặt lại ghi 1 dòng `english.audit_log` (`account.password_reset`, chỉ có vai trò và kiểu đăng nhập `short`/`email`; không email, không mật khẩu, không id người).
+- Không dùng được cho tên đăng nhập đã tắt (`active = false`).
