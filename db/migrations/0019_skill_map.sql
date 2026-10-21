@@ -611,4 +611,240 @@ begin
 end
 $seed$;
 
+-- 3. Nhãn riêng có nhóm ------------------------------------------------------------------------------------------------------------------
+-- Chỉ nhãn riêng (origin 'custom') mang group_key; nhãn có sẵn lấy nhóm từ skill_leaves. Nhãn riêng cũ (trước SM-1) để trống →
+-- mục "Chưa xếp mảng" cho tới khi gia sư/phụ huynh xếp (eng_set_tag_group).
+alter table english.error_tags add column if not exists group_key text;
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'error_tags_group_key_shape' and conrelid = 'english.error_tags'::regclass
+  ) then
+    alter table english.error_tags add constraint error_tags_group_key_shape
+      check (group_key is null or (origin = 'custom' and group_key ~ '^[a-z]{2}-[a-z-]{2,30}$'));
+  end if;
+end
+$$;
+
+-- Bản đồ hiện hành = bản đã công bố mới nhất. Hàm nội bộ.
+create or replace function english.eng_current_skill_map() returns text
+language sql stable security definer set search_path = ''
+as $$
+  select m.id from english.skill_maps m where m.published_at is not null order by m.published_at desc, m.id desc limit 1
+$$;
+
+-- "+ nhãn khác" phiên bản 2: như eng_add_error_tag (0014) và BẮT BUỘC một nhóm của bản đồ hiện hành.
+-- Trùng tên với nhãn đang dùng → trả nhãn đó (created = false); nếu đó là nhãn riêng cũ chưa có nhóm thì xếp luôn vào nhóm vừa chọn.
+create or replace function english.eng_add_error_tag_v2(p_learner uuid, p_key text, p_label text, p_group_key text, p_by uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_learner english.learners%rowtype;
+  v_label text := pg_catalog.regexp_replace(pg_catalog.btrim(coalesce(p_label, '')), '\s+', ' ', 'g');
+  v_map text := english.eng_current_skill_map();
+  v_existing english.error_tags%rowtype;
+  v_key text;
+  v_try int := 0;
+begin
+  if p_learner is null or p_key is null or p_group_key is null or p_by is null then
+    raise exception 'eng_add_error_tag_v2: learner, key, group and actor are required' using errcode = '22004';
+  end if;
+  select * into v_learner from english.learners l where l.id = p_learner;
+  if not found then
+    raise exception 'eng_add_error_tag_v2: learner not found' using errcode = 'P0002';
+  end if;
+  if not exists (select 1 from english.members m where m.id = p_by and m.role in ('tutor', 'parent')) or not english.eng_actor_may_manage(p_by, p_learner) then
+    raise exception 'eng_add_error_tag_v2: this member may not add tags for this learner' using errcode = '42501';
+  end if;
+  if p_key !~ '^x-[a-z0-9][a-z0-9-]{0,44}$' or pg_catalog.length(v_label) not between 2 and 120 then
+    raise exception 'eng_add_error_tag_v2: key must look like x-name and the label be 2 to 120 characters' using errcode = '22023';
+  end if;
+  if v_map is null or not exists (select 1 from english.skill_groups g where g.map_id = v_map and g.key = p_group_key) then
+    raise exception 'eng_add_error_tag_v2: the group is not in the current skill map (unknown_group)' using errcode = '23514';
+  end if;
+
+  -- Cùng khóa với eng_add_error_tag (0014): hai lần thêm cùng tên cùng lúc trong một gia đình xếp hàng, dù gọi bản nào.
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('error_tag:' || v_learner.family_id::text || ':' || v_learner.track_id || ':' || pg_catalog.lower(v_label), 0));
+  select * into v_existing from english.error_tags t
+  where t.track_id = v_learner.track_id and (t.family_id is null or t.family_id = v_learner.family_id)
+    and t.retired_at is null and pg_catalog.lower(t.label_vi) = pg_catalog.lower(v_label)
+  order by t.family_id nulls first limit 1;
+  if found then
+    if v_existing.origin = 'custom' and v_existing.group_key is null then
+      update english.error_tags set group_key = p_group_key where id = v_existing.id;
+      v_existing.group_key := p_group_key;
+    end if;
+    return pg_catalog.jsonb_build_object('key', v_existing.key, 'label_vi', v_existing.label_vi, 'group_key', v_existing.group_key, 'created', false);
+  end if;
+
+  loop
+    v_try := v_try + 1;
+    v_key := p_key || '-' || pg_catalog.substr(pg_catalog.md5(pg_catalog.random()::text || pg_catalog.clock_timestamp()::text || v_try::text), 1, 5);
+    begin
+      insert into english.error_tags(track_id, key, label_vi, group_vi, family_id, origin, created_by, group_key)
+      values (v_learner.track_id, v_key, v_label, 'Nhãn riêng', v_learner.family_id, 'custom', p_by, p_group_key);
+      exit;
+    exception when unique_violation then
+      if v_try >= 10 then
+        raise exception 'eng_add_error_tag_v2: could not make a unique key, try again' using errcode = 'P0001';
+      end if;
+    end;
+  end loop;
+  return pg_catalog.jsonb_build_object('key', v_key, 'label_vi', v_label, 'group_key', p_group_key, 'created', true);
+end
+$$;
+
+-- "Xếp vào nhóm": cho một nhãn riêng CHƯA có nhóm (thêm trước SM-1 hoặc bằng hàm cũ). Gia sư / phụ huynh của em; nhãn của gia đình
+-- và track của em. Gửi lại đúng nhóm đã xếp = trả lại (changed = false); nhóm khác → (already_grouped). Nhãn của nhà khác = không thấy.
+create or replace function english.eng_set_tag_group(p_learner uuid, p_tag_key text, p_group_key text, p_by uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_learner english.learners%rowtype;
+  v_member english.members%rowtype;
+  v_tag english.error_tags%rowtype;
+  v_map text := english.eng_current_skill_map();
+begin
+  if p_learner is null or p_tag_key is null or p_group_key is null or p_by is null then
+    raise exception 'eng_set_tag_group: learner, tag, group and actor are required' using errcode = '22004';
+  end if;
+  select * into v_learner from english.learners l where l.id = p_learner;
+  if not found then
+    raise exception 'eng_set_tag_group: learner not found' using errcode = 'P0002';
+  end if;
+  select * into v_member from english.members m where m.id = p_by;
+  if v_member.id is null or v_member.role not in ('tutor', 'parent') or not english.eng_actor_may_manage(p_by, p_learner) then
+    raise exception 'eng_set_tag_group: this member may not change tags for this learner' using errcode = '42501';
+  end if;
+  select * into v_tag from english.error_tags t
+  where t.track_id = v_learner.track_id and t.key = p_tag_key and t.family_id = v_learner.family_id
+    and t.origin = 'custom' and t.retired_at is null
+  for update;
+  if not found then
+    raise exception 'eng_set_tag_group: no family tag with this key for this learner' using errcode = 'P0002';
+  end if;
+  if v_map is null or not exists (select 1 from english.skill_groups g where g.map_id = v_map and g.key = p_group_key) then
+    raise exception 'eng_set_tag_group: the group is not in the current skill map (unknown_group)' using errcode = '23514';
+  end if;
+  if v_tag.group_key is not null then
+    if v_tag.group_key = p_group_key then
+      return pg_catalog.jsonb_build_object('key', v_tag.key, 'group_key', v_tag.group_key, 'changed', false);
+    end if;
+    raise exception 'eng_set_tag_group: this tag already has a group (already_grouped)' using errcode = '23514';
+  end if;
+
+  update english.error_tags set group_key = p_group_key where id = v_tag.id;
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_member.user_id, v_member.role, 'error_tag.grouped', v_learner.family_id, p_learner,
+          pg_catalog.jsonb_build_object('tag_key', v_tag.key, 'group_key', p_group_key, 'map_id', v_map));
+  return pg_catalog.jsonb_build_object('key', v_tag.key, 'group_key', p_group_key, 'changed', true);
+end
+$$;
+
+-- 4. Đọc ----------------------------------------------------------------------------------------------------------------------------------
+-- Bản đồ hiện hành cho một em (gia sư / phụ huynh; server gọi sau requireAccess). "Điểm cần chú ý" KHÔNG đổi SQL: app gộp
+-- kết quả eng_weak_points theo bản đồ này.
+create or replace function english.eng_skill_map(p_learner uuid) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_map english.skill_maps%rowtype;
+  v_set text[];
+begin
+  select * into v_l from english.learners l where l.id = p_learner;
+  if not found then
+    raise exception 'eng_skill_map: learner not found' using errcode = 'P0002';
+  end if;
+  select * into v_map from english.skill_maps m where m.published_at is not null order by m.published_at desc, m.id desc limit 1;
+  if not found then
+    raise exception 'eng_skill_map: no published skill map' using errcode = 'P0002';
+  end if;
+  select d.target_ids into v_set
+  from english.target_sets ts
+  join english.target_set_definitions d on d.id = ts.definition_id
+  where ts.learner_id = p_learner and ts.effective_from <= pg_catalog.clock_timestamp()
+  order by ts.effective_from desc, ts.seq desc
+  limit 1;
+  v_set := coalesce(v_set, '{}'::text[]);
+
+  return (
+    with leaves as (
+      -- nhãn có sẵn của track em (kể cả lá ẩn khỏi ô chọn: dấu nhãn cũ vẫn cần tên và mảng)
+      select lf.group_key, 0 as o1, lf.ord as o2, t.label_vi as o3,
+             pg_catalog.jsonb_build_object(
+               'kind', 'tag', 'track_id', lf.track_id, 'ref_key', lf.ref_key, 'label_vi', t.label_vi,
+               'level_from', lf.level_from, 'level_to', lf.level_to, 'task_from', lf.task_from, 'task_to', lf.task_to,
+               'core', lf.core, 'hidden_in_picker', lf.hidden_in_picker, 'related', pg_catalog.to_jsonb(lf.related),
+               'custom', false, 'in_set', false) as leaf
+      from english.skill_leaves lf
+      join english.error_tags t on t.track_id = lf.track_id and t.key = lf.ref_key and t.family_id is null and t.retired_at is null
+      where lf.map_id = v_map.id and lf.kind = 'tag' and lf.track_id = v_l.track_id
+      union all
+      -- nhãn riêng của gia đình đã có nhóm
+      select t.group_key, 1, 0, t.label_vi,
+             pg_catalog.jsonb_build_object(
+               'kind', 'tag', 'track_id', t.track_id, 'ref_key', t.key, 'label_vi', t.label_vi,
+               'level_from', null, 'level_to', null, 'task_from', null, 'task_to', null,
+               'core', false, 'hidden_in_picker', false, 'related', '[]'::jsonb, 'custom', true, 'in_set', false)
+      from english.error_tags t
+      where t.family_id = v_l.family_id and t.track_id = v_l.track_id and t.retired_at is null and t.group_key is not null
+        and exists (select 1 from english.skill_groups g where g.map_id = v_map.id and g.key = t.group_key)
+      union all
+      -- mọi kỹ năng danh mục của bản đồ; "trong bộ" = trong bộ kỹ năng hiện tại của em
+      select lf.group_key, case when lf.ref_key = any (v_set) then 2 else 3 end, lf.ord, tg.title_vi,
+             pg_catalog.jsonb_build_object(
+               'kind', 'target', 'track_id', lf.track_id, 'ref_key', lf.ref_key, 'label_vi', tg.title_vi,
+               'level_from', lf.level_from, 'level_to', lf.level_to, 'task_from', lf.task_from, 'task_to', lf.task_to,
+               'core', lf.core, 'hidden_in_picker', lf.hidden_in_picker, 'related', pg_catalog.to_jsonb(lf.related),
+               'custom', false, 'in_set', lf.ref_key = any (v_set))
+      from english.skill_leaves lf
+      join english.targets tg on tg.id = lf.ref_key and tg.descriptor_version = v_map.catalogue_version
+      where lf.map_id = v_map.id and lf.kind = 'target'
+    ),
+    loose as (
+      -- nhãn đang dùng của track em (có sẵn hoặc của gia đình) chưa có nhóm trong bản đồ
+      select t.created_at, t.label_vi,
+             pg_catalog.jsonb_build_object(
+               'kind', 'tag', 'track_id', t.track_id, 'ref_key', t.key, 'label_vi', t.label_vi,
+               'level_from', null, 'level_to', null, 'task_from', null, 'task_to', null,
+               'core', false, 'hidden_in_picker', false, 'related', '[]'::jsonb, 'custom', t.origin = 'custom', 'in_set', false) as leaf
+      from english.error_tags t
+      where t.track_id = v_l.track_id and t.retired_at is null and (t.family_id is null or t.family_id = v_l.family_id)
+        and not exists (select 1 from english.skill_leaves lf
+                        where lf.map_id = v_map.id and lf.kind = 'tag' and lf.track_id = t.track_id and lf.ref_key = t.key)
+        and not (t.group_key is not null
+                 and exists (select 1 from english.skill_groups g where g.map_id = v_map.id and g.key = t.group_key))
+    )
+    select pg_catalog.jsonb_build_object(
+      'map_id', v_map.id,
+      'track_id', v_l.track_id,
+      'assumed', coalesce(v_map.assumed -> v_l.track_id, '{}'::jsonb),
+      'domains', (
+        select pg_catalog.jsonb_agg(
+          pg_catalog.jsonb_build_object(
+            'key', d.key, 'name_vi', d.name_vi, 'scale', d.scale,
+            'groups', (
+              select coalesce(pg_catalog.jsonb_agg(
+                pg_catalog.jsonb_build_object(
+                  'key', g.key, 'name_vi', g.name_vi, 'desc', g.descriptions,
+                  'leaves', (select coalesce(pg_catalog.jsonb_agg(x.leaf order by x.o1, x.o2, x.o3), '[]'::jsonb)
+                             from leaves x where x.group_key = g.key))
+                order by g.ord), '[]'::jsonb)
+              from english.skill_groups g where g.map_id = v_map.id and g.domain_key = d.key))
+          order by d.ord)
+        from english.skill_domains d where d.map_id = v_map.id),
+      'unassigned', (select coalesce(pg_catalog.jsonb_agg(u.leaf order by u.created_at, u.label_vi), '[]'::jsonb) from loose u))
+  );
+end
+$$;
+
+revoke execute on function english.eng_current_skill_map() from public, anon, authenticated, service_role;
+revoke execute on function english.eng_add_error_tag_v2(uuid, text, text, text, uuid) from public, anon, authenticated;
+grant execute on function english.eng_add_error_tag_v2(uuid, text, text, text, uuid) to service_role;
+revoke execute on function english.eng_set_tag_group(uuid, text, text, uuid) from public, anon, authenticated;
+grant execute on function english.eng_set_tag_group(uuid, text, text, uuid) to service_role;
+revoke execute on function english.eng_skill_map(uuid) from public, anon, authenticated;
+grant execute on function english.eng_skill_map(uuid) to service_role;
+
 insert into english.schema_migrations(version) values ('0019') on conflict do nothing;

@@ -50,4 +50,31 @@ describe("0019_skill_map.sql", () => {
     expect(code).toContain("0019: SM-1 names a seed tag that does not exist");
     expect(code).toContain("0019: a leaf uses the other scale than its domain");
   });
+
+  it("error_tags.group_key is a nullable column (expand) that only family tags may fill, with the group-key shape", () => {
+    expect(code).toContain("alter table english.error_tags add column if not exists group_key text;");
+    expect(code).toContain("check (group_key is null or (origin = 'custom' and group_key ~ '^[a-z]{2}-[a-z-]{2,30}$'))");
+  });
+
+  it("keeps eng_add_error_tag of 0014 untouched (expand) and adds v2, set-group and the read function", () => {
+    expect(code).not.toContain("function english.eng_add_error_tag(");
+    for (const f of ["eng_current_skill_map(", "eng_add_error_tag_v2(", "eng_set_tag_group(", "eng_skill_map("]) {
+      expect(code).toContain(`create or replace function english.${f}`);
+    }
+    expect(code).toContain("(unknown_group)");
+    expect(code).toContain("(already_grouped)");
+    expect(code).toContain("'error_tag.grouped'");
+  });
+
+  it("every function pins search_path; callable ones are security definer and closed to everyone but service_role", () => {
+    for (const m of code.matchAll(/create or replace function english\.(\w+)\(([\s\S]*?)\n\$\$;/g)) {
+      expect(m[0], `${m[1]} search_path`).toMatch(/set search_path = ''/);
+      if (!/returns trigger/.test(m[0])) expect(m[0], `${m[1]} security definer`).toMatch(/security definer/);
+    }
+    for (const sig of ["eng_add_error_tag_v2(uuid, text, text, text, uuid)", "eng_set_tag_group(uuid, text, text, uuid)", "eng_skill_map(uuid)"]) {
+      expect(code).toContain(`revoke execute on function english.${sig} from public, anon, authenticated;`);
+      expect(code).toContain(`grant execute on function english.${sig} to service_role;`);
+    }
+    expect(code).toContain("revoke execute on function english.eng_current_skill_map() from public, anon, authenticated, service_role;");
+  });
 });
