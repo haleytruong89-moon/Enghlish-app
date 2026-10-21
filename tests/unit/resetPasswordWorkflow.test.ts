@@ -41,6 +41,13 @@ describe("reset-password workflow", () => {
     expect(yml).toContain("if: ${{ inputs.confirm == 'RESET' }}");
     expect(yml).toContain("if: ${{ inputs.confirm != 'RESET' }}");
     expect(yml).toContain("ô xác nhận phải là RESET");
+    expect(yml).toMatch(/not-confirmed:[\s\S]*timeout-minutes: \d+/);
+  });
+
+  it("re-checks the confirmation with exact case in the first step (the job-level if is case-insensitive)", () => {
+    expect(yml).toContain("CONFIRM: ${{ inputs.confirm }}");
+    expect(yml).toContain('if [ "$CONFIRM" != "RESET" ]; then');
+    expect(yml.indexOf('"$CONFIRM" != "RESET"')).toBeLessThan(yml.indexOf("actions/checkout@v5"));
   });
 
   it("uses the same pinned actions as the family workflow", () => {
@@ -61,11 +68,11 @@ describe("reset-password workflow", () => {
     expect(yml).toContain("RESET_LOGIN: ${{ inputs.login }}");
     expect(yml).toContain("RESET_FAMILY: ${{ inputs.family }}");
     const bodies = runBodies();
-    expect(bodies.length).toBeGreaterThanOrEqual(3);
+    expect(bodies.length).toBeGreaterThanOrEqual(4);
     for (const b of bodies) expect(b).not.toContain("${{");
     // inputs.* appear only on the env lines and in the job-level if
     const uses = lines.filter((l) => l.includes("inputs.") && !l.trimStart().startsWith("#"));
-    for (const l of uses) expect(l, l).toMatch(/^\s+(RESET_LOGIN|RESET_FAMILY): \$\{\{ inputs\.\w+ \}\}$|^\s+if: \$\{\{ inputs\.confirm [=!]= 'RESET' \}\}$/);
+    for (const l of uses) expect(l, l).toMatch(/^\s+(RESET_LOGIN|RESET_FAMILY|CONFIRM): \$\{\{ inputs\.\w+ \}\}$|^\s+if: \$\{\{ inputs\.confirm [=!]= 'RESET' \}\}$/);
   });
 
   it("never echoes a secret: the presence check prints names only, output is filtered, nothing prints the password", () => {
@@ -77,10 +84,30 @@ describe("reset-password workflow", () => {
     expect(yml).not.toMatch(/ACTIONS_STEP_DEBUG/);
   });
 
+  it("also drops any output line that contains the password itself, and guards an empty password", () => {
+    const bodies = runBodies().join("\n");
+    expect(bodies).toContain('grep -vF -f "$pwfile"');
+    // an empty password must give an empty pattern file (a file with one empty line would match, and drop, every line)
+    expect(bodies).toContain("grep -v '^$' > \"$pwfile\"");
+    // both the summary and the raw output go through the filter
+    expect((bodies.match(/scrub </g) ?? []).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("tells 'not changed' from 'maybe not changed' from 'changed' using the markers and exit code 3", () => {
+    expect(yml).toContain('grep -q "^Đang gửi yêu cầu đổi mật khẩu"');
+    expect(yml).toContain('grep -q "^Đã đổi mật khẩu"');
+    expect(yml).toContain('"$status" -eq 3');
+    expect(yml).not.toContain('"^Cảnh báo"');
+    expect(yml).toContain("Có thể chưa đổi — thử đăng nhập bằng mật khẩu mới trước khi chạy lại.");
+    expect(yml).toContain("Mật khẩu chưa đổi. Sửa theo dòng báo lỗi");
+    expect(yml).toContain("không bị đăng xuất");
+  });
+
   it("writes a Vietnamese summary that reminds the parent to delete the RESET_PASSWORD secret", () => {
     expect(yml).toContain('>> "$GITHUB_STEP_SUMMARY"');
     expect(yml).toContain("## Đã đặt lại mật khẩu");
     expect(yml).toContain("## Chưa đặt lại được mật khẩu");
+    expect(yml).toContain("## Chưa chắc đã đổi được mật khẩu");
     expect(yml).toMatch(/xóa secret \\`RESET_PASSWORD\\`/);
     expect(yml).toContain("mật khẩu bên Launcher cũng đổi");
   });

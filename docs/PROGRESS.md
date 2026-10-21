@@ -773,14 +773,20 @@ App chưa có "quên mật khẩu", và một số tài khoản dùng chung vớ
 
 ### Cách dùng (phụ huynh)
 
-1. GitHub → Settings → Secrets and variables → Actions → **New repository secret** tên `RESET_PASSWORD`, giá trị là mật khẩu mới (**≥ 12 ký tự**).
-2. Actions → **Reset password** → Run workflow: `login` = tên đăng nhập ngắn (vd. `an`) hoặc email; `family` = `real` (gia đình thật; `test` chỉ để thử); ô xác nhận gõ `RESET`.
-3. Đọc phần tóm tắt của lần chạy: ghi vai trò và email đã che (vd. `ha***@gmail.com`), không bao giờ có mật khẩu. Đưa mật khẩu mới cho người đó qua kênh riêng; người đó đăng nhập xong nên bấm **Đổi mật khẩu** và đặt mật khẩu của riêng mình.
+1. GitHub → Settings → Secrets and variables → Actions → **New repository secret** tên `RESET_PASSWORD`, giá trị là mật khẩu mới (**≥ 12 ký tự**, không có khoảng trắng ở đầu/cuối).
+2. Actions → **Reset password** → Run workflow: `login` = tên đăng nhập ngắn (vd. `an`) hoặc email; `family` = `real` (gia đình thật; `test` chỉ để thử); ô xác nhận gõ đúng `RESET` (viết hoa).
+3. Đọc phần tóm tắt của lần chạy: ghi vai trò (phụ huynh / gia sư / học sinh) và email đã che (vd. `ha***@gmail.com`), không bao giờ có mật khẩu. Đưa mật khẩu mới cho người đó qua kênh riêng; người đó đăng nhập xong nên bấm **Đổi mật khẩu** và đặt mật khẩu của riêng mình.
 4. **Xóa secret `RESET_PASSWORD` ngay sau khi dùng.**
 
 ### Cần biết
 
-- Tài khoản dùng chung Study Launcher nên **mật khẩu bên Launcher cũng đổi**.
+- Tài khoản dùng chung Study Launcher nên **mật khẩu bên Launcher cũng đổi**. Các phiên đăng nhập đang mở của người đó **không bị đăng xuất** (đổi mật khẩu không thu hồi phiên cũ).
 - Chỉ đặt lại cho người **đã là thành viên** (có dòng trong `english.members`) của gia đình đã chọn; tài khoản chỉ có bên Launcher, hoặc thuộc gia đình khác, bị từ chối và không đổi gì.
-- Mỗi lần đặt lại ghi 1 dòng `english.audit_log` (`account.password_reset`, chỉ có vai trò và kiểu đăng nhập `short`/`email`; không email, không mật khẩu, không id người).
-- Không dùng được cho tên đăng nhập đã tắt (`active = false`).
+- Tài khoản có tên đăng nhập ngắn đã bị tắt (`active = false`) cũng bị từ chối — dù gõ tên hay gõ email.
+- Mỗi lần đặt lại ghi 1 dòng `english.audit_log` (`account.password_reset`; payload chỉ có vai trò và kiểu đăng nhập `short`/`email`, không email, không mật khẩu, không id người; `correlation_id` = số lần chạy workflow). Thứ tự: mở transaction → ghi dòng nhật ký → gọi Supabase đổi mật khẩu → commit. Supabase báo lỗi thì dòng nhật ký bị hủy (không có dòng giả); không ghi được nhật ký thì mật khẩu **không** bị đụng tới.
+- Đọc kết quả: "Đã đặt lại mật khẩu" = xong. "Chưa đặt lại được" = dừng trước khi gọi Supabase, mật khẩu chưa đổi. "Chưa chắc đã đổi được" = Supabase báo lỗi giữa chừng — **thử đăng nhập bằng mật khẩu mới trước khi chạy lại**. "Mật khẩu ĐÃ đổi … chưa ghi được dòng nhật ký" (mã thoát 3) = mật khẩu mới dùng được, chỉ thiếu dòng nhật ký — báo dev.
+
+### Để sau
+
+- Ghim các action trong workflow theo SHA (hiện dùng `@v5` như các workflow khác).
+- Đặt workflow sau một GitHub Environment có người duyệt (Environments gate) thay vì chỉ ô gõ `RESET`.
