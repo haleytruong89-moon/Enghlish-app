@@ -854,6 +854,26 @@ export const tagPicker = {
   remove: (label: string) => `Bỏ nhãn ${label}`,
 } as const;
 
+/** SM-1: bản đồ kỹ năng trong ô chọn nhãn / kỹ năng (gia sư, phụ huynh). Tên mảng và nhóm đến từ bản đồ (cơ sở dữ liệu). */
+export const skillMapCopy = {
+  tabsLabel: "Mảng kỹ năng",
+  unassigned: "Chưa xếp mảng",
+  unassignedHelp: "Nhãn riêng thêm trước khi có bản đồ kỹ năng. Bấm “Xếp vào nhóm” để đặt vào đúng mảng.",
+  emptyDomain: "Chưa có mục nào ở mảng này.",
+  search: "Tìm trong mọi mảng",
+  searchPlaceholder: "Gõ để tìm…",
+  noMatch: "Không có mục nào khớp.",
+  place: (domain: string, group: string) => `${domain} · ${group}`,
+  chosen: (labels: string) => `Đang chọn: ${labels}`,
+  domainLabel: "Mảng",
+  groupLabel: "Nhóm",
+  pickDomain: "— Chọn mảng —",
+  pickGroup: "— Chọn nhóm —",
+  groupRequired: "Chọn mảng và nhóm cho nhãn mới.",
+  setGroup: "Xếp vào nhóm",
+  setGroupSave: "Lưu nhóm",
+} as const;
+
 export const sessionNotePage = {
   link: "Ghi buổi học",
   title: (alias: string) => `Ghi buổi học · ${alias}`,
