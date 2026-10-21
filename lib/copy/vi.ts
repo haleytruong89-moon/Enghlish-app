@@ -624,6 +624,8 @@ export const tutorWorkErrors = {
   duplicateMonth: "Tháng này đã có báo cáo. Tải lại trang để sửa bản đã lưu.",
   badMonth: "Chọn một tháng trong 24 tháng gần đây, không phải tháng sau.",
   staleReport: "Báo cáo tháng này vừa được người khác sửa. Tải lại trang rồi sửa lại.",
+  unknownGroup: "Nhóm này không có trong bản đồ kỹ năng. Tải lại trang rồi chọn lại.",
+  alreadyGrouped: "Nhãn này đã được xếp vào nhóm khác. Tải lại trang để xem.",
 } as const;
 
 /** Màn "Xóa dữ liệu của em" (S5c, chỉ phụ huynh). */

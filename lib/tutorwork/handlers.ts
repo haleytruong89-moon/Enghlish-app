@@ -9,7 +9,7 @@
 import { AccessError, requireAccess, type AccessDeps, type AccessGrant, type AccessUser, type Action } from "@/lib/auth/requireAccess";
 import { apiErrors } from "@/lib/copy/vi";
 import { fromDbError, ReviewDbError, type HandlerResult } from "@/lib/review/handlers";
-import { addTagBodySchema, resultBodySchema, sessionNoteBodySchema, tagItemsBodySchema, writingTagsBodySchema } from "./schemas";
+import { addTagBodySchema, resultBodySchema, sessionNoteBodySchema, setTagGroupBodySchema, tagItemsBodySchema, writingTagsBodySchema } from "./schemas";
 import { customTagKey } from "./frameScore";
 
 export interface TutorWorkStore {
@@ -36,7 +36,8 @@ export interface TutorWorkStore {
     clientId: string;
   }): Promise<unknown>;
   tagResultItems(args: { resultId: string; items: { n: number; tag_key: string }[]; byMemberId: string }): Promise<unknown>;
-  addTag(args: { learnerId: string; key: string; label: string; byMemberId: string }): Promise<unknown>;
+  addTag(args: { learnerId: string; key: string; label: string; groupKey: string; byMemberId: string }): Promise<unknown>;
+  setTagGroup(args: { learnerId: string; tagKey: string; groupKey: string; byMemberId: string }): Promise<unknown>;
   tagEpisode(args: { episodeId: string; tags: string[]; byMemberId: string }): Promise<unknown>;
   writeSessionNote(args: {
     learnerId: string;
@@ -152,17 +153,36 @@ export async function handleAddTag(deps: TutorWorkDeps, learnerId: string, rawBo
       learnerId: g.grant.learner.id,
       key,
       label: parsed.data.label,
+      groupKey: parsed.data.group_key,
       byMemberId: g.grant.member.id,
-    })) as {
-      key: string;
-      label_vi: string;
-      created: boolean;
-    };
+    })) as { key: string; label_vi: string; group_key: string | null; created: boolean };
     return {
       status: r.created ? 201 : 200,
-      body: { key: r.key, label: r.label_vi, created: r.created },
+      body: { key: r.key, label: r.label_vi, group_key: r.group_key, created: r.created },
     };
   } catch (err) {
+    if (err instanceof ReviewDbError && err.code === "23514" && /\(unknown_group\)/.test(err.detail)) return fail(400, "unknown_group");
+    return fromDbError(err);
+  }
+}
+
+/** "Xếp vào nhóm" (SM-1): put a family tag that has no group yet into a group of the skill map. Same access as adding a tag. */
+export async function handleSetTagGroup(deps: TutorWorkDeps, learnerId: string, rawBody: unknown): Promise<HandlerResult> {
+  const g = await guard(deps, learnerId, "tutorwork:write");
+  if (!g.ok) return g.result;
+  const parsed = setTagGroupBodySchema.safeParse(rawBody);
+  if (!parsed.success) return fail(400, "invalid_body");
+  try {
+    const r = (await deps.store.setTagGroup({
+      learnerId: g.grant.learner.id,
+      tagKey: parsed.data.tag_key,
+      groupKey: parsed.data.group_key,
+      byMemberId: g.grant.member.id,
+    })) as { key: string; group_key: string; changed: boolean };
+    return { status: 200, body: { key: r.key, group_key: r.group_key, changed: r.changed } };
+  } catch (err) {
+    if (err instanceof ReviewDbError && err.code === "23514" && /\(unknown_group\)/.test(err.detail)) return fail(400, "unknown_group");
+    if (err instanceof ReviewDbError && err.code === "23514" && /\(already_grouped\)/.test(err.detail)) return fail(409, "already_grouped");
     return fromDbError(err);
   }
 }

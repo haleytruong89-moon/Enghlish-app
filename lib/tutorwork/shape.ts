@@ -19,6 +19,7 @@ const tagRow = z.object({
   label_vi: text,
   group_vi: nullableText,
   origin: z.enum(["seed", "custom"]),
+  group_key: nullableText,
 });
 
 export function parseTags(raw: unknown): TagInfo[] {
@@ -30,6 +31,7 @@ export function parseTags(raw: unknown): TagInfo[] {
       label: t.label_vi,
       group: t.group_vi,
       custom: t.origin === "custom",
+      groupKey: t.group_key,
     }));
 }
 

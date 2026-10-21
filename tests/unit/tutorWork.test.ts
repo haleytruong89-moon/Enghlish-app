@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import type { AccessStore, Learner, Member, Relationship } from "@/lib/auth/requireAccess";
+import { tutorWorkErrors } from "@/lib/copy/vi";
 import { ReviewDbError } from "@/lib/review/handlers";
 import { parseNotes } from "@/lib/review/shape";
 import { normalizeFrame, frameFileSchema, scaleBand } from "@/lib/frames/frame";
@@ -9,14 +10,16 @@ import { customTagKey, itemList, parseItemNumbers, scoreFrame } from "@/lib/tuto
 import {
   handleAddTag,
   handleRecordResult,
+  handleSetTagGroup,
   handleTagEpisode,
   handleTagResultItems,
   handleWriteSessionNote,
   type TutorWorkDeps,
   type TutorWorkStore,
 } from "@/lib/tutorwork/handlers";
+import { failText } from "@/lib/tutorwork/client";
 import { resultBodySchema, sessionNoteBodySchema, tagItemsBodySchema, writingTagsBodySchema } from "@/lib/tutorwork/schemas";
-import { parseLastNote, parseUntagged, parseWeakPoints } from "@/lib/tutorwork/shape";
+import { parseLastNote, parseTags, parseUntagged, parseWeakPoints } from "@/lib/tutorwork/shape";
 import type { FrameView, UntaggedItem } from "@/lib/tutorwork/types";
 import { filterUntagged, windowSince } from "@/lib/tutorwork/window";
 
@@ -50,7 +53,8 @@ function makeStore(over: Partial<TutorWorkStore> = {}) {
     getEpisodeLearnerId: vi.fn(async (id: string) => (id === EPISODE_AN ? AN : null)),
     recordResult: vi.fn(async () => ({ id: "r1", replayed: false, untagged: 2 })),
     tagResultItems: vi.fn(async () => ({ tagged: 2, replayed: false })),
-    addTag: vi.fn(async (a: { key: string; label: string }) => ({ key: a.key, label_vi: a.label, created: true })),
+    addTag: vi.fn(async (a: { key: string; label: string; groupKey: string }) => ({ key: a.key, label_vi: a.label, group_key: a.groupKey, created: true })),
+    setTagGroup: vi.fn(async (a: { tagKey: string; groupKey: string }) => ({ key: a.tagKey, group_key: a.groupKey, changed: true })),
     tagEpisode: vi.fn(async () => ({ added: 1, replayed: false })),
     writeSessionNote: vi.fn(async () => ({ id: "n1", replayed: false })),
     ...over,
@@ -194,30 +198,31 @@ describe("S5b-1 handlers: 401 / 404 / 403 come before anything else", () => {
   const all = (d: TutorWorkDeps) => [
     () => handleRecordResult(d, AN, goodQuick),
     () => handleTagResultItems(d, RESULT_AN, { items: [{ n: 4, tag_key: "dang-tu" }] }),
-    () => handleAddTag(d, AN, { label: "Đảo ngữ" }),
+    () => handleAddTag(d, AN, { label: "Đảo ngữ", group_key: "gr-emphasis" }),
     () => handleTagEpisode(d, EPISODE_AN, { tags: ["dang-tu"] }),
     () => handleWriteSessionNote(d, AN, goodNote),
+    () => handleSetTagGroup(d, AN, { tag_key: "x-cu-abcde", group_key: "wr-genre" }),
   ];
-  const writes = (s: ReturnType<typeof makeStore>) => [s.recordResult, s.tagResultItems, s.addTag, s.tagEpisode, s.writeSessionNote];
+  const writes = (s: ReturnType<typeof makeStore>) => [s.recordResult, s.tagResultItems, s.addTag, s.tagEpisode, s.writeSessionNote, s.setTagGroup];
 
   it("401 without a session, store untouched", async () => {
     const s = makeStore();
     const out = await Promise.all(all(deps(null, s)).map((f) => f()));
-    expect(out.map((r) => r.status)).toEqual(Array(5).fill(401));
+    expect(out.map((r) => r.status)).toEqual(Array(6).fill(401));
     for (const fn of writes(s)) expect(fn).not.toHaveBeenCalled();
   });
 
   it("a student gets 403 everywhere and never reaches the store", async () => {
     const s = makeStore();
     const out = await Promise.all(all(deps("studentAn", s)).map((f) => f()));
-    expect(out.map((r) => r.status)).toEqual(Array(5).fill(403));
+    expect(out.map((r) => r.status)).toEqual(Array(6).fill(403));
     for (const fn of writes(s)) expect(fn).not.toHaveBeenCalled();
   });
 
   it("the other child's tutor gets 404 (never 403) and nothing is written", async () => {
     const s = makeStore();
     const out = await Promise.all(all(deps("tutorNguyen", s)).map((f) => f()));
-    expect(out.map((r) => r.status)).toEqual(Array(5).fill(404));
+    expect(out.map((r) => r.status)).toEqual(Array(6).fill(404));
     for (const fn of writes(s)) expect(fn).not.toHaveBeenCalled();
   });
 
@@ -328,17 +333,49 @@ describe("S5b-1 handlers: writes", () => {
     expect((await handleRecordResult(deps("tutorAn", s), AN, { ...goodFrame, source: "test" })).status).toBe(201);
   });
 
-  it("'+ nhãn khác': the key is made on the server from the label; a label with no letters is refused", async () => {
+  it("'+ nhãn khác': the key is made on the server from the label, and a group of the skill map is required", async () => {
     const s = makeStore();
-    const r = await handleAddTag(deps("tutorAn", s), AN, { label: "Đảo ngữ với hardly" });
-    expect(r.status).toBe(201);
-    expect(s.addTag).toHaveBeenCalledWith({ learnerId: AN, key: "x-dao-ngu-voi-hardly", label: "Đảo ngữ với hardly", byMemberId: "m-tutorAn" });
-    expect((await handleAddTag(deps("tutorAn", s), AN, { label: "?!?!" })).status).toBe(400);
-    expect((await handleAddTag(deps("tutorAn", s), AN, { label: "x", key: "x-evil" })).status).toBe(400);
-    const existing = makeStore({ addTag: vi.fn(async () => ({ key: "dang-tu", label_vi: "Dạng từ", created: false })) });
-    const again = await handleAddTag(deps("tutorAn", existing), AN, { label: "Dạng từ" });
-    expect(again.status).toBe(200);
-    expect(again.body).toEqual({ key: "dang-tu", label: "Dạng từ", created: false });
+    const r = await handleAddTag(deps("tutorAn", s), AN, { label: "Đảo ngữ với hardly", group_key: "gr-emphasis" });
+    expect(r).toEqual({ status: 201, body: { key: "x-dao-ngu-voi-hardly", label: "Đảo ngữ với hardly", group_key: "gr-emphasis", created: true } });
+    expect(s.addTag).toHaveBeenCalledWith({ learnerId: AN, key: "x-dao-ngu-voi-hardly", label: "Đảo ngữ với hardly", groupKey: "gr-emphasis", byMemberId: "m-tutorAn" });
+    expect((await handleAddTag(deps("tutorAn", s), AN, { label: "?!?!", group_key: "gr-emphasis" })).status).toBe(400);
+    expect((await handleAddTag(deps("tutorAn", s), AN, { label: "Đảo ngữ" })).status).toBe(400); // no group
+    expect((await handleAddTag(deps("tutorAn", s), AN, { label: "Đảo ngữ", group_key: "Ngữ pháp" })).status).toBe(400); // not a group key
+    expect((await handleAddTag(deps("tutorAn", s), AN, { label: "x", key: "x-evil", group_key: "gr-emphasis" })).status).toBe(400);
+    const existing = makeStore({ addTag: vi.fn(async () => ({ key: "dang-tu", label_vi: "Dạng từ", group_key: null, created: false })) });
+    expect(await handleAddTag(deps("tutorAn", existing), AN, { label: "Dạng từ", group_key: "vo-word-form" })).toEqual({
+      status: 200, body: { key: "dang-tu", label: "Dạng từ", group_key: null, created: false },
+    });
+    const unknown = makeStore({ addTag: vi.fn(async () => { throw new ReviewDbError("23514", "eng_add_error_tag_v2: x (unknown_group)"); }) });
+    expect(await handleAddTag(deps("tutorAn", unknown), AN, { label: "Mới", group_key: "gr-nope" })).toMatchObject({ status: 400, body: { error: "unknown_group" } });
+  });
+
+  it("'Xếp vào nhóm': staff of the child group an old family tag; database answers are mapped", async () => {
+    const s = makeStore();
+    expect(await handleSetTagGroup(deps("parent", s), AN, { tag_key: "x-cu-abcde", group_key: "wr-sentence-mech" })).toEqual({
+      status: 200, body: { key: "x-cu-abcde", group_key: "wr-sentence-mech", changed: true },
+    });
+    expect(s.setTagGroup).toHaveBeenCalledWith({ learnerId: AN, tagKey: "x-cu-abcde", groupKey: "wr-sentence-mech", byMemberId: "m-parent" });
+    expect((await handleSetTagGroup(deps("tutorAn", s), AN, { tag_key: "x-cu-abcde" })).status).toBe(400);
+    expect((await handleSetTagGroup(deps("tutorAn", s), AN, { tag_key: "dang-tu", group_key: "gr-tense" })).status).toBe(400); // seed tags are grouped by the map
+    const grouped = makeStore({ setTagGroup: vi.fn(async () => { throw new ReviewDbError("23514", "eng_set_tag_group: x (already_grouped)"); }) });
+    expect(await handleSetTagGroup(deps("tutorAn", grouped), AN, { tag_key: "x-cu-abcde", group_key: "wr-genre" })).toMatchObject({ status: 409, body: { error: "already_grouped" } });
+    const unknown = makeStore({ setTagGroup: vi.fn(async () => { throw new ReviewDbError("23514", "eng_set_tag_group: x (unknown_group)"); }) });
+    expect(await handleSetTagGroup(deps("tutorAn", unknown), AN, { tag_key: "x-cu-abcde", group_key: "gr-nope" })).toMatchObject({ status: 400, body: { error: "unknown_group" } });
+    const missing = makeStore({ setTagGroup: vi.fn(async () => { throw new ReviewDbError("P0002", "eng_set_tag_group: no family tag"); }) });
+    expect((await handleSetTagGroup(deps("tutorAn", missing), AN, { tag_key: "x-nope-abcde", group_key: "wr-genre" })).status).toBe(404);
+  });
+
+  it("tags read from the database carry the group of a family tag; the form words the two new errors", () => {
+    expect(parseTags([
+      { key: "dang-tu", label_vi: "Dạng từ", group_vi: "Từ vựng", origin: "seed", group_key: null },
+      { key: "x-moi-abcde", label_vi: "Mới", group_vi: "Nhãn riêng", origin: "custom", group_key: "gr-emphasis" },
+    ])).toEqual([
+      { key: "dang-tu", label: "Dạng từ", group: "Từ vựng", custom: false, groupKey: null },
+      { key: "x-moi-abcde", label: "Mới", group: "Nhãn riêng", custom: true, groupKey: "gr-emphasis" },
+    ]);
+    expect(failText({ ok: false, status: 400, error: "unknown_group" })).toBe(tutorWorkErrors.unknownGroup);
+    expect(failText({ ok: false, status: 409, error: "already_grouped" })).toBe(tutorWorkErrors.alreadyGrouped);
   });
 
   it("tags for wrong items and for writing use the result's / episode's learner for the access check", async () => {

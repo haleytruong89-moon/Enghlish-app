@@ -1,5 +1,6 @@
 /** Request bodies for the S5b-1 routes (zod). Parsed AFTER requireAccess, so outsiders always get 404. */
 import { z } from "zod";
+import { GROUP_KEY_RE } from "@/lib/skillmap/types";
 import {
   MAX_PRACTISED_PER_NOTE,
   MAX_WEAK_TAGS_PER_NOTE,
@@ -64,10 +65,21 @@ export const tagItemsBodySchema = z.strictObject({
 });
 export type TagItemsBody = z.infer<typeof tagItemsBodySchema>;
 
+const groupKey = z.string().regex(GROUP_KEY_RE);
+
+/** "+ nhãn khác": the label, and the skill-map group it belongs to (SM-1: required). */
 export const addTagBodySchema = z.strictObject({
   label: z.string().trim().min(2).max(120),
+  group_key: groupKey,
 });
 export type AddTagBody = z.infer<typeof addTagBodySchema>;
+
+/** "Xếp vào nhóm": a family tag (key x-…) that has no group yet. */
+export const setTagGroupBodySchema = z.strictObject({
+  tag_key: z.string().trim().regex(/^x-[a-z0-9][a-z0-9-]{0,60}$/),
+  group_key: groupKey,
+});
+export type SetTagGroupBody = z.infer<typeof setTagGroupBodySchema>;
 
 export const writingTagsBodySchema = z.strictObject({
   tags: z.array(tagKey).min(1).max(MAX_WRITING_TAGS),

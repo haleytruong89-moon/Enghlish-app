@@ -58,13 +58,25 @@ export function createSupabaseTutorWorkStore(): TutorWorkStore {
     },
 
     async addTag(a) {
-      const { data, error } = await db().rpc("eng_add_error_tag", {
+      const { data, error } = await db().rpc("eng_add_error_tag_v2", {
         p_learner: a.learnerId,
         p_key: a.key,
         p_label: a.label,
+        p_group_key: a.groupKey,
         p_by: a.byMemberId,
       });
-      if (error) dbError("eng_add_error_tag", error);
+      if (error) dbError("eng_add_error_tag_v2", error);
+      return data;
+    },
+
+    async setTagGroup(a) {
+      const { data, error } = await db().rpc("eng_set_tag_group", {
+        p_learner: a.learnerId,
+        p_tag_key: a.tagKey,
+        p_group_key: a.groupKey,
+        p_by: a.byMemberId,
+      });
+      if (error) dbError("eng_set_tag_group", error);
       return data;
     },
 
