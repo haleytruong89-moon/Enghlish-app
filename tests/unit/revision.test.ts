@@ -122,7 +122,7 @@ describe("parsers", () => {
     const mine = parseMyFeedback({ items: [{ feedback_id: "f", activity_id: "a", title_vi: "Núi lửa", round: 1, items_count: 2, state: "todo", seen_at: null,
       closing_note: null, praise: null, notes: null, score: 3, verdicts: ["improved"], author_name: "Cô X" }] });
     expect(mine).toEqual([{ feedbackId: "f", activityId: "a", titleVi: "Núi lửa", round: 1, itemsCount: 2, state: "todo", seenAt: null, closingNote: null, praise: null, notes: null }]);
-    const page = parseMyRevision({ activity_id: "a", instance_id: "i", title_vi: "Núi lửa", big_question_en: null, round: 1, praise: "Tốt",
+    const page = parseMyRevision({ activity_id: "a", instance_id: "i", feedback_id: "f", title_vi: "Núi lửa", big_question_en: null, round: 1, praise: "Tốt",
       items: [{ n: 1, text: "Thêm câu kết.", excerpt: null, leaf: { kind: "tag", ref_key: "x" } }], old_text: TEXT, reason_required: true, state: "todo",
       submitted_at: null, closing_note: null, draft: { content: { text: "draft", marks: { "1": { choice: "kept" } } }, revision: 2, updated_at: "2026-10-22T01:00:00Z" } });
     expect(page?.items).toEqual([{ n: 1, text: "Thêm câu kết.", excerpt: null }]);

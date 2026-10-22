@@ -105,7 +105,7 @@ describe("0021_feedback_revision.sql", () => {
   });
 
   it("the child's functions are for authenticated only and return no score, observation, decision, verdict or leaf", () => {
-    for (const sig of ["eng_my_feedback()", "eng_my_revision(uuid)", "eng_save_revision_draft(uuid, jsonb, int)", "eng_submit_revision(uuid, uuid, text, jsonb, text[], text)"]) {
+    for (const sig of ["eng_my_feedback()", "eng_my_revision(uuid)", "eng_save_revision_draft(uuid, jsonb, int)", "eng_submit_revision(uuid, uuid, text, jsonb, text[], text, uuid)"]) {
       expect(code).toContain(`revoke execute on function english.${sig} from public, anon, service_role;`);
       expect(code).toContain(`grant execute on function english.${sig} to authenticated;`);
     }

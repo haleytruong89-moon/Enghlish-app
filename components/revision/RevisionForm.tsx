@@ -28,6 +28,7 @@ export function RevisionForm({ revision }: { revision: MyRevisionView }) {
   const [savedAt, setSavedAt] = useState<string | null>(revision.draft?.updatedAt ?? null);
   const [otherTab, setOtherTab] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [stale, setStale] = useState(false);
   const [busy, setBusy] = useState(false);
   const [receipt, setReceipt] = useState<{ submittedAt: string } | null>(null);
 
@@ -103,7 +104,7 @@ export function RevisionForm({ revision }: { revision: MyRevisionView }) {
     setBusy(true);
     setProblem(null);
     if (inflight.current) await inflight.current;
-    const body = { text, marks: marksToSend(revision.items, marks), assistance: assist, provenance: pasted ? "pasted" : "in_app" };
+    const body = { feedback_id: revision.feedbackId, text, marks: marksToSend(revision.items, marks), assistance: assist, provenance: pasted ? "pasted" : "in_app" };
     const sig = JSON.stringify(body);
     if (!pending.current || pending.current.sig !== sig) pending.current = { id: crypto.randomUUID(), sig };
     try {
@@ -113,7 +114,14 @@ export function RevisionForm({ revision }: { revision: MyRevisionView }) {
         body: JSON.stringify({ ...body, client_submission_id: pending.current.id }),
       });
       if (res.status === 409) {
-        setProblem(revisionCopy.submitConflict);
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        // The adult edited the feedback while the child was writing: nothing was saved against the new text; reload to see it (S2).
+        if (j.error === "feedback_changed") {
+          setStale(true);
+          setProblem(revisionCopy.feedbackChanged);
+        } else {
+          setProblem(revisionCopy.submitConflict);
+        }
         pending.current = null;
         return;
       }
@@ -155,10 +163,6 @@ export function RevisionForm({ revision }: { revision: MyRevisionView }) {
     <form
       onSubmit={submit}
       onBlur={() => void saveNow()}
-      onPasteCapture={() => {
-        setPasted(true);
-        touch();
-      }}
       className="flex flex-col gap-3.5"
       data-testid="revision-form"
       noValidate
@@ -190,7 +194,7 @@ export function RevisionForm({ revision }: { revision: MyRevisionView }) {
                   </p>
                 ) : null}
                 <fieldset className="m-0 flex flex-wrap gap-2 border-0 p-0">
-                  <legend className="sr-only">{revisionCopy.marksTitle}</legend>
+                  <legend className="sr-only">{`${revisionCopy.itemLabel(it.n)}: ${revisionCopy.marksTitle}`}</legend>
                   {(["changed", "kept"] as const).map((c) => (
                     <label key={c} className="flex min-h-11 items-center gap-2 rounded-lg border border-line px-3 text-[15px] has-[:checked]:border-accent has-[:checked]:bg-[#E3ECE8]">
                       <input type="radio" name={`mark-${it.n}`} checked={m.choice === c} onChange={() => setMark(it.n, { choice: c })}
@@ -200,7 +204,10 @@ export function RevisionForm({ revision }: { revision: MyRevisionView }) {
                   ))}
                 </fieldset>
                 <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-muted">{revisionCopy.reasonLabel(revision.reasonRequired)}</span>
+                  <span className="text-muted">
+                    <span className="sr-only">{revisionCopy.itemLabel(it.n)}. </span>
+                    {revisionCopy.reasonLabel(revision.reasonRequired)}
+                  </span>
                   <input type="text" maxLength={REASON_MAX} value={m.reason ?? ""} placeholder={revisionCopy.reasonHint}
                     onChange={(e) => setMark(it.n, { reason: e.target.value })} data-testid={`revision-reason-${it.n}`}
                     className="min-h-11 rounded-lg border border-line bg-white px-3" />
@@ -221,7 +228,8 @@ export function RevisionForm({ revision }: { revision: MyRevisionView }) {
           {revisionCopy.editorTitle}
         </h2>
         <textarea aria-label={revisionCopy.editorLabel} rows={10} value={text} maxLength={20000} lang="en"
-          onChange={(e) => { touch(); setText(e.target.value); }} data-testid="revision-editor"
+          onChange={(e) => { touch(); setText(e.target.value); }}
+          onPaste={() => { setPasted(true); touch(); }} data-testid="revision-editor"
           className="min-h-48 rounded-lg border border-line bg-white px-3 py-2 text-base leading-relaxed" />
         <span className="text-[13px] text-muted">{work.wordCount(wordsOf(text))}</span>
       </section>
@@ -241,6 +249,11 @@ export function RevisionForm({ revision }: { revision: MyRevisionView }) {
       {problem ? (
         <p role="alert" className="rounded-xl bg-[#FBF1DC] px-3.5 py-3 text-sm text-[#6B4600]" data-testid="revision-problem">
           {problem}
+          {stale ? (
+            <button type="button" onClick={() => window.location.reload()} data-testid="revision-reload" className="ml-3 min-h-11 rounded-lg border border-[#6B4600] px-3 font-semibold">
+              {revisionCopy.reload}
+            </button>
+          ) : null}
         </p>
       ) : null}
       {otherTab ? (

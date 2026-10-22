@@ -117,7 +117,7 @@ export function parseMyFeedback(raw: unknown): MyFeedbackItem[] {
 
 const markDraft = z.object({ choice: z.enum(MARK_CHOICES).optional(), reason: z.string().optional() });
 const myRevisionSchema = z.object({
-  activity_id: text, instance_id: text, title_vi: text, big_question_en: nullableText, round: int, praise: text,
+  activity_id: text, instance_id: text, feedback_id: text, title_vi: text, big_question_en: nullableText, round: int, praise: text,
   items: z.array(childItem), old_text: text, reason_required: z.boolean(), state: z.enum(["todo", "submitted", "seen"]),
   submitted_at: nullableText, closing_note: nullableText,
   draft: z
@@ -140,7 +140,7 @@ export function parseMyRevision(raw: unknown): MyRevisionView | null {
   if (raw === null || raw === undefined) return null;
   const r = myRevisionSchema.parse(raw);
   return {
-    activityId: r.activity_id, instanceId: r.instance_id, titleVi: r.title_vi, bigQuestionEn: r.big_question_en, round: r.round, praise: r.praise,
+    activityId: r.activity_id, instanceId: r.instance_id, feedbackId: r.feedback_id, titleVi: r.title_vi, bigQuestionEn: r.big_question_en, round: r.round, praise: r.praise,
     items: r.items.map((i) => ({ n: i.n, text: i.text, excerpt: i.excerpt })), oldText: r.old_text, reasonRequired: r.reason_required,
     state: r.state, submittedAt: r.submitted_at, closingNote: r.closing_note,
     draft: r.draft && {

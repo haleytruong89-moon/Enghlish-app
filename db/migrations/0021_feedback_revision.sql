@@ -256,14 +256,15 @@ as $$
   select not exists (select 1 from english.feedback_notes s where s.supersedes_id = p_feedback)
 $$;
 
--- Vòng của một bài sửa (1 / 2); NULL nếu không phải bài sửa.
+-- Vòng của một bài sửa (1 / 2), theo góp ý mà em đã trả lời (revision_marks.feedback_id), không theo dòng đang hiệu lực; NULL nếu không phải bài sửa.
 create or replace function english.eng_revision_round(p_attempt uuid) returns int
 language sql stable security definer set search_path = ''
 as $$
   select f.round::int
-  from english.attempts a
-  join english.feedback_notes f on f.source_attempt_id = a.revises_attempt_id and f.kind = 'feedback' and f.requires_revision
-  where a.id = p_attempt and english.eng_feedback_is_live(f.id)
+  from english.revision_marks m
+  join english.feedback_notes f on f.id = m.feedback_id and f.kind = 'feedback' and f.requires_revision
+  where m.attempt_id = p_attempt
+  order by m.item_n
   limit 1
 $$;
 
@@ -784,8 +785,10 @@ begin
   -- Vòng (2-a): 1 cho bài gốc; 2 cho bài sửa vòng 1, luôn yêu cầu sửa, sau khi đã đánh giá đủ mọi góp ý; không bao giờ 3.
   v_root := english.eng_revision_root(v_src.id);
   if v_src.revises_attempt_id is not null then
+    -- Góp ý mà em đã trả lời (theo đánh dấu của bài sửa này), không phải "dòng đang hiệu lực".
     select f.* into v_prev_round from english.feedback_notes f
-    where f.source_attempt_id = v_src.revises_attempt_id and f.kind = 'feedback' and english.eng_feedback_is_live(f.id);
+    where f.id = (select m.feedback_id from english.revision_marks m where m.attempt_id = v_src.id order by m.item_n limit 1)
+      and f.kind = 'feedback';
     v_round := coalesce(v_prev_round.round, 2) + 1;
     if v_round > 2 then
       raise exception 'eng_write_feedback: at most 2 rounds of revision (max_rounds)' using errcode = '23514';
@@ -818,6 +821,11 @@ begin
     end if;
     if not english.eng_feedback_is_live(v_prev.id) then
       raise exception 'eng_write_feedback: this feedback was already edited (already_superseded)' using errcode = '23505';
+    end if;
+    -- S2: khóa cả bước sửa (cùng khóa với lưu nháp / nộp bài sửa của em) rồi mới hỏi "con đã bắt đầu chưa", để một lần nộp đang chạy
+    -- không lọt qua và để lại bài sửa trả lời góp ý cũ.
+    if v_prev.revision_activity_id is not null then
+      perform 1 from english.activity_instances a where a.id = v_prev.revision_activity_id for no key update;
     end if;
     if english.eng_revision_started(v_prev.id) then
       raise exception 'eng_write_feedback: the child already started the revision (revision_started)' using errcode = '23514';
@@ -990,6 +998,7 @@ begin
     'instance_id', v_inst.id,
     'title_vi', v_inst.snapshot -> 'template' ->> 'title_vi',
     'big_question_en', v_inst.snapshot -> 'template' ->> 'big_question_en',
+    'feedback_id', v_f.id,
     'round', v_f.round,
     'praise', v_f.praise,
     'items', (select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('n', (x ->> 'n')::int, 'text', x ->> 'text', 'excerpt', x ->> 'excerpt')
@@ -1075,7 +1084,8 @@ create or replace function english.eng_submit_revision(
   p_text text,
   p_marks jsonb,
   p_assistance text[],
-  p_provenance text
+  p_provenance text,
+  p_feedback uuid
 ) returns jsonb
 language plpgsql volatile security definer set search_path = ''
 as $$
@@ -1103,8 +1113,8 @@ begin
   if v_uid is null then
     raise exception 'eng_submit_revision: not signed in' using errcode = '42501';
   end if;
-  if p_client_id is null then
-    raise exception 'eng_submit_revision: client_submission_id is required' using errcode = '22004';
+  if p_client_id is null or p_feedback is null then
+    raise exception 'eng_submit_revision: client_submission_id and feedback id are required' using errcode = '22004';
   end if;
   select m.id, m.role into v_member, v_role from english.members m where m.user_id = v_uid;
   if v_member is null then
@@ -1140,6 +1150,10 @@ begin
   order by f.round desc, f.created_at desc limit 1;
   if not found or not english.eng_activity_released(p_activity) then
     raise exception 'eng_submit_revision: there is no revision to do on this step (revision_not_open)' using errcode = '22023';
+  end if;
+  -- S2: em trả lời đúng góp ý mà em đang xem; thầy/cô vừa sửa góp ý (hoặc trang cũ) → từ chối, em tải lại trang.
+  if v_f.id <> p_feedback then
+    raise exception 'eng_submit_revision: the feedback changed while you were writing (feedback_changed)' using errcode = '23514';
   end if;
   select * into v_src from english.attempts t where t.id = v_f.source_attempt_id;
   select av.content ->> 'text' into v_src_text from english.artifact_versions av where av.attempt_id = v_src.id order by av.version limit 1;
@@ -1226,11 +1240,11 @@ $$;
 revoke execute on function english.eng_my_feedback() from public, anon, service_role;
 revoke execute on function english.eng_my_revision(uuid) from public, anon, service_role;
 revoke execute on function english.eng_save_revision_draft(uuid, jsonb, int) from public, anon, service_role;
-revoke execute on function english.eng_submit_revision(uuid, uuid, text, jsonb, text[], text) from public, anon, service_role;
+revoke execute on function english.eng_submit_revision(uuid, uuid, text, jsonb, text[], text, uuid) from public, anon, service_role;
 grant execute on function english.eng_my_feedback() to authenticated;
 grant execute on function english.eng_my_revision(uuid) to authenticated;
 grant execute on function english.eng_save_revision_draft(uuid, jsonb, int) to authenticated;
-grant execute on function english.eng_submit_revision(uuid, uuid, text, jsonb, text[], text) to authenticated;
+grant execute on function english.eng_submit_revision(uuid, uuid, text, jsonb, text[], text, uuid) to authenticated;
 
 -- G4 (phụ huynh duyệt 22/10): một ghi chú "Chỉ góp ý" còn hiện ở trang của chính bài đó (không hết hạn 14 ngày như ô ở trang chủ), miễn là
 -- bước còn thấy được. Chỉ câu khen + góp ý + trích đoạn của em; không điểm, không lá kỹ năng, không tên người góp ý. NULL nếu không có.
@@ -1310,8 +1324,13 @@ begin
   if v_role is null then
     raise exception 'eng_finish_revision: this member may not review this revision (D15)' using errcode = '42501';
   end if;
+  -- S2: góp ý mà em đã trả lời = góp ý trong đánh dấu của bài sửa này (không phải "dòng đang hiệu lực" - có thể đã đổi).
   select f.* into v_f from english.feedback_notes f
-  where f.source_attempt_id = v_a.revises_attempt_id and f.kind = 'feedback' and f.requires_revision and english.eng_feedback_is_live(f.id);
+  where f.id = (select m.feedback_id from english.revision_marks m where m.attempt_id = p_attempt order by m.item_n limit 1)
+    and f.kind = 'feedback' and f.requires_revision;
+  if v_f.id is null then
+    raise exception 'eng_finish_revision: the revision has no marks (not_found)' using errcode = 'P0002';
+  end if;
 
   -- Gửi lại: đánh giá của lần bấm này đã có → trả lại kết quả cũ.
   if exists (select 1 from english.revision_checks c where c.attempt_id = p_attempt and c.client_id = p_client_id) then
@@ -1443,8 +1462,10 @@ declare
 begin
   select t.* into v_a from english.attempts t where t.id = p_attempt and t.revises_attempt_id is not null;
   if not found then return null; end if;
+  -- S2: góp ý mà em đã trả lời (theo đánh dấu của bài sửa này).
   select f.* into v_f from english.feedback_notes f
-  where f.source_attempt_id = v_a.revises_attempt_id and f.kind = 'feedback' and f.requires_revision and english.eng_feedback_is_live(f.id);
+  where f.id = (select m.feedback_id from english.revision_marks m where m.attempt_id = p_attempt order by m.item_n limit 1)
+    and f.kind = 'feedback' and f.requires_revision;
   select * into v_l from english.learners l where l.id = v_a.learner_id;
   select e.id into v_ep from english.episodes e where e.attempt_id = p_attempt;
   select i.snapshot -> 'template' ->> 'title_vi' into v_title

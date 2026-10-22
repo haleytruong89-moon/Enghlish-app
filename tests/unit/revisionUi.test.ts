@@ -84,7 +84,7 @@ const SCORE = /\d\s*\/\s*4\s*·|điểm|verdict|improved|not_yet|reason_ok/i;
 
 describe("Sửa bài (the child)", () => {
   const rev = (over: Partial<MyRevisionView> = {}): MyRevisionView => ({
-    activityId: "r1", instanceId: "i1", titleVi: "Núi lửa", bigQuestionEn: "Why do volcanoes erupt?", round: 1, praise: "Con giải thích rõ vì sao núi lửa phun.",
+    activityId: "r1", instanceId: "i1", feedbackId: "f1", titleVi: "Núi lửa", bigQuestionEn: "Why do volcanoes erupt?", round: 1, praise: "Con giải thích rõ vì sao núi lửa phun.",
     items: [{ n: 1, text: "Thêm câu kết.", excerpt: "Other volcanoes let lava flow gently." }, { n: 2, text: "Dùng từ nối.", excerpt: null }],
     oldText: TEXT, reasonRequired: false, state: "todo", submittedAt: null, closingNote: null, draft: null, ...over,
   });

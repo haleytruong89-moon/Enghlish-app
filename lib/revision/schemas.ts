@@ -44,6 +44,8 @@ export type RevisionDraftBody = z.infer<typeof revisionDraftBodySchema>;
 
 export const revisionSubmitBodySchema = z.strictObject({
   client_submission_id: z.string().regex(UUID_RE),
+  /** The feedback the child was answering (S2): refused when it is no longer the live one. */
+  feedback_id: z.string().regex(UUID_RE),
   text: z.string().min(1).max(20000),
   marks: z.record(markKey, z.strictObject({ choice: z.enum(MARK_CHOICES), reason: z.string().max(REASON_MAX).optional() })),
   assistance: z

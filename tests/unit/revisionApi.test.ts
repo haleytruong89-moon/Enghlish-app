@@ -59,9 +59,10 @@ describe("request bodies", () => {
     expect(revisionDraftBodySchema.safeParse({ content: { text: "x", marks: { "1": { choice: "kept" } } }, base_revision: 0 }).success).toBe(true);
     expect(revisionDraftBodySchema.safeParse({ content: { marks: { "4": { choice: "kept" } } } }).success).toBe(false);
     expect(revisionDraftBodySchema.safeParse({ content: { answers: {} } }).success).toBe(false);
-    const submit = { client_submission_id: "a1111111-1111-4111-8111-111111111111", text: "New text.", marks: { "1": { choice: "changed" } }, assistance: ["none"], provenance: "in_app" };
+    const submit = { client_submission_id: "a1111111-1111-4111-8111-111111111111", feedback_id: "b2222222-2222-4222-8222-222222222222", text: "New text.", marks: { "1": { choice: "changed" } }, assistance: ["none"], provenance: "in_app" };
     expect(revisionSubmitBodySchema.safeParse(submit).success).toBe(true);
     expect(revisionSubmitBodySchema.safeParse({ ...submit, marks: { "1": {} } }).success).toBe(false);
+    expect(revisionSubmitBodySchema.safeParse({ ...submit, feedback_id: undefined }).success).toBe(false);
     expect(revisionSubmitBodySchema.safeParse({ ...submit, assistance: ["none", "notes"] }).success).toBe(false);
     expect(revisionSubmitBodySchema.safeParse({ ...submit, marks: { "1": { choice: "changed", reason: "x".repeat(301) } } }).success).toBe(false);
   });

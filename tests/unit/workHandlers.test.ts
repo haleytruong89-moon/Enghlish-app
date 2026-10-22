@@ -58,7 +58,7 @@ const rpcSources = [{ id: "S1", title: "Volcanoes", author: "X", rights_note: "o
 const rpcReceipt = { attempt_id: "55555555-5555-4555-8555-555555555555", attempt_no: 1, submitted_at: "2026-10-14T08:00:00Z", hash: "abc", replayed: false };
 
 const rpcRevision = {
-  activity_id: ACT_AN, instance_id: "44444444-4444-4444-8444-444444444444", title_vi: "Núi lửa", big_question_en: "Why do volcanoes erupt?", round: 1,
+  activity_id: ACT_AN, instance_id: "44444444-4444-4444-8444-444444444444", feedback_id: "66666666-6666-4666-8666-666666666666", title_vi: "Núi lửa", big_question_en: "Why do volcanoes erupt?", round: 1,
   praise: "Con giải thích rõ.", items: [{ n: 1, text: "Thêm câu kết.", excerpt: null, leaf: { kind: "tag", ref_key: "x" } }], old_text: "Old text.",
   reason_required: false, state: "todo", submitted_at: null, closing_note: null, draft: null, score: 3,
 };
@@ -379,7 +379,7 @@ describe("SM-2: 'Việc cần ôn' on the student home", () => {
 });
 
 describe("S6: the child's revision routes", () => {
-  const submit = { client_submission_id: CLIENT_ID, text: "New text.", marks: { "1": { choice: "changed" } }, assistance: ["none"], provenance: "in_app" };
+  const submit = { client_submission_id: CLIENT_ID, feedback_id: "b2222222-2222-4222-8222-222222222222", text: "New text.", marks: { "1": { choice: "changed" } }, assistance: ["none"], provenance: "in_app" };
 
   it("home carries the feedback rows; a broken feedback call never takes the home down", async () => {
     const s = makeStore({ getMyFeedback: vi.fn(async (): Promise<unknown> => ({ items: [{ feedback_id: "f", activity_id: ACT_AN, title_vi: "Núi lửa", round: 1, items_count: 1,
@@ -404,10 +404,11 @@ describe("S6: the child's revision routes", () => {
     expect((await handleSaveRevisionDraft(deps("studentAn", s), ACT_AN, { content: { text: "x", marks: { "1": { choice: "kept" } } }, base_revision: 0 })).status).toBe(200);
     expect(s.saveRevisionDraft).toHaveBeenCalledWith({ activityId: ACT_AN, content: { text: "x", marks: { "1": { choice: "kept" } } }, baseRevision: 0 });
     expect((await handleSubmitRevision(deps("studentAn", s), ACT_AN, submit)).status).toBe(201);
-    expect(s.submitRevision).toHaveBeenCalledWith({ activityId: ACT_AN, clientSubmissionId: CLIENT_ID, text: "New text.", marks: { "1": { choice: "changed" } }, assistance: ["none"], provenance: "in_app" });
+    expect(s.submitRevision).toHaveBeenCalledWith({ activityId: ACT_AN, clientSubmissionId: CLIENT_ID, feedbackId: "b2222222-2222-4222-8222-222222222222", text: "New text.", marks: { "1": { choice: "changed" } }, assistance: ["none"], provenance: "in_app" });
     for (const [code, msg, status, error] of [
       ["23514", "eng_submit_revision: … (marks_incomplete)", 400, "marks_incomplete"], ["23514", "x (reason_required)", 400, "reason_required"],
       ["23514", "x (unchanged_needs_reason)", 400, "unchanged_needs_reason"], ["22023", "x (revision_not_open)", 409, "revision_not_open"],
+      ["23514", "x (feedback_changed)", 409, "feedback_changed"],
       ["23505", "x (already_submitted)", 409, "conflict"],
     ] as [string, string, number, string][]) {
       const bad = makeStore({ submitRevision: vi.fn(async (): Promise<unknown> => { throw new WorkDbError(code, msg); }) });

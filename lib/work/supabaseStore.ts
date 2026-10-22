@@ -91,10 +91,10 @@ export function createSupabaseWorkStore(): WorkStore {
       return data;
     },
 
-    async submitRevision({ activityId, clientSubmissionId, text, marks, assistance, provenance }) {
+    async submitRevision({ activityId, clientSubmissionId, feedbackId, text, marks, assistance, provenance }) {
       const db = await createUserClient();
       const { data, error } = await db.rpc("eng_submit_revision", {
-        p_activity: activityId, p_client_id: clientSubmissionId, p_text: text, p_marks: marks, p_assistance: assistance, p_provenance: provenance,
+        p_activity: activityId, p_client_id: clientSubmissionId, p_text: text, p_marks: marks, p_assistance: assistance, p_provenance: provenance, p_feedback: feedbackId,
       });
       if (error) dbErrorWithTag("eng_submit_revision", error);
       return data;

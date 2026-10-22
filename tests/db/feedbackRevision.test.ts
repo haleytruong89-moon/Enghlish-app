@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CONTENT_DIR } from "../../lib/config/content";
 import type { InquiryTemplate } from "../../lib/config/schemas";
 import { addDays, daysBetween, todayVn } from "../../lib/inquiries/dates";
+import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { SCORE_WORD_SAMPLES } from "../unit/fixtures/scoreWords";
 import { as, asCommit, createAuthUser, createTestDb, migrate, rowsAs, seed, type Seeded, type TestDb } from "./helpers";
 
@@ -63,9 +65,15 @@ describe("S6 feedback + revision (migration 0021)", () => {
     svc<Written>("select english.eng_write_feedback($1, $2, $3::jsonb, $4, $5, $6, $7) as r", [
       attempt, o.praise ?? "Con giải thích rõ vì sao núi lửa phun.", JSON.stringify(o.items ?? ITEMS), o.requires ?? true, o.supersedes ?? null, by, o.clientId ?? randomUUID(),
     ]);
-  const reviseAs = (user: string, activity: string, text: string, marks: unknown, o: { clientId?: string; assistance?: string[] } = {}) =>
-    student<Receipt>(user, "select english.eng_submit_revision($1, $2, $3, $4::jsonb, $5::text[], 'in_app') as r", [
-      activity, o.clientId ?? randomUUID(), text, JSON.stringify(marks), o.assistance ?? ["none"],
+  /** The feedback the child is answering on a revision step: the live one asking for a revision (what the page shows). */
+  const liveFeedbackOf = async (activity: string) =>
+    (await q1<{ id: string }>(
+      `select f.id from english.feedback_notes f
+       where f.revision_activity_id = $1 and f.kind = 'feedback' and f.requires_revision and english.eng_feedback_is_live(f.id)
+       order by f.round desc, f.created_at desc limit 1`, [activity]))[0]?.id ?? null;
+  const reviseAs = async (user: string, activity: string, text: string, marks: unknown, o: { clientId?: string; assistance?: string[]; feedback?: string | null } = {}) =>
+    student<Receipt>(user, "select english.eng_submit_revision($1, $2, $3, $4::jsonb, $5::text[], 'in_app', $6) as r", [
+      activity, o.clientId ?? randomUUID(), text, JSON.stringify(marks), o.assistance ?? ["none"], o.feedback === undefined ? await liveFeedbackOf(activity) : o.feedback,
     ]);
   const finish = (by: string, attempt: string, o: { action?: string; checks?: unknown; closing?: string | null; praise?: string | null; items?: unknown; clientId?: string } = {}) =>
     svc<{ closing_id: string | null; feedback_id: string | null; replayed: boolean }>(
@@ -356,6 +364,49 @@ describe("S6 feedback + revision (migration 0021)", () => {
       noLeaks(page);
     });
 
+    it("S2: a submit made on a stale page is refused (feedback_changed); the page carries the feedback id; no feedback id is refused", async () => {
+      const x = await assign("an", "A-W1-VOLCANOES", dueReleasingAll("A-W1-VOLCANOES"));
+      const work = (await submitText(U().studentAn, await step(x, 6), TEXT_A)).attempt_id;
+      const first = await write(M().tutorAn, work);
+      const act = first.revision_activity_id!;
+      expect((await studentRead<MyRevision & { feedback_id: string }>(U().studentAn, "select english.eng_my_revision($1) as r", [act])).feedback_id).toBe(first.id);
+      // the tutor edits before the child has started: the child's old page still answers the first feedback
+      const second = await write(M().tutorAn, work, { supersedes: first.id, items: [{ text: "Chỉ một góp ý thôi." }] });
+      const marks = { "1": { choice: "changed" }, "2": { choice: "changed" } };
+      await fail(reviseAs(U().studentAn, act, `${TEXT_A} In short, it is violent.`, marks, { feedback: first.id }), "23514", /\(feedback_changed\)/);
+      await fail(reviseAs(U().studentAn, act, `${TEXT_A} In short, it is violent.`, marks, { feedback: null }), "22004");
+      expect(await n("select count(*)::int as n from english.attempts where revises_attempt_id = $1", [work])).toBe(0);
+      const ok = await reviseAs(U().studentAn, act, `${TEXT_A} In short, it is violent.`, { "1": { choice: "changed" } }, { feedback: second.id });
+      expect(ok.replayed).toBe(false);
+      expect(await n("select count(*)::int as n from english.revision_marks where attempt_id = $1 and feedback_id = $2", [ok.attempt_id, second.id])).toBe(1);
+    });
+
+    it("S2: a tutor edit waits for a submit in flight on the same revision step, then sees that the child started (no stale revision)", async () => {
+      const x = await assign("an", "A-W1-VOLCANOES", dueReleasingAll("A-W1-VOLCANOES"));
+      const work = (await submitText(U().studentAn, await step(x, 6), TEXT_A)).attempt_id;
+      const first = await write(M().tutorAn, work);
+      const act = first.revision_activity_id!;
+      const other = new Client(pgConfigFromUrl(db.url));
+      await other.connect();
+      try {
+        // another session holds the revision step (as eng_save_revision_draft / eng_submit_revision do) and is about to save a first draft
+        await other.query("begin");
+        await other.query("select 1 from english.activity_instances where id = $1 for no key update", [act]);
+        let settled = false;
+        const edit = write(M().tutorAn, work, { supersedes: first.id, items: [{ text: "Chỉ một góp ý thôi." }] }).then(
+          () => { settled = true; return null; }, (e: unknown) => { settled = true; return e as { code?: string; message?: string }; });
+        await new Promise((r) => setTimeout(r, 400));
+        expect(settled, "the edit must wait for the lock on the revision step").toBe(false);
+        await other.query("insert into english.working_drafts(activity_instance_id, learner_id, content) values ($1, $2, '{}'::jsonb)", [act, s.learners.an]);
+        await other.query("commit");
+        const err = await edit;
+        expect(err?.code, err?.message).toBe("23514");
+        expect(err?.message).toMatch(/\(revision_started\)/);
+      } finally {
+        await other.end();
+      }
+    });
+
     it("G4: a 'Chỉ góp ý' note is read on its own activity (no expiry, no leaf, no author); a revision request and other children get nothing", async () => {
       const x = await assign("an", "A-W1-VOLCANOES", dueReleasingAll("A-W1-VOLCANOES"));
       const act = await step(x, 6);
@@ -445,6 +496,25 @@ describe("S6 feedback + revision (migration 0021)", () => {
       const view = await svc<View>("select english.eng_revision_view($1, $2) as r", [attempt, M().tutorAn]);
       expect(view).toMatchObject({ round: 1, before: { text: TEXT_A }, can_finish: false, can_open_round2: false, closing: { note: "Bài sửa rõ hơn nhiều!" } });
       expect(view.checks).toHaveLength(2);
+    });
+
+    it("S2: finish and the before-after view follow the feedback the child answered (the marks), even if another row is live", async () => {
+      const { root, attempt } = await revised();
+      const [f1] = await q1<{ id: string; revision_activity_id: string }>("select id, revision_activity_id from english.feedback_notes where source_attempt_id = $1 and kind = 'feedback'", [root]);
+      // a row that took over without the child answering it (what a lost race would leave behind): one item only, live
+      const [f2] = await q1<{ id: string }>(
+        `insert into english.feedback_notes(learner_id, source_attempt_id, root_attempt_id, round, kind, praise, items, requires_revision, revision_activity_id, supersedes_id, author_member, author_role, client_id)
+         values ($1, $2, $2, 1, 'feedback', 'Con viết rõ ý.', '[{"n":1,"text":"Chỉ một góp ý."}]'::jsonb, true, $3, $4, $5, 'tutor', $6) returning id`,
+        [s.learners.an, root, f1!.revision_activity_id, f1!.id, M().tutorAn, randomUUID()]);
+      expect((await q1<{ ok: boolean }>("select english.eng_feedback_is_live($1) as ok", [f2!.id]))[0]?.ok).toBe(true);
+      const view = await svc<View & { feedback: { id: string; items: unknown[] }; round: number }>("select english.eng_revision_view($1, $2) as r", [attempt, M().tutorAn]);
+      expect(view.feedback.id).toBe(f1!.id);
+      expect(view.feedback.items).toHaveLength(2);
+      expect((await q1<{ r: number }>("select english.eng_revision_round($1) as r", [attempt]))[0]?.r).toBe(1);
+      // two verdicts (one per item the child answered) close it; with the live row (one item) they would be refused
+      const done = await finish(M().tutorAn, attempt);
+      expect(done.closing_id).toBeTruthy();
+      expect(await n("select count(*)::int as n from english.revision_checks where attempt_id = $1", [attempt])).toBe(2);
     });
 
     it("the child then sees 'đã xem' and the closing note - still no verdict", async () => {

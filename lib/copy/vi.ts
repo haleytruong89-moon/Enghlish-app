@@ -1403,6 +1403,8 @@ export const revisionCopy = {
   } as Record<string, string>,
   submitError: "Chưa nộp được. Bạn thử lại nhé — bài vẫn đang được lưu.",
   submitConflict: "Bài sửa này đã được nộp rồi. Bạn về trang chủ để xem.",
+  feedbackChanged: `${tutorHonorificCap} vừa sửa góp ý — tải lại trang để xem bản mới.`,
+  reload: "Tải lại trang",
 } as const;
 
 /** "Bài sửa lại" (before–after) and "Bài đã sửa" (tutor / parent). */

@@ -49,7 +49,7 @@ export interface WorkStore {
   /** english.eng_save_revision_draft as the signed-in student. */
   saveRevisionDraft(args: { activityId: string; content: unknown; baseRevision: number | null }): Promise<unknown>;
   /** english.eng_submit_revision as the signed-in student. */
-  submitRevision(args: { activityId: string; clientSubmissionId: string; text: string; marks: unknown; assistance: string[]; provenance: string }): Promise<unknown>;
+  submitRevision(args: { activityId: string; clientSubmissionId: string; feedbackId: string; text: string; marks: unknown; assistance: string[]; provenance: string }): Promise<unknown>;
   /** english.eng_my_activity(id) as the signed-in user; null = not theirs / not released yet. */
   getActivity(activityId: string): Promise<unknown | null>;
   /** english.eng_my_step_sources(id) as the signed-in user. */
@@ -199,6 +199,7 @@ const REVISION_TAGS: [RegExp, 400 | 409, string][] = [
   [/\(unchanged_needs_reason\)/, 400, "unchanged_needs_reason"],
   [/\(reason_too_long\)/, 400, "reason_too_long"],
   [/\(revision_not_open\)/, 409, "revision_not_open"],
+  [/\(feedback_changed\)/, 409, "feedback_changed"],
   [/\(already_submitted\)/, 409, "conflict"],
 ];
 function fromRevisionWorkError(err: unknown): HandlerResult {
@@ -244,7 +245,7 @@ export async function handleSubmitRevision(deps: HandlerDeps, activityId: string
   if (!parsed.success) return fail(400, "invalid_body");
   try {
     const raw = await deps.store.submitRevision({
-      activityId, clientSubmissionId: parsed.data.client_submission_id, text: parsed.data.text, marks: parsed.data.marks,
+      activityId, clientSubmissionId: parsed.data.client_submission_id, feedbackId: parsed.data.feedback_id, text: parsed.data.text, marks: parsed.data.marks,
       assistance: parsed.data.assistance, provenance: parsed.data.provenance,
     });
     const receipt = toReceipt(raw);

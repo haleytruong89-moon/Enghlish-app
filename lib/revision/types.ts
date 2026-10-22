@@ -112,6 +112,8 @@ export type RevisionDraftContent = { text?: string; marks?: Record<string, MarkD
 
 export type MyRevisionView = {
   activityId: string;
+  /** The feedback shown on this page; sent back with the submit (S2). */
+  feedbackId: string;
   instanceId: string;
   titleVi: string;
   bigQuestionEn: string | null;
