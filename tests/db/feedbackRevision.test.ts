@@ -268,5 +268,115 @@ describe("S6 feedback + revision (migration 0021)", () => {
     });
   });
 
-  // (Tasks 3 and 4 add their sections here)
+  describe("3. the child's side: read, draft, submit", () => {
+    const STUDENT_FORBIDDEN = ["score", "verdict", "observation", "decision", "leaf", "ref_key", "target", "author", "rationale"];
+    const noLeaks = (v: unknown) => {
+      const text = JSON.stringify(v);
+      for (const bad of STUDENT_FORBIDDEN) expect(text, bad).not.toContain(bad);
+    };
+    type MyRevision = { state: string; round: number; praise: string; items: { n: number; text: string; excerpt: string | null }[]; old_text: string; reason_required: boolean; draft: unknown };
+    type MyFeedback = { items: { feedback_id: string; activity_id: string; state: string; items_count: number; closing_note: string | null }[] };
+
+    let root: string;
+    let rev: string; // An's own revision step (A-W1 step 6 → 100x)
+    let revised: string; // the revision attempt
+    beforeAll(async () => {
+      // a fresh instance: the root is attempt 1 of its step, so the revision is attempt 2 of the family
+      const fresh = await assign("an", "A-W1-VOLCANOES", dueReleasingAll("A-W1-VOLCANOES"));
+      root = (await submitText(U().studentAn, await step(fresh, 6), TEXT_A)).attempt_id;
+      const [leaf] = await q1<{ kind: string; ref_key: string }>(
+        "select kind, ref_key from english.skill_leaves where map_id = english.eng_current_skill_map() and track_id = 'A' order by group_key, ord limit 1");
+      rev = (await write(M().tutorAn, root, { items: [{ ...ITEMS[0]!, leaf }, ITEMS[1]!] })).revision_activity_id!;
+    });
+
+    it("the child reads the feedback (praise, items, excerpt, old text) but never a leaf, a score or who scored; others read nothing", async () => {
+      const home = await studentRead<MyFeedback>(U().studentAn, "select english.eng_my_feedback() as r");
+      expect(home.items.find((i) => i.activity_id === rev)).toMatchObject({ state: "todo", items_count: 2 });
+      noLeaks(home);
+      const page = await studentRead<MyRevision>(U().studentAn, "select english.eng_my_revision($1) as r", [rev]);
+      expect(page).toMatchObject({ state: "todo", round: 1, old_text: TEXT_A, reason_required: false, draft: null });
+      expect(page.items).toEqual([{ n: 1, text: ITEMS[0]!.text, excerpt: ITEMS[0]!.excerpt }, { n: 2, text: ITEMS[1]!.text, excerpt: null }]);
+      noLeaks(page);
+      expect(await studentRead(U().studentNguyen, "select english.eng_my_revision($1) as r", [rev])).toBeNull();
+      expect(await studentRead(U().tutorAn, "select english.eng_my_revision($1) as r", [rev])).toBeNull();
+      expect(await studentRead<MyFeedback>(U().parent, "select english.eng_my_feedback() as r")).toEqual({ items: [] });
+      // S4 still sees the step as "not in the app"
+      expect(await studentRead<{ supported: boolean }>(U().studentAn, "select english.eng_my_activity($1) as r", [rev])).toMatchObject({ supported: false });
+      // service_role may not call the child's functions
+      await fail(svc("select english.eng_my_feedback() as r"), "42501");
+    });
+
+    it("drafts: only {text, marks, pasted, assistance}, saved on the revision step, with the other-tab warning", async () => {
+      await fail(student(U().studentAn, "select english.eng_save_revision_draft($1, $2::jsonb) as r", [rev, JSON.stringify({ marks: { "4": { choice: "kept" } } })]), "22023");
+      await fail(student(U().studentAn, "select english.eng_save_revision_draft($1, $2::jsonb) as r", [rev, JSON.stringify({ answers: {} })]), "22023");
+      const first = await student<{ revision: number }>(U().studentAn, "select english.eng_save_revision_draft($1, $2::jsonb, 0) as r",
+        [rev, JSON.stringify({ text: TEXT_A, marks: { "1": { choice: "changed" } } })]);
+      expect(first.revision).toBe(1);
+      const second = await student<{ revision: number; other_tab_changed: boolean }>(U().studentAn, "select english.eng_save_revision_draft($1, $2::jsonb, 0) as r",
+        [rev, JSON.stringify({ text: `${TEXT_A} More.` })]);
+      expect(second).toMatchObject({ revision: 2, other_tab_changed: true });
+      expect((await studentRead<MyRevision>(U().studentAn, "select english.eng_my_revision($1) as r", [rev])).draft).toMatchObject({ revision: 2 });
+      await fail(student(U().studentNguyen, "select english.eng_save_revision_draft($1, '{}'::jsonb) as r", [rev]), "P0002");
+    });
+
+    it("submit: every item marked; an unchanged text needs 'kept' with a reason; then one revision, never first, in the root's family", async () => {
+      const NEW = `${TEXT_A} As a result, the eruption is violent.`;
+      await fail(reviseAs(U().studentAn, rev, NEW, { "1": { choice: "changed" } }), "23514", /\(marks_incomplete\)/);
+      await fail(reviseAs(U().studentAn, rev, TEXT_A, { "1": { choice: "changed" }, "2": { choice: "kept", reason: "Mình thấy đủ rồi" } }), "23514", /\(unchanged_needs_reason\)/);
+      const marks = { "1": { choice: "changed", reason: "Mình đã thêm câu kết" }, "2": { choice: "changed" } };
+      const receipt = await reviseAs(U().studentAn, rev, NEW, marks, { clientId: "a1111111-1111-4111-8111-111111111111" });
+      expect(receipt).toMatchObject({ attempt_no: 2, replayed: false });
+      revised = receipt.attempt_id;
+      expect(await reviseAs(U().studentAn, rev, NEW, marks, { clientId: "a1111111-1111-4111-8111-111111111111" })).toMatchObject({ attempt_id: revised, replayed: true });
+      await fail(reviseAs(U().studentAn, rev, `${NEW}!`, marks, { clientId: "a1111111-1111-4111-8111-111111111111" }), "23505");
+      await fail(reviseAs(U().studentAn, rev, NEW, marks), "23505", /\(already_submitted\)/);
+      await fail(student(U().studentAn, "select english.eng_save_revision_draft($1, '{}'::jsonb) as r", [rev]), "22023", /\(revision_not_open\)/);
+
+      const [att] = await q1<Record<string, unknown>>(
+        "select mode, attempt_no, parent_attempt_id, learning_family_id, revises_attempt_id from english.attempts where id = $1", [revised]);
+      const [r] = await q1<{ learning_family_id: string }>("select learning_family_id from english.attempts where id = $1", [root]);
+      expect(att).toEqual({ mode: "REVISION", attempt_no: 2, parent_attempt_id: root, learning_family_id: r!.learning_family_id, revises_attempt_id: root });
+      const [ep] = await q1<{ is_first_attempt: boolean; facets: Record<string, boolean> }>("select is_first_attempt, facets from english.episodes where attempt_id = $1", [revised]);
+      expect(ep).toMatchObject({ is_first_attempt: false, facets: { revision: true, checkpoint: false } });
+      expect(await q1("select item_n, choice, reason from english.revision_marks where attempt_id = $1 order by item_n", [revised])).toEqual([
+        { item_n: 1, choice: "changed", reason: "Mình đã thêm câu kết" }, { item_n: 2, choice: "changed", reason: null },
+      ]);
+      const help = await q1<{ kind: string; verification: string; affects_target_keys: string[]; note: string; recorded_by: string }>(
+        "select kind, verification, affects_target_keys, note, recorded_by from english.assistance_events where attempt_id = $1 and kind = 'tutor_prompt'", [revised]);
+      expect(help).toEqual([{ kind: "tutor_prompt", verification: "observed", affects_target_keys: ["A-A3-REDRAFT", "A-L3-CAUSE-W", "A-L2-CHUNKS"], note: "Góp ý vòng 1", recorded_by: M().tutorAn }]);
+      expect(await q1("select distinct source from english.exposure_log where attempt_id = $1", [revised])).toEqual([{ source: "retry" }]);
+      expect(await n("select count(*)::int as n from english.working_drafts where activity_instance_id = $1", [rev])).toBe(0);
+      // the S5 scoring path sees the step's A3 skill first, then the root's skills
+      const targets = await q1<{ target_key: string; scorable: boolean }>("select target_key, scorable from english.eng_episode_targets($1) order by ord", [await episodeOf(revised)]);
+      expect(targets).toEqual([
+        { target_key: "A-A3-REDRAFT", scorable: true }, { target_key: "A-L3-CAUSE-W", scorable: true }, { target_key: "A-L2-CHUNKS", scorable: true },
+      ]);
+      // the child sees "submitted", nothing more
+      const page = await studentRead<MyRevision>(U().studentAn, "select english.eng_my_revision($1) as r", [rev]);
+      expect(page).toMatchObject({ state: "submitted", draft: null });
+      noLeaks(page);
+    });
+
+    it("Track B requires a reason for every item (track setting, no `if track`)", async () => {
+      // a fresh B-W1 instance: step 7 of b1 is a one-time check that Task 2's test already used
+      const bx = await assign("nguyen", "B-W1-HOMEWORK", dueReleasingAll("B-W1-HOMEWORK"));
+      const wb = (await submitText(U().studentNguyen, await step(bx, 7), TEXT_B)).attempt_id;
+      const rb = (await write(M().tutorNguyen, wb, { items: [{ text: "Nêu rõ hơn lý do thứ hai." }] })).revision_activity_id!;
+      expect((await studentRead<MyRevision>(U().studentNguyen, "select english.eng_my_revision($1) as r", [rb])).reason_required).toBe(true);
+      await fail(reviseAs(U().studentNguyen, rb, `${TEXT_B} Sleep matters most.`, { "1": { choice: "changed" } }), "23514", /\(reason_required\)/);
+      expect((await reviseAs(U().studentNguyen, rb, `${TEXT_B} Sleep matters most.`, { "1": { choice: "changed", reason: "I added why sleep matters." } })).replayed).toBe(false);
+    });
+
+    it("D14: the revision of an in-session test stays tutor-only for scoring and checking", async () => {
+      const x = await assign("an", "A-W1-VOLCANOES", dueReleasingAll("A-W1-VOLCANOES"));
+      const check = (await submitText(U().studentAn, await step(x, 11), TEXT_A)).attempt_id;
+      const r = await write(M().tutorAn, check, { items: [{ text: "Thêm câu kết." }] });
+      const done = await reviseAs(U().studentAn, r.revision_activity_id!, `${TEXT_A} In the end, the lava cools.`, { "1": { choice: "changed" } });
+      const ep = await episodeOf(done.attempt_id);
+      expect((await q1<{ r: string | null }>("select english.eng_review_role($1, $2) as r", [ep, M().parent]))[0]?.r).toBeNull();
+      expect((await q1<{ r: string | null }>("select english.eng_review_role($1, $2) as r", [ep, M().tutorAn]))[0]?.r).toBe("tutor");
+    });
+  });
+
+  // (Task 4 adds its section here)
 });

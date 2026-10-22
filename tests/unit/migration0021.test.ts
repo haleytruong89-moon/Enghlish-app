@@ -103,5 +103,26 @@ describe("0021_feedback_revision.sql", () => {
     }
   });
 
-  // (Tasks 3 and 4 add their tests here)
+  it("the child's functions are for authenticated only and return no score, observation, decision, verdict or leaf", () => {
+    for (const sig of ["eng_my_feedback()", "eng_my_revision(uuid)", "eng_save_revision_draft(uuid, jsonb, int)", "eng_submit_revision(uuid, uuid, text, jsonb, text[], text)"]) {
+      expect(code).toContain(`revoke execute on function english.${sig} from public, anon, service_role;`);
+      expect(code).toContain(`grant execute on function english.${sig} to authenticated;`);
+    }
+    for (const fn of ["eng_my_feedback", "eng_my_revision"]) {
+      const body = fnText(sql, fn);
+      for (const bad of ["observations", "validation_decisions", "revision_checks", "'leaf'", "score"]) expect(body, `${fn}: ${bad}`).not.toContain(bad);
+      expect(body).toContain("m.user_id = auth.uid() and m.role = 'student'");
+    }
+  });
+
+  it("a submitted revision is never first, stays in the root's family, follows the revised work, and is marked as supported", () => {
+    const body = fnText(sql, "eng_submit_revision");
+    expect(body).toContain("values (v_id, p_activity, v_act.learner_id, v_no, v_src.id, v_src.learning_family_id, 'REVISION', p_provenance, v_assist, v_at, v_hash, p_client_id, v_src.id);");
+    expect(body).toContain("values (v_id, v_act.learner_id, false, v_context, false,");
+    expect(body).toContain("'revision', true");
+    expect(body).toContain("'tutor_prompt', null, v_targets, 'observed'");
+    expect(body).toContain("english.eng_track_setting(v_l.track_id, 'revision_reason_required')");
+  });
+
+  // (Task 4 adds its tests here)
 });

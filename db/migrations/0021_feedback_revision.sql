@@ -635,6 +635,387 @@ $$;
 revoke execute on function english.eng_write_feedback(uuid, text, jsonb, boolean, uuid, uuid, text) from public, anon, authenticated;
 grant execute on function english.eng_write_feedback(uuid, text, jsonb, boolean, uuid, uuid, text) to service_role;
 
+-- 7. Phía em: đọc góp ý, nháp, nộp bài sửa ------------------------------------------------------------------------------------------
+-- Đánh dấu của em cho đúng các góp ý của vòng: {"1": {choice, reason?}, …} → [{n, choice, reason}] theo thứ tự góp ý.
+-- Lý do bắt buộc khi track yêu cầu (Q3); bài không đổi chữ nào → mọi góp ý phải là "Giữ nguyên" có lý do (spec §2.4).
+create or replace function english.eng_clean_revision_marks(p_marks jsonb, p_items jsonb, p_reason_required boolean, p_unchanged boolean) returns jsonb
+language plpgsql immutable set search_path = ''
+as $$
+declare
+  v_item jsonb;
+  v_n int;
+  v_m jsonb;
+  v_choice text;
+  v_reason text;
+  v_out jsonb := '[]'::jsonb;
+begin
+  if p_marks is null or pg_catalog.jsonb_typeof(p_marks) <> 'object'
+     or exists (select 1 from pg_catalog.jsonb_object_keys(p_marks) k
+                where not exists (select 1 from pg_catalog.jsonb_array_elements(p_items) x where x ->> 'n' = k)) then
+    raise exception 'revision: one mark per feedback item (marks_incomplete)' using errcode = '23514';
+  end if;
+  for v_item in select x from pg_catalog.jsonb_array_elements(p_items) x order by (x ->> 'n')::int loop
+    v_n := (v_item ->> 'n')::int;
+    v_m := p_marks -> (v_n::text);
+    if v_m is null or pg_catalog.jsonb_typeof(v_m) <> 'object'
+       or exists (select 1 from pg_catalog.jsonb_object_keys(v_m) k where k not in ('choice', 'reason'))
+       or coalesce(v_m ->> 'choice', '') not in ('changed', 'kept') then
+      raise exception 'revision: mark every item "changed" or "kept" (marks_incomplete)' using errcode = '23514';
+    end if;
+    if v_m ? 'reason' and pg_catalog.jsonb_typeof(v_m -> 'reason') not in ('string', 'null') then
+      raise exception 'revision: a reason is text (marks_incomplete)' using errcode = '23514';
+    end if;
+    v_choice := v_m ->> 'choice';
+    v_reason := nullif(pg_catalog.btrim(coalesce(v_m ->> 'reason', '')), '');
+    if v_reason is not null and pg_catalog.length(v_reason) > 300 then
+      raise exception 'revision: a reason is at most 300 characters (reason_too_long)' using errcode = '22023';
+    end if;
+    if p_reason_required and v_reason is null then
+      raise exception 'revision: a reason is needed for every item (reason_required)' using errcode = '23514';
+    end if;
+    if p_unchanged and (v_choice <> 'kept' or v_reason is null) then
+      raise exception 'revision: the text did not change, so every item is "kept" with a reason (unchanged_needs_reason)' using errcode = '23514';
+    end if;
+    v_out := v_out || pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object('n', v_n, 'choice', v_choice, 'reason', v_reason));
+  end loop;
+  return v_out;
+end
+$$;
+revoke execute on function english.eng_clean_revision_marks(jsonb, jsonb, boolean, boolean) from public, anon, authenticated, service_role;
+
+-- Trang chủ của em: các góp ý còn hiệu lực. Chỉ câu khen / góp ý / trích đoạn (với "Chỉ góp ý"), số góp ý, trạng thái và nhận xét kết.
+-- KHÔNG điểm, quan sát, quyết định, đánh giá từng góp ý, lá kỹ năng. "Đã xem" và "Chỉ góp ý" giữ 14 ngày (D10, D12).
+create or replace function english.eng_my_feedback() returns jsonb
+language sql stable security definer set search_path = ''
+as $$
+  with me as (
+    select l.id from english.members m join english.learners l on l.member_id = m.id
+    where m.user_id = auth.uid() and m.role = 'student'
+  ),
+  fb as (
+    select f.id, f.created_at, f.round, f.requires_revision, f.praise, f.items,
+           coalesce(f.revision_activity_id, sa.activity_instance_id) as activity_id,
+           i.snapshot -> 'template' ->> 'title_vi' as title_vi,
+           rv.id as revision_id,
+           (select c.praise from english.feedback_notes c where c.source_attempt_id = rv.id and c.kind = 'closing') as closing_note,
+           (select min(x.created_at) from english.feedback_notes x where x.source_attempt_id = rv.id) as seen_at
+    from english.feedback_notes f
+    join me on me.id = f.learner_id
+    join english.attempts sa on sa.id = f.source_attempt_id
+    join english.activity_instances a on a.id = sa.activity_instance_id
+    join english.inquiry_instances i on i.id = a.inquiry_instance_id
+    left join lateral (
+      select t.id from english.attempts t where t.revises_attempt_id = f.source_attempt_id order by t.submitted_at limit 1) rv on true
+    where f.kind = 'feedback' and english.eng_feedback_is_live(f.id)
+  ),
+  st as (
+    select fb.*, case when not fb.requires_revision then 'note'
+                      when fb.revision_id is null then 'todo'
+                      when fb.seen_at is null then 'submitted'
+                      else 'seen' end as state
+    from fb
+  )
+  select pg_catalog.jsonb_build_object('items', coalesce(pg_catalog.jsonb_agg(
+    pg_catalog.jsonb_build_object(
+      'feedback_id', r.id,
+      'activity_id', r.activity_id,
+      'title_vi', r.title_vi,
+      'round', r.round,
+      'items_count', pg_catalog.jsonb_array_length(r.items),
+      'state', r.state,
+      'seen_at', r.seen_at,
+      'closing_note', r.closing_note,
+      'praise', case when r.state = 'note' then r.praise end,
+      'notes', case when r.state = 'note' then (
+        select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('n', (x ->> 'n')::int, 'text', x ->> 'text', 'excerpt', x ->> 'excerpt')
+                                    order by (x ->> 'n')::int)
+        from pg_catalog.jsonb_array_elements(r.items) x) end)
+    order by case r.state when 'todo' then 0 when 'submitted' then 1 else 2 end, r.created_at desc), '[]'::jsonb))
+  from st r
+  where r.state in ('todo', 'submitted')
+     or coalesce(r.seen_at, case when r.state = 'note' then r.created_at end) >= pg_catalog.now() - pg_catalog.make_interval(days => 14)
+$$;
+
+-- Màn sửa bài của em (một bước REVISION đã mở, có góp ý còn hiệu lực yêu cầu sửa): câu khen, góp ý đánh số + trích đoạn, bài cũ của chính em,
+-- lý do có bắt buộc không, trạng thái, nhận xét kết, bản nháp. NULL nếu không phải của em / chưa mở / không có góp ý.
+create or replace function english.eng_my_revision(p_activity uuid) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_act english.activity_instances%rowtype;
+  v_f english.feedback_notes%rowtype;
+  v_inst english.inquiry_instances%rowtype;
+  v_old text;
+  v_sub english.attempts%rowtype;
+  v_draft jsonb;
+  v_seen timestamptz;
+begin
+  select l.* into v_l from english.members m join english.learners l on l.member_id = m.id
+  where m.user_id = auth.uid() and m.role = 'student';
+  if not found then return null; end if;
+  select a.* into v_act from english.activity_instances a where a.id = p_activity and a.learner_id = v_l.id and a.mode = 'REVISION';
+  if not found or not english.eng_activity_released(p_activity) then return null; end if;
+  select f.* into v_f from english.feedback_notes f
+  where f.revision_activity_id = p_activity and f.kind = 'feedback' and f.requires_revision and english.eng_feedback_is_live(f.id)
+  order by f.round desc, f.created_at desc limit 1;
+  if not found then return null; end if;
+  select * into v_inst from english.inquiry_instances i where i.id = v_act.inquiry_instance_id;
+  select av.content ->> 'text' into v_old from english.artifact_versions av where av.attempt_id = v_f.source_attempt_id order by av.version limit 1;
+  select t.* into v_sub from english.attempts t where t.revises_attempt_id = v_f.source_attempt_id order by t.submitted_at limit 1;
+  if v_sub.id is null then
+    select pg_catalog.jsonb_build_object('content', d.content, 'revision', d.revision, 'updated_at', d.updated_at) into v_draft
+    from english.working_drafts d where d.activity_instance_id = p_activity and d.learner_id = v_l.id;
+  else
+    select min(x.created_at) into v_seen from english.feedback_notes x where x.source_attempt_id = v_sub.id;
+  end if;
+  return pg_catalog.jsonb_build_object(
+    'activity_id', v_act.id,
+    'instance_id', v_inst.id,
+    'title_vi', v_inst.snapshot -> 'template' ->> 'title_vi',
+    'big_question_en', v_inst.snapshot -> 'template' ->> 'big_question_en',
+    'round', v_f.round,
+    'praise', v_f.praise,
+    'items', (select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('n', (x ->> 'n')::int, 'text', x ->> 'text', 'excerpt', x ->> 'excerpt')
+                                          order by (x ->> 'n')::int)
+              from pg_catalog.jsonb_array_elements(v_f.items) x),
+    'old_text', v_old,
+    'reason_required', coalesce(english.eng_track_setting(v_l.track_id, 'revision_reason_required') = 'true'::jsonb, false),
+    'state', case when v_sub.id is null then 'todo' when v_seen is null then 'submitted' else 'seen' end,
+    'submitted_at', v_sub.submitted_at,
+    'closing_note', (select c.praise from english.feedback_notes c where c.source_attempt_id = v_sub.id and c.kind = 'closing'),
+    'draft', v_draft);
+end
+$$;
+
+-- Nháp tự lưu của bài sửa (cùng bảng working_drafts, cùng cảnh báo "tab khác vừa lưu" như eng_save_draft). Chỉ khi bước sửa đang mở.
+create or replace function english.eng_save_revision_draft(p_activity uuid, p_content jsonb, p_base_revision int default null) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_member uuid;
+  v_role text;
+  v_act english.activity_instances%rowtype;
+  v_cur int;
+  v_rev int;
+  v_at timestamptz;
+begin
+  if v_uid is null then
+    raise exception 'eng_save_revision_draft: not signed in' using errcode = '42501';
+  end if;
+  select m.id, m.role into v_member, v_role from english.members m where m.user_id = v_uid;
+  if v_member is null then
+    raise exception 'eng_save_revision_draft: activity not found' using errcode = 'P0002';
+  end if;
+  if v_role <> 'student' then
+    raise exception 'eng_save_revision_draft: only the learner may save a draft' using errcode = '42501';
+  end if;
+  select a.* into v_act from english.activity_instances a join english.learners l on l.id = a.learner_id
+  where a.id = p_activity and l.member_id = v_member and a.mode = 'REVISION'
+  for no key update of a;
+  if not found or not english.eng_activity_released(p_activity) then
+    raise exception 'eng_save_revision_draft: activity not found' using errcode = 'P0002';
+  end if;
+  if not english.eng_revision_open(p_activity) then
+    raise exception 'eng_save_revision_draft: there is no revision to do on this step (revision_not_open)' using errcode = '22023';
+  end if;
+
+  if p_content is null or pg_catalog.jsonb_typeof(p_content) <> 'object' or pg_catalog.length(p_content::text) > 200000
+     or exists (select 1 from pg_catalog.jsonb_object_keys(p_content) k where k not in ('text', 'marks', 'pasted', 'assistance'))
+     or (p_content ? 'text' and (pg_catalog.jsonb_typeof(p_content -> 'text') <> 'string' or pg_catalog.length(p_content ->> 'text') > 20000))
+     or (p_content ? 'pasted' and pg_catalog.jsonb_typeof(p_content -> 'pasted') <> 'boolean')
+     or (p_content ? 'assistance' and (pg_catalog.jsonb_typeof(p_content -> 'assistance') <> 'array'
+         or exists (select 1 from pg_catalog.jsonb_array_elements(p_content -> 'assistance') x
+                    where pg_catalog.jsonb_typeof(x) <> 'string' or (x #>> '{}') not in ('none', 'notes', 'dictionary', 'asked_someone', 'ai_outside'))))
+     or (p_content ? 'marks' and (pg_catalog.jsonb_typeof(p_content -> 'marks') <> 'object'
+         or exists (select 1 from pg_catalog.jsonb_each(p_content -> 'marks') kv
+                    where kv.key !~ '^[1-3]$' or pg_catalog.jsonb_typeof(kv.value) <> 'object'
+                       or exists (select 1 from pg_catalog.jsonb_object_keys(kv.value) k2 where k2 not in ('choice', 'reason'))
+                       or (kv.value ? 'choice' and coalesce(kv.value ->> 'choice', '') not in ('changed', 'kept'))
+                       or (kv.value ? 'reason' and (pg_catalog.jsonb_typeof(kv.value -> 'reason') <> 'string'
+                                                    or pg_catalog.length(kv.value ->> 'reason') > 300))))) then
+    raise exception 'eng_save_revision_draft: the draft is {text, marks, pasted, assistance}' using errcode = '22023';
+  end if;
+
+  select d.revision into v_cur from english.working_drafts d where d.activity_instance_id = p_activity and d.learner_id = v_act.learner_id;
+  insert into english.working_drafts as d(activity_instance_id, learner_id, content, revision, updated_at)
+  values (p_activity, v_act.learner_id, p_content, 1, pg_catalog.clock_timestamp())
+  on conflict (activity_instance_id, learner_id) do update
+    set content = excluded.content, revision = d.revision + 1, updated_at = excluded.updated_at
+  returning d.revision, d.updated_at into v_rev, v_at;
+  return pg_catalog.jsonb_build_object(
+    'revision', v_rev, 'saved_at', v_at,
+    'other_tab_changed', p_base_revision is not null and v_cur is not null and p_base_revision <> v_cur);
+end
+$$;
+
+-- Nộp bài sửa (spec §2.4): một transaction tạo attempt (REVISION, không bao giờ lần đầu, lần trước = bài được góp ý, cùng gia đình học tập),
+-- nội dung, đánh dấu từng góp ý, khai báo trợ giúp, một trợ giúp "góp ý" quan sát được (bằng chứng có hỗ trợ - D5), lần luyện "retry"
+-- cho mọi kỹ năng của cặp, episode (facets.revision). Idempotent theo (em, client_submission_id) như eng_submit_attempt.
+create or replace function english.eng_submit_revision(
+  p_activity uuid,
+  p_client_id uuid,
+  p_text text,
+  p_marks jsonb,
+  p_assistance text[],
+  p_provenance text
+) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_member uuid;
+  v_role text;
+  v_act english.activity_instances%rowtype;
+  v_l english.learners%rowtype;
+  v_f english.feedback_notes%rowtype;
+  v_src english.attempts%rowtype;
+  v_src_text text;
+  v_assist text[];
+  v_marks jsonb;
+  v_content jsonb;
+  v_hash text;
+  v_existing english.attempts%rowtype;
+  v_id uuid := pg_catalog.gen_random_uuid();
+  v_no int;
+  v_at timestamptz := pg_catalog.clock_timestamp();
+  v_targets text[];
+  v_item text;
+  v_context text;
+begin
+  if v_uid is null then
+    raise exception 'eng_submit_revision: not signed in' using errcode = '42501';
+  end if;
+  if p_client_id is null then
+    raise exception 'eng_submit_revision: client_submission_id is required' using errcode = '22004';
+  end if;
+  select m.id, m.role into v_member, v_role from english.members m where m.user_id = v_uid;
+  if v_member is null then
+    raise exception 'eng_submit_revision: activity not found' using errcode = 'P0002';
+  end if;
+  if v_role <> 'student' then
+    raise exception 'eng_submit_revision: only the learner may submit a revision' using errcode = '42501';
+  end if;
+  -- Khóa dòng bước: hai lần nộp cùng lúc xếp hàng.
+  select a.* into v_act from english.activity_instances a join english.learners l on l.id = a.learner_id
+  where a.id = p_activity and l.member_id = v_member and a.mode = 'REVISION'
+  for no key update of a;
+  if not found then
+    raise exception 'eng_submit_revision: activity not found' using errcode = 'P0002';
+  end if;
+  select * into v_l from english.learners l where l.id = v_act.learner_id;
+
+  select coalesce(array_agg(distinct x order by x), '{}') into v_assist from unnest(p_assistance) as x;
+  if cardinality(v_assist) = 0
+     or not (v_assist <@ array['none', 'notes', 'dictionary', 'asked_someone', 'ai_outside'])
+     or ('none' = any (v_assist) and cardinality(v_assist) > 1) then
+    raise exception 'eng_submit_revision: declare the help used (or "none")' using errcode = '22023';
+  end if;
+  if p_provenance is null or p_provenance not in ('in_app', 'pasted') then
+    raise exception 'eng_submit_revision: provenance must be in_app or pasted' using errcode = '22023';
+  end if;
+  if p_text is null or pg_catalog.btrim(p_text) = '' or pg_catalog.length(p_text) > 20000 then
+    raise exception 'eng_submit_revision: the text must be 1 to 20000 characters' using errcode = '22023';
+  end if;
+
+  select f.* into v_f from english.feedback_notes f
+  where f.revision_activity_id = p_activity and f.kind = 'feedback' and f.requires_revision and english.eng_feedback_is_live(f.id)
+  order by f.round desc, f.created_at desc limit 1;
+  if not found or not english.eng_activity_released(p_activity) then
+    raise exception 'eng_submit_revision: there is no revision to do on this step (revision_not_open)' using errcode = '22023';
+  end if;
+  select * into v_src from english.attempts t where t.id = v_f.source_attempt_id;
+  select av.content ->> 'text' into v_src_text from english.artifact_versions av where av.attempt_id = v_src.id order by av.version limit 1;
+  v_marks := english.eng_clean_revision_marks(
+    p_marks, v_f.items,
+    coalesce(english.eng_track_setting(v_l.track_id, 'revision_reason_required') = 'true'::jsonb, false),
+    english.eng_clean_text(p_text) = english.eng_clean_text(v_src_text));
+  v_content := pg_catalog.jsonb_build_object('text', p_text);
+  v_hash := pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(
+    pg_catalog.jsonb_build_object('text', p_text, 'marks', v_marks)::text, 'UTF8')), 'hex');
+
+  -- Gửi lại: cùng biên nhận; cùng id mà khác bước / chữ / đánh dấu / khai báo / nguồn gốc → 23505.
+  select t.* into v_existing from english.attempts t where t.learner_id = v_act.learner_id and t.client_submission_id = p_client_id;
+  if found then
+    if v_existing.activity_instance_id <> p_activity or v_existing.content_hash <> v_hash
+       or v_existing.declared_assistance is distinct from v_assist or v_existing.provenance is distinct from p_provenance then
+      raise exception 'eng_submit_revision: client_submission_id was already used for a different submission' using errcode = '23505';
+    end if;
+    return pg_catalog.jsonb_build_object('attempt_id', v_existing.id, 'attempt_no', v_existing.attempt_no,
+      'submitted_at', v_existing.submitted_at, 'hash', v_existing.content_hash, 'replayed', true);
+  end if;
+  if exists (select 1 from english.attempts t where t.revises_attempt_id = v_src.id) then
+    raise exception 'eng_submit_revision: this revision was already submitted (already_submitted)' using errcode = '23505';
+  end if;
+
+  -- D6: số lần = lớn nhất trong gia đình học tập / trên bước này + 1; lần trước = bài được góp ý; gia đình của bài đó.
+  v_no := greatest(
+    (select coalesce(max(t.attempt_no), 0) from english.attempts t where t.learning_family_id = v_src.learning_family_id),
+    (select coalesce(max(t.attempt_no), 0) from english.attempts t where t.activity_instance_id = p_activity)) + 1;
+  insert into english.attempts(id, activity_instance_id, learner_id, attempt_no, parent_attempt_id, learning_family_id, mode, provenance,
+                               declared_assistance, submitted_at, content_hash, client_submission_id, revises_attempt_id)
+  values (v_id, p_activity, v_act.learner_id, v_no, v_src.id, v_src.learning_family_id, 'REVISION', p_provenance, v_assist, v_at, v_hash, p_client_id, v_src.id);
+  insert into english.artifact_versions(attempt_id, learner_id, kind, version, content, is_raw, created_by)
+  values (v_id, v_act.learner_id, 'text', 1, v_content, true, v_member);
+  insert into english.revision_marks(learner_id, attempt_id, feedback_id, item_n, choice, reason)
+  select v_act.learner_id, v_id, v_f.id, (x ->> 'n')::smallint, x ->> 'choice', x ->> 'reason'
+  from pg_catalog.jsonb_array_elements(v_marks) x;
+
+  -- Kỹ năng của cặp: của bước sửa, rồi của bài gốc (cùng thứ tự với eng_episode_targets).
+  select coalesce(array_agg(z.k order by z.o), '{}') into v_targets
+  from (
+    select s.k, min(s.o) as o from (
+      select u.k, u.o from unnest(v_act.target_ids) with ordinality as u(k, o)
+      union all
+      select u.k, 1000 + u.o
+      from english.attempts r
+      join english.activity_instances ra on ra.id = r.activity_instance_id
+      cross join lateral unnest(ra.target_ids) with ordinality as u(k, o)
+      where r.id = english.eng_revision_root(v_src.id)
+    ) s group by s.k
+  ) z;
+
+  foreach v_item in array v_assist loop
+    if v_item <> 'none' then
+      insert into english.assistance_events(learner_id, attempt_id, kind, detail, affects_target_keys, verification)
+      values (v_act.learner_id, v_id, case when v_item = 'notes' then 'notes' else 'external_declared' end, v_item, v_targets, 'declared');
+    end if;
+  end loop;
+  if p_provenance = 'pasted' then
+    insert into english.assistance_events(learner_id, attempt_id, kind, detail, affects_target_keys, verification)
+    values (v_act.learner_id, v_id, 'external_declared', 'pasted', v_targets, 'declared');
+  end if;
+  -- D5: góp ý là một trợ giúp quan sát được → bài sửa luôn là bằng chứng "có hỗ trợ", không bao giờ "tự làm được".
+  insert into english.assistance_events(learner_id, attempt_id, kind, detail, affects_target_keys, verification, note, recorded_by)
+  values (v_act.learner_id, v_id, 'tutor_prompt', null, v_targets, 'observed', pg_catalog.format('Góp ý vòng %s', v_f.round), v_f.author_member);
+
+  insert into english.exposure_log(learner_id, target_key, at, source, attempt_id)
+  select distinct v_act.learner_id, k, v_at, 'retry', v_id from unnest(v_targets) as k;
+
+  select i.snapshot -> 'template' ->> 'id' into v_context from english.inquiry_instances i where i.id = v_act.inquiry_instance_id;
+  insert into english.episodes(attempt_id, learner_id, is_first_attempt, context_id, observed_directly, facets)
+  values (v_id, v_act.learner_id, false, v_context, false,
+          pg_catalog.jsonb_build_object('baseline', false, 'checkpoint', false, 'delayed_check', false, 'transfer_check', false, 'revision', true));
+
+  delete from english.working_drafts d where d.activity_instance_id = p_activity and d.learner_id = v_act.learner_id;
+
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_uid, v_role, 'revision.submitted', v_l.family_id, v_act.learner_id,
+          pg_catalog.jsonb_build_object('attempt', v_id, 'feedback', v_f.id, 'round', v_f.round));
+  return pg_catalog.jsonb_build_object('attempt_id', v_id, 'attempt_no', v_no, 'submitted_at', v_at, 'hash', v_hash, 'replayed', false);
+end
+$$;
+
+revoke execute on function english.eng_my_feedback() from public, anon, service_role;
+revoke execute on function english.eng_my_revision(uuid) from public, anon, service_role;
+revoke execute on function english.eng_save_revision_draft(uuid, jsonb, int) from public, anon, service_role;
+revoke execute on function english.eng_submit_revision(uuid, uuid, text, jsonb, text[], text) from public, anon, service_role;
+grant execute on function english.eng_my_feedback() to authenticated;
+grant execute on function english.eng_my_revision(uuid) to authenticated;
+grant execute on function english.eng_save_revision_draft(uuid, jsonb, int) to authenticated;
+grant execute on function english.eng_submit_revision(uuid, uuid, text, jsonb, text[], text) to authenticated;
+
 -- 9. Purge: thêm feedback_notes + revision_marks + revision_checks (giữ nguyên mọi dòng của 0020; có test đối chiếu từng dòng).
 create or replace function english.eng_purge_learner(
   p_learner_id uuid,
