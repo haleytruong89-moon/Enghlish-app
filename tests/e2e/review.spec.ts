@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
-import { formatScore, notesPage, offlineForm, reviewPage, scoreLabels } from "@/lib/copy/vi";
+import { feedbackCopy, formatScore, notesPage, offlineForm, reviewPage, revisionCopy, revisionReviewCopy, scoreLabels, work } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { LEARNER_IDS, loginAs } from "./helpers";
 
@@ -393,4 +393,143 @@ test.describe.serial("S5 review", () => {
       expect(await page.locator("body").innerText()).not.toMatch(SCORE_PATTERN);
     });
   }
+});
+
+// S6: feedback → revision → before–after → "đã xem" → "Bài đã sửa". Fresh work on A-W4 step 7 (practice, repeatable) every run.
+test.describe.serial("S6 feedback and revision", () => {
+  const PLANETS = "Sao Kim";
+  const TEXT = "Venus is hotter than Mars because it has a thick atmosphere. Mars is cold because its air is thin.";
+  let workAttempt = "";
+  let revisionActivity = "";
+  let revisionAttempt = "";
+
+  /** The inbox episode of one attempt (the inbox pages through the database; oldest first). */
+  async function episodeOfAttempt(page: Page, attemptId: string): Promise<string> {
+    let after = "";
+    for (let i = 0; i < 20; i++) {
+      const res = await page.request.get(`/api/review/inbox?filter=todo&limit=100${after}`);
+      expect(res.status()).toBe(200);
+      const data = (await res.json()) as { items: { episodeId: string; attemptId: string }[]; next: { at: string; id: string } | null };
+      const hit = data.items.find((x) => x.attemptId === attemptId);
+      if (hit) return hit.episodeId;
+      if (!data.next) break;
+      after = `&after_at=${encodeURIComponent(data.next.at)}&after_id=${data.next.id}`;
+    }
+    throw new Error(`no inbox item for attempt ${attemptId}`);
+  }
+
+  test("An writes a new practice paragraph in the app (A-W4 step 7)", async ({ page }) => {
+    await loginAs(page, "studentAn");
+    const home = (await (await page.request.get("/api/student/home")).json()) as { inquiries: { titleVi: string; steps: { activityId: string; stepNo: number }[] }[] };
+    const step7 = home.inquiries.find((q) => q.titleVi.includes(PLANETS))?.steps.find((s) => s.stepNo === 7);
+    expect(step7, "A-W4-PLANETS step 7").toBeTruthy();
+    const res = await page.request.post("/api/attempts", {
+      data: { activity_id: step7!.activityId, client_submission_id: randomUUID(), content: { text: TEXT }, assistance: ["none"], provenance: "in_app" },
+    });
+    expect(res.status(), await res.text()).toBe(201);
+    workAttempt = ((await res.json()) as { receipt: { attemptId: string } }).receipt.attemptId;
+  });
+
+  test("An's tutor: a score in the praise is refused; praise + one item with an excerpt is sent; 'Sửa góp ý' works before An starts", async ({ page }) => {
+    await loginAs(page, "tutorAn");
+    await page.goto(`/review/${await episodeOfAttempt(page, workAttempt)}`);
+    const panel = page.getByTestId("feedback-panel");
+    await panel.getByTestId("feedback-praise").fill("Bài được 3/4");
+    await panel.getByTestId("feedback-item-1-text").fill("Thêm một câu kết cho đoạn văn.");
+    await panel.getByTestId("feedback-send").click();
+    await expect(panel.getByTestId("feedback-problem")).toHaveText(feedbackCopy.errors.score_words!);
+    await panel.getByTestId("feedback-praise").fill("Con so sánh rõ Sao Kim và Sao Hỏa.");
+    await panel.getByTestId("feedback-item-1-excerpt").fill("its air is thin");
+    await expect(panel.getByTestId("feedback-require")).toBeChecked();
+    const [sent] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith(`/api/review/attempts/${workAttempt}/feedback`) && r.request().method() === "POST"),
+      panel.getByTestId("feedback-send").click(),
+    ]);
+    expect(sent.status(), await sent.text()).toBe(201);
+    revisionActivity = ((await sent.json()) as { revision_activity_id: string }).revision_activity_id;
+    await expect(panel.getByTestId("feedback-live")).toContainText("Con so sánh rõ Sao Kim và Sao Hỏa.");
+
+    await panel.getByTestId("feedback-edit").click();
+    await panel.getByTestId("feedback-item-1-text").fill("Thêm một câu kết nói hành tinh nào nóng hơn.");
+    await panel.getByTestId("feedback-send").click();
+    await expect(panel.getByTestId("feedback-live")).toContainText("Thêm một câu kết nói hành tinh nào nóng hơn.");
+    await expect(panel.getByTestId("feedback-history")).toBeVisible();
+    // the server refuses a score before the database
+    const bad = await page.request.post(`/api/review/attempts/${workAttempt}/feedback`, {
+      data: { client_id: randomUUID(), praise: "Được 80%", items: [{ text: "x" }], requires_revision: false },
+    });
+    expect(bad.status()).toBe(400);
+  });
+
+  test("Nguyên's tutor cannot give feedback on An's work (404)", async ({ page }) => {
+    await loginAs(page, "tutorNguyen");
+    const res = await page.request.post(`/api/review/attempts/${workAttempt}/feedback`, {
+      data: { client_id: randomUUID(), praise: "Tốt", items: [{ text: "x" }], requires_revision: true },
+    });
+    expect(res.status()).toBe(404);
+  });
+
+  test("An: 'Sửa bài' sits above Việc tiếp theo; the page shows praise and the marked excerpt; An revises, marks the item, gets a receipt - no score", async ({ page }) => {
+    await loginAs(page, "studentAn");
+    const row = page.getByTestId(`revision-row-${revisionActivity}`);
+    await expect(row).toContainText(revisionCopy.rowTitle(""));
+    const rowsBox = await page.getByTestId("revision-rows").boundingBox();
+    const nextBox = await page.locator('[data-testid="next-task"], [data-testid="no-next-task"]').first().boundingBox();
+    expect(rowsBox!.y).toBeLessThan(nextBox!.y);
+    await row.click();
+    await expect(page).toHaveURL(new RegExp(`/activities/${revisionActivity}$`));
+    await expect(page.getByTestId("revision-praise")).toContainText("Con so sánh rõ Sao Kim và Sao Hỏa.");
+    await page.getByText(revisionCopy.showOld).click();
+    await expect(page.getByTestId("excerpt-1")).toHaveText(/its air is thin/);
+    const editor = page.getByTestId("revision-editor");
+    await expect(editor).toHaveValue(TEXT);
+    await editor.fill(`${TEXT} So Venus is the hottest planet.`);
+    await page.getByTestId("revision-mark-1-changed").check();
+    await page.getByLabel(revisionCopy.reasonLabel(false)).first().fill("Mình thêm câu kết.");
+    await page.getByLabel(work.help.none).check(); // same help declaration as S4
+    const [sent] = await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith(`/api/student/revisions/${revisionActivity}`) && r.request().method() === "POST"),
+      page.getByTestId("revision-submit").click(),
+    ]);
+    expect(sent.status(), await sent.text()).toBe(201);
+    revisionAttempt = ((await sent.json()) as { receipt: { attemptId: string } }).receipt.attemptId;
+    await expect(page.getByTestId("revision-receipt")).toContainText(revisionCopy.receiptTitle);
+    expect(await page.locator("body").innerText()).not.toMatch(SCORE_PATTERN);
+  });
+
+  test("An's tutor: 'Bài sửa lại (vòng 1)' shows before-after, Xong waits for the verdict, then closes with a note", async ({ page }) => {
+    await loginAs(page, "tutorAn");
+    await page.goto(`/review/${await episodeOfAttempt(page, revisionAttempt)}`);
+    const r = page.getByTestId("revision-review");
+    await expect(r).toContainText(revisionReviewCopy.title(1));
+    await expect(page.getByText(revisionReviewCopy.supportedTag)).toBeVisible();
+    await expect(r.getByTestId("diff-after").locator("ins")).not.toHaveCount(0);
+    await expect(r.getByTestId("revision-finish")).toBeDisabled();
+    await r.getByTestId("verdict-1-improved").click();
+    await r.getByTestId("revision-closing").fill("Câu kết rất rõ!");
+    await r.getByTestId("revision-finish").click();
+    await expect(r.getByTestId("revision-done")).toContainText("Câu kết rất rõ!");
+  });
+
+  test("An sees 'Thầy/cô đã xem bài sửa của bạn' with the note - still no score", async ({ page }) => {
+    await loginAs(page, "studentAn");
+    const box = page.getByTestId("feedback-box");
+    await expect(box).toContainText(revisionCopy.seenTitle);
+    await expect(box).toContainText("Câu kết rất rõ!");
+    expect(await page.locator("body").innerText()).not.toMatch(SCORE_PATTERN);
+  });
+
+  test("the parent reads the pair under 'Bài đã sửa' (no buttons); the child cannot open that page", async ({ page, browser }) => {
+    await loginAs(page, "parent");
+    await page.getByTestId(`revisions-link-${LEARNER_IDS.an}`).click();
+    const pair = page.getByTestId(`revision-pair-${revisionAttempt}`);
+    await expect(pair).toContainText(revisionReviewCopy.stateDone);
+    await pair.getByRole("link").click();
+    await expect(page.getByTestId("revision-review")).toBeVisible();
+    await expect(page.getByTestId("revision-finish")).toHaveCount(0);
+    const kid = await browser.newPage();
+    await loginAs(kid, "studentAn");
+    await notFound(kid, `/learners/${LEARNER_IDS.an}/revisions`);
+    await kid.close();
+  });
 });
