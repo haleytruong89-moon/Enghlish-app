@@ -16,11 +16,14 @@
   color-scheme: only light;
 }
 
-input,
-select,
-textarea {
-  background-color: #ffffff;
-  color: var(--color-ink);
+/* In the base layer so Tailwind utilities (bg-*, text-*) still win over this default. */
+@layer base {
+  input,
+  select,
+  textarea {
+    background-color: #ffffff;
+    color: var(--color-ink);
+  }
 }
 
 html,

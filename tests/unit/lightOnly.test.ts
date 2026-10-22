@@ -11,7 +11,8 @@ describe("always-light theme", () => {
   it("declares only-light on :root and keeps form controls light", () => {
     const css = read("app/globals.css");
     expect(css).toMatch(/:root\s*\{[^}]*color-scheme:\s*only light/);
-    expect(css).toMatch(/input,\s*select,\s*textarea\s*\{[^}]*background-color:\s*#ffffff/);
+    // inside @layer base, so utilities such as bg-white / bg-paper still override it
+    expect(css).toMatch(/@layer base\s*\{\s*input,\s*select,\s*textarea\s*\{[^}]*background-color:\s*#ffffff/);
   });
   it("has no dark-mode variants anywhere in app/ or components/", () => {
     // Guard: nobody adds dark: classes or a prefers-color-scheme: dark block later.
