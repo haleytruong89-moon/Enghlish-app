@@ -65,7 +65,11 @@ test.describe.serial("S5 review", () => {
     const items = page.getByTestId("inbox-list").locator('[data-testid^="inbox-item-"]');
     await expect(items.first()).toBeVisible();
     // every item is An's; the seeded one is the in-app writing practice of step 7
-    for (const text of await items.allInnerTexts()) expect(text).toContain(AN);
+    for (const text of await items.allInnerTexts()) {
+      expect(text).toContain(AN);
+      expect(text).not.toContain("`"); // B1: a stray markdown fence once rendered on every row
+    }
+    await expect(page.getByTestId("inbox-list")).not.toContainText("`");
     const seeded = items.filter({ hasText: reviewPage.stepOf(AN, WRITE_STEP) }).filter({ hasText: "Đã chấm 0/2" }).first();
     await expect(seeded).toBeVisible();
     const id = (await seeded.getAttribute("data-testid"))!.replace("inbox-item-", "");

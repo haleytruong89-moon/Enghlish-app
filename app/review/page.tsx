@@ -71,7 +71,6 @@ export default async function ReviewInboxPage({ searchParams }: { searchParams: 
                       {revisionReviewCopy.inboxLabel(i.revisionRound)}
                     </span>
                   ) : null}
-```
                 </p>
                 <p className="mt-1 text-sm text-muted">
                   {reviewPage.submittedAt(formatWhen(i.submittedAt))} · {reviewPage.attemptNo(i.attemptNo)} ·{" "}
