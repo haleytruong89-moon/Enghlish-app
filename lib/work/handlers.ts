@@ -16,6 +16,8 @@ import {
 } from "@/lib/auth/requireAccess";
 import { apiErrors } from "@/lib/copy/vi";
 import { parseReviewByDomain } from "@/lib/levels/shape";
+import { revisionDraftBodySchema, revisionSubmitBodySchema } from "@/lib/revision/schemas";
+import { parseMyFeedback, parseMyRevision } from "@/lib/revision/shape";
 import { attemptBodySchema, draftBodySchema, UUID_RE } from "./schemas";
 import { toActivityView, toDraftReceipt, toHomeView, toReceipt } from "./shape";
 
@@ -38,6 +40,14 @@ export interface WorkStore {
   getHome(): Promise<unknown>;
   /** english.eng_my_review_by_domain() as the signed-in student: labels and domain names only (SM-2). */
   getReviewByDomain(): Promise<unknown>;
+  /** english.eng_my_feedback() as the signed-in student (S6): feedback rows, no score, verdict or leaf. */
+  getMyFeedback(): Promise<unknown>;
+  /** english.eng_my_revision(id) as the signed-in student; null = not theirs / nothing to revise there. */
+  getMyRevision(activityId: string): Promise<unknown | null>;
+  /** english.eng_save_revision_draft as the signed-in student. */
+  saveRevisionDraft(args: { activityId: string; content: unknown; baseRevision: number | null }): Promise<unknown>;
+  /** english.eng_submit_revision as the signed-in student. */
+  submitRevision(args: { activityId: string; clientSubmissionId: string; text: string; marks: unknown; assistance: string[]; provenance: string }): Promise<unknown>;
   /** english.eng_my_activity(id) as the signed-in user; null = not theirs / not released yet. */
   getActivity(activityId: string): Promise<unknown | null>;
   /** english.eng_my_step_sources(id) as the signed-in user. */
@@ -117,10 +127,14 @@ async function guardActivity(
 export async function handleStudentHome(deps: HandlerDeps): Promise<HandlerResult> {
   const g = await ownLearner(deps);
   if (!g.ok) return g.result;
-  // "Việc cần ôn" by domain (SM-2) must never take the home down: unreadable or unexpected → left out (null).
-  const [raw, review] = await Promise.all([deps.store.getHome(), deps.store.getReviewByDomain().then(parseReviewByDomain).catch(() => null)]);
+  // "Việc cần ôn" (SM-2) and the feedback rows (S6) must never take the home down: unreadable or unexpected → left out (null).
+  const [raw, review, feedback] = await Promise.all([
+    deps.store.getHome(),
+    deps.store.getReviewByDomain().then(parseReviewByDomain).catch(() => null),
+    deps.store.getMyFeedback().then(parseMyFeedback).catch(() => null),
+  ]);
   const home = toHomeView(raw);
-  return { status: 200, body: { learner: { alias: g.grant.learner.alias }, ...home, review } };
+  return { status: 200, body: { learner: { alias: g.grant.learner.alias }, ...home, review, feedback } };
 }
 
 export async function handleStudentActivity(deps: HandlerDeps, activityId: string): Promise<HandlerResult> {
@@ -173,5 +187,67 @@ export async function handleSubmit(deps: HandlerDeps, rawBody: unknown): Promise
     return { status: receipt.replayed ? 200 : 201, body: { receipt } };
   } catch (err) {
     return fromDbError(err);
+  }
+}
+
+/** Database refusals of the revision functions that the form can explain (the tag is at the end of the message). */
+const REVISION_TAGS: [RegExp, 400 | 409, string][] = [
+  [/\(marks_incomplete\)/, 400, "marks_incomplete"],
+  [/\(reason_required\)/, 400, "reason_required"],
+  [/\(unchanged_needs_reason\)/, 400, "unchanged_needs_reason"],
+  [/\(reason_too_long\)/, 400, "reason_too_long"],
+  [/\(revision_not_open\)/, 409, "revision_not_open"],
+  [/\(already_submitted\)/, 409, "conflict"],
+];
+function fromRevisionWorkError(err: unknown): HandlerResult {
+  if (err instanceof WorkDbError) {
+    for (const [re, status, code] of REVISION_TAGS) if (re.test(err.message)) return fail(status, code);
+  }
+  return fromDbError(err);
+}
+
+/** GET /api/student/feedback — the child's feedback rows (S6). */
+export async function handleStudentFeedback(deps: HandlerDeps): Promise<HandlerResult> {
+  const g = await ownLearner(deps);
+  if (!g.ok) return g.result;
+  return { status: 200, body: { items: parseMyFeedback(await deps.store.getMyFeedback()) } };
+}
+
+/** GET /api/student/revisions/:id — the revision page: praise, items, excerpts, old text, state; never a score, verdict or leaf. */
+export async function handleStudentRevision(deps: HandlerDeps, activityId: string): Promise<HandlerResult> {
+  const g = await guardActivity(deps, activityId);
+  if (!g.ok) return g.result;
+  const revision = parseMyRevision(await deps.store.getMyRevision(activityId));
+  if (!revision) return fail(404, "not_found");
+  return { status: 200, body: { revision } };
+}
+
+export async function handleSaveRevisionDraft(deps: HandlerDeps, activityId: string, rawBody: unknown): Promise<HandlerResult> {
+  const g = await guardActivity(deps, activityId);
+  if (!g.ok) return g.result;
+  const parsed = revisionDraftBodySchema.safeParse(rawBody);
+  if (!parsed.success) return fail(400, "invalid_body");
+  try {
+    const raw = await deps.store.saveRevisionDraft({ activityId, content: parsed.data.content, baseRevision: parsed.data.base_revision ?? null });
+    return { status: 200, body: { draft: toDraftReceipt(raw) } };
+  } catch (err) {
+    return fromRevisionWorkError(err);
+  }
+}
+
+export async function handleSubmitRevision(deps: HandlerDeps, activityId: string, rawBody: unknown): Promise<HandlerResult> {
+  const g = await guardActivity(deps, activityId);
+  if (!g.ok) return g.result;
+  const parsed = revisionSubmitBodySchema.safeParse(rawBody);
+  if (!parsed.success) return fail(400, "invalid_body");
+  try {
+    const raw = await deps.store.submitRevision({
+      activityId, clientSubmissionId: parsed.data.client_submission_id, text: parsed.data.text, marks: parsed.data.marks,
+      assistance: parsed.data.assistance, provenance: parsed.data.provenance,
+    });
+    const receipt = toReceipt(raw);
+    return { status: receipt.replayed ? 200 : 201, body: { receipt } };
+  } catch (err) {
+    return fromRevisionWorkError(err);
   }
 }

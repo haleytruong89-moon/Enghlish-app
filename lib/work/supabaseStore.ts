@@ -8,6 +8,11 @@ function dbError(what: string, err: { code?: string; message?: string }): never 
   throw new WorkDbError(err.code ?? "unknown", `${what}: ${err.code ?? "error"}`);
 }
 
+/** Like dbError, but keeps the database message: the S6 handlers read the "(tag)" at its end. It is never sent to the browser. */
+function dbErrorWithTag(what: string, err: { code?: string; message?: string }): never {
+  throw new WorkDbError(err.code ?? "unknown", `${what}: ${err.message ?? err.code ?? "error"}`);
+}
+
 /**
  * Scope lookups use the admin client (read-only, and only to decide which learner a request is about —
  * requireAccess then decides). Everything the student sees or writes goes through the USER client and the
@@ -55,6 +60,36 @@ export function createSupabaseWorkStore(): WorkStore {
       const db = await createUserClient();
       const { data, error } = await db.rpc("eng_my_review_by_domain");
       if (error) dbError("eng_my_review_by_domain", error);
+      return data;
+    },
+
+    async getMyFeedback() {
+      const db = await createUserClient();
+      const { data, error } = await db.rpc("eng_my_feedback");
+      if (error) dbError("eng_my_feedback", error);
+      return data;
+    },
+
+    async getMyRevision(activityId) {
+      const db = await createUserClient();
+      const { data, error } = await db.rpc("eng_my_revision", { p_activity: activityId });
+      if (error) dbError("eng_my_revision", error);
+      return data ?? null;
+    },
+
+    async saveRevisionDraft({ activityId, content, baseRevision }) {
+      const db = await createUserClient();
+      const { data, error } = await db.rpc("eng_save_revision_draft", { p_activity: activityId, p_content: content, p_base_revision: baseRevision });
+      if (error) dbErrorWithTag("eng_save_revision_draft", error);
+      return data;
+    },
+
+    async submitRevision({ activityId, clientSubmissionId, text, marks, assistance, provenance }) {
+      const db = await createUserClient();
+      const { data, error } = await db.rpc("eng_submit_revision", {
+        p_activity: activityId, p_client_id: clientSubmissionId, p_text: text, p_marks: marks, p_assistance: assistance, p_provenance: provenance,
+      });
+      if (error) dbErrorWithTag("eng_submit_revision", error);
       return data;
     },
 

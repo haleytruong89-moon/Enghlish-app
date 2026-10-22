@@ -32,6 +32,7 @@ const inboxRow = z.object({
   targets_total: z.number().int(),
   targets_decided: z.number().int(),
   can_decide: z.boolean(),
+  revision_round: z.number().int().nullable().optional().transform((v) => v ?? null),
 });
 
 const count = z.number().int().min(0);
@@ -72,6 +73,7 @@ export function parseInbox(raw: unknown): InboxPage {
       targetsTotal: x.targets_total,
       targetsDecided: x.targets_decided,
       canDecide: x.can_decide,
+      revisionRound: x.revision_round,
     })),
   };
 }

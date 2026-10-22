@@ -2,9 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import type { AccessStore, Learner, Member, Relationship, Role } from "@/lib/auth/requireAccess";
 import {
   handleSaveDraft,
+  handleSaveRevisionDraft,
   handleStudentActivity,
+  handleStudentFeedback,
   handleStudentHome,
+  handleStudentRevision,
   handleSubmit,
+  handleSubmitRevision,
   WorkDbError,
   type HandlerDeps,
   type WorkStore,
@@ -52,6 +56,12 @@ const rpcActivity = {
 const rpcSources = [{ id: "S1", title: "Volcanoes", author: "X", rights_note: "ok", modality: "text", url: null, text: "Magma rises." }];
 const rpcReceipt = { attempt_id: "55555555-5555-4555-8555-555555555555", attempt_no: 1, submitted_at: "2026-10-14T08:00:00Z", hash: "abc", replayed: false };
 
+const rpcRevision = {
+  activity_id: ACT_AN, instance_id: "44444444-4444-4444-8444-444444444444", title_vi: "Núi lửa", big_question_en: "Why do volcanoes erupt?", round: 1,
+  praise: "Con giải thích rõ.", items: [{ n: 1, text: "Thêm câu kết.", excerpt: null, leaf: { kind: "tag", ref_key: "x" } }], old_text: "Old text.",
+  reason_required: false, state: "todo", submitted_at: null, closing_note: null, draft: null, score: 3,
+};
+
 function makeStore(over: Partial<WorkStore> = {}) {
   const profiles: Record<string, { role: Role; learnerId: string | null }> = {
     "u-studentAn": { role: "student", learnerId: AN },
@@ -65,6 +75,10 @@ function makeStore(over: Partial<WorkStore> = {}) {
     getActivityLearnerId: vi.fn(async (id: string) => (id === ACT_AN ? AN : id === ACT_NGUYEN ? NGUYEN : null)),
     getHome: vi.fn(async () => ({ inquiries: [] })),
     getReviewByDomain: vi.fn(async (): Promise<unknown> => ({ items: [] })),
+    getMyFeedback: vi.fn(async (): Promise<unknown> => ({ items: [] })),
+    getMyRevision: vi.fn(async (): Promise<unknown> => rpcRevision),
+    saveRevisionDraft: vi.fn(async (): Promise<unknown> => ({ revision: 1, saved_at: "2026-10-14T08:00:00Z", other_tab_changed: false })),
+    submitRevision: vi.fn(async (): Promise<unknown> => rpcReceipt),
     getActivity: vi.fn(async (): Promise<unknown> => rpcActivity),
     getSources: vi.fn(async (): Promise<unknown> => rpcSources),
     saveDraft: vi.fn(async () => ({ revision: 3, saved_at: "2026-10-14T08:00:00Z", other_tab_changed: false })),
@@ -359,5 +373,45 @@ describe("SM-2: 'Việc cần ôn' on the student home", () => {
     expect([r.status, (r.body as { review: unknown }).review]).toEqual([200, null]);
     const leaky = makeStore({ getReviewByDomain: vi.fn(async (): Promise<unknown> => ({ items: [{ domain_key: "vocab", domain_name: "Từ vựng", label: "Dạng từ", level: "B2" }] })) });
     expect(((await handleStudentHome(deps("studentAn", leaky))).body as { review: unknown }).review).toBeNull();
+  });
+});
+
+describe("S6: the child's revision routes", () => {
+  const submit = { client_submission_id: CLIENT_ID, text: "New text.", marks: { "1": { choice: "changed" } }, assistance: ["none"], provenance: "in_app" };
+
+  it("home carries the feedback rows; a broken feedback call never takes the home down", async () => {
+    const s = makeStore({ getMyFeedback: vi.fn(async (): Promise<unknown> => ({ items: [{ feedback_id: "f", activity_id: ACT_AN, title_vi: "Núi lửa", round: 1, items_count: 1,
+      state: "todo", seen_at: null, closing_note: null, praise: null, notes: null }] })) });
+    expect((await handleStudentHome(deps("studentAn", s))).body).toMatchObject({ feedback: [{ activityId: ACT_AN, state: "todo", itemsCount: 1 }] });
+    const broken = makeStore({ getMyFeedback: vi.fn(async (): Promise<unknown> => { throw new Error("0021 not applied"); }) });
+    expect(await handleStudentHome(deps("studentAn", broken))).toMatchObject({ status: 200, body: { feedback: null } });
+    expect((await handleStudentFeedback(deps("tutorAn", makeStore()))).status).toBe(403);
+  });
+
+  it("the revision page: own step only, no leaf or score in the answer; 404 when there is nothing to revise", async () => {
+    const r = await handleStudentRevision(deps("studentAn", makeStore()), ACT_AN);
+    expect(r.status).toBe(200);
+    expect(JSON.stringify(r.body)).not.toMatch(/leaf|score|ref_key/);
+    expect((await handleStudentRevision(deps("studentNguyen", makeStore()), ACT_AN)).status).toBe(404);
+    expect((await handleStudentRevision(deps("tutorAn", makeStore()), ACT_AN)).status).toBe(403);
+    expect((await handleStudentRevision(deps("studentAn", makeStore({ getMyRevision: vi.fn(async () => null) })), ACT_AN)).status).toBe(404);
+  });
+
+  it("draft and submit go to the store after access; the database's mark rules come back as codes the form can explain", async () => {
+    const s = makeStore();
+    expect((await handleSaveRevisionDraft(deps("studentAn", s), ACT_AN, { content: { text: "x", marks: { "1": { choice: "kept" } } }, base_revision: 0 })).status).toBe(200);
+    expect(s.saveRevisionDraft).toHaveBeenCalledWith({ activityId: ACT_AN, content: { text: "x", marks: { "1": { choice: "kept" } } }, baseRevision: 0 });
+    expect((await handleSubmitRevision(deps("studentAn", s), ACT_AN, submit)).status).toBe(201);
+    expect(s.submitRevision).toHaveBeenCalledWith({ activityId: ACT_AN, clientSubmissionId: CLIENT_ID, text: "New text.", marks: { "1": { choice: "changed" } }, assistance: ["none"], provenance: "in_app" });
+    for (const [code, msg, status, error] of [
+      ["23514", "eng_submit_revision: … (marks_incomplete)", 400, "marks_incomplete"], ["23514", "x (reason_required)", 400, "reason_required"],
+      ["23514", "x (unchanged_needs_reason)", 400, "unchanged_needs_reason"], ["22023", "x (revision_not_open)", 409, "revision_not_open"],
+      ["23505", "x (already_submitted)", 409, "conflict"],
+    ] as [string, string, number, string][]) {
+      const bad = makeStore({ submitRevision: vi.fn(async (): Promise<unknown> => { throw new WorkDbError(code, msg); }) });
+      expect(await handleSubmitRevision(deps("studentAn", bad), ACT_AN, submit), msg).toMatchObject({ status, body: { error } });
+    }
+    expect((await handleSubmitRevision(deps("studentNguyen", s), ACT_AN, submit)).status).toBe(404);
+    expect((await handleSubmitRevision(deps("parent", s), ACT_AN, submit)).status).toBe(403);
   });
 });
