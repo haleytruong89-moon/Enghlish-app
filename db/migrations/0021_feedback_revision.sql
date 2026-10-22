@@ -1016,6 +1016,374 @@ grant execute on function english.eng_my_revision(uuid) to authenticated;
 grant execute on function english.eng_save_revision_draft(uuid, jsonb, int) to authenticated;
 grant execute on function english.eng_submit_revision(uuid, uuid, text, jsonb, text[], text) to authenticated;
 
+-- 8. Phía người duyệt -----------------------------------------------------------------------------------------------------------------
+-- Đánh giá từng góp ý + Xong (nhận xét kết, tùy chọn) hoặc Mở vòng 2 (góp ý mới) trong MỘT transaction (D11). Đánh giá phải đủ mọi góp ý và
+-- hợp với lựa chọn của con: Đã sửa → improved / not_yet; Giữ nguyên → reason_ok / not_yet (3-a). Người duyệt = người được duyệt bài sửa (D14).
+create or replace function english.eng_finish_revision(
+  p_attempt uuid,
+  p_action text,
+  p_checks jsonb,
+  p_closing text,
+  p_praise text,
+  p_items jsonb,
+  p_by uuid,
+  p_client_id text
+) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_a english.attempts%rowtype;
+  v_l english.learners%rowtype;
+  v_member english.members%rowtype;
+  v_f english.feedback_notes%rowtype;
+  v_ep uuid;
+  v_role text;
+  v_closing text := nullif(pg_catalog.btrim(coalesce(p_closing, '')), '');
+  v_c jsonb;
+  v_n int;
+  v_choice text;
+  v_closing_id uuid;
+  v_next jsonb;
+begin
+  if p_attempt is null or p_action is null or p_checks is null or p_by is null or p_client_id is null then
+    raise exception 'eng_finish_revision: revision, action, checks, actor and client id are required' using errcode = '22004';
+  end if;
+  if p_action not in ('close', 'round2') then
+    raise exception 'eng_finish_revision: action is close or round2 (bad_action)' using errcode = '22023';
+  end if;
+  if pg_catalog.length(pg_catalog.btrim(p_client_id)) < 8 or pg_catalog.length(p_client_id) > 100 then
+    raise exception 'eng_finish_revision: client_id must be 8..100 characters' using errcode = '22023';
+  end if;
+  select t.* into v_a from english.attempts t where t.id = p_attempt and t.revises_attempt_id is not null;
+  if not found then
+    raise exception 'eng_finish_revision: revision not found (not_found)' using errcode = 'P0002';
+  end if;
+  -- Khóa bước sửa: hai người bấm Xong cùng lúc xếp hàng.
+  perform 1 from english.activity_instances a where a.id = v_a.activity_instance_id for no key update;
+  select * into v_l from english.learners l where l.id = v_a.learner_id;
+  select * into v_member from english.members m where m.id = p_by;
+  select e.id into v_ep from english.episodes e where e.attempt_id = p_attempt;
+  v_role := english.eng_review_role(v_ep, p_by);
+  if v_role is null then
+    raise exception 'eng_finish_revision: this member may not review this revision (D15)' using errcode = '42501';
+  end if;
+  select f.* into v_f from english.feedback_notes f
+  where f.source_attempt_id = v_a.revises_attempt_id and f.kind = 'feedback' and f.requires_revision and english.eng_feedback_is_live(f.id);
+
+  -- Gửi lại: đánh giá của lần bấm này đã có → trả lại kết quả cũ.
+  if exists (select 1 from english.revision_checks c where c.attempt_id = p_attempt and c.client_id = p_client_id) then
+    return pg_catalog.jsonb_build_object(
+      'closing_id', (select c.id from english.feedback_notes c where c.source_attempt_id = p_attempt and c.kind = 'closing'),
+      'feedback_id', (select x.id from english.feedback_notes x where x.source_attempt_id = p_attempt and x.kind = 'feedback' and x.supersedes_id is null),
+      'revision_activity_id', (select x.revision_activity_id from english.feedback_notes x where x.source_attempt_id = p_attempt and x.kind = 'feedback' and x.supersedes_id is null),
+      'replayed', true);
+  end if;
+  if exists (select 1 from english.feedback_notes x where x.source_attempt_id = p_attempt)
+     or exists (select 1 from english.revision_checks c where c.attempt_id = p_attempt) then
+    raise exception 'eng_finish_revision: this revision was already looked at (already_finished)' using errcode = '23505';
+  end if;
+  if p_action = 'round2' and v_f.round >= 2 then
+    raise exception 'eng_finish_revision: at most 2 rounds of revision (max_rounds)' using errcode = '23514';
+  end if;
+
+  if pg_catalog.jsonb_typeof(p_checks) <> 'array' then
+    raise exception 'eng_finish_revision: checks are [{n, verdict}] (bad_verdict)' using errcode = '22023';
+  end if;
+  if pg_catalog.jsonb_array_length(p_checks) <> pg_catalog.jsonb_array_length(v_f.items)
+     or (select pg_catalog.count(distinct x ->> 'n') from pg_catalog.jsonb_array_elements(p_checks) x) <> pg_catalog.jsonb_array_length(v_f.items) then
+    raise exception 'eng_finish_revision: give one verdict for every feedback item (checks_incomplete)' using errcode = '23514';
+  end if;
+  for v_c in select x from pg_catalog.jsonb_array_elements(p_checks) x loop
+    if pg_catalog.jsonb_typeof(v_c) <> 'object' or coalesce(v_c ->> 'n', '') !~ '^[1-3]$' then
+      raise exception 'eng_finish_revision: checks are [{n, verdict}] (bad_verdict)' using errcode = '22023';
+    end if;
+    v_n := (v_c ->> 'n')::int;
+    select m.choice into v_choice from english.revision_marks m where m.attempt_id = p_attempt and m.item_n = v_n;
+    if v_choice is null then
+      raise exception 'eng_finish_revision: give one verdict for every feedback item (checks_incomplete)' using errcode = '23514';
+    end if;
+    if not ((v_choice = 'changed' and v_c ->> 'verdict' in ('improved', 'not_yet'))
+            or (v_choice = 'kept' and v_c ->> 'verdict' in ('reason_ok', 'not_yet'))) then
+      raise exception 'eng_finish_revision: this verdict does not fit the child''s choice (bad_verdict)' using errcode = '22023';
+    end if;
+    insert into english.revision_checks(learner_id, attempt_id, item_n, verdict, checker_member, checker_role, client_id)
+    values (v_a.learner_id, p_attempt, v_n, v_c ->> 'verdict', p_by, v_role, p_client_id);
+  end loop;
+
+  if p_action = 'close' then
+    if v_closing is not null and pg_catalog.length(v_closing) > 300 then
+      raise exception 'eng_finish_revision: the closing note is at most 300 characters (closing_too_long)' using errcode = '22023';
+    end if;
+    if english.eng_has_score_words(v_closing) then
+      raise exception 'eng_finish_revision: no scores in the closing note (score_words)' using errcode = '23514';
+    end if;
+    insert into english.feedback_notes(learner_id, source_attempt_id, root_attempt_id, round, kind, praise, items, requires_revision,
+                                       author_member, author_role, client_id)
+    values (v_a.learner_id, p_attempt, v_f.root_attempt_id, v_f.round, 'closing', v_closing, '[]'::jsonb, false, p_by, v_role, p_client_id)
+    returning id into v_closing_id;
+  else
+    v_next := english.eng_write_feedback(p_attempt, p_praise, p_items, true, null, p_by, p_client_id);
+  end if;
+
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_member.user_id, v_member.role, 'revision.checked', v_l.family_id, v_l.id,
+          pg_catalog.jsonb_build_object('attempt', p_attempt, 'action', p_action, 'round', v_f.round, 'checks', pg_catalog.jsonb_array_length(p_checks)));
+  return pg_catalog.jsonb_build_object('closing_id', v_closing_id, 'feedback_id', v_next ->> 'id',
+                                       'revision_activity_id', v_next ->> 'revision_activity_id', 'replayed', false);
+end
+$$;
+
+-- Khung "Góp ý cho con" ở màn duyệt (người duyệt; máy chủ gọi sau requireAccess): bài có góp ý được không (D8), người này góp ý được không,
+-- chữ của bài (để chọn trích đoạn), góp ý đang hiệu lực (+ còn sửa được không, con đã tới đâu), các bản cũ.
+create or replace function english.eng_feedback_panel(p_attempt uuid, p_by uuid) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_a english.attempts%rowtype;
+  v_ep uuid;
+  v_kind text;
+  v_text text;
+  v_role text;
+  v_eligible boolean;
+  v_live english.feedback_notes%rowtype;
+  v_rev english.attempts%rowtype;
+begin
+  select * into v_a from english.attempts t where t.id = p_attempt;
+  if not found then return null; end if;
+  select e.id into v_ep from english.episodes e where e.attempt_id = p_attempt;
+  select av.kind, av.content ->> 'text' into v_kind, v_text
+  from english.artifact_versions av where av.attempt_id = p_attempt order by av.version limit 1;
+  v_eligible := v_kind = 'text' and v_text is not null and v_a.provenance in ('in_app', 'pasted');
+  v_role := english.eng_review_role(v_ep, p_by);
+  select f.* into v_live from english.feedback_notes f
+  where f.source_attempt_id = p_attempt and f.kind = 'feedback' and english.eng_feedback_is_live(f.id);
+  select t.* into v_rev from english.attempts t where t.revises_attempt_id = p_attempt order by t.submitted_at limit 1;
+  return pg_catalog.jsonb_build_object(
+    'eligible', coalesce(v_eligible, false),
+    -- Góp ý mới: chỉ cho bài gốc. Bài sửa nhận góp ý vòng 2 qua "Mở vòng 2" (eng_finish_revision).
+    'can_give', coalesce(v_eligible, false) and v_role is not null and v_live.id is null and v_a.revises_attempt_id is null,
+    'text', case when v_eligible then v_text end,
+    'live', case when v_live.id is null then null else pg_catalog.jsonb_build_object(
+      'id', v_live.id, 'praise', v_live.praise, 'items', v_live.items, 'requires_revision', v_live.requires_revision, 'round', v_live.round,
+      'revision_activity_id', v_live.revision_activity_id,
+      'author_name', (select m.display_name from english.members m where m.id = v_live.author_member),
+      'author_is_me', v_live.author_member = p_by,
+      'created_at', v_live.created_at,
+      'editable', v_live.author_member = p_by and v_role is not null and not english.eng_revision_started(v_live.id),
+      'revision_state', case when not v_live.requires_revision then null
+                             when v_rev.id is not null then
+                               case when exists (select 1 from english.feedback_notes x where x.source_attempt_id = v_rev.id) then 'seen' else 'submitted' end
+                             when english.eng_revision_started(v_live.id) then 'started'
+                             else 'todo' end,
+      'revision_episode_id', (select e.id from english.episodes e where e.attempt_id = v_rev.id)) end,
+    'history', coalesce((
+      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('id', h.id, 'praise', h.praise, 'items', h.items, 'created_at', h.created_at,
+                                                                'author_name', m.display_name) order by h.created_at, h.id)
+      from english.feedback_notes h left join english.members m on m.id = h.author_member
+      where h.source_attempt_id = p_attempt and h.kind = 'feedback' and not english.eng_feedback_is_live(h.id)), '[]'::jsonb));
+end
+$$;
+
+-- Trước–sau của một bài sửa (màn "Bài sửa lại" và "Bài đã sửa"): bài cũ, bài sửa, góp ý, đánh dấu của con, đánh giá, nhận xét kết / vòng 2,
+-- người xem có được đánh giá không. NULL nếu không phải bài sửa.
+create or replace function english.eng_revision_view(p_attempt uuid, p_by uuid) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_a english.attempts%rowtype;
+  v_f english.feedback_notes%rowtype;
+  v_l english.learners%rowtype;
+  v_ep uuid;
+  v_role text;
+  v_done boolean;
+  v_title text;
+begin
+  select t.* into v_a from english.attempts t where t.id = p_attempt and t.revises_attempt_id is not null;
+  if not found then return null; end if;
+  select f.* into v_f from english.feedback_notes f
+  where f.source_attempt_id = v_a.revises_attempt_id and f.kind = 'feedback' and f.requires_revision and english.eng_feedback_is_live(f.id);
+  select * into v_l from english.learners l where l.id = v_a.learner_id;
+  select e.id into v_ep from english.episodes e where e.attempt_id = p_attempt;
+  select i.snapshot -> 'template' ->> 'title_vi' into v_title
+  from english.activity_instances a join english.inquiry_instances i on i.id = a.inquiry_instance_id where a.id = v_a.activity_instance_id;
+  v_role := english.eng_review_role(v_ep, p_by);
+  v_done := exists (select 1 from english.feedback_notes x where x.source_attempt_id = p_attempt);
+  return pg_catalog.jsonb_build_object(
+    'attempt_id', v_a.id, 'episode_id', v_ep, 'learner_id', v_l.id, 'alias', v_l.alias, 'round', v_f.round, 'title_vi', v_title,
+    'submitted_at', v_a.submitted_at,
+    'before', pg_catalog.jsonb_build_object(
+      'attempt_id', v_a.revises_attempt_id,
+      'episode_id', (select e.id from english.episodes e where e.attempt_id = v_a.revises_attempt_id),
+      'text', (select av.content ->> 'text' from english.artifact_versions av where av.attempt_id = v_a.revises_attempt_id order by av.version limit 1),
+      'submitted_at', (select t.submitted_at from english.attempts t where t.id = v_a.revises_attempt_id)),
+    'after', pg_catalog.jsonb_build_object(
+      'text', (select av.content ->> 'text' from english.artifact_versions av where av.attempt_id = p_attempt order by av.version limit 1)),
+    'feedback', pg_catalog.jsonb_build_object(
+      'id', v_f.id, 'praise', v_f.praise, 'items', v_f.items, 'created_at', v_f.created_at,
+      'author_name', (select m.display_name from english.members m where m.id = v_f.author_member)),
+    'marks', coalesce((select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('n', m.item_n, 'choice', m.choice, 'reason', m.reason) order by m.item_n)
+                       from english.revision_marks m where m.attempt_id = p_attempt), '[]'::jsonb),
+    'checks', coalesce((select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('n', c.item_n, 'verdict', c.verdict, 'checker_name', mb.display_name,
+                                                                                  'created_at', c.created_at) order by c.item_n)
+                        from english.revision_checks c left join english.members mb on mb.id = c.checker_member where c.attempt_id = p_attempt), '[]'::jsonb),
+    'closing', (select pg_catalog.jsonb_build_object('note', c.praise, 'author_name', mb.display_name, 'created_at', c.created_at)
+                from english.feedback_notes c left join english.members mb on mb.id = c.author_member
+                where c.source_attempt_id = p_attempt and c.kind = 'closing'),
+    'next_round', (select pg_catalog.jsonb_build_object('feedback_id', x.id, 'created_at', x.created_at)
+                   from english.feedback_notes x where x.source_attempt_id = p_attempt and x.kind = 'feedback' and x.supersedes_id is null),
+    'reason_required', coalesce(english.eng_track_setting(v_l.track_id, 'revision_reason_required') = 'true'::jsonb, false),
+    'can_finish', v_role is not null and not v_done,
+    'can_open_round2', v_role is not null and not v_done and v_f.round < 2);
+end
+$$;
+
+-- "Bài đã sửa" của một em (phụ huynh, gia sư): các cặp trước–sau, mới nhất trước, tối đa 50.
+create or replace function english.eng_revision_list(p_learner uuid) returns jsonb
+language sql stable security definer set search_path = ''
+as $$
+  select pg_catalog.jsonb_build_object('items', coalesce(pg_catalog.jsonb_agg(x.obj order by x.at desc, x.id desc), '[]'::jsonb))
+  from (
+    select t.id, t.submitted_at as at, pg_catalog.jsonb_build_object(
+      'attempt_id', t.id,
+      'episode_id', e.id,
+      'title_vi', i.snapshot -> 'template' ->> 'title_vi',
+      'round', english.eng_revision_round(t.id),
+      'submitted_at', t.submitted_at,
+      'items_count', (select pg_catalog.count(*) from english.revision_marks m where m.attempt_id = t.id),
+      'state', case when exists (select 1 from english.feedback_notes x where x.source_attempt_id = t.id) then 'done' else 'waiting' end,
+      'good', (select pg_catalog.count(*) from english.revision_checks c where c.attempt_id = t.id and c.verdict in ('improved', 'reason_ok')),
+      'not_yet', (select pg_catalog.count(*) from english.revision_checks c where c.attempt_id = t.id and c.verdict = 'not_yet')) as obj
+    from english.attempts t
+    join english.episodes e on e.attempt_id = t.id
+    join english.activity_instances a on a.id = t.activity_instance_id
+    join english.inquiry_instances i on i.id = a.inquiry_instance_id
+    where t.learner_id = p_learner and t.revises_attempt_id is not null
+    order by t.submitted_at desc, t.id desc
+    limit 50
+  ) x
+$$;
+
+revoke execute on function english.eng_finish_revision(uuid, text, jsonb, text, text, jsonb, uuid, text) from public, anon, authenticated;
+grant execute on function english.eng_finish_revision(uuid, text, jsonb, text, text, jsonb, uuid, text) to service_role;
+revoke execute on function english.eng_feedback_panel(uuid, uuid) from public, anon, authenticated;
+grant execute on function english.eng_feedback_panel(uuid, uuid) to service_role;
+revoke execute on function english.eng_revision_view(uuid, uuid) from public, anon, authenticated;
+grant execute on function english.eng_revision_view(uuid, uuid) to service_role;
+revoke execute on function english.eng_revision_list(uuid) from public, anon, authenticated;
+grant execute on function english.eng_revision_list(uuid) to service_role;
+
+-- Hộp duyệt (0010) - giữ nguyên mọi luật, thêm cho bài sửa: XONG khi người duyệt đã bấm Xong / Mở vòng 2 (điểm trên bài sửa là tùy chọn - D15),
+-- nhãn vòng ('revision_round'), "chỉ gia sư" theo bài gốc (eng_episode_restricted - D14).
+create or replace function english.eng_review_inbox(
+  p_allow_real boolean default false,
+  p_filter text default 'todo',
+  p_limit int default 50,
+  p_after_at timestamptz default null,
+  p_after_id uuid default null
+) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_limit int := least(greatest(coalesce(p_limit, 50), 1), 100);
+  v_me uuid := english.eng_current_member_id();
+begin
+  if p_filter is null or p_filter not in ('todo', 'tutor', 'independent', 'baseline', 'practice', 'done') then
+    raise exception 'eng_review_inbox: unknown filter' using errcode = '22023';
+  end if;
+  if (p_after_at is null) <> (p_after_id is null) then
+    raise exception 'eng_review_inbox: the cursor needs both a time and an id' using errcode = '22023';
+  end if;
+
+  return (
+    with base as (
+      select e.id as episode_id, at.submitted_at,
+        x.total, x.decided,
+        case when rv.round is null then x.decided >= x.total else rv.finished end as is_done,
+        case
+          when x.restricted then 'tutor'
+          when coalesce((e.facets ->> 'baseline')::boolean, false) then 'baseline'
+          when a.mode = 'INDEPENDENT_CHECK' then 'independent'
+          else 'practice' end as category,
+        english.eng_review_role(e.id, v_me) is not null as can_decide,
+        pg_catalog.jsonb_build_object(
+          'episode_id', e.id,
+          'attempt_id', at.id,
+          'learner_id', l.id,
+          'alias', l.alias,
+          'is_test', l.is_test,
+          'title_vi', i.snapshot -> 'template' ->> 'title_vi',
+          'step_no', a.step_no,
+          'activity_type', a.activity_type,
+          'mode', a.mode,
+          'purpose', pg_catalog.to_jsonb(a.purpose),
+          'provenance', at.provenance,
+          'attempt_no', at.attempt_no,
+          'is_first_attempt', e.is_first_attempt,
+          'submitted_at', at.submitted_at,
+          'restricted', x.restricted,
+          'targets_total', x.total,
+          'targets_decided', x.decided,
+          'revision_round', rv.round) as obj
+      from english.episodes e
+      join english.learners l on l.id = e.learner_id
+      join english.attempts at on at.id = e.attempt_id
+      join english.activity_instances a on a.id = at.activity_instance_id
+      join english.inquiry_instances i on i.id = a.inquiry_instance_id
+      cross join lateral (
+        select count(*) filter (where t.scorable)::int as total,
+               count(*) filter (where t.scorable and exists (
+                 select 1 from english.validation_decisions d
+                 where d.episode_id = e.id and d.target_key = t.target_key and d.supersedes_id is null))::int as decided,
+               english.eng_episode_restricted(e.id) as restricted
+        from english.eng_episode_targets(e.id) t
+      ) x
+      cross join lateral (
+        select english.eng_revision_round(at.id) as round,
+               exists (select 1 from english.feedback_notes f where f.source_attempt_id = at.id) as finished
+      ) rv
+      where english.eng_is_staff_of(e.learner_id)
+        and (p_allow_real or l.is_test)
+        and x.total > 0
+    ),
+    counts as (
+      select pg_catalog.jsonb_build_object(
+        'todo', count(*) filter (where not b.is_done),
+        'tutor', count(*) filter (where not b.is_done and b.category = 'tutor'),
+        'independent', count(*) filter (where not b.is_done and b.category = 'independent'),
+        'baseline', count(*) filter (where not b.is_done and b.category = 'baseline'),
+        'practice', count(*) filter (where not b.is_done and b.category = 'practice'),
+        'done', count(*) filter (where b.is_done),
+        'to_decide', count(*) filter (where not b.is_done and b.can_decide)) as c
+      from base b
+    ),
+    picked as (
+      select b.*
+      from base b
+      where (case p_filter
+               when 'done' then b.is_done
+               when 'todo' then not b.is_done
+               else not b.is_done and b.category = p_filter end)
+        and (p_after_at is null or (b.submitted_at, b.episode_id) > (p_after_at, p_after_id))
+      order by b.submitted_at, b.episode_id
+      limit v_limit + 1
+    ),
+    page as (
+      select p.*, row_number() over (order by p.submitted_at, p.episode_id) as rn from picked p
+    )
+    select pg_catalog.jsonb_build_object(
+      'items', coalesce((select pg_catalog.jsonb_agg(
+                           pg_catalog.jsonb_build_object('category', p.category, 'can_decide', p.can_decide) || p.obj
+                           order by p.rn)
+                         from page p where p.rn <= v_limit), '[]'::jsonb),
+      'next', (select pg_catalog.jsonb_build_object('at', p.submitted_at, 'id', p.episode_id)
+               from page p where p.rn = v_limit and exists (select 1 from page q where q.rn = v_limit + 1)),
+      'counts', (select c from counts))
+  );
+end
+$$;
+revoke execute on function english.eng_review_inbox(boolean, text, int, timestamptz, uuid) from public, anon, service_role;
+grant execute on function english.eng_review_inbox(boolean, text, int, timestamptz, uuid) to authenticated;
+
 -- 9. Purge: thêm feedback_notes + revision_marks + revision_checks (giữ nguyên mọi dòng của 0020; có test đối chiếu từng dòng).
 create or replace function english.eng_purge_learner(
   p_learner_id uuid,

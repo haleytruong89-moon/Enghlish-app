@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars -- helpers are used by the sections added in Tasks 2-4 (removed in Task 4) */
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -378,5 +377,125 @@ describe("S6 feedback + revision (migration 0021)", () => {
     });
   });
 
-  // (Task 4 adds its section here)
+  describe("4. the reviewer's side: verdicts, Xong, round 2, reads, inbox, purge", () => {
+    type View = { round: number; before: { text: string }; after: { text: string }; marks: unknown[]; checks: unknown[]; closing: unknown; can_finish: boolean; can_open_round2: boolean };
+    type Inbox = { items: { attempt_id: string; revision_round: number | null }[]; counts: Record<string, number> };
+    const inboxAs = (user: string, filter: string) =>
+      as(db.client, "authenticated", user, async (q) => ((await q("select english.eng_review_inbox(true, $1, 100) as r", [filter])).rows[0] as { r: Inbox }).r);
+
+    /** A fresh A-W1, An's writing at step 6, feedback with 2 items, An's revision → the revision attempt id. */
+    const revised = async () => {
+      const x = await assign("an", "A-W1-VOLCANOES", dueReleasingAll("A-W1-VOLCANOES"));
+      const root = (await submitText(U().studentAn, await step(x, 6), TEXT_A)).attempt_id;
+      const rev = (await write(M().tutorAn, root)).revision_activity_id!;
+      const r = await reviseAs(U().studentAn, rev, `${TEXT_A} As a result, it is violent.`, { "1": { choice: "changed" }, "2": { choice: "kept", reason: "Đã có so" } });
+      return { root, rev, attempt: r.attempt_id };
+    };
+
+    it("verdicts must cover every item and fit the child's choice; Xong closes once, with an optional note and no scores", async () => {
+      const { attempt } = await revised();
+      await fail(finish(M().tutorNguyen, attempt), "42501", /\(D15\)/);
+      await fail(finish(M().tutorAn, attempt, { checks: [{ n: 1, verdict: "improved" }] }), "23514", /\(checks_incomplete\)/);
+      await fail(finish(M().tutorAn, attempt, { checks: [{ n: 1, verdict: "reason_ok" }, { n: 2, verdict: "reason_ok" }] }), "22023", /\(bad_verdict\)/);
+      await fail(finish(M().tutorAn, attempt, { closing: "Lần này được 4/4" }), "23514", /\(score_words\)/);
+      expect(await n("select count(*)::int as n from english.revision_checks where attempt_id = $1", [attempt])).toBe(0); // all or nothing
+      const done = await finish(M().parent, attempt, { closing: "Bài sửa rõ hơn nhiều!", clientId: "finish-replay-1" }); // ordinary work: the parent may
+      expect(done.closing_id).toBeTruthy();
+      expect(await finish(M().parent, attempt, { closing: "Bài sửa rõ hơn nhiều!", clientId: "finish-replay-1" })).toMatchObject({ replayed: true });
+      await fail(finish(M().tutorAn, attempt), "23505", /\(already_finished\)/);
+      const view = await svc<View>("select english.eng_revision_view($1, $2) as r", [attempt, M().tutorAn]);
+      expect(view).toMatchObject({ round: 1, before: { text: TEXT_A }, can_finish: false, can_open_round2: false, closing: { note: "Bài sửa rõ hơn nhiều!" } });
+      expect(view.checks).toHaveLength(2);
+    });
+
+    it("the child then sees 'đã xem' and the closing note - still no verdict", async () => {
+      const { rev, attempt } = await revised();
+      await finish(M().tutorAn, attempt, { closing: "Cô thấy bạn tiến bộ." });
+      const page = await studentRead<{ state: string; closing_note: string }>(U().studentAn, "select english.eng_my_revision($1) as r", [rev]);
+      expect(page).toMatchObject({ state: "seen", closing_note: "Cô thấy bạn tiến bộ." });
+      const home = await studentRead<{ items: { activity_id: string; state: string }[] }>(U().studentAn, "select english.eng_my_feedback() as r");
+      expect(home.items.find((i) => i.activity_id === rev)?.state).toBe("seen");
+      for (const bad of ["improved", "not_yet", "reason_ok", "verdict"]) expect(JSON.stringify([page, home]), bad).not.toContain(bad);
+    });
+
+    it("round 2: same step, new attempt in the same family; after round 2 only Xong remains; never round 3", async () => {
+      const { root, rev, attempt } = await revised();
+      const next = await finish(M().tutorAn, attempt, { action: "round2", praise: "Câu kết hay hơn rồi.", items: [{ text: "Thêm một ví dụ cụ thể." }] });
+      expect(next.feedback_id).toBeTruthy();
+      expect((next as unknown as { revision_activity_id: string }).revision_activity_id).toBe(rev); // D7
+      const page = await studentRead<{ state: string; round: number }>(U().studentAn, "select english.eng_my_revision($1) as r", [rev]);
+      expect(page).toMatchObject({ state: "todo", round: 2 });
+      const r2 = await reviseAs(U().studentAn, rev, `${TEXT_A} As a result, it is violent. For example, Mount St Helens.`, { "1": { choice: "changed" } });
+      const [a2] = await q1<{ attempt_no: number; parent_attempt_id: string; revises_attempt_id: string; learning_family_id: string }>(
+        "select attempt_no, parent_attempt_id, revises_attempt_id, learning_family_id from english.attempts where id = $1", [r2.attempt_id]);
+      const [r0] = await q1<{ learning_family_id: string }>("select learning_family_id from english.attempts where id = $1", [root]);
+      expect(a2).toEqual({ attempt_no: 3, parent_attempt_id: attempt, revises_attempt_id: attempt, learning_family_id: r0!.learning_family_id });
+      expect((await svc<View>("select english.eng_revision_view($1, $2) as r", [r2.attempt_id, M().tutorAn]))).toMatchObject({ round: 2, can_open_round2: false, can_finish: true });
+      await fail(finish(M().tutorAn, r2.attempt_id, { action: "round2", checks: [{ n: 1, verdict: "improved" }], praise: "x", items: [{ text: "y" }] }), "23514", /\(max_rounds\)/);
+      await fail(write(M().tutorAn, r2.attempt_id), "23514", /\(max_rounds\)/);
+      await finish(M().tutorAn, r2.attempt_id, { checks: [{ n: 1, verdict: "improved" }] });
+    });
+
+    it("panel: eligibility, who may give, the live note with its edit window, the history; never for the student", async () => {
+      const x = await assign("an", "A-W1-VOLCANOES", dueReleasingAll("A-W1-VOLCANOES"));
+      const root = (await submitText(U().studentAn, await step(x, 6), TEXT_A)).attempt_id;
+      type Panel = { eligible: boolean; can_give: boolean; text: string | null; live: { editable: boolean; revision_state: string; author_is_me: boolean } | null; history: unknown[] };
+      const panel = (by: string) => svc<Panel>("select english.eng_feedback_panel($1, $2) as r", [root, by]);
+      expect(await panel(M().tutorAn)).toMatchObject({ eligible: true, can_give: true, text: TEXT_A, live: null, history: [] });
+      const first = await write(M().tutorAn, root);
+      await write(M().tutorAn, root, { supersedes: first.id, praise: "Con nêu rõ hai loại núi lửa." });
+      expect(await panel(M().tutorAn)).toMatchObject({ can_give: false, live: { editable: true, revision_state: "todo", author_is_me: true } });
+      expect((await panel(M().tutorAn)).history).toHaveLength(1);
+      expect(await panel(M().parent)).toMatchObject({ live: { editable: false, author_is_me: false } });
+      await fail(student(U().studentAn, "select english.eng_feedback_panel($1, $2) as r", [root, M().studentAn]), "42501");
+      await fail(student(U().studentAn, "select english.eng_revision_list($1) as r", [s.learners.an]), "42501");
+    });
+
+    it("inbox: a revision shows its round and stays 'to do' until Xong / Mở vòng 2, even with no score at all", async () => {
+      const { attempt } = await revised();
+      const todo = await inboxAs(U().tutorAn, "todo");
+      expect(todo.items.find((i) => i.attempt_id === attempt)?.revision_round).toBe(1);
+      await finish(M().tutorAn, attempt);
+      expect((await inboxAs(U().tutorAn, "todo")).items.some((i) => i.attempt_id === attempt)).toBe(false);
+      expect((await inboxAs(U().tutorAn, "done")).items.some((i) => i.attempt_id === attempt)).toBe(true);
+      // ordinary work keeps the S5 rule (done = every skill decided)
+      expect((await inboxAs(U().tutorAn, "todo")).items.some((i) => i.revision_round === null)).toBe(true);
+    });
+
+    it("'Bài đã sửa' lists the pairs newest first with the verdict counts; scoring the A3 skill goes through S5 and stays off the target set", async () => {
+      const { attempt } = await revised();
+      await finish(M().tutorAn, attempt, { checks: [{ n: 1, verdict: "improved" }, { n: 2, verdict: "not_yet" }] });
+      const list = await svc<{ items: { attempt_id: string; state: string; good: number; not_yet: number; items_count: number }[] }>(
+        "select english.eng_revision_list($1) as r", [s.learners.an]);
+      expect(list.items[0]).toMatchObject({ attempt_id: attempt, state: "done", good: 1, not_yet: 1, items_count: 2 });
+      const r = await svc<unknown[]>("select english.eng_record_reviews($1, $2::jsonb, $3, $4) as r",
+        [await episodeOf(attempt), JSON.stringify([{ target_key: "A-A3-REDRAFT", score: 3, not_observed: false }]), M().tutorAn, randomUUID()]);
+      expect(r).toHaveLength(1);
+      // D4: neither A3 target is in a published target set
+      expect(await n("select count(*)::int as n from english.target_set_definitions where target_ids && array['A-A3-REDRAFT', 'B-A3-REVISE']")).toBe(0);
+    });
+
+    it("purge: the dry run counts the three books and the purge deletes them with the attempts, with a matching receipt", async () => {
+      // a throwaway TEST child with its own student login, in the test family, with An's tutor
+      const user = await createAuthUser(db.client, `s6-purge-${randomUUID().slice(0, 8)}@test.local`);
+      const member = (await q1<{ id: string }>("insert into english.members(user_id, family_id, role, display_name) values ($1, $2, 'student', 'Em thử S6') returning id", [user, s.familyId]))[0]!.id;
+      const learner = (await q1<{ id: string }>(
+        "insert into english.learners(family_id, alias, track_id, is_test, status, member_id) values ($1, 'Em thử S6', 'A', true, 'active', $2) returning id", [s.familyId, member]))[0]!.id;
+      await q1("insert into english.relationships(member_id, learner_id, relation) values ($1, $2, 'tutor')", [M().tutorAn, learner]);
+      const x = (await q1<{ id: string }>("select english.eng_assign_inquiry($1, 'A-W1-VOLCANOES', 1, $2, $3, $4) as id",
+        [learner, dueReleasingAll("A-W1-VOLCANOES"), M().parent, `s6-purge-${randomUUID()}`]))[0]!.id;
+      const root = (await submitText(user, await step(x, 6), TEXT_A)).attempt_id;
+      const rev = (await write(M().tutorAn, root)).revision_activity_id!;
+      const r = await reviseAs(user, rev, `${TEXT_A} So it is violent.`, { "1": { choice: "changed" }, "2": { choice: "changed" } });
+      await finish(M().tutorAn, r.attempt_id, { checks: [{ n: 1, verdict: "improved" }, { n: 2, verdict: "improved" }] });
+
+      const preview = await svc<{ counts: Record<string, number> }>("select english.eng_purge_preview($1) as r", [learner]);
+      expect([preview.counts.feedback_notes, preview.counts.revision_marks, preview.counts.revision_checks]).toEqual([2, 2, 2]); // feedback + closing
+      const receipt = await svc<{ deleted: Record<string, number> }>("select english.eng_purge_learner($1, $2) as r", [learner, U().parent]);
+      expect(receipt.deleted).toEqual(preview.counts);
+      expect(await n(`select ((select count(*) from english.feedback_notes where learner_id = $1) + (select count(*) from english.revision_marks where learner_id = $1)
+                      + (select count(*) from english.revision_checks where learner_id = $1) + (select count(*) from english.attempts where learner_id = $1)
+                      + (select count(*) from english.activity_instances where learner_id = $1))::int as n`, [learner])).toBe(0);
+    });
+  });
 });

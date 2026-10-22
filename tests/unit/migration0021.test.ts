@@ -124,5 +124,25 @@ describe("0021_feedback_revision.sql", () => {
     expect(body).toContain("english.eng_track_setting(v_l.track_id, 'revision_reason_required')");
   });
 
-  // (Task 4 adds its tests here)
+  it("the reviewer's functions are for service_role only; the inbox keeps its 0010 grants", () => {
+    for (const sig of [
+      "eng_finish_revision(uuid, text, jsonb, text, text, jsonb, uuid, text)", "eng_feedback_panel(uuid, uuid)", "eng_revision_view(uuid, uuid)", "eng_revision_list(uuid)",
+    ]) {
+      expect(code).toContain(`revoke execute on function english.${sig} from public, anon, authenticated;`);
+      expect(code).toContain(`grant execute on function english.${sig} to service_role;`);
+    }
+    expect(code).toContain("revoke execute on function english.eng_review_inbox(boolean, text, int, timestamptz, uuid) from public, anon, service_role;");
+    expect(code).toContain("grant execute on function english.eng_review_inbox(boolean, text, int, timestamptz, uuid) to authenticated;");
+  });
+
+  it("Xong / Mở vòng 2 need a verdict on every item first; the inbox closes a revision on Xong / Mở vòng 2, not on scores", () => {
+    const f = fnText(sql, "eng_finish_revision");
+    expect(f).toContain("(checks_incomplete)");
+    expect(f).toContain("(bad_verdict)");
+    expect(f).toContain("v_next := english.eng_write_feedback(p_attempt, p_praise, p_items, true, null, p_by, p_client_id);");
+    const inbox = fnText(sql, "eng_review_inbox");
+    expect(inbox).toContain("case when rv.round is null then x.decided >= x.total else rv.finished end as is_done");
+    expect(inbox).toContain("'revision_round', rv.round");
+    expect(inbox).toContain("english.eng_episode_restricted(e.id) as restricted");
+  });
 });
