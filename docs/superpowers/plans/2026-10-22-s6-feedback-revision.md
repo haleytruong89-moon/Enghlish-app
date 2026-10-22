@@ -5887,3 +5887,19 @@ git commit -m "docs(s6): PROGRESS section, status + next migration 0022, DESIGN 
 Placeholder scan: every code step carries its code. Two steps edit existing files by exact replacement (ScoringPanel, StudentHome, the review page, LearnerCard, inbox page, `lib/work/*`), and each names its anchor text.
 
 Names checked across tasks: `eng_write_feedback`, `eng_finish_revision`, `eng_feedback_panel`, `eng_revision_view`, `eng_revision_list`, `eng_my_feedback`, `eng_my_revision`, `eng_save_revision_draft`, `eng_submit_revision`, `eng_revision_open`, `eng_revision_root`, `eng_episode_restricted`, `eng_has_score_words`, `hasScoreWords`, `diffWords`, `changeCount`, `findExcerpt`, `segmentsFor`, `checkFeedback`, `checkMarks`, `marksToSend`, `missingVerdicts`, `verdictsFor`, `splitFeedback`, `homeSteps`, `parseFeedbackPanel` / `parseRevisionView` / `parseRevisionList` / `parseMyFeedback` / `parseMyRevision`, `loadFeedbackPanel` / `loadRevisionView` / `loadRevisionList` / `loadRevisionPage`, `revisionFailText`, `feedbackCopy` / `revisionCopy` / `revisionReviewCopy`, `FeedbackFields` / `feedbackPayloadItems` / `emptyItem` / `FeedbackItemsList` / `findLeaf`, `InboxItem.revisionRound`.
+
+---
+
+## Amendments — parent decisions 22/10/2026 ("ok G1–G4, ok mockup S6")
+
+Task 0 gate passed: the parent approved mockup boards 15–17. The answers below override the tasks wherever they conflict, and Task 11 docs must record them.
+
+- **G1 → as D1.** The template REVISION step is reused when it is the first REVISION step after the written work, with no other ACT-WRITE in between. A self-review step in between does not block it. Keep the literal rule only as the marked alternative comment; do not enable it.
+- **G2 → narrow the score-word rule.** `eng_has_score_words` (DB) and `hasScoreWords` (app) must reject exactly these, and no other text:
+  1. a fraction that looks like a score: `a/b` (spaces allowed around `/`) where `b` is an integer 1–10 and `0 ≤ a ≤ b`. "3/4" and "7 / 10" are rejected; "22/10" (date), "1/2 trang" (½ page) and "12/20" are allowed. "1/2" is ambiguous and IS rejected — accepted trade-off.
+  2. the word "điểm" next to a number, in either order, within one word gap: "6 điểm", "điểm 7", "được 8 điểm", "điểm: 9". "điểm mạnh", "điểm cần chú ý" and "điểm yếu" are allowed.
+  3. a percent sign that follows a number ("80%", "80 %").
+
+  Update the shared samples in `tests/unit/fixtures/scoreWords.ts` to cover every case above, in both directions. The DB CHECK and the app function must agree on every sample.
+- **G3 → accepted.** S6 attaches only to written steps of inquiries. A one-off writing assignment does not exist yet and reuses this flow later. Write this under "Để sau" in PROGRESS.
+- **G4 → as D10.** A "Chỉ góp ý" note shows in the child's home box for 14 days, and also on that activity's page (`/activities/[id]`) for as long as the activity is visible. If Task 8 does not already render it on the activity page, add it with a unit test.
