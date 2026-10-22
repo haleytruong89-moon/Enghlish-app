@@ -40,6 +40,7 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     await page.getByTestId("pdf-input").setInputFiles({ name: "de-thu.pdf", mimeType: "application/pdf", buffer: PDF });
     await expect(page.getByTestId("pdf-chosen")).toContainText("de-thu.pdf");
     await page.getByTestId("assign-title").fill(title);
+    await page.getByTestId("tab-assign-tags-vocab").click();
     await page.getByTestId("tag-chip-thanh-ngu").click();
     await page.getByTestId("assign-due").fill(todayVn());
     await page.getByTestId("assign-submit").click();
@@ -113,7 +114,7 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     await page.getByTestId("result-save").click();
     await expect(page.getByTestId("result-saved")).toContainText(resultPage.saved(0));
 
-    await page.goto(`/learners/${NG}/weak?weeks=all`);
+    await page.goto(`/learners/${NG}/weak?weeks=all&domain=vocab`);
     await expect(page.getByTestId("weak-row-thanh-ngu")).toBeVisible();
     await page.goto(`/learners/${NG}/assign`);
     await expect(page.getByTestId(`status-${assignmentId}`)).toHaveText(assignPage.statusRecorded);

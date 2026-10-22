@@ -1,22 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { tagPicker } from "@/lib/copy/vi";
+import { skillMapCopy, tagPicker } from "@/lib/copy/vi";
+import type { DomainKey, SkillMapView } from "@/lib/skillmap/types";
+import { GroupPicker } from "./GroupPicker";
+import type { AddTagFn } from "./useTags";
 
-/** The "+ nhãn khác" box: type a name, add it as a tag of the family. `onAdd` returns the new key, or a message to show. */
-export function AddTag({ onAdd, prefill = "" }: { onAdd: (label: string) => Promise<{ key: string } | { error: string }>; prefill?: string }) {
+/** "+ nhãn khác": a name and its place in the skill map — domain and group are both required (SM-1, spec M3). */
+export function AddTag({
+  map,
+  onAdd,
+  defaultDomain = null,
+  prefill = "",
+}: {
+  map: SkillMapView;
+  onAdd: AddTagFn;
+  defaultDomain?: DomainKey | null;
+  prefill?: string;
+}) {
   const [label, setLabel] = useState(prefill);
+  const [group, setGroup] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
   const clean = label.trim();
+  const ready = clean.length >= 2 && group !== null;
 
   async function submit() {
-    if (clean.length < 2 || busy) return;
+    if (busy || clean.length < 2) return;
+    if (group === null) return setError(skillMapCopy.groupRequired);
     setBusy(true);
     setError(null);
     setDone(null);
-    const r = await onAdd(clean);
+    const r = await onAdd(clean, group);
     setBusy(false);
     if ("error" in r) return setError(r.error);
     setDone(tagPicker.added(clean));
@@ -24,28 +40,29 @@ export function AddTag({ onAdd, prefill = "" }: { onAdd: (label: string) => Prom
   }
 
   return (
-    <div className="flex flex-col gap-1" data-testid="add-tag">
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          type="text"
-          aria-label={tagPicker.addTitle}
-          placeholder={tagPicker.addOther}
-          maxLength={120}
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              void submit();
-            }
-          }}
-          data-testid="add-tag-input"
-          className="min-h-11 min-w-0 flex-1 rounded-lg border border-line px-3 text-sm"
-        />
+    <div className="flex flex-col gap-2" data-testid="add-tag">
+      <input
+        type="text"
+        aria-label={tagPicker.addTitle}
+        placeholder={tagPicker.addOther}
+        maxLength={120}
+        value={label}
+        onChange={(e) => setLabel(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            void submit();
+          }
+        }}
+        data-testid="add-tag-input"
+        className="min-h-11 min-w-0 rounded-lg border border-line px-3 text-sm"
+      />
+      <div className="flex flex-wrap items-end gap-2">
+        <GroupPicker map={map} value={group} onChange={setGroup} testIdPrefix="add-tag" defaultDomain={defaultDomain} />
         <button
           type="button"
           onClick={() => void submit()}
-          disabled={busy || clean.length < 2}
+          disabled={busy || !ready}
           data-testid="add-tag-button"
           className="min-h-11 rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent disabled:opacity-50"
         >

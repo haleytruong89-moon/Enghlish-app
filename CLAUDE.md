@@ -12,6 +12,7 @@ Chủ dự án là phụ huynh, **không phải dev** — giải thích bằng t
 4. `content/catalogue_v0.2.json` — danh mục năng lực (seed), đọc bằng code.
 5. Tham chiếu gốc: MVP PRD v1.0 + Master Architecture v1.0 (nằm trong hub; file PRD Family thắng khi mâu thuẫn).
 6. `docs/PROGRESS.md` — lát nào xong, việc phụ huynh cần làm, SQL cần áp.
+7. `content/skill_map/SM-1.json` — bản đồ kỹ năng (7 mảng · 40 nhóm); mọi nhãn / kỹ năng mới phải có đúng 1 nhóm.
 
 ## Tech stack
 
@@ -77,10 +78,13 @@ npm run doctor            # kiểm tra cài đặt cloud 1 lần: bảng ✓/✗
 
 ## Current status
 
-- Repo: `haleytruong89-moon/Enghlish-app` (private). **Đã gộp vào `main` (xong, CI xanh): S0, S1, S2 (+ 4 mẫu Track B), S4, S5, S1b (tạo gia đình thật), S5b-1 PR A và PR B.** Các migration **0001–0016 đã áp** trên Supabase thật (chi tiết từng lát: `docs/PROGRESS.md`).
+- Repo: `haleytruong89-moon/Enghlish-app` (private). **Đã gộp vào `main` (xong, CI xanh): S0, S1, S2 (+ 4 mẫu Track B), S4, S5, S1b (tạo gia đình thật), S5b-1 PR A và PR B.** Các migration **0001–0018 đã áp** trên Supabase thật (0017 = S5c, 0018 = kỹ năng đọc) (chi tiết từng lát: `docs/PROGRESS.md`).
 - **S5c (Sẵn sàng dùng thật) — ĐÃ GỘP (PR #15, 19/10) và `0017` ĐÃ ÁP** (sao lưu thật có "Restore check PASSED"). Chi tiết: mục S5c trong `docs/PROGRESS.md`.
-- **Studio 1 · PR A (Kỹ năng đọc) — code xong trên nhánh `feature/studio-1`**, chờ CI + review Opus + phụ huynh duyệt PR rồi áp **`0018_reading_skills.sql`** — **áp 0018 TRƯỚC khi thử preview hoặc gộp PR (0018 chỉ thêm, tương thích ngược với `main`)**: 14 (Track B) / 6 (Track A) nhãn "Kỹ năng đọc" theo báo cáo TOMO, bảng append-only `reading_reports` (gia sư/phụ huynh nhập tháng: số câu + % mỗi kỹ năng), bảng "Kỹ năng đọc" trên Điểm cần chú ý (< 4 câu = "chưa đủ dữ liệu"; ngưỡng ở `tutorwork_settings`), xóa dữ liệu một em gồm bảng mới. Tín hiệu, không phải bằng chứng; không AI. Kế hoạch `docs/superpowers/plans/2026-10-20-studio-1a-reading-skills.md`; chi tiết `docs/PROGRESS.md`. PR B (Studio: đề → bài trong app) làm tiếp trên cùng nhánh.
+- **Studio 1 · PR A (Kỹ năng đọc) — ĐÃ GỘP (PR #16) và `0018` ĐÃ ÁP**: 14 (Track B) / 6 (Track A) nhãn "Kỹ năng đọc", bảng append-only `reading_reports` (gia sư/phụ huynh nhập tháng: số câu + % mỗi kỹ năng), bảng "Kỹ năng đọc" trên Điểm cần chú ý (< 4 câu = "chưa đủ dữ liệu"; ngưỡng ở `tutorwork_settings`), xóa dữ liệu một em gồm bảng mới. Tín hiệu, không phải bằng chứng; không AI. Kế hoạch `docs/superpowers/plans/2026-10-20-studio-1a-reading-skills.md`; chi tiết `docs/PROGRESS.md`. PR B (Studio: đề → bài trong app) làm tiếp.
+- **Công cụ đặt lại mật khẩu — PR #17.**
+- **SM-1 (Bản đồ kỹ năng) — code trên nhánh `feature/skill-map`**, chờ CI + review Opus + phụ huynh duyệt PR; **áp `0019_skill_map.sql` TRƯỚC khi thử preview hoặc gộp** (chỉ thêm; cần 0015 + 0018): bản đồ 7 mảng · 40 nhóm (`content/skill_map/SM-1.json`, bất biến sau công bố → đổi = SM-2), ô chọn nhãn / kỹ năng theo tab mảng, nhãn riêng bắt buộc mảng + nhóm (`eng_add_error_tag_v2`, "Xếp vào nhóm"), Điểm cần chú ý 7 ô mảng; kèm giao diện luôn sáng và không chữ "TOMO" trong giao diện. Kế hoạch `docs/superpowers/plans/2026-10-21-sm1-skill-map.md`.
 - Thứ tự tiếp theo (PRD D31 = E8, phụ huynh đã đồng ý 18/10): **S5c → spike AI (nhánh `feature/spike-studio-ai`, không gộp) → đưa gia sư vào + mockup Studio → Studio bước 1 (đề PDF/Word + đáp án → bài trong app, tự chấm, tự gắn nhãn) → Studio bước 2 (gợi ý bài bổ sung theo "Thư viện kiểu luyện", gộp S5b-2) → S6 → S7 → S8**. AI chỉ soạn **nháp** cho gia sư duyệt; không gửi danh tính của em; trần $10/tháng; chỉ bật sau khi phụ huynh duyệt `ai_text` (E6).
-- Chờ phụ huynh: Vercel Deployment Protection cho Preview; duyệt văn bản đồng ý (`docs/CONSENT_pilot-2026-10.md`, cần trước khi bật AI); thêm 4 mật khẩu vào GitHub Secrets rồi tạo gia đình thật; buổi 30 phút với gia sư.
-- Seed cấu hình sinh tự động và **khóa phiên bản**: bản đã công bố (danh mục 0.2.1-draft, ngưỡng AP-0.2-pilot, bộ A-v1/B-v1) nằm trong `content/config.lock.json` — KHÔNG sửa nội dung của chúng (CI báo đỏ). Muốn đổi = thêm phiên bản mới (file mới, id mới như `B-v2`) rồi `npm run gen:config -- --new` để sinh migration kế tiếp (số kế tiếp, **hiện là 0019** vì 0017 là migration S5c và 0018 là kỹ năng đọc của Studio 1 PR A); không sửa tay các migration seed.
+- Văn bản đồng ý `docs/CONSENT_pilot-2026-10.md` **đã được phụ huynh duyệt 21/10** (bật AI vẫn cần đồng ý `ai_text` riêng, E6).
+- Chờ phụ huynh: Vercel Deployment Protection cho Preview; thêm 4 mật khẩu vào GitHub Secrets rồi tạo gia đình thật; buổi 30 phút với gia sư.
+- Seed cấu hình sinh tự động và **khóa phiên bản**: bản đã công bố (danh mục 0.2.1-draft, ngưỡng AP-0.2-pilot, bộ A-v1/B-v1) nằm trong `content/config.lock.json` — KHÔNG sửa nội dung của chúng (CI báo đỏ). Muốn đổi = thêm phiên bản mới (file mới, id mới như `B-v2`) rồi `npm run gen:config -- --new` để sinh migration kế tiếp (số kế tiếp, **hiện là 0020** vì 0017 là S5c, 0018 là kỹ năng đọc của Studio 1 PR A và 0019 là bản đồ kỹ năng SM-1); không sửa tay các migration seed.
 - Pilot thủ công cả 2 em chạy song song từ 17–19/10/2026 (Pilot Kit A/B v0.2 trong hub).

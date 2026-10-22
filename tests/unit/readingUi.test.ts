@@ -46,6 +46,14 @@ describe("reading UI", () => {
     expect(html).not.toMatch(/data-testid="reading-status-doc-sequence"[^>]*bg-\[#7a4a00\]/);
   });
 
+  it("never prints a provider name, even when the stored source is TOMO (copy function and component)", () => {
+    expect(view.latestSource).toBe("TOMO");
+    expect(readingPage.sectionIntro("10/2026")).not.toMatch(/tomo/i);
+    expect(readingPage.sectionIntro(null)).not.toMatch(/tomo/i);
+    const html = renderToStaticMarkup(createElement(ReadingSkillsTable, { view, learnerId: LEARNER }));
+    expect(html).not.toMatch(/tomo/i);
+  });
+
   it("a missing previous month shows a neutral header and dashes; no view at all shows the empty state instead of the table", () => {
     const html = renderToStaticMarkup(createElement(ReadingSkillsTable, { view: { ...view, previousMonth: null, skills: [{ ...view.skills[1]!, prevQuestions: null, prevCorrectPct: null }] }, learnerId: LEARNER }));
     expect(html).toContain(readingPage.colPrev(null));

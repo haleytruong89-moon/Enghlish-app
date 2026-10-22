@@ -33,6 +33,8 @@ export type TagInfo = {
   label: string;
   group: string | null;
   custom: boolean;
+  /** Family tags only: the skill-map group chosen when it was added (SM-1). Seed tags take their group from the map. */
+  groupKey?: string | null;
 };
 
 export type FramePart = { key: string; name: string; from: number; to: number };

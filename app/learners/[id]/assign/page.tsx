@@ -5,6 +5,7 @@ import { AssignmentTable } from "@/components/practice/AssignmentTable";
 import { assignPage, learnerWithTrack } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { loadAssignments } from "@/lib/practice/load";
+import { loadSkillMap } from "@/lib/skillmap/load";
 import { loadFrames, loadTags } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
@@ -14,7 +15,12 @@ export const dynamic = "force-dynamic";
 export default async function AssignPracticePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { member, learner } = await requireLearnerPage(id, "practice:write");
-  const [tags, frames, assignments] = await Promise.all([loadTags(learner.trackId), loadFrames(learner.trackId), loadAssignments(learner.id)]);
+  const [tags, frames, assignments, map] = await Promise.all([
+    loadTags(learner.trackId),
+    loadFrames(learner.trackId),
+    loadAssignments(learner.id),
+    loadSkillMap(learner.id),
+  ]);
   const tagLabels = Object.fromEntries(tags.map((t) => [t.key, t.label]));
   return (
     <>
@@ -27,7 +33,7 @@ export default async function AssignPracticePage({ params }: { params: Promise<{
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
         <p className="mt-3 text-muted">{assignPage.intro}</p>
         <div className="mt-6 flex flex-col gap-8">
-          <AssignForm learnerId={learner.id} alias={learner.alias} tags={tags} frames={frames} today={todayVn()} />
+          <AssignForm learnerId={learner.id} alias={learner.alias} tags={tags} frames={frames} today={todayVn()} map={map} />
           <section className="flex flex-col gap-3" aria-label={assignPage.listTitle}>
             <h2 className="text-lg font-semibold">{assignPage.listTitle}</h2>
             <AssignmentTable learnerId={learner.id} assignments={assignments} tagLabels={tagLabels} today={todayVn()} />

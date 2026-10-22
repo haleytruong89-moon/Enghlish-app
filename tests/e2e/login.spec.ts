@@ -3,6 +3,19 @@ import { app, auth } from "@/lib/copy/vi";
 import { SEED_ACCOUNTS } from "../../scripts/lib/seed";
 import { emailFor, loginAs, seedPassword, submitLogin } from "./helpers";
 
+test.describe("dark device theme", () => {
+  test.use({ colorScheme: "dark" });
+  test("login page stays light", async ({ page }) => {
+    await page.goto("/login");
+    const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(bg).toBe("rgb(244, 245, 240)");
+    const scheme = await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
+    // Chromium may serialise it as "light only"; the order of the two words is not what matters.
+    expect(scheme.split(/\s+/).sort()).toEqual(["light", "only"]);
+    await expect(page.locator('meta[name="color-scheme"]')).toHaveAttribute("content", "only light");
+  });
+});
+
 test.describe("login page", () => {
   test("renders the Vietnamese login form", async ({ page }) => {
     await page.goto("/login");

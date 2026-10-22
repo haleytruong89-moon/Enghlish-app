@@ -22,7 +22,7 @@ export async function loadTags(trackId: string): Promise<TagInfo[]> {
   const db = await createUserClient();
   const { data, error } = await db
     .from("error_tags")
-    .select("key, label_vi, group_vi, origin")
+    .select("key, label_vi, group_vi, origin, group_key")
     .eq("track_id", trackId)
     .is("retired_at", null)
     .order("origin", { ascending: false })

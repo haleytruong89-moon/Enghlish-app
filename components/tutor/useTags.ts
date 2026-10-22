@@ -4,23 +4,41 @@ import { useCallback, useState } from "react";
 import { tagPicker } from "@/lib/copy/vi";
 import { failText, postJson } from "@/lib/tutorwork/client";
 import type { TagInfo } from "@/lib/tutorwork/types";
+import type { SetGroupFn } from "./SetGroupControl";
 
-/** The tag list of one child plus "+ nhãn khác": adding a tag calls the server (which makes the key) and extends the list. */
+export type AddTagFn = (label: string, groupKey: string) => Promise<{ key: string; groupKey: string | null } | { error: string }>;
+
+/**
+ * The tag list of one child plus "+ nhãn khác" (the server makes the key; a group of the skill map is required) and "Xếp vào nhóm"
+ * for a family tag that has no group yet. Both update the list in place, so the tag moves to its domain tab at once.
+ */
 export function useTags(learnerId: string, initial: TagInfo[]) {
   const [tags, setTags] = useState<TagInfo[]>(initial);
-  const add = useCallback(
-    async (label: string): Promise<{ key: string } | { error: string }> => {
-      const r = await postJson<{
-        key: string;
-        label: string;
-        created: boolean;
-      }>(`/api/learners/${learnerId}/tags`, { label });
+  const add = useCallback<AddTagFn>(
+    async (label, groupKey) => {
+      const r = await postJson<{ key: string; label: string; group_key: string | null; created: boolean }>(`/api/learners/${learnerId}/tags`, {
+        label,
+        group_key: groupKey,
+      });
       if (!r.ok) return { error: failText(r) };
-      const { key, label: saved } = r.body;
-      setTags((cur) => (cur.some((t) => t.key === key) ? cur : [...cur, { key, label: saved, group: tagPicker.customGroup, custom: true }]));
-      return { key };
+      const { key, label: saved, group_key } = r.body;
+      setTags((cur) =>
+        cur.some((t) => t.key === key)
+          ? cur.map((t) => (t.key === key && t.custom ? { ...t, groupKey: group_key } : t))
+          : [...cur, { key, label: saved, group: tagPicker.customGroup, custom: true, groupKey: group_key }],
+      );
+      return { key, groupKey: group_key };
     },
     [learnerId],
   );
-  return { tags, add };
+  const setGroup = useCallback<SetGroupFn>(
+    async (key, groupKey) => {
+      const r = await postJson<{ key: string; group_key: string; changed: boolean }>(`/api/learners/${learnerId}/tags/group`, { tag_key: key, group_key: groupKey });
+      if (!r.ok) return { error: failText(r) };
+      setTags((cur) => cur.map((t) => (t.key === key ? { ...t, groupKey: r.body.group_key } : t)));
+      return { ok: true as const };
+    },
+    [learnerId],
+  );
+  return { tags, add, setGroup };
 }

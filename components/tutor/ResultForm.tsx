@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
+import type { SkillMapView } from "@/lib/skillmap/types";
 import { fallbackLabels, resultPage } from "@/lib/copy/vi";
 import { failText, postJson } from "@/lib/tutorwork/client";
 import { itemList, parseItemNumbers, scoreFrame } from "@/lib/tutorwork/frameScore";
@@ -17,6 +18,8 @@ type Props = {
   learnerId: string;
   frames: FrameView[];
   tags: TagInfo[];
+  /** The skill map of this learner (SM-1): the tag selects are grouped by domain. */
+  map: SkillMapView;
   /** A parent cannot record work done in the session (D15). The database refuses it too. */
   canClass: boolean;
   today: string;
@@ -35,7 +38,7 @@ type Props = {
  * "Ghi kết quả bài": two ways in one screen. "Đề có khung" = click the wrong items on a grid (tags come from the frame);
  * "Nhập nhanh" = score + wrong numbers + a tag per wrong item. Only first attempts feed "Điểm cần chú ý"; the screen says so.
  */
-export function ResultForm({ learnerId, frames, tags: initialTags, canClass, today, minDate, assignments = [], initialAssignmentId = null, supersede = null, initialRetry = false }: Props) {
+export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass, today, minDate, assignments = [], initialAssignmentId = null, supersede = null, initialRetry = false }: Props) {
   const router = useRouter();
   const { tags, add } = useTags(learnerId, initialTags);
   const labelOf = useMemo(() => new Map(tags.map((t) => [t.key, t.label])), [tags]);
@@ -386,6 +389,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, canClass, tod
                     <span className="pt-2.5 text-sm font-medium">{resultPage.tagItem(n)}</span>
                     <TagSelect
                       tags={tags}
+                      map={map}
                       value={itemTags[n] ?? null}
                       onChange={(k) => setItemTags((cur) => ({ ...cur, [n]: k }))}
                       onAdd={add}

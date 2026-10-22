@@ -624,6 +624,8 @@ export const tutorWorkErrors = {
   duplicateMonth: "Tháng này đã có báo cáo. Tải lại trang để sửa bản đã lưu.",
   badMonth: "Chọn một tháng trong 24 tháng gần đây, không phải tháng sau.",
   staleReport: "Báo cáo tháng này vừa được người khác sửa. Tải lại trang rồi sửa lại.",
+  unknownGroup: "Nhóm này không có trong bản đồ kỹ năng. Tải lại trang rồi chọn lại.",
+  alreadyGrouped: "Nhãn này đã được xếp vào nhóm khác. Tải lại trang để xem.",
 } as const;
 
 /** Màn "Xóa dữ liệu của em" (S5c, chỉ phụ huynh). */
@@ -854,6 +856,26 @@ export const tagPicker = {
   remove: (label: string) => `Bỏ nhãn ${label}`,
 } as const;
 
+/** SM-1: bản đồ kỹ năng trong ô chọn nhãn / kỹ năng (gia sư, phụ huynh). Tên mảng và nhóm đến từ bản đồ (cơ sở dữ liệu). */
+export const skillMapCopy = {
+  tabsLabel: "Mảng kỹ năng",
+  unassigned: "Chưa xếp mảng",
+  unassignedHelp: "Nhãn riêng thêm trước khi có bản đồ kỹ năng. Bấm “Xếp vào nhóm” để đặt vào đúng mảng.",
+  emptyDomain: "Chưa có mục nào ở mảng này.",
+  search: "Tìm trong mọi mảng",
+  searchPlaceholder: "Gõ để tìm…",
+  noMatch: "Không có mục nào khớp.",
+  place: (domain: string, group: string) => `${domain} · ${group}`,
+  chosen: (labels: string) => `Đang chọn: ${labels}`,
+  domainLabel: "Mảng",
+  groupLabel: "Nhóm",
+  pickDomain: "— Chọn mảng —",
+  pickGroup: "— Chọn nhóm —",
+  groupRequired: "Chọn mảng và nhóm cho nhãn mới.",
+  setGroup: "Xếp vào nhóm",
+  setGroupSave: "Lưu nhóm",
+} as const;
+
 export const sessionNotePage = {
   link: "Ghi buổi học",
   title: (alias: string) => `Ghi buổi học · ${alias}`,
@@ -926,13 +948,20 @@ export const weakPage = {
   recheckResultLabels: { ok: "ổn", still_wrong: "còn sai", not_asked: "chưa hỏi" } as const,
   pendingTitle: "Chờ gắn nhãn",
   pendingLink: "Gắn nhãn cho các câu sai",
+  tilesTitle: "Theo mảng",
+  tilesHint: "Bấm một mảng để xem từng điểm cần chú ý của mảng đó.",
+  tileCount: (n: number) => (n === 0 ? "Chưa có điểm cần chú ý" : `${n} điểm cần chú ý`),
+  tileWorst: (label: string) => `Cần chú ý nhất: ${label}`,
+  tileAll: "Xem tất cả",
+  tileReading: (n: number) => `${n} kỹ năng đọc cần chú ý`,
+  allTitle: "Tất cả các mảng",
 } as const;
 
 export const readingPage = {
   link: "Nhập kỹ năng đọc tháng",
   title: (alias: string) => `Kỹ năng đọc tháng · ${alias}`,
   back: "Về Điểm cần chú ý",
-  intro: "Nhập số câu và % đúng của từng kỹ năng theo báo cáo đọc tháng (TOMO). Dòng để trống (hoặc số câu = 0) = tháng này không có câu.",
+  intro: "Nhập số câu và % đúng của từng kỹ năng theo báo cáo đọc trong tháng. Dòng để trống (hoặc số câu = 0) = tháng này không có câu.",
   monthLabel: "Tháng",
   colSkill: "Kỹ năng",
   colQuestions: "Số câu",
@@ -945,8 +974,8 @@ export const readingPage = {
   rowInvalid: "Số câu là số nguyên 0–500 (0 = không có câu); % đúng là số nguyên 0–100; nhập cả hai hoặc để trống cả hai.",
   needOneRow: "Nhập ít nhất một kỹ năng.",
   sectionTitle: "Kỹ năng đọc",
-  sectionIntro: (month: string | null, source: string | null) =>
-    month ? `Theo báo cáo tháng ${month}${source ? ` (${source})` : ""}, so với báo cáo trước. Câu sai 6 tuần = từ bài kiểm tra và bài luyện.` : "Chưa có báo cáo kỹ năng đọc nào.",
+  sectionIntro: (month: string | null) =>
+    month ? `Theo báo cáo tháng ${month}, so với báo cáo trước. Câu sai 6 tuần = từ bài kiểm tra và bài luyện.` : "Chưa có báo cáo kỹ năng đọc nào.",
   colLatest: (month: string | null) => (month ? `Tháng ${month}` : "Báo cáo mới nhất"),
   colPrev: (month: string | null) => (month ? `Tháng ${month}` : "Báo cáo trước"),
   colWrong6w: "Câu sai 6 tuần",

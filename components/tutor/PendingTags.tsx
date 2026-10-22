@@ -5,19 +5,22 @@ import { useState } from "react";
 import { resultPage } from "@/lib/copy/vi";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { failText, postJson } from "@/lib/tutorwork/client";
+import type { SkillMapView } from "@/lib/skillmap/types";
 import type { TagInfo, UntaggedItem } from "@/lib/tutorwork/types";
 import { TagSelect } from "./TagSelect";
-import { useTags } from "./useTags";
+import { useTags, type AddTagFn } from "./useTags";
 
 function PendingResult({
   item,
   tags,
   add,
+  map,
   onSaved,
 }: {
   item: UntaggedItem;
   tags: TagInfo[];
-  add: (label: string) => Promise<{ key: string } | { error: string }>;
+  add: AddTagFn;
+  map: SkillMapView;
   onSaved: () => void;
 }) {
   const [picked, setPicked] = useState<Record<number, string | null>>({});
@@ -52,6 +55,7 @@ function PendingResult({
           <span className="pt-2.5 text-sm font-medium">{resultPage.tagItem(n)}</span>
           <TagSelect
             tags={tags}
+            map={map}
             value={picked[n] ?? null}
             onChange={(k) => setPicked((cur) => ({ ...cur, [n]: k }))}
             onAdd={add}
@@ -82,7 +86,7 @@ function PendingResult({
  * "Chờ gắn nhãn": wrong items that have no tag yet. The tutor tags first; the parent sees the tutor's items after 2 days and her own
  * at once (decided on the server). Saving some items keeps the rest in the list; the list is refreshed from the server after each save.
  */
-export function PendingTags({ learnerId, items, tags: initialTags, isParent }: { learnerId: string; items: UntaggedItem[]; tags: TagInfo[]; isParent: boolean }) {
+export function PendingTags({ learnerId, items, tags: initialTags, isParent, map }: { learnerId: string; items: UntaggedItem[]; tags: TagInfo[]; isParent: boolean; map: SkillMapView }) {
   const router = useRouter();
   const { tags, add } = useTags(learnerId, initialTags);
   const [message, setMessage] = useState<string | null>(null);
@@ -105,6 +109,7 @@ export function PendingTags({ learnerId, items, tags: initialTags, isParent }: {
               item={i}
               tags={tags}
               add={add}
+              map={map}
               onSaved={() => {
                 setMessage(resultPage.pendingSaved);
                 router.refresh();

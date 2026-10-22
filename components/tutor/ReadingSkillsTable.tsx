@@ -35,7 +35,7 @@ export function ReadingSkillsTable({ view, learnerId }: { view: ReadingSkillsVie
 function ReadingRows({ view }: { view: ReadingSkillsView }) {
   return (
     <>
-      <p className="mt-1 text-sm text-muted">{readingPage.sectionIntro(monthLabel(view.latestMonth), view.latestSource)}</p>
+      <p className="mt-1 text-sm text-muted">{readingPage.sectionIntro(monthLabel(view.latestMonth))}</p>
       <div className="mt-3 overflow-x-auto rounded-xl border border-line bg-white">
         <table className="w-full min-w-[560px] text-sm">
           <thead>

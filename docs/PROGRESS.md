@@ -683,6 +683,7 @@ Nhánh `feature/s5c-readiness`. Kế hoạch `docs/plans/s5c-readiness.md`; ki�
 
 1. **Vercel → Settings → Deployment Protection:** bật cho **Preview** (Standard/Vercel Authentication). Lý do: Preview dùng chung database thật với khóa toàn quyền; bật lên thì chỉ người đăng nhập Vercel mới mở được. (Audit #8, quyết định A7.)
 2. **Duyệt văn bản đồng ý** `docs/CONSENT_pilot-2026-10.md` (5–7 câu): sửa chữ nếu cần rồi nói "duyệt". Văn bản chưa nối vào giao diện; khi đổi chữ thì phải đặt phiên bản mới (không sửa `pilot-2026-10` đã ghi).
+   - *Ghi chú 22/10 (đã duyệt 21/10):* các dòng đồng ý `pilot-2026-10` được ghi lúc tạo gia đình (20/10), theo BẢN NHÁP. Thay đổi ngày 21/10 chỉ chạm câu 4 (AI). Bật AI vẫn cần đồng ý `ai_text` riêng (E6), nên **giữ nguyên phiên bản** `pilot-2026-10`; không đổi dữ liệu đồng ý nào.
 3. **Chạy sao lưu tay một lần** sau khi PR được gộp: GitHub → Actions → *Weekly backup (encrypted)* → Run workflow. Mở lần chạy, đọc phần **Summary**: bảng *Restore check* phải ghi **OK** ở mọi dòng (mỗi bảng của `english` và `auth.users`) và "Restore check PASSED". Nếu thấy **MISMATCH**: bản sao lưu vẫn được lưu nhưng **đừng tin** cho tới khi xem nguyên nhân (nhờ dev). Chạy này cần Secrets `DATABASE_URL`, `BACKUP_AGE_RECIPIENT` như cũ; không cần thêm gì.
 4. **Diễn tập giải mã một lần** (làm tay, trên máy có khóa offline): tải artifact `learning-os-…` về máy → `age -d -i learning-os-backup.key learning-os-<mốc>.dump.age > main.dump` và tương tự cho `learning-os-auth-<mốc>.dump.age` → `auth.dump`; chạy `pg_restore -l main.dump | head` để thấy danh sách đối tượng (không cần khôi phục thật). Xóa các file `.dump` sau khi xem. Mục đích: chắc rằng khóa offline thật sự giải mã được.
 5. **Khôi phục thật (khi cần):** làm trên một project THỬ, không phải project thật; Claude chỉ chuẩn bị lệnh, phụ huynh quyết và bấm (xem bảng "Quay lại khi hỏng" trong `CLAUDE.md`).
@@ -766,3 +767,51 @@ Báo cáo kỹ năng đọc là **tín hiệu, không phải bằng chứng**: e
 ### Tiêu chí đạt
 
 `typecheck`, `lint`, `test` (gồm test database trên Postgres thật), `gen:config` xanh; CI (gồm E2E `tests/e2e/reading.spec.ts` và bước áp migration hai lần) xanh; review Opus; phụ huynh áp `0018` sau khi gộp rồi làm 3 bước thử ở trên.
+
+## SM-1 — Bản đồ kỹ năng (21/10/2026)
+
+Nhánh `feature/skill-map`. Thiết kế `docs/superpowers/specs/2026-10-21-skill-map-levels-design.md` (§2, §5–§8, phần SM-1); kế hoạch `docs/superpowers/plans/2026-10-21-sm1-skill-map.md`. Không AI; học sinh không thấy gì mới.
+
+### Đã thay đổi gì (nói đơn giản)
+
+| Việc | Vì sao | Nằm ở |
+|---|---|---|
+| **Bản đồ kỹ năng SM-1**: 7 mảng (Ngữ pháp · Từ vựng · Đọc · Nghe · Viết · Nói · Tư duy & tự học), 40 nhóm có mô tả ngắn theo cấp; đủ 40 nhãn và 70 kỹ năng danh mục, mỗi cái đúng 1 nhóm; cấp tham khảo; cấp giả định theo track (An A2 / bậc 1, Nguyên B2 / bậc 2 — chưa hiện, dùng ở SM-2) | Biết con yếu mảng nào; ô chọn không còn danh sách phẳng | `content/skill_map/SM-1.json`, `0019` |
+| **Ô chọn nhãn và "Kỹ năng đã luyện hôm nay" theo tab 7 mảng**, có tiêu đề nhóm và ô tìm nhanh; "Đọc hiểu (KET Reading)" của An ẩn khỏi ô chọn (dữ liệu cũ vẫn hiện đúng tên) | Chọn nhanh, đúng chỗ | Ghi buổi học, Ghi kết quả bài, Chờ gắn nhãn, Giao bài luyện, nhãn bài viết |
+| **Nhãn riêng bắt buộc chọn mảng + nhóm**; nhãn riêng cũ nằm ở "Chưa xếp mảng" với nút "Xếp vào nhóm" | Mọi nhãn mới vào đúng bản đồ (quyết định M3) | `0019` (`eng_add_error_tag_v2`, `eng_set_tag_group`) |
+| **"Điểm cần chú ý" mở đầu bằng 7 ô mảng** (số điểm cần chú ý + điểm nặng nhất); bấm ô → bảng chi tiết của mảng; bảng "Kỹ năng đọc" nằm trong ô Đọc; "Xem tất cả" = bảng cũ | Trả lời "con yếu mảng nào" | trang Điểm cần chú ý |
+
+Bản đồ đã công bố thì **không sửa được** (cơ sở dữ liệu chặn); muốn đổi = bản `SM-2`, phụ huynh duyệt.
+
+### SQL cần áp
+
+- **`db/migrations/0019_skill_map.sql`** — Actions → **Apply database migrations** (gõ APPLY) hoặc dán vào SQL Editor. **Áp `0019` TRƯỚC khi thử preview hoặc gộp PR** (chỉ thêm: 4 bảng cấu hình, 1 cột trống `error_tags.group_key`, 5 hàm mới (3 hàm server gọi, 1 hàm trợ giúp nội bộ, 1 hàm chặn sửa bản đồ đã công bố); hàm cũ `eng_add_error_tag` vẫn chạy → tương thích ngược với `main`). **Lưu ý giữa lúc áp `0019` và lúc gộp PR:** `main` (production) vẫn dùng hàm thêm nhãn cũ (v1), nên nhãn riêng thêm trong khoảng đó sẽ nằm ở "Chưa xếp mảng" và cần bấm "Xếp vào nhóm" sau khi gộp. Code mới cần `0019`: chưa áp thì các trang có ô chọn nhãn và trang Điểm cần chú ý sẽ báo lỗi. `0019` cần `0015` và `0018` đã áp (nó tự kiểm và dừng nếu thiếu nhãn). Chạy lại an toàn. Nên bấm chạy tay *Weekly backup* trước khi áp.
+
+### Cách thử trên preview (gia đình thử)
+
+1. Đăng nhập `thu-giasu-nguyen` → Nguyên (thử) → **Ghi buổi học**: "Kỹ năng đã luyện hôm nay" và "Điểm cần củng cố" có tab 7 mảng; bấm tab **Từ vựng** chọn "Dạng từ", tab **Nói** chọn "Phát âm" → dòng "Đang chọn" liệt kê cả hai.
+2. Gõ một nhãn mới ("Đảo ngữ thử"): nút thêm chỉ bấm được sau khi chọn **Mảng = Ngữ pháp, Nhóm = Nhấn mạnh & đảo ngữ**; nhãn hiện ở tab Ngữ pháp và đã được tích.
+3. **Điểm cần chú ý**: thấy 7 ô + "Xem tất cả"; bấm ô **Từ vựng** → chỉ các điểm từ vựng; bấm ô **Đọc** → thấy bảng "Kỹ năng đọc".
+4. Đăng nhập `thu-giasu-an` → An (thử) → **Ghi kết quả bài** → Nhập nhanh, một câu sai: ô chọn nhãn chia theo "Mảng · Nhóm", không có "Đọc hiểu (KET Reading)".
+
+### Đối chiếu với spec — chỗ khác và vì sao
+
+- **Cấp của mảng Tư duy & tự học** lưu bằng `task_from` / `task_to` (bậc 1–4), không phải một số `task_level`: kỹ năng `B-T5-SUPPORT` trải 2 bậc (TL3–TL4).
+- **Kỹ năng L7** (nằm ở Tư duy & tự học) chưa có bậc nhiệm vụ, **kỹ năng T1/T2** (ở Đọc / Nghe) chưa có cấp CEFR: danh mục 0.2.1 chỉ ghi thang còn lại; điền ở nội dung v0.3.
+- **"Hay dùng lên đầu" chưa làm**: app chưa đếm số lần dùng nhãn; làm cùng bộ lọc ± 1 cấp ở SM-2.
+- **SM-1 không vào `config.lock.json` / `gen:config`**: khóa bằng `skill_maps.source_hash` + test so JSON nhúng trong `0019` với file; sửa file sau khi áp → test đỏ → phải làm SM-2.
+- **Thêm dòng "Đang chọn: …"** phía trên các tab (một nhãn đã chọn có thể nằm ở tab khác).
+- **Điểm cần chú ý**: 7 ô luôn hiện; bảng chi tiết hiện dưới ô đang mở; thêm ô "Xem tất cả" = bảng đầy đủ như trước.
+
+### Để sau (SM-2 / nội dung v0.3)
+
+Lọc ô chọn theo cấp hiện tại ± 1; "hay dùng" lên đầu; Hồ sơ cấp + sổ quyết định cấp + mốc thi ngoài; điểm cốt lõi (`core`) theo cấp; cấp CEFR cho kỹ năng L7 và bậc nhiệm vụ cho T1/T2.
+
+### Tiêu chí đạt
+
+`typecheck`, `lint`, `test` (gồm test database), `gen:config` xanh; CI (gồm E2E và bước áp migration hai lần) xanh; review Opus; gia sư rà `SM-1.json` (bảng xếp 46 kỹ năng trong kế hoạch); phụ huynh áp `0019` rồi làm 4 bước thử ở trên.
+
+### Điều chỉnh của phụ huynh 22/10/2026 (làm cùng nhánh, sau khi duyệt mockup)
+
+- **Giao diện luôn sáng** (kể cả máy Windows/điện thoại đặt chế độ tối, kể cả trình duyệt tự làm tối trang): `colorScheme: "only light"` trong viewport + `color-scheme: only light` ở `:root` + ô nhập/chọn nền trắng. Có test `tests/unit/lightOnly.test.ts` (cấm `dark:` / `prefers-color-scheme: dark` trong `app/`, `components/`) và một test E2E "login page stays light" trong `tests/e2e/login.spec.ts`.
+- **Không chữ "TOMO" trong giao diện**: lời dẫn của màn "Nhập kỹ năng đọc tháng" chỉ nói "báo cáo đọc trong tháng"; giá trị `reading_reports.source = 'TOMO'` vẫn là dữ liệu (không đổi, không migration). Test `tests/unit/copyNoProvider.test.ts` giữ cho `lib/copy/vi.ts` và các file `.tsx` không chứa chữ này. Lý do: phụ huynh dự định cho gia sư giao bài và AI chấm theo các tiêu chí này, nên giao diện không gắn với một nhà cung cấp. Danh sách kỹ năng đọc (14 / 6) giữ nguyên.
