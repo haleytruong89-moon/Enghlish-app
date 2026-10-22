@@ -359,6 +359,214 @@ as $$
 $$;
 revoke execute on function english.eng_episode_targets(uuid) from public, anon, authenticated, service_role;
 
+-- 5b. D14 trọn vẹn: gắn nhãn bài viết và màn xem bài cũng theo eng_episode_restricted (bài sửa của bài kiểm tra trong buổi / quan sát trực tiếp chỉ gia sư).
+-- Thân hàm = bản của 0014 (eng_tag_episode) và 0010 (eng_review_episode); chỉ thay phép kiểm tra "bài bị giới hạn" tại chỗ bằng eng_episode_restricted. Quyền giữ nguyên.
+create or replace function english.eng_tag_episode(p_episode uuid, p_tags text[], p_by uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_e english.episodes%rowtype;
+  v_learner english.learners%rowtype;
+  v_member english.members%rowtype;
+  v_type text;
+  v_at timestamptz;
+  v_keys text[];
+  v_have int;
+  v_added int := 0;
+  k text;
+begin
+  if p_episode is null or p_by is null or p_tags is null then
+    raise exception 'eng_tag_episode: episode, tags and actor are required' using errcode = '22004';
+  end if;
+  select pg_catalog.array_agg(distinct pg_catalog.btrim(x) order by pg_catalog.btrim(x)) into v_keys from unnest(p_tags) x where pg_catalog.btrim(coalesce(x, '')) <> '';
+  v_keys := coalesce(v_keys, '{}');
+  select * into v_e from english.episodes e where e.id = p_episode for no key update;
+  if not found then
+    raise exception 'eng_tag_episode: episode not found' using errcode = 'P0002';
+  end if;
+  select * into v_learner from english.learners l where l.id = v_e.learner_id;
+  select * into v_member from english.members m where m.id = p_by;
+  if v_member.id is null or v_member.role not in ('tutor', 'parent') or not english.eng_actor_may_manage(p_by, v_e.learner_id) then
+    raise exception 'eng_tag_episode: this member may not tag work of this learner' using errcode = '42501';
+  end if;
+  -- D15: bài kiểm tra trong buổi (checkpoint) và bài quan sát trực tiếp: chỉ gia sư gắn nhãn (cùng luật với duyệt bài).
+  if v_member.role <> 'tutor' and english.eng_episode_restricted(v_e.id) then
+    raise exception 'eng_tag_episode: only a tutor may tag work checked in the session or watched live (D15)' using errcode = '42501';
+  end if;
+  select a.activity_type, t.submitted_at into v_type, v_at
+  from english.attempts t join english.activity_instances a on a.id = t.activity_instance_id where t.id = v_e.attempt_id;
+  if v_type not in ('ACT-WRITE', 'ACT-REVISE') then
+    raise exception 'eng_tag_episode: only written work can be tagged here' using errcode = '23514';
+  end if;
+  -- Tổng số nhãn của bài viết này (đã có + mới) không quá 3.
+  select pg_catalog.count(*) into v_have from english.tag_marks m where m.source = 'writing' and m.source_id = p_episode;
+  if v_have + (select pg_catalog.count(*) from unnest(v_keys) x
+               where not exists (select 1 from english.tag_marks m where m.source = 'writing' and m.source_id = p_episode and m.tag_key = x)) > 3 then
+    raise exception 'eng_tag_episode: at most 3 tags for one piece of writing' using errcode = '23514';
+  end if;
+  foreach k in array v_keys loop
+    if not english.eng_tag_exists(v_learner.track_id, v_learner.family_id, k) then
+      raise exception 'eng_tag_episode: a tag does not exist for this learner''s track' using errcode = '23514';
+    end if;
+    insert into english.tag_marks(learner_id, tag_key, source, source_id, item_no, counts, marked_on, recorded_by_member)
+    values (v_e.learner_id, k, 'writing', p_episode, null, v_e.is_first_attempt, (v_at at time zone 'Asia/Ho_Chi_Minh')::date, p_by)
+    on conflict do nothing;
+    if found then
+      v_added := v_added + 1;
+    end if;
+  end loop;
+  if v_added > 0 then
+    insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+    values (v_member.user_id, v_member.role, 'writing.tagged', v_learner.family_id, v_e.learner_id,
+            pg_catalog.jsonb_build_object('episode', p_episode, 'tags', v_added));
+  end if;
+  return pg_catalog.jsonb_build_object('added', v_added, 'replayed', v_added = 0);
+end
+$$;
+
+create or replace function english.eng_review_episode(p_episode uuid) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_e english.episodes%rowtype;
+  v_at english.attempts%rowtype;
+  v_a english.activity_instances%rowtype;
+  v_i english.inquiry_instances%rowtype;
+  v_l english.learners%rowtype;
+  v_me english.members%rowtype;
+  v_step jsonb;
+  v_desc text;
+  v_restricted boolean;
+begin
+  select e.* into v_e from english.episodes e where e.id = p_episode;
+  if not found or not english.eng_is_staff_of(v_e.learner_id) then
+    return null;
+  end if;
+  select * into v_at from english.attempts t where t.id = v_e.attempt_id;
+  select * into v_a from english.activity_instances a where a.id = v_at.activity_instance_id;
+  select * into v_i from english.inquiry_instances i where i.id = v_a.inquiry_instance_id;
+  select * into v_l from english.learners l where l.id = v_e.learner_id;
+  select * into v_me from english.members m where m.id = english.eng_current_member_id();
+  v_desc := v_i.snapshot -> 'template' ->> 'descriptor_version';
+  v_restricted := english.eng_episode_restricted(v_e.id);
+  select x into v_step from pg_catalog.jsonb_array_elements(v_i.snapshot -> 'steps') as x
+  where (x ->> 'step_no')::int = v_a.step_no;
+
+  return pg_catalog.jsonb_build_object(
+    'episode', pg_catalog.jsonb_build_object(
+      'id', v_e.id,
+      'is_first_attempt', v_e.is_first_attempt,
+      'observed_directly', v_e.observed_directly,
+      'facets', v_e.facets,
+      'restricted', v_restricted),
+    'learner', pg_catalog.jsonb_build_object('id', v_l.id, 'alias', v_l.alias, 'track_id', v_l.track_id, 'is_test', v_l.is_test),
+    'viewer', pg_catalog.jsonb_build_object(
+      'role', v_me.role,
+      'can_decide', english.eng_review_role(v_e.id, v_me.id) is not null,
+      'restricted', v_restricted),
+    'attempt', pg_catalog.jsonb_build_object(
+      'id', v_at.id,
+      'attempt_no', v_at.attempt_no,
+      'mode', v_at.mode,
+      'provenance', v_at.provenance,
+      'submitted_at', v_at.submitted_at,
+      'declared_assistance', pg_catalog.to_jsonb(v_at.declared_assistance),
+      'recorded_by_name', (select m.display_name from english.artifact_versions av
+                           join english.members m on m.id = av.created_by
+                           where av.attempt_id = v_at.id and v_at.provenance in ('tutor_live', 'manual_import')
+                           order by av.version limit 1)),
+    'artifact', (select pg_catalog.jsonb_build_object('kind', av.kind, 'content', av.content, 'is_raw', av.is_raw)
+                 from english.artifact_versions av where av.attempt_id = v_at.id order by av.version limit 1),
+    'activity', pg_catalog.jsonb_build_object(
+      'id', v_a.id, 'step_no', v_a.step_no, 'activity_type', v_a.activity_type, 'mode', v_a.mode,
+      'purpose', pg_catalog.to_jsonb(v_a.purpose), 'time_min', (v_step ->> 'time_min')::int),
+    'inquiry', pg_catalog.jsonb_build_object(
+      'id', v_i.id,
+      'title_vi', v_i.snapshot -> 'template' ->> 'title_vi',
+      'big_question_en', v_i.snapshot -> 'template' ->> 'big_question_en',
+      'big_question_vi', v_i.snapshot -> 'template' ->> 'big_question_vi'),
+    'step', pg_catalog.jsonb_build_object(
+      'prompt_en', v_step ->> 'prompt_en',
+      'items', (select coalesce(pg_catalog.jsonb_agg(
+                  pg_catalog.jsonb_build_object('id', x ->> 'id', 'kind', x ->> 'kind', 'stem', x ->> 'stem',
+                                                'options', coalesce(x -> 'options', '[]'::jsonb))
+                  order by o), '[]'::jsonb)
+                from pg_catalog.jsonb_array_elements(coalesce(v_step -> 'items', '[]'::jsonb)) with ordinality as t(x, o))),
+    'sources', (select coalesce(pg_catalog.jsonb_agg(
+                  pg_catalog.jsonb_build_object('id', s.id, 'title', s.title, 'modality', s.modality) order by ss.position, s.id), '[]'::jsonb)
+                from english.template_step_sources ss
+                join english.sources s on s.id = ss.source_id and s.version = ss.source_version
+                where ss.template_id = v_i.template_id and ss.template_version = v_i.template_version and ss.step_no = v_a.step_no),
+    'auto_checks', (select c.checks from english.attempt_auto_checks c where c.attempt_id = v_at.id),
+    'keys', (select coalesce(pg_catalog.jsonb_agg(
+               pg_catalog.jsonb_build_object('item_id', k.item_id, 'kind', k.kind, 'answer', k.answer, 'explanation_vi', k.explanation_vi)
+               order by k.item_id), '[]'::jsonb)
+             from english.instance_item_keys k where k.inquiry_instance_id = v_i.id and k.step_no = v_a.step_no),
+    'assistance', (select coalesce(pg_catalog.jsonb_agg(
+                     pg_catalog.jsonb_build_object(
+                       'id', s.id, 'kind', s.kind, 'detail', s.detail, 'verification', s.verification,
+                       'affects', pg_catalog.to_jsonb(s.affects_target_keys), 'at', s.at, 'note', s.note,
+                       'by_name', m.display_name)
+                     order by s.at, s.id), '[]'::jsonb)
+                   from english.assistance_events s
+                   left join english.members m on m.id = s.recorded_by
+                   where s.attempt_id = v_at.id),
+    'targets', (select coalesce(pg_catalog.jsonb_agg(
+                  pg_catalog.jsonb_build_object(
+                    'key', t.target_key,
+                    'is_target', t.is_target,
+                    'scorable', t.scorable,
+                    'locked_reason', case when not t.is_target then 'not_a_skill'
+                                          when not t.scorable then 'needs_live' else null end,
+                    'title_vi', tg.title_vi,
+                    'dimension', case when dm.id is null then null else
+                      pg_catalog.jsonb_build_object('id', dm.id, 'name_vi', dm.name_vi, 'rubric_vi', dm.rubric_vi) end,
+                    'criteria', coalesce((select pg_catalog.jsonb_agg(
+                                  pg_catalog.jsonb_build_object(
+                                    'id', c ->> 'id', 'check_vi', c ->> 'check_vi', 'method', c ->> 'method',
+                                    'computable', coalesce((c ->> 'computable')::boolean, false))
+                                  order by co)
+                                from pg_catalog.jsonb_array_elements(tg.success_criteria) with ordinality as cc(c, co)), '[]'::jsonb),
+                    'opportunity_rule', tg.opportunity_rule,
+                    'decisions', (select coalesce(pg_catalog.jsonb_agg(
+                                    pg_catalog.jsonb_build_object(
+                                      'id', d.id,
+                                      'decision', d.decision,
+                                      'final_score', d.final_score,
+                                      'final_not_observed', d.final_not_observed,
+                                      'validator_role', d.validator_role,
+                                      'validator_name', vm.display_name,
+                                      'reason', d.reason,
+                                      'supersedes_id', d.supersedes_id,
+                                      'at', d.created_at,
+                                      'current', not exists (select 1 from english.validation_decisions d2 where d2.supersedes_id = d.id),
+                                      'criteria_results', o.criteria_results,
+                                      'rationale', o.rationale,
+                                      'blind', o.blind)
+                                    order by d.created_at, d.id), '[]'::jsonb)
+                                  from english.validation_decisions d
+                                  left join english.observations o on o.id = d.observation_id
+                                  left join english.members vm on vm.id = d.validator_member_id
+                                  where d.episode_id = v_e.id and d.target_key = t.target_key))
+                  order by t.ord), '[]'::jsonb)
+                from english.eng_episode_targets(v_e.id) t
+                left join english.targets tg on tg.id = t.target_key and tg.descriptor_version = v_desc
+                left join english.dimensions dm on dm.id = tg.dimension_id and dm.catalogue_version = tg.catalogue_version),
+    'tech', pg_catalog.jsonb_build_object(
+      'template_id', v_i.template_id,
+      'template_version', v_i.template_version,
+      'catalogue_version', v_i.snapshot -> 'template' ->> 'catalogue_version',
+      'descriptor_version', v_desc,
+      'policy_version', v_i.snapshot -> 'template' ->> 'assessment_policy_version')
+  );
+end
+$$;
+
+revoke execute on function english.eng_tag_episode(uuid, text[], uuid) from public, anon, authenticated;
+grant execute on function english.eng_tag_episode(uuid, text[], uuid) to service_role;
+revoke execute on function english.eng_review_episode(uuid) from public, anon, service_role;
+grant execute on function english.eng_review_episode(uuid) to authenticated;
+
 -- 6. Góp ý cho con ----------------------------------------------------------------------------------------------------------------------
 -- 1–3 góp ý: {text 1..200, không điểm; excerpt? ≤ 120, phải có trong bài (so sau khi làm sạch khoảng trắng / nháy); leaf? = 1 lá của bản đồ
 -- hiện hành cho track của em, hoặc nhãn riêng của gia đình đã có nhóm}. Trả mảng chuẩn [{n, text, excerpt?, leaf?}], n = 1..k theo thứ tự.

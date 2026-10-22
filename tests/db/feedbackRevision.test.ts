@@ -393,6 +393,26 @@ describe("S6 feedback + revision (migration 0021)", () => {
       const ep = await episodeOf(done.attempt_id);
       expect((await q1<{ r: string | null }>("select english.eng_review_role($1, $2) as r", [ep, M().parent]))[0]?.r).toBeNull();
       expect((await q1<{ r: string | null }>("select english.eng_review_role($1, $2) as r", [ep, M().tutorAn]))[0]?.r).toBe("tutor");
+      // D14 in full: tagging and the episode view follow the same rule (eng_episode_restricted)
+      const tag = (by: string) => svc<{ added: number }>("select english.eng_tag_episode($1, '{viet-cau}'::text[], $2) as r", [ep, by]);
+      await fail(tag(M().parent), "42501", /\(D15\)/);
+      expect((await tag(M().tutorAn)).added).toBe(1);
+      const view = (user: string, episode: string) => studentRead<{ episode: { restricted: boolean }; viewer: { restricted: boolean; can_decide: boolean } } | null>(user, "select english.eng_review_episode($1) as r", [episode]);
+      expect(await view(U().parent, ep)).toMatchObject({ episode: { restricted: true }, viewer: { restricted: true, can_decide: false } });
+      expect(await view(U().tutorAn, ep)).toMatchObject({ episode: { restricted: true }, viewer: { can_decide: true } });
+    });
+
+    it("D14 keeps the old behaviour for ordinary work: the parent may tag and decide, the episode is not restricted", async () => {
+      const x = await assign("an", "A-W1-VOLCANOES", dueReleasingAll("A-W1-VOLCANOES"));
+      const ordinary = await submitText(U().studentAn, await step(x, 6), TEXT_A);
+      const ep = await episodeOf(ordinary.attempt_id);
+      expect((await svc<{ added: number }>("select english.eng_tag_episode($1, '{viet-cau}'::text[], $2) as r", [ep, M().parent])).added).toBe(1);
+      expect(await studentRead(U().parent, "select english.eng_review_episode($1) as r", [ep])).toMatchObject({ episode: { restricted: false }, viewer: { restricted: false, can_decide: true } });
+      // the checkpoint itself (not a revision) is restricted as before
+      const check = await submitText(U().studentAn, await step(x, 11), TEXT_A);
+      const cep = await episodeOf(check.attempt_id);
+      await fail(svc("select english.eng_tag_episode($1, '{viet-cau}'::text[], $2) as r", [cep, M().parent]), "42501", /\(D15\)/);
+      expect(await studentRead(U().parent, "select english.eng_review_episode($1) as r", [cep])).toMatchObject({ episode: { restricted: true } });
     });
   });
 
