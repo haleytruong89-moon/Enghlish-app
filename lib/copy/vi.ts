@@ -960,7 +960,7 @@ export const readingPage = {
   link: "Nhập kỹ năng đọc tháng",
   title: (alias: string) => `Kỹ năng đọc tháng · ${alias}`,
   back: "Về Điểm cần chú ý",
-  intro: "Nhập số câu và % đúng của từng kỹ năng theo báo cáo đọc tháng (TOMO). Dòng để trống (hoặc số câu = 0) = tháng này không có câu.",
+  intro: "Nhập số câu và % đúng của từng kỹ năng theo báo cáo đọc trong tháng. Dòng để trống (hoặc số câu = 0) = tháng này không có câu.",
   monthLabel: "Tháng",
   colSkill: "Kỹ năng",
   colQuestions: "Số câu",
