@@ -3697,3 +3697,140 @@ git commit -m "docs(sm-1): PROGRESS section, status + next migration 0020, DESIG
 **Dry run (21/10, while writing the plan):** the code of Tasks 1–9 was applied in a throw-away worktree exactly as written here: `npm run test:unit` 625/625 green (incl. the new files), `typecheck`, `lint` and `gen:config` clean; `tests/db/skillMap.test.ts` (16), `migrations`, `tutorWork`, `config` and `readingSkills` DB tests green on PGlite (Postgres 17, no local Postgres 16 available). The builder must still run the DB suite on the repo's Postgres 16 (`npm run test:db`).
 
 **Type consistency:** `SkillMapView` / `SkillLeaf` (Task 1) are produced by `parseSkillMap` (Task 4) and consumed by `group.ts`, `DomainTabs`, `GroupPicker`, `SetGroupControl`, `AddTag`, `TagChips`, `TagSelect`, `DomainTiles`; `AddTagFn` is `(label, groupKey)` everywhere (useTags, AddTag, TagChips, TagSelect, PendingTags); `SetGroupFn` is defined in `SetGroupControl.tsx` and returned by `useTags`; store args `groupKey` / `tagKey` match the handlers and the RPC parameter names `p_group_key` / `p_tag_key` of 0019.
+
+---
+
+## Amendments — parent, 22/10/2026 (mockups approved the same day)
+
+Do Tasks 11 and 12 together with Tasks 6–9; Task 10 (docs, checks, review, PR) runs last and must also cover them.
+
+### Task 11: The app is always light, even when the device uses a dark theme
+
+Why: the parent wants every screen light on Windows/phones set to dark mode, including browsers that force-darken pages (Chrome/Edge "auto dark"). `color-scheme: only light` opts out of forced darkening and keeps native controls (inputs, selects, scrollbars, date pickers) light.
+
+**Files:**
+- Modify: `app/layout.tsx` (viewport)
+- Modify: `app/globals.css`
+- Test: `tests/unit/lightOnly.test.ts` (new)
+- Test: add one test to an existing Playwright spec (the smoke/home spec); no new e2e file
+
+**Interfaces:** none (styling only).
+
+- [ ] **Step 1: Write the failing unit test** — `tests/unit/lightOnly.test.ts`
+
+```ts
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+
+const read = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
+
+describe("always-light theme", () => {
+  it("declares only-light in the viewport (meta color-scheme)", () => {
+    expect(read("app/layout.tsx")).toMatch(/colorScheme:\s*"only light"/);
+  });
+  it("declares only-light on :root and keeps form controls light", () => {
+    const css = read("app/globals.css");
+    expect(css).toMatch(/:root\s*\{[^}]*color-scheme:\s*only light/);
+    expect(css).toMatch(/input,\s*select,\s*textarea\s*\{[^}]*background-color:\s*#ffffff/);
+  });
+  it("has no dark-mode variants anywhere in app/ or components/", () => {
+    // Guard: nobody adds dark: classes or a prefers-color-scheme: dark block later.
+    const { execSync } = require("node:child_process") as typeof import("node:child_process");
+    const out = execSync("grep -rlE 'dark:|prefers-color-scheme:\\s*dark' app components || true", { encoding: "utf8" });
+    expect(out.trim()).toBe("");
+  });
+});
+```
+
+- [ ] **Step 2: Run it — expect FAIL** (`npx vitest run tests/unit/lightOnly.test.ts`: the first two tests fail).
+
+- [ ] **Step 3: Implement**
+
+`app/layout.tsx` — add one line to `viewport`:
+
+```ts
+export const viewport: Viewport = {
+  themeColor: "#F4F5F0",
+  colorScheme: "only light",
+  width: "device-width",
+  initialScale: 1,
+};
+```
+
+`app/globals.css` — add after the `@theme` block:
+
+```css
+/* Always light (parent, 22/10/2026): also opts out of browser "auto dark" (forced darkening). */
+:root {
+  color-scheme: only light;
+}
+
+input,
+select,
+textarea {
+  background-color: #ffffff;
+  color: var(--color-ink);
+}
+```
+
+- [ ] **Step 4: Add the e2e check** to the existing smoke spec (the file that already opens the login page), as its own `test.describe` block:
+
+```ts
+test.describe("dark device theme", () => {
+  test.use({ colorScheme: "dark" });
+  test("login page stays light", async ({ page }) => {
+    await page.goto("/login");
+    const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(bg).toBe("rgb(244, 245, 240)");
+    const scheme = await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
+    expect(scheme).toBe("only light");
+  });
+});
+```
+
+(Use the spec's existing imports; if the login route differs, use the route the spec already visits.)
+
+- [ ] **Step 5: Run** `npx vitest run tests/unit/lightOnly.test.ts` → PASS; `npm run typecheck && npm run lint`; `npx playwright test --list` shows the new test.
+
+- [ ] **Step 6: Commit** — `feat(ui): always-light theme, opt out of forced dark mode`
+
+### Task 12: No "TOMO" in any user-facing text
+
+Why: the reading-skill list stays (same 14 / 6 skills), but the parent plans to have tutors assign work and AI grade against these criteria, so the UI must not tie them to one provider. Stored data is unchanged: `reading_reports.source = 'TOMO'` stays as a data value (no migration).
+
+**Files:**
+- Modify: `lib/copy/vi.ts` (reading-report intro, ~line 957, and any copy added in Tasks 6–9)
+- Test: `tests/unit/copyNoProvider.test.ts` (new)
+
+- [ ] **Step 1: Failing test** — `tests/unit/copyNoProvider.test.ts`
+
+```ts
+import { readFileSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { describe, expect, it } from "vitest";
+
+describe("no provider name in UI text", () => {
+  it("lib/copy/vi.ts never says TOMO", () => {
+    const vi = readFileSync(new URL("../../lib/copy/vi.ts", import.meta.url), "utf8");
+    expect(vi).not.toMatch(/tomo/i);
+  });
+  it("no component or page renders a literal TOMO", () => {
+    const out = execSync("grep -rIl --include=*.tsx -i 'tomo' app components || true", { encoding: "utf8" });
+    expect(out.trim()).toBe("");
+  });
+});
+```
+
+- [ ] **Step 2: Run — expect FAIL** (vi.ts line ~957 says "(TOMO)").
+
+- [ ] **Step 3: Implement** — reading-report intro becomes:
+
+```ts
+  intro: "Nhập số câu và % đúng của từng kỹ năng theo báo cáo đọc trong tháng. Dòng để trống (hoặc số câu = 0) = tháng này không có câu.",
+```
+
+Also check the weak page / Đọc tile copy written in Task 8 says only "Kỹ năng đọc" (e.g. "Kỹ năng đọc (báo cáo tháng + bài trong app)"), and that no component prints `report.source`. Code comments in `lib/reading/*` may keep "TOMO" (not user-facing).
+
+- [ ] **Step 4: Run** `npx vitest run tests/unit/copyNoProvider.test.ts` → PASS.
+
+- [ ] **Step 5: Commit** — `fix(copy): reading skills UI does not name a provider`
