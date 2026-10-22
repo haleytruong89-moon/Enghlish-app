@@ -3,7 +3,7 @@ import { skillMapCopy } from "@/lib/copy/vi";
 import { domainOfAdded, domainOfGroup, firstTab, groupTags, groupTargets, groupWeakPoints, placeOfTag } from "@/lib/skillmap/group";
 import { parseSkillMap } from "@/lib/skillmap/shape";
 import type { TagInfo, WeakPoint } from "@/lib/tutorwork/types";
-import { fixtureMap } from "./fixtures/skillMap";
+import { fixtureMap, levelledMap } from "./fixtures/skillMap";
 
 const tag = (key: string, over: Partial<TagInfo> = {}): TagInfo => ({ key, label: key, group: null, custom: false, ...over });
 const weak = (tagKey: string, status: WeakPoint["status"], sources = 1): WeakPoint => ({
@@ -28,7 +28,7 @@ describe("groupTags", () => {
       ["gr-emphasis", ["x-moi-abcde"]],
     ]);
     expect(b[1]?.groups.map((g) => g.name)).toEqual(["Dạng từ", "Kết hợp từ, cụm động từ, thành ngữ"]);
-    expect(b[3]).toEqual({ key: "listening", name: "Nghe", total: 0, groups: [] });
+    expect(b[3]).toEqual({ key: "listening", name: "Nghe", total: 0, groups: [], far: [] });
     expect(b[7]).toMatchObject({ name: skillMapCopy.unassigned, total: 2 });
     expect(b[7]?.groups[0]?.items.map((t) => t.key)).toEqual(["x-dao-ngu-hardly", "khong-co-trong-ban-do"]);
   });
@@ -107,5 +107,40 @@ describe("domainOfAdded (the tab to open after '+ nhãn khác')", () => {
     expect(domainOfAdded(map, { key: "x-moi", groupKey: "vo-word-form" })).toBe("vocab");
     expect(domainOfAdded(map, { key: "dang-tu", groupKey: null })).toBe("vocab"); // the label matched a seed tag
     expect(domainOfAdded(map, { key: "x-la", groupKey: null })).toBeNull();
+  });
+});
+
+describe("SM-2 P4-c: tag pickers put the current level ± 1 first", () => {
+  it("without a current level nothing moves (SM-1 behaviour)", () => {
+    expect(groupTags(fixtureMap(), [tag("dang-tu"), tag("cum-dong-tu"), tag("thanh-ngu")]).every((b) => b.far.length === 0)).toBe(true);
+  });
+
+  it("a tag outside B2 ± 1 goes to 'far'; a tag without a level and a chosen tag stay near; the tab count includes both", () => {
+    const tags = [tag("dang-tu"), tag("cum-dong-tu"), tag("thanh-ngu"), tag("phat-am")];
+    const vocab = groupTags(levelledMap(), tags).find((b) => b.key === "vocab")!;
+    expect(vocab.groups.flatMap((g) => g.items.map((t) => t.key))).toEqual(["dang-tu", "thanh-ngu"]);
+    expect(vocab.far.map((g) => [g.key, g.items.map((t) => t.key)])).toEqual([["vo-colloc-idiom", ["cum-dong-tu"]]]);
+    expect(vocab.total).toBe(3);
+    expect(groupTags(levelledMap(), tags).find((b) => b.key === "speaking")!.far).toEqual([]);
+    expect(groupTags(levelledMap(), tags, { keep: ["cum-dong-tu"] }).find((b) => b.key === "vocab")!.far).toEqual([]);
+    expect(firstTab(groupTags(levelledMap(), [tag("cum-dong-tu")]))).toBe("vocab");
+  });
+
+  it("nearKeep: a tag can stay visible (keep) while the near/far split uses only the selection at mount", () => {
+    const tags = [tag("dang-tu"), tag("cum-dong-tu"), tag("thanh-ngu")];
+    // chosen in this session after mount: still listed, but still under "far" (it does not jump sections while the user clicks)
+    const live = groupTags(levelledMap(), tags, { keep: ["cum-dong-tu"], nearKeep: [] }).find((b) => b.key === "vocab")!;
+    expect(live.far.flatMap((g) => g.items.map((t) => t.key))).toEqual(["cum-dong-tu"]);
+    // chosen at mount: near
+    const atMount = groupTags(levelledMap(), tags, { keep: ["cum-dong-tu"], nearKeep: ["cum-dong-tu"] }).find((b) => b.key === "vocab")!;
+    expect(atMount.far).toEqual([]);
+    // without nearKeep, keep still decides both (earlier behaviour)
+    expect(groupTags(levelledMap(), tags, { keep: ["cum-dong-tu"] }).find((b) => b.key === "vocab")!.far).toEqual([]);
+  });
+
+  it("the skills of the child's set and the weak points are never split by level (D2)", () => {
+    expect(groupTargets(levelledMap(), [{ id: "B-L1-TRANSFORM-W", title: "x" }]).every((b) => b.far.length === 0)).toBe(true);
+    const tiles = groupWeakPoints(levelledMap(), [weak("cum-dong-tu", "watch")]);
+    expect(tiles.find((t) => t.key === "vocab")?.points.map((p) => p.tagKey)).toEqual(["cum-dong-tu"]);
   });
 });

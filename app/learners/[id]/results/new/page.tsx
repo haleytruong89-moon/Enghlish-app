@@ -5,7 +5,7 @@ import { ResultForm } from "@/components/tutor/ResultForm";
 import { learnerWithTrack, resultPage } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { loadAssignments } from "@/lib/practice/load";
-import { loadSkillMap } from "@/lib/skillmap/load";
+import { loadPickerMap } from "@/lib/skillmap/load";
 import { loadFrames, loadResultForEdit, loadTags, loadUntagged } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
@@ -22,7 +22,7 @@ export default async function NewResultPage({ params, searchParams }: { params: 
     loadTags(learner.trackId),
     loadUntagged(learner.id, { role, memberId: member.id }),
     loadAssignments(learner.id),
-    loadSkillMap(learner.id),
+    loadPickerMap(learner.id),
   ]);
   // Open assignments only: not retracted, and not yet recorded (unless this very one was asked for, e.g. to record a second attempt).
   const assignments = allAssignments.filter((a) => !a.retractedAt && (a.resultId === null || a.id === assignment));

@@ -180,3 +180,11 @@ describe("requireAccess", () => {
     expect(grant.learner.id).toBe(AN);
   });
 });
+
+describe("SM-2: levels:decide", () => {
+  it("only the child's tutor may confirm or adjust a level; the parent reads but may not decide", async () => {
+    expect(await status("tutorAn", AN, "levels:decide")).toBe(200);
+    expect(await status("parent", AN, "levels:decide")).toBe(403);
+    expect(await status("tutorAn", NGUYEN, "levels:decide")).toBe(404);
+  });
+});

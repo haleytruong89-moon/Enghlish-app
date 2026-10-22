@@ -815,3 +815,61 @@ Lọc ô chọn theo cấp hiện tại ± 1; "hay dùng" lên đầu; Hồ sơ 
 
 - **Giao diện luôn sáng** (kể cả máy Windows/điện thoại đặt chế độ tối, kể cả trình duyệt tự làm tối trang): `colorScheme: "only light"` trong viewport + `color-scheme: only light` ở `:root` + ô nhập/chọn nền trắng. Có test `tests/unit/lightOnly.test.ts` (cấm `dark:` / `prefers-color-scheme: dark` trong `app/`, `components/`) và một test E2E "login page stays light" trong `tests/e2e/login.spec.ts`.
 - **Không chữ "TOMO" trong giao diện**: lời dẫn của màn "Nhập kỹ năng đọc tháng" chỉ nói "báo cáo đọc trong tháng"; giá trị `reading_reports.source = 'TOMO'` vẫn là dữ liệu (không đổi, không migration). Test `tests/unit/copyNoProvider.test.ts` giữ cho `lib/copy/vi.ts` và các file `.tsx` không chứa chữ này. Lý do: phụ huynh dự định cho gia sư giao bài và AI chấm theo các tiêu chí này, nên giao diện không gắn với một nhà cung cấp. Danh sách kỹ năng đọc (14 / 6) giữ nguyên.
+
+## SM-2 — Hồ sơ cấp đang học (22/10/2026)
+
+Nhánh `feature/sm2-level-profile` (dựa trên `feature/skill-map`). Thiết kế `docs/superpowers/specs/2026-10-21-skill-map-levels-design.md` (P2-a..P2-d, P4-c, §3, §5–§6 phần SM-2); kế hoạch `docs/superpowers/plans/2026-10-22-sm2-level-profile.md`; mockup "10 · Hồ sơ cấp" phụ huynh duyệt 22/10. Không AI.
+
+### Đã thay đổi gì (nói đơn giản)
+
+| Việc | Vì sao | Nằm ở |
+|---|---|---|
+| **Hồ sơ cấp** của mỗi em: "{tên} đang ở đâu?" + 1 câu tóm tắt + 3 ô Mạnh nhất / Cần tập trung / Đang chờ thầy/cô; 7 thanh cấp (6 mảng chung thang A1→C2, mảng Tư duy thang riêng bậc 1→4); thanh **ước lượng** có sọc + chữ "Ước lượng — thầy/cô chưa xác nhận"; bấm một mảng → chi tiết (nội dung ở cấp đó, điểm cần chú ý của mảng); "Mốc ngoài & lịch sử" | Phụ huynh thấy 7 dòng cấp đang học, biết dòng nào giả định, dòng nào thầy/cô đã xác nhận | trang `/learners/…/levels`, link "Hồ sơ cấp" trên thẻ của em |
+| **Sổ quyết định cấp** (`level_decisions`, chỉ thêm): thầy/cô **xác nhận cấp khởi điểm** (7 mảng một lần) hoặc **điều chỉnh** một mảng (bắt buộc lý do, lên hoặc xuống). Chỉ **gia sư của em** ghi được — cơ sở dữ liệu chặn phụ huynh. "Lên cấp" để dành cho S7 | P2-a, P2-c, Q3 | `0020` |
+| **Mốc thi ngoài** (`external_results`, chỉ thêm): KET / PET / FCE / CAE / CPE / đề thử vào 10 / bài thi ở trường / khác, ngày, điểm, mảng liên quan, ảnh hoặc PDF phiếu điểm (kho riêng tư). **Không tự đổi cấp.** Nhập nhầm thì bấm **Sửa**: lưu một dòng mới thay dòng cũ (dòng cũ không bị xóa, hiện kèm "Đã sửa — trước đó: …") | Đối chiếu với cấp trong app | `0020`, "+ Thêm kết quả thi ngoài", nút "Sửa" |
+| **Ô chọn nhãn**: nhãn quanh cấp đang học (± 1 cấp) lên trước; cấp khác nằm trong "Cấp khác (n)" thu gọn | P4-c | Ghi buổi học, Ghi kết quả bài, Giao bài, nhãn bài viết |
+| **Trang chủ phụ huynh**: ô "Thay đổi cấp gần đây" (30 ngày, tối đa 5 dòng, kèm lý do; điều chỉnh lên trước; xác nhận cấp khởi điểm cùng ngày gộp một dòng) | Phụ huynh được báo khi thầy/cô điều chỉnh | trang chủ |
+| **Trang chủ của em**: "Việc cần ôn" theo mảng — tối đa 3 điểm đã đến hạn hỏi lại, **không cấp, không điểm** | P2-d | trang chủ của em |
+
+Học sinh không đọc được hai sổ mới (cơ sở dữ liệu chặn). Báo cáo kỹ năng đọc tháng hiện trong "Mốc ngoài" là "Báo cáo kỹ năng đọc tháng 10/2026 · Đọc", không ghi tên nguồn. Xóa dữ liệu một em xóa luôn hai sổ mới và file phiếu điểm.
+
+### SQL cần áp
+
+- **`db/migrations/0020_level_profile.sql`** — Actions → **Apply database migrations** (gõ APPLY) hoặc dán vào SQL Editor. **Áp `0020` TRƯỚC khi thử preview hoặc gộp PR**; cần `0019` đã áp. Chỉ thêm: 2 bảng mới, nới danh sách loại file (thêm `external_result`), 6 hàm mới (5 hàm server gọi + 1 hàm của em: danh sách "Việc cần ôn"), bản mới của hàm xóa dữ liệu một em (giữ nguyên mọi dòng cũ). Chạy lại an toàn. Nên bấm chạy tay *Weekly backup* trước khi áp. Chưa áp thì trang Hồ sơ cấp báo lỗi; ô chọn nhãn và trang chủ vẫn chạy (chỉ không sắp theo cấp / không có ô mới).
+
+### Cách thử trên preview (gia đình thử)
+
+1. `thu-giasu-nguyen` → thẻ Nguyên (thử) → **Hồ sơ cấp**: 7 thanh đều có sọc "Ước lượng — thầy/cô chưa xác nhận"; 3 ô ghi "Các mảng đang ngang nhau" và "Không có".
+2. Bấm **Xác nhận cấp khởi điểm** (7 mảng đã điền sẵn) → đổi Ngữ pháp thành B2+ → Lưu: cả 7 thanh hết sọc; ô "Mạnh nhất" = Ngữ pháp · B2+. Mọi chữ về người dạy là "thầy/cô" (chữ này đặt một chỗ trong `lib/copy/vi.ts`).
+3. Mở mảng Ngữ pháp → **Điều chỉnh cấp** → B2, lý do "thử" → Lưu: "Lịch sử cấp" có thêm dòng "Ngữ pháp: B2+ → B2 · Điều chỉnh" kèm lý do.
+4. Đăng nhập phụ huynh → trang chủ có ô **Thay đổi cấp gần đây** (dòng "Điều chỉnh" có lý do ở trên cùng) → mở Hồ sơ cấp → **+ Thêm kết quả thi ngoài** (FCE, 172, mảng Đọc + Nghe, kèm ảnh) → thấy trong "Mốc ngoài" → bấm **Sửa**, đổi điểm → chỉ còn điểm mới, dòng cũ nằm trong "Đã sửa — trước đó: …". Phụ huynh không có nút Xác nhận / Điều chỉnh.
+5. `thu-giasu-nguyen` → **Ghi buổi học**: tab Từ vựng — nhãn quanh B2 hiện trước, phần "Cấp khác" thu gọn.
+6. Đăng nhập `thu-nguyen` (em): trang chủ không có chữ cấp nào; nếu có điểm đến hạn hỏi lại thì thấy "Việc cần ôn" theo mảng.
+
+### Phụ huynh đã duyệt kế hoạch 22/10/2026 ("ok SM-2"), có hai thay đổi
+
+- **A1 (thay D13):** mọi chữ về người dạy là "thầy/cô" lấy từ `tutorHonorific` ("Đang chờ thầy/cô", "Ước lượng — thầy/cô chưa xác nhận", "Thầy/cô xác nhận ngày …"). Lý do: tài khoản gia sư là chung, người dạy có thể đổi, chữ "cô" cứng có thể sai. Có test quét: không câu nào của Hồ sơ cấp chứa chữ "cô" đứng riêng.
+- **A2 (thay D9):** kết quả thi ngoài **sửa được bằng dòng mới thay dòng cũ** (cột `supersedes_id`, mỗi dòng bị thay tối đa một lần, dòng cũ không bị xóa/sửa; hàm ghi nhận `p_supersedes`; ghi nhật ký `external_result.corrected`). Hồ sơ cấp chỉ liệt kê dòng còn hiệu lực, dòng thay thế hiện "Đã sửa — trước đó: …" kèm phiếu điểm cũ. Xóa dữ liệu một em đếm và xóa cả hai dòng.
+
+### Quyết định trong kế hoạch (phụ huynh xem lại)
+
+D1 "± 1 cấp" = ± 1 bậc CEFR lớn (A2 → A1…B1+) · D2 chỉ áp cho ô chọn nhãn · D3 ba ô "Đã vững / Đang luyện / Để lên cấp tiếp" ghi "Sẽ có khi app bắt đầu theo dõi trạng thái từng kỹ năng" tới S7 · D4 Mạnh nhất / Cần tập trung chỉ so 6 mảng ngôn ngữ · D5 thanh Tư duy thang riêng · D6 xác nhận một lần mỗi mảng, sau đó chỉ "Điều chỉnh" · D7 bằng chứng do cơ sở dữ liệu tự ghi · D8 chỉ gia sư quyết cấp · D9 (đã đổi 22/10 → A2) mốc ngoài sửa bằng dòng mới thay dòng cũ, không xóa · D10 báo cáo đọc không ghi nguồn · D11 30 ngày, 5 dòng · D12 em thấy tối đa 3 điểm · D13 (đã đổi 22/10 → A1) chữ về người dạy là "thầy/cô" lấy từ `tutorHonorific`, không viết cứng "cô" · D14 chi tiết mảng dùng mô tả nhóm của SM-1 · D15 ai mở trang nào. Chi tiết: bảng "Decisions" và mục "Amendments" trong kế hoạch.
+
+### Phụ huynh đã trả lời 22/10/2026 (không còn câu hỏi mở)
+
+1. Ô "Thay đổi cấp gần đây" **không cần** nút "Đã xem" (giữ: 30 ngày, tối đa 5 dòng; "Điều chỉnh" / "Lên cấp" luôn lên trước; các dòng "xác nhận cấp khởi điểm" của một thầy/cô cho một em trong cùng một ngày gộp thành MỘT dòng, vd. "Nguyên · Thầy/cô xác nhận cấp khởi điểm (7 mảng)").
+2. Chưa cần **rút hẳn** một kết quả thi ngoài (không thay bằng bản khác); Claude khuyên chỉ dùng "Sửa". Ghi vào "Để sau".
+
+### Để sau (SM-2)
+
+- Rút hẳn một kết quả thi ngoài (không có bản thay). Chỉ làm nếu thực tế cần.
+
+### Ghi chú khi làm
+
+- Nhánh `feature/skill-map` đã có thêm các commit sửa sau review (nút Tab theo ARIA, `domainOfAdded`…), nên phần ô chọn nhãn (Task 8) được ghép tay vào nội dung hiện tại; các test của Task 8 là hợp đồng.
+- Hàm `eng_record_external_result` có thêm tham số cuối `p_supersedes uuid default null` (chữ ký 10 tham số).
+- Sau review Opus: sửa kết quả mà **không chọn ảnh mới thì vẫn dùng phiếu điểm cũ** (hồ sơ đi ngược chuỗi sửa lấy phiếu gần nhất, cờ `file_inherited`); màn "Sửa" tìm dòng theo id bằng `eng_external_result` (không giới hạn 30 dòng; không thấy → chữ trung tính "Không tìm thấy…"); ba form lưu cấp / kết quả lấy mã lưu mới sau lỗi 409 và nối chữ gợi ý / lỗi với ô nhập bằng `aria-describedby`; chip nhãn chia gần / xa theo lúc mở màn hình (chip vừa chọn không nhảy mục).
+
+### Tiêu chí đạt
+
+`typecheck`, `lint`, `test` (gồm test database: ma trận vai, chỉ thêm, xóa dữ liệu, học sinh bị chặn), `gen:config` xanh; CI (E2E + áp migration hai lần) xanh; review Opus; phụ huynh áp `0020` rồi làm 6 bước thử ở trên; buổi 30 phút: gia sư xác nhận cấp khởi điểm cho cả hai em.

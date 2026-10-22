@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
-import { resultPage, sessionNotePage, tagPicker, todayPage, weakPage } from "@/lib/copy/vi";
-import { todayVn } from "@/lib/inquiries/dates";
+import { levelCopy, resultPage, studentReviewCopy, sessionNotePage, tagPicker, todayPage, weakPage } from "@/lib/copy/vi";
+import { addDays, todayVn } from "@/lib/inquiries/dates";
+import { formatDateVi } from "@/lib/inquiries/format";
 import { LEARNER_IDS, loginAs } from "./helpers";
 
 // S5b-1 PR A: "Hôm nay", "Ghi kết quả bài" (framed + quick), "Chờ gắn nhãn", "Ghi buổi học", "Điểm cần chú ý".
@@ -154,7 +155,7 @@ test.describe.serial("S5b-1 tutor work", () => {
 
   test("the other child's tutor and the students get nothing", async ({ page }) => {
     await loginAs(page, "tutorAn");
-    for (const p of ["results/new", "notes/new", "weak"]) await notFound(page, `/learners/${NG}/${p}`);
+    for (const p of ["results/new", "notes/new", "weak", "levels", "levels/baseline"]) await notFound(page, `/learners/${NG}/${p}`);
     const other = await page.request.post(`/api/learners/${NG}/results`, {
       data: { client_id: randomUUID(), mode: "quick", title: "x", total_items: 5, correct: 5, wrong_items: [], context: "home", attempt: "first", used_hint: false, taken_on: todayVn() },
     });
@@ -162,12 +163,77 @@ test.describe.serial("S5b-1 tutor work", () => {
 
     await page.context().clearCookies();
     await loginAs(page, "studentNguyen");
-    for (const p of ["results/new", "notes/new", "weak"]) await notFound(page, `/learners/${NG}/${p}`);
+    for (const p of ["results/new", "notes/new", "weak", "levels", "levels/baseline"]) await notFound(page, `/learners/${NG}/${p}`);
     const mine = await page.request.post(`/api/learners/${NG}/results`, {
       data: { client_id: randomUUID(), mode: "quick", title: "x", total_items: 5, correct: 5, wrong_items: [], context: "home", attempt: "first", used_hint: false, taken_on: todayVn() },
     });
     expect(mine.status()).toBe(403);
     const tags = await page.request.post(`/api/learners/${NG}/tags`, { data: { label: "Nhãn lạ" } });
     expect(tags.status()).toBe(403);
+  });
+
+  test("Hồ sơ cấp: the tutor confirms the starting levels; the parent reads them, sees the change on her home, adds an exam result, and may not decide", async ({ page }) => {
+    test.setTimeout(120_000);
+    await loginAs(page, "tutorNguyen");
+    await page.goto(`/learners/${NG}/levels`);
+    await expect(page.getByTestId("level-summary")).toContainText(levelCopy.whereTitle("Nguyên (thử)"));
+    await expect(page.locator('[data-testid^="level-bar-"]')).toHaveCount(7);
+    await page.goto(`/learners/${NG}/levels/baseline`);
+    // A re-run on the same database finds every domain already confirmed: then there is no form, only the "đã xác nhận" note.
+    if ((await page.getByTestId("baseline-form").count()) > 0) {
+      await page.getByTestId("baseline-grammar").selectOption("B2+");
+      await page.getByTestId("baseline-save").click();
+      await page.waitForURL(`**/learners/${NG}/levels`);
+    }
+    await page.goto(`/learners/${NG}/levels?domain=grammar`);
+    await expect(page.getByTestId("level-bar-grammar")).toHaveAttribute("data-status", "confirmed");
+    await expect(page.getByTestId("level-detail-grammar")).toContainText(levelCopy.adjustLink);
+
+    await page.context().clearCookies();
+    await loginAs(page, "parent");
+    await expect(page.getByTestId("recent-levels")).toContainText(levelCopy.kindLabels.baseline!);
+    const denied = await page.request.post(`/api/learners/${NG}/levels`, {
+      data: { client_id: randomUUID(), kind: "adjust", levels: { grammar: "C1" }, reason: "thử" },
+    });
+    expect(denied.status()).toBe(403);
+    await notFound(page, `/learners/${NG}/levels/baseline`);
+    await page.goto(`/learners/${NG}/levels/external/new`);
+    await page.getByTestId("external-exam").selectOption("FCE");
+    const wrongScore = `165 · ${randomUUID().slice(0, 6)}`;
+    const rightScore = `172 · ${randomUUID().slice(0, 6)}`;
+    await page.getByTestId("external-score").fill(wrongScore);
+    await page.getByTestId("external-domain-reading").check();
+    await page.getByTestId("external-save").click();
+    await page.waitForURL(`**/learners/${NG}/levels`);
+    await expect(page.getByTestId("milestones")).toContainText(wrongScore);
+    // A2: a wrong entry is corrected by a replacement; the profile then lists only the new score (the old one stays as "đã sửa").
+    const examLabel = "FCE (B2 First)";
+    const line = (score: string) => levelCopy.externalLine(examLabel, formatDateVi(todayVn()), score);
+    await page.getByText(line(wrongScore), { exact: true }).locator("xpath=..").getByRole("link", { name: levelCopy.editExternal }).click();
+    await expect(page.getByTestId("external-form")).toHaveAttribute("data-editing", /.+/);
+    await page.getByTestId("external-score").fill(rightScore);
+    await page.getByTestId("external-save").click();
+    await page.waitForURL(`**/learners/${NG}/levels`);
+    await expect(page.getByText(line(rightScore), { exact: true })).toHaveCount(1);
+    await expect(page.getByText(line(wrongScore), { exact: true })).toHaveCount(0);
+    await expect(page.getByTestId("milestones")).toContainText(levelCopy.corrected(wrongScore));
+    expect(await page.locator("body").innerText()).not.toMatch(/tomo/i);
+  });
+  test("Việc cần ôn: a tag whose re-check is due shows on the student's home, grouped by domain, with no level or score", async ({ page }) => {
+    // 20 days ago, one wrong item with a tag: after the 14-day policy it is due for a re-check (the same case as the DB test)
+    await loginAs(page, "tutorNguyen");
+    const saved = await page.request.post(`/api/learners/${NG}/results`, {
+      data: {
+        client_id: randomUUID(), mode: "quick", title: "Ôn tập cũ", total_items: 5, correct: 4, wrong_items: [1], tags: [{ n: 1, tag_key: "modal-suy-doan" }],
+        context: "home", attempt: "first", used_hint: false, taken_on: addDays(todayVn(), -20),
+      },
+    });
+    expect(saved.status()).toBe(201);
+    await page.context().clearCookies();
+    await loginAs(page, "studentNguyen");
+    const box = page.getByTestId("review-by-domain");
+    await expect(box).toContainText(studentReviewCopy.title);
+    await expect(box).not.toContainText(/\b[ABC][12]\b|\/\d|bậc/);
+    await expect(page.getByTestId("review-by-domain").locator("li").first()).toBeVisible();
   });
 });

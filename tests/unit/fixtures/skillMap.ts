@@ -35,3 +35,16 @@ export function fixtureMap(): SkillMapView {
     unassigned: [leaf("tag", "x-dao-ngu-hardly", { custom: true, label: "Đảo ngữ với hardly" })],
   };
 }
+
+/** SM-2 P4-c: the fixture map with levels on the vocab tags and a current vocab level of B2 (Nguyên). */
+export function levelledMap(): SkillMapView {
+  const m = fixtureMap();
+  const vocab = m.domains[1]!;
+  const [wordForm, colloc] = [vocab.groups[0]!, vocab.groups[1]!];
+  wordForm.leaves = [{ ...wordForm.leaves[0]!, levelFrom: "B1", levelTo: "B2" }]; // dang-tu: near B2
+  colloc.leaves = [
+    { ...colloc.leaves[0]!, levelFrom: "A1", levelTo: "A1" }, // cum-dong-tu: two levels below B2 → far
+    { ...colloc.leaves[1]!, levelFrom: "C1", levelTo: "C2" }, // thanh-ngu: C1 = B2 + 1 → near
+  ];
+  return { ...m, current: { vocab: "B2" } };
+}

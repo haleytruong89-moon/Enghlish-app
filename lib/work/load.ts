@@ -2,10 +2,11 @@ import "server-only";
 import { createUserClient } from "@/lib/supabase/server";
 import { handleStudentActivity, handleStudentHome } from "./handlers";
 import { createSupabaseWorkStore } from "./supabaseStore";
+import type { ReviewItem } from "@/lib/levels/types";
 import type { ActivityView, HomeView } from "./types";
 
 export type StudentHomeData =
-  | { kind: "ok"; alias: string; home: HomeView }
+  | { kind: "ok"; alias: string; home: HomeView; review: ReviewItem[] | null }
   | { kind: "login" }
   | { kind: "not-found" };
 
@@ -25,8 +26,8 @@ export async function loadStudentHome(): Promise<StudentHomeData> {
   const res = await handleStudentHome({ user, store: createSupabaseWorkStore() });
   if (res.status === 401) return { kind: "login" };
   if (res.status !== 200) return { kind: "not-found" };
-  const body = res.body as { learner: { alias: string } } & HomeView;
-  return { kind: "ok", alias: body.learner.alias, home: { inquiries: body.inquiries } };
+  const body = res.body as { learner: { alias: string }; review?: ReviewItem[] | null } & HomeView;
+  return { kind: "ok", alias: body.learner.alias, home: { inquiries: body.inquiries }, review: body.review ?? null };
 }
 
 export async function loadActivityPage(activityId: string): Promise<ActivityPageData> {

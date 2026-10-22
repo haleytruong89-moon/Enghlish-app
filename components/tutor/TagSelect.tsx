@@ -10,7 +10,7 @@ import type { AddTagFn } from "./useTags";
 
 const NEW = "__new__";
 
-/** One tag for one wrong item: a native select grouped as "Mảng · Nhóm" of the skill map (phone-friendly), plus "+ nhãn khác". */
+/** One tag for one wrong item: a native select grouped as "Mảng · Nhóm" of the skill map, the current level ± 1 first (P4-c), plus "+ nhãn khác". */
 export function TagSelect({
   tags,
   map,
@@ -54,16 +54,21 @@ export function TagSelect({
         className="min-h-11 w-full min-w-0 rounded-lg border border-line bg-white px-2 text-sm"
       >
         <option value="">{resultPage.tagNone}</option>
-        {buckets.flatMap((b) =>
-          b.groups.map((g) => (
-            <optgroup key={`${b.key}:${g.key}`} label={b.key === g.key ? b.name : skillMapCopy.place(b.name, g.name)}>
-              {g.items.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.label}
-                </option>
-              ))}
-            </optgroup>
-          )),
+        {[false, true].flatMap((far) =>
+          buckets.flatMap((b) =>
+            (far ? b.far : b.groups).map((g) => {
+              const place = b.key === g.key ? b.name : skillMapCopy.place(b.name, g.name);
+              return (
+                <optgroup key={`${far ? "far" : "near"}:${b.key}:${g.key}`} label={far ? skillMapCopy.farPlace(place) : place}>
+                  {g.items.map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.label}
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            }),
+          ),
         )}
         <option value={NEW}>{tagPicker.addOther}</option>
       </select>

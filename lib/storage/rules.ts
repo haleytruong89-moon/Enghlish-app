@@ -23,7 +23,7 @@ export const ALLOWED_MIMES = ["application/pdf", ...IMAGE_MIMES] as const;
 export type AllowedMime = (typeof ALLOWED_MIMES)[number];
 
 /** What a stored file is for (column files.kind). */
-export const FILE_KINDS = ["assignment_pdf", "answer_key", "result_image", "work_photo"] as const;
+export const FILE_KINDS = ["assignment_pdf", "answer_key", "result_image", "work_photo", "external_result"] as const;
 export type FileKind = (typeof FILE_KINDS)[number];
 
 const EXTENSION: Record<AllowedMime, string> = {

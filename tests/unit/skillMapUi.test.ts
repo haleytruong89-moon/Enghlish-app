@@ -10,7 +10,7 @@ import { TagSelect } from "@/components/tutor/TagSelect";
 import { skillMapCopy, weakPage } from "@/lib/copy/vi";
 import { groupTags, groupWeakPoints } from "@/lib/skillmap/group";
 import type { TagInfo, WeakPoint } from "@/lib/tutorwork/types";
-import { fixtureMap } from "./fixtures/skillMap";
+import { fixtureMap, levelledMap } from "./fixtures/skillMap";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 const render = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
@@ -152,5 +152,40 @@ describe("DomainTiles", () => {
     const empty = none.match(/<a[^>]*data-testid="weak-tile-reading"[\s\S]*?<\/a>/)?.[0] ?? "";
     expect(empty).toContain(weakPage.tileCount(0));
     expect(empty).not.toContain("kỹ năng đọc cần chú ý");
+  });
+});
+
+describe("SM-2 P4-c in the pickers", () => {
+  const near = groupTags(levelledMap(), [tag("dang-tu"), tag("cum-dong-tu"), tag("thanh-ngu")]);
+  it("DomainTabs keeps other levels in a closed 'Cấp khác (n)' under the near groups; search still finds them", () => {
+    const html = render(
+      createElement(DomainTabs<TagInfo>, {
+        buckets: near, active: "vocab", onActive: vi.fn(), testId: "t", itemKey: (x: TagInfo) => x.key, itemText: (x: TagInfo) => x.label,
+        renderItem: (x: TagInfo) => createElement("span", { "data-testid": `item-${x.key}` }, x.label),
+      }),
+    );
+    const far = html.match(/<details[^>]*data-testid="far-t-vocab"[\s\S]*?<\/details>/)?.[0] ?? "";
+    expect(far).toContain(skillMapCopy.otherLevels(1));
+    expect(far).toContain('data-testid="item-cum-dong-tu"');
+    expect(far).not.toContain('data-testid="item-dang-tu"');
+    expect(html).not.toMatch(/<details[^>]*\sopen/);
+    expect(html.indexOf('data-testid="item-dang-tu"')).toBeLessThan(html.indexOf('data-testid="item-cum-dong-tu"'));
+  });
+
+  it("TagSelect lists the near groups first and labels the others '· cấp khác'", () => {
+    const html = render(createElement(TagSelect, { tags: [tag("cum-dong-tu"), tag("dang-tu")], map: levelledMap(), value: null, onChange: vi.fn(), onAdd: vi.fn(), label: "Câu 1" }));
+    expect(html.indexOf('value="dang-tu"')).toBeGreaterThan(0);
+    expect(html.indexOf('value="cum-dong-tu"')).toBeGreaterThan(html.indexOf('value="dang-tu"'));
+    expect(html).toContain(`label="${skillMapCopy.farPlace(skillMapCopy.place("Từ vựng", "Kết hợp từ, cụm động từ, thành ngữ"))}"`);
+  });
+});
+
+describe("SM-2 P4-c: TagChips splits near/far by the selection at mount", () => {
+  it("a far tag that is already chosen when the screen opens is listed with the near ones; one that is not stays under 'Cấp khác'", () => {
+    const tags = [tag("dang-tu"), tag("cum-dong-tu"), tag("thanh-ngu")];
+    const open = render(createElement(TagChips, { tags, map: levelledMap(), selected: ["cum-dong-tu"], onChange: vi.fn(), max: 3, onAdd: vi.fn(), testId: "t" }));
+    expect(open).not.toMatch(/<details[^>]*data-testid="far-t-vocab"/);
+    const fresh = render(createElement(TagChips, { tags, map: levelledMap(), selected: [], onChange: vi.fn(), max: 3, onAdd: vi.fn(), testId: "t" }));
+    expect(fresh).toMatch(/<details[^>]*data-testid="far-t-vocab"[\s\S]*?tag-chip-cum-dong-tu/);
   });
 });

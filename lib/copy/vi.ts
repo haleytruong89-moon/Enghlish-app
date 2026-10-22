@@ -242,6 +242,8 @@ export const fallbackLabels = {
   autoResult: "Cần người xem",
   tag: "Nhãn khác",
   record: "Dữ liệu khác",
+  exam: "Kỳ thi khác",
+  levelKind: "Quyết định cấp",
 } as const;
 
 /** Nhãn nguồn của một bài (provenance). Học sinh không thấy các nhãn này. */
@@ -626,6 +628,13 @@ export const tutorWorkErrors = {
   staleReport: "Báo cáo tháng này vừa được người khác sửa. Tải lại trang rồi sửa lại.",
   unknownGroup: "Nhóm này không có trong bản đồ kỹ năng. Tải lại trang rồi chọn lại.",
   alreadyGrouped: "Nhãn này đã được xếp vào nhóm khác. Tải lại trang để xem.",
+  levelTutorOnly: `Chỉ ${tutorHonorific} của em mới xác nhận hoặc điều chỉnh được cấp.`,
+  alreadyConfirmed: "Mảng này đã được xác nhận rồi. Tải lại trang rồi dùng “Điều chỉnh cấp”.",
+  needsBaseline: "Mảng này chưa có cấp khởi điểm. Xác nhận cấp khởi điểm trước.",
+  sameLevel: "Cấp mới đang trùng cấp hiện tại.",
+  reasonRequired: "Điều chỉnh cấp cần ghi lý do.",
+  badDate: "Ngày thi không hợp lệ: không chọn ngày sau hôm nay, không quá 10 năm trước.",
+  alreadySuperseded: "Kết quả này đã được sửa trước đó. Tải lại trang để sửa bản mới nhất.",
 } as const;
 
 /** Màn "Xóa dữ liệu của em" (S5c, chỉ phụ huynh). */
@@ -670,6 +679,8 @@ export const purgePage = {
     files: "File ảnh / PDF",
     upload_tickets: "Phiếu tải file",
     reading_reports: "Báo cáo kỹ năng đọc tháng",
+    level_decisions: "Quyết định cấp đang học",
+    external_results: "Kết quả thi ngoài",
     login_names: "Tên đăng nhập ngắn",
     learners: "Hồ sơ của em",
     members: "Tài khoản của em trong app",
@@ -874,6 +885,9 @@ export const skillMapCopy = {
   groupRequired: "Chọn mảng và nhóm cho nhãn mới.",
   setGroup: "Xếp vào nhóm",
   setGroupSave: "Lưu nhóm",
+  otherLevels: (n: number) => `Cấp khác (${n})`,
+  nearEmpty: "Quanh cấp đang học chưa có mục nào — mở “Cấp khác”.",
+  farPlace: (place: string) => `${place} · cấp khác`,
 } as const;
 
 export const sessionNotePage = {
@@ -1003,6 +1017,7 @@ export const writingTags = {
 /** Names offered to the browser when it saves a file that someone SENT (never opened inside the site). */
 export const downloadNames = {
   studentWork: "bai-em-gui",
+  externalResult: "ket-qua-thi-ngoai",
 } as const;
 
 export const sourceLabels = {
@@ -1160,4 +1175,125 @@ export const practiceStudent = {
     generic: "Chưa gửi được. Bạn thử lại sau ít phút nhé.",
     tooMany: (max: number) => `Gửi tối đa ${max} ảnh một lần nhé.`,
   },
+} as const;
+
+// ---------- SM-2: Hồ sơ cấp đang học (phụ huynh, gia sư). Cấp ghi "đang học B1", KHÔNG BAO GIỜ "đạt" (spec §1 "Cách gọi"). ----------
+// Người dạy luôn gọi bằng tutorHonorific ("thầy/cô"), không viết cứng "cô" (phụ huynh 22/10, A1); có test quét.
+export const levelCopy = {
+  link: "Hồ sơ cấp",
+  title: (alias: string) => `Hồ sơ cấp · ${alias}`,
+  back: "Về trang chủ",
+  intro: `Cấp đang học của từng mảng. Cấp đến từ bài làm trong app và nhận xét của ${tutorHonorific}, không phải bài thi chuẩn.`,
+  levelName: (scale: "cefr" | "task_level", level: string) => (scale === "cefr" ? level : `bậc ${level}`),
+  whereTitle: (alias: string) => `${alias} đang ở đâu?`,
+  summaryRange: (alias: string, low: string, high: string) =>
+    low === high ? `${alias} đang học quanh ${low} ở cả sáu mảng ngôn ngữ.` : `${alias} đang học từ ${low} đến ${high}, tuỳ mảng.`,
+  summaryConfirmed: (n: number, total: number) => `${tutorHonorificCap} đã xác nhận ${n}/${total} mảng.`,
+  summaryNoneConfirmed: (alias: string) => `Đây là cấp ước lượng theo track — ${tutorHonorific} chưa xác nhận mảng nào của ${alias}.`,
+  strongest: "Mạnh nhất",
+  focus: "Cần tập trung",
+  waiting: `Đang chờ ${tutorHonorific}`,
+  waitingNone: "Không có",
+  even: "Các mảng đang ngang nhau",
+  boxLine: (names: string, level: string) => `${names} · ${level}`,
+  barsTitle: "Cấp đang học theo mảng",
+  scaleCefr: "Thang A1 → C2",
+  scaleTask: "thang riêng bậc 1 → 4",
+  assumed: `Ước lượng — ${tutorHonorific} chưa xác nhận`,
+  confirmedOn: (dateLabel: string, by: string | null) => `${tutorHonorificCap} xác nhận ngày ${dateLabel}${by ? ` · ${by}` : ""}`,
+  detailTitle: (domain: string) => `Mảng ${domain}`,
+  sentenceConfirmed: (alias: string, domain: string, level: string) => `${alias} đang học ${level} ở mảng ${domain}.`,
+  sentenceAssumed: (alias: string, domain: string, level: string) => `${alias} được ước lượng đang học ${level} ở mảng ${domain}; ${tutorHonorific} chưa xác nhận.`,
+  contentTitle: (level: string) => `Ở ${level}, mảng này gồm`,
+  solidTitle: "Đã vững",
+  practisingTitle: "Đang luyện",
+  nextTitle: "Để lên cấp tiếp, còn cần",
+  notYet: "Sẽ có khi app bắt đầu theo dõi trạng thái từng kỹ năng (bước sau).",
+  weakTitle: "Điểm cần chú ý của mảng này",
+  weakNone: "Chưa có điểm cần chú ý nào ở mảng này (8 tuần gần đây).",
+  weakMore: "Xem trong Điểm cần chú ý",
+  milestonesTitle: "Mốc ngoài & lịch sử",
+  addExternal: "+ Thêm kết quả thi ngoài",
+  externalTitle: "Kết quả thi ngoài",
+  externalNone: "Chưa có kết quả thi ngoài.",
+  externalLine: (exam: string, dateLabel: string, score: string) => `${exam} · ${dateLabel} · ${score}`,
+  externalDomains: (names: string) => `Mảng: ${names}`,
+  readingReportLine: (monthLabel: string) => `Báo cáo kỹ năng đọc tháng ${monthLabel} · Đọc`,
+  openFile: "Xem phiếu điểm",
+  editExternal: "Sửa",
+  corrected: (score: string) => `Đã sửa — trước đó: ${score}`,
+  openOldFile: "Xem phiếu điểm cũ",
+  historyTitle: "Lịch sử cấp",
+  historyNone: "Chưa có quyết định cấp nào.",
+  historyLine: (domain: string, from: string, to: string) => `${domain}: ${from} → ${to}`,
+  historyMeta: (kind: string, dateLabel: string, by: string | null) => `${kind} · ${dateLabel}${by ? ` · ${by}` : ""}`,
+  kindLabels: { baseline: "Xác nhận cấp khởi điểm", level_up: "Lên cấp", adjust: "Điều chỉnh" } as Record<string, string>,
+  confirmLink: "Xác nhận cấp khởi điểm",
+  adjustLink: "Điều chỉnh cấp",
+  recentTitle: "Thay đổi cấp gần đây",
+  recentNone: "30 ngày qua chưa có thay đổi cấp nào.",
+  recentLine: (alias: string, domain: string, from: string, to: string) => `${alias} · ${domain}: ${from} → ${to}`,
+  // S2: the baselines one tutor saved for one child on one day, as one line.
+  recentBaselines: (alias: string, n: number) => `${alias} · ${tutorHonorificCap} xác nhận cấp khởi điểm (${n} mảng)`,
+} as const;
+
+/** SM-2: "Xác nhận cấp khởi điểm" và "Điều chỉnh cấp" (chỉ gia sư của em). */
+export const levelFormCopy = {
+  back: "Về Hồ sơ cấp",
+  baselineTitle: (alias: string) => `Xác nhận cấp khởi điểm · ${alias}`,
+  baselineIntro: `Mỗi mảng đã điền sẵn cấp ước lượng. ${tutorHonorificCap} sửa mảng nào chưa đúng rồi bấm lưu một lần.`,
+  baselineDone: "Mọi mảng đã được xác nhận. Muốn đổi một mảng, dùng “Điều chỉnh cấp”.",
+  levelOf: (domain: string) => `Cấp đang học · ${domain}`,
+  assumedHint: (level: string) => `Ước lượng: ${level}`,
+  note: "Ghi chú (không bắt buộc)",
+  saveBaseline: "Lưu cấp khởi điểm",
+  adjustTitle: (alias: string) => `Điều chỉnh cấp · ${alias}`,
+  adjustIntro: "Phụ huynh sẽ thấy thay đổi này ở trang chủ, kèm lý do.",
+  pickDomain: "Chọn mảng cần điều chỉnh",
+  pickNone: "Chưa có mảng nào được xác nhận. Xác nhận cấp khởi điểm trước.",
+  current: (level: string) => `Hiện tại: đang học ${level}`,
+  newLevel: "Cấp mới",
+  reason: "Lý do (bắt buộc)",
+  reasonHint: "Ví dụ: 3 bài kiểm tra gần đây đều làm tốt phần câu điều kiện.",
+  reasonRequired: "Bạn ghi lý do điều chỉnh nhé.",
+  sameLevel: "Cấp mới đang trùng cấp hiện tại.",
+  saveAdjust: "Lưu điều chỉnh",
+  saving: "Đang lưu…",
+  saved: "Đã lưu.",
+} as const;
+
+/** SM-2: "Thêm kết quả thi ngoài" (phụ huynh, gia sư). Mốc ngoài chỉ để đối chiếu, không đổi cấp. */
+export const externalCopy = {
+  title: (alias: string) => `Thêm kết quả thi ngoài · ${alias}`,
+  back: "Về Hồ sơ cấp",
+  intro: "Kết quả thi ngoài chỉ để đối chiếu — không tự đổi cấp đang học.",
+  exam: "Kỳ thi",
+  examLabels: {
+    KET: "KET (A2 Key)", PET: "PET (B1 Preliminary)", FCE: "FCE (B2 First)", CAE: "CAE (C1 Advanced)", CPE: "CPE (C2 Proficiency)",
+    VAO10_MOCK: "Đề thử vào 10", SCHOOL: "Bài thi ở trường", OTHER: "Khác",
+  } as Record<string, string>,
+  takenOn: "Ngày thi",
+  score: "Điểm / kết quả",
+  scoreHint: "Ví dụ: 140 · Merit, hoặc 8,5/10",
+  domains: "Mảng liên quan",
+  domainsHelp: "Chọn ít nhất một mảng.",
+  note: "Ghi chú (không bắt buộc)",
+  file: "Ảnh hoặc PDF phiếu điểm (không bắt buộc)",
+  save: "Lưu kết quả",
+  saving: "Đang lưu…",
+  uploading: "Đang tải file lên…",
+  needDomain: "Bạn chọn ít nhất một mảng nhé.",
+  needScore: "Bạn ghi điểm hoặc kết quả nhé.",
+  editTitle: (alias: string) => `Sửa kết quả thi ngoài · ${alias}`,
+  editIntro: "Lưu sẽ thay kết quả cũ bằng kết quả mới này. Bản cũ vẫn được giữ trong lịch sử, không bị xóa.",
+  editFileHint: "Không chọn ảnh mới thì vẫn dùng phiếu điểm cũ.",
+  alreadyCorrected: "Kết quả này đã được sửa trước đó. Mở lại Hồ sơ cấp để sửa bản mới nhất.",
+  notFound: "Không tìm thấy kết quả thi này. Mở lại Hồ sơ cấp để chọn kết quả cần sửa.",
+} as const;
+
+/** SM-2: "Việc cần ôn" theo mảng trên trang chủ của em. Không cấp, không điểm (P2-d). Xưng "bạn". */
+export const studentReviewCopy = {
+  title: "Việc cần ôn",
+  intro: "Ôn lại mấy điểm này nhé.",
+  otherDomain: "Khác",
 } as const;

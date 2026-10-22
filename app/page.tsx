@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { LearnerCard } from "@/components/LearnerCard";
+import { RecentLevelChanges } from "@/components/levels/RecentLevelChanges";
 import { StudentHome } from "@/components/student/StudentHome";
 import Link from "next/link";
 import { home, reviewPage, todayPage } from "@/lib/copy/vi";
@@ -8,6 +9,7 @@ import { todayVn } from "@/lib/inquiries/dates";
 import { formatDay } from "@/lib/review/format";
 import { loadToday, type TodayData } from "@/lib/tutorwork/load";
 import { loadHome } from "@/lib/home/loadHome";
+import { loadRecentLevelChanges } from "@/lib/levels/load";
 import { countToDecide } from "@/lib/review/load";
 import { safeColor } from "@/lib/home/visible";
 import { loadStudentHome } from "@/lib/work/load";
@@ -42,7 +44,7 @@ export default async function HomePage() {
       <>
         <AppHeader showTestBadge={anyTest} studentNav="next" />
         {work.kind === "ok" ? (
-          <StudentHome alias={alias} color={color} data={work.home} />
+          <StudentHome alias={alias} color={color} data={work.home} review={work.review} />
         ) : (
           <main className="mx-auto max-w-xl px-5 py-12">
             <h1 className="text-4xl font-bold" style={{ color }}>
@@ -74,6 +76,8 @@ export default async function HomePage() {
       }
     }),
   );
+  // "Thay đổi cấp gần đây" (parent only). null = could not be read: the box is left out rather than claiming "no change".
+  const recent = isParent ? await loadRecentLevelChanges(data.learners) : null;
   return (
     <>
       <AppHeader name={data.displayName} showTestBadge={anyTest} />
@@ -88,6 +92,7 @@ export default async function HomePage() {
         >
           {toDecide === null ? reviewPage.link : reviewPage.linkCount(toDecide)}
         </Link>
+        {recent ? <RecentLevelChanges items={recent} /> : null}
         <ul className="mt-6 flex flex-col gap-3">
           {data.learners.map((l, i) => (
             <LearnerCard key={l.id} learner={l} today={todays[i] ?? null} role={role} />

@@ -38,7 +38,9 @@ export function TagChips({
 }) {
   const keep = [...selected, ...locked];
   const keepKey = keep.join("|");
-  const buckets = useMemo(() => groupTags(map, tags, { keep: keepKey ? keepKey.split("|") : [] }), [map, tags, keepKey]);
+  // The near/far split uses the selection at mount only: a far chip ticked now stays under "Cấp khác" until the screen is reopened.
+  const [atMount] = useState(() => keep);
+  const buckets = useMemo(() => groupTags(map, tags, { keep: keepKey ? keepKey.split("|") : [], nearKeep: atMount }), [map, tags, keepKey, atMount]);
   const [tab, setTab] = useState<string>(() => firstTab(buckets, (t) => selected.includes(t.key)));
   const active = buckets.some((b) => b.key === tab) ? tab : firstTab(buckets);
   const full = selected.length >= max;
