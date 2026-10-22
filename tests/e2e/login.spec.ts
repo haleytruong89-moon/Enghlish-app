@@ -10,7 +10,9 @@ test.describe("dark device theme", () => {
     const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
     expect(bg).toBe("rgb(244, 245, 240)");
     const scheme = await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
-    expect(scheme).toBe("only light");
+    // Chromium may serialise it as "light only"; the order of the two words is not what matters.
+    expect(scheme.split(/\s+/).sort()).toEqual(["light", "only"]);
+    await expect(page.locator('meta[name="color-scheme"]')).toHaveAttribute("content", "only light");
   });
 });
 

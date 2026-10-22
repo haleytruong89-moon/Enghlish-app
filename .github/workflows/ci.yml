@@ -194,6 +194,8 @@ jobs:
           } > "$RUNNER_TEMP/diag.log" 2>&1
           cat "$RUNNER_TEMP/diag.log"
           # Raw run logs are not always downloadable, so also surface them as annotations.
+          grep -E '✘|[0-9]+ (failed|flaky)|Error:|Expected|Received|›.*:[0-9]+:[0-9]+' "$RUNNER_TEMP/e2e.log" | sed -E 's/\x1b\[[0-9;]*[A-Za-z]//g' | grep -v '✓' > "$RUNNER_TEMP/fail.log" || true
+          .github/scripts/annotate-log.sh "$RUNNER_TEMP/fail.log" "failures" 40
           .github/scripts/annotate-log.sh "$RUNNER_TEMP/e2e.log" "step output" 60
           .github/scripts/annotate-log.sh "$RUNNER_TEMP/diag.log" "app and container logs" 80
 
