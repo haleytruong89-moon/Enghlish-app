@@ -53,7 +53,8 @@ describe("0021_feedback_revision.sql", () => {
   it("the score-word check is in the table: praise and item texts, never the excerpt", () => {
     const fn = fnText(sql, "eng_has_score_words");
     expect(fn).toContain("(?<![0-9])([0-9]+)[[:space:]]*/[[:space:]]*([0-9]+)(?![0-9])");
-    expect(fn).toContain("m[2] ~ '^0*(10|[1-9])$' and m[1]::numeric <= m[2]::numeric");
+    expect(fn).toContain("m[1] is null and m[4] is null and m[5] is null and m[3] ~ '^0*(10|[1-9])$' and m[2]::numeric <= m[3]::numeric");
+    expect(fn).toContain("pg_catalog.chr(160) || pg_catalog.chr(8239) || pg_catalog.chr(12288)");
     expect(fn).toContain("[đĐ][iI][ểỂ][mM]");
     expect(fn).toContain("[0-9][[:space:]]*%");
     expect(fnText(sql, "eng_feedback_texts_ok")).toContain("english.eng_has_score_words(x ->> 'text')");
