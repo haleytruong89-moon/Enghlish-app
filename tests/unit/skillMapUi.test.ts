@@ -4,11 +4,12 @@ import { describe, expect, it, vi } from "vitest";
 import { DomainTabs } from "@/components/tutor/DomainTabs";
 import { GroupPicker } from "@/components/tutor/GroupPicker";
 import { SetGroupControl } from "@/components/tutor/SetGroupControl";
+import { DomainTiles } from "@/components/tutor/DomainTiles";
 import { TagChips } from "@/components/tutor/TagChips";
 import { TagSelect } from "@/components/tutor/TagSelect";
-import { skillMapCopy } from "@/lib/copy/vi";
-import { groupTags } from "@/lib/skillmap/group";
-import type { TagInfo } from "@/lib/tutorwork/types";
+import { skillMapCopy, weakPage } from "@/lib/copy/vi";
+import { groupTags, groupWeakPoints } from "@/lib/skillmap/group";
+import type { TagInfo, WeakPoint } from "@/lib/tutorwork/types";
 import { fixtureMap } from "./fixtures/skillMap";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
@@ -89,5 +90,25 @@ describe("pickers by domain", () => {
     expect(html.indexOf(`<optgroup label="${skillMapCopy.unassigned}">`)).toBeGreaterThan(html.indexOf(`<optgroup label="${skillMapCopy.place("Nói", "Phát âm & ngữ điệu")}">`));
     expect(html).not.toContain('value="doc-hieu"');
     expect(render(createElement(TagSelect, { tags, map, value: "doc-hieu", onChange: vi.fn(), onAdd: vi.fn(), label: "Câu 4" }))).toContain('value="doc-hieu"');
+  });
+});
+
+describe("DomainTiles", () => {
+  const point = (tagKey: string, status: WeakPoint["status"]): WeakPoint => ({
+    tagKey, label: tagKey, group: null, sources: 1, bySource: { test: 1, lesson: 0, writing: 0, practice: 0 }, itemsWrong: { test: 1, practice: 0 },
+    asked: 0, askedWrong: 0, lastSeen: "2026-10-20", recheckDueOn: null, recheckDue: false, lastRecheck: null, status, events: [],
+  });
+
+  it("one tile per domain with how many points need attention and the worst one; links keep the window; 'Xem tất cả' last", () => {
+    const tiles = groupWeakPoints(map, [point("dang-tu", "repeat"), point("thanh-ngu", "watch"), point("phat-am", "ok")]);
+    const html = render(createElement(DomainTiles, { tiles, learnerId: "L1", weeks: "8", active: "vocab" }));
+    for (const k of ["grammar", "vocab", "reading", "listening", "writing", "speaking", "thinking", "all"]) expect(html).toContain(`data-testid="weak-tile-${k}"`);
+    expect(html).toContain('href="/learners/L1/weak?weeks=8&amp;domain=grammar"');
+    expect(html).toContain('href="/learners/L1/weak?weeks=8&amp;domain=all"');
+    expect(html).toContain(weakPage.tileCount(2));
+    expect(html).toContain(weakPage.tileWorst("dang-tu"));
+    expect(html).toContain(weakPage.tileCount(0)); // speaking: phat-am is "ok"
+    expect(html.match(/<a[^>]*data-testid="weak-tile-vocab"[^>]*>/)?.[0]).toContain('aria-current="page"');
+    expect(html.match(/<a[^>]*data-testid="weak-tile-grammar"[^>]*>/)?.[0]).not.toContain("aria-current");
   });
 });

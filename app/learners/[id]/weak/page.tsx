@@ -1,30 +1,46 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { DomainTiles } from "@/components/tutor/DomainTiles";
 import { ReadingSkillsTable } from "@/components/tutor/ReadingSkillsTable";
 import { WeakTable } from "@/components/tutor/WeakTable";
 import { learnerWithTrack, resultPage, weakPage } from "@/lib/copy/vi";
 import { logAppError } from "@/lib/ops/logAppError";
 import { loadReadingSkills } from "@/lib/reading/load";
 import { loadSoft } from "@/lib/reading/soft";
+import { groupWeakPoints } from "@/lib/skillmap/group";
+import { loadSkillMap } from "@/lib/skillmap/load";
 import { loadUntagged, loadWeakPoints } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 import { WEAK_WINDOWS, type WeakWindow } from "@/lib/tutorwork/schemas";
 
 export const dynamic = "force-dynamic";
 
-/** "Điểm cần chú ý" of one child: tag × source over 4 weeks / 8 weeks / all time. Parent and tutor only. */
-export default async function WeakPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ weeks?: string }> }) {
+/**
+ * "Điểm cần chú ý" of one child (parent and tutor only): first 7 domain tiles of the skill map (SM-1), then — for ?domain= — the
+ * tag × source table of that domain (the "Kỹ năng đọc" table lives in the Đọc domain), over 4 weeks / 8 weeks / all time.
+ */
+export default async function WeakPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ weeks?: string; domain?: string }> }) {
   const { id } = await params;
-  const { weeks } = await searchParams;
+  const { weeks, domain } = await searchParams;
   const { member, learner } = await requireLearnerPage(id, "tutorwork:read");
   const window: WeakWindow = (WEAK_WINDOWS as readonly string[]).includes(weeks ?? "") ? (weeks as WeakWindow) : "8";
   const role = member.role === "tutor" ? "tutor" : "parent";
-  const [view, pending, reading] = await Promise.all([
+  const [view, pending, map] = await Promise.all([
     loadWeakPoints(learner.id, window),
     loadUntagged(learner.id, { role, memberId: member.id }),
-    // Fail soft: the reading table is an add-on; if it cannot be read the rest of the page still renders.
-    loadSoft(() => loadReadingSkills(learner.id), (error) => logAppError({ route: "GET /learners/[id]/weak (reading skills)", code: "reading_skills", error, userId: member.userId })),
+    loadSkillMap(learner.id),
   ]);
+  const tiles = groupWeakPoints(map, view.tags);
+  const tile = tiles.find((t) => t.key === domain) ?? null;
+  const pick = domain === "all" ? "all" : (tile?.key ?? null);
+  // Fail soft: the reading table is an add-on of the Đọc tile; if it cannot be read the rest of the page still renders.
+  const reading =
+    pick === "reading"
+      ? await loadSoft(
+          () => loadReadingSkills(learner.id),
+          (error) => logAppError({ route: "GET /learners/[id]/weak (reading skills)", code: "reading_skills", error, userId: member.userId }),
+        )
+      : null;
 
   return (
     <>
@@ -41,7 +57,7 @@ export default async function WeakPage({ params, searchParams }: { params: Promi
           {WEAK_WINDOWS.map((w) => (
             <Link
               key={w}
-              href={`/learners/${learner.id}/weak?weeks=${w}`}
+              href={`/learners/${learner.id}/weak?weeks=${w}${pick ? `&domain=${pick}` : ""}`}
               aria-current={w === window ? "page" : undefined}
               data-testid={`weak-window-${w}`}
               className={`inline-flex min-h-11 items-center rounded-lg border px-4 text-sm font-medium ${w === window ? "border-accent bg-accent text-white" : "border-line bg-white text-ink hover:border-accent"}`}
@@ -60,11 +76,21 @@ export default async function WeakPage({ params, searchParams }: { params: Promi
           </p>
         ) : null}
 
-        <div className="mt-5">
-          <WeakTable view={view} />
-        </div>
+        <DomainTiles tiles={tiles} learnerId={learner.id} weeks={window} active={pick} />
 
-        <ReadingSkillsTable view={reading} learnerId={learner.id} />
+        {pick === null ? (
+          <p className="mt-4 text-sm text-muted" data-testid="weak-tiles-hint">
+            {weakPage.tilesHint}
+          </p>
+        ) : (
+          <section className="mt-6" data-testid={`weak-detail-${pick}`}>
+            <h2 className="text-xl font-semibold">{tile ? tile.name : weakPage.allTitle}</h2>
+            <div className="mt-3">
+              <WeakTable view={tile ? { ...view, tags: tile.points } : view} />
+            </div>
+            {pick === "reading" ? <ReadingSkillsTable view={reading} learnerId={learner.id} /> : null}
+          </section>
+        )}
       </main>
     </>
   );

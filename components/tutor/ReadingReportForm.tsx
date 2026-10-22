@@ -42,7 +42,7 @@ export function ReadingReportForm({ learnerId, tags, month, existing }: {
     setBusy(false);
     if (!res.ok) return setMsg({ ok: false, text: failText(res) });
     setMsg({ ok: true, text: readingPage.saved });
-    router.push(`/learners/${learnerId}/weak`);
+    router.push(`/learners/${learnerId}/weak?domain=reading`);
   }
 
   return (

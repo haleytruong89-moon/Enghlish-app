@@ -948,6 +948,12 @@ export const weakPage = {
   recheckResultLabels: { ok: "ổn", still_wrong: "còn sai", not_asked: "chưa hỏi" } as const,
   pendingTitle: "Chờ gắn nhãn",
   pendingLink: "Gắn nhãn cho các câu sai",
+  tilesTitle: "Theo mảng",
+  tilesHint: "Bấm một mảng để xem từng điểm cần chú ý của mảng đó.",
+  tileCount: (n: number) => (n === 0 ? "Chưa có điểm cần chú ý" : `${n} điểm cần chú ý`),
+  tileWorst: (label: string) => `Cần chú ý nhất: ${label}`,
+  tileAll: "Xem tất cả",
+  allTitle: "Tất cả các mảng",
 } as const;
 
 export const readingPage = {
