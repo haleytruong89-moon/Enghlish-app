@@ -9,7 +9,7 @@ export function levelText(scale: Scale, level: string): string {
   return levelCopy.levelName(scale, level);
 }
 
-/** "Nguyên đang học từ B1+ đến B2+, tuỳ mảng. Cô đã xác nhận 2/7 mảng." (conclusion first, UX guide §4.1). */
+/** "Nguyên đang học từ B1+ đến B2+, tuỳ mảng. Thầy/cô đã xác nhận 2/7 mảng." (conclusion first, UX guide §4.1). */
 export function profileSummary(alias: string, p: LevelProfile): string {
   const cefr = p.domains
     .filter((d) => d.scale === "cefr" && stepIndex("cefr", d.current) !== null)

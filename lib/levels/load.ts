@@ -1,6 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { parseLevelProfile, parseRecentChanges } from "./shape";
+import { parseExternalResult, parseLevelProfile, parseRecentChanges, type ExternalLookup } from "./shape";
 import { RECENT_DAYS, type LevelProfile, type RecentChange } from "./types";
 import { mergeRecentChanges } from "./view";
 
@@ -28,4 +28,11 @@ export async function loadRecentLevelChanges(learners: { id: string; alias: stri
     }),
   );
   return mergeRecentChanges(per);
+}
+
+/** One external result by id (the correction form), found even when it is older than the 30 the profile lists. Call after requireLearnerPage. */
+export async function loadExternalResult(learnerId: string, id: string): Promise<ExternalLookup> {
+  const { data, error } = await createAdminClient().rpc("eng_external_result", { p_learner: learnerId, p_id: id });
+  if (error) throw new Error(`eng_external_result failed: ${error.code ?? error.message ?? "error"}`);
+  return parseExternalResult(data);
 }

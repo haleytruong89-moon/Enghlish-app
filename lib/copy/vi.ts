@@ -1288,6 +1288,7 @@ export const externalCopy = {
   editIntro: "Lưu sẽ thay kết quả cũ bằng kết quả mới này. Bản cũ vẫn được giữ trong lịch sử, không bị xóa.",
   editFileHint: "Không chọn ảnh mới thì vẫn dùng phiếu điểm cũ.",
   alreadyCorrected: "Kết quả này đã được sửa trước đó. Mở lại Hồ sơ cấp để sửa bản mới nhất.",
+  notFound: "Không tìm thấy kết quả thi này. Mở lại Hồ sơ cấp để chọn kết quả cần sửa.",
 } as const;
 
 /** SM-2: "Việc cần ôn" theo mảng trên trang chủ của em. Không cấp, không điểm (P2-d). Xưng "bạn". */

@@ -82,7 +82,7 @@ describe("0020_level_profile.sql", () => {
       expect(m[0], `${m[1]} search_path`).toMatch(/set search_path = ''/);
       expect(m[0], `${m[1]} security definer`).toMatch(/security definer/);
     }
-    for (const sig of ["eng_level_profile(uuid)", "eng_recent_level_changes(uuid, int)", "eng_purge_learner(uuid, uuid)", "eng_purge_preview(uuid)"]) {
+    for (const sig of ["eng_level_profile(uuid)", "eng_external_result(uuid, uuid)", "eng_recent_level_changes(uuid, int)", "eng_purge_learner(uuid, uuid)", "eng_purge_preview(uuid)"]) {
       expect(code).toContain(`revoke execute on function english.${sig} from public, anon, authenticated;`);
       expect(code).toContain(`grant execute on function english.${sig} to service_role;`);
     }

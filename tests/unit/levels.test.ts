@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { externalCopy, levelCopy, levelFormCopy, studentReviewCopy, tutorHonorific, tutorHonorificCap } from "@/lib/copy/vi";
 import { barFraction, bandOf, currentLevels, isLevelOf, levelsOf, majorIndex, nearLevel, stepIndex, strongestWeakest } from "@/lib/levels/scale";
-import { parseLevelProfile, parseRecentChanges, parseReviewByDomain } from "@/lib/levels/shape";
+import { parseExternalResult, parseLevelProfile, parseRecentChanges, parseReviewByDomain } from "@/lib/levels/shape";
 import type { RecentChange } from "@/lib/levels/types";
 import { boxValue, dayLabel, domainSentence, groupReview, levelText, mergeRecentChanges, monthLabel, profileSummary } from "@/lib/levels/view";
 import { assumedProfile, confirmedProfile } from "./fixtures/levels";
@@ -163,5 +163,16 @@ describe("mergeRecentChanges (D11)", () => {
     expect(out.map((x) => [x.id, x.collapsed ?? null])).toEqual([["up", null], ["d2", null], ["t2", null], ["d1b", 2]]);
     const many = Array.from({ length: 8 }, (_, i) => row(`m${i}`, `2026-10-1${i}T03:00:00+00:00`, { kind: "adjust" }));
     expect(mergeRecentChanges([many])).toHaveLength(5);
+  });
+});
+
+describe("parseExternalResult (the correction form's lookup)", () => {
+  it("three states; a live entry is mapped to the form's values; anything else throws", () => {
+    expect(parseExternalResult({ state: "superseded", result: null })).toEqual({ state: "superseded" });
+    expect(parseExternalResult({ state: "not_found", result: null })).toEqual({ state: "not_found" });
+    expect(parseExternalResult({ state: "live", result: { id: "e1", exam: "FCE", taken_on: "2026-09-12", score_text: "172", domains: ["reading"], note: null } }))
+      .toEqual({ state: "live", result: { id: "e1", exam: "FCE", takenOn: "2026-09-12", scoreText: "172", domains: ["reading"], note: null } });
+    expect(() => parseExternalResult({ state: "live", result: null })).toThrow();
+    expect(() => parseExternalResult({ state: "maybe", result: null })).toThrow();
   });
 });

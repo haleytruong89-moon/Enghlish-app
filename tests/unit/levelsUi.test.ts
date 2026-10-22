@@ -31,7 +31,7 @@ const readingGroups: SkillGroup[] = [
 ];
 
 describe("LevelSummaryCard", () => {
-  it("asks where the child is, says it in one plain sentence, and fills Mạnh nhất / Cần tập trung / Đang chờ cô (D4)", () => {
+  it("asks where the child is, says it in one plain sentence, and fills Mạnh nhất / Cần tập trung / Đang chờ thầy/cô (D4)", () => {
     const html = render(createElement(LevelSummaryCard, { alias: "Nguyên", profile: confirmedProfile() }));
     expect(html).toContain(levelCopy.whereTitle("Nguyên"));
     expect(html).toMatch(/data-testid="level-strongest"[\s\S]*?Đọc · B2\+/);
@@ -43,7 +43,7 @@ describe("LevelSummaryCard", () => {
 });
 
 describe("LevelBars", () => {
-  it("7 bars, one per domain; assumed bars are dashed and say 'Ước lượng — cô chưa xác nhận' in words (D5)", () => {
+  it("7 bars, one per domain; assumed bars are dashed and say 'Ước lượng — thầy/cô chưa xác nhận' in words (D5)", () => {
     const html = render(createElement(LevelBars, { profile: confirmedProfile(), learnerId: L, active: "reading" }));
     expect(count(html, 'data-testid="level-bar-')).toBe(7);
     expect(html).toMatch(/data-testid="level-bar-reading"[^>]*data-status="confirmed"/);

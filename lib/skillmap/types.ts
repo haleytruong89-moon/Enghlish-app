@@ -52,7 +52,7 @@ export type SkillDomain = { key: DomainKey; name: string; scale: "cefr" | "task_
 export type SkillMapView = {
   mapId: string;
   trackId: string;
-  /** Assumed start level per domain for the learner's track (SM-2 shows it as "giả định — chờ cô xác nhận"). */
+  /** Assumed start level per domain for the learner's track (SM-2 shows it as "giả định — chờ thầy/cô xác nhận"). */
   assumed: Record<string, string | number>;
   domains: SkillDomain[];
   /** Tags of this learner's track (seed or family) that have no group in the map. */

@@ -381,6 +381,29 @@ describe("SM-2 level profile (migration 0020)", () => {
       expect(bareRows).toMatchObject([{ file_id: null, file_inherited: false }]);
     });
 
+    it("eng_external_result: one entry by id for the correction form - live, already corrected, or not found (any family, any child)", async () => {
+      const L = await newLearner("B");
+      const first = await ext(M().parent, { learner: L, score: "165", clientId: "ext-one-0001", note: "ghi chú" });
+      const fixed = await ext(M().parent, { learner: L, score: "172", clientId: "ext-one-0002", supersedes: first.id });
+      type One = { state: string; result: { id: string; score_text: string; domains: string[]; note: string | null } | null };
+      const one = (learner: string, id: string) => svc<One>("select english.eng_external_result($1, $2) as r", [learner, id]);
+      expect(await one(L, fixed.id)).toMatchObject({ state: "live", result: { id: fixed.id, score_text: "172", domains: ["listening", "reading"] } });
+      expect(await one(L, first.id)).toEqual({ state: "superseded", result: null });
+      expect(await one(L, randomUUID())).toEqual({ state: "not_found", result: null });
+      // another child's row, and a row of another family, are "not found" for this child
+      const mine = await ext(M().parent, { learner: NG(), clientId: "ext-one-0003" });
+      expect(await one(L, mine.id)).toEqual({ state: "not_found", result: null });
+      const otherFamily = (await q1<{ id: string }>("insert into english.families(name) values ('Gia đình khác') returning id"))[0]!.id;
+      const stranger = (await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1, 'Em lạ', 'B', true, 'active') returning id", [otherFamily]))[0]!.id;
+      const strangerMember = (await q1<{ id: string }>("insert into english.members(user_id, family_id, role, display_name) values ($1, $2, 'parent', 'PH lạ') returning id", [await createAuthUser(db.client, `stranger-${randomUUID().slice(0, 6)}@test.local`), otherFamily]))[0]!.id;
+      const foreign = await ext(strangerMember, { learner: stranger, clientId: "ext-one-0004" });
+      expect(await one(L, foreign.id)).toEqual({ state: "not_found", result: null });
+      // a correction may not point at another family's row either
+      await fail(ext(M().parent, { learner: L, supersedes: foreign.id }), "P0002", /\(not_found\)/);
+      const err = await rowsAs(db.client, "authenticated", s.users.studentNguyen, "select english.eng_external_result($1, $2) as r", [NG(), mine.id]).then(() => null, (e: unknown) => e as { code?: string });
+      expect(err?.code).toBe("42501");
+    });
+
     it("the staff reads are closed to anon and authenticated (a student calling it is refused)", async () => {
       const acl = await q1<{ proname: string; anon: boolean; auth: boolean; svc: boolean }>(`
         select p.proname, has_function_privilege('anon', p.oid, 'execute') as anon, has_function_privilege('authenticated', p.oid, 'execute') as auth,

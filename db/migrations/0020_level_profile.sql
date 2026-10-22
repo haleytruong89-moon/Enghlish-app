@@ -515,6 +515,23 @@ $$;
 
 revoke execute on function english.eng_level_profile(uuid) from public, anon, authenticated;
 grant execute on function english.eng_level_profile(uuid) to service_role;
+-- Một kết quả thi ngoài theo id (màn "Sửa"): còn hiệu lực → nội dung để điền sẵn; đã bị sửa → 'superseded'; không có / của em khác / của gia đình
+-- khác → 'not_found'. Không phụ thuộc giới hạn 30 dòng của hồ sơ.
+create or replace function english.eng_external_result(p_learner uuid, p_id uuid) returns jsonb
+language sql stable security definer set search_path = ''
+as $$
+  select case
+    when e.id is null then pg_catalog.jsonb_build_object('state', 'not_found', 'result', null)
+    when exists (select 1 from english.external_results s where s.supersedes_id = e.id) then pg_catalog.jsonb_build_object('state', 'superseded', 'result', null)
+    else pg_catalog.jsonb_build_object('state', 'live', 'result', pg_catalog.jsonb_build_object(
+      'id', e.id, 'exam', e.exam, 'taken_on', e.taken_on, 'score_text', e.score_text, 'domains', pg_catalog.to_jsonb(e.domains), 'note', e.note))
+  end
+  from (select 1) one
+  left join english.external_results e on e.id = p_id and e.learner_id = p_learner
+$$;
+
+revoke execute on function english.eng_external_result(uuid, uuid) from public, anon, authenticated;
+grant execute on function english.eng_external_result(uuid, uuid) to service_role;
 revoke execute on function english.eng_recent_level_changes(uuid, int) from public, anon, authenticated;
 grant execute on function english.eng_recent_level_changes(uuid, int) to service_role;
 revoke execute on function english.eng_my_review_by_domain() from public, anon, service_role;

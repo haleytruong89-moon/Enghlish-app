@@ -1,6 +1,6 @@
 /** Parse the jsonb of the 0020 read functions. zod strips unknown keys (except the student's list: strict); anything unexpected throws. */
 import { z } from "zod";
-import { DOMAIN_KEYS } from "@/lib/skillmap/types";
+import { DOMAIN_KEYS, type DomainKey } from "@/lib/skillmap/types";
 import { EXAMS, LEVEL_KINDS, REVIEW_MAX, type LevelChange, type LevelProfile, type ReviewItem } from "./types";
 
 const scale = z.enum(["cefr", "task_level"]);
@@ -78,4 +78,27 @@ export function parseReviewByDomain(raw: unknown): ReviewItem[] {
   return z.strictObject({ items: z.array(reviewRow).max(REVIEW_MAX) }).parse(raw).items.map((r) => ({
     domainKey: r.domain_key, domainName: r.domain_name, label: r.label,
   }));
+}
+
+/** One external result looked up by id for the correction form (eng_external_result). */
+export type ExternalLookup =
+  | { state: "live"; result: { id: string; exam: (typeof EXAMS)[number]; takenOn: string; scoreText: string; domains: DomainKey[]; note: string | null } }
+  | { state: "superseded" }
+  | { state: "not_found" };
+
+const lookupRow = z.union([
+  z.object({
+    state: z.literal("live"),
+    result: z.object({ id: z.string(), exam: z.enum(EXAMS), taken_on: z.string(), score_text: z.string(), domains: z.array(domainKey), note: z.string().nullable() }),
+  }),
+  z.object({ state: z.enum(["superseded", "not_found"]), result: z.null() }),
+]);
+
+export function parseExternalResult(raw: unknown): ExternalLookup {
+  const r = lookupRow.parse(raw);
+  if (r.state === "live") {
+    const x = r.result;
+    return { state: "live", result: { id: x.id, exam: x.exam, takenOn: x.taken_on, scoreText: x.score_text, domains: x.domains, note: x.note } };
+  }
+  return { state: r.state };
 }

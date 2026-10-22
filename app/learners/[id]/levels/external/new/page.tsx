@@ -3,9 +3,10 @@ import { AppHeader } from "@/components/AppHeader";
 import { ExternalResultForm } from "@/components/levels/ExternalResultForm";
 import { externalCopy, learnerWithTrack } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
-import { loadLevelProfile } from "@/lib/levels/load";
+import { loadExternalResult, loadLevelProfile } from "@/lib/levels/load";
 import { EXAM_DAYS_BACK } from "@/lib/levels/types";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
+import { UUID_RE } from "@/lib/work/schemas";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +18,10 @@ export default async function ExternalNewPage({ params, searchParams }: { params
   const profile = await loadLevelProfile(learner.id);
   const today = todayVn();
   // A2: ?edit=<id> corrects a live entry (the form saves a new one that replaces it). An entry already corrected is not offered again.
-  const target = edit ? (profile.externalResults.find((e) => e.id === edit) ?? null) : null;
-  const stale = Boolean(edit) && !target;
+  // Looked up by id (not in the 30 listed entries), so an older entry can still be corrected. Not a uuid → treated as not found.
+  const lookup = edit ? (UUID_RE.test(edit) ? await loadExternalResult(learner.id, edit) : ({ state: "not_found" } as const)) : null;
+  const target = lookup?.state === "live" ? lookup.result : null;
+  const problem = lookup && lookup.state !== "live" ? (lookup.state === "superseded" ? externalCopy.alreadyCorrected : externalCopy.notFound) : null;
   return (
     <>
       <AppHeader name={member.displayName} showTestBadge={learner.isTest} />
@@ -28,9 +31,9 @@ export default async function ExternalNewPage({ params, searchParams }: { params
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{target ? externalCopy.editTitle(learner.alias) : externalCopy.title(learner.alias)}</h1>
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
-        {stale ? (
+        {problem ? (
           <p className="mt-4 rounded-xl border border-line bg-white px-4 py-3" data-testid="external-stale">
-            {externalCopy.alreadyCorrected}
+            {problem}
           </p>
         ) : (
           <>
@@ -40,7 +43,7 @@ export default async function ExternalNewPage({ params, searchParams }: { params
               domains={profile.domains.map((d) => ({ key: d.key, name: d.name }))}
               today={today}
               minDate={addDays(today, -EXAM_DAYS_BACK)}
-              edit={target ? { id: target.id, exam: target.exam, takenOn: target.takenOn, scoreText: target.scoreText, domains: target.domains, note: target.note } : undefined}
+              edit={target ?? undefined}
             />
           </>
         )}

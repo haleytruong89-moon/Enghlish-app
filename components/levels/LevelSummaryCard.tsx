@@ -3,7 +3,7 @@ import { strongestWeakest } from "@/lib/levels/scale";
 import type { LevelProfile } from "@/lib/levels/types";
 import { boxValue, profileSummary } from "@/lib/levels/view";
 
-/** "{tên} đang ở đâu?": one plain sentence (conclusion first), then Mạnh nhất / Cần tập trung / Đang chờ cô (D4). Staff only. */
+/** "{tên} đang ở đâu?": one plain sentence (conclusion first), then Mạnh nhất / Cần tập trung / Đang chờ thầy/cô (D4). Staff only. */
 export function LevelSummaryCard({ alias, profile }: { alias: string; profile: LevelProfile }) {
   const { strongest, weakest, even } = strongestWeakest(profile.domains);
   const boxes = [
