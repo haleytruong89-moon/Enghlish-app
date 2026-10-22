@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { DomainTabs } from "@/components/tutor/DomainTabs";
+import { DomainTabs, nextTabKey } from "@/components/tutor/DomainTabs";
 import { GroupPicker } from "@/components/tutor/GroupPicker";
 import { SetGroupControl } from "@/components/tutor/SetGroupControl";
 import { DomainTiles } from "@/components/tutor/DomainTiles";
@@ -46,6 +46,27 @@ describe("DomainTabs", () => {
     expect(html).not.toContain('data-testid="item-doc-hieu"'); // hidden from the picker
     expect(html).toContain(skillMapCopy.emptyDomain); // listening has nothing
     expect(html).toContain(`aria-label="${skillMapCopy.search}"`);
+  });
+});
+
+describe("DomainTabs follows the ARIA tabs pattern", () => {
+  it("only the selected tab is in the tab order; panels can take focus", () => {
+    const html = tabs("vocab");
+    expect(html.match(/<button[^>]*data-testid="tab-t-vocab"[^>]*>/)?.[0]).toContain('tabindex="0"');
+    expect(html.match(/<button[^>]*data-testid="tab-t-grammar"[^>]*>/)?.[0]).toContain('tabindex="-1"');
+    expect(html.match(/<div[^>]*role="tabpanel"[^>]*data-testid="panel-t-vocab"[^>]*>/)?.[0]).toContain('tabindex="0"');
+  });
+
+  it("arrows move to the neighbour and wrap, Home and End go to the ends, other keys do nothing", () => {
+    const keys = ["grammar", "vocab", "reading"];
+    expect(nextTabKey(keys, "vocab", "ArrowRight")).toBe("reading");
+    expect(nextTabKey(keys, "reading", "ArrowRight")).toBe("grammar");
+    expect(nextTabKey(keys, "grammar", "ArrowLeft")).toBe("reading");
+    expect(nextTabKey(keys, "vocab", "ArrowLeft")).toBe("grammar");
+    expect(nextTabKey(keys, "vocab", "Home")).toBe("grammar");
+    expect(nextTabKey(keys, "vocab", "End")).toBe("reading");
+    expect(nextTabKey(keys, "vocab", "Enter")).toBeNull();
+    expect(nextTabKey([], "vocab", "Home")).toBeNull();
   });
 });
 
