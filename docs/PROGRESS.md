@@ -924,7 +924,7 @@ D1 bước "Sửa bài" của chủ đề = bước sửa đầu tiên sau bài,
 
 ### Sửa theo review Opus (22/10, cùng nhánh)
 
-- **B1:** dòng ``` thừa làm hiện ký tự lạ trên mỗi dòng Hộp duyệt — đã bỏ; thêm test dựng trang Hộp duyệt (không dòng nào có dấu `\``) và quét mọi `.tsx` tìm dòng chỉ có dấu ngược.
+- **B1:** dòng ``` thừa làm hiện ký tự lạ trên mỗi dòng Hộp duyệt — đã bỏ; thêm test dựng trang Hộp duyệt (không dòng nào có dấu nháy ngược) và quét mọi `.tsx` tìm dòng chỉ có dấu ngược.
 - **S1 (D14 trọn):** `0021` viết lại `eng_tag_episode` (bản 0014) và `eng_review_episode` (bản 0010) để dùng `eng_episode_restricted`: phụ huynh không gắn nhãn được cho bài sửa của bài kiểm tra trong buổi (42501), màn xem bài báo `restricted`.
 - **S2:** sửa góp ý khóa bước sửa trước khi kiểm tra "con đã bắt đầu"; nộp bài sửa gửi `feedback_id` (góp ý cũ → "Thầy/cô vừa sửa góp ý — tải lại trang để xem bản mới."); Xong / Mở vòng 2 / trước–sau lấy góp ý theo đánh dấu của bài sửa.
 - **S3/N2:** luật chữ "điểm" chốt lại (xem câu 2 ở trên) — **Claude đề xuất, phụ huynh xem lại**.
