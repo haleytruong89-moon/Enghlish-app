@@ -973,8 +973,8 @@ export const readingPage = {
   rowInvalid: "Số câu là số nguyên 0–500 (0 = không có câu); % đúng là số nguyên 0–100; nhập cả hai hoặc để trống cả hai.",
   needOneRow: "Nhập ít nhất một kỹ năng.",
   sectionTitle: "Kỹ năng đọc",
-  sectionIntro: (month: string | null, source: string | null) =>
-    month ? `Theo báo cáo tháng ${month}${source ? ` (${source})` : ""}, so với báo cáo trước. Câu sai 6 tuần = từ bài kiểm tra và bài luyện.` : "Chưa có báo cáo kỹ năng đọc nào.",
+  sectionIntro: (month: string | null) =>
+    month ? `Theo báo cáo tháng ${month}, so với báo cáo trước. Câu sai 6 tuần = từ bài kiểm tra và bài luyện.` : "Chưa có báo cáo kỹ năng đọc nào.",
   colLatest: (month: string | null) => (month ? `Tháng ${month}` : "Báo cáo mới nhất"),
   colPrev: (month: string | null) => (month ? `Tháng ${month}` : "Báo cáo trước"),
   colWrong6w: "Câu sai 6 tuần",
