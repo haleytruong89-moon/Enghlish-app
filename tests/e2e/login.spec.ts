@@ -3,6 +3,17 @@ import { app, auth } from "@/lib/copy/vi";
 import { SEED_ACCOUNTS } from "../../scripts/lib/seed";
 import { emailFor, loginAs, seedPassword, submitLogin } from "./helpers";
 
+test.describe("dark device theme", () => {
+  test.use({ colorScheme: "dark" });
+  test("login page stays light", async ({ page }) => {
+    await page.goto("/login");
+    const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(bg).toBe("rgb(244, 245, 240)");
+    const scheme = await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
+    expect(scheme).toBe("only light");
+  });
+});
+
 test.describe("login page", () => {
   test("renders the Vietnamese login form", async ({ page }) => {
     await page.goto("/login");

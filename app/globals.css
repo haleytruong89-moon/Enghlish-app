@@ -11,6 +11,18 @@
   --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Always light (parent, 22/10/2026): also opts out of browser "auto dark" (forced darkening). */
+:root {
+  color-scheme: only light;
+}
+
+input,
+select,
+textarea {
+  background-color: #ffffff;
+  color: var(--color-ink);
+}
+
 html,
 body {
   background: var(--color-paper);
