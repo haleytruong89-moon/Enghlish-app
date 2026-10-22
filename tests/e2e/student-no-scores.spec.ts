@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { levelCopy } from "@/lib/copy/vi";
 import { loginAs, type AccountKey } from "./helpers";
 
 // Students never see raw scores (CLAUDE.md, D28). formatScore() renders "3/4 · Đạt yêu cầu".
@@ -9,5 +10,9 @@ for (const key of ["studentAn", "studentNguyen"] as AccountKey[]) {
     await loginAs(page, key);
     expect(await page.locator("body").innerText()).not.toMatch(SCORE_PATTERN);
     expect(await page.content()).not.toMatch(SCORE_PATTERN);
+    // SM-2 (P2-d): a student never sees a level, assumed or confirmed.
+    const text = await page.locator("body").innerText();
+    expect(text).not.toMatch(/đang học (A1|A2|B1|B2|C1|C2)/);
+    expect(text).not.toContain(levelCopy.assumed);
   });
 }
