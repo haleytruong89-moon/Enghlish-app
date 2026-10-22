@@ -166,6 +166,12 @@ describe("Bài sửa lại (before–after) and Bài đã sửa", () => {
     expect(html).toContain(revisionReviewCopy.deletedLabel);
     expect(html).toContain(revisionReviewCopy.addedLabel);
     expect(renderToStaticMarkup(createElement(DiffView, { before: "same", after: "same" }))).toContain(revisionReviewCopy.noChange);
+    // the "before" column keeps the old spacing and line breaks, the "after" column the new ones
+    const spaced = renderToStaticMarkup(createElement(DiffView, { before: "a  b\nc d", after: "a b c e" }));
+    const col = (id: string) => (spaced.match(new RegExp(`data-testid="${id}"[\\s\\S]*?</p>`)) ?? [""])[0];
+    expect(col("diff-before")).toContain("a  b\nc ");
+    expect(col("diff-after")).toContain("a b c ");
+    expect(col("diff-after")).not.toContain("a  b");
   });
 
   it("one verdict pair per item fits the child's choice; Xong waits for every verdict; round 2 only in round 1", () => {

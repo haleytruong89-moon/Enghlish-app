@@ -49,12 +49,44 @@ describe("text clean-up (mirror of eng_clean_text)", () => {
 describe("word diff", () => {
   it("marks removed and added words; spacing alone is not a change; identical texts are one 'same' run", () => {
     expect(diffWords("a b c", "a x c")).toEqual([
-      { op: "same", text: "a " }, { op: "del", text: "b " }, { op: "add", text: "x " }, { op: "same", text: "c" },
+      { op: "same", text: "a ", old: "a " }, { op: "del", text: "b " }, { op: "add", text: "x " }, { op: "same", text: "c", old: "c" },
     ]);
-    expect(diffWords(TEXT, TEXT)).toEqual([{ op: "same", text: TEXT }]);
-    expect(diffWords("a  b", "a b")).toEqual([{ op: "same", text: "a b" }]);
+    expect(diffWords(TEXT, TEXT)).toEqual([{ op: "same", text: TEXT, old: TEXT }]);
     expect(diffWords("", "new text")).toEqual([{ op: "add", text: "new text" }]);
     expect(diffWords("old", "")).toEqual([{ op: "del", text: "old" }]);
+  });
+
+  it("the old column keeps the OLD spacing and line breaks, the new column the new ones", () => {
+    const t = diffWords("a  b\nc d", "a b c e");
+    expect(t).toEqual([{ op: "same", text: "a b c ", old: "a  b\nc " }, { op: "del", text: "d" }, { op: "add", text: "e" }]);
+    expect(t.filter((x) => x.op !== "add").map((x) => x.old ?? x.text).join("")).toBe("a  b\nc d");
+    expect(t.filter((x) => x.op !== "del").map((x) => x.text).join("")).toBe("a b c e");
+    expect(changeCount(t)).toEqual({ added: 1, removed: 1 });
+  });
+
+  it("empty and identical texts", () => {
+    expect(diffWords("", "")).toEqual([]);
+    expect(diffWords("   ", "")).toEqual([{ op: "del", text: "   " }]);
+    expect(changeCount(diffWords("Same text.\nTwo lines.", "Same text.\nTwo lines."))).toEqual({ added: 0, removed: 0 });
+  });
+
+  it("an accent typed as one letter or as letter + combining mark is the same word (NFD vs NFC)", () => {
+    const nfc = "caf\u00e9 r\u00f4le";
+    const nfd = "cafe\u0301 ro\u0302le";
+    expect(nfc).not.toBe(nfd);
+    const t = diffWords(nfd, nfc);
+    expect(t).toEqual([{ op: "same", text: nfc, old: nfd }]);
+    expect(changeCount(t)).toEqual({ added: 0, removed: 0 });
+    // Vietnamese diacritics: a real change is still a change
+    expect(changeCount(diffWords("Vi\u1ec7t Nam", "Vie\u0302\u0323t Nam"))).toEqual({ added: 0, removed: 0 });
+    expect(changeCount(diffWords("Việt Nam", "Viet Nam"))).toEqual({ added: 1, removed: 1 });
+  });
+
+  it("curly and straight quotes are the same word; punctuation that changes is a change", () => {
+    expect(changeCount(diffWords("It\u2019s the \u201Cbest\u201D one.", "It's the \"best\" one."))).toEqual({ added: 0, removed: 0 });
+    expect(changeCount(diffWords("It's hot", "It\u2019s hot"))).toEqual({ added: 0, removed: 0 });
+    expect(changeCount(diffWords("The gas rises.", "The gas rises!"))).toEqual({ added: 1, removed: 1 });
+    expect(changeCount(diffWords("hot, cold", "hot cold"))).toEqual({ added: 1, removed: 1 });
   });
 
   it("keeps the order of a real revision and counts the changed words", () => {

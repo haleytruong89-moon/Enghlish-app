@@ -22,7 +22,7 @@ export function DiffView({ before, after }: { before: string; after: string }) {
                   {t.text}
                 </del>
               ) : (
-                <span key={i}>{t.text}</span>
+                <span key={i}>{t.old ?? t.text}</span>
               ),
             )}
           </p>
