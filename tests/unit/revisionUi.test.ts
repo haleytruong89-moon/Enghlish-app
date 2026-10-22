@@ -148,6 +148,31 @@ describe("Sửa bài (the child)", () => {
   });
 });
 
+describe("N6: 'Xong x/y bước' with a reused template REVISION step", () => {
+  const step = (stepNo: number, activityId: string, over: Record<string, unknown> = {}) => ({
+    activityId, stepNo, activityType: "ACT-REVISE", mode: "REVISION" as const, purpose: [], timeMin: null, date: "2026-10-22", attempts: 0, ...over,
+  });
+  const write = { activityId: "w", stepNo: 6, activityType: "ACT-WRITE", mode: "PRACTICE" as const, purpose: [], timeMin: 10, date: "2026-10-20", attempts: 1 };
+  const home = (steps: unknown[], feedback: unknown[]) =>
+    renderToStaticMarkup(createElement(StudentHome, {
+      alias: "An (thử)", color: "#9A4A15", review: null, feedback: feedback as never,
+      data: { inquiries: [{ instanceId: "i", titleVi: "Núi lửa", bigQuestionEn: null, bigQuestionVi: null, dueOn: "2026-10-30", steps }] } as never,
+    }));
+  const progress = (html: string) => (html.match(/data-testid="progress"[^>]*>([^<]*)</) ?? [])[1];
+
+  it("the template revision step is counted while open and stays counted - and done - after the revision is in, even when the box row is gone", () => {
+    const open = home([write, step(13, "t")], [{ feedbackId: "f", activityId: "t", titleVi: "Núi lửa", round: 1, itemsCount: 1, state: "todo", seenAt: null, closingNote: null, praise: null, notes: null }]);
+    expect(progress(open)).toBe(work.progress(1, 2));
+    const sent = home([write, step(13, "t", { attempts: 1 })], [{ feedbackId: "f", activityId: "t", titleVi: "Núi lửa", round: 1, itemsCount: 1, state: "submitted", seenAt: null, closingNote: null, praise: null, notes: null }]);
+    expect(progress(sent)).toBe(work.progress(2, 2));
+    // 14 days later the box row is gone; the step is still counted as done
+    const later = home([write, step(13, "t", { attempts: 1 })], []);
+    expect(progress(later)).toBe(work.progress(2, 2));
+    // a template revision step nobody has revised is still "on paper"
+    expect(progress(home([write, step(13, "t")], []))).toBe(work.progress(1, 1));
+  });
+});
+
 describe("Bài sửa lại (before–after) and Bài đã sửa", () => {
   const view = (over: Partial<RevisionView> = {}): RevisionView => ({
     attemptId: "r", episodeId: "e", learnerId: "l", alias: "An (thử)", round: 1, titleVi: "Núi lửa", submittedAt: "2026-10-22T03:00:00Z",

@@ -78,7 +78,11 @@ export default async function ReviewInboxPage({ searchParams }: { searchParams: 
                 </p>
                 <p className="mt-1 text-sm text-muted">{provenanceLabels[i.provenance] ?? fallbackLabels.provenance}</p>
                 <p className="mt-2 text-sm">
-                  <span data-testid="progress">{reviewPage.progress(i.targetsDecided, i.targetsTotal)}</span>
+                  {i.revisionRound ? (
+                    <span data-testid="revision-progress">{revisionReviewCopy.inboxProgress}</span>
+                  ) : (
+                    <span data-testid="progress">{reviewPage.progress(i.targetsDecided, i.targetsTotal)}</span>
+                  )}
                   {!i.canDecide ? (
                     <span className="ml-2 rounded-full border border-line px-2 py-0.5 text-xs" data-testid="waiting-tutor">
                       {reviewPage.waitingTutor}

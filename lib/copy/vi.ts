@@ -1411,6 +1411,8 @@ export const revisionCopy = {
 export const revisionReviewCopy = {
   title: (round: number) => `Bài sửa lại (vòng ${round})`,
   inboxLabel: (round: number) => `Bài sửa lại (vòng ${round})`,
+  /** Inbox line for a revision: it is done with "Xong", and scoring skills there is optional, so no "Đã chấm 0/n". */
+  inboxProgress: "Đánh giá từng góp ý rồi bấm Xong · chấm kỹ năng là tùy chọn",
   intro: "Bài cũ và bài sửa cạnh nhau: chữ bỏ bị gạch, chữ thêm được tô.",
   before: "Bài cũ",
   after: "Bài sửa",

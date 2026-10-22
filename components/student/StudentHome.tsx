@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { ReviewItem } from "@/lib/levels/types";
 import type { MyFeedbackItem } from "@/lib/revision/types";
-import { homeSteps, splitFeedback } from "@/lib/revision/home";
+import { countsInApp, homeSteps, splitFeedback } from "@/lib/revision/home";
 import { concepts, home, modeLabels, work } from "@/lib/copy/vi";
 import { pickNextTask, stepState, type StepState } from "@/lib/work/nextTask";
 import type { HomeInquiry, HomeStep, HomeView } from "@/lib/work/types";
-import { doableInApp, stepTitle, todayLine, unsupportedLabel } from "@/lib/work/view";
+import { stepTitle, todayLine, unsupportedLabel } from "@/lib/work/view";
 import { FeedbackBox } from "./FeedbackBox";
 import { ReviewByDomain } from "./ReviewByDomain";
 import { RevisionRows } from "./RevisionRows";
@@ -38,8 +38,8 @@ function StateIcon({ state }: { state: StepState }) {
 const STATE_TEXT: Record<StepState, string> = { done: work.stateDone, now: work.stateNow, later: work.stateLater };
 
 function StepRow({ step, state, open }: { step: HomeStep; state: StepState; open: boolean }) {
-  // S6: the app's own revision step (1001+) is doable while the child has feedback to revise there.
-  const doable = doableInApp(step.activityType, step.mode) || open;
+  // S6: a revision step is doable while the child has feedback to revise there, and stays a normal (done) row once the revision is in.
+  const doable = countsInApp(step, new Set(open ? [step.activityId] : []));
   const title = stepTitle(step.activityType);
   const chip = step.purpose.includes("delayed_check")
     ? concepts.delayedCheck.student
@@ -74,7 +74,7 @@ function StepRow({ step, state, open }: { step: HomeStep; state: StepState; open
 function InquiryCard({ inquiry, next, openIds }: { inquiry: HomeInquiry; next: ReturnType<typeof pickNextTask>; openIds: Set<string> }) {
   // "Xong x/y bước" counts only the steps the app can do; steps done on paper / with the tutor are shown apart
   const steps = homeSteps(inquiry.steps, openIds);
-  const inApp = steps.filter((s) => doableInApp(s.activityType, s.mode) || openIds.has(s.activityId));
+  const inApp = steps.filter((s) => countsInApp(s, openIds));
   const done = inApp.filter((s) => s.attempts > 0).length;
   const offApp = steps.length - inApp.length;
   return (
