@@ -5895,11 +5895,13 @@ Names checked across tasks: `eng_write_feedback`, `eng_finish_revision`, `eng_fe
 Task 0 gate passed: the parent approved mockup boards 15–17. The answers below override the tasks wherever they conflict, and Task 11 docs must record them.
 
 - **G1 → as D1.** The template REVISION step is reused when it is the first REVISION step after the written work, with no other ACT-WRITE in between. A self-review step in between does not block it. Keep the literal rule only as the marked alternative comment; do not enable it.
-- **G2 → narrow the score-word rule.** `eng_has_score_words` (DB) and `hasScoreWords` (app) must reject exactly these, and no other text:
-  1. a fraction that looks like a score: `a/b` (spaces allowed around `/`) where `b` is an integer 1–10 and `0 ≤ a ≤ b`. "3/4" and "7 / 10" are rejected; "22/10" (date), "1/2 trang" (½ page) and "12/20" are allowed. "1/2" is ambiguous and IS rejected — accepted trade-off.
-  2. the word "điểm" next to a number, in either order, within one word gap: "6 điểm", "điểm 7", "được 8 điểm", "điểm: 9". "điểm mạnh", "điểm cần chú ý" and "điểm yếu" are allowed.
-  3. a percent sign that follows a number ("80%", "80 %").
+- **G2 → narrow the score-word rule (refined after the Opus review; Claude's proposal, for the parent to review).** Parent principle: the child never sees a score, so adult text must not look like one. `eng_has_score_words` (DB) and `hasScoreWords` (app) reject exactly these, and no other text (adult text only, never the child's):
+  1. a fraction `a/b` (spaces allowed around `/`) where `b` is an integer 1–10 and `0 ≤ a ≤ b` ("3/4", "7 / 10", "1/2") - EXCEPT when it directly follows (spaces only) a date word `ngày|hôm|từ|đến|tới|trước|sau|hạn|tháng` ("hôm 5/10"), is followed by another `/digits` (a full date, "1/10/2026"), or is followed by the word `trang` ("1/2 trang"). "22/10" and "12/20" pass because `a > b`. (The first draft of this amendment listed "1/2 trang" as allowed and "1/2" as refused without a rule that told them apart; the `trang` exception is that rule.)
+  2. a number next to `điểm`, `diem` or `đ`, within one word gap, either order: "8đ", "8 đ", "6 điểm", "điểm 7", "8 diem". "điểm mạnh", "điểm cần chú ý" and "điểm yếu" pass.
+  3. `N trên M` with `M` 1–10 ("8 trên 10").
+  4. a percent sign that follows a number ("80%", "80 %").
+  5. the five 0–4 rubric labels of UX_COPY_GUIDE §3.1, case-insensitive ("Đạt yêu cầu", "Chưa thể hiện", "Còn thiếu nhiều", "Được một phần", "Vững, rõ ràng").
 
-  Update the shared samples in `tests/unit/fixtures/scoreWords.ts` to cover every case above, in both directions. The DB CHECK and the app function must agree on every sample.
+  NFC first; NBSP / U+202F / U+3000 become a normal space on both sides. `tests/unit/fixtures/scoreWords.ts` holds every case in both directions; the DB test and the app test must agree on every sample.
 - **G3 → accepted.** S6 attaches only to written steps of inquiries. A one-off writing assignment does not exist yet and reuses this flow later. Write this under "Để sau" in PROGRESS.
 - **G4 → as D10.** A "Chỉ góp ý" note shows in the child's home box for 14 days, and also on that activity's page (`/activities/[id]`) for as long as the activity is visible. If Task 8 does not already render it on the activity page, add it with a unit test.

@@ -88,23 +88,31 @@ $$;
 revoke execute on function english.eng_track_setting(text, text) from public, anon, authenticated, service_role;
 
 -- 3. Ba sổ mới (append-only) ---------------------------------------------------------------------------------------------------------
--- Chữ của người lớn có dạng điểm (phụ huynh duyệt 22/10, G2: thu hẹp luật) — đúng ba loại, không loại nào khác:
---   1. phân số kiểu điểm a/b (cho phép khoảng trắng quanh "/"): b là số nguyên 1–10 và 0 ≤ a ≤ b ("3/4", "7 / 10"; "22/10", "12/20" thì được).
---   2. chữ "điểm" (mọi kiểu hoa thường, chuẩn NFC) đi sát một con số, cách nhau tối đa một chữ: "6 điểm", "điểm 7", "được 8 điểm", "điểm: 9"
---      ("điểm mạnh", "điểm cần chú ý", "điểm yếu" thì được).
---   3. dấu % đứng sau một con số ("80%", "80 %").
--- Dùng ở bảng (CHECK) và trong các hàm ghi. Có danh sách mẫu chung với lib/revision/scoreWords.ts (tests/unit/fixtures/scoreWords.ts).
--- Ký tự ngăn cách = khoảng trắng, dấu câu ASCII và “ ” ‘ ’ … – — (cùng tập với bản TypeScript).
+-- Chữ của người lớn có dạng điểm (phụ huynh duyệt 22/10, G2; Claude đề xuất cách chốt luật, phụ huynh xem lại) - đúng năm loại, không loại nào khác:
+--   1. phân số kiểu điểm a/b (cho phép khoảng trắng quanh "/"): b là số nguyên 1–10 và 0 ≤ a ≤ b ("3/4", "7 / 10", "1/2"). KHÔNG tính là điểm khi:
+--      đứng ngay sau (chỉ cách khoảng trắng) một trong các chữ ngày: ngày, hôm, từ, đến, tới, trước, sau, hạn, tháng ("hôm 5/10");
+--      hoặc theo sau là "/số" nữa (ngày đầy đủ "1/10/2026"); hoặc theo sau là chữ "trang" ("1/2 trang"). "22/10", "12/20" thì được vì a > b.
+--   2. con số đi sát chữ "điểm", "diem" hoặc "đ" (mọi kiểu hoa thường, chuẩn NFC), cách nhau tối đa một chữ, thứ tự nào cũng được:
+--      "8đ", "8 đ", "6 điểm", "điểm 7", "được 8 điểm", "8 diem" ("điểm mạnh", "điểm cần chú ý", "điểm yếu" thì được).
+--   3. "N trên M" với M là số nguyên 1–10 ("8 trên 10").
+--   4. dấu % đứng sau một con số ("80%", "80 %").
+--   5. đúng các nhãn thang 0–4 trong UX_COPY_GUIDE 3.1 (không phân biệt hoa thường): "Chưa thể hiện", "Còn thiếu nhiều", "Được một phần", "Đạt yêu cầu", "Vững, rõ ràng".
+-- Trước khi so khớp: chuẩn NFC và đổi khoảng trắng lạ (U+00A0, U+202F, U+3000) thành khoảng trắng thường.
+-- Dùng ở bảng (CHECK) và trong các hàm ghi - chỉ cho chữ của người lớn, không bao giờ cho chữ của em. Có danh sách mẫu chung với lib/revision/scoreWords.ts (tests/unit/fixtures/scoreWords.ts).
+-- Ký tự ngăn cách = khoảng trắng, dấu câu ASCII và “ ” ‘ ’ … – — (cùng tập với bản TypeScript). Chữ hoa/thường viết thẳng bằng [xX] vì locale C không đổi chữ có dấu.
 create or replace function english.eng_has_score_words(p_text text) returns boolean
 language sql immutable set search_path = ''
 as $$
   select exists (
            select 1
-           from pg_catalog.regexp_matches(normalize(coalesce(p_text, ''), nfc), '(?<![0-9])([0-9]+)[[:space:]]*/[[:space:]]*([0-9]+)(?![0-9])', 'g') m
-           where m[2] ~ '^0*(10|[1-9])$' and m[1]::numeric <= m[2]::numeric)
-      or normalize(coalesce(p_text, ''), nfc) ~ '[0-9][[:space:]!-/:-@[-`{-~“”‘’…–—]*([^[:space:]!-/:-@[-`{-~“”‘’…–—0-9]+[[:space:]!-/:-@[-`{-~“”‘’…–—]+)?[đĐ][iI][ểỂ][mM]'
-      or normalize(coalesce(p_text, ''), nfc) ~ '[đĐ][iI][ểỂ][mM][[:space:]!-/:-@[-`{-~“”‘’…–—]*([^[:space:]!-/:-@[-`{-~“”‘’…–—0-9]+[[:space:]!-/:-@[-`{-~“”‘’…–—]+)?[0-9]'
-      or normalize(coalesce(p_text, ''), nfc) ~ '[0-9][[:space:]]*%'
+           from pg_catalog.regexp_matches(x.t, '((?<![^[:space:]!-/:-@[-`{-~“”‘’…–—])(?:[nN][gG][àÀ][yY]|[hH][ôÔ][mM]|[tT][ừỪ]|[đĐ][ếẾ][nN]|[tT][ớỚ][iI]|[tT][rR][ưƯ][ớỚ][cC]|[sS][aA][uU]|[hH][ạẠ][nN]|[tT][hH][áÁ][nN][gG])[[:space:]]*)?(?<![0-9])([0-9]+)[[:space:]]*/[[:space:]]*([0-9]+)(?![0-9])(?:([[:space:]]*/[[:space:]]*[0-9])|([[:space:]]*[tT][rR][aA][nN][gG](?![^[:space:]!-/:-@[-`{-~“”‘’…–—])))?', 'g') m
+           where m[1] is null and m[4] is null and m[5] is null and m[3] ~ '^0*(10|[1-9])$' and m[2]::numeric <= m[3]::numeric)
+      or x.t ~ '[0-9][[:space:]!-/:-@[-`{-~“”‘’…–—]*(?:[^[:space:]!-/:-@[-`{-~“”‘’…–—0-9]+[[:space:]!-/:-@[-`{-~“”‘’…–—]+)?(?:[đĐ][iI][ểỂ][mM]|[dD][iI][eE][mM]|[đĐ](?![^[:space:]!-/:-@[-`{-~“”‘’…–—]))'
+      or x.t ~ '(?:[đĐ][iI][ểỂ][mM]|[dD][iI][eE][mM]|[đĐ](?![^[:space:]!-/:-@[-`{-~“”‘’…–—]))[[:space:]!-/:-@[-`{-~“”‘’…–—]*(?:[^[:space:]!-/:-@[-`{-~“”‘’…–—0-9]+[[:space:]!-/:-@[-`{-~“”‘’…–—]+)?[0-9]'
+      or x.t ~ '[0-9][[:space:]]*[tT][rR][êÊ][nN][[:space:]]*0*(10|[1-9])(?![0-9])'
+      or x.t ~ '[0-9][[:space:]]*%'
+      or x.t ~ '[cC][hH][ưƯ][aA],?[[:space:]]+[tT][hH][ểỂ],?[[:space:]]+[hH][iI][ệỆ][nN]|[cC][òÒ][nN],?[[:space:]]+[tT][hH][iI][ếẾ][uU],?[[:space:]]+[nN][hH][iI][ềỀ][uU]|[đĐ][ưƯ][ợỢ][cC],?[[:space:]]+[mM][ộỘ][tT],?[[:space:]]+[pP][hH][ầẦ][nN]|[đĐ][ạẠ][tT],?[[:space:]]+[yY][êÊ][uU],?[[:space:]]+[cC][ầẦ][uU]|[vV][ữỮ][nN][gG],?[[:space:]]+[rR][õÕ],?[[:space:]]+[rR][àÀ][nN][gG]'
+  from (select pg_catalog.translate(normalize(coalesce(p_text, ''), nfc), pg_catalog.chr(160) || pg_catalog.chr(8239) || pg_catalog.chr(12288), '   ') as t) x
 $$;
 -- Chỉ kiểm chữ góp ý (text), không kiểm trích đoạn (đó là chữ tiếng Anh của em, vd. "3/4 of the water").
 create or replace function english.eng_feedback_texts_ok(p_items jsonb) returns boolean

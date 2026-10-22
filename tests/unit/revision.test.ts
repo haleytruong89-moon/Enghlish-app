@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { feedbackCopy, inquiriesPage, revisionCopy, revisionReviewCopy, tutorHonorific } from "@/lib/copy/vi";
+import { feedbackCopy, formatScore, inquiriesPage, revisionCopy, revisionReviewCopy, scoreLabels, tutorHonorific } from "@/lib/copy/vi";
 import { changeCount, diffWords } from "@/lib/revision/diff";
 import { findExcerpt, segmentsFor } from "@/lib/revision/excerpt";
 import { checkFeedback, checkMarks, marksToSend, missingVerdicts } from "@/lib/revision/rules";
@@ -20,6 +20,21 @@ describe("score words (same samples as the database)", () => {
     expect(hasScoreWords("\u0111i\u00ea\u0309m 7")).toBe(true); // "điểm" written with a combining hook (NFD) is caught after NFC
     expect(hasScoreWords("x".repeat(500) + " 3/4")).toBe(true);
     expect(hasScoreWords("99999999999999999999/10")).toBe(false);
+  });
+
+  it("refuses every 0-4 rubric label of the UX guide (copy and rule cannot drift apart)", () => {
+    for (const k of ["0", "1", "2", "3", "4"] as const) {
+      expect(hasScoreWords(scoreLabels[k].short), scoreLabels[k].short).toBe(true);
+      expect(hasScoreWords(scoreLabels[k].short.toLowerCase()), k).toBe(true);
+      expect(hasScoreWords(scoreLabels[k].short.toUpperCase()), k).toBe(true);
+    }
+    expect(hasScoreWords(formatScore(3))).toBe(true);
+  });
+
+  it("the rule is for adult text only: an excerpt or the child's marks reason that looks like a score is not refused", () => {
+    const work = "He ate 3/4 of the pizza and got 8 out of 10.";
+    expect(checkFeedback("Con viết rõ.", [{ text: "Thêm câu kết.", excerpt: "3/4 of the pizza", leaf: null }] as never, work)).toBeNull();
+    expect(checkMarks([{ n: 1 }], { "1": { choice: "kept", reason: "Mình thấy 8 điểm là đủ" } }, true, true)).toBeNull();
   });
 });
 
