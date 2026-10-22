@@ -14,15 +14,6 @@ for (const key of ["studentAn", "studentNguyen"] as AccountKey[]) {
     const text = await page.locator("body").innerText();
     expect(text).not.toMatch(/đang học (A1|A2|B1|B2|C1|C2)/);
     expect(text).not.toContain(levelCopy.assumed);
-    // S6: the child's revision pages carry no score, verdict or skill code either.
-    const fb = await page.request.get("/api/student/feedback");
-    if (fb.status() === 200) {
-      const { items } = (await fb.json()) as { items: { activityId: string; state: string }[] };
-      for (const it of items.filter((i) => i.state !== "note").slice(0, 3)) {
-        await page.goto(`/activities/${it.activityId}`);
-        expect(await page.locator("body").innerText()).not.toMatch(SCORE_PATTERN);
-        expect(await page.content()).not.toMatch(/"verdict"|improved|not_yet|reason_ok|ref_key/);
-      }
-    }
+    // S6: the child's revision pages (todo and seen) and the home box are checked in the S6 serial suite of review.spec.ts, on real data.
   });
 }

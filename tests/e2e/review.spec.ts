@@ -14,6 +14,16 @@ const AN = "An (thử)";
 const WRITE_STEP = 7; // ACT-WRITE practice: A-L3-CAUSE-W + A-L2-CHUNKS
 const SPEAK_STEP = 6; // ACT-SPEAK-MONO practice: A-L3-CAUSE-S + A-L2-CHUNKS (recorded live by the tutor)
 const SCORE_PATTERN = /\d\s*\/\s*4\s*·/;
+// What the child's pages must never carry (S6): a verdict, a skill code, or a score-looking line ("3/4 ·", "8 điểm", "80%").
+const CHILD_LEAK = /"verdict"|improved|not_yet|reason_ok|ref_key/;
+const CHILD_SCORE = /\d\s*\/\s*4\s*·|\d\s*điểm|điểm\s*\d|\d\s*%/i;
+/** Fails when the area (default: the whole page) shows a score-shaped line, or the page markup carries a verdict or a skill code. */
+async function expectNoScoreLeak(page: Page, label: string, scope?: string) {
+  const text = await (scope ? page.getByTestId(scope) : page.locator("body")).innerText();
+  expect(text.length, `${label}: the checked area has content`).toBeGreaterThan(20);
+  expect(text, `${label}: text`).not.toMatch(CHILD_SCORE);
+  expect(await page.content(), `${label}: markup`).not.toMatch(CHILD_LEAK);
+}
 
 type ApiInquiries = { inquiries: { templateId: string; steps: { activityId: string; stepNo: number }[] }[] };
 
@@ -477,12 +487,14 @@ test.describe.serial("S6 feedback and revision", () => {
     await loginAs(page, "studentAn");
     const row = page.getByTestId(`revision-row-${revisionActivity}`);
     await expect(row).toContainText(revisionCopy.rowTitle(""));
+    await expectNoScoreLeak(page, "home, revision todo", "revision-rows");
     const rowsBox = await page.getByTestId("revision-rows").boundingBox();
     const nextBox = await page.locator('[data-testid="next-task"], [data-testid="no-next-task"]').first().boundingBox();
     expect(rowsBox!.y).toBeLessThan(nextBox!.y);
     await row.click();
     await expect(page).toHaveURL(new RegExp(`/activities/${revisionActivity}$`));
     await expect(page.getByTestId("revision-praise")).toContainText("Con so sánh rõ Sao Kim và Sao Hỏa.");
+    await expectNoScoreLeak(page, "revision page, todo");
     await page.getByText(revisionCopy.showOld).click();
     await expect(page.getByTestId("excerpt-1")).toHaveText(/its air is thin/);
     const editor = page.getByTestId("revision-editor");
@@ -521,6 +533,11 @@ test.describe.serial("S6 feedback and revision", () => {
     await expect(box).toContainText(revisionCopy.seenTitle);
     await expect(box).toContainText("Câu kết rất rõ!");
     expect(await page.locator("body").innerText()).not.toMatch(SCORE_PATTERN);
+    await expectNoScoreLeak(page, "home, revision seen", "feedback-box");
+    // the revision page itself in the "seen" state (the adult checked it): still no verdict, skill code or score
+    await page.goto(`/activities/${revisionActivity}`);
+    await expect(page.getByTestId("revision-form")).toHaveCount(0);
+    await expectNoScoreLeak(page, "revision page, seen");
   });
 
   test("the parent reads the pair under 'Bài đã sửa' (no buttons); the child cannot open that page", async ({ page, browser }) => {
