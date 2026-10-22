@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import { DomainTabs } from "@/components/tutor/DomainTabs";
 import { GroupPicker } from "@/components/tutor/GroupPicker";
 import { SetGroupControl } from "@/components/tutor/SetGroupControl";
+import { TagChips } from "@/components/tutor/TagChips";
+import { TagSelect } from "@/components/tutor/TagSelect";
 import { skillMapCopy } from "@/lib/copy/vi";
 import { groupTags } from "@/lib/skillmap/group";
 import type { TagInfo } from "@/lib/tutorwork/types";
@@ -60,5 +62,32 @@ describe("GroupPicker and SetGroupControl", () => {
     const html = render(createElement(SetGroupControl, { map, tagKey: "x-dao-ngu-hardly", onSetGroup: vi.fn() }));
     expect(html).toContain('data-testid="set-group-x-dao-ngu-hardly"');
     expect(html).toContain(skillMapCopy.setGroup);
+  });
+});
+
+describe("pickers by domain", () => {
+  const tags = [tag("dang-tu"), tag("thanh-ngu"), tag("phat-am"), tag("doc-hieu"), tag("x-dao-ngu-hardly", { custom: true, label: "Đảo ngữ với hardly" })];
+
+  it("TagChips opens on the tab of the first chosen tag, says what is chosen, hides the hidden leaf, offers 'Xếp vào nhóm', and '+ nhãn khác' needs a group", () => {
+    const html = render(createElement(TagChips, { tags, map, selected: ["phat-am"], onChange: vi.fn(), max: 3, onAdd: vi.fn(), onSetGroup: vi.fn(), testId: "session-tags" }));
+    expect(html).toMatch(/<button[^>]*aria-selected="true"[^>]*data-testid="tab-session-tags-speaking"/);
+    expect(html).toContain(skillMapCopy.chosen("phat-am"));
+    expect(html).not.toContain('data-testid="tag-chip-doc-hieu"');
+    expect(html).toContain('data-testid="set-group-x-dao-ngu-hardly"');
+    expect(html).toContain('data-testid="add-tag-domain"');
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*data-testid="add-tag-button"/);
+  });
+
+  it("TagChips keeps a hidden tag that was already saved, ticked and locked", () => {
+    const html = render(createElement(TagChips, { tags, map, selected: ["doc-hieu"], locked: ["doc-hieu"], onChange: vi.fn(), max: 3, onAdd: vi.fn() }));
+    expect(html).toMatch(/<button[^>]*aria-checked="true"[^>]*disabled=""[^>]*data-testid="tag-chip-doc-hieu"/);
+  });
+
+  it("TagSelect groups options as 'Mảng · Nhóm', 'Chưa xếp mảng' last; the hidden leaf only when it is the current value", () => {
+    const html = render(createElement(TagSelect, { tags, map, value: null, onChange: vi.fn(), onAdd: vi.fn(), label: "Câu 4", testId: "q4" }));
+    expect(html).toContain(`<optgroup label="${skillMapCopy.place("Từ vựng", "Dạng từ")}">`);
+    expect(html.indexOf(`<optgroup label="${skillMapCopy.unassigned}">`)).toBeGreaterThan(html.indexOf(`<optgroup label="${skillMapCopy.place("Nói", "Phát âm & ngữ điệu")}">`));
+    expect(html).not.toContain('value="doc-hieu"');
+    expect(render(createElement(TagSelect, { tags, map, value: "doc-hieu", onChange: vi.fn(), onAdd: vi.fn(), label: "Câu 4" }))).toContain('value="doc-hieu"');
   });
 });

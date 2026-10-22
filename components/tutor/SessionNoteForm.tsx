@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { fallbackLabels, sessionNotePage } from "@/lib/copy/vi";
 import { formatDateVi } from "@/lib/inquiries/format";
+import { firstTab, groupTargets } from "@/lib/skillmap/group";
+import type { SkillMapView } from "@/lib/skillmap/types";
 import { failText, postJson } from "@/lib/tutorwork/client";
 import {
   MAX_PRACTISED_PER_NOTE,
@@ -18,6 +20,7 @@ import {
   type TagInfo,
   type WeakPoint,
 } from "@/lib/tutorwork/types";
+import { DomainTabs } from "./DomainTabs";
 import { TagChips } from "./TagChips";
 import { useTags } from "./useTags";
 
@@ -33,6 +36,7 @@ export function SessionNoteForm({
   previous,
   today,
   minDate,
+  map,
 }: {
   learnerId: string;
   tags: TagInfo[];
@@ -42,9 +46,11 @@ export function SessionNoteForm({
   previous: LastNote | null;
   today: string;
   minDate: string;
+  /** The skill map of this learner (SM-1): skills and tags are picked by domain. */
+  map: SkillMapView;
 }) {
   const router = useRouter();
-  const { tags, add } = useTags(learnerId, initialTags);
+  const { tags, add, setGroup } = useTags(learnerId, initialTags);
   const [date, setDate] = useState(today);
   const [studied, setStudied] = useState("");
   const [weak, setWeak] = useState<string[]>([]);
@@ -53,6 +59,8 @@ export function SessionNoteForm({
   const [parentNote, setParentNote] = useState("");
   const [rechecks, setRechecks] = useState<Record<string, RecheckResult | null>>({});
   const [error, setError] = useState<string | null>(null);
+  const skillBuckets = useMemo(() => groupTargets(map, skills), [map, skills]);
+  const [skillTab, setSkillTab] = useState<string>(() => firstTab(skillBuckets));
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const clientId = useRef<string>(crypto.randomUUID());
@@ -120,11 +128,17 @@ export function SessionNoteForm({
           {skills.length === 0 ? (
             <p className="text-sm text-muted">{sessionNotePage.practisedNone}</p>
           ) : (
-            <ul className="mt-2 flex flex-wrap gap-2">
-              {skills.map((t) => {
-                const on = practised.includes(t.id);
-                return (
-                  <li key={t.id}>
+            <div className="mt-2">
+              <DomainTabs
+                buckets={skillBuckets}
+                active={skillTab}
+                onActive={setSkillTab}
+                testId="session-practised"
+                itemKey={(t) => t.id}
+                itemText={(t) => t.title}
+                renderItem={(t) => {
+                  const on = practised.includes(t.id);
+                  return (
                     <button
                       type="button"
                       role="checkbox"
@@ -139,17 +153,17 @@ export function SessionNoteForm({
                       {on ? "✓ " : ""}
                       {t.title}
                     </button>
-                  </li>
-                );
-              })}
-            </ul>
+                  );
+                }}
+              />
+            </div>
           )}
         </div>
 
         <div className="flex flex-col gap-1">
           <h2 className="text-base font-semibold">{sessionNotePage.weakTitle}</h2>
           <p className="text-sm text-muted">{sessionNotePage.weakHelp}</p>
-          <TagChips tags={tags} selected={weak} onChange={setWeak} max={MAX_WEAK_TAGS_PER_NOTE} onAdd={add} testId="session-tags" />
+          <TagChips tags={tags} map={map} selected={weak} onChange={setWeak} max={MAX_WEAK_TAGS_PER_NOTE} onAdd={add} onSetGroup={setGroup} testId="session-tags" />
         </div>
 
         <label className="flex flex-col gap-1 text-sm">

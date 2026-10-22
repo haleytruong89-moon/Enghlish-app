@@ -5,6 +5,7 @@ import { ResultForm } from "@/components/tutor/ResultForm";
 import { learnerWithTrack, resultPage } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { loadAssignments } from "@/lib/practice/load";
+import { loadSkillMap } from "@/lib/skillmap/load";
 import { loadFrames, loadResultForEdit, loadTags, loadUntagged } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
@@ -16,11 +17,12 @@ export default async function NewResultPage({ params, searchParams }: { params: 
   const { assignment, again } = await searchParams;
   const { member, learner } = await requireLearnerPage(id, "tutorwork:write");
   const role = member.role === "tutor" ? "tutor" : "parent";
-  const [frames, tags, pending, allAssignments] = await Promise.all([
+  const [frames, tags, pending, allAssignments, map] = await Promise.all([
     loadFrames(learner.trackId),
     loadTags(learner.trackId),
     loadUntagged(learner.id, { role, memberId: member.id }),
     loadAssignments(learner.id),
+    loadSkillMap(learner.id),
   ]);
   // Open assignments only: not retracted, and not yet recorded (unless this very one was asked for, e.g. to record a second attempt).
   const assignments = allAssignments.filter((a) => !a.retractedAt && (a.resultId === null || a.id === assignment));
@@ -45,6 +47,7 @@ export default async function NewResultPage({ params, searchParams }: { params: 
             learnerId={learner.id}
             frames={frames}
             tags={tags}
+            map={map}
             canClass={role === "tutor"}
             today={today}
             minDate={addDays(today, -120)}
@@ -53,7 +56,7 @@ export default async function NewResultPage({ params, searchParams }: { params: 
             supersede={supersede}
             initialRetry={again === "1" && Boolean(picked?.resultId)}
           />
-          <PendingTags learnerId={learner.id} items={pending} tags={tags} isParent={role === "parent"} />
+          <PendingTags learnerId={learner.id} items={pending} tags={tags} map={map} isParent={role === "parent"} />
         </div>
       </main>
     </>

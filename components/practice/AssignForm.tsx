@@ -8,6 +8,7 @@ import { assignPage, sourceLabels } from "@/lib/copy/vi";
 import { codeOf, nextAttempt, practiceErrorText, uploadAll, type SendAttempt, type UploadCache } from "@/lib/practice/client";
 import { detectLinkSource } from "@/lib/practice/link";
 import { addDays } from "@/lib/inquiries/dates";
+import type { SkillMapView } from "@/lib/skillmap/types";
 import { prepareFile, type Prepared } from "@/lib/storage/clientUpload";
 import { postJson } from "@/lib/tutorwork/client";
 import type { FrameView, TagInfo } from "@/lib/tutorwork/types";
@@ -22,15 +23,17 @@ export function AssignForm({
   tags: initialTags,
   frames,
   today,
+  map,
 }: {
   learnerId: string;
   alias: string;
   tags: TagInfo[];
   frames: FrameView[];
   today: string;
+  map: SkillMapView;
 }) {
   const router = useRouter();
-  const { tags, add } = useTags(learnerId, initialTags);
+  const { tags, add, setGroup } = useTags(learnerId, initialTags);
   const [kind, setKind] = useState<"link" | "pdf">("link");
   const [url, setUrl] = useState("");
   const [pdf, setPdf] = useState<Prepared | null>(null);
@@ -223,7 +226,7 @@ export function AssignForm({
         <div className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">{assignPage.tagsLabel}</span>
           <p className="text-sm text-muted">{assignPage.tagsHelp}</p>
-          <TagChips tags={tags} selected={picked} onChange={setPicked} max={3} onAdd={add} testId="assign-tags" />
+          <TagChips tags={tags} map={map} selected={picked} onChange={setPicked} max={3} onAdd={add} onSetGroup={setGroup} testId="assign-tags" />
         </div>
 
         <div className="flex flex-wrap gap-4">

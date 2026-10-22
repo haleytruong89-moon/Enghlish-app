@@ -14,10 +14,12 @@ import { fallbackLabels, resultPage, sessionNotePage, todayPage, weakPage } from
 import { frameFileSchema, normalizeFrame } from "@/lib/frames/frame";
 import type { TodayData } from "@/lib/tutorwork/load";
 import type { FrameView, TagInfo, UntaggedItem, WeakPoint, WeakPointsView } from "@/lib/tutorwork/types";
+import { fixtureMap } from "./fixtures/skillMap";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 
 const LEARNER = "a0000000-0000-4000-8000-000000000001";
+const map = fixtureMap();
 const tags: TagInfo[] = [
   { key: "dang-tu", label: "Dạng từ", group: "Từ vựng", custom: false },
   { key: "cum-dong-tu", label: "Cụm động từ", group: "Từ vựng", custom: false },
@@ -137,7 +139,7 @@ describe("S5b-1 'Điểm cần chú ý' table", () => {
 });
 
 describe("S5b-1 'Ghi kết quả bài'", () => {
-  const props = { learnerId: LEARNER, tags, today: "2026-10-17", minDate: "2026-06-19" };
+  const props = { learnerId: LEARNER, tags, map, today: "2026-10-17", minDate: "2026-06-19" };
   it("framed mode: one button per item (60), every part with its score, the scale band, and 'in class' for a tutor", () => {
     const html = render(createElement(ResultForm, { ...props, frames: [frame()], canClass: true }));
     expect((html.match(/data-testid="item-\d+"/g) ?? []).length).toBe(60);
@@ -149,7 +151,7 @@ describe("S5b-1 'Ghi kết quả bài'", () => {
     expect(html).toContain(resultPage.gridHelp);
   });
   it("quick entry asks 'Bài kiểm tra | Bài luyện' and starts on 'Bài luyện'", () => {
-    const html = render(createElement(ResultForm, { learnerId: LEARNER, tags, today: "2026-10-17", minDate: "2026-06-19", frames: [], canClass: true }));
+    const html = render(createElement(ResultForm, { learnerId: LEARNER, tags, map, today: "2026-10-17", minDate: "2026-06-19", frames: [], canClass: true }));
     const btn = (id: string) => html.match(new RegExp(`<button[^>]*data-testid="${id}"[^>]*>`))?.[0] ?? "";
     expect(btn("source-practice")).toContain('aria-pressed="true"');
     expect(btn("source-test")).toContain('aria-pressed="false"');
@@ -174,16 +176,16 @@ describe("S5b-1 'Ghi kết quả bài'", () => {
 
 describe("S5b-1 'Chờ gắn nhãn' and 'Ghi buổi học' and writing tags", () => {
   it("pending items list the wrong items with a tag select each; parents get the fallback wording", () => {
-    const tutorHtml = render(createElement(PendingTags, { learnerId: LEARNER, items: [untagged], tags, isParent: false }));
+    const tutorHtml = render(createElement(PendingTags, { learnerId: LEARNER, items: [untagged], tags, map, isParent: false }));
     expect(tutorHtml).toContain('data-testid="pending-tag-r1-4"');
     expect(tutorHtml).toContain('data-testid="pending-tag-r1-7"');
     expect(tutorHtml).toContain(resultPage.pendingIntro(false));
-    const parentHtml = render(createElement(PendingTags, { learnerId: LEARNER, items: [untagged], tags, isParent: true }));
+    const parentHtml = render(createElement(PendingTags, { learnerId: LEARNER, items: [untagged], tags, map, isParent: true }));
     expect(parentHtml).toContain(resultPage.pendingIntro(true));
-    expect(render(createElement(PendingTags, { learnerId: LEARNER, items: [], tags, isParent: false }))).toContain(resultPage.pendingEmpty);
+    expect(render(createElement(PendingTags, { learnerId: LEARNER, items: [], tags, map, isParent: false }))).toContain(resultPage.pendingEmpty);
   });
 
-  const note = { learnerId: LEARNER, tags, skills: [{ id: "B-W-1", title: "Viết đoạn lập luận" }], previous: null, today: "2026-10-17", minDate: "2026-06-19" };
+  const note = { learnerId: LEARNER, tags, map, skills: [{ id: "B-W-1", title: "Viết đoạn lập luận" }], previous: null, today: "2026-10-17", minDate: "2026-06-19" };
   it("session note: fields with the real limits, the three answers for each tag due, links to the result screen", () => {
     const html = render(createElement(SessionNoteForm, { ...note, due: [weakTag({ tagKey: "cum-dong-tu", label: "Cụm động từ", recheckDue: true })] }));
     expect(html).toContain('maxLength="500"');
@@ -212,17 +214,17 @@ describe("S5b-1 'Chờ gắn nhãn' and 'Ghi buổi học' and writing tags", ()
     expect(html).not.toContain("x-gone");
   });
   it("tag chips: at most `max` can be chosen - the rest are disabled once full; saved tags stay ticked and locked", () => {
-    const html = render(createElement(TagChips, { tags, selected: ["dang-tu", "cum-dong-tu"], onChange: vi.fn(), max: 2, onAdd: vi.fn() }));
+    const html = render(createElement(TagChips, { tags, map, selected: ["dang-tu", "cum-dong-tu"], onChange: vi.fn(), max: 2, onAdd: vi.fn() }));
     expect(html).toContain('data-testid="tag-chip-dang-tu"');
     const chip = (key: string) => html.match(new RegExp(`<button[^>]*data-testid="tag-chip-${key}"[^>]*>`))?.[0] ?? "";
     expect(chip("dang-tu")).toContain('aria-checked="true"');
     expect(chip("cau-dieu-kien-dao-ngu")).toContain("disabled");
     expect(html).toContain("(nhãn riêng)");
-    const locked = render(createElement(TagChips, { tags, selected: ["dang-tu"], onChange: vi.fn(), max: 3, locked: ["dang-tu"], onAdd: vi.fn() }));
+    const locked = render(createElement(TagChips, { tags, map, selected: ["dang-tu"], onChange: vi.fn(), max: 3, locked: ["dang-tu"], onAdd: vi.fn() }));
     expect(locked.match(/<button[^>]*data-testid="tag-chip-dang-tu"[^>]*>/)?.[0]).toContain("disabled");
   });
   it("writing tags: chips, a save button, and the note that saved tags cannot be removed", () => {
-    const html = render(createElement(WritingTags, { learnerId: LEARNER, episodeId: "e1", tags, saved: ["dang-tu"] }));
+    const html = render(createElement(WritingTags, { learnerId: LEARNER, episodeId: "e1", tags, saved: ["dang-tu"], map }));
     expect(html).toContain('data-testid="writing-tags"');
     expect(html).toContain('data-testid="writing-tags-save"');
     expect(html).toContain('data-testid="tag-chip-dang-tu"');

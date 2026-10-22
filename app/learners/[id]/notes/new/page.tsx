@@ -3,6 +3,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { SessionNoteForm } from "@/components/tutor/SessionNoteForm";
 import { learnerWithTrack, sessionNotePage } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
+import { loadSkillMap } from "@/lib/skillmap/load";
 import { loadTargetsView } from "@/lib/targets/loadTargets";
 import { loadLastNote, loadTags, loadWeakPoints } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
@@ -13,11 +14,12 @@ export const dynamic = "force-dynamic";
 export default async function NewSessionNotePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { member, learner } = await requireLearnerPage(id, "tutorwork:write");
-  const [tags, weak, previous, targets] = await Promise.all([
+  const [tags, weak, previous, targets, map] = await Promise.all([
     loadTags(learner.trackId),
     loadWeakPoints(learner.id, "all"),
     loadLastNote(learner.id),
     loadTargetsView(learner.id),
+    loadSkillMap(learner.id),
   ]);
   const today = todayVn();
 
@@ -35,6 +37,7 @@ export default async function NewSessionNotePage({ params }: { params: Promise<{
           <SessionNoteForm
             learnerId={learner.id}
             tags={tags}
+            map={map}
             skills={(targets?.rows ?? []).map((r) => ({ id: r.id, title: r.title }))}
             due={weak.tags.filter((t) => t.recheckDue)}
             previous={previous}

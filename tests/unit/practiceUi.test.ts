@@ -14,6 +14,7 @@ import type { AssignmentView, ReviewPoints, StudentPracticeItem } from "@/lib/pr
 import { fitWithin, outputMime } from "@/lib/storage/clientUpload";
 import { MAX_IMAGE_SIDE } from "@/lib/storage/rules";
 import type { TodayData } from "@/lib/tutorwork/load";
+import { fixtureMap } from "./fixtures/skillMap";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 
@@ -212,7 +213,7 @@ describe("recorded assignment: 'Sửa kết quả' (the new result replaces the 
   const form = (over: Record<string, unknown>) =>
     render(
       createElement(ResultForm, {
-        learnerId: "a0000000-0000-4000-8000-000000000001", frames: [], tags: [{ key: "dang-tu", label: "Dạng từ", group: null, custom: false }],
+        learnerId: "a0000000-0000-4000-8000-000000000001", frames: [], map: fixtureMap(), tags: [{ key: "dang-tu", label: "Dạng từ", group: null, custom: false }],
         canClass: true, today: "2026-10-17", minDate: "2026-06-17", assignments: [recorded], initialAssignmentId: recorded.id, ...over,
       }),
     );
