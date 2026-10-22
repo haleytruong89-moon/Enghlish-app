@@ -5,7 +5,7 @@ import { AssignmentTable } from "@/components/practice/AssignmentTable";
 import { assignPage, learnerWithTrack } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { loadAssignments } from "@/lib/practice/load";
-import { loadSkillMap } from "@/lib/skillmap/load";
+import { loadPickerMap } from "@/lib/skillmap/load";
 import { loadFrames, loadTags } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
@@ -19,7 +19,7 @@ export default async function AssignPracticePage({ params }: { params: Promise<{
     loadTags(learner.trackId),
     loadFrames(learner.trackId),
     loadAssignments(learner.id),
-    loadSkillMap(learner.id),
+    loadPickerMap(learner.id),
   ]);
   const tagLabels = Object.fromEntries(tags.map((t) => [t.key, t.label]));
   return (

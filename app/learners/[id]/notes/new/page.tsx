@@ -3,7 +3,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { SessionNoteForm } from "@/components/tutor/SessionNoteForm";
 import { learnerWithTrack, sessionNotePage } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
-import { loadSkillMap } from "@/lib/skillmap/load";
+import { loadPickerMap } from "@/lib/skillmap/load";
 import { loadTargetsView } from "@/lib/targets/loadTargets";
 import { loadLastNote, loadTags, loadWeakPoints } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
@@ -19,7 +19,7 @@ export default async function NewSessionNotePage({ params }: { params: Promise<{
     loadWeakPoints(learner.id, "all"),
     loadLastNote(learner.id),
     loadTargetsView(learner.id),
-    loadSkillMap(learner.id),
+    loadPickerMap(learner.id),
   ]);
   const today = todayVn();
 

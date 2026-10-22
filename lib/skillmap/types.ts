@@ -57,4 +57,6 @@ export type SkillMapView = {
   domains: SkillDomain[];
   /** Tags of this learner's track (seed or family) that have no group in the map. */
   unassigned: SkillLeaf[];
+  /** SM-2 (P4-c): the child's current level per domain ("B1+", task level "2"). Absent = pickers do not sort by level. */
+  current?: Partial<Record<DomainKey, string>>;
 };

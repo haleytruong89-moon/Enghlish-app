@@ -883,6 +883,9 @@ export const skillMapCopy = {
   groupRequired: "Chọn mảng và nhóm cho nhãn mới.",
   setGroup: "Xếp vào nhóm",
   setGroupSave: "Lưu nhóm",
+  otherLevels: (n: number) => `Cấp khác (${n})`,
+  nearEmpty: "Quanh cấp đang học chưa có mục nào — mở “Cấp khác”.",
+  farPlace: (place: string) => `${place} · cấp khác`,
 } as const;
 
 export const sessionNotePage = {

@@ -9,7 +9,7 @@ import { activityLabels, app, fallbackLabels, inquiriesPage, learnerWithTrack, m
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { formatWhen, skillLabel } from "@/lib/review/format";
 import { findEpisodeLearner, loadEpisode } from "@/lib/review/load";
-import { loadSkillMap } from "@/lib/skillmap/load";
+import { loadPickerMap } from "@/lib/skillmap/load";
 import { createUserClient } from "@/lib/supabase/server";
 import { loadTags, loadWritingTagKeys } from "@/lib/tutorwork/load";
 import { TAGGABLE_ACTIVITIES } from "@/lib/tutorwork/types";
@@ -45,7 +45,7 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
   // Tag chips for written work (tutor or parent). A failed lookup leaves the chips out; it never blocks the review itself.
   const taggable = (TAGGABLE_ACTIVITIES as readonly string[]).includes(view.activity.activityType);
   const writing = taggable
-    ? await Promise.all([loadTags(learner.trackId), loadWritingTagKeys(learner.id, view.episode.id), loadSkillMap(learner.id)]).catch(() => null)
+    ? await Promise.all([loadTags(learner.trackId), loadWritingTagKeys(learner.id, view.episode.id), loadPickerMap(learner.id)]).catch(() => null)
     : null;
 
   return (
