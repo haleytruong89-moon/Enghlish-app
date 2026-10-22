@@ -80,6 +80,8 @@ test.describe.serial("S5b-1 tutor work", () => {
     await loginAs(page, "tutorNguyen");
     await page.goto(`/learners/${NG}/notes/new`);
     await page.getByTestId("add-tag-input").fill(label);
+    await page.getByTestId("add-tag-domain").selectOption("grammar");
+    await page.getByTestId("add-tag-group").selectOption("gr-emphasis");
     await page.getByTestId("add-tag-button").click();
     await expect(page.getByText(tagPicker.added(label))).toBeVisible();
     await expect(page.getByRole("checkbox", { name: new RegExp(label) })).toHaveAttribute("aria-checked", "true");
@@ -92,10 +94,14 @@ test.describe.serial("S5b-1 tutor work", () => {
     await expect(page.getByRole("heading", { level: 1, name: sessionNotePage.title("Nguyên (thử)") })).toBeVisible();
     await page.getByTestId("session-studied").fill(studied);
     await page.locator('button[data-testid^="session-practised-"]').first().click(); // "practised today" (optional) - logged as an exposure
+    await page.getByTestId("tab-session-tags-vocab").click();
     await page.getByTestId("tag-chip-dang-tu").click();
     await page.getByTestId("tag-chip-cum-dong-tu").click();
+    await page.getByTestId("tab-session-tags-speaking").click();
     await page.getByTestId("tag-chip-phat-am").click();
+    await page.getByTestId("tab-session-tags-vocab").click();
     await expect(page.getByTestId("tag-chip-thanh-ngu")).toBeDisabled(); // 4th is not allowed
+    await expect(page.getByTestId("session-tags-chosen")).toContainText("Dạng từ");
     await page.getByTestId("session-message").fill("Ôn lại dạng từ và cụm động từ nhé.");
     await page.getByTestId("session-parent-note").fill("Em hiểu bài, cần luyện thêm cụm động từ.");
     await page.getByTestId("session-save").click();
@@ -112,6 +118,9 @@ test.describe.serial("S5b-1 tutor work", () => {
     await loginAs(page, "tutorNguyen");
     await page.goto(`/learners/${NG}/weak?weeks=all`);
     await expect(page.getByRole("heading", { level: 1, name: weakPage.title("Nguyên (thử)") })).toBeVisible();
+    await expect(page.getByTestId("weak-tile-vocab")).toBeVisible();
+    await page.getByTestId("weak-tile-all").click();
+    await expect(page).toHaveURL(/domain=all/);
     await expect(page.getByTestId("weak-table")).toBeVisible();
     await expect(page.locator('[data-testid^="weak-row-"]').first()).toBeVisible();
     await expect(page.getByTestId("weak-window-4")).toHaveText(weakPage.windows["4"] ?? "");

@@ -14,7 +14,7 @@ test.describe.serial("Studio 1A reading skills", () => {
     await page.getByTestId("reading-q-doc-sequence").fill("1");
     await page.getByTestId("reading-pct-doc-sequence").fill("0");
     await page.getByTestId("reading-save").click();
-    await expect(page).toHaveURL(new RegExp(`/learners/${LEARNER_IDS.nguyen}/weak$`));
+    await expect(page).toHaveURL(new RegExp(`/learners/${LEARNER_IDS.nguyen}/weak\\?domain=reading$`));
     await expect(page.getByTestId("reading-status-doc-cause-effect")).toHaveText(readingPage.status.weak!);
     await expect(page.getByTestId("reading-status-doc-sequence")).toHaveText(readingPage.status.thin!);
   });
