@@ -64,6 +64,7 @@ function makeStore(over: Partial<WorkStore> = {}) {
     getOwnProfile: vi.fn(async (u: string) => profiles[u] ?? null),
     getActivityLearnerId: vi.fn(async (id: string) => (id === ACT_AN ? AN : id === ACT_NGUYEN ? NGUYEN : null)),
     getHome: vi.fn(async () => ({ inquiries: [] })),
+    getReviewByDomain: vi.fn(async (): Promise<unknown> => ({ items: [] })),
     getActivity: vi.fn(async (): Promise<unknown> => rpcActivity),
     getSources: vi.fn(async (): Promise<unknown> => rpcSources),
     saveDraft: vi.fn(async () => ({ revision: 3, saved_at: "2026-10-14T08:00:00Z", other_tab_changed: false })),
@@ -346,5 +347,17 @@ describe("S4 route handlers: submit", () => {
       const s = makeStore({ submit: vi.fn(async () => { throw new WorkDbError(code, "x"); }) });
       expect((await handleSubmit(deps("studentAn", s), goodAttempt)).status, code).toBe(status);
     }
+  });
+});
+
+describe("SM-2: 'Việc cần ôn' on the student home", () => {
+  it("passes labels and domain names through; a failure or an unexpected key leaves it out (null) instead of breaking the home", async () => {
+    const ok = makeStore({ getReviewByDomain: vi.fn(async (): Promise<unknown> => ({ items: [{ domain_key: "vocab", domain_name: "Từ vựng", label: "Dạng từ" }] })) });
+    expect((await handleStudentHome(deps("studentAn", ok))).body).toMatchObject({ review: [{ domainKey: "vocab", domainName: "Từ vựng", label: "Dạng từ" }] });
+    const broken = makeStore({ getReviewByDomain: vi.fn(async (): Promise<unknown> => { throw new Error("eng_my_review_by_domain is missing"); }) });
+    const r = await handleStudentHome(deps("studentAn", broken));
+    expect([r.status, (r.body as { review: unknown }).review]).toEqual([200, null]);
+    const leaky = makeStore({ getReviewByDomain: vi.fn(async (): Promise<unknown> => ({ items: [{ domain_key: "vocab", domain_name: "Từ vựng", label: "Dạng từ", level: "B2" }] })) });
+    expect(((await handleStudentHome(deps("studentAn", leaky))).body as { review: unknown }).review).toBeNull();
   });
 });

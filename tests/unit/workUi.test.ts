@@ -164,3 +164,14 @@ describe("SourceReader", () => {
     expect(html).not.toContain(work.openVideo); // its URL was unsafe: no link at all
   });
 });
+
+describe("StudentHome · SM-2", () => {
+  it("shows 'Việc cần ôn' by domain when there is something to review, and nothing otherwise", () => {
+    const withReview = renderToStaticMarkup(createElement(StudentHome, {
+      alias: "An (thử)", color: "#9A4A15", data: { inquiries: [] }, review: [{ domainKey: "grammar", domainName: "Ngữ pháp", label: "Thì quá khứ đơn" }],
+    }));
+    expect(withReview).toContain('data-testid="review-by-domain"');
+    expect(withReview).toContain("Thì quá khứ đơn");
+    expect(renderToStaticMarkup(createElement(StudentHome, { alias: "An (thử)", color: "#9A4A15", data: { inquiries: [] } }))).not.toContain('data-testid="review-by-domain"');
+  });
+});

@@ -15,6 +15,7 @@ import {
   type Role,
 } from "@/lib/auth/requireAccess";
 import { apiErrors } from "@/lib/copy/vi";
+import { parseReviewByDomain } from "@/lib/levels/shape";
 import { attemptBodySchema, draftBodySchema, UUID_RE } from "./schemas";
 import { toActivityView, toDraftReceipt, toHomeView, toReceipt } from "./shape";
 
@@ -35,6 +36,8 @@ export interface WorkStore {
   getActivityLearnerId(activityId: string): Promise<string | null>;
   /** english.eng_my_home() as the signed-in user. */
   getHome(): Promise<unknown>;
+  /** english.eng_my_review_by_domain() as the signed-in student: labels and domain names only (SM-2). */
+  getReviewByDomain(): Promise<unknown>;
   /** english.eng_my_activity(id) as the signed-in user; null = not theirs / not released yet. */
   getActivity(activityId: string): Promise<unknown | null>;
   /** english.eng_my_step_sources(id) as the signed-in user. */
@@ -114,8 +117,10 @@ async function guardActivity(
 export async function handleStudentHome(deps: HandlerDeps): Promise<HandlerResult> {
   const g = await ownLearner(deps);
   if (!g.ok) return g.result;
-  const home = toHomeView(await deps.store.getHome());
-  return { status: 200, body: { learner: { alias: g.grant.learner.alias }, ...home } };
+  // "Việc cần ôn" by domain (SM-2) must never take the home down: unreadable or unexpected → left out (null).
+  const [raw, review] = await Promise.all([deps.store.getHome(), deps.store.getReviewByDomain().then(parseReviewByDomain).catch(() => null)]);
+  const home = toHomeView(raw);
+  return { status: 200, body: { learner: { alias: g.grant.learner.alias }, ...home, review } };
 }
 
 export async function handleStudentActivity(deps: HandlerDeps, activityId: string): Promise<HandlerResult> {

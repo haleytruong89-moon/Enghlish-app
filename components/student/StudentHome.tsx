@@ -1,8 +1,10 @@
 import Link from "next/link";
+import type { ReviewItem } from "@/lib/levels/types";
 import { concepts, home, modeLabels, work } from "@/lib/copy/vi";
 import { pickNextTask, stepState, type StepState } from "@/lib/work/nextTask";
 import type { HomeInquiry, HomeStep, HomeView } from "@/lib/work/types";
 import { doableInApp, stepTitle, todayLine, unsupportedLabel } from "@/lib/work/view";
+import { ReviewByDomain } from "./ReviewByDomain";
 
 /** Done = filled green circle with a tick; now = ringed dot; later = empty grey ring (as in the Main mockup). */
 function StateIcon({ state }: { state: StepState }) {
@@ -101,7 +103,7 @@ function InquiryCard({ inquiry, next }: { inquiry: HomeInquiry; next: ReturnType
  * The student's home: greeting, "Việc tiếp theo", this week's released steps. Only what the API allows
  * (no keys, no results, no scores). Mobile first, as the Main mockup.
  */
-export function StudentHome({ alias, color, data }: { alias: string; color: string; data: HomeView }) {
+export function StudentHome({ alias, color, data, review = null }: { alias: string; color: string; data: HomeView; review?: ReviewItem[] | null }) {
   const next = pickNextTask(data);
   const hasSteps = data.inquiries.some((q) => q.steps.length > 0);
   return (
@@ -151,6 +153,8 @@ export function StudentHome({ alias, color, data }: { alias: string; color: stri
           {hasSteps ? work.allDone : home.studentEmpty}
         </p>
       )}
+
+      {review && review.length > 0 ? <ReviewByDomain items={review} /> : null}
 
       {data.inquiries.map((q) => (
         <InquiryCard key={q.instanceId} inquiry={q} next={next} />

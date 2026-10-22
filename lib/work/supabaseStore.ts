@@ -51,6 +51,13 @@ export function createSupabaseWorkStore(): WorkStore {
       return data;
     },
 
+    async getReviewByDomain() {
+      const db = await createUserClient();
+      const { data, error } = await db.rpc("eng_my_review_by_domain");
+      if (error) dbError("eng_my_review_by_domain", error);
+      return data;
+    },
+
     async getActivity(activityId) {
       const db = await createUserClient();
       const { data, error } = await db.rpc("eng_my_activity", { p_activity: activityId });

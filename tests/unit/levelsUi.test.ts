@@ -2,6 +2,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { LearnerCard } from "@/components/LearnerCard";
+import { RecentLevelChanges } from "@/components/levels/RecentLevelChanges";
+import { ReviewByDomain } from "@/components/student/ReviewByDomain";
 import { AdjustForm } from "@/components/levels/AdjustForm";
 import { BaselineForm } from "@/components/levels/BaselineForm";
 import { ExternalResultForm } from "@/components/levels/ExternalResultForm";
@@ -9,7 +11,7 @@ import { DomainDetail } from "@/components/levels/DomainDetail";
 import { LevelBars } from "@/components/levels/LevelBars";
 import { LevelSummaryCard } from "@/components/levels/LevelSummaryCard";
 import { Milestones } from "@/components/levels/Milestones";
-import { externalCopy, levelCopy, levelFormCopy } from "@/lib/copy/vi";
+import { externalCopy, levelCopy, levelFormCopy, studentReviewCopy } from "@/lib/copy/vi";
 import type { SkillGroup } from "@/lib/skillmap/types";
 import type { WeakPoint } from "@/lib/tutorwork/types";
 import { assumedProfile, confirmedProfile } from "./fixtures/levels";
@@ -178,5 +180,31 @@ describe("forms", () => {
     const plain = render(createElement(ExternalResultForm, base));
     expect(plain).not.toContain("data-editing");
     expect(plain).not.toContain(externalCopy.editFileHint);
+  });
+});
+
+describe("homes", () => {
+  it("parent: 'Thay đổi cấp gần đây' names the child, the domain, from → to, the kind, day, tutor and reason; an empty list says so", () => {
+    const html = render(createElement(RecentLevelChanges, {
+      items: [{
+        id: "c1", domainKey: "thinking", domainName: "Tư duy và tự học", scale: "task_level", from: "2", to: "3", kind: "adjust", reason: "Lập luận tốt hơn",
+        decidedAt: "2026-10-22T03:00:00+00:00", decidedBy: "Cô Lan", learnerId: L, alias: "Nguyên",
+      }],
+    }));
+    expect(html).toContain(levelCopy.recentLine("Nguyên", "Tư duy và tự học", "bậc 2", "bậc 3"));
+    expect(html).toContain(levelCopy.historyMeta("Điều chỉnh", "22/10/2026", "Cô Lan"));
+    expect(html).toContain("“Lập luận tốt hơn”");
+    expect(html).toContain(`href="/learners/${L}/levels?domain=thinking"`);
+    expect(render(createElement(RecentLevelChanges, { items: [] }))).toContain(levelCopy.recentNone);
+  });
+
+  it("student: 'Việc cần ôn' grouped by domain, with no level and no score; nothing at all when there is nothing to review", () => {
+    const html = render(createElement(ReviewByDomain, {
+      items: [{ domainKey: "grammar", domainName: "Ngữ pháp", label: "Câu điều kiện" }, { domainKey: "vocab", domainName: "Từ vựng", label: "Dạng từ" }],
+    }));
+    expect(html).toContain(studentReviewCopy.title);
+    expect(html).toMatch(/Ngữ pháp[\s\S]*Câu điều kiện[\s\S]*Từ vựng[\s\S]*Dạng từ/);
+    expect(html).not.toMatch(/\b[ABC][12]\b|\/4|bậc/);
+    expect(render(createElement(ReviewByDomain, { items: [] }))).toBe("");
   });
 });

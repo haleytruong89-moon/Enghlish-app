@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { externalCopy, levelCopy, levelFormCopy, studentReviewCopy, tutorHonorific, tutorHonorificCap } from "@/lib/copy/vi";
 import { barFraction, bandOf, currentLevels, isLevelOf, levelsOf, majorIndex, nearLevel, stepIndex, strongestWeakest } from "@/lib/levels/scale";
 import { parseLevelProfile, parseRecentChanges, parseReviewByDomain } from "@/lib/levels/shape";
-import { boxValue, dayLabel, domainSentence, groupReview, levelText, monthLabel, profileSummary } from "@/lib/levels/view";
+import type { RecentChange } from "@/lib/levels/types";
+import { boxValue, dayLabel, domainSentence, groupReview, levelText, mergeRecentChanges, monthLabel, profileSummary } from "@/lib/levels/view";
 import { assumedProfile, confirmedProfile } from "./fixtures/levels";
 
 const leaf = (over: Partial<{ levelFrom: string | null; levelTo: string | null; taskFrom: number | null; taskTo: number | null }> = {}) => ({
@@ -126,5 +127,18 @@ describe("parsers", () => {
     expect(parseReviewByDomain({ items: [{ domain_key: "vocab", domain_name: "Từ vựng", label: "Dạng từ" }] })).toEqual([{ domainKey: "vocab", domainName: "Từ vựng", label: "Dạng từ" }]);
     expect(() => parseReviewByDomain({ items: [{ domain_key: "vocab", domain_name: "Từ vựng", label: "Dạng từ", level: "B2" }] })).toThrow();
     expect(() => parseReviewByDomain({ items: [1, 2, 3, 4].map((i) => ({ domain_key: null, domain_name: null, label: `l${i}` })) })).toThrow();
+  });
+});
+
+describe("mergeRecentChanges (D11)", () => {
+  const c = (id: string, at: string, alias = "An"): RecentChange => ({
+    id, domainKey: "grammar", domainName: "Ngữ pháp", scale: "cefr", from: "A2", to: "A2+", kind: "baseline", reason: null, decidedAt: at, decidedBy: "Cô", learnerId: "l", alias,
+  });
+  it("both children, newest first, at most 5; a child that failed is skipped; all failed → null; no child → []", () => {
+    const merged = mergeRecentChanges([[c("a", "2026-10-20T01:00:00+00:00"), c("b", "2026-10-22T01:00:00+00:00")], null, [c("c", "2026-10-21T01:00:00+00:00", "Nguyên")]]);
+    expect(merged?.map((x) => x.id)).toEqual(["b", "c", "a"]);
+    expect(mergeRecentChanges([Array.from({ length: 7 }, (_, i) => c(`x${i}`, `2026-10-1${i}T01:00:00+00:00`))])).toHaveLength(5);
+    expect(mergeRecentChanges([null, null])).toBeNull();
+    expect(mergeRecentChanges([])).toEqual([]);
   });
 });

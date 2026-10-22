@@ -3,7 +3,7 @@ import { levelCopy, studentReviewCopy } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { stepIndex } from "./scale";
-import { REVIEW_MAX, type DomainLevel, type LevelProfile, type ReviewItem, type Scale } from "./types";
+import { RECENT_MAX, REVIEW_MAX, type DomainLevel, type LevelProfile, type RecentChange, type ReviewItem, type Scale } from "./types";
 
 export function levelText(scale: Scale, level: string): string {
   return levelCopy.levelName(scale, level);
@@ -53,4 +53,13 @@ export function monthLabel(month: string): string {
 /** A timestamp → its calendar day in Vietnam, "22/10/2026". */
 export function dayLabel(ts: string): string {
   return formatDateVi(todayVn(new Date(ts)));
+}
+
+/** D11: the changes of every child, newest first, at most RECENT_MAX. null when no child could be read (never a false "no change"). */
+export function mergeRecentChanges(per: (RecentChange[] | null)[]): RecentChange[] | null {
+  if (per.length > 0 && per.every((x) => x === null)) return null;
+  return per
+    .flatMap((x) => x ?? [])
+    .sort((a, b) => Date.parse(b.decidedAt) - Date.parse(a.decidedAt))
+    .slice(0, RECENT_MAX);
 }
