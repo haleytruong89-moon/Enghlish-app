@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { skillMapCopy } from "@/lib/copy/vi";
-import { domainOfGroup, firstTab, groupTags, groupTargets, groupWeakPoints, placeOfTag } from "@/lib/skillmap/group";
+import { domainOfAdded, domainOfGroup, firstTab, groupTags, groupTargets, groupWeakPoints, placeOfTag } from "@/lib/skillmap/group";
 import { parseSkillMap } from "@/lib/skillmap/shape";
 import type { TagInfo, WeakPoint } from "@/lib/tutorwork/types";
 import { fixtureMap } from "./fixtures/skillMap";
@@ -98,5 +98,14 @@ describe("parseSkillMap", () => {
   it("throws on an unknown domain or level instead of showing a half-right picker", () => {
     expect(() => parseSkillMap({ ...raw, domains: [{ ...raw.domains[0], key: "maths" }] })).toThrow();
     expect(() => parseSkillMap({ ...raw, domains: [{ ...raw.domains[0], groups: [{ ...raw.domains[0]!.groups[0], leaves: [{ ...rawLeaf, level_from: "D1" }] }] }] })).toThrow();
+  });
+});
+
+describe("domainOfAdded (the tab to open after '+ nhãn khác')", () => {
+  const map = fixtureMap();
+  it("follows the group the server returned, not the one requested; falls back to the tag's own place; unknown = null", () => {
+    expect(domainOfAdded(map, { key: "x-moi", groupKey: "vo-word-form" })).toBe("vocab");
+    expect(domainOfAdded(map, { key: "dang-tu", groupKey: null })).toBe("vocab"); // the label matched a seed tag
+    expect(domainOfAdded(map, { key: "x-la", groupKey: null })).toBeNull();
   });
 });

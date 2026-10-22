@@ -6,7 +6,7 @@ import { failText, postJson } from "@/lib/tutorwork/client";
 import type { TagInfo } from "@/lib/tutorwork/types";
 import type { SetGroupFn } from "./SetGroupControl";
 
-export type AddTagFn = (label: string, groupKey: string) => Promise<{ key: string } | { error: string }>;
+export type AddTagFn = (label: string, groupKey: string) => Promise<{ key: string; groupKey: string | null } | { error: string }>;
 
 /**
  * The tag list of one child plus "+ nhãn khác" (the server makes the key; a group of the skill map is required) and "Xếp vào nhóm"
@@ -27,7 +27,7 @@ export function useTags(learnerId: string, initial: TagInfo[]) {
           ? cur.map((t) => (t.key === key && t.custom ? { ...t, groupKey: group_key } : t))
           : [...cur, { key, label: saved, group: tagPicker.customGroup, custom: true, groupKey: group_key }],
       );
-      return { key };
+      return { key, groupKey: group_key };
     },
     [learnerId],
   );

@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { DomainTabs, nextTabKey } from "@/components/tutor/DomainTabs";
-import { GroupPicker } from "@/components/tutor/GroupPicker";
+import { effectiveDomain, GroupPicker } from "@/components/tutor/GroupPicker";
 import { SetGroupControl } from "@/components/tutor/SetGroupControl";
 import { DomainTiles } from "@/components/tutor/DomainTiles";
 import { TagChips } from "@/components/tutor/TagChips";
@@ -78,6 +78,14 @@ describe("GroupPicker and SetGroupControl", () => {
     const vocab = render(createElement(GroupPicker, { map, value: null, onChange: vi.fn(), testIdPrefix: "add-tag", defaultDomain: "vocab" }));
     expect(vocab).toContain('<option value="vo-word-form">Dạng từ</option>');
     expect(vocab).not.toContain('value="gr-conditional"');
+  });
+
+  it("the domain follows the default (the open tab) until the user picks one in this picker", () => {
+    expect(effectiveDomain(null, "vocab")).toBe("vocab");
+    expect(effectiveDomain(null, "reading")).toBe("reading"); // the tab changed, nothing picked yet
+    expect(effectiveDomain("grammar", "reading")).toBe("grammar"); // the user's pick wins
+    expect(effectiveDomain("", "reading")).toBe(""); // "— Chọn mảng —" chosen on purpose
+    expect(effectiveDomain(null, null)).toBe("");
   });
 
   it("'Xếp vào nhóm' starts as one button", () => {

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { fallbackLabels, skillMapCopy, tagPicker } from "@/lib/copy/vi";
-import { domainOfGroup, firstTab, groupTags, placeOfTag } from "@/lib/skillmap/group";
+import { domainOfAdded, firstTab, groupTags, placeOfTag } from "@/lib/skillmap/group";
 import { isDomainKey, UNASSIGNED, type SkillMapView } from "@/lib/skillmap/types";
 import type { TagInfo } from "@/lib/tutorwork/types";
 import { AddTag } from "./AddTag";
@@ -53,7 +53,8 @@ export function TagChips({
   async function addAndSelect(label: string, groupKey: string) {
     const r = await onAdd(label, groupKey);
     if ("key" in r) {
-      const d = domainOfGroup(map, groupKey);
+      // The tag may have matched an existing one with another group: follow what the server returned, not what was asked for.
+      const d = domainOfAdded(map, r);
       if (d) setTab(d);
       if (!full && !selected.includes(r.key)) onChange([...selected, r.key]);
     }

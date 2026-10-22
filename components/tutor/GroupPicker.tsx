@@ -4,6 +4,11 @@ import { useState } from "react";
 import { skillMapCopy } from "@/lib/copy/vi";
 import type { DomainKey, SkillMapView } from "@/lib/skillmap/types";
 
+/** The domain shown: what the user picked in this picker, else the default (which follows the open tab) - so a tab change never overrides a choice. */
+export function effectiveDomain(picked: string | null, defaultDomain: DomainKey | null): string {
+  return picked ?? defaultDomain ?? "";
+}
+
 /** Domain, then group of that domain (two native selects: phone-friendly). `onChange(null)` while no group is chosen. */
 export function GroupPicker({
   map,
@@ -18,7 +23,8 @@ export function GroupPicker({
   testIdPrefix: string;
   defaultDomain?: DomainKey | null;
 }) {
-  const [domain, setDomain] = useState<string>(defaultDomain ?? "");
+  const [picked, setPicked] = useState<string | null>(null);
+  const domain = effectiveDomain(picked, defaultDomain);
   const groups = map.domains.find((d) => d.key === domain)?.groups ?? [];
   const select = "min-h-11 min-w-0 rounded-lg border border-line bg-white px-2 text-sm";
   return (
@@ -28,7 +34,7 @@ export function GroupPicker({
         <select
           value={domain}
           onChange={(e) => {
-            setDomain(e.target.value);
+            setPicked(e.target.value);
             onChange(null);
           }}
           data-testid={`${testIdPrefix}-domain`}

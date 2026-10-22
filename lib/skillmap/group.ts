@@ -41,6 +41,11 @@ export function placeOfTarget(map: SkillMapView, id: string): GroupPlace | null 
   return index(map).targets.get(id) ?? null;
 }
 
+/** The domain a tag just added (or matched to an existing one) sits in: the group the SERVER returned, else the tag's own place. */
+export function domainOfAdded(map: SkillMapView, added: { key: string; groupKey?: string | null }): DomainKey | null {
+  return placeOfTag(map, added)?.domainKey ?? null;
+}
+
 export function domainOfGroup(map: SkillMapView, groupKey: string): DomainKey | null {
   return placeOfGroup(map, groupKey)?.domainKey ?? null;
 }
