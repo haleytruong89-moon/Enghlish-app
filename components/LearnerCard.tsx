@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { assignPage, fallbackLabels, home, inquiriesPage, learnerWithTrack, levelCopy, notesPage, purgePage, readingPage, sourceLabels, targetsPage, todayPage, tutorHonorific, weakPage } from "@/lib/copy/vi";
+import { assignPage, fallbackLabels, home, inquiriesPage, learnerWithTrack, levelCopy, notesPage, purgePage, readingPage, revisionReviewCopy, sourceLabels, targetsPage, todayPage, tutorHonorific, weakPage } from "@/lib/copy/vi";
 import { safeColor, type LearnerSummary } from "@/lib/home/visible";
 import { todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi } from "@/lib/inquiries/format";
@@ -90,10 +90,13 @@ export function LearnerCard({
   today,
   role,
   todayIso = todayVn(),
+  revisionsReady = true,
 }: {
   learner: LearnerSummary;
   today: TodayData | null;
   role: "tutor" | "parent";
+  /** false while migration 0021 is not applied: the "Bài đã sửa" link is left out (no dead link). */
+  revisionsReady?: boolean;
   /** Today in Vietnam (YYYY-MM-DD); only for the "Quá hạn" label. */
   todayIso?: string;
 }) {
@@ -209,6 +212,11 @@ export function LearnerCard({
         <Link href={`/learners/${learner.id}/levels`} data-testid={`levels-link-${learner.id}`} className={linkClass}>
           {levelCopy.link}
         </Link>
+        {revisionsReady ? (
+          <Link href={`/learners/${learner.id}/revisions`} data-testid={`revisions-link-${learner.id}`} className={linkClass}>
+            {revisionReviewCopy.link}
+          </Link>
+        ) : null}
         <Link href={`/learners/${learner.id}/reading/new`} className={linkClass}>
           {readingPage.link}
         </Link>

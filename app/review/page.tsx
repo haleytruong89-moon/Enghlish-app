@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
-import { activityLabels, fallbackLabels, modeLabels, provenanceLabels, reviewPage, type Mode } from "@/lib/copy/vi";
+import { activityLabels, fallbackLabels, modeLabels, provenanceLabels, reviewPage, revisionReviewCopy, type Mode } from "@/lib/copy/vi";
 import { authorizeStaffPage } from "@/lib/review/access";
 import { formatWhen } from "@/lib/review/format";
 import { cursorToParam, FILTERS, parseCursor, parseFilter } from "@/lib/review/inbox";
@@ -66,6 +66,11 @@ export default async function ReviewInboxPage({ searchParams }: { searchParams: 
                 <p className="text-xs font-bold text-an">{reviewPage.stepOf(i.alias, i.stepNo)}</p>
                 <p className="mt-1 font-semibold">
                   {i.titleVi} · {activityLabels[i.activityType] ?? fallbackLabels.activity}
+                  {i.revisionRound ? (
+                    <span className="ml-2 rounded-full bg-[#FBF1DC] px-2 py-0.5 text-xs text-[#6B4600]" data-testid="inbox-revision">
+                      {revisionReviewCopy.inboxLabel(i.revisionRound)}
+                    </span>
+                  ) : null}
                 </p>
                 <p className="mt-1 text-sm text-muted">
                   {reviewPage.submittedAt(formatWhen(i.submittedAt))} · {reviewPage.attemptNo(i.attemptNo)} ·{" "}
@@ -73,7 +78,11 @@ export default async function ReviewInboxPage({ searchParams }: { searchParams: 
                 </p>
                 <p className="mt-1 text-sm text-muted">{provenanceLabels[i.provenance] ?? fallbackLabels.provenance}</p>
                 <p className="mt-2 text-sm">
-                  <span data-testid="progress">{reviewPage.progress(i.targetsDecided, i.targetsTotal)}</span>
+                  {i.revisionRound ? (
+                    <span data-testid="revision-progress">{revisionReviewCopy.inboxProgress}</span>
+                  ) : (
+                    <span data-testid="progress">{reviewPage.progress(i.targetsDecided, i.targetsTotal)}</span>
+                  )}
                   {!i.canDecide ? (
                     <span className="ml-2 rounded-full border border-line px-2 py-0.5 text-xs" data-testid="waiting-tutor">
                       {reviewPage.waitingTutor}

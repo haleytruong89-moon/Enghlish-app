@@ -4,11 +4,14 @@ import { AppHeader } from "@/components/AppHeader";
 import { ScoringPanel, type PanelTarget } from "@/components/review/ScoringPanel";
 import { SupportForm } from "@/components/review/SupportForm";
 import { WorkPanel } from "@/components/review/WorkPanel";
+import { FeedbackPanel } from "@/components/revision/FeedbackPanel";
+import { RevisionReview } from "@/components/revision/RevisionReview";
 import { WritingTags } from "@/components/tutor/WritingTags";
-import { activityLabels, app, fallbackLabels, inquiriesPage, learnerWithTrack, modeLabels, provenanceLabels, purposeLabels, reviewPage, type Mode } from "@/lib/copy/vi";
+import { activityLabels, app, fallbackLabels, inquiriesPage, learnerWithTrack, modeLabels, provenanceLabels, purposeLabels, reviewPage, revisionReviewCopy, type Mode } from "@/lib/copy/vi";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { formatWhen, skillLabel } from "@/lib/review/format";
 import { findEpisodeLearner, loadEpisode } from "@/lib/review/load";
+import { loadFeedbackPanel, loadRevisionView } from "@/lib/revision/load";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { createUserClient } from "@/lib/supabase/server";
 import { loadTags, loadWritingTagKeys } from "@/lib/tutorwork/load";
@@ -47,6 +50,11 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
   const writing = taggable
     ? await Promise.all([loadTags(learner.trackId), loadWritingTagKeys(learner.id, view.episode.id), loadPickerMap(learner.id)]).catch(() => null)
     : null;
+  // S6: "Góp ý cho con" (in-app writing only; the panel decides from the database's answer). A failed lookup (e.g. 0021 not applied yet)
+  // leaves the panel out; it never blocks the review.
+  const feedback = await loadFeedbackPanel(view.attempt.id, member.id).catch(() => null);
+  const map = writing ? writing[2] : null;
+  const revision = view.attempt.mode === "REVISION" ? await loadRevisionView(view.attempt.id, member.id).catch(() => null) : null;
 
   return (
     <>
@@ -79,6 +87,7 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
               ...view.activity.purpose.map((p) => purposeLabels[p] ?? fallbackLabels.purpose),
               ...(view.episode.observedDirectly && !checkpoint ? [reviewPage.liveTag] : []),
               ...(view.episode.isFirstAttempt ? [reviewPage.firstAttemptTag] : []),
+              ...(view.episode.facets.revision === true ? [revisionReviewCopy.supportedTag] : []),
               ...(checkpoint ? [reviewPage.blindNote] : []),
             ].map((chip) => (
               <li key={chip} className="rounded-full bg-[#E3ECE8] px-3 py-1 text-[#1F4439]">
@@ -90,7 +99,10 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <div className="flex flex-col gap-4">
-            <WorkPanel view={view} />
+            {revision ? <RevisionReview view={revision} map={map} /> : <WorkPanel view={view} />}
+            {feedback && feedback.eligible && (view.attempt.mode !== "REVISION" || feedback.live) ? (
+              <FeedbackPanel attemptId={view.attempt.id} panel={feedback} map={map} />
+            ) : null}
             {writing ? <WritingTags learnerId={learner.id} episodeId={view.episode.id} tags={writing[0]} saved={writing[1]} map={writing[2]} /> : null}
             {scorable.length > 0 && view.viewer.canDecide ? <SupportForm attemptId={view.attempt.id} skills={scorable.map((t) => ({ key: t.key, label: t.label }))} /> : null}
           </div>
@@ -101,6 +113,7 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
             canDecide={view.viewer.canDecide}
             observedDirectly={view.episode.observedDirectly}
             targets={targets}
+            optional={view.episode.facets.revision === true}
           />
         </div>
 

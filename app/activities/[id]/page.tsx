@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
+import { RevisionForm } from "@/components/revision/RevisionForm";
+import { ActivityNote } from "@/components/student/FeedbackBox";
 import { SourceReader } from "@/components/student/SourceReader";
 import { WorkForm } from "@/components/student/WorkForm";
-import { concepts, messages, modeLabels, work } from "@/lib/copy/vi";
-import { loadActivityPage } from "@/lib/work/load";
+import { concepts, messages, modeLabels, revisionCopy, work } from "@/lib/copy/vi";
+import { loadActivityPage, loadRevisionPage } from "@/lib/work/load";
 import { formatHm, stepTitle } from "@/lib/work/view";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +19,44 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
   if (data.kind === "login") redirect("/login");
   if (data.kind === "not-found") notFound();
   const a = data.activity;
+  if (!a.supported && a.mode === "REVISION") {
+    // S6: a REVISION step with feedback is done in the app (eng_revision_open); without feedback it stays a neutral "not in the app" step.
+    const r = await loadRevisionPage(id);
+    if (r.kind === "login") redirect("/login");
+    if (r.kind === "ok") {
+      const rv = r.revision;
+      return (
+        <>
+          <AppHeader />
+          <main className="mx-auto flex max-w-xl flex-col gap-3.5 px-5 py-5" data-testid="revision-page">
+            <header className="flex items-center gap-2">
+              <Link href="/" className="flex min-h-11 min-w-11 items-center text-sm font-semibold text-accent">
+                {work.back(rv.titleVi)}
+              </Link>
+            </header>
+            <h1 className="text-lg font-bold">{revisionCopy.pageTitle}</h1>
+            {rv.state === "todo" ? (
+              <RevisionForm revision={rv} />
+            ) : (
+              <section className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-4" data-testid={`revision-${rv.state}`}>
+                <p role="status" className="text-[15px] font-semibold text-accent">
+                  {rv.state === "seen" ? revisionCopy.seenTitle : revisionCopy.waiting}
+                </p>
+                {rv.state === "seen" && rv.closingNote ? (
+                  <p className="text-[15px]">
+                    {revisionCopy.closingLabel}: {rv.closingNote}
+                  </p>
+                ) : null}
+                <Link href="/" className="flex min-h-12 items-center self-start rounded-xl bg-accent px-5 text-base font-bold text-white">
+                  {work.homeLink}
+                </Link>
+              </section>
+            )}
+          </main>
+        </>
+      );
+    }
+  }
   if (!a.supported) {
     // Nothing of the step except its neutral label: no prompt, questions, sources or self-check.
     return (
@@ -59,6 +99,8 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
           {a.mode === "INDEPENDENT_CHECK" ? <> {messages.independentCheck}</> : null}
           {chip ? <span className="block text-[13px]">{chip}</span> : null}
         </div>
+
+        <ActivityNote note={data.note} />
 
         <section aria-labelledby="task" className="flex flex-col gap-1.5 rounded-2xl border border-line bg-white p-4">
           <h2 id="task" className="text-sm font-semibold text-muted">

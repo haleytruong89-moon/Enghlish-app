@@ -873,3 +873,72 @@ D1 "± 1 cấp" = ± 1 bậc CEFR lớn (A2 → A1…B1+) · D2 chỉ áp cho ô
 ### Tiêu chí đạt
 
 `typecheck`, `lint`, `test` (gồm test database: ma trận vai, chỉ thêm, xóa dữ liệu, học sinh bị chặn), `gen:config` xanh; CI (E2E + áp migration hai lần) xanh; review Opus; phụ huynh áp `0020` rồi làm 6 bước thử ở trên; buổi 30 phút: gia sư xác nhận cấp khởi điểm cho cả hai em.
+
+## S6 — Góp ý cho con + Sửa bài (trước–sau) (22/10/2026)
+
+Nhánh `feature/s6-feedback-revision` (dựa trên `feature/sm2-level-profile`). Thiết kế `docs/superpowers/specs/2026-10-22-s6-feedback-revision-design.md` (duyệt từng phần 22/10); kế hoạch `docs/superpowers/plans/2026-10-22-s6-feedback-revision.md`; 3 mockup (thầy/cô góp ý · con sửa bài · trước–sau) phụ huynh duyệt trước khi làm giao diện. Không AI.
+
+### Đã thay đổi gì (nói đơn giản)
+
+| Việc | Vì sao | Nằm ở |
+|---|---|---|
+| **Góp ý cho con** ở màn duyệt bài viết: 1 câu khen (bắt buộc) + 1–3 góp ý (trích đoạn trong bài, gắn kỹ năng — tùy chọn), "Yêu cầu con sửa bài" hoặc "Chỉ góp ý". Câu có dạng điểm bị từ chối: phân số kiểu điểm "3/4", "7 / 10" (mẫu số 1–10, tử ≤ mẫu; không tính ngày như "hôm 5/10" và "1/2 trang"), con số sát "điểm" / "đ" ("6 điểm", "8đ"), "8 trên 10", dấu % sau con số ("80%") và các nhãn thang 0–4 ("Đạt yêu cầu"); "điểm mạnh", "22/10", "12/20" thì được (phụ huynh thu hẹp luật 22/10 — G2; cách chốt chi tiết: Claude đề xuất, phụ huynh xem lại). **Sửa góp ý** được cho tới khi con bắt đầu sửa | Q1, 1-a, 1-b, 1-c | Hộp duyệt → mở một bài viết |
+| **Bước sửa**: dùng bước "Sửa bài" của chủ đề nếu là bước sửa kế tiếp, không thì app thêm bước sửa riêng ("Bước sửa bài") | PA | `0021` |
+| **Con sửa bài**: dòng "Sửa bài: … · n góp ý của thầy/cô" nằm trên Việc tiếp theo; màn sửa có câu khen, góp ý đánh số, chỗ cần sửa được tô trong bài cũ, ô viết đã điền bài cũ (tự lưu), "Xem bài cũ", mỗi góp ý chọn **Đã sửa / Giữ nguyên** (Track B bắt buộc 1 câu lý do — cài đặt theo track) | Q2, Q3 | trang chủ và màn sửa của con |
+| **Bài sửa lại (vòng n)** trong Hộp duyệt: bài cũ – bài sửa cạnh nhau (chữ bỏ gạch, chữ thêm tô), đánh giá **bắt buộc** từng góp ý, điểm "Sửa bài" và điểm kỹ năng ngôn ngữ **tùy chọn** (luôn ghi là "có góp ý"), nhận xét kết, **Xong** hoặc **Mở vòng 2** (tối đa 2 vòng) | 2-a, 3-a, 3-b | Hộp duyệt |
+| Con thấy **"Thầy/cô đã xem bài sửa của bạn"** + nhận xét kết; **không bao giờ thấy điểm** hay đánh giá | 2-c | trang chủ của con |
+| **Bài đã sửa** trên thẻ của mỗi con: danh sách cặp trước–sau, mở ra xem (chỉ xem) | 3-c | `/learners/…/revisions` |
+
+Bài sửa **không bao giờ** là "lần đầu" và luôn nối với bài gốc (cơ sở dữ liệu ép). Xóa dữ liệu một em xóa luôn 3 sổ mới.
+
+### SQL cần áp
+
+- **`db/migrations/0021_feedback_revision.sql`** — Actions → **Apply database migrations** (gõ APPLY) hoặc dán vào SQL Editor. **Áp `0021` TRƯỚC khi thử preview hoặc gộp PR**; cần `0019` + `0020` đã áp. Chỉ thêm: 1 cột (`attempts.revises_attempt_id`), 1 bảng cài đặt theo track, 3 sổ mới, các hàm mới, bản mới của 3 hàm Hộp duyệt (giữ nguyên luật cũ cho bài thường) và của hàm xóa dữ liệu một em (giữ nguyên mọi dòng cũ). Chạy lại an toàn. Nên bấm chạy tay *Weekly backup* trước khi áp. Chưa áp thì khung "Góp ý cho con" và các dòng "Sửa bài" chỉ không hiện; phần còn lại vẫn chạy.
+
+### Cách thử trên preview (gia đình thử)
+
+1. `thu-an` (em) → mở bài viết tuần 4 (Sao Kim – Sao Hỏa, bước luyện viết) → viết vài câu → Nộp.
+2. `thu-giasu-an` → Hộp duyệt → mở bài vừa nộp → khung **Góp ý cho con**: gõ câu khen "Bài được 3/4" → thấy lời nhắc không ghi điểm; sửa câu khen; góp ý 1 + bôi đen một đoạn trong bài → "Lấy đoạn đang chọn" → **Gửi góp ý cho con**. Bấm **Sửa góp ý**, đổi chữ, lưu.
+3. `thu-an` → trang chủ: dòng **Sửa bài** ở trên Việc tiếp theo → mở: đoạn được tô, ô viết có sẵn bài cũ → sửa, chọn **Đã sửa**, khai báo "Mình không dùng gợi ý nào" → **Nộp bài sửa**.
+4. `thu-giasu-an` → Hộp duyệt: **Bài sửa lại (vòng 1)** → thấy chữ bỏ gạch / chữ thêm tô → bấm **Cải thiện thật** → (tùy chọn) chấm "Sửa bài" → nhận xét kết → **Xong**.
+5. `thu-an` → trang chủ: **"Thầy/cô đã xem bài sửa của bạn"** + nhận xét; không có điểm nào.
+6. Phụ huynh → thẻ An (thử) → **Bài đã sửa** → mở cặp trước–sau (chỉ xem).
+
+### Quyết định trong kế hoạch (phụ huynh xem lại)
+
+D1 bước "Sửa bài" của chủ đề = bước sửa đầu tiên sau bài, không có bước viết nào xen giữa · D2 bước đó mở ngay hôm nay · D3 bước sửa riêng số 1001+ · D4 điểm "Sửa bài" (A3) ghi trên bài sửa, không vào mẫu số độ phủ · D5 bài sửa luôn là "có góp ý" · D6 số lần / gia đình học tập của bài sửa · D7 vòng 2 cùng bước sửa · D8 chỉ bài viết làm trong app · D9 góp ý và chấm độc lập · D10 "Chỉ góp ý" hiện 14 ngày ở trang chủ con · D11 đánh giá + Xong/Vòng 2 lưu một lần · D12 "đã xem" hiện 14 ngày · D13 giữ khai báo trợ giúp khi nộp bài sửa · D14 bài sửa của bài kiểm tra trong buổi: chỉ gia sư (duyệt, chấm, gắn nhãn và màn xem bài — review 22/10 làm trọn) · D15 Hộp duyệt: bài sửa xong khi bấm Xong / Mở vòng 2 · D16 kỹ năng gắn là lá của bản đồ · D17 trang "Bài đã sửa" · D18 không kiểm "điểm" trong trích đoạn / lý do của con · D19 bảng cài đặt theo track · D20 màn sửa nằm ở link bước cũ. Chi tiết: bảng "Decisions" trong kế hoạch.
+
+### Phụ huynh đã trả lời 22/10/2026 ("ok G1–G4, ok mockup S6"; không còn câu hỏi mở)
+
+1. **"Ngay sau" (G1) → như D1:** bước "Sửa bài" của chủ đề được dùng khi là bước sửa đầu tiên sau bài, không có bước viết (`ACT-WRITE`) nào xen giữa; bước tự xem lại ở giữa không chặn. Bản đọc đúng từng chữ ("bước kế tiếp") chỉ để làm chú thích trong `eng_open_revision_step`, không bật.
+2. **Chữ "điểm" (G2) → thu hẹp luật.** Nguyên tắc của phụ huynh: em không bao giờ thấy điểm; chữ của người lớn (câu khen, góp ý, nhận xét kết) không được có dạng điểm. *Cách chốt chi tiết dưới đây là **Claude đề xuất, phụ huynh xem lại** (review 22/10 phát hiện bản trước tự mâu thuẫn ở "1/2 trang").* Từ chối đúng năm loại: (1) phân số `a/b` (cho khoảng trắng quanh "/") với `b` là số nguyên 1–10 và `0 ≤ a ≤ b` ("3/4", "7 / 10", "1/2") — **trừ** khi đứng ngay sau (chỉ cách khoảng trắng) một chữ ngày (`ngày|hôm|từ|đến|tới|trước|sau|hạn|tháng`, vd. "hôm 5/10"), hoặc theo sau là "/số" nữa (ngày đầy đủ "1/10/2026"), hoặc theo sau là chữ "trang" ("1/2 trang"); "22/10", "12/20" thì được vì tử > mẫu; (2) con số đi sát chữ "điểm", "diem" hoặc "đ" (cách nhau tối đa một chữ, hai thứ tự): "8đ", "8 đ", "6 điểm", "điểm 7", "8 diem" — "điểm mạnh", "điểm cần chú ý", "điểm yếu" thì được; (3) "N trên M" với M 1–10 ("8 trên 10"); (4) dấu % sau con số ("80%"); (5) đúng năm nhãn thang 0–4 của UX guide §3.1, không phân biệt hoa thường ("Đạt yêu cầu", "Chưa thể hiện"…). Khoảng trắng lạ (NBSP, U+202F, U+3000) được đổi thành khoảng trắng thường trước khi so. Không bao giờ áp cho chữ của em. Cơ sở dữ liệu (`eng_has_score_words`) và app (`hasScoreWords`) dùng chung danh sách mẫu hai chiều `tests/unit/fixtures/scoreWords.ts`. Đánh đổi cần phụ huynh biết: câu tự nhiên như "con làm được một phần" hay "chưa thể hiện rõ" cũng bị từ chối (trùng nhãn thang). Lời nhắc khi bị từ chối: "Góp ý cho con không ghi điểm (như “3/4”, “6 điểm”, “80%”). Bạn viết lại bằng lời nhé."
+3. **"Bài viết giao lẻ" (G3) → chấp nhận.** S6 chỉ gắn vào bước viết của các chủ đề. Bài viết giao lẻ chưa có trong app; khi có sẽ dùng lại luồng này (xem "Để sau").
+4. **"Chỉ góp ý" (G4) → như D10:** hiện ở ô "Góp ý của thầy/cô" trên trang chủ con 14 ngày, **và** ở trang của chính bài đó (`/activities/[id]`) chừng nào bài còn thấy được (hàm mới `eng_my_activity_note`, em chỉ đọc câu khen + góp ý + trích đoạn).
+5. **3 mockup (bảng 15–17) → duyệt.**
+
+### Để sau (S6)
+
+- Bài viết giao lẻ (G3): khi có, gắn vào đúng luồng góp ý → sửa bài này (Studio PR B / giao bài lẻ).
+- Cách nới tiếp luật chữ "điểm" nếu thực tế vẫn từ chối nhầm: "điểm mạnh 1" hay "câu 2 có điểm mạnh" (số + một chữ + "điểm") hiện bị từ chối vì luật cho phép cách nhau một chữ.
+- Điểm "Sửa bài" (A3) của Track B chỉ thấy ở bài sửa và ở "Bài đã sửa": muốn liệt kê vào mục theo dõi riêng cần bộ B-v2 (B-v1 đã khóa).
+
+### Sửa theo review Opus (22/10, cùng nhánh)
+
+- **B1:** dòng ``` thừa làm hiện ký tự lạ trên mỗi dòng Hộp duyệt — đã bỏ; thêm test dựng trang Hộp duyệt (không dòng nào có dấu nháy ngược) và quét mọi `.tsx` tìm dòng chỉ có dấu ngược.
+- **S1 (D14 trọn):** `0021` viết lại `eng_tag_episode` (bản 0014) và `eng_review_episode` (bản 0010) để dùng `eng_episode_restricted`: phụ huynh không gắn nhãn được cho bài sửa của bài kiểm tra trong buổi (42501), màn xem bài báo `restricted`.
+- **S2:** sửa góp ý khóa bước sửa trước khi kiểm tra "con đã bắt đầu"; nộp bài sửa gửi `feedback_id` (góp ý cũ → "Thầy/cô vừa sửa góp ý — tải lại trang để xem bản mới."); Xong / Mở vòng 2 / trước–sau lấy góp ý theo đánh dấu của bài sửa.
+- **S3/N2:** luật chữ "điểm" chốt lại (xem câu 2 ở trên) — **Claude đề xuất, phụ huynh xem lại**.
+- **S4:** kiểm tra "không điểm / không verdict" của e2e dời vào bộ S6 (trang sửa bài ở trạng thái làm và đã xem, ô ở trang chủ), không còn nhánh `if (status === 200)` có thể pass rỗng.
+- **S5:** dòng "Sửa bài" biến mất khi bước bị bỏ hoặc dời sang ngày sau; bài ghi ngoài app trên bước sửa đóng việc sửa của em (chọn cách này thay vì từ chối ghi, vì gia sư có thể thật sự ghi bài sửa trên giấy). Hộp duyệt / khung góp ý của người lớn không đổi.
+- **N3:** so khác theo NFC + nháy thẳng; cột "Bài cũ" giữ khoảng trắng / xuống dòng của bài cũ. **N4:** dán chữ chỉ nhận ở ô viết chính. **N5:** nhóm nút và nhãn lý do ghi rõ "Góp ý n". **N6:** bước sửa của mẫu đã có bài sửa tính là xong trong "Xong x/y bước"; dòng bài sửa trong Hộp duyệt không còn "Đã chấm 0/n kỹ năng".
+- **N7:** khi chưa áp `0021`, thẻ của em không hiện link "Bài đã sửa" và trang `/learners/[id]/revisions` báo nhẹ "chưa sẵn sàng" thay vì lỗi. Việc **áp `0021` trước khi thử preview hoặc gộp** vẫn là bước bắt buộc; các màn khác của S6 (Hộp duyệt, trang chủ của em) cũng cần `0021` nên chỉ phần "Bài đã sửa" được che như trên.
+
+### Ghi chú khi làm
+
+- `0021` có thêm hàm `eng_my_activity_note(p_activity)` (G4) — cùng kiểu với `eng_my_review_by_domain`: chỉ `authenticated`, tìm em bằng `auth.uid()`.
+- Test database: `TRUNCATE feedback_notes` bị Postgres chặn trước (mã `0A000`) vì bảng khác trỏ tới nó; `DELETE` trên bảng rỗng không kích hoạt trigger — hai chỗ chỉnh nhỏ trong test của kế hoạch. Test "Track B cần lý do" dùng một chủ đề B-W1 mới vì bước 7 của chủ đề cũ là bài kiểm tra một lần.
+- Màn Hộp duyệt ghi "Bước sửa bài" thay vì "Bước 1001" cho bước sửa riêng của app.
+
+### Tiêu chí đạt
+
+`typecheck`, `lint`, `test` (gồm test database: ma trận vai, học sinh không thấy điểm, vòng 1–2 và chặn vòng 3, thời hạn sửa góp ý, bài sửa không bao giờ là lần đầu, xóa dữ liệu), `gen:config` xanh; CI (E2E + áp migration hai lần) xanh; review Opus; phụ huynh áp `0021` rồi làm 6 bước thử ở trên; gia sư gửi được góp ý cho một bài trong ≤ 2 phút.

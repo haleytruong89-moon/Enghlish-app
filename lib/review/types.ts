@@ -27,6 +27,8 @@ export type InboxItem = {
   targetsTotal: number;
   targetsDecided: number;
   canDecide: boolean;
+  /** S6: "Bài sửa lại (vòng n)"; null for ordinary work. */
+  revisionRound: number | null;
 };
 
 /** Inbox filters (applied in SQL). `todo` = not fully decided yet (the default); `done` = every skill decided. */

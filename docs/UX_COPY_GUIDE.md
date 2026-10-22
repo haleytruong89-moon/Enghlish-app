@@ -63,6 +63,12 @@ Hiển thị bằng **thang 4 ô có chữ**, không dùng màu đơn thuần.
 | PRACTICE | Luyện tập (có gợi ý) | Bài luyện tập |
 | INDEPENDENT_CHECK | Bài tự làm — lần này chưa có gợi ý | Bài tự làm (không gợi ý) |
 | REVISION | Sửa bài | Bài sửa lại |
+| Feedback (S6) | Góp ý của thầy/cô | Góp ý cho con |
+| Revision round (S6) | Sửa bài · Lần sửa thứ hai | Bài sửa lại (vòng n) |
+| Revision mark (S6) | Đã sửa / Giữ nguyên | Con chọn: Đã sửa / Giữ nguyên |
+| Revision verdict (S6) | (không hiện) | Cải thiện thật / Chưa / Lý do hợp lý |
+| Revision seen (S6) | Thầy/cô đã xem bài sửa của bạn | Đã xem xong |
+| Revision pairs (S6) | (không hiện) | Bài đã sửa |
 | Checkpoint | (không hiện) | Bài kiểm tra trong buổi học |
 | Delayed check | Ôn lại bài cũ | Bài ôn lại sau 2 tuần |
 | Transfer check | Thử ở chủ đề mới | Bài dùng ở chủ đề mới |
@@ -117,3 +123,5 @@ Hiển thị bằng **thang 4 ô có chữ**, không dùng màu đơn thuần.
 | Ôn lại | "Hôm nay ôn: Ong làm mật thế nào? Nói lại mà không xem ghi chép nhé." |
 | Lên bậc (phụ huynh) | "An đã lên 'Tự làm được' ở *Dùng thì quá khứ khi viết* — cô xác nhận ngày 12/11." |
 | Cần xem lại (gia sư) | "Bài gần đây chưa tốt bằng trước. Giữ bậc hiện tại — cô xem lại khi rảnh." |
+| Nộp bài sửa (học sinh) | "Đã nộp bài sửa! Thầy/cô sẽ xem lại." |
+| Góp ý có dạng điểm (người lớn) | "Góp ý cho con không ghi điểm (như “3/4”, “6 điểm”, “80%”). Bạn viết lại bằng lời nhé." |

@@ -14,5 +14,6 @@ for (const key of ["studentAn", "studentNguyen"] as AccountKey[]) {
     const text = await page.locator("body").innerText();
     expect(text).not.toMatch(/đang học (A1|A2|B1|B2|C1|C2)/);
     expect(text).not.toContain(levelCopy.assumed);
+    // S6: the child's revision pages (todo and seen) and the home box are checked in the S6 serial suite of review.spec.ts, on real data.
   });
 }
