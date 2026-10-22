@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
-import { levelCopy, resultPage, sessionNotePage, tagPicker, todayPage, weakPage } from "@/lib/copy/vi";
-import { todayVn } from "@/lib/inquiries/dates";
+import { levelCopy, resultPage, studentReviewCopy, sessionNotePage, tagPicker, todayPage, weakPage } from "@/lib/copy/vi";
+import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { LEARNER_IDS, loginAs } from "./helpers";
 
@@ -218,5 +218,22 @@ test.describe.serial("S5b-1 tutor work", () => {
     await expect(page.getByText(line(wrongScore), { exact: true })).toHaveCount(0);
     await expect(page.getByTestId("milestones")).toContainText(levelCopy.corrected(wrongScore));
     expect(await page.locator("body").innerText()).not.toMatch(/tomo/i);
+  });
+  test("Việc cần ôn: a tag whose re-check is due shows on the student's home, grouped by domain, with no level or score", async ({ page }) => {
+    // 20 days ago, one wrong item with a tag: after the 14-day policy it is due for a re-check (the same case as the DB test)
+    await loginAs(page, "tutorNguyen");
+    const saved = await page.request.post(`/api/learners/${NG}/results`, {
+      data: {
+        client_id: randomUUID(), mode: "quick", title: "Ôn tập cũ", total_items: 5, correct: 4, wrong_items: [1], tags: [{ n: 1, tag_key: "modal-suy-doan" }],
+        context: "home", attempt: "first", used_hint: false, taken_on: addDays(todayVn(), -20),
+      },
+    });
+    expect(saved.status()).toBe(201);
+    await page.context().clearCookies();
+    await loginAs(page, "studentNguyen");
+    const box = page.getByTestId("review-by-domain");
+    await expect(box).toContainText(studentReviewCopy.title);
+    await expect(box).not.toContainText(/\b[ABC][12]\b|\/\d|bậc/);
+    await expect(page.getByTestId("review-by-domain").locator("li").first()).toBeVisible();
   });
 });
