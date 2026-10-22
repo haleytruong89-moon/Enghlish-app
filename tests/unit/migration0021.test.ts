@@ -80,5 +80,28 @@ describe("0021_feedback_revision.sql", () => {
     }
   });
 
-  // (Tasks 2, 3 and 4 add their tests here)
+  it("feedback is written by the reviewer of the work (D15), in-app writing only, no scores; rounds and the edit window are in the DB", () => {
+    const w = fnText(sql, "eng_write_feedback");
+    expect(w).toContain("v_role := english.eng_review_role(v_ep, p_by);");
+    for (const tag of ["(not_writing)", "(praise_required)", "(score_words)", "(max_rounds)", "(checks_incomplete)", "(revision_started)", "(author_only)", "(already_given)"]) {
+      expect(w, tag).toContain(tag);
+    }
+    expect(fnText(sql, "eng_open_revision_step")).toContain("-- D1");
+    expect(fnText(sql, "eng_clean_feedback_items")).toContain("(excerpt_not_found)");
+  });
+
+  it("S5 grows for revisions: D15 follows the root; a revision is scored on its own skill and on the root's skills", () => {
+    expect(fnText(sql, "eng_review_role")).toContain("and not english.eng_episode_restricted(e.id) then 'parent'");
+    expect(fnText(sql, "eng_episode_targets")).toContain("where at.revises_attempt_id is not null and ra.id = english.eng_revision_root(at.id)");
+  });
+
+  it("eng_write_feedback is for service_role only; the helpers for nobody", () => {
+    expect(code).toContain("revoke execute on function english.eng_write_feedback(uuid, text, jsonb, boolean, uuid, uuid, text) from public, anon, authenticated;");
+    expect(code).toContain("grant execute on function english.eng_write_feedback(uuid, text, jsonb, boolean, uuid, uuid, text) to service_role;");
+    for (const f of ["eng_episode_restricted(uuid)", "eng_clean_feedback_items(jsonb, text, uuid)", "eng_open_revision_step(uuid, uuid)"]) {
+      expect(code).toContain(`revoke execute on function english.${f} from public, anon, authenticated, service_role;`);
+    }
+  });
+
+  // (Tasks 3 and 4 add their tests here)
 });

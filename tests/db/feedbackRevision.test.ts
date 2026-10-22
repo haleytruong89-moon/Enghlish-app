@@ -175,5 +175,98 @@ describe("S6 feedback + revision (migration 0021)", () => {
     });
   });
 
-  // (Tasks 2, 3 and 4 add their sections here)
+  describe("2. giving feedback (eng_write_feedback) and opening the revision step", () => {
+    it("who: the child's tutor and the parent on ordinary work; on in-session tests only the tutor (D15); nobody outside; never a student", async () => {
+      const work = (await submitText(U().studentAn, await step(a1, 6), TEXT_A)).attempt_id;
+      await fail(write(M().tutorNguyen, work), "42501", /\(D15\)/);
+      await fail(student(U().studentAn, "select english.eng_write_feedback($1, 'x', '[]'::jsonb, true, null, $2, 'client-0001') as r", [work, M().studentAn]), "42501");
+      expect((await write(M().parent, work, { requires: false })).round).toBe(1);
+      const check = (await submitText(U().studentAn, await step(a1, 11), TEXT_A)).attempt_id; // A-W1 step 11 = checkpoint
+      await fail(write(M().parent, check), "42501", /\(D15\)/);
+      const r = await write(M().tutorAn, check);
+      expect(r.revision_activity_id).toBe(await step(a1, 13)); // D1: 11 → (12 self-review) → 13
+    });
+
+    it("only in-app writing (D8): paper work and answer-shaped steps are refused", async () => {
+      const paper = await svc<{ attempt_id: string }>(
+        "select english.eng_record_offline_attempt($1, 'manual_import', $2, null, null, $3::date, '{none}'::text[], $4, $5) as r",
+        [await step(a1, 6), TEXT_A, TODAY, M().tutorAn, randomUUID()]);
+      await fail(write(M().tutorAn, paper.attempt_id), "23514", /\(not_writing\)/);
+      const reading = (await student<Receipt>(U().studentAn, "select english.eng_submit_attempt($1, $2, $3::jsonb, '{none}', 'in_app') as r",
+        [await step(a1, 3), randomUUID(), JSON.stringify({ answers: { "W1-R2": "Melted rock." } })])).attempt_id;
+      await fail(write(M().tutorAn, reading), "23514", /\(not_writing\)/);
+    });
+
+    it("praise is required, 1-3 items, no scores, the excerpt must be in the work, the leaf must be in the map", async () => {
+      const work = (await submitText(U().studentAn, await step(a1, 6), TEXT_A)).attempt_id;
+      await fail(write(M().tutorAn, work, { praise: "  " }), "23514", /\(praise_required\)/);
+      await fail(write(M().tutorAn, work, { praise: "Bài được 3/4" }), "23514", /\(score_words\)/);
+      await fail(write(M().tutorAn, work, { items: [{ text: "Đúng 80%" }] }), "23514", /\(score_words\)/);
+      await fail(write(M().tutorAn, work, { items: [] }), "22023", /\(bad_items\)/);
+      await fail(write(M().tutorAn, work, { items: [{ text: "a" }, { text: "b" }, { text: "c" }, { text: "d" }] }), "22023", /\(bad_items\)/);
+      await fail(write(M().tutorAn, work, { items: [{ text: "Sửa câu này.", excerpt: "This sentence is not in the work." }] }), "23514", /\(excerpt_not_found\)/);
+      await fail(write(M().tutorAn, work, { items: [{ text: "Sửa.", leaf: { kind: "tag", ref_key: "no-such-tag" } }] }), "23514", /\(unknown_leaf\)/);
+      const [leaf] = await q1<{ kind: string; ref_key: string }>(
+        "select kind, ref_key from english.skill_leaves where map_id = english.eng_current_skill_map() and track_id = 'A' order by group_key, ord limit 1");
+      // spacing and curly quotes do not matter for the excerpt; the stored excerpt is the trimmed one
+      const ok = await write(M().tutorAn, work, { items: [{ text: "Thêm câu kết.", excerpt: "  Other volcanoes   let lava flow gently. ", leaf }] });
+      const [row] = await q1<{ items: unknown }>("select items from english.feedback_notes where id = $1", [ok.id]);
+      expect(row?.items).toEqual([{ n: 1, text: "Thêm câu kết.", excerpt: "Other volcanoes   let lava flow gently.", leaf: { kind: leaf!.kind, ref_key: leaf!.ref_key } }]);
+    });
+
+    it("one live feedback per work; a replay returns the same row; edits only by the author, only the live row, only before the child starts", async () => {
+      const work = (await submitText(U().studentAn, await step(a1, 6), TEXT_A)).attempt_id;
+      const first = await write(M().tutorAn, work, { clientId: "feedback-replay-1" });
+      expect(first).toMatchObject({ round: 1, replayed: false });
+      expect(await write(M().tutorAn, work, { clientId: "feedback-replay-1" })).toMatchObject({ id: first.id, replayed: true });
+      await fail(write(M().tutorAn, work, { clientId: "feedback-replay-1", praise: "Khác" }), "23505");
+      await fail(write(M().tutorAn, work), "23505", /\(already_given\)/);
+      await fail(write(M().parent, work, { supersedes: first.id }), "42501", /\(author_only\)/);
+      const second = await write(M().tutorAn, work, { supersedes: first.id, items: [{ text: "Chỉ một góp ý thôi." }] });
+      expect(second.revision_activity_id).toBe(first.revision_activity_id); // the same revision step
+      await fail(write(M().tutorAn, work, { supersedes: first.id }), "23505", /\(already_superseded\)/);
+      // the child saves a first draft of the revision: from then on the feedback can no longer be edited
+      await q1("insert into english.working_drafts(activity_instance_id, learner_id, content) values ($1, $2, '{}'::jsonb)", [second.revision_activity_id, s.learners.an]);
+      await fail(write(M().tutorAn, work, { supersedes: second.id }), "23514", /\(revision_started\)/);
+    });
+
+    it("revision step: the template step is reused (and opened today if dated later); otherwise the app adds step 1001, 1002 on the track's A3 skill", async () => {
+      // A-W1 step 6: step 11 (writing) lies between 6 and 13 → a step of its own
+      const w6a = (await submitText(U().studentAn, await step(a1, 6), TEXT_A)).attempt_id;
+      const r6a = await write(M().tutorAn, w6a);
+      const w6b = (await submitText(U().studentAn, await step(a1, 6), TEXT_A)).attempt_id;
+      const r6b = await write(M().tutorAn, w6b);
+      const own = await q1<{ step_no: number; activity_type: string; mode: string; target_ids: string[]; scheduled_for: string }>(
+        "select step_no, activity_type, mode, target_ids, scheduled_for::text from english.activity_instances where id = any($1::uuid[]) order by step_no",
+        [[r6a.revision_activity_id, r6b.revision_activity_id]]);
+      expect(own.map((o) => o.step_no)).toEqual([own[0]!.step_no, own[0]!.step_no + 1]);
+      expect(own[0]!.step_no).toBeGreaterThan(1000);
+      expect(own[0]).toMatchObject({ activity_type: "ACT-REVISE", mode: "REVISION", target_ids: ["A-A3-REDRAFT"], scheduled_for: TODAY });
+      // B-W1 with only step 7 released: step 8 (REVISION, dated tomorrow) is reused and opened today
+      const b = await assign("nguyen", "B-W1-HOMEWORK", dueReleasing("B-W1-HOMEWORK", 7));
+      const step8 = await step(b, 8);
+      expect((await q1<{ ok: boolean }>("select english.eng_activity_released($1) as ok", [step8]))[0]?.ok).toBe(false);
+      const wb = (await submitText(U().studentNguyen, await step(b, 7), TEXT_B)).attempt_id;
+      expect((await write(M().tutorNguyen, wb, { items: [{ text: "Nêu rõ hơn lý do thứ hai." }] })).revision_activity_id).toBe(step8);
+      expect((await q1<{ ok: boolean }>("select english.eng_activity_released($1) as ok", [step8]))[0]?.ok).toBe(true);
+      expect(await n("select count(*)::int as n from english.activity_instance_events where activity_instance_id = $1 and kind = 'reschedule'", [step8])).toBe(1);
+      // the fully released B-W1: its step 8 is free and already open
+      const wb2 = (await submitText(U().studentNguyen, await step(b1, 7), TEXT_B)).attempt_id;
+      const rb2 = await write(M().tutorNguyen, wb2, { items: [{ text: "Thêm phản biện." }] });
+      expect(rb2.revision_activity_id).toBe(await step(b1, 8)); // B-W1 7 → 8 (the next step)
+    });
+
+    it("'Chỉ góp ý' opens no step; the S4 paths still refuse a REVISION step; eng_revision_open follows the live feedback", async () => {
+      const work = (await submitText(U().studentAn, await step(a1, 6), TEXT_A)).attempt_id;
+      const note = await write(M().tutorAn, work, { requires: false });
+      expect(note.revision_activity_id).toBeNull();
+      const work2 = (await submitText(U().studentAn, await step(a1, 6), TEXT_A)).attempt_id;
+      const rev = (await write(M().tutorAn, work2)).revision_activity_id!;
+      expect((await q1<{ ok: boolean }>("select english.eng_revision_open($1) as ok", [rev]))[0]?.ok).toBe(true);
+      await fail(student(U().studentAn, "select english.eng_save_draft($1, '{\"text\":\"x\"}'::jsonb) as r", [rev]), "22023");
+      await fail(student(U().studentAn, "select english.eng_submit_attempt($1, $2, '{\"text\":\"x\"}'::jsonb, '{none}', 'in_app') as r", [rev, randomUUID()]), "22023");
+    });
+  });
+
+  // (Tasks 3 and 4 add their sections here)
 });
