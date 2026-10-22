@@ -4,7 +4,20 @@ import type { WeakTile } from "@/lib/skillmap/group";
 import type { WeakWindow } from "@/lib/tutorwork/schemas";
 
 /** First layer of "Điểm cần chú ý" (SM-1): one tile per domain — how many points need attention and the worst one. Staff only. */
-export function DomainTiles({ tiles, learnerId, weeks, active }: { tiles: WeakTile[]; learnerId: string; weeks: WeakWindow; active: string | null }) {
+export function DomainTiles({
+  tiles,
+  learnerId,
+  weeks,
+  active,
+  readingWeak = 0,
+}: {
+  tiles: WeakTile[];
+  learnerId: string;
+  weeks: WeakWindow;
+  active: string | null;
+  /** How many reading skills of the monthly report need attention: counted on the Đọc tile whichever tile is open. */
+  readingWeak?: number;
+}) {
   const href = (d: string) => `/learners/${learnerId}/weak?weeks=${weeks}&domain=${d}`;
   const box = (on: boolean) =>
     `flex min-h-11 h-full flex-col gap-1 rounded-xl border px-4 py-3 ${on ? "border-accent bg-[#E3ECE8]" : "border-line bg-white hover:border-accent"}`;
@@ -16,9 +29,16 @@ export function DomainTiles({ tiles, learnerId, weeks, active }: { tiles: WeakTi
           <li key={t.key}>
             <Link href={href(t.key)} aria-current={t.key === active ? "page" : undefined} data-testid={`weak-tile-${t.key}`} className={box(t.key === active)}>
               <span className="font-semibold">{t.name}</span>
-              <span className="text-sm" data-testid={`weak-tile-count-${t.key}`}>
-                {weakPage.tileCount(t.weakCount)}
-              </span>
+              {t.key !== "reading" || t.weakCount > 0 || readingWeak === 0 ? (
+                <span className="text-sm" data-testid={`weak-tile-count-${t.key}`}>
+                  {weakPage.tileCount(t.weakCount)}
+                </span>
+              ) : null}
+              {t.key === "reading" && readingWeak > 0 ? (
+                <span className="text-sm" data-testid="weak-tile-reading-skills">
+                  {weakPage.tileReading(readingWeak)}
+                </span>
+              ) : null}
               {t.worst ? <span className="text-sm text-muted">{weakPage.tileWorst(t.worst.label)}</span> : null}
             </Link>
           </li>

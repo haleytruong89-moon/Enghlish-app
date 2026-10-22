@@ -111,4 +111,17 @@ describe("DomainTiles", () => {
     expect(html.match(/<a[^>]*data-testid="weak-tile-vocab"[^>]*>/)?.[0]).toContain('aria-current="page"');
     expect(html.match(/<a[^>]*data-testid="weak-tile-grammar"[^>]*>/)?.[0]).not.toContain("aria-current");
   });
+
+  it("the Đọc tile counts reading skills that need attention even when another tile is open; without them it says there is nothing", () => {
+    const tiles = groupWeakPoints(map, [point("dang-tu", "repeat")]);
+    const open = render(createElement(DomainTiles, { tiles, learnerId: "L1", weeks: "8", active: "vocab", readingWeak: 3 }));
+    const tile = open.match(/<a[^>]*data-testid="weak-tile-reading"[\s\S]*?<\/a>/)?.[0] ?? "";
+    expect(tile).toContain(weakPage.tileReading(3));
+    expect(tile).not.toContain(weakPage.tileCount(0)); // reading has something to look at
+    expect(tile).not.toContain("aria-current");
+    const none = render(createElement(DomainTiles, { tiles, learnerId: "L1", weeks: "8", active: "vocab" }));
+    const empty = none.match(/<a[^>]*data-testid="weak-tile-reading"[\s\S]*?<\/a>/)?.[0] ?? "";
+    expect(empty).toContain(weakPage.tileCount(0));
+    expect(empty).not.toContain("kỹ năng đọc cần chú ý");
+  });
 });

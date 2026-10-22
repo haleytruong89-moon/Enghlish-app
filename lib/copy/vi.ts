@@ -953,6 +953,7 @@ export const weakPage = {
   tileCount: (n: number) => (n === 0 ? "Chưa có điểm cần chú ý" : `${n} điểm cần chú ý`),
   tileWorst: (label: string) => `Cần chú ý nhất: ${label}`,
   tileAll: "Xem tất cả",
+  tileReading: (n: number) => `${n} kỹ năng đọc cần chú ý`,
   allTitle: "Tất cả các mảng",
 } as const;
 

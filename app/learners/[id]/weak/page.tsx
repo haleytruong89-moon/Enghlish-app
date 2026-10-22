@@ -34,13 +34,12 @@ export default async function WeakPage({ params, searchParams }: { params: Promi
   const tile = tiles.find((t) => t.key === domain) ?? null;
   const pick = domain === "all" ? "all" : (tile?.key ?? null);
   // Fail soft: the reading table is an add-on of the Đọc tile; if it cannot be read the rest of the page still renders.
-  const reading =
-    pick === "reading"
-      ? await loadSoft(
-          () => loadReadingSkills(learner.id),
-          (error) => logAppError({ route: "GET /learners/[id]/weak (reading skills)", code: "reading_skills", error, userId: member.userId }),
-        )
-      : null;
+  // Always loaded: the Đọc tile counts the reading skills that need attention even while another tile is open.
+  const reading = await loadSoft(
+    () => loadReadingSkills(learner.id),
+    (error) => logAppError({ route: "GET /learners/[id]/weak (reading skills)", code: "reading_skills", error, userId: member.userId }),
+  );
+  const readingWeak = reading?.skills.filter((s) => s.status === "weak").length ?? 0;
 
   return (
     <>
@@ -76,7 +75,7 @@ export default async function WeakPage({ params, searchParams }: { params: Promi
           </p>
         ) : null}
 
-        <DomainTiles tiles={tiles} learnerId={learner.id} weeks={window} active={pick} />
+        <DomainTiles tiles={tiles} learnerId={learner.id} weeks={window} active={pick} readingWeak={readingWeak} />
 
         {pick === null ? (
           <p className="mt-4 text-sm text-muted" data-testid="weak-tiles-hint">
