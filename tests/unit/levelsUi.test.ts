@@ -11,7 +11,7 @@ import { DomainDetail } from "@/components/levels/DomainDetail";
 import { LevelBars } from "@/components/levels/LevelBars";
 import { LevelSummaryCard } from "@/components/levels/LevelSummaryCard";
 import { Milestones } from "@/components/levels/Milestones";
-import { externalCopy, levelCopy, levelFormCopy, studentReviewCopy } from "@/lib/copy/vi";
+import { externalCopy, levelCopy, levelFormCopy, studentReviewCopy, tutorHonorificCap } from "@/lib/copy/vi";
 import type { SkillGroup } from "@/lib/skillmap/types";
 import type { WeakPoint } from "@/lib/tutorwork/types";
 import { assumedProfile, confirmedProfile } from "./fixtures/levels";
@@ -218,5 +218,21 @@ describe("Milestones: the sheet survives a correction (S1)", () => {
     expect(html).toContain(`href="/api/files/${sheet}"`);
     expect(html.split(`href="/api/files/${sheet}"`).length - 1).toBe(1);
     expect(html).toContain(levelCopy.openFile);
+  });
+});
+
+describe("RecentLevelChanges: collapsed baselines (S2)", () => {
+  it("one line for a day's baselines, with the honorific from the copy file and no domain in the link", () => {
+    const html = render(createElement(RecentLevelChanges, {
+      items: [{
+        id: "b6", domainKey: "thinking", domainName: "Tư duy và tự học", scale: "task_level", from: "2", to: "2", kind: "baseline", reason: "ghi chú chung",
+        decidedAt: "2026-10-20T03:00:06+00:00", decidedBy: "Lan", learnerId: L, alias: "Nguyên", collapsed: 7,
+      }],
+    }));
+    expect(html).toContain(levelCopy.recentBaselines("Nguyên", 7));
+    expect(html).toContain(`${tutorHonorificCap} xác nhận cấp khởi điểm (7 mảng)`);
+    expect(html).toContain(`href="/learners/${L}/levels"`);
+    expect(html).not.toContain("Tư duy và tự học");
+    expect(html).not.toContain("ghi chú chung");
   });
 });

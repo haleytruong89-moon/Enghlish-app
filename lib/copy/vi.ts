@@ -1233,6 +1233,8 @@ export const levelCopy = {
   recentTitle: "Thay đổi cấp gần đây",
   recentNone: "30 ngày qua chưa có thay đổi cấp nào.",
   recentLine: (alias: string, domain: string, from: string, to: string) => `${alias} · ${domain}: ${from} → ${to}`,
+  // S2: the baselines one tutor saved for one child on one day, as one line.
+  recentBaselines: (alias: string, n: number) => `${alias} · ${tutorHonorificCap} xác nhận cấp khởi điểm (${n} mảng)`,
 } as const;
 
 /** SM-2: "Xác nhận cấp khởi điểm" và "Điều chỉnh cấp" (chỉ gia sư của em). */

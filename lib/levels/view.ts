@@ -55,11 +55,21 @@ export function dayLabel(ts: string): string {
   return formatDateVi(todayVn(new Date(ts)));
 }
 
-/** D11: the changes of every child, newest first, at most RECENT_MAX. null when no child could be read (never a false "no change"). */
+/**
+ * D11 + S2: the changes of every child for the parent home, at most RECENT_MAX lines. Adjustments and level-ups come first (newest
+ * first), then baselines (newest first); two or more baselines one tutor saved for one child on the same day collapse into one line
+ * (`collapsed` = how many), so confirming 7 domains cannot push an adjustment out. null when no child could be read (never a false "no change").
+ */
 export function mergeRecentChanges(per: (RecentChange[] | null)[]): RecentChange[] | null {
   if (per.length > 0 && per.every((x) => x === null)) return null;
-  return per
-    .flatMap((x) => x ?? [])
-    .sort((a, b) => Date.parse(b.decidedAt) - Date.parse(a.decidedAt))
-    .slice(0, RECENT_MAX);
+  const newestFirst = (a: RecentChange, b: RecentChange) => Date.parse(b.decidedAt) - Date.parse(a.decidedAt);
+  const all = per.flatMap((x) => x ?? []).sort(newestFirst);
+  const decisions = all.filter((c) => c.kind !== "baseline");
+  const groups = new Map<string, RecentChange[]>();
+  for (const c of all.filter((x) => x.kind === "baseline")) {
+    const key = [c.learnerId, c.decidedBy ?? "", dayLabel(c.decidedAt)].join("|");
+    groups.set(key, [...(groups.get(key) ?? []), c]);
+  }
+  const baselines = [...groups.values()].map((g) => (g.length > 1 ? { ...g[0]!, collapsed: g.length } : g[0]!)).sort(newestFirst);
+  return [...decisions, ...baselines].slice(0, RECENT_MAX);
 }

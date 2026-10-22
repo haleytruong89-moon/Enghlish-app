@@ -63,7 +63,8 @@ export type LevelChange = {
   id: string; domainKey: DomainKey; domainName: string; scale: Scale; from: string; to: string; kind: LevelKind; reason: string | null;
   decidedAt: string; decidedBy: string | null;
 };
-export type RecentChange = LevelChange & { learnerId: string; alias: string };
+/** `collapsed` = how many baselines one tutor saved for this child on this day, shown as one line (S2); the other fields are the newest of them. */
+export type RecentChange = LevelChange & { learnerId: string; alias: string; collapsed?: number };
 
 /** What the student's home may show: a label and its domain. Nothing else. */
 export type ReviewItem = { domainKey: DomainKey | null; domainName: string | null; label: string };

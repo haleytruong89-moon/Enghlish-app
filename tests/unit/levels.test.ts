@@ -141,4 +141,27 @@ describe("mergeRecentChanges (D11)", () => {
     expect(mergeRecentChanges([null, null])).toBeNull();
     expect(mergeRecentChanges([])).toEqual([]);
   });
+
+  it("S2: adjustments come before baselines; a tutor's baselines for one child on one day collapse into one line", () => {
+    const row = (id: string, at: string, over: Partial<RecentChange>): RecentChange => ({ ...c(id, at), ...over });
+    const monday = row("adj", "2026-10-19T03:00:00+00:00", { kind: "adjust", reason: "Làm tốt", learnerId: "an", alias: "An" });
+    const tuesday = ["grammar", "vocab", "reading", "listening", "writing", "speaking", "thinking"].map((k, i) =>
+      row(`b${i}`, `2026-10-20T03:00:0${i}+00:00`, { domainKey: k as RecentChange["domainKey"], learnerId: "ng", alias: "Nguyên" }));
+    const merged = mergeRecentChanges([[monday], tuesday])!;
+    expect(merged.map((x) => [x.id, x.kind, x.collapsed ?? null])).toEqual([["adj", "adjust", null], ["b6", "baseline", 7]]);
+    expect(merged[1]).toMatchObject({ alias: "Nguyên", learnerId: "ng" });
+  });
+
+  it("S2: baselines on different days, by different tutors or for different children stay apart; a lone baseline is not collapsed; level_up counts with adjust; max 5 lines", () => {
+    const row = (id: string, at: string, over: Partial<RecentChange>): RecentChange => ({ ...c(id, at), ...over });
+    const out = mergeRecentChanges([[
+      row("d1a", "2026-10-20T03:00:00+00:00", {}), row("d1b", "2026-10-20T03:00:01+00:00", {}),
+      row("d2", "2026-10-21T03:00:00+00:00", {}),
+      row("t2", "2026-10-20T03:00:02+00:00", { decidedBy: "Thầy B" }),
+      row("up", "2026-10-18T03:00:00+00:00", { kind: "level_up" }),
+    ]])!;
+    expect(out.map((x) => [x.id, x.collapsed ?? null])).toEqual([["up", null], ["d2", null], ["t2", null], ["d1b", 2]]);
+    const many = Array.from({ length: 8 }, (_, i) => row(`m${i}`, `2026-10-1${i}T03:00:00+00:00`, { kind: "adjust" }));
+    expect(mergeRecentChanges([many])).toHaveLength(5);
+  });
 });

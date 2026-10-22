@@ -17,12 +17,16 @@ export function RecentLevelChanges({ items }: { items: RecentChange[] }) {
           {items.map((c) => (
             <li key={c.id} data-testid={`recent-level-${c.id}`}>
               <Link
-                href={`/learners/${c.learnerId}/levels?domain=${c.domainKey}`}
+                href={c.collapsed ? `/learners/${c.learnerId}/levels` : `/learners/${c.learnerId}/levels?domain=${c.domainKey}`}
                 className="flex min-h-11 flex-col gap-0.5 rounded-lg bg-paper px-4 py-3 text-ink no-underline hover:bg-[#E3ECE8]"
               >
-                <span className="font-semibold">{levelCopy.recentLine(c.alias, c.domainName, levelText(c.scale, c.from), levelText(c.scale, c.to))}</span>
+                <span className="font-semibold">
+                  {c.collapsed
+                    ? levelCopy.recentBaselines(c.alias, c.collapsed)
+                    : levelCopy.recentLine(c.alias, c.domainName, levelText(c.scale, c.from), levelText(c.scale, c.to))}
+                </span>
                 <span className="text-sm text-muted">{levelCopy.historyMeta(levelCopy.kindLabels[c.kind] ?? fallbackLabels.levelKind, dayLabel(c.decidedAt), c.decidedBy)}</span>
-                {c.reason ? <span className="text-sm">“{c.reason}”</span> : null}
+                {c.reason && !c.collapsed ? <span className="text-sm">“{c.reason}”</span> : null}
               </Link>
             </li>
           ))}

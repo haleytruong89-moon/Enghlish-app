@@ -458,7 +458,7 @@ begin
 end
 $$;
 
--- "Thay đổi cấp gần đây" (trang chủ phụ huynh): quyết định cấp của một em trong p_days ngày qua (1..365), mới nhất trước, tối đa 10.
+-- "Thay đổi cấp gần đây" (trang chủ phụ huynh): quyết định cấp của một em trong p_days ngày qua (1..365), mới nhất trước, tối đa 40 (ứng dụng gộp các dòng xác nhận cấp khởi điểm cùng ngày rồi lấy 5 dòng).
 create or replace function english.eng_recent_level_changes(p_learner uuid, p_days int) returns jsonb
 language sql stable security definer set search_path = ''
 as $$
@@ -473,7 +473,7 @@ as $$
           where x.learner_id = p_learner
             and x.decided_at >= pg_catalog.now() - pg_catalog.make_interval(days => greatest(1, least(coalesce(p_days, 30), 365)))
           order by x.decided_at desc, x.id desc
-          limit 10) d
+          limit 40) d
     left join english.skill_domains dm on dm.map_id = d.map_id and dm.key = d.domain_key
     left join english.members m on m.id = d.decided_by_member), '[]'::jsonb))
 $$;
