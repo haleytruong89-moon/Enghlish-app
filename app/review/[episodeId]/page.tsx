@@ -5,12 +5,13 @@ import { ScoringPanel, type PanelTarget } from "@/components/review/ScoringPanel
 import { SupportForm } from "@/components/review/SupportForm";
 import { WorkPanel } from "@/components/review/WorkPanel";
 import { FeedbackPanel } from "@/components/revision/FeedbackPanel";
+import { RevisionReview } from "@/components/revision/RevisionReview";
 import { WritingTags } from "@/components/tutor/WritingTags";
-import { activityLabels, app, fallbackLabels, inquiriesPage, learnerWithTrack, modeLabels, provenanceLabels, purposeLabels, reviewPage, type Mode } from "@/lib/copy/vi";
+import { activityLabels, app, fallbackLabels, inquiriesPage, learnerWithTrack, modeLabels, provenanceLabels, purposeLabels, reviewPage, revisionReviewCopy, type Mode } from "@/lib/copy/vi";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { formatWhen, skillLabel } from "@/lib/review/format";
 import { findEpisodeLearner, loadEpisode } from "@/lib/review/load";
-import { loadFeedbackPanel } from "@/lib/revision/load";
+import { loadFeedbackPanel, loadRevisionView } from "@/lib/revision/load";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { createUserClient } from "@/lib/supabase/server";
 import { loadTags, loadWritingTagKeys } from "@/lib/tutorwork/load";
@@ -53,6 +54,7 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
   // leaves the panel out; it never blocks the review.
   const feedback = await loadFeedbackPanel(view.attempt.id, member.id).catch(() => null);
   const map = writing ? writing[2] : null;
+  const revision = view.attempt.mode === "REVISION" ? await loadRevisionView(view.attempt.id, member.id).catch(() => null) : null;
 
   return (
     <>
@@ -85,6 +87,7 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
               ...view.activity.purpose.map((p) => purposeLabels[p] ?? fallbackLabels.purpose),
               ...(view.episode.observedDirectly && !checkpoint ? [reviewPage.liveTag] : []),
               ...(view.episode.isFirstAttempt ? [reviewPage.firstAttemptTag] : []),
+              ...(view.episode.facets.revision === true ? [revisionReviewCopy.supportedTag] : []),
               ...(checkpoint ? [reviewPage.blindNote] : []),
             ].map((chip) => (
               <li key={chip} className="rounded-full bg-[#E3ECE8] px-3 py-1 text-[#1F4439]">
@@ -96,7 +99,7 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <div className="flex flex-col gap-4">
-            <WorkPanel view={view} />
+            {revision ? <RevisionReview view={revision} map={map} /> : <WorkPanel view={view} />}
             {feedback && feedback.eligible && (view.attempt.mode !== "REVISION" || feedback.live) ? (
               <FeedbackPanel attemptId={view.attempt.id} panel={feedback} map={map} />
             ) : null}
@@ -110,6 +113,7 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
             canDecide={view.viewer.canDecide}
             observedDirectly={view.episode.observedDirectly}
             targets={targets}
+            optional={view.episode.facets.revision === true}
           />
         </div>
 

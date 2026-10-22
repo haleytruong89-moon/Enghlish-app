@@ -25,6 +25,7 @@ export function ScoringPanel({
   canDecide,
   observedDirectly,
   targets,
+  optional = false,
 }: {
   episodeId: string;
   alias: string;
@@ -33,6 +34,8 @@ export function ScoringPanel({
   /** The tutor watched this work live: only then may the "heard live" criteria be ticked (the database refuses them otherwise). */
   observedDirectly: boolean;
   targets: PanelTarget[];
+  /** S6: on a revision every skill is optional - the reviewer saves the skills she chose (none is required). */
+  optional?: boolean;
 }) {
   const router = useRouter();
   const scorable = targets.filter((t) => t.scorable);
@@ -46,7 +49,8 @@ export function ScoringPanel({
   const clientId = useRef<string>(crypto.randomUUID());
 
   const remaining = open.filter((t) => choices[t.key] === undefined).length;
-  const canSave = canDecide && open.length > 0 && remaining === 0 && !busy;
+  const chosen = open.filter((t) => choices[t.key] !== undefined);
+  const canSave = canDecide && open.length > 0 && (optional ? chosen.length > 0 : remaining === 0) && !busy;
   const chosenText = viewerRole === "tutor" ? reviewPage.chosen : reviewPage.chosenParent;
 
   async function save() {
@@ -54,7 +58,7 @@ export function ScoringPanel({
     setError(null);
     setSaved(false);
     try {
-      const items = open.map((t) => {
+      const items = (optional ? chosen : open).map((t) => {
         const c = choices[t.key] as Choice;
         const crit = criteriaToSend(criteria[t.key]); // touched criteria only - see lib/review/criteria.ts
         const note = (notes[t.key] ?? "").trim();
@@ -274,7 +278,7 @@ export function ScoringPanel({
             data-testid="save-review"
             className="min-h-12 self-start rounded-xl bg-accent px-6 text-base font-bold text-white disabled:bg-[#C9CEC5] disabled:text-[#3F4541]"
           >
-            {busy ? reviewPage.saving : remaining > 0 ? reviewPage.saveRemaining(remaining) : reviewPage.save}
+            {busy ? reviewPage.saving : remaining > 0 && !optional ? reviewPage.saveRemaining(remaining) : reviewPage.save}
           </button>
         </div>
       ) : null}

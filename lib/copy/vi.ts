@@ -304,7 +304,7 @@ export const reviewPage = {
   pagesLabel: "Chuyển trang",
   nextPage: "Xem các bài tiếp theo",
   firstPage: "Về đầu danh sách",
-  stepOf: (alias: string, stepNo: number) => `${alias} · Bước ${stepNo}`,
+  stepOf: (alias: string, stepNo: number) => (stepNo > 1000 ? `${alias} · Bước sửa bài` : `${alias} · Bước ${stepNo}`),
   submittedAt: (when: string) => `Nộp ${when}`,
   attemptNo: (n: number) => `Lần ${n}`,
   progress: (decided: number, total: number) => (decided >= total ? `Đã duyệt xong ${total}/${total} kỹ năng` : `Đã chấm ${decided}/${total} kỹ năng`),

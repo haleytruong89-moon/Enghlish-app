@@ -4,11 +4,15 @@ import { describe, expect, it, vi } from "vitest";
 import { ExcerptText } from "@/components/revision/ExcerptText";
 import { FeedbackPanel } from "@/components/revision/FeedbackPanel";
 import { findLeaf } from "@/components/revision/LeafPicker";
+import { DiffView } from "@/components/revision/DiffView";
 import { RevisionForm } from "@/components/revision/RevisionForm";
+import { RevisionList } from "@/components/revision/RevisionList";
+import { RevisionReview } from "@/components/revision/RevisionReview";
+import { ScoringPanel } from "@/components/review/ScoringPanel";
 import { ActivityNote } from "@/components/student/FeedbackBox";
 import { StudentHome } from "@/components/student/StudentHome";
-import { feedbackCopy, revisionCopy, tutorHonorific, work } from "@/lib/copy/vi";
-import type { FeedbackPanelView, MyRevisionView } from "@/lib/revision/types";
+import { feedbackCopy, reviewPage, revisionCopy, revisionReviewCopy, tutorHonorific, work } from "@/lib/copy/vi";
+import type { FeedbackPanelView, MyRevisionView, RevisionView } from "@/lib/revision/types";
 import { fixtureMap } from "./fixtures/skillMap";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
@@ -144,4 +148,67 @@ describe("Sửa bài (the child)", () => {
   });
 });
 
-// (Task 9 adds its describe blocks here)
+describe("Bài sửa lại (before–after) and Bài đã sửa", () => {
+  const view = (over: Partial<RevisionView> = {}): RevisionView => ({
+    attemptId: "r", episodeId: "e", learnerId: "l", alias: "An (thử)", round: 1, titleVi: "Núi lửa", submittedAt: "2026-10-22T03:00:00Z",
+    before: { attemptId: "o", episodeId: "eo", text: "The gas stays inside. The pressure grows.", submittedAt: "2026-10-21T03:00:00Z" },
+    after: { text: "The gas stays inside, so the pressure grows a lot." },
+    feedback: { id: "f", praise: "Con giải thích rõ.", items: [{ n: 1, text: "Dùng từ nối chỉ kết quả.", excerpt: null, leaf: null }, { n: 2, text: "Thêm ví dụ.", excerpt: null, leaf: null }],
+      authorName: "Thầy/cô của An (thử)", createdAt: "2026-10-21T04:00:00Z" },
+    marks: [{ n: 1, choice: "changed", reason: "Mình thêm so." }, { n: 2, choice: "kept", reason: null }],
+    checks: [], closing: null, nextRound: null, reasonRequired: false, canFinish: true, canOpenRound2: true, ...over,
+  });
+
+  it("the diff strikes removed words in the old text and marks added words in the new one, with words for screen readers", () => {
+    const html = renderToStaticMarkup(createElement(DiffView, { before: "a b c", after: "a x c" }));
+    expect(html).toMatch(/data-testid="diff-before"[\s\S]*<del[^>]*>[\s\S]*b [\s\S]*<\/del>/);
+    expect(html).toMatch(/data-testid="diff-after"[\s\S]*<ins[^>]*>[\s\S]*x [\s\S]*<\/ins>/);
+    expect(html).toContain(revisionReviewCopy.deletedLabel);
+    expect(html).toContain(revisionReviewCopy.addedLabel);
+    expect(renderToStaticMarkup(createElement(DiffView, { before: "same", after: "same" }))).toContain(revisionReviewCopy.noChange);
+  });
+
+  it("one verdict pair per item fits the child's choice; Xong waits for every verdict; round 2 only in round 1", () => {
+    const html = renderToStaticMarkup(createElement(RevisionReview, { view: view(), map: null }));
+    expect(html).toContain(revisionReviewCopy.title(1));
+    expect(html).toContain('data-testid="verdict-1-improved"');
+    expect(html).toContain('data-testid="verdict-1-not_yet"');
+    expect(html).not.toContain('data-testid="verdict-1-reason_ok"');
+    expect(html).toContain('data-testid="verdict-2-reason_ok"');
+    expect(html).toContain(revisionReviewCopy.childChose("kept"));
+    expect(html).toContain(revisionReviewCopy.noReason);
+    expect(html).toMatch(/<button(?=[^>]*data-testid="revision-finish")(?=[^>]*disabled)[^>]*>/); // any attribute order
+    expect(html).toContain(revisionReviewCopy.needVerdicts(2));
+    expect(html).toContain('data-testid="revision-round2-open"');
+    expect(renderToStaticMarkup(createElement(RevisionReview, { view: view({ round: 2, canOpenRound2: false }), map: null }))).not.toContain('data-testid="revision-round2-open"');
+  });
+
+  it("read-only (parent viewer, or after Xong): the verdicts and the closing note, no buttons", () => {
+    const done = view({ canFinish: false, canOpenRound2: false, checks: [{ n: 1, verdict: "improved", checkerName: "Thầy/cô", createdAt: "2026-10-22T05:00:00Z" }, { n: 2, verdict: "not_yet", checkerName: null, createdAt: "2026-10-22T05:00:00Z" }],
+      closing: { note: "Bài sửa rõ hơn nhiều!", authorName: null, createdAt: "2026-10-22T05:00:00Z" } });
+    const html = renderToStaticMarkup(createElement(RevisionReview, { view: done, map: null }));
+    expect(html).toContain('data-testid="revision-done"');
+    expect(html).toContain(revisionReviewCopy.verdicts.improved!);
+    expect(html).toContain("Bài sửa rõ hơn nhiều!");
+    expect(html).not.toContain('data-testid="revision-finish"');
+    expect(renderToStaticMarkup(createElement(RevisionReview, { view: view(), map: null, readOnly: true }))).not.toContain('data-testid="revision-finish"');
+  });
+
+  it("'Bài đã sửa': one row per pair with round, items, state and the verdict summary with its denominator; an empty list says so", () => {
+    const html = renderToStaticMarkup(createElement(RevisionList, { learnerId: "l", items: [
+      { attemptId: "r", episodeId: "e", titleVi: "Núi lửa", round: 1, submittedAt: "2026-10-22T03:00:00Z", itemsCount: 2, state: "done", good: 1, notYet: 1 },
+    ] }));
+    expect(html).toContain('href="/learners/l/revisions/r"');
+    expect(html).toContain(revisionReviewCopy.listLine(1, 2));
+    expect(html).toContain(revisionReviewCopy.verdictSummary(1, 2));
+    expect(renderToStaticMarkup(createElement(RevisionList, { learnerId: "l", items: [] }))).toContain('data-testid="revisions-empty"');
+  });
+
+  it("scoring on a revision is optional: no 'còn n kỹ năng' counter", () => {
+    const t = { key: "A-A3-REDRAFT", isTarget: true, scorable: true, lockedReason: null, titleVi: "Viết lại bài theo ưu tiên phản hồi", dimensionNameVi: null, rubricVi: null,
+      criteria: [], opportunityRule: null, decisions: [], current: null, label: "Sửa bài" };
+    const html = renderToStaticMarkup(createElement(ScoringPanel, { episodeId: "e", alias: "An", viewerRole: "tutor", canDecide: true, observedDirectly: false, targets: [t, { ...t, key: "A-L3-CAUSE-W" }], optional: true }));
+    expect(html).toContain(reviewPage.save);
+    expect(html).not.toContain(reviewPage.saveRemaining(2));
+  });
+});
