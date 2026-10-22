@@ -3720,6 +3720,7 @@ Why: the parent wants every screen light on Windows/phones set to dark mode, inc
 
 ```ts
 import { readFileSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 
 const read = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
@@ -3735,7 +3736,6 @@ describe("always-light theme", () => {
   });
   it("has no dark-mode variants anywhere in app/ or components/", () => {
     // Guard: nobody adds dark: classes or a prefers-color-scheme: dark block later.
-    const { execSync } = require("node:child_process") as typeof import("node:child_process");
     const out = execSync("grep -rlE 'dark:|prefers-color-scheme:\\s*dark' app components || true", { encoding: "utf8" });
     expect(out.trim()).toBe("");
   });
