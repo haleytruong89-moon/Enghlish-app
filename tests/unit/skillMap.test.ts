@@ -126,6 +126,18 @@ describe("SM-2 P4-c: tag pickers put the current level ± 1 first", () => {
     expect(firstTab(groupTags(levelledMap(), [tag("cum-dong-tu")]))).toBe("vocab");
   });
 
+  it("nearKeep: a tag can stay visible (keep) while the near/far split uses only the selection at mount", () => {
+    const tags = [tag("dang-tu"), tag("cum-dong-tu"), tag("thanh-ngu")];
+    // chosen in this session after mount: still listed, but still under "far" (it does not jump sections while the user clicks)
+    const live = groupTags(levelledMap(), tags, { keep: ["cum-dong-tu"], nearKeep: [] }).find((b) => b.key === "vocab")!;
+    expect(live.far.flatMap((g) => g.items.map((t) => t.key))).toEqual(["cum-dong-tu"]);
+    // chosen at mount: near
+    const atMount = groupTags(levelledMap(), tags, { keep: ["cum-dong-tu"], nearKeep: ["cum-dong-tu"] }).find((b) => b.key === "vocab")!;
+    expect(atMount.far).toEqual([]);
+    // without nearKeep, keep still decides both (earlier behaviour)
+    expect(groupTags(levelledMap(), tags, { keep: ["cum-dong-tu"] }).find((b) => b.key === "vocab")!.far).toEqual([]);
+  });
+
   it("the skills of the child's set and the weak points are never split by level (D2)", () => {
     expect(groupTargets(levelledMap(), [{ id: "B-L1-TRANSFORM-W", title: "x" }]).every((b) => b.far.length === 0)).toBe(true);
     const tiles = groupWeakPoints(levelledMap(), [weak("cum-dong-tu", "watch")]);

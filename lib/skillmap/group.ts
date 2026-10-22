@@ -67,7 +67,7 @@ function bucketize<T>(
   map: SkillMapView,
   items: T[],
   placeOf: (item: T) => GroupPlace | null,
-  opts: { keep: (item: T) => boolean; byLevel: boolean },
+  opts: { keep: (item: T) => boolean; nearKeep?: (item: T) => boolean; byLevel: boolean },
 ): Bucket<T>[] {
   const domains = map.domains.map((d) => ({
     key: d.key as BucketKey,
@@ -91,7 +91,7 @@ function bucketize<T>(
       loose.push(item);
       continue;
     }
-    const near = !opts.byLevel || kept || p.leaf === null || nearLevel(p.scale, map.current?.[p.domainKey], p.leaf);
+    const near = !opts.byLevel || (opts.nearKeep ?? opts.keep)(item) || p.leaf === null || nearLevel(p.scale, map.current?.[p.domainKey], p.leaf);
     (near ? d.groups : d.far)[gi]!.items.push(item);
     d.total += 1;
   }
@@ -109,9 +109,14 @@ function bucketize<T>(
   return out;
 }
 
-export function groupTags(map: SkillMapView, tags: TagInfo[], opts: { keep?: string[] } = {}): Bucket<TagInfo>[] {
+/**
+ * `keep` = tags that stay listed even when hidden in the picker (and count as near). `nearKeep`, when given, replaces `keep` for the
+ * near/far split only: the chips pass the selection at mount, so a far chip ticked in this session stays in its section.
+ */
+export function groupTags(map: SkillMapView, tags: TagInfo[], opts: { keep?: string[]; nearKeep?: string[] } = {}): Bucket<TagInfo>[] {
   const keep = new Set(opts.keep ?? []);
-  return bucketize(map, tags, (t) => placeOfTag(map, t), { keep: (t) => keep.has(t.key), byLevel: true });
+  const nearKeep = opts.nearKeep ? new Set(opts.nearKeep) : undefined;
+  return bucketize(map, tags, (t) => placeOfTag(map, t), { keep: (t) => keep.has(t.key), nearKeep: nearKeep && ((t) => nearKeep.has(t.key)), byLevel: true });
 }
 
 export function groupTargets<T extends { id: string }>(map: SkillMapView, items: T[]): Bucket<T>[] {

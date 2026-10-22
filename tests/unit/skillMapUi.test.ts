@@ -179,3 +179,13 @@ describe("SM-2 P4-c in the pickers", () => {
     expect(html).toContain(`label="${skillMapCopy.farPlace(skillMapCopy.place("Từ vựng", "Kết hợp từ, cụm động từ, thành ngữ"))}"`);
   });
 });
+
+describe("SM-2 P4-c: TagChips splits near/far by the selection at mount", () => {
+  it("a far tag that is already chosen when the screen opens is listed with the near ones; one that is not stays under 'Cấp khác'", () => {
+    const tags = [tag("dang-tu"), tag("cum-dong-tu"), tag("thanh-ngu")];
+    const open = render(createElement(TagChips, { tags, map: levelledMap(), selected: ["cum-dong-tu"], onChange: vi.fn(), max: 3, onAdd: vi.fn(), testId: "t" }));
+    expect(open).not.toMatch(/<details[^>]*data-testid="far-t-vocab"/);
+    const fresh = render(createElement(TagChips, { tags, map: levelledMap(), selected: [], onChange: vi.fn(), max: 3, onAdd: vi.fn(), testId: "t" }));
+    expect(fresh).toMatch(/<details[^>]*data-testid="far-t-vocab"[\s\S]*?tag-chip-cum-dong-tu/);
+  });
+});
