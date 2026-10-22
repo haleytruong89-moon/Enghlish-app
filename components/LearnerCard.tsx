@@ -90,10 +90,13 @@ export function LearnerCard({
   today,
   role,
   todayIso = todayVn(),
+  revisionsReady = true,
 }: {
   learner: LearnerSummary;
   today: TodayData | null;
   role: "tutor" | "parent";
+  /** false while migration 0021 is not applied: the "Bài đã sửa" link is left out (no dead link). */
+  revisionsReady?: boolean;
   /** Today in Vietnam (YYYY-MM-DD); only for the "Quá hạn" label. */
   todayIso?: string;
 }) {
@@ -209,9 +212,11 @@ export function LearnerCard({
         <Link href={`/learners/${learner.id}/levels`} data-testid={`levels-link-${learner.id}`} className={linkClass}>
           {levelCopy.link}
         </Link>
-        <Link href={`/learners/${learner.id}/revisions`} data-testid={`revisions-link-${learner.id}`} className={linkClass}>
-          {revisionReviewCopy.link}
-        </Link>
+        {revisionsReady ? (
+          <Link href={`/learners/${learner.id}/revisions`} data-testid={`revisions-link-${learner.id}`} className={linkClass}>
+            {revisionReviewCopy.link}
+          </Link>
+        ) : null}
         <Link href={`/learners/${learner.id}/reading/new`} className={linkClass}>
           {readingPage.link}
         </Link>

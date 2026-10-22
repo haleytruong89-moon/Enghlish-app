@@ -906,7 +906,7 @@ Bài sửa **không bao giờ** là "lần đầu" và luôn nối với bài g�
 
 ### Quyết định trong kế hoạch (phụ huynh xem lại)
 
-D1 bước "Sửa bài" của chủ đề = bước sửa đầu tiên sau bài, không có bước viết nào xen giữa · D2 bước đó mở ngay hôm nay · D3 bước sửa riêng số 1001+ · D4 điểm "Sửa bài" (A3) ghi trên bài sửa, không vào mẫu số độ phủ · D5 bài sửa luôn là "có góp ý" · D6 số lần / gia đình học tập của bài sửa · D7 vòng 2 cùng bước sửa · D8 chỉ bài viết làm trong app · D9 góp ý và chấm độc lập · D10 "Chỉ góp ý" hiện 14 ngày ở trang chủ con · D11 đánh giá + Xong/Vòng 2 lưu một lần · D12 "đã xem" hiện 14 ngày · D13 giữ khai báo trợ giúp khi nộp bài sửa · D14 bài sửa của bài kiểm tra trong buổi: chỉ gia sư · D15 Hộp duyệt: bài sửa xong khi bấm Xong / Mở vòng 2 · D16 kỹ năng gắn là lá của bản đồ · D17 trang "Bài đã sửa" · D18 không kiểm "điểm" trong trích đoạn / lý do của con · D19 bảng cài đặt theo track · D20 màn sửa nằm ở link bước cũ. Chi tiết: bảng "Decisions" trong kế hoạch.
+D1 bước "Sửa bài" của chủ đề = bước sửa đầu tiên sau bài, không có bước viết nào xen giữa · D2 bước đó mở ngay hôm nay · D3 bước sửa riêng số 1001+ · D4 điểm "Sửa bài" (A3) ghi trên bài sửa, không vào mẫu số độ phủ · D5 bài sửa luôn là "có góp ý" · D6 số lần / gia đình học tập của bài sửa · D7 vòng 2 cùng bước sửa · D8 chỉ bài viết làm trong app · D9 góp ý và chấm độc lập · D10 "Chỉ góp ý" hiện 14 ngày ở trang chủ con · D11 đánh giá + Xong/Vòng 2 lưu một lần · D12 "đã xem" hiện 14 ngày · D13 giữ khai báo trợ giúp khi nộp bài sửa · D14 bài sửa của bài kiểm tra trong buổi: chỉ gia sư (duyệt, chấm, gắn nhãn và màn xem bài — review 22/10 làm trọn) · D15 Hộp duyệt: bài sửa xong khi bấm Xong / Mở vòng 2 · D16 kỹ năng gắn là lá của bản đồ · D17 trang "Bài đã sửa" · D18 không kiểm "điểm" trong trích đoạn / lý do của con · D19 bảng cài đặt theo track · D20 màn sửa nằm ở link bước cũ. Chi tiết: bảng "Decisions" trong kế hoạch.
 
 ### Phụ huynh đã trả lời 22/10/2026 ("ok G1–G4, ok mockup S6"; không còn câu hỏi mở)
 
@@ -921,6 +921,17 @@ D1 bước "Sửa bài" của chủ đề = bước sửa đầu tiên sau bài,
 - Bài viết giao lẻ (G3): khi có, gắn vào đúng luồng góp ý → sửa bài này (Studio PR B / giao bài lẻ).
 - Cách nới tiếp luật chữ "điểm" nếu thực tế vẫn từ chối nhầm: "điểm mạnh 1" hay "câu 2 có điểm mạnh" (số + một chữ + "điểm") hiện bị từ chối vì luật cho phép cách nhau một chữ.
 - Điểm "Sửa bài" (A3) của Track B chỉ thấy ở bài sửa và ở "Bài đã sửa": muốn liệt kê vào mục theo dõi riêng cần bộ B-v2 (B-v1 đã khóa).
+
+### Sửa theo review Opus (22/10, cùng nhánh)
+
+- **B1:** dòng ``` thừa làm hiện ký tự lạ trên mỗi dòng Hộp duyệt — đã bỏ; thêm test dựng trang Hộp duyệt (không dòng nào có dấu `\``) và quét mọi `.tsx` tìm dòng chỉ có dấu ngược.
+- **S1 (D14 trọn):** `0021` viết lại `eng_tag_episode` (bản 0014) và `eng_review_episode` (bản 0010) để dùng `eng_episode_restricted`: phụ huynh không gắn nhãn được cho bài sửa của bài kiểm tra trong buổi (42501), màn xem bài báo `restricted`.
+- **S2:** sửa góp ý khóa bước sửa trước khi kiểm tra "con đã bắt đầu"; nộp bài sửa gửi `feedback_id` (góp ý cũ → "Thầy/cô vừa sửa góp ý — tải lại trang để xem bản mới."); Xong / Mở vòng 2 / trước–sau lấy góp ý theo đánh dấu của bài sửa.
+- **S3/N2:** luật chữ "điểm" chốt lại (xem câu 2 ở trên) — **Claude đề xuất, phụ huynh xem lại**.
+- **S4:** kiểm tra "không điểm / không verdict" của e2e dời vào bộ S6 (trang sửa bài ở trạng thái làm và đã xem, ô ở trang chủ), không còn nhánh `if (status === 200)` có thể pass rỗng.
+- **S5:** dòng "Sửa bài" biến mất khi bước bị bỏ hoặc dời sang ngày sau; bài ghi ngoài app trên bước sửa đóng việc sửa của em (chọn cách này thay vì từ chối ghi, vì gia sư có thể thật sự ghi bài sửa trên giấy). Hộp duyệt / khung góp ý của người lớn không đổi.
+- **N3:** so khác theo NFC + nháy thẳng; cột "Bài cũ" giữ khoảng trắng / xuống dòng của bài cũ. **N4:** dán chữ chỉ nhận ở ô viết chính. **N5:** nhóm nút và nhãn lý do ghi rõ "Góp ý n". **N6:** bước sửa của mẫu đã có bài sửa tính là xong trong "Xong x/y bước"; dòng bài sửa trong Hộp duyệt không còn "Đã chấm 0/n kỹ năng".
+- **N7:** khi chưa áp `0021`, thẻ của em không hiện link "Bài đã sửa" và trang `/learners/[id]/revisions` báo nhẹ "chưa sẵn sàng" thay vì lỗi. Việc **áp `0021` trước khi thử preview hoặc gộp** vẫn là bước bắt buộc; các màn khác của S6 (Hộp duyệt, trang chủ của em) cũng cần `0021` nên chỉ phần "Bài đã sửa" được che như trên.
 
 ### Ghi chú khi làm
 

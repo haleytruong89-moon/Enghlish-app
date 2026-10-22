@@ -1449,6 +1449,7 @@ export const revisionReviewCopy = {
   stateDone: "Đã xem xong",
   verdictSummary: (good: number, total: number) => `${good}/${total} góp ý đã cải thiện hoặc có lý do hợp lý`,
   link: "Bài đã sửa",
+  unavailable: "Phần “Bài đã sửa” chưa sẵn sàng. Bạn thử lại sau nhé.",
   back: "Về danh sách bài đã sửa",
   backHome: "Về trang chủ",
   openReview: "Mở trong Hộp duyệt",

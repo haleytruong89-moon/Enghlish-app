@@ -11,6 +11,7 @@ import { loadToday, type TodayData } from "@/lib/tutorwork/load";
 import { loadHome } from "@/lib/home/loadHome";
 import { loadRecentLevelChanges } from "@/lib/levels/load";
 import { countToDecide } from "@/lib/review/load";
+import { revisionsAvailable } from "@/lib/revision/load";
 import { safeColor } from "@/lib/home/visible";
 import { loadStudentHome } from "@/lib/work/load";
 
@@ -78,6 +79,8 @@ export default async function HomePage() {
   );
   // "Thay đổi cấp gần đây" (parent only). null = could not be read: the box is left out rather than claiming "no change".
   const recent = isParent ? await loadRecentLevelChanges(data.learners) : null;
+  // "Bài đã sửa" needs migration 0021: until it is applied the link on each card is left out (no dead link).
+  const revisionsReady = await revisionsAvailable();
   return (
     <>
       <AppHeader name={data.displayName} showTestBadge={anyTest} />
@@ -95,7 +98,7 @@ export default async function HomePage() {
         {recent ? <RecentLevelChanges items={recent} /> : null}
         <ul className="mt-6 flex flex-col gap-3">
           {data.learners.map((l, i) => (
-            <LearnerCard key={l.id} learner={l} today={todays[i] ?? null} role={role} />
+            <LearnerCard key={l.id} learner={l} today={todays[i] ?? null} role={role} revisionsReady={revisionsReady} />
           ))}
         </ul>
       </main>
