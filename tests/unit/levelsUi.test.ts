@@ -2,11 +2,14 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { LearnerCard } from "@/components/LearnerCard";
+import { AdjustForm } from "@/components/levels/AdjustForm";
+import { BaselineForm } from "@/components/levels/BaselineForm";
+import { ExternalResultForm } from "@/components/levels/ExternalResultForm";
 import { DomainDetail } from "@/components/levels/DomainDetail";
 import { LevelBars } from "@/components/levels/LevelBars";
 import { LevelSummaryCard } from "@/components/levels/LevelSummaryCard";
 import { Milestones } from "@/components/levels/Milestones";
-import { levelCopy } from "@/lib/copy/vi";
+import { externalCopy, levelCopy, levelFormCopy } from "@/lib/copy/vi";
 import type { SkillGroup } from "@/lib/skillmap/types";
 import type { WeakPoint } from "@/lib/tutorwork/types";
 import { assumedProfile, confirmedProfile } from "./fixtures/levels";
@@ -122,5 +125,58 @@ describe("Milestones: corrections (A2)", () => {
     expect(html).not.toContain(levelCopy.corrected("172 · Grade B"));
     expect(html.match(/data-testid="external-e1"/g)).toHaveLength(1);
     expect(html).not.toContain("external-e0");
+  });
+});
+
+describe("forms", () => {
+  it("baseline: one row per unconfirmed domain, prefilled with the assumed level; the thinking row offers bậc 1–4", () => {
+    const html = render(createElement(BaselineForm, {
+      learnerId: L,
+      rows: [{ key: "grammar", name: "Ngữ pháp", scale: "cefr", assumed: "B2" }, { key: "thinking", name: "Tư duy", scale: "task_level", assumed: "2" }],
+    }));
+    expect(html).toMatch(/data-testid="baseline-grammar"[\s\S]*?<option value="B2" selected="">B2<\/option>/);
+    expect((html.match(/<option value="[ABC][12]\+?"/g) ?? []).length).toBe(9);
+    expect(html).toMatch(/data-testid="baseline-thinking"[\s\S]*?<option value="2" selected="">bậc 2<\/option>/);
+    expect(html).toContain(levelFormCopy.assumedHint("B2"));
+    expect(html).toContain(levelFormCopy.saveBaseline);
+    expect(html).not.toMatch(NO_DAT);
+  });
+
+  it("adjust: shows the current level, offers the domain's own scale and needs a reason", () => {
+    const html = render(createElement(AdjustForm, { learnerId: L, domain: { key: "writing", name: "Viết", scale: "cefr", current: "B1+" } }));
+    expect(html).toContain(levelFormCopy.current("B1+"));
+    expect(html).toMatch(/<option value="B1\+" selected="">B1\+<\/option>/);
+    expect(html).toMatch(/<textarea[^>]*required=""[^>]*data-testid="adjust-reason"/);
+    expect(html).toContain(levelFormCopy.reason);
+    expect(html).not.toMatch(NO_DAT);
+  });
+
+  it("external result: 8 exams, a date no later than today, 7 domain boxes, an optional PDF or image", () => {
+    const html = render(createElement(ExternalResultForm, {
+      learnerId: L, domains: assumedProfile().domains.map((d) => ({ key: d.key, name: d.name })), today: "2026-10-22", minDate: "2016-10-25",
+    }));
+    expect((html.match(/<option value="(KET|PET|FCE|CAE|CPE|VAO10_MOCK|SCHOOL|OTHER)"/g) ?? []).length).toBe(8);
+    expect(html).toContain(externalCopy.examLabels.VAO10_MOCK);
+    expect(html).toMatch(/<input[^>]*type="date"[^>]*max="2026-10-22"/);
+    expect(count(html, 'data-testid="external-domain-')).toBe(7);
+    expect(html).toContain('accept="application/pdf,image/png,image/jpeg,image/webp"');
+    expect(html).not.toMatch(NO_DAT);
+  });
+
+  it("A2: the correction form starts from the old entry, says the old one stays in history, and has no stray prefill without it", () => {
+    const base = { learnerId: L, domains: assumedProfile().domains.map((d) => ({ key: d.key, name: d.name })), today: "2026-10-22", minDate: "2016-10-25" };
+    const html = render(createElement(ExternalResultForm, {
+      ...base, edit: { id: "e1", exam: "FCE", takenOn: "2026-09-12", scoreText: "165", domains: ["reading"], note: "Ghi chú cũ" },
+    }));
+    expect(html).toContain('data-editing="e1"');
+    expect(html).toMatch(/<option value="FCE" selected="">/);
+    expect(html).toContain('value="2026-09-12"');
+    expect(html).toContain('value="165"');
+    expect(html).toMatch(/data-testid="external-domain-reading"[^>]*checked=""|checked=""[^>]*data-testid="external-domain-reading"/);
+    expect(html).toContain("Ghi chú cũ");
+    expect(html).toContain(externalCopy.editFileHint);
+    const plain = render(createElement(ExternalResultForm, base));
+    expect(plain).not.toContain("data-editing");
+    expect(plain).not.toContain(externalCopy.editFileHint);
   });
 });
