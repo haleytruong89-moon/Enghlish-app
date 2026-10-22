@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { externalCopy } from "@/lib/copy/vi";
+import { externalCopy, fallbackLabels } from "@/lib/copy/vi";
 import { EXAMS, NOTE_MAX, SCORE_MAX, type Exam } from "@/lib/levels/types";
 import { practiceErrorText, uploadAll, type UploadCache } from "@/lib/practice/client";
 import type { DomainKey } from "@/lib/skillmap/types";
@@ -90,7 +90,7 @@ export function ExternalResultForm({
         <select value={exam} onChange={(e) => setExam(e.target.value as Exam)} data-testid="external-exam" className={`${field} max-w-72`}>
           {EXAMS.map((x) => (
             <option key={x} value={x}>
-              {externalCopy.examLabels[x] ?? x}
+              {externalCopy.examLabels[x] ?? fallbackLabels.exam}
             </option>
           ))}
         </select>

@@ -242,6 +242,8 @@ export const fallbackLabels = {
   autoResult: "Cần người xem",
   tag: "Nhãn khác",
   record: "Dữ liệu khác",
+  exam: "Kỳ thi khác",
+  levelKind: "Quyết định cấp",
 } as const;
 
 /** Nhãn nguồn của một bài (provenance). Học sinh không thấy các nhãn này. */

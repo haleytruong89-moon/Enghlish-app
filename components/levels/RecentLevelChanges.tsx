@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { levelCopy } from "@/lib/copy/vi";
+import { fallbackLabels, levelCopy } from "@/lib/copy/vi";
 import type { RecentChange } from "@/lib/levels/types";
 import { dayLabel, levelText } from "@/lib/levels/view";
 
@@ -21,7 +21,7 @@ export function RecentLevelChanges({ items }: { items: RecentChange[] }) {
                 className="flex min-h-11 flex-col gap-0.5 rounded-lg bg-paper px-4 py-3 text-ink no-underline hover:bg-[#E3ECE8]"
               >
                 <span className="font-semibold">{levelCopy.recentLine(c.alias, c.domainName, levelText(c.scale, c.from), levelText(c.scale, c.to))}</span>
-                <span className="text-sm text-muted">{levelCopy.historyMeta(levelCopy.kindLabels[c.kind] ?? c.kind, dayLabel(c.decidedAt), c.decidedBy)}</span>
+                <span className="text-sm text-muted">{levelCopy.historyMeta(levelCopy.kindLabels[c.kind] ?? fallbackLabels.levelKind, dayLabel(c.decidedAt), c.decidedBy)}</span>
                 {c.reason ? <span className="text-sm">“{c.reason}”</span> : null}
               </Link>
             </li>

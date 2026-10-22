@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { externalCopy, levelCopy } from "@/lib/copy/vi";
+import { externalCopy, fallbackLabels, levelCopy } from "@/lib/copy/vi";
 import { formatDateVi } from "@/lib/inquiries/format";
 import type { LevelProfile } from "@/lib/levels/types";
 import { dayLabel, levelText, monthLabel } from "@/lib/levels/view";
@@ -33,7 +33,7 @@ export function Milestones({ profile, learnerId }: { profile: LevelProfile; lear
       <ul className="mt-1 flex flex-col gap-2 text-sm">
         {profile.externalResults.map((e) => (
           <li key={e.id} data-testid={`external-${e.id}`} className="flex flex-col gap-0.5 rounded-lg bg-paper px-4 py-2">
-            <span className="font-semibold">{levelCopy.externalLine(externalCopy.examLabels[e.exam] ?? e.exam, formatDateVi(e.takenOn), e.scoreText)}</span>
+            <span className="font-semibold">{levelCopy.externalLine(externalCopy.examLabels[e.exam] ?? fallbackLabels.exam, formatDateVi(e.takenOn), e.scoreText)}</span>
             <span className="text-muted">{levelCopy.externalDomains(e.domains.map(name).join(", "))}</span>
             {e.note ? <span>“{e.note}”</span> : null}
             {e.fileId ? (
@@ -79,7 +79,7 @@ export function Milestones({ profile, learnerId }: { profile: LevelProfile; lear
           {profile.history.map((h) => (
             <li key={h.id} data-testid={`history-${h.id}`} className="flex flex-col gap-0.5 border-l-4 border-line pl-3">
               <span className="font-semibold">{levelCopy.historyLine(name(h.domainKey), lv(h.domainKey, h.from), lv(h.domainKey, h.to))}</span>
-              <span className="text-muted">{levelCopy.historyMeta(levelCopy.kindLabels[h.kind] ?? h.kind, dayLabel(h.decidedAt), h.decidedBy)}</span>
+              <span className="text-muted">{levelCopy.historyMeta(levelCopy.kindLabels[h.kind] ?? fallbackLabels.levelKind, dayLabel(h.decidedAt), h.decidedBy)}</span>
               {h.reason ? <span>“{h.reason}”</span> : null}
             </li>
           ))}
