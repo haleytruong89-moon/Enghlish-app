@@ -4395,3 +4395,39 @@ git commit -m "docs(sm-2): PROGRESS section, status + next migration 0021, DESIG
 | Docs (PROGRESS, CLAUDE.md next 0021, DESIGN) | Task 11 |
 
 Placeholder scan: every code step carries the code; the only "adapt by hand" note is Task 8's warning that `feature/skill-map` may move under review (the tests remain the contract). Names checked across tasks: `eng_record_level`, `eng_record_external_result`, `eng_level_profile`, `eng_recent_level_changes`, `eng_my_review_by_domain`, `loadLevelProfile`, `loadRecentLevelChanges`, `mergeRecentChanges`, `loadPickerMap`, `levelsOf`, `nearLevel`, `currentLevels`, `RecentChange`, `ReviewItem`, `BucketGroup`, `levelCopy` / `levelFormCopy` / `externalCopy` / `studentReviewCopy`, `EXAM_DAYS_BACK`.
+
+---
+
+## Amendments — parent decisions 22/10/2026 ("ok SM-2")
+
+The parent approved D1–D15 except D9 and D13, which change as follows. These amendments override the tasks above wherever they conflict. Task 11 (docs, review, PR) must describe them.
+
+### A1 (replaces D13): say "thầy/cô", never a literal "cô"
+
+All level strings use the existing configurable `tutorHonorific` from `lib/copy/vi.ts` (today "thầy/cô"). Examples: "Đang chờ thầy/cô", "Ước lượng — thầy/cô chưa xác nhận", "Thầy/cô xác nhận ngày …". Reason: tutor accounts are generic and the tutor may change, so a gendered word can become wrong.
+
+- In Task 4 copy and Task 6/7/9 components, build these strings from `tutorHonorific`. Do not hard-code "cô". Capitalise the first letter at sentence start with a small helper, e.g. `cap(tutorHonorific)`.
+- Add a unit test: no level-profile string in `lib/copy/vi.ts` contains the standalone word "cô" (regex `/(^|[^/\p{L}])cô([^/\p{L}]|$)/u` on the `levels…` copy objects). Any "cô" must come from `tutorHonorific`.
+
+### A2 (replaces D9): an external result can be corrected by a replacement entry
+
+Nothing is ever deleted. A correction is a new row that replaces an earlier one, following the same pattern as `results.supersedes_id` in 0014 / "Sửa kết quả" in S5b.
+
+- **Migration 0020:** `english.external_results` gets `supersedes_id uuid references english.external_results(id)`, nullable. Add a unique partial index so a row is superseded at most once: `create unique index … on english.external_results(supersedes_id) where supersedes_id is not null`. The table stays append-only.
+- **`eng_record_external_result`:** gains the last parameter `p_supersedes uuid default null`. When it is set:
+  - the target row must exist and belong to the same learner;
+  - the target row must not already be superseded; otherwise raise `already_superseded`;
+  - the actor must be tutor or parent in scope, same as for creating a row;
+  - write audit `external_result.corrected`.
+  - Update the function signature in grants/revokes, the store and the tests.
+- **Reading:** `eng_level_profile` and the "Mốc ngoài" lists only show live rows (rows nobody supersedes). History shows a corrected row as "đã sửa" next to its replacement. Purge and preview count both rows.
+- **UI (Task 7):** each live external result in "Mốc ngoài & lịch sử" gets a "Sửa" link. It opens the same form prefilled from that row and posts it with `supersedes_id`. The copy goes in `vi.ts`.
+- **API (Task 5):** the body schema accepts an optional `supersedes_id`. Error `already_superseded` maps to 409, `not_found` to 404.
+- **DB tests:**
+  - correct once → OK;
+  - correct the same row again → `already_superseded`;
+  - correct another learner's row → refused;
+  - a student cannot call it;
+  - the profile shows only the replacement;
+  - purge removes both rows.
+- **E2E:** extend the Task 10 external-result check: add a result, press Sửa, change the score, and the profile shows only the new score.
