@@ -122,7 +122,7 @@ begin
 end
 $$;
 
--- RLS: thành viên app đọc bản đồ ĐÃ công bố (như cấu hình ở 0005). Không có policy ghi; ghi chỉ bằng migration.
+-- RLS: phụ huynh / gia sư (không phải học sinh) đọc bản đồ ĐÃ công bố, như error_tags (0014). Không có policy ghi; ghi chỉ bằng migration.
 alter table english.skill_maps enable row level security;
 alter table english.skill_domains enable row level security;
 alter table english.skill_groups enable row level security;
@@ -131,24 +131,24 @@ alter table english.skill_leaves enable row level security;
 drop policy if exists skill_maps_select on english.skill_maps;
 create policy skill_maps_select on english.skill_maps
   for select to authenticated
-  using (published_at is not null and english.eng_current_member_id() is not null);
+  using (published_at is not null and english.eng_is_staff());
 
 drop policy if exists skill_domains_select on english.skill_domains;
 create policy skill_domains_select on english.skill_domains
   for select to authenticated
-  using (english.eng_current_member_id() is not null
+  using (english.eng_is_staff()
          and exists (select 1 from english.skill_maps m where m.id = skill_domains.map_id and m.published_at is not null));
 
 drop policy if exists skill_groups_select on english.skill_groups;
 create policy skill_groups_select on english.skill_groups
   for select to authenticated
-  using (english.eng_current_member_id() is not null
+  using (english.eng_is_staff()
          and exists (select 1 from english.skill_maps m where m.id = skill_groups.map_id and m.published_at is not null));
 
 drop policy if exists skill_leaves_select on english.skill_leaves;
 create policy skill_leaves_select on english.skill_leaves
   for select to authenticated
-  using (english.eng_current_member_id() is not null
+  using (english.eng_is_staff()
          and exists (select 1 from english.skill_maps m where m.id = skill_leaves.map_id and m.published_at is not null));
 
 grant select on english.skill_maps, english.skill_domains, english.skill_groups, english.skill_leaves to authenticated;
@@ -640,9 +640,11 @@ language plpgsql volatile security definer set search_path = ''
 as $$
 declare
   v_learner english.learners%rowtype;
+  v_member english.members%rowtype;
   v_label text := pg_catalog.regexp_replace(pg_catalog.btrim(coalesce(p_label, '')), '\s+', ' ', 'g');
   v_map text := english.eng_current_skill_map();
   v_existing english.error_tags%rowtype;
+  v_set_group text;
   v_key text;
   v_try int := 0;
 begin
@@ -653,7 +655,8 @@ begin
   if not found then
     raise exception 'eng_add_error_tag_v2: learner not found' using errcode = 'P0002';
   end if;
-  if not exists (select 1 from english.members m where m.id = p_by and m.role in ('tutor', 'parent')) or not english.eng_actor_may_manage(p_by, p_learner) then
+  select * into v_member from english.members m where m.id = p_by;
+  if v_member.id is null or v_member.role not in ('tutor', 'parent') or not english.eng_actor_may_manage(p_by, p_learner) then
     raise exception 'eng_add_error_tag_v2: this member may not add tags for this learner' using errcode = '42501';
   end if;
   if p_key !~ '^x-[a-z0-9][a-z0-9-]{0,44}$' or pg_catalog.length(v_label) not between 2 and 120 then
@@ -671,8 +674,16 @@ begin
   order by t.family_id nulls first limit 1;
   if found then
     if v_existing.origin = 'custom' and v_existing.group_key is null then
-      update english.error_tags set group_key = p_group_key where id = v_existing.id;
-      v_existing.group_key := p_group_key;
+      -- Set the group once only (never overwrite one that is already there, even under a race) and leave an audit row when it is set.
+      update english.error_tags set group_key = p_group_key
+      where id = v_existing.id and group_key is null
+      returning group_key into v_set_group;
+      if found then
+        insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+        values (v_member.user_id, v_member.role, 'error_tag.grouped', v_learner.family_id, p_learner,
+                pg_catalog.jsonb_build_object('tag_key', v_existing.key, 'group_key', p_group_key, 'map_id', v_map));
+      end if;
+      select t.group_key into v_existing.group_key from english.error_tags t where t.id = v_existing.id;
     end if;
     return pg_catalog.jsonb_build_object('key', v_existing.key, 'label_vi', v_existing.label_vi, 'group_key', v_existing.group_key, 'created', false);
   end if;
@@ -763,14 +774,14 @@ begin
   select d.target_ids into v_set
   from english.target_sets ts
   join english.target_set_definitions d on d.id = ts.definition_id
-  where ts.learner_id = p_learner and ts.effective_from <= pg_catalog.clock_timestamp()
+  where ts.learner_id = p_learner and ts.effective_from <= pg_catalog.now()
   order by ts.effective_from desc, ts.seq desc
   limit 1;
   v_set := coalesce(v_set, '{}'::text[]);
 
   return (
     with leaves as (
-      -- nhãn có sẵn của track em (kể cả lá ẩn khỏi ô chọn: dấu nhãn cũ vẫn cần tên và mảng)
+      -- nhãn có sẵn của track em (kể cả lá ẩn khỏi ô chọn và nhãn đã nghỉ dùng: dấu nhãn cũ vẫn cần tên và mảng)
       select lf.group_key, 0 as o1, lf.ord as o2, t.label_vi as o3,
              pg_catalog.jsonb_build_object(
                'kind', 'tag', 'track_id', lf.track_id, 'ref_key', lf.ref_key, 'label_vi', t.label_vi,
@@ -778,17 +789,17 @@ begin
                'core', lf.core, 'hidden_in_picker', lf.hidden_in_picker, 'related', pg_catalog.to_jsonb(lf.related),
                'custom', false, 'in_set', false) as leaf
       from english.skill_leaves lf
-      join english.error_tags t on t.track_id = lf.track_id and t.key = lf.ref_key and t.family_id is null and t.retired_at is null
+      join english.error_tags t on t.track_id = lf.track_id and t.key = lf.ref_key and t.family_id is null
       where lf.map_id = v_map.id and lf.kind = 'tag' and lf.track_id = v_l.track_id
       union all
-      -- nhãn riêng của gia đình đã có nhóm
+      -- nhãn riêng của gia đình đã có nhóm (kể cả đã nghỉ dùng; ô chọn tự bỏ nhãn đã nghỉ)
       select t.group_key, 1, 0, t.label_vi,
              pg_catalog.jsonb_build_object(
                'kind', 'tag', 'track_id', t.track_id, 'ref_key', t.key, 'label_vi', t.label_vi,
                'level_from', null, 'level_to', null, 'task_from', null, 'task_to', null,
                'core', false, 'hidden_in_picker', false, 'related', '[]'::jsonb, 'custom', true, 'in_set', false)
       from english.error_tags t
-      where t.family_id = v_l.family_id and t.track_id = v_l.track_id and t.retired_at is null and t.group_key is not null
+      where t.family_id = v_l.family_id and t.track_id = v_l.track_id and t.group_key is not null
         and exists (select 1 from english.skill_groups g where g.map_id = v_map.id and g.key = t.group_key)
       union all
       -- mọi kỹ năng danh mục của bản đồ; "trong bộ" = trong bộ kỹ năng hiện tại của em

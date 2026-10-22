@@ -92,8 +92,13 @@ describe("SM-1 skill map (migration 0019)", () => {
       expect(await q1("select (select count(*) from english.skill_leaves)::int as l, (select published_at from english.skill_maps) as p")).toEqual(before);
     });
 
-    it("members read the published map; anon reads nothing", async () => {
+    it("staff read the published map; a student reads nothing from any of the four tables; anon reads nothing", async () => {
       expect((await rowsAs<{ n: number }>(db.client, "authenticated", s.users.tutorNguyen, "select count(*)::int as n from english.skill_groups"))[0]?.n).toBe(40);
+      for (const who of [s.users.studentNguyen, s.users.studentAn]) {
+        for (const t of ["skill_maps", "skill_domains", "skill_groups", "skill_leaves"]) {
+          expect((await rowsAs<{ n: number }>(db.client, "authenticated", who, `select count(*)::int as n from english.${t}`))[0]?.n, t).toBe(0);
+        }
+      }
       const anon = await q1<{ t: string; ok: boolean }>(`select t, has_table_privilege('anon', ('english.' || t)::regclass, 'select') as ok
                     from unnest(array['skill_maps', 'skill_domains', 'skill_groups', 'skill_leaves']) as t`);
       expect(anon.every((r) => !r.ok)).toBe(true);
@@ -144,6 +149,17 @@ describe("SM-1 skill map (migration 0019)", () => {
       expect(await q1("select group_key from english.error_tags where key = $1", [oldKey])).toEqual([{ group_key: null }]);
     });
 
+    it("the same label as an old ungrouped family tag sets its group once (with an audit row) and never overwrites it", async () => {
+      const old = await addV1(learner2, "Nhãn cũ chưa xếp nhóm", parent2Member);
+      expect(await q1("select group_key from english.error_tags where key = $1", [old.key])).toEqual([{ group_key: null }]);
+      expect(await addV2(learner2, "nhãn cũ chưa xếp nhóm", "gr-tense", parent2Member)).toMatchObject({ key: old.key, group_key: "gr-tense", created: false });
+      const audit = () => q1<{ payload: Record<string, unknown> }>("select payload from english.audit_log where action = 'error_tag.grouped' and payload ->> 'tag_key' = $1", [old.key]);
+      expect((await audit()).map((r) => r.payload)).toEqual([{ tag_key: old.key, group_key: "gr-tense", map_id: "SM-1" }]);
+      expect(await addV2(learner2, "Nhãn cũ chưa xếp nhóm", "gr-emphasis", parent2Member)).toMatchObject({ key: old.key, group_key: "gr-tense", created: false });
+      expect(await q1("select group_key from english.error_tags where key = $1", [old.key])).toEqual([{ group_key: "gr-tense" }]);
+      expect(await audit()).toHaveLength(1);
+    });
+
     it("only staff of this child: a student, the other child's tutor and another family are refused", async () => {
       for (const who of [M().studentNguyen, M().tutorAn, parent2Member]) await fail(addV2(NG(), "Không được", "gr-tense", who), "42501");
       await fail(addV2(randomUUID(), "Không có em", "gr-tense", M().tutorNguyen), "P0002");
@@ -174,6 +190,17 @@ describe("SM-1 skill map (migration 0019)", () => {
   });
 
   describe("4. eng_skill_map", () => {
+    it("a retired seed tag keeps its place in the map, so old data still has a name and a domain", async () => {
+      const inMap = async () => leavesOf(await mapOf(NG())).filter((l) => l.kind === "tag" && l.ref_key === "dang-tu").map((l) => l.group);
+      expect(await inMap()).toEqual(["vo-word-form"]);
+      await q1("update english.error_tags set retired_at = now() where track_id = 'B' and key = 'dang-tu' and family_id is null");
+      try {
+        expect(await inMap()).toEqual(["vo-word-form"]);
+      } finally {
+        await q1("update english.error_tags set retired_at = null where track_id = 'B' and key = 'dang-tu' and family_id is null");
+      }
+    });
+
     it("Nguyên (B): 7 domains, 40 groups, the 24 B tags + the family's grouped tags, all 70 skills with the 12 of B-v1 flagged", async () => {
       const m = await mapOf(NG());
       expect([m.map_id, m.track_id]).toEqual(["SM-1", "B"]);
@@ -214,7 +241,8 @@ describe("SM-1 skill map (migration 0019)", () => {
     it("another family sees its own tags only; an unknown learner is not found", async () => {
       const m = await mapOf(learner2);
       expect(m.unassigned.map((l) => l.label_vi)).toEqual(["Nhãn nhà khác"]);
-      expect(leavesOf(m).some((l) => l.custom)).toBe(false);
+      // its only grouped family tag is the one grouped by the v2 replay test above; nothing of the other family leaks in
+      expect(leavesOf(m).filter((l) => l.custom).map((l) => l.label_vi)).toEqual(["Nhãn cũ chưa xếp nhóm"]);
       expect(leavesOf(m).filter((l) => l.in_set)).toHaveLength(0); // no target set assigned
       await fail(mapOf(randomUUID()), "P0002");
     });
