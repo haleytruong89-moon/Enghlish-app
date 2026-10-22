@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { levelCopy, levelFormCopy } from "@/lib/copy/vi";
+import { clientIdAfter, describedBy } from "@/lib/levels/form";
 import { levelsOf } from "@/lib/levels/scale";
 import { REASON_MAX, type Scale } from "@/lib/levels/types";
 import type { DomainKey } from "@/lib/skillmap/types";
@@ -18,7 +19,7 @@ export function BaselineForm({ learnerId, rows }: { learnerId: string; rows: Bas
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   // One client id per screen: a retry after a lost answer is recognised as the same save (replayed).
-  const [clientId] = useState(() => crypto.randomUUID());
+  const [clientId, setClientId] = useState(() => crypto.randomUUID());
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -31,6 +32,8 @@ export function BaselineForm({ learnerId, rows }: { learnerId: string; rows: Bas
       ...(note.trim() ? { reason: note.trim() } : {}),
     });
     setBusy(false);
+    // After a 409 (e.g. a domain was confirmed meanwhile) the next try must be a new save, not the same client id again.
+    setClientId(clientIdAfter(r, clientId));
     if (!r.ok) return setMsg({ ok: false, text: failText(r) });
     setMsg({ ok: true, text: levelFormCopy.saved });
     router.push(`/learners/${learnerId}/levels`);
@@ -44,13 +47,14 @@ export function BaselineForm({ learnerId, rows }: { learnerId: string; rows: Bas
           <li key={r.key} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-white px-4 py-3">
             <span className="flex min-w-0 flex-col">
               <b className="font-semibold">{r.name}</b>
-              <span className="text-xs text-muted">{levelFormCopy.assumedHint(levelCopy.levelName(r.scale, r.assumed))}</span>
+              <span id={`baseline-${r.key}-hint`} className="text-xs text-muted">{levelFormCopy.assumedHint(levelCopy.levelName(r.scale, r.assumed))}</span>
             </span>
             <select
               aria-label={levelFormCopy.levelOf(r.name)}
               value={levels[r.key] ?? r.assumed}
               onChange={(e) => setLevels({ ...levels, [r.key]: e.target.value })}
               data-testid={`baseline-${r.key}`}
+              aria-describedby={describedBy(`baseline-${r.key}-hint`, msg && !msg.ok && "baseline-msg")}
               className="min-h-11 rounded-lg border border-line bg-white px-2"
             >
               {levelsOf(r.scale).map((l) => (
@@ -70,15 +74,16 @@ export function BaselineForm({ learnerId, rows }: { learnerId: string; rows: Bas
           rows={2}
           onChange={(e) => setNote(e.target.value)}
           data-testid="baseline-note"
+          aria-describedby={describedBy(msg && !msg.ok && "baseline-msg")}
           className="rounded-lg border border-line bg-white px-3 py-2"
         />
       </label>
       {msg ? (
-        <p role="status" data-testid="baseline-msg" className={msg.ok ? "text-accent" : "font-medium text-[#7a2a0c]"}>
+        <p id="baseline-msg" role="status" data-testid="baseline-msg" className={msg.ok ? "text-accent" : "font-medium text-[#7a2a0c]"}>
           {msg.text}
         </p>
       ) : null}
-      <button type="submit" disabled={busy} data-testid="baseline-save" className="min-h-12 rounded-xl bg-accent px-5 text-base font-semibold text-white disabled:opacity-60">
+      <button type="submit" disabled={busy} data-testid="baseline-save" aria-describedby={describedBy(msg && "baseline-msg")} className="min-h-12 rounded-xl bg-accent px-5 text-base font-semibold text-white disabled:opacity-60">
         {busy ? levelFormCopy.saving : levelFormCopy.saveBaseline}
       </button>
     </form>
