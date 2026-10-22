@@ -10,7 +10,6 @@ describe("SM-2 level profile (migration 0020)", () => {
   let oldTutor: string;
   const M = () => s.members;
   const NG = () => s.learners.nguyen;
-  const AN = () => s.learners.an;
   const TODAY = todayVn();
   const q1 = async <R extends Record<string, unknown>>(sql: string, params: unknown[] = []) => (await db.client.query<R>(sql, params)).rows;
   const n = async (sql: string, params: unknown[] = []) => ((await q1<{ n: number }>(sql, params))[0] as { n: number }).n;
@@ -281,5 +280,122 @@ describe("SM-2 level profile (migration 0020)", () => {
   });
 
 
-  // (Task 3 adds its sections here)
+  describe("4. reading the profile", () => {
+    type Dom = { key: string; current_level: string; assumed_level: string; status: string; last_kind: string | null; decided_by_name: string | null; external: { exam: string } | null };
+    type Profile = {
+      map_id: string; track_id: string; domains: Dom[]; history: { domain_key: string; kind: string; to_level: string }[];
+      external_results: { exam: string }[]; reading_reports: { month: string; skills: number }[];
+    };
+    const profile = (l: string) => svc<Profile>("select english.eng_level_profile($1) as r", [l]);
+
+    it("a new Track A child: 7 domains in map order, all assumed (A2, thinking 1), nothing in history", async () => {
+      const L = await newLearner("A");
+      const p = await profile(L);
+      expect([p.map_id, p.track_id]).toEqual(["SM-1", "A"]);
+      expect(p.domains.map((d) => [d.key, d.current_level, d.status])).toEqual([
+        ["grammar", "A2", "assumed"], ["vocab", "A2", "assumed"], ["reading", "A2", "assumed"], ["listening", "A2", "assumed"],
+        ["writing", "A2", "assumed"], ["speaking", "A2", "assumed"], ["thinking", "1", "assumed"],
+      ]);
+      expect([p.history, p.external_results, p.reading_reports]).toEqual([[], [], []]);
+    });
+
+    it("the latest decision wins; who decided; the newest external result per domain; history newest first", async () => {
+      const L = await newLearner("A");
+      await rec(M().tutorNguyen, { learner: L, levels: { grammar: "A2+", reading: "A2" } });
+      await rec(M().tutorNguyen, { learner: L, kind: "adjust", levels: { grammar: "B1" }, reason: "Làm tốt 3 bài kiểm tra" });
+      await ext(M().parent, { learner: L, exam: "KET", takenOn: addDays(TODAY, -200), domains: ["reading", "listening"] });
+      await ext(M().parent, { learner: L, exam: "PET", takenOn: addDays(TODAY, -10), domains: ["reading"] });
+      const p = await profile(L);
+      const by = new Map(p.domains.map((d) => [d.key, d]));
+      expect(by.get("grammar")).toMatchObject({ current_level: "B1", assumed_level: "A2", status: "confirmed", last_kind: "adjust", decided_by_name: "Cô của Nguyên (thử)" });
+      expect(by.get("reading")).toMatchObject({ current_level: "A2", status: "confirmed", external: { exam: "PET" } });
+      expect(by.get("listening")).toMatchObject({ status: "assumed", external: { exam: "KET" } });
+      expect(by.get("vocab")?.external).toBeNull();
+      expect(p.history.map((h) => [h.domain_key, h.kind, h.to_level])).toEqual([["grammar", "adjust", "B1"], ["reading", "baseline", "A2"], ["grammar", "baseline", "A2+"]]);
+      expect(p.external_results.map((e) => e.exam)).toEqual(["PET", "KET"]);
+    });
+
+    it("current monthly reading reports appear as months only, never with their source name", async () => {
+      const L = await newLearner("A");
+      const month = `${TODAY.slice(0, 7)}-01`;
+      await svc("select english.eng_record_reading_report($1, $2::date, null, $3::jsonb, null, null, $4, $5) as r",
+        [L, month, JSON.stringify([{ tag_key: "doc-main-idea", questions: 6, correct_pct: 50 }]), M().parent, randomUUID()]);
+      const p = await profile(L);
+      expect(p.reading_reports).toEqual([{ month, skills: 1 }]);
+      expect(JSON.stringify(p)).not.toMatch(/tomo/i);
+    });
+
+    it("recent changes: last p_days days, newest first, with the domain name and scale; older rows are left out", async () => {
+      const L = await newLearner("B");
+      await rec(M().tutorNguyen, { learner: L, levels: { thinking: "3" } });
+      await rec(M().tutorNguyen, { learner: L, kind: "adjust", levels: { thinking: "2" }, reason: "Chưa tự lập luận được" });
+      // an old decision, inserted by the owner as if made 40 days ago
+      await q1(`insert into english.level_decisions(learner_id, domain_key, map_id, from_level, to_level, kind, decided_by_member, decided_role, client_id, decided_at)
+                values ($1, 'grammar', 'SM-1', 'B2', 'B2', 'baseline', $2, 'tutor', 'old-decision-1', now() - interval '40 days')`, [L, M().tutorNguyen]);
+      type Change = { domain_key: string; domain_name: string; scale: string; from_level: string; to_level: string; kind: string; reason: string | null };
+      const r = await svc<{ changes: Change[] }>("select english.eng_recent_level_changes($1, 30) as r", [L]);
+      expect(r.changes.map((c) => [c.domain_key, c.domain_name, c.scale, c.from_level, c.to_level, c.kind, c.reason])).toEqual([
+        ["thinking", "Tư duy & tự học", "task_level", "3", "2", "adjust", "Chưa tự lập luận được"],
+        ["thinking", "Tư duy & tự học", "task_level", "2", "3", "baseline", null],
+      ]);
+      expect((await svc<{ changes: unknown[] }>("select english.eng_recent_level_changes($1, 60) as r", [L])).changes).toHaveLength(3);
+    });
+
+    it("a corrected external result: the profile lists only the replacement (and what it replaced); the domain's latest mark is the replacement", async () => {
+      const L = await newLearner("B");
+      const first = await ext(M().parent, { learner: L, exam: "FCE", score: "165", domains: ["reading"], clientId: "ext-prof-0001" });
+      const fixed = await ext(M().parent, { learner: L, exam: "FCE", score: "172", domains: ["reading"], clientId: "ext-prof-0002", supersedes: first.id });
+      const p = await svc<{ domains: { key: string; external: { id: string; score_text: string } | null }[];
+        external_results: { id: string; score_text: string; replaces: { id: string; score_text: string } | null }[] }>("select english.eng_level_profile($1) as r", [L]);
+      expect(p.external_results.map((e) => [e.id, e.score_text, e.replaces?.id ?? null, e.replaces?.score_text ?? null])).toEqual([[fixed.id, "172", first.id, "165"]]);
+      expect(p.domains.find((d) => d.key === "reading")?.external).toMatchObject({ id: fixed.id, score_text: "172" });
+      // the purge counts and removes both rows
+      const dry = await svc<{ counts: Record<string, number> }>("select english.eng_purge_preview($1) as r", [L]);
+      expect(dry.counts.external_results).toBe(2);
+      await svc("select english.eng_purge_learner($1, $2) as r", [L, s.users.parent]);
+      expect(await n("select count(*)::int as n from english.external_results where learner_id = $1", [L])).toBe(0);
+    });
+
+    it("the staff reads are closed to anon and authenticated (a student calling it is refused)", async () => {
+      const acl = await q1<{ proname: string; anon: boolean; auth: boolean; svc: boolean }>(`
+        select p.proname, has_function_privilege('anon', p.oid, 'execute') as anon, has_function_privilege('authenticated', p.oid, 'execute') as auth,
+               has_function_privilege('service_role', p.oid, 'execute') as svc
+        from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
+        where ns.nspname = 'english' and p.proname in ('eng_level_profile', 'eng_recent_level_changes')`);
+      expect(acl).toHaveLength(2);
+      for (const a of acl) expect([a.anon, a.auth, a.svc], a.proname).toEqual([false, false, true]);
+      const err = await rowsAs(db.client, "authenticated", s.users.studentNguyen, "select english.eng_level_profile($1) as r", [NG()])
+        .then(() => null, (e: unknown) => e as { code?: string });
+      expect(err?.code).toBe("42501");
+    });
+  });
+
+  describe("5. the student's 'Việc cần ôn' by domain", () => {
+    it("lists at most 3 due tags with only a label and a domain name; no level, score, count or date", async () => {
+      // 4 wrong items 20 days ago, on 4 tags of 4 domains: with the 14-day policy of B-v1 all 4 are due for a re-check
+      await svc("select english.eng_record_result($1, 'quick', null, 'Ôn tập tháng', 10, 6, '{1,2,3,4}', $2::jsonb, 'home', 'first', false, $3::date, null, null, $4, $5, 'test') as r", [
+        NG(),
+        JSON.stringify([{ n: 1, tag_key: "modal-suy-doan" }, { n: 2, tag_key: "dang-tu" }, { n: 3, tag_key: "phat-am" }, { n: 4, tag_key: "doc-inference" }]),
+        addDays(TODAY, -20), M().tutorNguyen, randomUUID(),
+      ]);
+      const [row] = await rowsAs<{ r: { items: Record<string, unknown>[] } }>(db.client, "authenticated", s.users.studentNguyen, "select english.eng_my_review_by_domain() as r");
+      const items = row!.r.items;
+      expect(items).toHaveLength(3);
+      const names = new Map([["grammar", "Ngữ pháp"], ["vocab", "Từ vựng"], ["speaking", "Nói"], ["reading", "Đọc"]]);
+      for (const it of items) {
+        expect(Object.keys(it).sort()).toEqual(["domain_key", "domain_name", "label"]);
+        expect(names.get(String(it.domain_key))).toBe(it.domain_name);
+      }
+      expect(JSON.stringify(row)).not.toMatch(/B2|\/4|20\d\d-/);
+    });
+
+    it("a tutor, a parent or another student without due tags gets an empty list; service_role and anon cannot call it", async () => {
+      for (const u of [s.users.tutorNguyen, s.users.parent, s.users.studentAn]) {
+        const [row] = await rowsAs<{ r: { items: unknown[] } }>(db.client, "authenticated", u, "select english.eng_my_review_by_domain() as r");
+        expect(row!.r.items, u).toEqual([]);
+      }
+      expect((await q1<{ s: boolean; a: boolean }>(`select has_function_privilege('service_role', 'english.eng_my_review_by_domain()', 'execute') as s,
+                                                          has_function_privilege('anon', 'english.eng_my_review_by_domain()', 'execute') as a`))[0]).toEqual({ s: false, a: false });
+    });
+  });
 });

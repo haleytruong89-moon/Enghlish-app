@@ -348,6 +348,158 @@ grant execute on function english.eng_record_level(uuid, text, jsonb, text, uuid
 revoke execute on function english.eng_record_external_result(uuid, text, date, text, text[], text, jsonb, uuid, text, uuid) from public, anon, authenticated;
 grant execute on function english.eng_record_external_result(uuid, text, date, text, text[], text, jsonb, uuid, text, uuid) to service_role;
 
+-- 5. Đọc ------------------------------------------------------------------------------------------------------------------------------
+-- Hồ sơ cấp của một em (gia sư / phụ huynh; máy chủ gọi sau requireAccess). Cấp hiện tại = dòng gần nhất của mảng, chưa có thì cấp giả
+-- định của track (status 'assumed'). Báo cáo kỹ năng đọc tháng hiện như mốc ngoài của mảng Đọc: chỉ tháng + số kỹ năng, KHÔNG tên nguồn.
+create or replace function english.eng_level_profile(p_learner uuid) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_map english.skill_maps%rowtype;
+begin
+  select * into v_l from english.learners l where l.id = p_learner;
+  if not found then
+    raise exception 'eng_level_profile: learner not found' using errcode = 'P0002';
+  end if;
+  select * into v_map from english.skill_maps m where m.published_at is not null order by m.published_at desc, m.id desc limit 1;
+  if not found then
+    raise exception 'eng_level_profile: no published skill map' using errcode = 'P0002';
+  end if;
+
+  return (
+    with latest as (
+      select distinct on (d.domain_key) d.*
+      from english.level_decisions d
+      where d.learner_id = p_learner
+      order by d.domain_key, d.decided_at desc, d.id desc
+    ),
+    ext as (
+      select distinct on (x.dk) x.dk, e.id, e.exam, e.taken_on, e.score_text
+      from english.external_results e
+      cross join lateral unnest(e.domains) as x(dk)
+      where e.learner_id = p_learner
+        and not exists (select 1 from english.external_results s where s.supersedes_id = e.id)
+      order by x.dk, e.taken_on desc, e.recorded_at desc
+    )
+    select pg_catalog.jsonb_build_object(
+      'map_id', v_map.id,
+      'track_id', v_l.track_id,
+      'domains', (
+        select pg_catalog.jsonb_agg(
+          pg_catalog.jsonb_build_object(
+            'key', dm.key, 'name_vi', dm.name_vi, 'scale', dm.scale, 'ord', dm.ord,
+            'assumed_level', v_map.assumed -> v_l.track_id ->> dm.key,
+            'current_level', coalesce(lt.to_level, v_map.assumed -> v_l.track_id ->> dm.key),
+            'status', case when lt.id is null then 'assumed' else 'confirmed' end,
+            'last_kind', lt.kind,
+            'decided_at', lt.decided_at,
+            'decided_by_name', mb.display_name,
+            'external', case when ex.id is null then null
+                             else pg_catalog.jsonb_build_object('id', ex.id, 'exam', ex.exam, 'taken_on', ex.taken_on, 'score_text', ex.score_text) end)
+          order by dm.ord)
+        from english.skill_domains dm
+        left join latest lt on lt.domain_key = dm.key
+        left join english.members mb on mb.id = lt.decided_by_member
+        left join ext ex on ex.dk = dm.key
+        where dm.map_id = v_map.id),
+      'history', coalesce((
+        select pg_catalog.jsonb_agg(
+          pg_catalog.jsonb_build_object(
+            'id', h.id, 'domain_key', h.domain_key, 'from_level', h.from_level, 'to_level', h.to_level, 'kind', h.kind,
+            'reason', h.reason, 'decided_at', h.decided_at, 'decided_by_name', hm.display_name)
+          order by h.decided_at desc, h.id desc)
+        from (select * from english.level_decisions d where d.learner_id = p_learner order by d.decided_at desc, d.id desc limit 30) h
+        left join english.members hm on hm.id = h.decided_by_member), '[]'::jsonb),
+      'external_results', coalesce((
+        select pg_catalog.jsonb_agg(
+          pg_catalog.jsonb_build_object(
+            'id', e.id, 'exam', e.exam, 'taken_on', e.taken_on, 'score_text', e.score_text, 'domains', pg_catalog.to_jsonb(e.domains),
+            'note', e.note, 'file_id', e.file_id, 'recorded_by_name', em.display_name, 'recorded_role', e.recorded_role, 'recorded_at', e.recorded_at,
+            -- sửa = dòng mới thay dòng cũ: chỉ dòng còn hiệu lực được liệt kê; dòng cũ hiện kèm ("đã sửa", điểm cũ, phiếu cũ)
+            'replaces', case when old.id is null then null
+                             else pg_catalog.jsonb_build_object('id', old.id, 'exam', old.exam, 'taken_on', old.taken_on,
+                                                                'score_text', old.score_text, 'file_id', old.file_id) end)
+          order by e.taken_on desc, e.recorded_at desc)
+        from (select * from english.external_results x
+              where x.learner_id = p_learner and not exists (select 1 from english.external_results s where s.supersedes_id = x.id)
+              order by x.taken_on desc, x.recorded_at desc limit 30) e
+        left join english.members em on em.id = e.recorded_by_member
+        left join english.external_results old on old.id = e.supersedes_id), '[]'::jsonb),
+      'reading_reports', coalesce((
+        select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('month', rr.month, 'skills', pg_catalog.jsonb_array_length(rr.rows))
+                                    order by rr.month desc, rr.recorded_at desc)
+        from (select * from english.reading_reports x
+              where x.learner_id = p_learner and not exists (select 1 from english.reading_reports x2 where x2.supersedes_id = x.id)
+              order by x.month desc, x.recorded_at desc limit 6) rr), '[]'::jsonb)
+    )
+  );
+end
+$$;
+
+-- "Thay đổi cấp gần đây" (trang chủ phụ huynh): quyết định cấp của một em trong p_days ngày qua (1..365), mới nhất trước, tối đa 10.
+create or replace function english.eng_recent_level_changes(p_learner uuid, p_days int) returns jsonb
+language sql stable security definer set search_path = ''
+as $$
+  select pg_catalog.jsonb_build_object('changes', coalesce((
+    select pg_catalog.jsonb_agg(
+      pg_catalog.jsonb_build_object(
+        'id', d.id, 'domain_key', d.domain_key, 'domain_name', dm.name_vi, 'scale', dm.scale,
+        'from_level', d.from_level, 'to_level', d.to_level, 'kind', d.kind, 'reason', d.reason,
+        'decided_at', d.decided_at, 'decided_by_name', m.display_name)
+      order by d.decided_at desc, d.id desc)
+    from (select * from english.level_decisions x
+          where x.learner_id = p_learner
+            and x.decided_at >= pg_catalog.now() - pg_catalog.make_interval(days => greatest(1, least(coalesce(p_days, 30), 365)))
+          order by x.decided_at desc, x.id desc
+          limit 10) d
+    left join english.skill_domains dm on dm.map_id = d.map_id and dm.key = d.domain_key
+    left join english.members m on m.id = d.decided_by_member), '[]'::jsonb))
+$$;
+
+-- "Việc cần ôn" theo mảng cho trang chủ của EM: tối đa 3 điểm đã đến hạn hỏi lại (thứ tự của "Điểm cần chú ý": nặng trước), mỗi điểm chỉ
+-- tên và tên mảng. Người gọi nhận diện bằng auth.uid() (chỉ học sinh có hồ sơ); người khác nhận danh sách rỗng.
+create or replace function english.eng_my_review_by_domain() returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_map text;
+  v_weak jsonb;
+begin
+  select l.* into v_l
+  from english.members m
+  join english.learners l on l.member_id = m.id
+  where m.user_id = auth.uid() and m.role = 'student';
+  if not found then
+    return pg_catalog.jsonb_build_object('items', '[]'::jsonb);
+  end if;
+  v_map := english.eng_current_skill_map();
+  v_weak := english.eng_weak_points(v_l.id, null);
+  return pg_catalog.jsonb_build_object('items', coalesce((
+    select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('domain_key', p.domain_key, 'domain_name', p.domain_name, 'label', p.label) order by p.ord)
+    from (
+      select x.ord, x.tag ->> 'label_vi' as label, dm.key as domain_key, dm.name_vi as domain_name
+      from pg_catalog.jsonb_array_elements(coalesce(v_weak -> 'tags', '[]'::jsonb)) with ordinality as x(tag, ord)
+      left join english.error_tags et on et.track_id = v_l.track_id and et.key = x.tag ->> 'tag_key'
+      left join english.skill_leaves lf on lf.map_id = v_map and lf.kind = 'tag' and lf.track_id = v_l.track_id and lf.ref_key = x.tag ->> 'tag_key'
+      left join english.skill_groups g on g.map_id = v_map and g.key = coalesce(et.group_key, lf.group_key)
+      left join english.skill_domains dm on dm.map_id = g.map_id and dm.key = g.domain_key
+      where coalesce((x.tag ->> 'recheck_due')::boolean, false)
+      order by x.ord
+      limit 3
+    ) p), '[]'::jsonb));
+end
+$$;
+
+revoke execute on function english.eng_level_profile(uuid) from public, anon, authenticated;
+grant execute on function english.eng_level_profile(uuid) to service_role;
+revoke execute on function english.eng_recent_level_changes(uuid, int) from public, anon, authenticated;
+grant execute on function english.eng_recent_level_changes(uuid, int) to service_role;
+revoke execute on function english.eng_my_review_by_domain() from public, anon, service_role;
+grant execute on function english.eng_my_review_by_domain() to authenticated;
+
+
 -- 6. Purge: thêm level_decisions + external_results (giữ nguyên mọi dòng của 0018; có test đối chiếu từng dòng).
 create or replace function english.eng_purge_learner(
   p_learner_id uuid,

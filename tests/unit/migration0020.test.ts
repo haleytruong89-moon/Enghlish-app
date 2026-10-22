@@ -77,5 +77,35 @@ describe("0020_level_profile.sql", () => {
     }
   });
 
-  // (Task 3 adds its tests here)
+  it("every function pins search_path and is security definer; staff reads are service_role only, the student's read authenticated only", () => {
+    for (const m of code.matchAll(/create or replace function english\.(\w+)\(([\s\S]*?)\n\$\$;/g)) {
+      expect(m[0], `${m[1]} search_path`).toMatch(/set search_path = ''/);
+      expect(m[0], `${m[1]} security definer`).toMatch(/security definer/);
+    }
+    for (const sig of ["eng_level_profile(uuid)", "eng_recent_level_changes(uuid, int)", "eng_purge_learner(uuid, uuid)", "eng_purge_preview(uuid)"]) {
+      expect(code).toContain(`revoke execute on function english.${sig} from public, anon, authenticated;`);
+      expect(code).toContain(`grant execute on function english.${sig} to service_role;`);
+    }
+    expect(code).toContain("revoke execute on function english.eng_my_review_by_domain() from public, anon, service_role;");
+    expect(code).toContain("grant execute on function english.eng_my_review_by_domain() to authenticated;");
+  });
+
+  it("the student's review list returns only a label and a domain, at most 3, and finds the student by auth.uid()", () => {
+    const f = fnText(sql, "eng_my_review_by_domain");
+    expect(f).toContain("where m.user_id = auth.uid() and m.role = 'student'");
+    expect(f).toContain("pg_catalog.jsonb_build_object('domain_key', p.domain_key, 'domain_name', p.domain_name, 'label', p.label)");
+    expect(f).toContain("limit 3");
+    expect(f).not.toMatch(/to_level|score|'sources'|last_seen|recheck_due_on/);
+  });
+
+  it("the profile never returns the source of a reading report", () => {
+    expect(fnText(sql, "eng_level_profile")).not.toMatch(/'source'|\.source\b/);
+  });
+
+  it("the profile lists only live external results (nobody supersedes them) and shows what a correction replaced", () => {
+    const f = fnText(sql, "eng_level_profile");
+    expect(f.match(/not exists \(select 1 from english\.external_results s where s\.supersedes_id = (e|x)\.id\)/g)).toHaveLength(2);
+    expect(f).toContain("left join english.external_results old on old.id = e.supersedes_id");
+  });
+
 });
