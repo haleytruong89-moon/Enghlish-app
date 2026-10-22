@@ -44,7 +44,7 @@ export function confirmedProfile(): LevelProfile {
   p.externalResults = [
     {
       id: "e1", exam: "FCE", takenOn: "2026-09-12", scoreText: "172 · Grade B", domains: ["listening", "reading"], note: null,
-      fileId: "f0000000-0000-4000-8000-000000000001", recordedBy: "Phụ huynh", recordedRole: "parent", recordedAt: "2026-09-13T01:00:00+00:00", replaces: null,
+      fileId: "f0000000-0000-4000-8000-000000000001", fileInherited: false, recordedBy: "Phụ huynh", recordedRole: "parent", recordedAt: "2026-09-13T01:00:00+00:00", replaces: null,
     },
   ];
   p.readingReports = [{ month: "2026-10-01", skills: 14 }];

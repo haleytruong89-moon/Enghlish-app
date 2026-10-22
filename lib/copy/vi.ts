@@ -1284,7 +1284,7 @@ export const externalCopy = {
   needScore: "Bạn ghi điểm hoặc kết quả nhé.",
   editTitle: (alias: string) => `Sửa kết quả thi ngoài · ${alias}`,
   editIntro: "Lưu sẽ thay kết quả cũ bằng kết quả mới này. Bản cũ vẫn được giữ trong lịch sử, không bị xóa.",
-  editFileHint: "Phiếu điểm cũ vẫn được giữ. Chọn ảnh hoặc PDF mới nếu muốn thay.",
+  editFileHint: "Không chọn ảnh mới thì vẫn dùng phiếu điểm cũ.",
   alreadyCorrected: "Kết quả này đã được sửa trước đó. Mở lại Hồ sơ cấp để sửa bản mới nhất.",
 } as const;
 

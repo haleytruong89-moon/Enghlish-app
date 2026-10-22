@@ -42,7 +42,9 @@ export type LevelHistoryRow = { id: string; domainKey: DomainKey; from: string; 
 export type ReplacedResult = { id: string; exam: Exam; takenOn: string; scoreText: string; fileId: string | null };
 
 export type ExternalResultRow = {
-  id: string; exam: Exam; takenOn: string; scoreText: string; domains: DomainKey[]; note: string | null; fileId: string | null;
+  id: string; exam: Exam; takenOn: string; scoreText: string; domains: DomainKey[]; note: string | null;
+  /** The sheet in force: the entry's own, else the nearest earlier one it corrects (fileInherited). */
+  fileId: string | null; fileInherited: boolean;
   recordedBy: string | null; recordedRole: "tutor" | "parent"; recordedAt: string;
   replaces: ReplacedResult | null;
 };

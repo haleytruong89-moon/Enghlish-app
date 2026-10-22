@@ -208,3 +208,15 @@ describe("homes", () => {
     expect(render(createElement(ReviewByDomain, { items: [] }))).toBe("");
   });
 });
+
+describe("Milestones: the sheet survives a correction (S1)", () => {
+  it("an inherited sheet is opened from the corrected entry once, without a second 'old sheet' link to the same file", () => {
+    const p = confirmedProfile();
+    const sheet = "f0000000-0000-4000-8000-000000000003";
+    p.externalResults = [{ ...p.externalResults[0]!, fileId: sheet, fileInherited: true, replaces: { id: "e0", exam: "FCE", takenOn: "2026-09-12", scoreText: "165", fileId: sheet } }];
+    const html = render(createElement(Milestones, { profile: p, learnerId: L }));
+    expect(html).toContain(`href="/api/files/${sheet}"`);
+    expect(html.split(`href="/api/files/${sheet}"`).length - 1).toBe(1);
+    expect(html).toContain(levelCopy.openFile);
+  });
+});

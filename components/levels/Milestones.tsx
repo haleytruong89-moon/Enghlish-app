@@ -45,7 +45,7 @@ export function Milestones({ profile, learnerId }: { profile: LevelProfile; lear
               // A2: a correction replaces an earlier entry; the old one stays in the book and is shown next to the new one.
               <span className="text-muted" data-testid={`external-corrected-${e.id}`}>
                 {levelCopy.corrected(e.replaces.scoreText)}
-                {e.replaces.fileId ? (
+                {e.replaces.fileId && e.replaces.fileId !== e.fileId ? (
                   <>
                     {" · "}
                     <a href={`/api/files/${e.replaces.fileId}`} className="text-accent underline">

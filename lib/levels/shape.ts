@@ -25,7 +25,7 @@ const historyRow = z.object({
 });
 const externalRow = z.object({
   id: z.string(), exam: z.enum(EXAMS), taken_on: z.string(), score_text: z.string(), domains: z.array(domainKey), note: z.string().nullable(),
-  file_id: z.string().nullable(), recorded_by_name: z.string().nullable(), recorded_role: z.enum(["tutor", "parent"]), recorded_at: z.string(),
+  file_id: z.string().nullable(), file_inherited: z.boolean(), recorded_by_name: z.string().nullable(), recorded_role: z.enum(["tutor", "parent"]), recorded_at: z.string(),
   replaces: z.object({ id: z.string(), exam: z.enum(EXAMS), taken_on: z.string(), score_text: z.string(), file_id: z.string().nullable() }).nullable(),
 });
 const profileRow = z.object({
@@ -51,7 +51,7 @@ export function parseLevelProfile(raw: unknown): LevelProfile {
       id: h.id, domainKey: h.domain_key, from: h.from_level, to: h.to_level, kind: h.kind, reason: h.reason, decidedAt: h.decided_at, decidedBy: h.decided_by_name,
     })),
     externalResults: p.external_results.map((e) => ({
-      id: e.id, exam: e.exam, takenOn: e.taken_on, scoreText: e.score_text, domains: e.domains, note: e.note, fileId: e.file_id,
+      id: e.id, exam: e.exam, takenOn: e.taken_on, scoreText: e.score_text, domains: e.domains, note: e.note, fileId: e.file_id, fileInherited: e.file_inherited,
       recordedBy: e.recorded_by_name, recordedRole: e.recorded_role, recordedAt: e.recorded_at,
       replaces: e.replaces ? { id: e.replaces.id, exam: e.replaces.exam, takenOn: e.replaces.taken_on, scoreText: e.replaces.score_text, fileId: e.replaces.file_id } : null,
     })),

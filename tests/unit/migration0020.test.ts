@@ -104,7 +104,9 @@ describe("0020_level_profile.sql", () => {
 
   it("the profile lists only live external results (nobody supersedes them) and shows what a correction replaced", () => {
     const f = fnText(sql, "eng_level_profile");
-    expect(f.match(/not exists \(select 1 from english\.external_results s where s\.supersedes_id = (e|x)\.id\)/g)).toHaveLength(2);
+    expect(f.match(/not exists \(select 1 from english\.external_results s where s\.supersedes_id = (e|x)\.id\)/g)).toHaveLength(3);
+    expect(f).toContain("with recursive");
+    expect(f).toContain("where c.file_id is null"); // the walk back stops at the first sheet it meets
     expect(f).toContain("left join english.external_results old on old.id = e.supersedes_id");
   });
 

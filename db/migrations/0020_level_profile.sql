@@ -368,7 +368,7 @@ begin
   end if;
 
   return (
-    with latest as (
+    with recursive latest as (
       select distinct on (d.domain_key) d.*
       from english.level_decisions d
       where d.learner_id = p_learner
@@ -381,6 +381,26 @@ begin
       where e.learner_id = p_learner
         and not exists (select 1 from english.external_results s where s.supersedes_id = e.id)
       order by x.dk, e.taken_on desc, e.recorded_at desc
+    ),
+    -- Phiếu điểm hiệu lực của mỗi dòng còn hiệu lực: của chính nó, không thì của dòng gần nhất trước nó trong chuỗi sửa (đi ngược
+    -- supersedes_id; dừng ngay khi gặp phiếu). Sửa mà không chọn ảnh mới thì không làm mất phiếu cũ.
+    live as (
+      select x.id, x.file_id from english.external_results x
+      where x.learner_id = p_learner and not exists (select 1 from english.external_results s where s.supersedes_id = x.id)
+    ),
+    chain(live_id, cur_id, file_id, depth) as (
+      select l.id, l.id, l.file_id, 0 from live l
+      union all
+      select c.live_id, p.id, p.file_id, c.depth + 1
+      from chain c
+      join english.external_results cur on cur.id = c.cur_id
+      join english.external_results p on p.id = cur.supersedes_id
+      where c.file_id is null
+    ),
+    sheet as (
+      select distinct on (c.live_id) c.live_id, c.file_id, c.depth
+      from chain c where c.file_id is not null
+      order by c.live_id, c.depth
     )
     select pg_catalog.jsonb_build_object(
       'map_id', v_map.id,
@@ -415,7 +435,7 @@ begin
         select pg_catalog.jsonb_agg(
           pg_catalog.jsonb_build_object(
             'id', e.id, 'exam', e.exam, 'taken_on', e.taken_on, 'score_text', e.score_text, 'domains', pg_catalog.to_jsonb(e.domains),
-            'note', e.note, 'file_id', e.file_id, 'recorded_by_name', em.display_name, 'recorded_role', e.recorded_role, 'recorded_at', e.recorded_at,
+            'note', e.note, 'file_id', sh.file_id, 'file_inherited', coalesce(sh.depth > 0, false), 'recorded_by_name', em.display_name, 'recorded_role', e.recorded_role, 'recorded_at', e.recorded_at,
             -- sửa = dòng mới thay dòng cũ: chỉ dòng còn hiệu lực được liệt kê; dòng cũ hiện kèm ("đã sửa", điểm cũ, phiếu cũ)
             'replaces', case when old.id is null then null
                              else pg_catalog.jsonb_build_object('id', old.id, 'exam', old.exam, 'taken_on', old.taken_on,
@@ -425,7 +445,8 @@ begin
               where x.learner_id = p_learner and not exists (select 1 from english.external_results s where s.supersedes_id = x.id)
               order by x.taken_on desc, x.recorded_at desc limit 30) e
         left join english.members em on em.id = e.recorded_by_member
-        left join english.external_results old on old.id = e.supersedes_id), '[]'::jsonb),
+        left join english.external_results old on old.id = e.supersedes_id
+        left join sheet sh on sh.live_id = e.id), '[]'::jsonb),
       'reading_reports', coalesce((
         select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('month', rr.month, 'skills', pg_catalog.jsonb_array_length(rr.rows))
                                     order by rr.month desc, rr.recorded_at desc)

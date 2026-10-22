@@ -356,6 +356,31 @@ describe("SM-2 level profile (migration 0020)", () => {
       expect(await n("select count(*)::int as n from english.external_results where learner_id = $1", [L])).toBe(0);
     });
 
+    it("S1: a correction without a new sheet keeps the original sheet (inherited down the whole chain); a new sheet replaces it", async () => {
+      const L = await newLearner("B");
+      const sheet = randomUUID();
+      type Row = { id: string; file_id: string | null; file_inherited: boolean; replaces: { file_id: string | null } | null };
+      const live = async () => (await svc<{ external_results: Row[] }>("select english.eng_level_profile($1) as r", [L])).external_results;
+      const first = await ext(M().parent, { learner: L, clientId: "ext-sheet-0001", file: { id: sheet, mime: "application/pdf", bytes: 2048 } });
+      expect(await live()).toMatchObject([{ id: first.id, file_id: sheet, file_inherited: false }]);
+      const second = await ext(M().parent, { learner: L, clientId: "ext-sheet-0002", supersedes: first.id });
+      const third = await ext(M().tutorNguyen, { learner: L, clientId: "ext-sheet-0003", supersedes: second.id });
+      const rows = await live();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ id: third.id, file_id: sheet, file_inherited: true });
+      expect(rows[0]!.replaces?.file_id).toBeNull(); // `replaces` still describes the direct predecessor only
+      // a newer sheet wins over the inherited one
+      const sheet2 = randomUUID();
+      const fourth = await ext(M().parent, { learner: L, clientId: "ext-sheet-0004", supersedes: third.id, file: { id: sheet2, mime: "image/png", bytes: 500 } });
+      expect(await live()).toMatchObject([{ id: fourth.id, file_id: sheet2, file_inherited: false }]);
+      // a chain that never had a sheet stays without one
+      const bare = await newLearner("B");
+      const b1 = await ext(M().parent, { learner: bare, clientId: "ext-bare-0001" });
+      await ext(M().parent, { learner: bare, clientId: "ext-bare-0002", supersedes: b1.id });
+      const bareRows = (await svc<{ external_results: Row[] }>("select english.eng_level_profile($1) as r", [bare])).external_results;
+      expect(bareRows).toMatchObject([{ file_id: null, file_inherited: false }]);
+    });
+
     it("the staff reads are closed to anon and authenticated (a student calling it is refused)", async () => {
       const acl = await q1<{ proname: string; anon: boolean; auth: boolean; svc: boolean }>(`
         select p.proname, has_function_privilege('anon', p.oid, 'execute') as anon, has_function_privilege('authenticated', p.oid, 'execute') as auth,

@@ -106,7 +106,7 @@ describe("parsers", () => {
     map_id: "SM-1", track_id: "B",
     domains: [rawDomain("grammar"), rawDomain("vocab"), rawDomain("reading"), rawDomain("listening"), rawDomain("writing"), rawDomain("speaking"), rawDomain("thinking", "task_level")],
     history: [{ id: "h1", domain_key: "reading", from_level: "B2", to_level: "B2+", kind: "baseline", reason: null, decided_at: "2026-10-21T03:00:00+00:00", decided_by_name: "Cô Lan" }],
-    external_results: [{ id: "e1", exam: "FCE", taken_on: "2026-09-12", score_text: "172", domains: ["reading"], note: null, file_id: null, recorded_by_name: "Phụ huynh", recorded_role: "parent", recorded_at: "2026-09-13T01:00:00+00:00", replaces: { id: "e0", exam: "FCE", taken_on: "2026-09-12", score_text: "165", file_id: null } }],
+    external_results: [{ id: "e1", exam: "FCE", taken_on: "2026-09-12", score_text: "172", domains: ["reading"], note: null, file_id: null, file_inherited: false, recorded_by_name: "Phụ huynh", recorded_role: "parent", recorded_at: "2026-09-13T01:00:00+00:00", replaces: { id: "e0", exam: "FCE", taken_on: "2026-09-12", score_text: "165", file_id: null } }],
     reading_reports: [{ month: "2026-10-01", skills: 14 }],
   };
 
@@ -115,7 +115,7 @@ describe("parsers", () => {
     expect(p.domains).toHaveLength(7);
     expect(p.domains[6]).toEqual({ key: "thinking", name: "thinking", scale: "task_level", current: "2", assumed: "2", status: "assumed", lastKind: null, decidedAt: null, decidedBy: null, external: null });
     expect(p.history[0]).toEqual({ id: "h1", domainKey: "reading", from: "B2", to: "B2+", kind: "baseline", reason: null, decidedAt: "2026-10-21T03:00:00+00:00", decidedBy: "Cô Lan" });
-    expect(p.externalResults[0]).toMatchObject({ exam: "FCE", domains: ["reading"], recordedRole: "parent", fileId: null, replaces: { id: "e0", scoreText: "165" } });
+    expect(p.externalResults[0]).toMatchObject({ exam: "FCE", domains: ["reading"], recordedRole: "parent", fileId: null, fileInherited: false, replaces: { id: "e0", scoreText: "165" } });
     expect(p.readingReports).toEqual([{ month: "2026-10-01", skills: 14 }]);
     expect(() => parseLevelProfile({ ...raw, domains: raw.domains.slice(0, 6) })).toThrow();
     expect(() => parseLevelProfile({ ...raw, history: [{ ...raw.history[0], kind: "promote" }] })).toThrow();
