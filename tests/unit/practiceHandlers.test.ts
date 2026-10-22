@@ -368,3 +368,17 @@ describe("student side", () => {
     expect((await handleStudentFile(deps("tutorAn", s, makeStorage()), A_PDF)).status).toBe(403);
   });
 });
+
+describe("SM-2: exam sheets (kind external_result)", () => {
+  it("staff get an upload target for a PDF or an image; a stored PDF sheet opens as a download, never inside the site", async () => {
+    const st = makeStorage();
+    const r = await handleStaffUploadUrl(deps("parent", makeStore(), st), AN, { purpose: "external_result", mime: "application/pdf", bytes: 5000 });
+    expect(r.status).toBe(201);
+    expect(st.createUpload).toHaveBeenCalledWith(pathOf(AN, FILE_NEW, "pdf"));
+    expect((await handleStaffUploadUrl(deps("tutorAn", makeStore(), makeStorage()), AN, { purpose: "external_result", mime: "image/png", bytes: 5000 })).status).toBe(201);
+    const sheet = makeStore({ getFile: vi.fn(async () => ({ learnerId: AN, path: pathOf(AN, FILE_KEY, "pdf"), mime: "application/pdf", kind: "external_result" })) });
+    const st2 = makeStorage();
+    await handleStaffFile(deps("parent", sheet, st2), FILE_KEY);
+    expect(st2.createDownload).toHaveBeenCalledWith(pathOf(AN, FILE_KEY, "pdf"), { downloadName: "ket-qua-thi-ngoai.pdf" });
+  });
+});

@@ -34,6 +34,13 @@ export function failText(r: PostFail): string {
   if (r.error === "stale_report") return tutorWorkErrors.staleReport;
   if (r.error === "unknown_group") return tutorWorkErrors.unknownGroup;
   if (r.error === "already_grouped") return tutorWorkErrors.alreadyGrouped;
+  if (r.error === "level_tutor_only") return tutorWorkErrors.levelTutorOnly;
+  if (r.error === "already_confirmed") return tutorWorkErrors.alreadyConfirmed;
+  if (r.error === "needs_baseline") return tutorWorkErrors.needsBaseline;
+  if (r.error === "same_level") return tutorWorkErrors.sameLevel;
+  if (r.error === "reason_required") return tutorWorkErrors.reasonRequired;
+  if (r.error === "bad_date") return tutorWorkErrors.badDate;
+  if (r.error === "already_superseded") return tutorWorkErrors.alreadySuperseded;
   if (r.status === 403) return tutorWorkErrors.forbidden;
   if (r.status === 409) return tutorWorkErrors.conflict;
   if (r.status === 400) return tutorWorkErrors.invalid;

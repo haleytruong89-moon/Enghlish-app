@@ -626,6 +626,13 @@ export const tutorWorkErrors = {
   staleReport: "Báo cáo tháng này vừa được người khác sửa. Tải lại trang rồi sửa lại.",
   unknownGroup: "Nhóm này không có trong bản đồ kỹ năng. Tải lại trang rồi chọn lại.",
   alreadyGrouped: "Nhãn này đã được xếp vào nhóm khác. Tải lại trang để xem.",
+  levelTutorOnly: `Chỉ ${tutorHonorific} của em mới xác nhận hoặc điều chỉnh được cấp.`,
+  alreadyConfirmed: "Mảng này đã được xác nhận rồi. Tải lại trang rồi dùng “Điều chỉnh cấp”.",
+  needsBaseline: "Mảng này chưa có cấp khởi điểm. Xác nhận cấp khởi điểm trước.",
+  sameLevel: "Cấp mới đang trùng cấp hiện tại.",
+  reasonRequired: "Điều chỉnh cấp cần ghi lý do.",
+  badDate: "Ngày thi không hợp lệ: không chọn ngày sau hôm nay, không quá 10 năm trước.",
+  alreadySuperseded: "Kết quả này đã được sửa trước đó. Tải lại trang để sửa bản mới nhất.",
 } as const;
 
 /** Màn "Xóa dữ liệu của em" (S5c, chỉ phụ huynh). */
@@ -670,6 +677,8 @@ export const purgePage = {
     files: "File ảnh / PDF",
     upload_tickets: "Phiếu tải file",
     reading_reports: "Báo cáo kỹ năng đọc tháng",
+    level_decisions: "Quyết định cấp đang học",
+    external_results: "Kết quả thi ngoài",
     login_names: "Tên đăng nhập ngắn",
     learners: "Hồ sơ của em",
     members: "Tài khoản của em trong app",
@@ -1003,6 +1012,7 @@ export const writingTags = {
 /** Names offered to the browser when it saves a file that someone SENT (never opened inside the site). */
 export const downloadNames = {
   studentWork: "bai-em-gui",
+  externalResult: "ket-qua-thi-ngoai",
 } as const;
 
 export const sourceLabels = {

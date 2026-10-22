@@ -14,6 +14,7 @@ import { AccessError, requireAccess, type AccessDeps, type AccessGrant, type Acc
 import { apiErrors, downloadNames } from "@/lib/copy/vi";
 import { fromDbError, ReviewDbError, type HandlerResult } from "@/lib/review/handlers";
 import { checkFile, buildPath, safeDownloadName, type AllowedMime, type FileKind } from "@/lib/storage/rules";
+import { FILE_ERRORS, verifyStoredFile } from "@/lib/storage/verify";
 import type { FileStorage } from "@/lib/storage/types";
 import { parseHttpsUrl } from "./link";
 import {
@@ -92,13 +93,6 @@ async function ownLearner(deps: PracticeDeps): Promise<Guard> {
   return guard(deps, profile.learnerId, "work:submit");
 }
 
-const FILE_ERRORS = {
-  type: "file_type",
-  empty: "file_empty",
-  too_big: "file_too_big",
-  kind: "file_type",
-} as const;
-
 /** A file's path is built from ids, never read from the request. */
 function pathFor(grant: AccessGrant, fileId: string, mime: AllowedMime): string {
   return buildPath({ familyId: grant.learner.familyId, learnerId: grant.learner.id, fileId, mime });
@@ -106,12 +100,7 @@ function pathFor(grant: AccessGrant, fileId: string, mime: AllowedMime): string 
 
 /** Does storage really hold this file, with the type and size the browser claimed? Returns an error code, or null when it does. */
 async function verifyStored(deps: PracticeDeps, grant: AccessGrant, kind: FileKind, meta: FileMeta): Promise<string | null> {
-  const c = checkFile(kind, meta.mime, meta.bytes);
-  if (!c.ok) return FILE_ERRORS[c.reason];
-  const stat = await deps.storage.stat(pathFor(grant, meta.id, meta.mime));
-  if (!stat) return "file_missing";
-  if (stat.bytes !== meta.bytes || stat.mime !== meta.mime) return "file_mismatch";
-  return null;
+  return verifyStoredFile(deps.storage, { familyId: grant.learner.familyId, learnerId: grant.learner.id }, kind, meta);
 }
 
 function fileKindOf(assignmentKind: "link" | "pdf"): FileKind {
@@ -281,8 +270,9 @@ export async function handleStaffFile(deps: PracticeDeps, fileId: string): Promi
   if (!g.ok) return g.result;
   // A PDF that a child (or someone for the child) SENT is untrusted content: it is saved, never opened inside our site. Images and the
   // tutor's own sheets / answer keys open in the browser as before.
-  const sent = (file.kind === "work_photo" || file.kind === "result_image") && file.mime === "application/pdf";
-  const opts = sent ? { downloadName: safeDownloadName(downloadNames.studentWork, "application/pdf") } : undefined;
+  const sent = (file.kind === "work_photo" || file.kind === "result_image" || file.kind === "external_result") && file.mime === "application/pdf";
+  const name = file.kind === "external_result" ? downloadNames.externalResult : downloadNames.studentWork;
+  const opts = sent ? { downloadName: safeDownloadName(name, "application/pdf") } : undefined;
   return { status: 200, body: { url: await deps.storage.createDownload(file.path, opts) } };
 }
 

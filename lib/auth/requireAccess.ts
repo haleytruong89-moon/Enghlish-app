@@ -26,6 +26,7 @@ export type Action =
   | "tutorwork:write" //    record a result / a v2 session note / tags — tutor and parent; the database narrows in-class work to tutors (D15)
   | "practice:read" //      assigned practice, what the student sent, and its files - tutor and parent; never students (S5b-1 PR B)
   | "practice:write" //     give / retract practice, upload its files, submit on the student's behalf - tutor and parent
+  | "levels:decide" //     confirm the starting levels / adjust one level (SM-2) - the child's tutor only; the database checks it again
   | "targets:read" //        tracked-skills page (target set) — parent and tutor only
   | "inquiries:read" //     assigned inquiries + assignable templates — parent and tutor only
   | "inquiries:assign" //   assign an inquiry template — parent and tutor only
@@ -48,6 +49,7 @@ export const ACTIONS_BY_ROLE: Record<Role, readonly Action[]> = {
     "tutorwork:write",
     "practice:read",
     "practice:write",
+    "levels:decide",
   ],
   parent: [
     "learner:read",

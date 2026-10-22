@@ -3,10 +3,10 @@ import { z } from "zod";
 import { ALLOWED_MIMES, MAX_FILES_PER_SUBMISSION } from "@/lib/storage/rules";
 import { MAX_URL_LENGTH } from "./link";
 
-const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+export const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
 const clientId = z.string().min(8).max(100);
 const tagKey = z.string().trim().min(1).max(61);
-const isoDate = z
+export const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .refine((s) => {
@@ -26,7 +26,7 @@ export type FileMeta = z.infer<typeof fileMetaSchema>;
 /** Ask for an upload target. `submission` = a screenshot / photo for an assignment (staff: submitting on the student's behalf). */
 export const staffUploadBodySchema = z
   .strictObject({
-    purpose: z.enum(["assignment_pdf", "answer_key", "submission"]),
+    purpose: z.enum(["assignment_pdf", "answer_key", "external_result", "submission"]),
     assignment_id: uuid.optional(),
     mime: z.enum(ALLOWED_MIMES),
     bytes: z.number().int().min(1),
