@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { formatScore, learnerWithTrack, LEVEL_ORDER, levelLabels, modeLabels } from "@/lib/copy/vi";
+import { formatScore, learnerWithTrack, LEVEL_ORDER, levelLabels, modeLabels, revisionCopy, revisionReviewCopy } from "@/lib/copy/vi";
 import { allowRealLearners } from "@/lib/env";
 import { safeColor, visibleLearners, type LearnerSummary } from "@/lib/home/visible";
 
 describe("copy (UX_COPY_GUIDE v0.1)", () => {
+  it("S6 follows the guide: REVISION is 'Sửa bài' for the child and 'Bài sửa lại' for staff", () => {
+    expect(modeLabels.REVISION).toEqual({ student: "Sửa bài", staff: "Bài sửa lại" });
+    expect(revisionCopy.pageTitle).toBe(modeLabels.REVISION.student);
+    expect(revisionReviewCopy.title(1).startsWith(modeLabels.REVISION.staff)).toBe(true);
+  });
+
   it("scores always show number, denominator and words; NULL differs from 0", () => {
     expect(formatScore(3)).toBe("3/4 · Đạt yêu cầu");
     expect(formatScore(0)).toBe("0/4 · Chưa thể hiện");
