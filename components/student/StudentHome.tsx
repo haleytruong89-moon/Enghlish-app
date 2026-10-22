@@ -1,10 +1,14 @@
 import Link from "next/link";
 import type { ReviewItem } from "@/lib/levels/types";
+import type { MyFeedbackItem } from "@/lib/revision/types";
+import { homeSteps, splitFeedback } from "@/lib/revision/home";
 import { concepts, home, modeLabels, work } from "@/lib/copy/vi";
 import { pickNextTask, stepState, type StepState } from "@/lib/work/nextTask";
 import type { HomeInquiry, HomeStep, HomeView } from "@/lib/work/types";
 import { doableInApp, stepTitle, todayLine, unsupportedLabel } from "@/lib/work/view";
+import { FeedbackBox } from "./FeedbackBox";
 import { ReviewByDomain } from "./ReviewByDomain";
+import { RevisionRows } from "./RevisionRows";
 
 /** Done = filled green circle with a tick; now = ringed dot; later = empty grey ring (as in the Main mockup). */
 function StateIcon({ state }: { state: StepState }) {
@@ -33,8 +37,9 @@ function StateIcon({ state }: { state: StepState }) {
 
 const STATE_TEXT: Record<StepState, string> = { done: work.stateDone, now: work.stateNow, later: work.stateLater };
 
-function StepRow({ step, state }: { step: HomeStep; state: StepState }) {
-  const doable = doableInApp(step.activityType, step.mode);
+function StepRow({ step, state, open }: { step: HomeStep; state: StepState; open: boolean }) {
+  // S6: the app's own revision step (1001+) is doable while the child has feedback to revise there.
+  const doable = doableInApp(step.activityType, step.mode) || open;
   const title = stepTitle(step.activityType);
   const chip = step.purpose.includes("delayed_check")
     ? concepts.delayedCheck.student
@@ -66,11 +71,12 @@ function StepRow({ step, state }: { step: HomeStep; state: StepState }) {
   );
 }
 
-function InquiryCard({ inquiry, next }: { inquiry: HomeInquiry; next: ReturnType<typeof pickNextTask> }) {
+function InquiryCard({ inquiry, next, openIds }: { inquiry: HomeInquiry; next: ReturnType<typeof pickNextTask>; openIds: Set<string> }) {
   // "Xong x/y bước" counts only the steps the app can do; steps done on paper / with the tutor are shown apart
-  const inApp = inquiry.steps.filter((s) => doableInApp(s.activityType, s.mode));
+  const steps = homeSteps(inquiry.steps, openIds);
+  const inApp = steps.filter((s) => doableInApp(s.activityType, s.mode) || openIds.has(s.activityId));
   const done = inApp.filter((s) => s.attempts > 0).length;
-  const offApp = inquiry.steps.length - inApp.length;
+  const offApp = steps.length - inApp.length;
   return (
     <section
       aria-labelledby={`inq-${inquiry.instanceId}`}
@@ -91,8 +97,8 @@ function InquiryCard({ inquiry, next }: { inquiry: HomeInquiry; next: ReturnType
         </p>
       ) : null}
       <ol className="flex flex-col gap-1">
-        {inquiry.steps.map((s) => (
-          <StepRow key={s.activityId} step={s} state={stepState(s, next)} />
+        {steps.map((s) => (
+          <StepRow key={s.activityId} step={s} state={stepState(s, next)} open={openIds.has(s.activityId)} />
         ))}
       </ol>
     </section>
@@ -103,8 +109,21 @@ function InquiryCard({ inquiry, next }: { inquiry: HomeInquiry; next: ReturnType
  * The student's home: greeting, "Việc tiếp theo", this week's released steps. Only what the API allows
  * (no keys, no results, no scores). Mobile first, as the Main mockup.
  */
-export function StudentHome({ alias, color, data, review = null }: { alias: string; color: string; data: HomeView; review?: ReviewItem[] | null }) {
+export function StudentHome({
+  alias,
+  color,
+  data,
+  review = null,
+  feedback = null,
+}: {
+  alias: string;
+  color: string;
+  data: HomeView;
+  review?: ReviewItem[] | null;
+  feedback?: MyFeedbackItem[] | null;
+}) {
   const next = pickNextTask(data);
+  const fb = splitFeedback(feedback ?? []);
   const hasSteps = data.inquiries.some((q) => q.steps.length > 0);
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-4 px-5 py-6">
@@ -123,6 +142,8 @@ export function StudentHome({ alias, color, data, review = null }: { alias: stri
           {alias.slice(0, 1).toUpperCase()}
         </div>
       </header>
+
+      <RevisionRows items={fb.rows} />
 
       {next ? (
         <section
@@ -156,8 +177,10 @@ export function StudentHome({ alias, color, data, review = null }: { alias: stri
 
       {review && review.length > 0 ? <ReviewByDomain items={review} /> : null}
 
+      <FeedbackBox items={fb.box} />
+
       {data.inquiries.map((q) => (
-        <InquiryCard key={q.instanceId} inquiry={q} next={next} />
+        <InquiryCard key={q.instanceId} inquiry={q} next={next} openIds={fb.openActivityIds} />
       ))}
     </main>
   );

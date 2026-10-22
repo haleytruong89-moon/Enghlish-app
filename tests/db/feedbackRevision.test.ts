@@ -356,6 +356,25 @@ describe("S6 feedback + revision (migration 0021)", () => {
       noLeaks(page);
     });
 
+    it("G4: a 'Chỉ góp ý' note is read on its own activity (no expiry, no leaf, no author); a revision request and other children get nothing", async () => {
+      const x = await assign("an", "A-W1-VOLCANOES", dueReleasingAll("A-W1-VOLCANOES"));
+      const act = await step(x, 6);
+      const work = (await submitText(U().studentAn, act, TEXT_A)).attempt_id;
+      expect(await studentRead(U().studentAn, "select english.eng_my_activity_note($1) as r", [act])).toBeNull();
+      await write(M().tutorAn, work, { requires: false, items: [{ text: "Thêm một câu kết." }] });
+      const note = await studentRead<{ feedback_id: string; praise: string; notes: { n: number; text: string }[] }>(U().studentAn, "select english.eng_my_activity_note($1) as r", [act]);
+      expect(note).toMatchObject({ praise: "Con giải thích rõ vì sao núi lửa phun.", notes: [{ n: 1, text: "Thêm một câu kết." }] });
+      noLeaks(note);
+      expect(await studentRead(U().studentNguyen, "select english.eng_my_activity_note($1) as r", [act])).toBeNull();
+      expect(await studentRead(U().tutorAn, "select english.eng_my_activity_note($1) as r", [act])).toBeNull();
+      await fail(svc("select english.eng_my_activity_note($1) as r", [act]), "42501");
+      // a note that asks for a revision is not a note
+      const y = await assign("an", "A-W1-VOLCANOES", dueReleasingAll("A-W1-VOLCANOES"));
+      const actY = await step(y, 6);
+      await write(M().tutorAn, (await submitText(U().studentAn, actY, TEXT_A)).attempt_id);
+      expect(await studentRead(U().studentAn, "select english.eng_my_activity_note($1) as r", [actY])).toBeNull();
+    });
+
     it("Track B requires a reason for every item (track setting, no `if track`)", async () => {
       // a fresh B-W1 instance: step 7 of b1 is a one-time check that Task 2's test already used
       const bx = await assign("nguyen", "B-W1-HOMEWORK", dueReleasingAll("B-W1-HOMEWORK"));

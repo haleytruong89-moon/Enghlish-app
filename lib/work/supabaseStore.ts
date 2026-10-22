@@ -70,6 +70,13 @@ export function createSupabaseWorkStore(): WorkStore {
       return data;
     },
 
+    async getMyActivityNote(activityId) {
+      const db = await createUserClient();
+      const { data, error } = await db.rpc("eng_my_activity_note", { p_activity: activityId });
+      if (error) dbError("eng_my_activity_note", error);
+      return data ?? null;
+    },
+
     async getMyRevision(activityId) {
       const db = await createUserClient();
       const { data, error } = await db.rpc("eng_my_revision", { p_activity: activityId });

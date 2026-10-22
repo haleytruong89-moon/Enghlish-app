@@ -108,7 +108,9 @@ describe("0021_feedback_revision.sql", () => {
       expect(code).toContain(`revoke execute on function english.${sig} from public, anon, service_role;`);
       expect(code).toContain(`grant execute on function english.${sig} to authenticated;`);
     }
-    for (const fn of ["eng_my_feedback", "eng_my_revision"]) {
+    expect(code).toContain("revoke execute on function english.eng_my_activity_note(uuid) from public, anon, service_role;");
+    expect(code).toContain("grant execute on function english.eng_my_activity_note(uuid) to authenticated;");
+    for (const fn of ["eng_my_feedback", "eng_my_revision", "eng_my_activity_note"]) {
       const body = fnText(sql, fn);
       for (const bad of ["observations", "validation_decisions", "revision_checks", "'leaf'", "score"]) expect(body, `${fn}: ${bad}`).not.toContain(bad);
       expect(body).toContain("m.user_id = auth.uid() and m.role = 'student'");

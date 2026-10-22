@@ -3,6 +3,7 @@ import { feedbackCopy, inquiriesPage, revisionCopy, revisionReviewCopy, tutorHon
 import { changeCount, diffWords } from "@/lib/revision/diff";
 import { findExcerpt, segmentsFor } from "@/lib/revision/excerpt";
 import { checkFeedback, checkMarks, marksToSend, missingVerdicts } from "@/lib/revision/rules";
+import { homeSteps, splitFeedback } from "@/lib/revision/home";
 import { hasScoreWords } from "@/lib/revision/scoreWords";
 import { parseFeedbackPanel, parseMyFeedback, parseMyRevision, parseRevisionList, parseRevisionView } from "@/lib/revision/shape";
 import { cleanText, isUnchanged } from "@/lib/revision/text";
@@ -149,5 +150,21 @@ describe("S6 copy", () => {
     expect(revisionCopy.receiptTitle).toBe("Đã nộp bài sửa!");
     expect(inquiriesPage.stepLabel(7)).toBe("Bước 7");
     expect(inquiriesPage.stepLabel(1001)).toBe("Bước sửa bài");
+  });
+});
+
+describe("the child's home (pure)", () => {
+  const f = (over: Partial<import("@/lib/revision/types").MyFeedbackItem>) => ({
+    feedbackId: "f", activityId: "a", titleVi: "Núi lửa", round: 1, itemsCount: 2, state: "todo" as const, seenAt: null, closingNote: null, praise: null, notes: null, ...over,
+  });
+  it("todo and submitted rows go first, 'đã xem' and notes go to the box; only todo steps are open", () => {
+    const s = splitFeedback([f({ feedbackId: "1", activityId: "r1" }), f({ feedbackId: "2", activityId: "r2", state: "submitted" }), f({ feedbackId: "3", state: "seen" }), f({ feedbackId: "4", state: "note" })]);
+    expect(s.rows.map((x) => x.feedbackId)).toEqual(["1", "2"]);
+    expect(s.box.map((x) => x.feedbackId)).toEqual(["3", "4"]);
+    expect([...s.openActivityIds]).toEqual(["r1"]);
+  });
+  it("the app's own revision steps (1001+) are listed only while open; template revision steps always", () => {
+    const step = (stepNo: number, activityId: string) => ({ activityId, stepNo, activityType: "ACT-REVISE", mode: "REVISION" as const, purpose: [], timeMin: null, date: "2026-10-22", attempts: 0 });
+    expect(homeSteps([step(13, "t"), step(1001, "own-open"), step(1002, "own-old")], new Set(["own-open"])).map((s) => s.activityId)).toEqual(["t", "own-open"]);
   });
 });

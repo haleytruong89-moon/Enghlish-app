@@ -17,7 +17,7 @@ import {
 import { apiErrors } from "@/lib/copy/vi";
 import { parseReviewByDomain } from "@/lib/levels/shape";
 import { revisionDraftBodySchema, revisionSubmitBodySchema } from "@/lib/revision/schemas";
-import { parseMyFeedback, parseMyRevision } from "@/lib/revision/shape";
+import { parseMyActivityNote, parseMyFeedback, parseMyRevision } from "@/lib/revision/shape";
 import { attemptBodySchema, draftBodySchema, UUID_RE } from "./schemas";
 import { toActivityView, toDraftReceipt, toHomeView, toReceipt } from "./shape";
 
@@ -42,6 +42,8 @@ export interface WorkStore {
   getReviewByDomain(): Promise<unknown>;
   /** english.eng_my_feedback() as the signed-in student (S6): feedback rows, no score, verdict or leaf. */
   getMyFeedback(): Promise<unknown>;
+  /** english.eng_my_activity_note(id) as the signed-in student (S6, G4): the "Chỉ góp ý" note of this activity, or null. */
+  getMyActivityNote(activityId: string): Promise<unknown | null>;
   /** english.eng_my_revision(id) as the signed-in student; null = not theirs / nothing to revise there. */
   getMyRevision(activityId: string): Promise<unknown | null>;
   /** english.eng_save_revision_draft as the signed-in student. */
@@ -250,4 +252,12 @@ export async function handleSubmitRevision(deps: HandlerDeps, activityId: string
   } catch (err) {
     return fromRevisionWorkError(err);
   }
+}
+
+/** The "Chỉ góp ý" note of the child's own activity (G4). Never fatal: unreadable or unexpected → null. */
+export async function handleStudentActivityNote(deps: HandlerDeps, activityId: string): Promise<HandlerResult> {
+  const g = await guardActivity(deps, activityId);
+  if (!g.ok) return g.result;
+  const note = await deps.store.getMyActivityNote(activityId).then(parseMyActivityNote).catch(() => null);
+  return { status: 200, body: { note } };
 }

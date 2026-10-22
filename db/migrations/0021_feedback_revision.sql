@@ -1016,6 +1016,33 @@ grant execute on function english.eng_my_revision(uuid) to authenticated;
 grant execute on function english.eng_save_revision_draft(uuid, jsonb, int) to authenticated;
 grant execute on function english.eng_submit_revision(uuid, uuid, text, jsonb, text[], text) to authenticated;
 
+-- G4 (phụ huynh duyệt 22/10): một ghi chú "Chỉ góp ý" còn hiện ở trang của chính bài đó (không hết hạn 14 ngày như ô ở trang chủ), miễn là
+-- bước còn thấy được. Chỉ câu khen + góp ý + trích đoạn của em; không điểm, không lá kỹ năng, không tên người góp ý. NULL nếu không có.
+create or replace function english.eng_my_activity_note(p_activity uuid) returns jsonb
+language sql stable security definer set search_path = ''
+as $$
+  select (
+    select pg_catalog.jsonb_build_object(
+      'feedback_id', f.id,
+      'praise', f.praise,
+      'created_at', f.created_at,
+      'notes', (select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('n', (x ->> 'n')::int, 'text', x ->> 'text', 'excerpt', x ->> 'excerpt')
+                                            order by (x ->> 'n')::int)
+                from pg_catalog.jsonb_array_elements(f.items) x))
+    from english.feedback_notes f
+    join english.attempts sa on sa.id = f.source_attempt_id
+    join english.activity_instances a on a.id = sa.activity_instance_id
+    join english.learners l on l.id = a.learner_id
+    join english.members m on m.id = l.member_id
+    where a.id = p_activity and m.user_id = auth.uid() and m.role = 'student'
+      and f.kind = 'feedback' and not f.requires_revision and english.eng_feedback_is_live(f.id)
+      and english.eng_activity_released(p_activity)
+    order by f.created_at desc
+    limit 1)
+$$;
+revoke execute on function english.eng_my_activity_note(uuid) from public, anon, service_role;
+grant execute on function english.eng_my_activity_note(uuid) to authenticated;
+
 -- 8. Phía người duyệt -----------------------------------------------------------------------------------------------------------------
 -- Đánh giá từng góp ý + Xong (nhận xét kết, tùy chọn) hoặc Mở vòng 2 (góp ý mới) trong MỘT transaction (D11). Đánh giá phải đủ mọi góp ý và
 -- hợp với lựa chọn của con: Đã sửa → improved / not_yet; Giữ nguyên → reason_ok / not_yet (3-a). Người duyệt = người được duyệt bài sửa (D14).

@@ -44,7 +44,7 @@ export default async function HomePage() {
       <>
         <AppHeader showTestBadge={anyTest} studentNav="next" />
         {work.kind === "ok" ? (
-          <StudentHome alias={alias} color={color} data={work.home} review={work.review} />
+          <StudentHome alias={alias} color={color} data={work.home} review={work.review} feedback={work.feedback} />
         ) : (
           <main className="mx-auto max-w-xl px-5 py-12">
             <h1 className="text-4xl font-bold" style={{ color }}>

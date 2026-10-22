@@ -4,6 +4,7 @@ import {
   handleSaveDraft,
   handleSaveRevisionDraft,
   handleStudentActivity,
+  handleStudentActivityNote,
   handleStudentFeedback,
   handleStudentHome,
   handleStudentRevision,
@@ -77,6 +78,7 @@ function makeStore(over: Partial<WorkStore> = {}) {
     getReviewByDomain: vi.fn(async (): Promise<unknown> => ({ items: [] })),
     getMyFeedback: vi.fn(async (): Promise<unknown> => ({ items: [] })),
     getMyRevision: vi.fn(async (): Promise<unknown> => rpcRevision),
+    getMyActivityNote: vi.fn(async (): Promise<unknown> => null),
     saveRevisionDraft: vi.fn(async (): Promise<unknown> => ({ revision: 1, saved_at: "2026-10-14T08:00:00Z", other_tab_changed: false })),
     submitRevision: vi.fn(async (): Promise<unknown> => rpcReceipt),
     getActivity: vi.fn(async (): Promise<unknown> => rpcActivity),
@@ -413,5 +415,17 @@ describe("S6: the child's revision routes", () => {
     }
     expect((await handleSubmitRevision(deps("studentNguyen", s), ACT_AN, submit)).status).toBe(404);
     expect((await handleSubmitRevision(deps("parent", s), ACT_AN, submit)).status).toBe(403);
+  });
+
+  it("G4: a 'Chỉ góp ý' note is read on its own activity page (allowlist; no leaf, score or author); a broken lookup leaves it out", async () => {
+    const note = { feedback_id: "f1", praise: "Câu mở đoạn rõ.", created_at: "2026-10-22T01:00:00Z", notes: [{ n: 1, text: "Thêm ví dụ.", excerpt: null, leaf: { kind: "tag", ref_key: "x" } }], score: 3 };
+    const s = makeStore({ getMyActivityNote: vi.fn(async (): Promise<unknown> => note) });
+    const r = await handleStudentActivityNote(deps("studentAn", s), ACT_AN);
+    expect(r).toEqual({ status: 200, body: { note: { feedbackId: "f1", praise: "Câu mở đoạn rõ.", notes: [{ n: 1, text: "Thêm ví dụ.", excerpt: null }] } } });
+    expect(JSON.stringify(r.body)).not.toMatch(/leaf|score|ref_key/);
+    const broken = makeStore({ getMyActivityNote: vi.fn(async (): Promise<unknown> => { throw new Error("0021 not applied"); }) });
+    expect(await handleStudentActivityNote(deps("studentAn", broken), ACT_AN)).toMatchObject({ status: 200, body: { note: null } });
+    expect((await handleStudentActivityNote(deps("studentNguyen", s), ACT_AN)).status).toBe(404);
+    expect((await handleStudentActivityNote(deps("parent", s), ACT_AN)).status).toBe(403);
   });
 });

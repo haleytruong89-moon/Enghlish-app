@@ -125,3 +125,6 @@ export type MyRevisionView = {
   closingNote: string | null;
   draft: { content: RevisionDraftContent; revision: number; updatedAt: string } | null;
 };
+
+/** A "Chỉ góp ý" note read on the page of its own activity (G4): praise + items, no expiry, no score, leaf or author. */
+export type MyActivityNote = { feedbackId: string; praise: string; notes: { n: number; text: string; excerpt: string | null }[] };

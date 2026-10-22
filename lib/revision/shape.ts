@@ -9,6 +9,7 @@ import {
   VERDICTS,
   type FeedbackItem,
   type FeedbackPanelView,
+  type MyActivityNote,
   type MyFeedbackItem,
   type MyRevisionView,
   type RevisionListItem,
@@ -153,4 +154,13 @@ export function parseMyRevision(raw: unknown): MyRevisionView | null {
       updatedAt: r.draft.updated_at,
     },
   };
+}
+
+const myActivityNoteSchema = z.object({ feedback_id: text, praise: text, notes: z.array(childItem) });
+
+/** G4: the "Chỉ góp ý" note of one activity (allowlist like the other child parsers). */
+export function parseMyActivityNote(raw: unknown): MyActivityNote | null {
+  if (raw === null || raw === undefined) return null;
+  const r = myActivityNoteSchema.parse(raw);
+  return { feedbackId: r.feedback_id, praise: r.praise, notes: r.notes.map((n) => ({ n: n.n, text: n.text, excerpt: n.excerpt })) };
 }

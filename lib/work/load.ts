@@ -1,7 +1,7 @@
 import "server-only";
 import { createUserClient } from "@/lib/supabase/server";
-import type { MyFeedbackItem, MyRevisionView } from "@/lib/revision/types";
-import { handleStudentActivity, handleStudentHome, handleStudentRevision } from "./handlers";
+import type { MyActivityNote, MyFeedbackItem, MyRevisionView } from "@/lib/revision/types";
+import { handleStudentActivity, handleStudentActivityNote, handleStudentHome, handleStudentRevision } from "./handlers";
 import { createSupabaseWorkStore } from "./supabaseStore";
 import type { ReviewItem } from "@/lib/levels/types";
 import type { ActivityView, HomeView } from "./types";
@@ -11,7 +11,7 @@ export type StudentHomeData =
   | { kind: "login" }
   | { kind: "not-found" };
 
-export type ActivityPageData = { kind: "ok"; activity: ActivityView } | { kind: "login" } | { kind: "not-found" };
+export type ActivityPageData = { kind: "ok"; activity: ActivityView; note: MyActivityNote | null } | { kind: "login" } | { kind: "not-found" };
 
 async function currentUser() {
   const supabase = await createUserClient();
@@ -36,7 +36,10 @@ export async function loadActivityPage(activityId: string): Promise<ActivityPage
   const res = await handleStudentActivity({ user, store: createSupabaseWorkStore() }, activityId);
   if (res.status === 401) return { kind: "login" };
   if (res.status !== 200) return { kind: "not-found" };
-  return { kind: "ok", activity: (res.body as { activity: ActivityView }).activity };
+  const activity = (res.body as { activity: ActivityView }).activity;
+  // G4: the "Chỉ góp ý" note of this activity; a failed lookup (e.g. 0021 not applied yet) leaves it out.
+  const noteRes = activity.supported ? await handleStudentActivityNote({ user, store: createSupabaseWorkStore() }, activityId).catch(() => null) : null;
+  return { kind: "ok", activity, note: (noteRes?.body as { note?: MyActivityNote | null } | undefined)?.note ?? null };
 }
 
 export type RevisionPageData = { kind: "ok"; revision: MyRevisionView } | { kind: "login" } | { kind: "not-found" };
