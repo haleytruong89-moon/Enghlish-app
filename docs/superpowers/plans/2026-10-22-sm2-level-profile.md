@@ -13,6 +13,8 @@
 
 ## Global Constraints
 
+> Note: Amendments A1 and A2 at the end of this plan override the D9 / D13 wording in this section and in the decision table.
+
 - Everything lives in schema `english`; never create or change anything in schema `public`; never `supabase db push` / `db reset --linked`.
 - Migration `0020_level_profile.sql` is idempotent, expand-only, and its LAST line is `insert into english.schema_migrations(version) values ('0020') on conflict do nothing;`. Never edit 0001–0019, `content/skill_map/SM-1.json`, the catalogue / target-set / tag JSON or `content/config.lock.json`.
 - New append-only tables carry `english.eng_forbid_mutation('learner_id')` (update/delete) and `english.eng_forbid_mutation()` (truncate), RLS on, no direct INSERT/UPDATE/DELETE/TRUNCATE for anyone (also revoked from `service_role`); SELECT only through the policy `english.eng_is_staff_of(learner_id)` (parent of the family, tutor with an active relationship — never a student). No `grant … on all tables`.
@@ -50,7 +52,7 @@ Approved behaviour is unchanged; these fill gaps the spec leaves open. They are 
 
 ## Spec gaps noticed (asked in the PR, not blocking)
 
-1. The spec does not say whether an external result can be corrected or withdrawn (D9 says no for now).
+1. The spec does not say whether an external result can be corrected or withdrawn (D9 says no for now; Amendment A2 overrides this: a correction is a replacement entry, withdrawal without replacement is deferred).
 2. The spec does not say whether the parent's home should mark a change as "đã xem". SM-2 shows the last 30 days (D11).
 3. "Đang chờ cô" has nothing to count before S7 (proposals); it always says "Không có" in SM-2.
 
