@@ -279,7 +279,17 @@ as $$
     from english.feedback_notes f where f.id = p_feedback), false)
 $$;
 
--- Góp ý đang chờ con sửa ở một bước sửa (còn hiệu lực, yêu cầu sửa, chưa có bài sửa), hoặc NULL.
+-- Bước sửa này đã có bài ghi NGOÀI app (S5 "Ghi bài ngoài app": bài của bước REVISION không trỏ về bài được sửa) chưa. Có thì việc "Sửa bài"
+-- của em coi như xong - không còn hiện ở Việc tiếp theo, không nộp / lưu nháp thêm được (S5 của review 22/10). Bài sửa của em luôn trỏ về bài được sửa.
+create or replace function english.eng_revision_offline_answered(p_feedback uuid) returns boolean
+language sql stable security definer set search_path = ''
+as $$
+  select coalesce((
+    select exists (select 1 from english.attempts t where t.activity_instance_id = f.revision_activity_id and t.revises_attempt_id is null)
+    from english.feedback_notes f where f.id = p_feedback and f.revision_activity_id is not null), false)
+$$;
+
+-- Góp ý đang chờ con sửa ở một bước sửa (còn hiệu lực, yêu cầu sửa, chưa có bài sửa - trong app hay ngoài app), hoặc NULL.
 create or replace function english.eng_revision_feedback(p_activity uuid) returns uuid
 language sql stable security definer set search_path = ''
 as $$
@@ -287,6 +297,7 @@ as $$
   where f.revision_activity_id = p_activity and f.kind = 'feedback' and f.requires_revision
     and english.eng_feedback_is_live(f.id)
     and not exists (select 1 from english.attempts t where t.revises_attempt_id = f.source_attempt_id)
+    and not english.eng_revision_offline_answered(f.id)
   order by f.round desc, f.created_at desc
   limit 1
 $$;
@@ -303,6 +314,7 @@ revoke execute on function english.eng_revision_root(uuid) from public, anon, au
 revoke execute on function english.eng_feedback_is_live(uuid) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_revision_round(uuid) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_revision_started(uuid) from public, anon, authenticated, service_role;
+revoke execute on function english.eng_revision_offline_answered(uuid) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_revision_feedback(uuid) from public, anon, authenticated, service_role;
 revoke execute on function english.eng_revision_open(uuid) from public, anon, authenticated, service_role;
 
@@ -921,6 +933,7 @@ as $$
            coalesce(f.revision_activity_id, sa.activity_instance_id) as activity_id,
            i.snapshot -> 'template' ->> 'title_vi' as title_vi,
            rv.id as revision_id,
+           english.eng_revision_offline_answered(f.id) as offline_done,
            (select c.praise from english.feedback_notes c where c.source_attempt_id = rv.id and c.kind = 'closing') as closing_note,
            (select min(x.created_at) from english.feedback_notes x where x.source_attempt_id = rv.id) as seen_at
     from english.feedback_notes f
@@ -934,6 +947,7 @@ as $$
   ),
   st as (
     select fb.*, case when not fb.requires_revision then 'note'
+                      when fb.revision_id is null and fb.offline_done then 'closed'
                       when fb.revision_id is null then 'todo'
                       when fb.seen_at is null then 'submitted'
                       else 'seen' end as state
@@ -956,8 +970,10 @@ as $$
         from pg_catalog.jsonb_array_elements(r.items) x) end)
     order by case r.state when 'todo' then 0 when 'submitted' then 1 else 2 end, r.created_at desc), '[]'::jsonb))
   from st r
-  where r.state in ('todo', 'submitted')
-     or coalesce(r.seen_at, case when r.state = 'note' then r.created_at end) >= pg_catalog.now() - pg_catalog.make_interval(days => 14)
+  where (r.state = 'todo' and english.eng_activity_released(r.activity_id))
+     or r.state = 'submitted'
+     or (r.state in ('seen', 'note')
+         and coalesce(r.seen_at, case when r.state = 'note' then r.created_at end) >= pg_catalog.now() - pg_catalog.make_interval(days => 14))
 $$;
 
 -- Màn sửa bài của em (một bước REVISION đã mở, có góp ý còn hiệu lực yêu cầu sửa): câu khen, góp ý đánh số + trích đoạn, bài cũ của chính em,
@@ -987,6 +1003,9 @@ begin
   select * into v_inst from english.inquiry_instances i where i.id = v_act.inquiry_instance_id;
   select av.content ->> 'text' into v_old from english.artifact_versions av where av.attempt_id = v_f.source_attempt_id order by av.version limit 1;
   select t.* into v_sub from english.attempts t where t.revises_attempt_id = v_f.source_attempt_id order by t.submitted_at limit 1;
+  if v_sub.id is null and english.eng_revision_offline_answered(v_f.id) then
+    return null;
+  end if;
   if v_sub.id is null then
     select pg_catalog.jsonb_build_object('content', d.content, 'revision', d.revision, 'updated_at', d.updated_at) into v_draft
     from english.working_drafts d where d.activity_instance_id = p_activity and d.learner_id = v_l.id;
@@ -1148,7 +1167,7 @@ begin
   select f.* into v_f from english.feedback_notes f
   where f.revision_activity_id = p_activity and f.kind = 'feedback' and f.requires_revision and english.eng_feedback_is_live(f.id)
   order by f.round desc, f.created_at desc limit 1;
-  if not found or not english.eng_activity_released(p_activity) then
+  if not found or not english.eng_activity_released(p_activity) or english.eng_revision_offline_answered(v_f.id) then
     raise exception 'eng_submit_revision: there is no revision to do on this step (revision_not_open)' using errcode = '22023';
   end if;
   -- S2: em trả lời đúng góp ý mà em đang xem; thầy/cô vừa sửa góp ý (hoặc trang cũ) → từ chối, em tải lại trang.

@@ -407,6 +407,55 @@ describe("S6 feedback + revision (migration 0021)", () => {
       }
     });
 
+    describe("S5: a 'Sửa bài' row never goes stale", () => {
+      /** A fresh writing + revision-asking feedback → the revision step. */
+      const open = async () => {
+        const x = await assign("an", "A-W1-VOLCANOES", dueReleasingAll("A-W1-VOLCANOES"));
+        const work = (await submitText(U().studentAn, await step(x, 6), TEXT_A)).attempt_id;
+        return { work, act: (await write(M().tutorAn, work)).revision_activity_id! };
+      };
+      const todo = async (act: string) => (await studentRead<MyFeedback>(U().studentAn, "select english.eng_my_feedback() as r")).items.find((i) => i.activity_id === act);
+      const event = (act: string, kind: string, date: string | null) =>
+        q1("select english.eng_activity_event($1, $2, $3::date, 'S5 test: stale row', $4)", [act, kind, date, M().parent]);
+
+      it("a skipped step leaves the home and the page; unskipping brings it back", async () => {
+        const { act } = await open();
+        expect(await todo(act)).toMatchObject({ state: "todo" });
+        await event(act, "skip", null);
+        expect(await todo(act)).toBeUndefined();
+        expect(await studentRead(U().studentAn, "select english.eng_my_revision($1) as r", [act])).toBeNull();
+        await event(act, "unskip", null);
+        expect(await todo(act)).toMatchObject({ state: "todo" });
+      });
+
+      it("a step moved to a later day leaves the home until that day; moving it back returns it", async () => {
+        const { act } = await open();
+        await event(act, "reschedule", addDays(TODAY, 3));
+        expect(await todo(act)).toBeUndefined();
+        await event(act, "reschedule", TODAY);
+        expect(await todo(act)).toMatchObject({ state: "todo" });
+      });
+
+      it("work recorded outside the app on the revision step closes the open revision: gone from the home, no page, no draft, no submit", async () => {
+        const { act } = await open();
+        const feedback = await liveFeedbackOf(act);
+        expect(await todo(act)).toMatchObject({ state: "todo" });
+        await svc("select english.eng_record_offline_attempt($1, 'manual_import', $2, null, null, $3::date, '{none}'::text[], $4, $5) as r",
+          [act, `${TEXT_A} On paper, I added an ending.`, TODAY, M().tutorAn, randomUUID()]);
+        expect(await todo(act)).toBeUndefined();
+        expect(await studentRead(U().studentAn, "select english.eng_my_revision($1) as r", [act])).toBeNull();
+        expect((await q1<{ ok: boolean }>("select english.eng_revision_open($1) as ok", [act]))[0]?.ok).toBe(false);
+        await fail(student(U().studentAn, "select english.eng_save_revision_draft($1, '{}'::jsonb) as r", [act]), "22023", /\(revision_not_open\)/);
+        await fail(reviseAs(U().studentAn, act, `${TEXT_A} Again.`, { "1": { choice: "changed" } }, { feedback }), "22023", /\(revision_not_open\)/);
+      });
+
+      it("a revision the child already sent stays on the home as 'submitted' (the row is not stale), and round 2 is a fresh 'todo'", async () => {
+        const { act } = await open();
+        await reviseAs(U().studentAn, act, `${TEXT_A} As a result, it is violent.`, { "1": { choice: "changed" }, "2": { choice: "changed" } });
+        expect(await todo(act)).toMatchObject({ state: "submitted" });
+      });
+    });
+
     it("G4: a 'Chỉ góp ý' note is read on its own activity (no expiry, no leaf, no author); a revision request and other children get nothing", async () => {
       const x = await assign("an", "A-W1-VOLCANOES", dueReleasingAll("A-W1-VOLCANOES"));
       const act = await step(x, 6);
