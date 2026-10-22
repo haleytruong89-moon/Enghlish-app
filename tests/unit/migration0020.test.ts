@@ -56,5 +56,26 @@ describe("0020_level_profile.sql", () => {
     expect(preview).toContain("'external_results', (select pg_catalog.count(*) from english.external_results x where x.learner_id = p_learner),");
   });
 
-  // (Tasks 2 and 3 add their tests here)
+  it("eng_record_level: only the child's active tutor, never level_up, reason for adjust; eng_record_external_result: tutor or parent", () => {
+    const lvl = fnText(sql, "eng_record_level");
+    expect(lvl).toContain("v_member.role <> 'tutor' or not english.eng_actor_may_manage(p_by, p_learner)");
+    for (const tag of ["(tutor_only)", "(level_up_reserved)", "(reason_required)", "(already_confirmed)", "(needs_baseline)", "(same_level)", "(bad_level)"]) {
+      expect(lvl, tag).toContain(tag);
+    }
+    expect(lvl).toContain("for update");
+    const ext = fnText(sql, "eng_record_external_result");
+    expect(ext).toContain("v_member.role not in ('tutor', 'parent') or not english.eng_actor_may_manage(p_by, p_learner)");
+    expect(ext).toContain("english.eng_register_file(v_l.family_id, p_learner, 'external_result', p_file, p_by)");
+    expect(ext).toContain("already_superseded");
+    expect(ext).toContain("'external_result.corrected'");
+    for (const sig of [
+      "eng_record_level(uuid, text, jsonb, text, uuid, text)",
+      "eng_record_external_result(uuid, text, date, text, text[], text, jsonb, uuid, text, uuid)",
+    ]) {
+      expect(code).toContain(`revoke execute on function english.${sig} from public, anon, authenticated;`);
+      expect(code).toContain(`grant execute on function english.${sig} to service_role;`);
+    }
+  });
+
+  // (Task 3 adds its tests here)
 });

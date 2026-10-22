@@ -102,6 +102,252 @@ alter table english.files add constraint files_kind_mime check (
   or kind in ('answer_key', 'work_photo', 'external_result')
   or (kind = 'result_image' and mime <> 'application/pdf'));
 
+-- 4. Ghi ------------------------------------------------------------------------------------------------------------------------------
+-- Xác nhận cấp khởi điểm (baseline, 1..7 mảng một lần) hoặc điều chỉnh (adjust, đúng 1 mảng, bắt buộc lý do). CHỈ gia sư còn quan hệ
+-- hiệu lực với em (kiểu D15; phụ huynh xem, không ghi). level_up không đi qua đây (S7: xác nhận đề xuất). Cấp cũ (from_level) do hàm
+-- tính: dòng gần nhất của mảng, chưa có thì cấp giả định của track. Gửi lại cùng client_id + cùng nội dung = trả lại (replayed).
+create or replace function english.eng_record_level(
+  p_learner uuid,
+  p_kind text,
+  p_levels jsonb,
+  p_reason text,
+  p_by uuid,
+  p_client_id text
+) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_member english.members%rowtype;
+  v_map english.skill_maps%rowtype;
+  v_reason text := nullif(pg_catalog.btrim(coalesce(p_reason, '')), '');
+  v_n int;
+  v_policy text;
+  v_item record;
+  v_prev english.level_decisions%rowtype;
+  v_from text;
+  v_new jsonb;
+  v_old jsonb;
+  v_ids uuid[] := '{}';
+  v_id uuid;
+begin
+  if p_learner is null or p_kind is null or p_levels is null or p_by is null or p_client_id is null then
+    raise exception 'eng_record_level: learner, kind, levels, actor and client id are required' using errcode = '22004';
+  end if;
+  if p_kind = 'level_up' then
+    raise exception 'eng_record_level: a level-up is confirmed from a proposal, not recorded here (level_up_reserved)' using errcode = '22023';
+  end if;
+  if p_kind not in ('baseline', 'adjust') then
+    raise exception 'eng_record_level: kind must be baseline or adjust (bad_level)' using errcode = '22023';
+  end if;
+  -- Khóa dòng em: hai lần ghi cùng lúc xếp hàng (một mảng không thể được xác nhận hai lần).
+  select * into v_l from english.learners l where l.id = p_learner for update;
+  if not found then
+    raise exception 'eng_record_level: learner not found' using errcode = 'P0002';
+  end if;
+  select * into v_member from english.members m where m.id = p_by;
+  if v_member.id is null or v_member.role <> 'tutor' or not english.eng_actor_may_manage(p_by, p_learner) then
+    raise exception 'eng_record_level: only a tutor of this learner records levels (tutor_only)' using errcode = '42501';
+  end if;
+  if v_reason is not null and pg_catalog.length(v_reason) > 300 then
+    raise exception 'eng_record_level: the reason is too long (reason_too_long)' using errcode = '22023';
+  end if;
+  if p_kind = 'adjust' and v_reason is null then
+    raise exception 'eng_record_level: an adjustment needs a reason (reason_required)' using errcode = '23514';
+  end if;
+  if pg_catalog.jsonb_typeof(p_levels) <> 'object' then
+    raise exception 'eng_record_level: levels must be {domain: level} (bad_level)' using errcode = '22023';
+  end if;
+  select pg_catalog.count(*)::int into v_n from pg_catalog.jsonb_object_keys(p_levels);
+  if v_n not between 1 and 7 or (p_kind = 'adjust' and v_n <> 1) then
+    raise exception 'eng_record_level: a baseline names 1 to 7 domains, an adjustment exactly one (bad_level)' using errcode = '22023';
+  end if;
+  select * into v_map from english.skill_maps m where m.published_at is not null order by m.published_at desc, m.id desc limit 1;
+  if not found then
+    raise exception 'eng_record_level: no published skill map' using errcode = 'P0002';
+  end if;
+  -- Mỗi khóa là một mảng của bản đồ; mỗi giá trị là một nấc của THANG CỦA MẢNG ĐÓ.
+  if exists (
+    select 1 from pg_catalog.jsonb_each(p_levels) x
+    left join english.skill_domains d on d.map_id = v_map.id and d.key = x.key
+    where d.key is null
+       or pg_catalog.jsonb_typeof(x.value) <> 'string'
+       or (d.scale = 'cefr' and (x.value #>> '{}') not in ('A1', 'A2', 'A2+', 'B1', 'B1+', 'B2', 'B2+', 'C1', 'C2'))
+       or (d.scale = 'task_level' and (x.value #>> '{}') not in ('1', '2', '3', '4'))) then
+    raise exception 'eng_record_level: each domain needs a level of its own scale (bad_level)' using errcode = '22023';
+  end if;
+
+  -- Gửi lại (mạng chập chờn): cùng client_id + cùng nội dung + cùng người → trả lại các dòng cũ.
+  select pg_catalog.jsonb_object_agg(x.key, x.value #>> '{}') into v_new from pg_catalog.jsonb_each(p_levels) x;
+  if exists (select 1 from english.level_decisions d where d.learner_id = p_learner and d.client_id = p_client_id) then
+    select pg_catalog.jsonb_object_agg(d.domain_key, d.to_level) into v_old
+    from english.level_decisions d where d.learner_id = p_learner and d.client_id = p_client_id;
+    if v_old = v_new and not exists (
+      select 1 from english.level_decisions d
+      where d.learner_id = p_learner and d.client_id = p_client_id
+        and (d.kind <> p_kind or d.decided_by_member <> p_by or d.reason is distinct from v_reason)) then
+      return pg_catalog.jsonb_build_object(
+        'ids', (select pg_catalog.jsonb_agg(d.id order by d.domain_key) from english.level_decisions d where d.learner_id = p_learner and d.client_id = p_client_id),
+        'replayed', true);
+    end if;
+    raise exception 'eng_record_level: this client id was already used for other levels' using errcode = '23505';
+  end if;
+
+  -- Chính sách đánh giá của bộ kỹ năng hiện tại của em (để S7 đọc lại; NULL nếu em chưa có bộ kỹ năng).
+  select c.assessment_policy_version into v_policy
+  from english.target_sets ts
+  join english.target_set_definitions d on d.id = ts.definition_id
+  join english.catalogue_versions c on c.version = d.catalogue_version
+  where ts.learner_id = p_learner
+  order by ts.effective_from desc, ts.seq desc
+  limit 1;
+
+  for v_item in select x.key, x.value #>> '{}' as lvl from pg_catalog.jsonb_each(p_levels) x order by x.key loop
+    select * into v_prev from english.level_decisions d
+    where d.learner_id = p_learner and d.domain_key = v_item.key
+    order by d.decided_at desc, d.id desc
+    limit 1;
+    if p_kind = 'baseline' and v_prev.id is not null then
+      raise exception 'eng_record_level: this domain was already confirmed; adjust it instead (already_confirmed)' using errcode = '23505';
+    end if;
+    if p_kind = 'adjust' and v_prev.id is null then
+      raise exception 'eng_record_level: confirm the starting level of this domain first (needs_baseline)' using errcode = '23514';
+    end if;
+    v_from := coalesce(v_prev.to_level, v_map.assumed -> v_l.track_id ->> v_item.key);
+    if v_from is null then
+      raise exception 'eng_record_level: the map has no assumed level for this track' using errcode = 'P0002';
+    end if;
+    if p_kind = 'adjust' and v_from = v_item.lvl then
+      raise exception 'eng_record_level: the new level is the current one (same_level)' using errcode = '23514';
+    end if;
+    insert into english.level_decisions(learner_id, domain_key, map_id, from_level, to_level, kind, reason, evidence, policy_version,
+                                        decided_by_member, decided_role, client_id)
+    values (p_learner, v_item.key, v_map.id, v_from, v_item.lvl, p_kind, v_reason,
+            pg_catalog.jsonb_build_object(
+              'basis', 'tutor_judgement',
+              'assumed_level', v_map.assumed -> v_l.track_id ->> v_item.key,
+              'latest_external_result_id', (
+                select e.id from english.external_results e
+                where e.learner_id = p_learner and v_item.key = any (e.domains)
+                  and not exists (select 1 from english.external_results s where s.supersedes_id = e.id)
+                order by e.taken_on desc, e.recorded_at desc limit 1)),
+            v_policy, p_by, 'tutor', p_client_id)
+    returning id into v_id;
+    v_ids := v_ids || v_id;
+  end loop;
+
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_member.user_id, v_member.role, 'level.recorded', v_l.family_id, p_learner,
+          pg_catalog.jsonb_build_object('kind', p_kind, 'map_id', v_map.id,
+                                        'domains', (select pg_catalog.jsonb_agg(k order by k) from pg_catalog.jsonb_object_keys(p_levels) k)));
+  return pg_catalog.jsonb_build_object('ids', pg_catalog.to_jsonb(v_ids), 'replayed', false);
+end
+$$;
+
+-- Một kết quả thi ngoài (gia sư hoặc phụ huynh của em). File kèm (nếu có) đã được máy chủ kiểm có thật trong kho trước khi gọi;
+-- hàm ghi dòng files loại 'external_result' (đường dẫn tính từ id). Mốc ngoài KHÔNG đổi cấp.
+-- Sửa một kết quả = ghi dòng MỚI có p_supersedes (dòng cũ của chính em này, chưa bị thay): không xóa, không sửa dòng cũ.
+create or replace function english.eng_record_external_result(
+  p_learner uuid,
+  p_exam text,
+  p_taken_on date,
+  p_score_text text,
+  p_domains text[],
+  p_note text,
+  p_file jsonb,
+  p_by uuid,
+  p_client_id text,
+  p_supersedes uuid default null
+) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_member english.members%rowtype;
+  v_today date := english.eng_today_vn();
+  v_score text := pg_catalog.btrim(coalesce(p_score_text, ''));
+  v_note text := nullif(pg_catalog.btrim(coalesce(p_note, '')), '');
+  v_domains text[];
+  v_has_file boolean := p_file is not null and p_file <> 'null'::jsonb;
+  v_old english.external_results%rowtype;
+  v_file uuid;
+  v_id uuid;
+  v_target english.external_results%rowtype;
+begin
+  if p_learner is null or p_exam is null or p_taken_on is null or p_domains is null or p_by is null or p_client_id is null then
+    raise exception 'eng_record_external_result: learner, exam, date, domains, actor and client id are required' using errcode = '22004';
+  end if;
+  select * into v_l from english.learners l where l.id = p_learner for update;
+  if not found then
+    raise exception 'eng_record_external_result: learner not found' using errcode = 'P0002';
+  end if;
+  select * into v_member from english.members m where m.id = p_by;
+  if v_member.id is null or v_member.role not in ('tutor', 'parent') or not english.eng_actor_may_manage(p_by, p_learner) then
+    raise exception 'eng_record_external_result: this member may not record results for this learner' using errcode = '42501';
+  end if;
+  if p_exam not in ('KET', 'PET', 'FCE', 'CAE', 'CPE', 'VAO10_MOCK', 'SCHOOL', 'OTHER') then
+    raise exception 'eng_record_external_result: unknown exam (bad_exam)' using errcode = '22023';
+  end if;
+  if p_taken_on > v_today or p_taken_on < v_today - 3660 then
+    raise exception 'eng_record_external_result: the date must be today or earlier, within 10 years (bad_date)' using errcode = '23514';
+  end if;
+  if pg_catalog.length(v_score) not between 1 and 60 then
+    raise exception 'eng_record_external_result: the score must be 1 to 60 characters' using errcode = '22023';
+  end if;
+  if v_note is not null and pg_catalog.length(v_note) > 300 then
+    raise exception 'eng_record_external_result: the note is too long (note_too_long)' using errcode = '22023';
+  end if;
+  if pg_catalog.cardinality(p_domains) = 0 or exists (
+    select 1 from unnest(p_domains) d
+    where d is null or d not in ('grammar', 'vocab', 'reading', 'listening', 'writing', 'speaking', 'thinking')) then
+    raise exception 'eng_record_external_result: name 1 to 7 known domains (bad_domains)' using errcode = '22023';
+  end if;
+  v_domains := array(select distinct d from unnest(p_domains) d order by d);
+
+  select * into v_old from english.external_results e where e.learner_id = p_learner and e.client_id = p_client_id;
+  if found then
+    if v_old.exam = p_exam and v_old.taken_on = p_taken_on and v_old.score_text = v_score and v_old.domains = v_domains
+       and v_old.note is not distinct from v_note and v_old.recorded_by_member = p_by
+       and v_old.supersedes_id is not distinct from p_supersedes
+       and v_old.file_id::text is not distinct from (case when v_has_file then pg_catalog.lower(p_file ->> 'id') end) then
+      return pg_catalog.jsonb_build_object('id', v_old.id, 'replayed', true);
+    end if;
+    raise exception 'eng_record_external_result: this client id was already used for another result' using errcode = '23505';
+  end if;
+
+  -- Sửa: dòng cũ phải là của chính em này và chưa bị thay (gửi lại cùng client_id đã trả ở trên, nên không vướng chỗ này).
+  if p_supersedes is not null then
+    select * into v_target from english.external_results e where e.id = p_supersedes and e.learner_id = p_learner;
+    if not found then
+      raise exception 'eng_record_external_result: the result to correct was not found (not_found)' using errcode = 'P0002';
+    end if;
+    if exists (select 1 from english.external_results s where s.supersedes_id = p_supersedes) then
+      raise exception 'eng_record_external_result: this result was already corrected (already_superseded)' using errcode = '23505';
+    end if;
+  end if;
+
+  if v_has_file then
+    v_file := english.eng_register_file(v_l.family_id, p_learner, 'external_result', p_file, p_by);
+  end if;
+  insert into english.external_results(learner_id, exam, taken_on, score_text, domains, file_id, note, recorded_by_member, recorded_role,
+                                       supersedes_id, client_id)
+  values (p_learner, p_exam, p_taken_on, v_score, v_domains, v_file, v_note, p_by, v_member.role, p_supersedes, p_client_id)
+  returning id into v_id;
+
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_member.user_id, v_member.role,
+          case when p_supersedes is null then 'external_result.recorded' else 'external_result.corrected' end, v_l.family_id, p_learner,
+          pg_catalog.jsonb_build_object('result_id', v_id, 'exam', p_exam, 'domains', pg_catalog.to_jsonb(v_domains), 'has_file', v_file is not null)
+            || case when p_supersedes is null then '{}'::jsonb else pg_catalog.jsonb_build_object('supersedes_id', p_supersedes) end);
+  return pg_catalog.jsonb_build_object('id', v_id, 'replayed', false);
+end
+$$;
+
+revoke execute on function english.eng_record_level(uuid, text, jsonb, text, uuid, text) from public, anon, authenticated;
+grant execute on function english.eng_record_level(uuid, text, jsonb, text, uuid, text) to service_role;
+revoke execute on function english.eng_record_external_result(uuid, text, date, text, text[], text, jsonb, uuid, text, uuid) from public, anon, authenticated;
+grant execute on function english.eng_record_external_result(uuid, text, date, text, text[], text, jsonb, uuid, text, uuid) to service_role;
+
 -- 6. Purge: thêm level_decisions + external_results (giữ nguyên mọi dòng của 0018; có test đối chiếu từng dòng).
 create or replace function english.eng_purge_learner(
   p_learner_id uuid,

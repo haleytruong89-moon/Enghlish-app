@@ -34,10 +34,10 @@ describe("SM-2 level profile (migration 0020)", () => {
     svc<Rec>("select english.eng_record_level($1, $2, $3::jsonb, $4, $5, $6) as r", [
       o.learner ?? NG(), o.kind ?? "baseline", JSON.stringify(o.levels ?? { grammar: "B2" }), o.reason ?? null, by, o.clientId ?? randomUUID(),
     ]);
-  const ext = (by: string, o: { learner?: string; exam?: string; takenOn?: string; score?: string; domains?: string[]; note?: string | null; file?: unknown; clientId?: string } = {}) =>
-    svc<{ id: string; replayed: boolean }>("select english.eng_record_external_result($1, $2, $3::date, $4, $5::text[], $6, $7::jsonb, $8, $9) as r", [
+  const ext = (by: string, o: { learner?: string; exam?: string; takenOn?: string; score?: string; domains?: string[]; note?: string | null; file?: unknown; clientId?: string; supersedes?: string } = {}) =>
+    svc<{ id: string; replayed: boolean }>("select english.eng_record_external_result($1, $2, $3::date, $4, $5::text[], $6, $7::jsonb, $8, $9, $10) as r", [
       o.learner ?? NG(), o.exam ?? "FCE", o.takenOn ?? addDays(TODAY, -30), o.score ?? "172 · Grade B", o.domains ?? ["reading", "listening"],
-      o.note ?? null, o.file === undefined ? null : JSON.stringify(o.file), by, o.clientId ?? randomUUID(),
+      o.note ?? null, o.file === undefined ? null : JSON.stringify(o.file), by, o.clientId ?? randomUUID(), o.supersedes ?? null,
     ]);
 
   beforeAll(async () => {
@@ -147,5 +147,139 @@ describe("SM-2 level profile (migration 0020)", () => {
     });
   });
 
-  // (Tasks 2 and 3 add their sections here)
+  describe("2. recording levels", () => {
+    it("the child's tutor confirms several starting levels at once; 'from' is the track's assumed level; replay returns the same rows", async () => {
+      const L = await newLearner("B");
+      const r = await rec(M().tutorNguyen, { learner: L, levels: { thinking: "3", grammar: "B2+", reading: "B2" }, reason: "Buổi đầu", clientId: "lvl-base-0001" });
+      expect([r.ids.length, r.replayed]).toEqual([3, false]);
+      expect(await q1("select domain_key, from_level, to_level, kind, reason, decided_role, map_id from english.level_decisions where learner_id = $1 order by domain_key", [L])).toEqual([
+        { domain_key: "grammar", from_level: "B2", to_level: "B2+", kind: "baseline", reason: "Buổi đầu", decided_role: "tutor", map_id: "SM-1" },
+        { domain_key: "reading", from_level: "B2", to_level: "B2", kind: "baseline", reason: "Buổi đầu", decided_role: "tutor", map_id: "SM-1" },
+        { domain_key: "thinking", from_level: "2", to_level: "3", kind: "baseline", reason: "Buổi đầu", decided_role: "tutor", map_id: "SM-1" },
+      ]);
+      expect(await rec(M().tutorNguyen, { learner: L, levels: { grammar: "B2+", reading: "B2", thinking: "3" }, reason: "Buổi đầu", clientId: "lvl-base-0001" })).toEqual({ ids: r.ids, replayed: true });
+      await fail(rec(M().tutorNguyen, { learner: L, levels: { grammar: "C1", reading: "B2", thinking: "3" }, reason: "Buổi đầu", clientId: "lvl-base-0001" }), "23505");
+      expect((await q1<{ evidence: unknown; policy_version: string | null }>("select evidence, policy_version from english.level_decisions where learner_id = $1 and domain_key = 'grammar'", [L]))[0])
+        .toEqual({ evidence: { basis: "tutor_judgement", assumed_level: "B2", latest_external_result_id: null }, policy_version: null });
+      // a child with a skill set records the policy of that set
+      await rec(M().tutorNguyen, { levels: { grammar: "B2" } });
+      expect((await q1<{ p: string }>("select policy_version as p from english.level_decisions where learner_id = $1 and domain_key = 'grammar'", [NG()]))[0]?.p).toBe("AP-0.2-pilot");
+    });
+
+    it("baseline once per domain; adjust needs a baseline, one domain, a different level and a reason; going down is allowed", async () => {
+      const L = await newLearner("B");
+      await rec(M().tutorNguyen, { learner: L, levels: { grammar: "B2+" } });
+      await fail(rec(M().tutorNguyen, { learner: L, levels: { grammar: "B2" } }), "23505", /\(already_confirmed\)/);
+      await fail(rec(M().tutorNguyen, { learner: L, kind: "adjust", levels: { listening: "B1+" }, reason: "Nghe còn yếu" }), "23514", /\(needs_baseline\)/);
+      await fail(rec(M().tutorNguyen, { learner: L, kind: "adjust", levels: { grammar: "B2" } }), "23514", /\(reason_required\)/);
+      await fail(rec(M().tutorNguyen, { learner: L, kind: "adjust", levels: { grammar: "B2" }, reason: "   " }), "23514", /\(reason_required\)/);
+      await fail(rec(M().tutorNguyen, { learner: L, kind: "adjust", levels: { grammar: "B2", vocab: "B2" }, reason: "x" }), "22023", /\(bad_level\)/);
+      await fail(rec(M().tutorNguyen, { learner: L, kind: "adjust", levels: { grammar: "B2+" }, reason: "x" }), "23514", /\(same_level\)/);
+      await rec(M().tutorNguyen, { learner: L, kind: "adjust", levels: { grammar: "B2" }, reason: "Bài viết gần đây còn nhiều lỗi thì" });
+      expect(await q1("select from_level, to_level, kind, reason from english.level_decisions where learner_id = $1 and domain_key = 'grammar' order by decided_at", [L])).toEqual([
+        { from_level: "B2", to_level: "B2+", kind: "baseline", reason: null },
+        { from_level: "B2+", to_level: "B2", kind: "adjust", reason: "Bài viết gần đây còn nhiều lỗi thì" },
+      ]);
+    });
+
+    it("each level must fit its domain's scale; unknown domains, level_up, other kinds and long reasons are refused", async () => {
+      const L = await newLearner("A");
+      for (const levels of [{ thinking: "B1" }, { grammar: "3" }, { grammar: "B3" }, { music: "B1" }, {}, { grammar: 2 }, ["grammar"]]) {
+        await fail(rec(M().tutorNguyen, { learner: L, levels }), "22023", /\(bad_level\)/);
+      }
+      await fail(rec(M().tutorNguyen, { learner: L, kind: "level_up", levels: { grammar: "B1" } }), "22023", /\(level_up_reserved\)/);
+      await fail(rec(M().tutorNguyen, { learner: L, kind: "promote", levels: { grammar: "B1" } }), "22023");
+      await fail(rec(M().tutorNguyen, { learner: L, levels: { grammar: "A2" }, reason: "x".repeat(301) }), "22023", /\(reason_too_long\)/);
+      expect(await n("select count(*)::int as n from english.level_decisions where learner_id = $1", [L])).toBe(0);
+    });
+
+    it("only a tutor with an active relationship: the parent, the other child's tutor, a past tutor, the student and strangers are refused", async () => {
+      for (const by of [M().parent, M().tutorAn, oldTutor, M().studentNguyen, randomUUID()]) {
+        await fail(rec(by, { levels: { vocab: "B2" } }), "42501", /\(tutor_only\)/);
+      }
+      await fail(rec(M().tutorNguyen, { learner: randomUUID(), levels: { vocab: "B2" } }), "P0002");
+    });
+
+    it("writes an audit row without the reason", async () => {
+      const L = await newLearner("B");
+      await rec(M().tutorNguyen, { learner: L, levels: { writing: "B1+" }, reason: "Chi tiết riêng tư" });
+      const log = await q1<{ payload: Record<string, unknown> }>("select payload from english.audit_log where action = 'level.recorded' and learner_id = $1", [L]);
+      expect(log[0]?.payload).toEqual({ kind: "baseline", map_id: "SM-1", domains: ["writing"] });
+    });
+  });
+
+  describe("3. recording external results", () => {
+    it("the parent or the tutor records one, with or without a file; replay returns it; a reused client id or file is refused", async () => {
+      const a = await ext(M().parent, { clientId: "ext-0000-0001", domains: ["reading", "listening", "reading"] });
+      expect(a.replayed).toBe(false);
+      expect(await ext(M().parent, { clientId: "ext-0000-0001", domains: ["listening", "reading"] })).toEqual({ id: a.id, replayed: true });
+      await fail(ext(M().parent, { clientId: "ext-0000-0001", score: "180" }), "23505");
+      expect((await q1("select exam, score_text, domains, recorded_role, file_id from english.external_results where id = $1", [a.id]))[0])
+        .toEqual({ exam: "FCE", score_text: "172 · Grade B", domains: ["listening", "reading"], recorded_role: "parent", file_id: null });
+      const fileId = randomUUID();
+      const b = await ext(M().tutorNguyen, { exam: "VAO10_MOCK", score: "8,5/10", domains: ["grammar"], file: { id: fileId, mime: "application/pdf", bytes: 2048 } });
+      expect((await q1("select kind, path, learner_id from english.files where id = $1", [fileId]))[0]).toEqual({
+        kind: "external_result", path: `${s.familyId}/${NG()}/${fileId}.pdf`, learner_id: NG(),
+      });
+      expect((await q1<{ f: string }>("select file_id::text as f from english.external_results where id = $1", [b.id]))[0]?.f).toBe(fileId);
+      await fail(ext(M().tutorNguyen, { file: { id: fileId, mime: "application/pdf", bytes: 2048 } }), "23505");
+    });
+
+    it("refuses a future or very old date, unknown exams and domains, an empty score, a long note, and members outside the child", async () => {
+      await fail(ext(M().parent, { takenOn: addDays(TODAY, 1) }), "23514", /\(bad_date\)/);
+      await fail(ext(M().parent, { takenOn: addDays(TODAY, -3700) }), "23514", /\(bad_date\)/);
+      await fail(ext(M().parent, { exam: "IELTS" }), "22023", /\(bad_exam\)/);
+      await fail(ext(M().parent, { domains: [] }), "22023", /\(bad_domains\)/);
+      await fail(ext(M().parent, { domains: ["music"] }), "22023", /\(bad_domains\)/);
+      await fail(ext(M().parent, { score: "   " }), "22023");
+      await fail(ext(M().parent, { note: "n".repeat(301) }), "22023", /\(note_too_long\)/);
+      for (const by of [M().tutorAn, oldTutor, M().studentNguyen, randomUUID()]) await fail(ext(by), "42501");
+    });
+
+    it("the audit row names the kind of result, never the score or the note; both write functions are service_role only", async () => {
+      const r = await ext(M().parent, { note: "Riêng tư" });
+      const log = await q1<{ payload: Record<string, unknown> }>("select payload from english.audit_log where action = 'external_result.recorded' and payload ->> 'result_id' = $1", [r.id]);
+      expect(Object.keys(log[0]!.payload).sort()).toEqual(["domains", "exam", "has_file", "result_id"]);
+      const acl = await q1<{ proname: string; anon: boolean; auth: boolean; svc: boolean }>(`
+        select p.proname, has_function_privilege('anon', p.oid, 'execute') as anon, has_function_privilege('authenticated', p.oid, 'execute') as auth,
+               has_function_privilege('service_role', p.oid, 'execute') as svc
+        from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
+        where ns.nspname = 'english' and p.proname in ('eng_record_level', 'eng_record_external_result')`);
+      expect(acl).toHaveLength(2);
+      for (const a of acl) expect([a.anon, a.auth, a.svc], a.proname).toEqual([false, false, true]);
+    });
+
+    it("a correction is a new row that replaces an old one: once per row, same child only, tutor or parent only, audited as corrected", async () => {
+      const L = await newLearner("B");
+      const first = await ext(M().parent, { learner: L, score: "165", clientId: "ext-corr-0001" });
+      const fixed = await ext(M().tutorNguyen, { learner: L, score: "172", clientId: "ext-corr-0002", supersedes: first.id });
+      expect(fixed.replayed).toBe(false);
+      expect(await ext(M().tutorNguyen, { learner: L, score: "172", clientId: "ext-corr-0002", supersedes: first.id })).toEqual({ id: fixed.id, replayed: true });
+      expect(await q1("select score_text, supersedes_id from english.external_results where learner_id = $1 order by recorded_at", [L])).toEqual([
+        { score_text: "165", supersedes_id: null },
+        { score_text: "172", supersedes_id: first.id },
+      ]);
+      await fail(ext(M().parent, { learner: L, score: "180", supersedes: first.id }), "23505", /\(already_superseded\)/);
+      // the replacement can be corrected in turn
+      await ext(M().parent, { learner: L, score: "175", supersedes: fixed.id });
+      // a row of another child, or a missing row, is not found; the actor must be in scope of the child
+      const other = await ext(M().parent, { learner: NG(), clientId: "ext-corr-0003" });
+      await fail(ext(M().parent, { learner: L, supersedes: other.id }), "P0002", /\(not_found\)/);
+      await fail(ext(M().parent, { learner: L, supersedes: randomUUID() }), "P0002", /\(not_found\)/);
+      for (const by of [M().tutorAn, oldTutor, M().studentNguyen, randomUUID()]) {
+        const target = await ext(M().parent, { learner: L, clientId: `ext-corr-${randomUUID().slice(0, 8)}` });
+        await fail(ext(by, { learner: L, supersedes: target.id }), "42501");
+      }
+      const log = await q1<{ action: string; payload: Record<string, unknown> }>(
+        "select action, payload from english.audit_log where action = 'external_result.corrected' and payload ->> 'result_id' = $1", [fixed.id]);
+      expect(log).toHaveLength(1);
+      expect(Object.keys(log[0]!.payload).sort()).toEqual(["domains", "exam", "has_file", "result_id", "supersedes_id"]);
+      // append-only still: the old row cannot be touched
+      const err = await db.client.query("update english.external_results set score_text = 'x' where id = $1", [first.id]).then(() => null, (e: unknown) => e as { code?: string });
+      expect(err?.code).toBe("42501");
+    });
+  });
+
+
+  // (Task 3 adds its sections here)
 });
