@@ -6142,3 +6142,30 @@ No "TBD", "TODO", "implement later" or "similar to Task N" is left. Every code s
   - The Task 12 e2e uses only these names.
 - Copy keys used in Tasks 10–12 all exist in the Task 9 `skillStateCopy` / `levelCopy` blocks: `pending`, `autoNote`, `flagChip`, `rebuildDone`, `reasonRequired`, `confirmAll`, `solidCount`, `pendingLine`, `flagLine`, `practisingLine`, `nextLine`, `noneYet` and `noSkillsInDomain`.
 - Migration numbers: 0022 = generated AP-0.3 seed, 0023 = everything else, next = 0024. The CLAUDE.md and PROGRESS edits in Task 12 say the same.
+
+---
+
+## Amendments — parent decisions 23/10/2026 ("ok mockup S7a", then "ok r" to G1–G4 and D4–D12)
+
+Task 0 passed: the parent approved mockup board 18 (Hộp duyệt → tab "Kỹ năng"). D4, D5, D6, D8, D9, D10 and D12 are confirmed under DESIGN §17 exactly as written. The answers below override the tasks wherever they conflict. Task 12 must record them in PROGRESS and in the PR.
+
+- **G1 (keep as planned).** Level 2 needs an unaided first attempt ≥ 3/4 (`developing.minScore = 3` in AP-0.3). An unaided 2/4 stays level 1.
+
+- **G2 (change).** Auto-checked items can lift a skill to **level 2** before route 2 is complete.
+  - **Config:** add to AP-0.3 `receptiveAuto` the keys `developingMinItems: 4` and `developingMinAccuracyPct: 75`. Update the zod schema and the generated `0022` seed, and regenerate it with `gen:config -- --new` before anything is committed. 0022 is not applied anywhere yet.
+  - **Rule:** a skill in the reading, listening, grammar or vocab domain reaches level 2 (kind `AUTO`, no confirmation) when it has ≥ 4 counted items (D9 counting) at ≥ 75 % accuracy. Fewer items, or lower accuracy with ≥ 1 correct, gives level 1.
+  - **Scope:** route 1 and the tutor-scored rules are unchanged. Route 2 is still needed for level 3.
+  - **Tests:** add engine unit tests for both boundaries (3 items vs 4; 74 % vs 75 %).
+
+- **G3 (keep as planned).** ⚑ cards offer "Giữ bậc" and "Sửa bậc". "Sửa bậc" is the manual form, can lower a skill, needs a reason, and is tutor only. The app itself never lowers a level.
+
+- **G4 (change).** Let the tutor mark transfer work so level 4 can happen now.
+  - **UI:** on the S5 review page of an episode (`/review/[episodeId]`), add a checkbox "Bài này ở chủ đề / nguồn mới (vận dụng)". The copy goes in `vi.ts`. Only a reviewer allowed by D15 for that episode sees it, and only on first attempts that are not revisions.
+  - **DB:** a new security-definer function in 0023 records it **append-only**. Do not update `episodes.facets`, since episodes are append-only. Either:
+    - write a row to a new append-only table `episode_marks(episode_id, mark 'transfer_check', set_by, reason null, created_at)`, or
+    - write a `validation_decisions` facet, if that table's design allows it without touching `first_once`.
+
+    Pick the simplest correct option and note it.
+  - **Engine:** treat an episode as `transfer_check` when the template facet says so **or** such a mark exists. C7 still applies: a new source counts as transfer, not as delayed.
+  - **Purge/preview:** include the new table.
+  - **Tests:** a DB test (only an allowed reviewer can mark; the student and the other tutor are refused) and an engine test (a mark plus a delayed check reaches level 4).
