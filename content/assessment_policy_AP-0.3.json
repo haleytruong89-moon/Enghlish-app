@@ -1,0 +1,38 @@
+{
+  "independent": {
+    "minFirstAttemptEpisodes": 3,
+    "distinctDays": true,
+    "minContexts": 2,
+    "minSpanDays": 7,
+    "minScoreEach": 3,
+    "requireValidated": true,
+    "minDirectCheckpoint": 1,
+    "allowedModes": ["INDEPENDENT_CHECK"],
+    "maxAssistanceAffectingTarget": 0
+  },
+  "transferable": {
+    "requires": "INDEPENDENT",
+    "minDistinctEpisodes": 2,
+    "needs": ["delayed_check", "transfer_check"],
+    "delayedMinDaysFromLastExposure": 14,
+    "transferNeedsTutorDescribedDifference": true
+  },
+  "supported": { "minScore": 1, "assistanceAllowed": true },
+  "developing": { "minScore": 3 },
+  "conflictWindowDays": 21,
+  "revisionNeverFirstAttempt": true,
+  "receptiveAuto": {
+    "domains": ["reading", "listening", "grammar", "vocab"],
+    "minItems": 8,
+    "minActivities": 2,
+    "minAccuracyPct": 75,
+    "developingMinItems": 4,
+    "developingMinAccuracyPct": 75,
+    "reviewMinDays": 14,
+    "reviewMinAccuracyPct": 70,
+    "firstAttemptOnly": true,
+    "allowedModes": ["PRACTICE", "INDEPENDENT_CHECK"],
+    "maxAssistanceAffectingTarget": 0
+  },
+  "levelGate": null
+}

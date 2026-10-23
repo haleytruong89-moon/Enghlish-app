@@ -38,20 +38,24 @@ beforeEach(() => {
   const lockPath = path.join(paths.contentDir, LOCK_FILE);
   const lock = JSON.parse(readFileSync(lockPath, "utf8")) as Record<string, unknown>;
   delete lock.inquiryTemplates;
+  // S7a: AP-0.3 lives in 0022, which this S1 fixture does not copy - keep the fixture at catalogue + AP-0.2 + target sets.
+  delete (lock.policies as Record<string, unknown>)["AP-0.3"];
+  rmSync(path.join(paths.contentDir, "assessment_policy_AP-0.3.json"), { force: true });
   writeFileSync(lockPath, JSON.stringify(lock, null, 2) + "\n");
 });
 afterEach(() => rmSync(tmp, { recursive: true, force: true }));
 
 describe("content/config.lock.json", () => {
-  it("locks catalogue, policy and both target sets, all pointing at 0006", () => {
+  it("locks catalogue, AP-0.2 and both target sets in 0006, and AP-0.3 in 0022", () => {
     const lock = JSON.parse(readFileSync(path.join(CONTENT_DIR, LOCK_FILE), "utf8")) as Record<string, Record<string, { sha256: string; migration: string }>>;
     expect(Object.keys(lock.catalogues ?? {})).toEqual(["0.2.1-draft"]);
-    expect(Object.keys(lock.policies ?? {})).toEqual(["AP-0.2-pilot"]);
+    expect(Object.keys(lock.policies ?? {})).toEqual(["AP-0.2-pilot", "AP-0.3"]);
     expect(Object.keys(lock.targetSets ?? {})).toEqual(["A-v1", "B-v1"]);
-    for (const e of [...Object.values(lock.catalogues ?? {}), ...Object.values(lock.policies ?? {}), ...Object.values(lock.targetSets ?? {})]) {
-      expect(e.sha256).toMatch(/^[0-9a-f]{64}$/);
-      expect(e.migration).toBe("0006_seed_config_v0_2_1.sql");
+    for (const e of [...Object.values(lock.catalogues ?? {}), lock.policies?.["AP-0.2-pilot"], ...Object.values(lock.targetSets ?? {})]) {
+      expect(e?.sha256).toMatch(/^[0-9a-f]{64}$/);
+      expect(e?.migration).toBe("0006_seed_config_v0_2_1.sql");
     }
+    expect(lock.policies?.["AP-0.3"]?.migration).toBe("0022_seed_ap_0_3.sql");
   });
 
   it("the repository as checked in is consistent", async () => {

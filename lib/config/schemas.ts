@@ -4,6 +4,7 @@
  * because every catalogue row is also stored whole in a `raw jsonb` column.
  */
 import { z } from "zod";
+import { DOMAIN_KEYS } from "../skillmap/types";
 
 export const TRACK_IDS = ["A", "B"] as const;
 export const trackIdSchema = z.enum(TRACK_IDS);
@@ -108,6 +109,28 @@ export type Catalogue = z.infer<typeof catalogueSchema>;
 
 // ---------- Assessment policy (DESIGN §8) --------------------------------------------------
 const count = z.number().int().nonnegative();
+const pct = z.number().int().min(0).max(100);
+const policyMode = z.enum(["PRACTICE", "INDEPENDENT_CHECK", "REVISION"]);
+
+/**
+ * P3-b (skill-map spec 2026-10-21; S7a route 2): "Tự làm được" from auto-checked closed items done in the app, for skills whose
+ * skill-map domain is listed. `developingMinItems` / `developingMinAccuracyPct` (S7a amendment G2) let the same items lift a skill
+ * to level 2 before route 2 is complete. First seen in AP-0.3; older policies have no such block (route 2 is then off).
+ */
+export const receptiveAutoSchema = z.strictObject({
+  domains: z.array(z.enum(DOMAIN_KEYS)).min(1),
+  minItems: count,
+  minActivities: count,
+  minAccuracyPct: pct,
+  developingMinItems: count,
+  developingMinAccuracyPct: pct,
+  reviewMinDays: count,
+  reviewMinAccuracyPct: pct,
+  firstAttemptOnly: z.boolean(),
+  allowedModes: z.array(policyMode).min(1),
+  maxAssistanceAffectingTarget: count,
+});
+export type ReceptiveAuto = z.infer<typeof receptiveAutoSchema>;
 
 export const assessmentPolicySchema = z.strictObject({
   independent: z.strictObject({
@@ -118,7 +141,7 @@ export const assessmentPolicySchema = z.strictObject({
     minScoreEach: z.number().int().min(0).max(4),
     requireValidated: z.boolean(),
     minDirectCheckpoint: count,
-    allowedModes: z.array(z.enum(["PRACTICE", "INDEPENDENT_CHECK", "REVISION"])).min(1),
+    allowedModes: z.array(policyMode).min(1),
     maxAssistanceAffectingTarget: count,
   }),
   transferable: z.strictObject({
@@ -132,6 +155,9 @@ export const assessmentPolicySchema = z.strictObject({
   developing: z.strictObject({ minScore: z.number().int().min(0).max(4) }),
   conflictWindowDays: count,
   revisionNeverFirstAttempt: z.boolean(),
+  receptiveAuto: receptiveAutoSchema.optional(),
+  /** Reserved for S7b (domain level-up gate, P3-a). Must stay null until a policy version defines it. */
+  levelGate: z.null().optional(),
 });
 export type AssessmentPolicy = z.infer<typeof assessmentPolicySchema>;
 

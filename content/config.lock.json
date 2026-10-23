@@ -9,6 +9,10 @@
     "AP-0.2-pilot": {
       "sha256": "c64accb9a72f8dd6ea817c03640db4c7ebdc80ba0ca58e84cb37472949feb6b0",
       "migration": "0006_seed_config_v0_2_1.sql"
+    },
+    "AP-0.3": {
+      "sha256": "a308f258c3b9276c7c98758a095e71d11f07381cc02bfe20bc612efe81adf28e",
+      "migration": "0022_seed_ap_0_3.sql"
     }
   },
   "targetSets": {
