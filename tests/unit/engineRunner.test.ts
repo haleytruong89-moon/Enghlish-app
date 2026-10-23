@@ -12,7 +12,7 @@ const raw = (o: Record<string, unknown> = {}) => ({
   targets: [{ key: "A-L3-CAUSE-W", domain: "writing" }, { key: "A-T1-TEXT-R", domain: "reading" }],
   episodes: [{
     episode_id: "ep1", attempt_id: "at1", activity_id: "act1", at: "2026-10-20T12:00:00.654321+07:00", context_id: "A-W1-VOLCANOES",
-    is_first_attempt: true, mode: "INDEPENDENT_CHECK", observed_directly: false, transfer_marked: false,
+    is_first_attempt: true, step_repeat: false, mode: "INDEPENDENT_CHECK", observed_directly: false, transfer_marked: false,
     facets: { baseline: false, checkpoint: true, delayed_check: false, transfer_check: false }, declared_unknown: false,
     assistance: [{ kind: "notes", verification: "declared", targets: ["A-T1-TEXT-R"] }],
     scores: [
@@ -21,7 +21,7 @@ const raw = (o: Record<string, unknown> = {}) => ({
     ],
   }],
   auto: [{
-    attempt_id: "aa1", episode_id: "ae1", activity_id: "act2", at: "2026-10-21T09:00:00+07:00", is_first_attempt: true, mode: "INDEPENDENT_CHECK",
+    attempt_id: "aa1", episode_id: "ae1", activity_id: "act2", at: "2026-10-21T09:00:00+07:00", is_first_attempt: true, step_repeat: false, mode: "INDEPENDENT_CHECK",
     facets: {}, declared_unknown: false, assistance: [],
     items: [{ item_id: "q1", target_key: "A-T1-TEXT-R", result: "correct" }, { item_id: "q2", target_key: "A-L3-CAUSE-W", result: "incorrect" }],
   }],

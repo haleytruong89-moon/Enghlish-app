@@ -28,7 +28,7 @@ export function ep(o: EpOpts = {}): ScoredEpisode {
   const transferMarked = rest.transferMarked ?? false;
   return {
     episodeId: `ep-${i}`, attemptId: `at-${i}`, activityId: `act-${i}`, at: daysAgo(d), validatedAt: daysAgo(validatedDaysAgo ?? d), contextId: "A-W1-VOLCANOES",
-    isFirstAttempt: true, mode: "INDEPENDENT_CHECK", observedDirectly: false, transferMarked, transferMarkId: transferMarked ? `mk-${i}` : null,
+    isFirstAttempt: true, stepRepeat: false, mode: "INDEPENDENT_CHECK", observedDirectly: false, transferMarked, transferMarkId: transferMarked ? `mk-${i}` : null,
     assistance: [], declaredUnknown: false, decisionId: `vd-${i}`, score: 3, ...rest, facets: { ...NO_FACETS, ...facets },
   };
 }
@@ -42,7 +42,7 @@ export function auto(o: AutoOpts = {}): AutoAttempt {
   const { daysAgo: d = 1, facets, correct = 0, wrong = 0, blank = 0, ...rest } = o;
   const mk = (n: number, result: "correct" | "incorrect" | "blank") => Array.from({ length: n }, (_, k) => ({ itemId: `q${i}-${result}-${k}`, result }));
   return {
-    attemptId: `aa-${i}`, episodeId: `ae-${i}`, activityId: `act-${i}`, at: daysAgo(d), isFirstAttempt: true, mode: "INDEPENDENT_CHECK",
+    attemptId: `aa-${i}`, episodeId: `ae-${i}`, activityId: `act-${i}`, at: daysAgo(d), isFirstAttempt: true, stepRepeat: false, mode: "INDEPENDENT_CHECK",
     assistance: [], declaredUnknown: false, ...rest, facets: { ...NO_FACETS, ...facets },
     items: [...mk(correct, "correct"), ...mk(wrong, "incorrect"), ...mk(blank, "blank")],
   };

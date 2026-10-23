@@ -742,4 +742,65 @@ describe("S7a skill states (migrations 0022 + 0023)", () => {
     });
   });
 
+  describe("7. N6: the same template step assigned again is a review, not a new first attempt", () => {
+    type Inputs = {
+      episodes: { attempt_id: string; is_first_attempt: boolean; step_repeat: boolean; scores: { target_key: string }[] }[];
+      auto: { attempt_id: string; is_first_attempt: boolean; step_repeat: boolean }[];
+    };
+    const read = () => svc<Inputs>("select english.eng_engine_inputs($1, null) as r", [s.learners.an]);
+
+    it("episodes: only the later instance of the SAME template + step is a repeat; another step, another template, or the earliest one is not", async () => {
+      const w1b = await assign("an", "A-W1-VOLCANOES"); // second instance of A-W1 (the first one, w1, holds step 11 from 20 days ago)
+      const repeat = await evidence("an", { activityId: await step(w1b, 11), daysAgo: 2, scores: { [SKILL]: 3 }, facets: ["checkpoint"] });
+      const otherStep = await evidence("an", { activityId: await step(w1b, 10), daysAgo: 2, scores: { [SKILL]: 3 }, facets: ["checkpoint"] });
+      const w4 = await assign("an", "A-W4-PLANETS");
+      const otherTemplate = await evidence("an", { activityId: await step(w4, 11), daysAgo: 2, scores: { [SKILL]: 3 }, facets: ["checkpoint"] });
+      const original = proof[0]!.episodeId;
+      const rows = (await read()).episodes;
+      const byAttempt = (attempt: string) => rows.find((e) => e.attempt_id === attempt)!;
+      expect(byAttempt(repeat.attemptId)).toMatchObject({ is_first_attempt: true, step_repeat: true });
+      expect(byAttempt(otherStep.attemptId)).toMatchObject({ is_first_attempt: true, step_repeat: false });
+      expect(byAttempt(otherTemplate.attemptId)).toMatchObject({ is_first_attempt: true, step_repeat: false });
+      const originalAttempt = (await q1<{ attempt_id: string }>("select attempt_id from english.episodes where id = $1", [original]))[0]!.attempt_id;
+      expect(byAttempt(originalAttempt).step_repeat).toBe(false);
+      // the TypeScript side reads the flag
+      const parsed = parseEngineInputs(await svc("select english.eng_engine_inputs($1, null) as r", [s.learners.an]));
+      const sliced = sliceTarget(parsed, SKILL).episodes;
+      expect(sliced.find((e) => e.attemptId === repeat.attemptId)).toMatchObject({ isFirstAttempt: true, stepRepeat: true });
+      expect(sliced.find((e) => e.attemptId === originalAttempt)).toMatchObject({ stepRepeat: false });
+    });
+
+    it("the earliest submission wins, not the first assignment; an earlier first attempt that was never validated still makes the later one a repeat", async () => {
+      const w2b = await assign("an", "A-W2-WATERCYCLE");
+      const later = await evidence("an", { activityId: await step(w2b, 13), daysAgo: 1, scores: { [SKILL]: 3 } });
+      const earlier = await evidence("an", { activityId: await step(w2, 13), daysAgo: 4, scores: { [SKILL]: 3 } }); // first assigned, but submitted EARLIER
+      let rows = (await read()).episodes;
+      expect(rows.find((e) => e.attempt_id === earlier.attemptId)?.step_repeat).toBe(false);
+      expect(rows.find((e) => e.attempt_id === later.attemptId)?.step_repeat).toBe(true);
+      // an unvalidated earlier first attempt (no decision at all) still counts as the first one
+      const w4b = await assign("an", "A-W4-PLANETS");
+      await evidence("an", { activityId: await step(w4b, 12), daysAgo: 6, scores: {} });
+      const after = await evidence("an", { activityId: await step(await assign("an", "A-W4-PLANETS"), 12), daysAgo: 3, scores: { [SKILL]: 3 } });
+      rows = (await read()).episodes;
+      expect(rows.find((e) => e.attempt_id === after.attemptId)?.step_repeat).toBe(true);
+    });
+
+    it("auto-checked items: the second instance of a quiz step is a repeat (the original is not)", async () => {
+      const w1c = await assign("an", "A-W1-VOLCANOES");
+      const option = template("A-W1-VOLCANOES").steps[2]!.items[0]!.options[1]!;
+      const quizStep = await step(w1c, 3);
+      const receipt = await asCommit(db.client, "authenticated", s.users.studentAn, async (q) =>
+        ((await q("select english.eng_submit_attempt($1, $2, $3::jsonb, $4::text[], 'in_app') as r", [quizStep, randomUUID(), JSON.stringify({ answers: { "W1-R1": option } }), ["none"]])).rows[0] as { r: { attempt_id: string } }).r);
+      const auto = (await read()).auto;
+      expect(auto.find((a) => a.attempt_id === quizAttempt)).toMatchObject({ is_first_attempt: true, step_repeat: false });
+      expect(auto.find((a) => a.attempt_id === receipt.attempt_id)).toMatchObject({ is_first_attempt: true, step_repeat: true });
+    });
+
+    it("the helper is not callable by an app role", async () => {
+      for (const role of ["authenticated", "anon", "service_role"]) {
+        expect((await q1<{ ok: boolean }>(`select has_function_privilege('${role}', 'english.eng_is_step_repeat(uuid)', 'execute') as ok`))[0]?.ok, role).toBe(false);
+      }
+    });
+  });
+
 });

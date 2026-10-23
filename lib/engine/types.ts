@@ -35,6 +35,13 @@ export type ScoredEpisode = {
   /** episodes.context_id = template id (topic / source family). */
   contextId: string;
   isFirstAttempt: boolean;
+  /**
+   * N6: an EARLIER first attempt of the same learner exists on the same template step (episodes.context_id = template id + the step number),
+   * from another activity instance. The same template assigned again is a review: it can be the 14-day review / delayed evidence by gap, but it is
+   * not a new first attempt (route 1, route 2, level-2 lifts, ⚑) and not a "different bài". Computed in english.eng_engine_inputs, which also sees
+   * first attempts that were never validated.
+   */
+  stepRepeat: boolean;
   mode: Mode;
   observedDirectly: boolean;
   facets: Facets;
@@ -61,6 +68,8 @@ export type AutoAttempt = {
   activityId: string;
   at: string;
   isFirstAttempt: boolean;
+  /** N6: see ScoredEpisode.stepRepeat. */
+  stepRepeat: boolean;
   mode: Mode;
   facets: Facets;
   assistance: AssistanceMark[];

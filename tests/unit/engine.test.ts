@@ -338,6 +338,83 @@ describe("level 4 'Vận dụng được' (§1 item 4, D8, D10)", () => {
   });
 });
 
+describe("N6: assigning the same template step again is a review, never a new first attempt", () => {
+  const again = { stepRepeat: true };
+
+  it("route 1: the second instance of a template step adds no first attempt (3 → 2) and no new topic", () => {
+    const base = run(input({ episodes: three() }));
+    expect(base.propose).toBe("INDEPENDENT");
+    const r = run(input({ episodes: three(undefined, [{}, again, {}]) }));
+    expect(r).toMatchObject({ evidenceState: "DEVELOPING", route: 1, propose: null });
+    expect(condition(r, "r1_first_attempts")).toMatchObject({ have: 2, need: 3, met: false });
+    // the repeat that came from the topic we needed: topics 2 → 1
+    const topics = run(input({ episodes: three(undefined, [{}, { ...again, contextId: "A-W9-OTHER" }, { contextId: "A-W1-VOLCANOES" }]) }));
+    expect(condition(topics, "r1_contexts").have).toBe(1);
+  });
+
+  it("route 1: a repeat that scored well does not replace a failed first attempt (no retry-until-pass), and a different template still counts", () => {
+    const failedThenPassed = three(undefined, [{}, { score: 2 }, {}]);
+    expect(run(input({ episodes: failedThenPassed })).evidenceState).toBe("DEVELOPING"); // the failed one is the first attempt
+    const repeatOfFailed = [...failedThenPassed, ep({ daysAgo: 1, contextId: "A-W2-WATERCYCLE", stepRepeat: true })];
+    expect(run(input({ episodes: repeatOfFailed })).evidenceState).toBe("DEVELOPING");
+    const newTemplate = [...failedThenPassed, ep({ daysAgo: 1, contextId: "A-W3-EARTHQUAKES" })];
+    expect(run(input({ episodes: newTemplate })).evidenceState).toBe("INDEPENDENT");
+  });
+
+  it("level 2: a lone repeat reaches 'Làm được khi có gợi ý' at most, not 'Đang tiến bộ'; it never starts a ⚑", () => {
+    expect(run(input({ episodes: [ep({ ...again, score: 4 })] }))).toMatchObject({ evidenceState: "SUPPORTED", auto: "SUPPORTED" });
+    expect(run(input({ episodes: [ep({ ...again, score: 4 }), ep({ daysAgo: 3, score: 4 })] })).evidenceState).toBe("DEVELOPING");
+    expect(run(input({ episodes: [ep({ ...again, daysAgo: 2, score: 1 })], decisions: confirmedIndependent() })).raiseFlag).toBe(false);
+  });
+
+  it("route 2: a second instance adds no items and is not another bài; level 2 from items ignores it", () => {
+    const q1 = auto({ daysAgo: 20, correct: 4, wrong: 0, activityId: "quiz-1" });
+    const q2 = auto({ daysAgo: 10, correct: 4, wrong: 0, activityId: "quiz-2", stepRepeat: true }); // same template step, another instance
+    const q3 = auto({ daysAgo: 2, correct: 4, wrong: 0, activityId: "quiz-3", stepRepeat: true });
+    const exposures: Exposure[] = [exposure(20, "A-W1-VOLCANOES", q1.attemptId), exposure(10, "A-W1-VOLCANOES", q2.attemptId), exposure(2, "A-W1-VOLCANOES", q3.attemptId)];
+    const r = run(input({ targetKey: "A-T1-TEXT-R", domain: "reading", autoAttempts: [q1, q2, q3], exposures }));
+    expect(["r2_items", "r2_activities"].map((id) => [condition(r, id).have, condition(r, id).need, condition(r, id).met])).toEqual([[4, 8, false], [1, 2, false]]);
+    expect(r.evidenceState).toBe("DEVELOPING"); // 4 counted items at 100 % (G2)
+    const lonely = run(input({ targetKey: "A-T1-TEXT-R", domain: "reading", autoAttempts: [auto({ correct: 4, stepRepeat: true })] }));
+    expect(lonely.evidenceState).toBe("NOT_OBSERVED");
+  });
+
+  it("route 2: the second instance can be the review when it comes >= 14 days after the last practice, and counts nothing else", () => {
+    const q1 = auto({ daysAgo: 40, correct: 4, wrong: 0, activityId: "quiz-1" });
+    const q2 = auto({ daysAgo: 30, correct: 4, wrong: 0, activityId: "quiz-2" }); // another template
+    const again1 = (daysAgoAt: number, o: AutoOpts = {}) => auto({ daysAgo: daysAgoAt, correct: 3, wrong: 1, activityId: "quiz-3", stepRepeat: true, ...o });
+    const ex = (a: ReturnType<typeof auto>[]): Exposure[] => a.map((x, i) => exposure([40, 30, 2][i] ?? 1, "A-W1-VOLCANOES", x.attemptId));
+    const review = again1(2);
+    const ok = run(input({ targetKey: "A-T1-TEXT-R", domain: "reading", autoAttempts: [q1, q2, review], exposures: ex([q1, q2, review]) }));
+    expect(condition(ok, "r2_review")).toMatchObject({ have: 1, met: true });
+    expect([condition(ok, "r2_items").have, condition(ok, "r2_activities").have]).toEqual([8, 2]); // the review adds neither
+    expect(ok).toMatchObject({ evidenceState: "INDEPENDENT", route: 2, propose: "INDEPENDENT" });
+    expect(ok.evidence.propose).not.toContain(review.episodeId);
+    // 13 days after the last practice, or below 70 %: not a review
+    const early = again1(2);
+    const recent = [q1, q2, early];
+    expect(run(input({ targetKey: "A-T1-TEXT-R", domain: "reading", autoAttempts: recent, exposures: [exposure(40, "A-W1-VOLCANOES", q1.attemptId), exposure(15, "A-W1-VOLCANOES", q2.attemptId), exposure(2, "A-W1-VOLCANOES", early.attemptId)] })).evidenceState).toBe("DEVELOPING");
+    const weak = again1(2, { correct: 2, wrong: 2 });
+    expect(run(input({ targetKey: "A-T1-TEXT-R", domain: "reading", autoAttempts: [q1, q2, weak], exposures: ex([q1, q2, weak]) })).evidenceState).toBe("DEVELOPING");
+    // a retry (attempt 2 of an instance) is still no review
+    const retry = again1(2, { isFirstAttempt: false });
+    expect(run(input({ targetKey: "A-T1-TEXT-R", domain: "reading", autoAttempts: [q1, q2, retry], exposures: ex([q1, q2, retry]) })).evidenceState).toBe("DEVELOPING");
+  });
+
+  it("level 4: the second instance of a delayed_check step is the delayed evidence by gap; as a 'transfer' it never counts", () => {
+    const d = ep({ daysAgo: 3, contextId: "A-W3-EARTHQUAKES", stepRepeat: true, facets: { delayedCheck: true, checkpoint: true } });
+    const t = ep({ daysAgo: 2, contextId: "A-W5-NEWTOPIC", facets: { transferCheck: true } });
+    const exposures = [exposure(17, "A-W3-EARTHQUAKES"), exposure(3, "A-W3-EARTHQUAKES", d.attemptId), exposure(2, "A-W5-NEWTOPIC", t.attemptId)];
+    expect(run(input({ episodes: [d, t], decisions: confirmedIndependent(), exposures }))).toMatchObject({ evidenceState: "TRANSFERABLE", propose: "TRANSFERABLE" });
+    const repeatTransfer = ep({ daysAgo: 2, contextId: "A-W5-NEWTOPIC", stepRepeat: true, facets: { transferCheck: true } });
+    const r = run(input({ episodes: [d, repeatTransfer], decisions: confirmedIndependent(), exposures }));
+    expect(condition(r, "l4_transfer").met).toBe(false);
+    expect(r.propose).toBeNull();
+    // the repeat of a delayed step 13 days after the last practice is still too early
+    expect(run(input({ episodes: [d, t], decisions: confirmedIndependent(), exposures: [exposure(16, "A-W3-EARTHQUAKES"), ...exposures.slice(1)] })).propose).toBeNull();
+  });
+});
+
 describe("G4: the reviewer's 'new topic / source' mark counts as transfer_check", () => {
   /** Like level4 above, but the transfer episode carries no template facet - only the mark. */
   function marked(o: { mark?: boolean; delayedMark?: boolean } = {}) {

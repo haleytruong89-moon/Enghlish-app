@@ -25,12 +25,12 @@ const facets = z
   }));
 const assistance = z.array(z.object({ kind: z.string(), verification: z.enum(["observed", "declared", "unknown"]), targets: z.array(z.string()) }));
 const episodeRow = z.object({
-  episode_id: id, attempt_id: id, activity_id: id, at, context_id: z.string(), is_first_attempt: z.boolean(), mode,
+  episode_id: id, attempt_id: id, activity_id: id, at, context_id: z.string(), is_first_attempt: z.boolean(), step_repeat: z.boolean(), mode,
   observed_directly: z.boolean(), facets, transfer_marked: z.boolean(), transfer_mark_id: z.string().nullable().default(null), declared_unknown: z.boolean(), assistance,
   scores: z.array(z.object({ target_key: z.string(), decision_id: id, decided_at: at.optional(), score: z.number().int().min(0).max(4).nullable(), not_observed: z.boolean() })),
 });
 const autoRow = z.object({
-  attempt_id: id, episode_id: id, activity_id: id, at, is_first_attempt: z.boolean(), mode, facets, declared_unknown: z.boolean(), assistance,
+  attempt_id: id, episode_id: id, activity_id: id, at, is_first_attempt: z.boolean(), step_repeat: z.boolean(), mode, facets, declared_unknown: z.boolean(), assistance,
   items: z.array(z.object({ item_id: z.string(), target_key: z.string(), result: z.enum(["correct", "incorrect", "blank"]) })),
 });
 const exposureRow = z.object({ target_key: z.string(), at, attempt_id: z.string().nullable(), context_id: z.string().nullable() });
@@ -69,7 +69,7 @@ export function sliceTarget(inputs: EngineInputs, key: string): EngineInput {
       const score = sc.not_observed ? null : (sc.score as 0 | 1 | 2 | 3 | 4 | null);
       return [{
         episodeId: e.episode_id, attemptId: e.attempt_id, activityId: e.activity_id, at: e.at, contextId: e.context_id,
-        isFirstAttempt: e.is_first_attempt, mode: e.mode, observedDirectly: e.observed_directly, facets: e.facets, transferMarked: e.transfer_marked, transferMarkId: e.transfer_mark_id,
+        isFirstAttempt: e.is_first_attempt, stepRepeat: e.step_repeat, mode: e.mode, observedDirectly: e.observed_directly, facets: e.facets, transferMarked: e.transfer_marked, transferMarkId: e.transfer_mark_id,
         assistance: marks(e.assistance, key), declaredUnknown: e.declared_unknown, decisionId: sc.decision_id, validatedAt: sc.decided_at ?? e.at, score,
       }];
     }),
@@ -77,7 +77,7 @@ export function sliceTarget(inputs: EngineInputs, key: string): EngineInput {
       const items = a.items.filter((i) => i.target_key === key).map((i) => ({ itemId: i.item_id, result: i.result }));
       if (items.length === 0) return [];
       return [{
-        attemptId: a.attempt_id, episodeId: a.episode_id, activityId: a.activity_id, at: a.at, isFirstAttempt: a.is_first_attempt, mode: a.mode,
+        attemptId: a.attempt_id, episodeId: a.episode_id, activityId: a.activity_id, at: a.at, isFirstAttempt: a.is_first_attempt, stepRepeat: a.step_repeat, mode: a.mode,
         facets: a.facets, assistance: marks(a.assistance, key), declaredUnknown: a.declared_unknown, items,
       }];
     }),

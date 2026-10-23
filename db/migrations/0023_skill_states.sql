@@ -273,6 +273,26 @@ as $$
   from (select pg_catalog.translate(normalize(coalesce(p_text, ''), nfc), pg_catalog.chr(160) || pg_catalog.chr(8239) || pg_catalog.chr(12288), '   ') as t) x
 $$;
 
+-- N6 (phụ huynh 23/10/2026): giao lại CÙNG một bước của CÙNG một mẫu bài không phải "lần làm đầu" mới. Bước của mẫu = (episodes.context_id = id mẫu bài,
+-- activity_instances.step_no). Lần làm đầu "thật" của bước = lần nộp sớm nhất (submitted_at, id) có is_first_attempt = true của em trên bước đó, qua MỌI lần giao
+-- (kể cả bài chưa được duyệt, nên phải tính ở đây chứ engine thuần không thấy được). Bài nộp sau đó trên cùng bước, từ một lần giao khác = "ôn lại":
+-- engine chỉ cho nó làm bài ôn ≥ 14 ngày / bằng chứng "ôn lại" theo khoảng cách, không tính là lần làm đầu (đường 1, đường 2, lên bậc 2, ⚑) hay "bài khác".
+create or replace function english.eng_is_step_repeat(p_attempt uuid) returns boolean
+language sql stable security definer set search_path = ''
+as $$
+  select exists (
+    select 1
+    from english.attempts t
+    join english.episodes e on e.attempt_id = t.id
+    join english.activity_instances a on a.id = t.activity_instance_id
+    join english.episodes e2 on e2.learner_id = e.learner_id and e2.context_id = e.context_id and e2.is_first_attempt
+    join english.attempts t2 on t2.id = e2.attempt_id and t2.activity_instance_id <> t.activity_instance_id
+    join english.activity_instances a2 on a2.id = t2.activity_instance_id and a2.step_no = a.step_no
+    where t.id = p_attempt
+      and (t2.submitted_at, t2.id) < (t.submitted_at, t.id))
+$$;
+revoke execute on function english.eng_is_step_repeat(uuid) from public, anon, authenticated, service_role;
+
 -- 4. Engine: đọc bằng chứng, ghi kết quả (service_role; máy chủ gọi sau requireAccess, hoặc ngay sau một lần ghi đã qua requireAccess) -----
 -- Bằng chứng của các kỹ năng trong bộ hiện tại của em (p_targets = chỉ một phần của bộ; mã ngoài bộ bị bỏ qua, D11):
 --   episodes  = bài có quyết định duyệt hiện hành (AGREE / MODIFY chưa bị thay) cho ít nhất một kỹ năng đó (§2 "chỉ bằng chứng đã duyệt");
@@ -318,7 +338,7 @@ begin
     'episodes', coalesce((
       select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
                'episode_id', e.id, 'attempt_id', t.id, 'activity_id', t.activity_instance_id, 'at', t.submitted_at,
-               'context_id', e.context_id, 'is_first_attempt', e.is_first_attempt, 'mode', t.mode,
+               'context_id', e.context_id, 'is_first_attempt', e.is_first_attempt, 'step_repeat', english.eng_is_step_repeat(t.id), 'mode', t.mode,
                'observed_directly', e.observed_directly, 'facets', e.facets,
                -- G4: dòng mới nhất của dấu "chủ đề / nguồn mới" (episode_marks) quyết định; không có dòng = false.
                'transfer_marked', coalesce((select m.value from english.episode_marks m where m.episode_id = e.id and m.mark = 'transfer_check'
@@ -344,7 +364,7 @@ begin
     'auto', coalesce((
       select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
                'attempt_id', t.id, 'episode_id', e.id, 'activity_id', t.activity_instance_id, 'at', t.submitted_at,
-               'is_first_attempt', e.is_first_attempt, 'mode', t.mode, 'facets', e.facets,
+               'is_first_attempt', e.is_first_attempt, 'step_repeat', english.eng_is_step_repeat(t.id), 'mode', t.mode, 'facets', e.facets,
                'declared_unknown', 'unknown' = any (t.declared_assistance),
                'assistance', english.eng_attempt_assistance(t.id),
                'items', it.items)

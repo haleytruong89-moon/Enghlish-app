@@ -51,7 +51,10 @@ export function computeTargetState(input: EngineInput): EngineResult {
   const helped = (e: Helpable) => hadHelp(e, p.independent.allowedModes, p.independent.maxAssistanceAffectingTarget, p.revisionNeverFirstAttempt);
 
   const scored = byTime(input.episodes).filter((e): e is Scored => e.score !== null);
-  const unaided = scored.filter((e) => e.isFirstAttempt && !helped(e));
+  // N6: `firstTries` = first attempts of an activity instance (no retry, no revision); `unaided` also drops the second and later instances of a
+  // template step the child already did (stepRepeat): those are reviews, never new first attempts.
+  const firstTries = scored.filter((e) => e.isFirstAttempt && !helped(e));
+  const unaided = firstTries.filter((e) => !e.stepRepeat);
 
   // Levels 1–2 (D5)
   const l1 = scored.filter((e) => e.score >= p.supported.minScore);
@@ -80,15 +83,17 @@ export function computeTargetState(input: EngineInput): EngineResult {
   let l1Auto = false;
   let l2Auto = false;
   if (ra && input.domain !== null && ra.domains.includes(input.domain)) {
-    counted = byTime(input.autoAttempts).filter(
+    const usableAuto = byTime(input.autoAttempts).filter(
       (a) => a.items.length > 0 && (!ra.firstAttemptOnly || a.isFirstAttempt) && !hadHelp(a, ra.allowedModes, ra.maxAssistanceAffectingTarget, p.revisionNeverFirstAttempt),
     );
+    // N6: only the earliest first attempt of a template step is counted (items, bài, accuracy, level-2 lift, ⚑); a later instance can only be the review.
+    counted = usableAuto.filter((a) => !(ra.firstAttemptOnly && a.stepRepeat));
     const total = counted.reduce((s, a) => s + a.items.length, 0);
     const correct = counted.reduce((s, a) => s + correctOf(a), 0);
     const ids = episodeIds(counted);
     // S5 (P3-b "bài ôn sau ≥ 14 ngày"): the review must come >= reviewMinDays after the latest exposure of the skill. A step marked
     // delayed_check gets no shortcut: two quizzes on one day are not a review, whatever the step is called.
-    const reviews = counted.filter((a) => {
+    const reviews = usableAuto.filter((a) => {
       if (!atLeastPct(correctOf(a), a.items.length, ra.reviewMinAccuracyPct)) return false;
       const gap = daysSinceLastPractice(input.exposures, a.at, a.attemptId, null);
       return gap !== null && gap >= ra.reviewMinDays;
@@ -115,7 +120,8 @@ export function computeTargetState(input: EngineInput): EngineResult {
   // Level 4 (§1 item 4, D8, D10): current ≥ Tự làm được + a delayed check + a transfer check, two different episodes
   const t = p.transferable;
   const passing = unaided.filter((e) => e.score >= p.independent.minScoreEach);
-  const delayed = passing.filter((e) => {
+  // N6: the delayed check is the one place a template step done again counts: the gap since the last practice decides, not the repeat itself.
+  const delayed = firstTries.filter((e) => e.score >= p.independent.minScoreEach).filter((e) => {
     // C7 / G4: work the reviewer marked as "new topic / source" is a transfer, never a delayed check.
     if (!e.facets.delayedCheck || e.transferMarked) return false;
     const gap = daysSinceLastPractice(input.exposures, e.at, e.attemptId, e.contextId);
