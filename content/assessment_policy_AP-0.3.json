@@ -30,6 +30,7 @@
     "developingMinAccuracyPct": 75,
     "reviewMinDays": 14,
     "reviewMinAccuracyPct": 70,
+    "flagMinItems": 4,
     "firstAttemptOnly": true,
     "allowedModes": ["PRACTICE", "INDEPENDENT_CHECK"],
     "maxAssistanceAffectingTarget": 0

@@ -126,6 +126,8 @@ export const receptiveAutoSchema = z.strictObject({
   developingMinAccuracyPct: pct,
   reviewMinDays: count,
   reviewMinAccuracyPct: pct,
+  /** N1: a counted quiz below `minAccuracyPct` raises ⚑ only when it has at least this many counted items of the skill. */
+  flagMinItems: count,
   firstAttemptOnly: z.boolean(),
   allowedModes: z.array(policyMode).min(1),
   maxAssistanceAffectingTarget: count,

@@ -4,7 +4,7 @@ import { daysSinceLastPractice, vnDay } from "@/lib/engine/days";
 import { evidenceKeyOf } from "@/lib/engine/key";
 import { projectDecisions, proposalKeyOf } from "@/lib/engine/project";
 import { ENGINE_VERSION, SKILL_STATES, STATE_LEVEL, stateAt, type Exposure } from "@/lib/engine/types";
-import { AP02, auto, decision, ep, exposure, input, type AutoOpts, type EpOpts } from "./fixtures/engine";
+import { AP02, AP03, auto, decision, ep, exposure, input, type AutoOpts, type EpOpts } from "./fixtures/engine";
 
 describe("engine types", () => {
   it("5 states in order, levels 0..4, stateAt clamps", () => {
@@ -533,6 +533,28 @@ describe("⚑ conflict window (D12)", () => {
   it("route 2: a counted quiz below 75 % after 'Tự làm được' flags a reading skill", () => {
     const r = run(input({ targetKey: "A-T1-TEXT-R", domain: "reading", autoAttempts: [auto({ daysAgo: 2, correct: 1, wrong: 3 })], decisions: confirmedIndependent() }));
     expect(r).toMatchObject({ currentState: "INDEPENDENT", proposedState: "INDEPENDENT", raiseFlag: true });
+  });
+
+  it("N1: a route-2 ⚑ needs the low quiz to have >= receptiveAuto.flagMinItems (4) counted items: 2/3 does not flag, 2/4 does", () => {
+    const flagged = (a: AutoOpts) => run(input({ targetKey: "A-T1-TEXT-R", domain: "reading", autoAttempts: [auto({ daysAgo: 2, ...a })], decisions: confirmedIndependent() }));
+    expect(flagged({ correct: 2, wrong: 1 })).toMatchObject({ raiseFlag: false, flag: { conflict: false, key: null, evidence: [] } }); // 67 % on 3 items: too few to doubt a confirmed level
+    expect(flagged({ correct: 0, wrong: 3 }).raiseFlag).toBe(false);
+    const four = flagged({ correct: 2, wrong: 2 });
+    expect(four).toMatchObject({ raiseFlag: true, flag: { conflict: true } });
+    expect(four.flag.evidence).toHaveLength(1);
+    expect(flagged({ correct: 3, wrong: 1 }).raiseFlag).toBe(false); // 75 % is not below the bar
+    expect(flagged({ correct: 1, wrong: 1, blank: 2 }).raiseFlag).toBe(true); // blanks are counted items
+  });
+
+  it("N1: the item count is per attempt (two 2/3 quizzes do not add up), and route-1 flags ignore it", () => {
+    const decisions = confirmedIndependent();
+    const two = run(input({ targetKey: "A-T1-TEXT-R", domain: "reading", decisions, autoAttempts: [auto({ daysAgo: 3, correct: 2, wrong: 1 }), auto({ daysAgo: 2, correct: 2, wrong: 1 })] }));
+    expect(two.raiseFlag).toBe(false);
+    // route 1: a single unaided first attempt scored 2 flags, whatever the number of items
+    expect(run(input({ episodes: [ep({ daysAgo: 2, score: 2 })], decisions })).raiseFlag).toBe(true);
+    // the policy decides: AP-0.3 with flagMinItems 3 flags the 2/3 quiz
+    const lax = { ...AP03, config: { ...AP03.config, receptiveAuto: { ...AP03.config.receptiveAuto!, flagMinItems: 3 } } };
+    expect(run(input({ targetKey: "A-T1-TEXT-R", domain: "reading", policy: lax, decisions, autoAttempts: [auto({ daysAgo: 2, correct: 2, wrong: 1 })] })).raiseFlag).toBe(true);
   });
 });
 

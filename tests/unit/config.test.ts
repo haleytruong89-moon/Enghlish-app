@@ -199,6 +199,7 @@ describe("assessment policy AP-0.3 (S7a)", () => {
       developingMinAccuracyPct: 75,
       reviewMinDays: 14,
       reviewMinAccuracyPct: 70,
+      flagMinItems: 4,
       firstAttemptOnly: true,
       allowedModes: ["PRACTICE", "INDEPENDENT_CHECK"],
       maxAssistanceAffectingTarget: 0,
@@ -211,6 +212,9 @@ describe("assessment policy AP-0.3 (S7a)", () => {
     expect(assessmentPolicySchema.safeParse({ ...base, receptiveAuto: { ...ra, extra: 1 } }).success).toBe(false);
     expect(assessmentPolicySchema.safeParse({ ...base, receptiveAuto: { ...ra, domains: ["maths"] } }).success).toBe(false);
     expect(assessmentPolicySchema.safeParse({ ...base, receptiveAuto: { ...ra, minAccuracyPct: 101 } }).success).toBe(false);
+    const withoutFlagMin = Object.fromEntries(Object.entries(ra).filter(([k]) => k !== "flagMinItems"));
+    expect(assessmentPolicySchema.safeParse({ ...base, receptiveAuto: withoutFlagMin }).success).toBe(false); // N1: flagMinItems is required
+    expect(assessmentPolicySchema.safeParse({ ...base, receptiveAuto: { ...ra, flagMinItems: -1 } }).success).toBe(false);
     expect(assessmentPolicySchema.safeParse({ ...base, levelGate: { minCorePct: 80 } }).success).toBe(false);
     expect(assessmentPolicySchema.safeParse(ap02).success).toBe(true);
   });

@@ -175,7 +175,11 @@ export function computeTargetState(input: EngineInput): EngineResult {
   const recent = (at: string, validatedAt: string = at) =>
     since !== null && Math.max(Date.parse(at), Date.parse(validatedAt)) > since && today - vnDay(at) <= p.conflictWindowDays;
   const lowEpisodes = curLevel >= 2 ? unaided.filter((e) => !e.facets.baseline && e.score < p.independent.minScoreEach && recent(e.at, e.validatedAt)) : [];
-  const lowAuto = curLevel >= 2 && ra ? counted.filter((a) => recent(a.at) && !atLeastPct(correctOf(a), a.items.length, ra.minAccuracyPct)) : [];
+  // N1: a quiz of fewer than flagMinItems items is too small to doubt a level a tutor confirmed (2/3 is one slip; 2/4 is a pattern).
+  const lowAuto =
+    curLevel >= 2 && ra
+      ? counted.filter((a) => recent(a.at) && a.items.length >= ra.flagMinItems && !atLeastPct(correctOf(a), a.items.length, ra.minAccuracyPct))
+      : [];
   const conflict = lowEpisodes.length + lowAuto.length > 0;
   const flagKey = conflict ? evidenceKeyOf([...lowEpisodes.map((e) => e.decisionId), ...lowAuto.map((a) => a.attemptId)]) : null;
   const raiseFlag = flagKey !== null && proj.openFlag === null && !proj.flagKeys.has(flagKey);

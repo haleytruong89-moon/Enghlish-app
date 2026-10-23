@@ -11,7 +11,7 @@
       "migration": "0006_seed_config_v0_2_1.sql"
     },
     "AP-0.3": {
-      "sha256": "a308f258c3b9276c7c98758a095e71d11f07381cc02bfe20bc612efe81adf28e",
+      "sha256": "e4db7a467ab39a97a69b563c47114c935648086cc5a20d524cd285aa906adaa4",
       "migration": "0022_seed_ap_0_3.sql"
     }
   },
