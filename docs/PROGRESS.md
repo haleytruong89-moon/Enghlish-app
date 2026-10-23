@@ -1013,10 +1013,10 @@ Ghi chú G4: chọn bảng riêng thay vì thêm facet vào `validation_decision
 | N7 | Thiếu `0022` ra lỗi khóa ngoại khó hiểu | Đầu `0023` có kiểm tra AP-0.3 và báo tiếng Việt "hãy áp 0022 trước" |
 | N8 | `import "server-only"` không ở dòng đầu | Sửa ở `lib/review|revision|work/route.ts` |
 
-### Để sau / Hỏi phụ huynh (S7a, sau review Opus)
+### Phụ huynh đã quyết 23/10 (S7a, sau review Opus; "ok đề xuất")
 
-1. **N1.** ⚑ cách 2 chỉ dựa trên một bài trắc nghiệm ngắn dưới 75 % (ví dụ 1/4) có thể bật ⚑ hơi sớm. Chưa đổi; hỏi phụ huynh có muốn đòi tối thiểu số câu trước khi bật ⚑ không.
-2. **N6.** Giao lại cùng một mẫu cho em được tính là hoạt động mới và lần làm đầu (bài mới theo hệ thống). Chưa đổi; hỏi phụ huynh có muốn coi giao lại là bài ôn không.
+1. **N1. ⚑ cách 2 cần bài trắc nghiệm đủ câu.** Một lần làm cách 2 dưới `minAccuracyPct` (75 %) chỉ bật ⚑ khi chính lần làm đó có **≥ 4 câu được tính** của kỹ năng (`AP-0.3` → `receptiveAuto.flagMinItems: 4`). 2/3 câu: không bật ⚑; 2/4 câu: bật. Số câu tính **theo từng lần làm** (hai bài 2/3 không cộng lại). ⚑ cách 1 (thầy/cô chấm) không đổi. Vì AP-0.3 thêm khóa nên `0022` được sinh lại (chưa áp ở đâu nên không phá bản đã công bố); `content/config.lock.json` đã cập nhật; SQL `eng_apply_engine_results` không kiểm số câu (engine quyết định có ⚑ hay không; SQL chỉ giữ luật "bậc ≥ 2, không ⚑ đang mở, chưa gắn cờ cùng khóa").
+2. **N6. Giao lại cùng một mẫu không phải "lần làm đầu" mới.** Bước của mẫu = (`episodes.context_id` = mã mẫu bài, `activity_instances.step_no`). Với engine, một lần nộp chỉ là lần làm đầu nếu nó là lần làm đầu (`is_first_attempt`) **sớm nhất** của em trên bước đó của mẫu đó, qua mọi lần giao (kể cả bài chưa được duyệt; sớm nhất theo giờ nộp, không theo thứ tự giao). Lần giao sau của cùng bước là **bài ôn**: dùng được làm bài ôn ≥ 14 ngày (cách 2) / bằng chứng "ôn lại" bậc 4 theo khoảng cách ngày, nhưng **không** thêm lần làm đầu cho cách 1, cách 2, bậc 2, ⚑, không tính là "bài khác" (≥ 2 bài), không tính là bài chuyển giao. Mẫu khác, hoặc bước khác của cùng mẫu, vẫn tính riêng. Tính trong `english.eng_engine_inputs` (hàm phụ `eng_is_step_repeat`, trường `step_repeat`), engine đọc `stepRepeat`.
 
 ### Quyết định trong kế hoạch
 
