@@ -6169,3 +6169,13 @@ Task 0 passed: the parent approved mockup board 18 (Hộp duyệt → tab "Kỹ 
   - **Engine:** treat an episode as `transfer_check` when the template facet says so **or** such a mark exists. C7 still applies: a new source counts as transfer, not as delayed.
   - **Purge/preview:** include the new table.
   - **Tests:** a DB test (only an allowed reviewer can mark; the student and the other tutor are refused) and an engine test (a mark plus a delayed check reaches level 4).
+
+## Amendments — Opus review fixes (23/10/2026)
+
+These override the tasks above where they conflict. `0023` is not applied anywhere, so it was edited in place; `0022` is unchanged (AP-0.3 did not change).
+
+- **G4 narrowed (S1).** The "chủ đề / nguồn mới" mark is for the child's **tutor only** (parent's intent, spec item 4, D18): `eng_mark_episode_transfer` requires `eng_review_role = 'tutor'` (active relationship); the checkbox is shown only to that tutor. A template step that already has `transfer_check` shows it ticked and read-only (N4).
+- **Proposal keys (B1, S3).** "Already proposed" is `(to_state, evidence_key)`. The key is the evidence the level's conditions use: route 1 = the counted pool's validation decisions; route 2 = the counted attempts; level 4 = delayed + transfer decisions + the effective transfer-mark ids. `EngineResult.proposeKey` / `ApplyRow.propose_key`; unique index per `to_state`, ⚑ has its own index.
+- **Hand-set levels hold (B2).** `MANUAL` rows store the engine's global evidence key (all validated decisions + auto-checked attempts + transfer-mark ids). While the latest state row is a `MANUAL` with the same key, the engine writes no AUTO / PROPOSED (TS `held`, SQL `v_held`). `eng_set_skill_state(..., p_evidence_key)`; the manual handler computes it with `evidenceKeyFor`.
+- **Smaller fixes.** S2 flag window from `max(submitted, validated)`; S4 manual form follows the level; S5 route-2 review always needs the 14-day gap; N2 `competency_state.inputs_at`; N3 soft state loading on the two pages; N5 `auto_route`; N7 guard for 0022; N8 `server-only` first.
+- **Deferred (PROGRESS "Để sau / Hỏi phụ huynh"):** N1 (⚑ on one short quiz), N6 (a re-assigned template counts as a new activity).
