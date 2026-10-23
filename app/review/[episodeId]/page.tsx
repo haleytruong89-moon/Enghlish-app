@@ -12,6 +12,7 @@ import { activityLabels, app, fallbackLabels, inquiriesPage, learnerWithTrack, m
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { formatWhen, skillLabel } from "@/lib/review/format";
 import { findEpisodeLearner, loadEpisode, loadTransferMark } from "@/lib/review/load";
+import { transferMarkMode } from "@/lib/review/transferMark";
 import { loadFeedbackPanel, loadRevisionView } from "@/lib/revision/load";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { createUserClient } from "@/lib/supabase/server";
@@ -54,11 +55,10 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
   // S6: "Góp ý cho con" (in-app writing only; the panel decides from the database's answer). A failed lookup (e.g. 0021 not applied yet)
   // leaves the panel out; it never blocks the review.
   const feedback = await loadFeedbackPanel(view.attempt.id, member.id).catch(() => null);
-  // G4: "Bài này ở chủ đề / nguồn mới (vận dụng)" - only for someone who may decide this work, and only on a first attempt that is not a revision.
-  const transferMark =
-    view.viewer.canDecide && view.episode.isFirstAttempt && view.attempt.mode !== "REVISION" && view.episode.facets.revision !== true
-      ? await loadTransferMark(view.episode.id).catch(() => null)
-      : null;
+  // G4 / S1: "Bài này ở chủ đề / nguồn mới (vận dụng)" - only the child's tutor (never the parent), only on a first attempt that is not a revision.
+  // N4: a template step that already is a transfer check shows the box ticked and read-only.
+  const transferMode = transferMarkMode(view);
+  const transferMark = transferMode === "tickable" ? await loadTransferMark(view.episode.id).catch(() => null) : null;
   const map = writing ? writing[2] : null;
   const revision = view.attempt.mode === "REVISION" ? await loadRevisionView(view.attempt.id, member.id).catch(() => null) : null;
 
@@ -109,6 +109,7 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
             {feedback && feedback.eligible && (view.attempt.mode !== "REVISION" || feedback.live) ? (
               <FeedbackPanel attemptId={view.attempt.id} panel={feedback} map={map} />
             ) : null}
+            {transferMode === "from_template" ? <TransferMark episodeId={view.episode.id} initial fromTemplate /> : null}
             {transferMark !== null ? <TransferMark episodeId={view.episode.id} initial={transferMark} /> : null}
             {writing ? <WritingTags learnerId={learner.id} episodeId={view.episode.id} tags={writing[0]} saved={writing[1]} map={writing[2]} /> : null}
             {scorable.length > 0 && view.viewer.canDecide ? <SupportForm attemptId={view.attempt.id} skills={scorable.map((t) => ({ key: t.key, label: t.label }))} /> : null}

@@ -6,10 +6,12 @@ import { ConditionList } from "@/components/skills/ConditionList";
 import { ConfirmAllButton } from "@/components/skills/ConfirmAllButton";
 import { RebuildButton } from "@/components/skills/RebuildButton";
 import { SkillProposalCard } from "@/components/skills/SkillProposalCard";
+import { ManualForm } from "@/components/skills/ManualForm";
 import { SkillRow } from "@/components/skills/SkillRow";
 import { SkillScale } from "@/components/skills/SkillScale";
 import { levelLabels, skillStateCopy, targetsPage } from "@/lib/copy/vi";
 import type { Condition } from "@/lib/engine/types";
+import { manualChoices, pickManualState } from "@/lib/skills/form";
 import type { SkillInboxItem, SkillStateRow } from "@/lib/skills/types";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
@@ -98,6 +100,24 @@ describe("SkillScale and SkillRow (Kỹ năng đang theo dõi)", () => {
     expect(parent).not.toContain(skillStateCopy.flagChip);
     const empty = render(createElement(SkillRow, { id: "A-L3-CAUSE-W", title: "Viết", dimensionName: "Ngôn ngữ", state: null, learnerId: "L1", canEdit: true, showCode: false }));
     expect(empty).toContain('data-level="0"');
+  });
+
+  it("S4: the manual form never offers the level the skill already has, and starts afresh when the level changes under it", () => {
+    expect(manualChoices("SUPPORTED")).toEqual(["DEVELOPING"]);
+    expect(manualChoices("DEVELOPING")).toEqual(["SUPPORTED"]);
+    expect(manualChoices("INDEPENDENT")).toEqual(["SUPPORTED", "DEVELOPING"]);
+    // picked SUPPORTED while at NOT_OBSERVED; the engine lifts the skill to SUPPORTED: the pick is no longer valid
+    expect(pickManualState("SUPPORTED", "NOT_OBSERVED")).toBe("SUPPORTED");
+    expect(pickManualState("SUPPORTED", "SUPPORTED")).toBe("DEVELOPING");
+    expect(pickManualState("DEVELOPING", "INDEPENDENT")).toBe("DEVELOPING");
+    // and the row remounts the form (key = current level) so the reason typed for the old level is not carried over
+    const keyOf = (state: Parameters<typeof stateRow>[0]) => {
+      const row = SkillRow({ id: "A-L3-CAUSE-W", title: "Viết", dimensionName: "x", state: stateRow(state), learnerId: "L1", canEdit: true, showCode: false });
+      const kids = (row.props as { children: unknown[] }).children.flat() as { type?: unknown; key?: string | null }[];
+      return kids.find((k) => k && k.type === ManualForm)?.key;
+    };
+    expect(keyOf({ state: "DEVELOPING" })).toBe("DEVELOPING");
+    expect(keyOf({ state: "SUPPORTED" })).toBe("SUPPORTED");
   });
 
   it("'Tính lại từ đầu' explains that it never makes duplicate proposals", () => {

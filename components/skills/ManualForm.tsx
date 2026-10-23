@@ -6,14 +6,17 @@ import { useState } from "react";
 import { levelLabels, skillStateCopy } from "@/lib/copy/vi";
 import type { SkillState } from "@/lib/engine/types";
 import { clientIdAfter, describedBy } from "@/lib/levels/form";
-import { MANUAL_STATES, REASON_MAX, REASON_MIN } from "@/lib/skills/types";
+import { manualChoices, pickManualState, type ManualState } from "@/lib/skills/form";
+import { REASON_MAX, REASON_MIN } from "@/lib/skills/types";
 import { failText, postJson } from "@/lib/tutorwork/client";
 
 /** "Sửa tay bậc 1–2" (§3 step 5, G3): the child's tutor only (the server and the database check it), always with a reason. */
 export function ManualForm({ learnerId, targetKey, current }: { learnerId: string; targetKey: string; current: SkillState }) {
   const router = useRouter();
-  const choices = MANUAL_STATES.filter((s) => s !== current);
-  const [state, setState] = useState<(typeof MANUAL_STATES)[number]>(choices[0] ?? "SUPPORTED");
+  const choices = manualChoices(current);
+  const [picked, setPicked] = useState<ManualState>(choices[0] ?? "SUPPORTED");
+  // S4: never show (or send) the level the skill already has, even when the engine moved it while this form was open.
+  const state = pickManualState(picked, current);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -39,7 +42,7 @@ export function ManualForm({ learnerId, targetKey, current }: { learnerId: strin
       <form onSubmit={save} className="mt-2 flex flex-col gap-2">
         <label className="flex flex-col gap-1">
           <span className="text-muted">{skillStateCopy.manualState}</span>
-          <select value={state} onChange={(e) => setState(e.target.value as (typeof MANUAL_STATES)[number])} data-testid="skill-manual-state" className="min-h-11 max-w-60 rounded-lg border border-line bg-white px-2">
+          <select value={state} onChange={(e) => setPicked(e.target.value as ManualState)} data-testid="skill-manual-state" className="min-h-11 max-w-60 rounded-lg border border-line bg-white px-2">
             {choices.map((s) => (
               <option key={s} value={s}>
                 {levelLabels[s].label}

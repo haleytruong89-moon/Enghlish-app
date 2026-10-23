@@ -4,8 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { reviewPage } from "@/lib/copy/vi";
 
-/** G4 (S7a): the reviewer ticks that this work is on a new topic / source, so it counts as transfer ("vận dụng"). Shown only to someone who may decide. */
-export function TransferMark({ episodeId, initial }: { episodeId: string; initial: boolean }) {
+/**
+ * G4 (S7a): the child's tutor ticks that this work is on a new topic / source, so it counts as transfer ("vận dụng"). Shown only to that tutor (S1).
+ * N4: `fromTemplate` = the template step already is a transfer check: ticked, read-only, with a note.
+ */
+export function TransferMark({ episodeId, initial, fromTemplate = false }: { episodeId: string; initial: boolean; fromTemplate?: boolean }) {
   const router = useRouter();
   const [checked, setChecked] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -45,13 +48,13 @@ export function TransferMark({ episodeId, initial }: { episodeId: string; initia
           type="checkbox"
           data-testid="transfer-mark-input"
           className="h-5 w-5"
-          checked={checked}
-          disabled={busy}
+          checked={fromTemplate || checked}
+          disabled={busy || fromTemplate}
           onChange={(e) => void toggle(e.target.checked)}
         />
         {reviewPage.transferMark}
       </label>
-      <p className="text-xs text-muted">{reviewPage.transferMarkHint}</p>
+      <p className="text-xs text-muted">{fromTemplate ? reviewPage.transferMarkFromTemplate : reviewPage.transferMarkHint}</p>
       {msg ? (
         <p role={msg.ok ? "status" : "alert"} data-testid="transfer-mark-msg" className={msg.ok ? "text-sm text-accent" : "text-sm text-[#8A2D1B]"}>
           {msg.text}

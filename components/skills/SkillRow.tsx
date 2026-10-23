@@ -36,7 +36,7 @@ export function SkillRow({ id, title, dimensionName, state, learnerId, canEdit, 
         ) : null}
         {state?.stateSince ? <span className="text-muted">{skillStateCopy.updatedOn(dayLabel(state.stateSince))}</span> : null}
       </div>
-      {canEdit ? <ManualForm learnerId={learnerId} targetKey={id} current={current} /> : null}
+      {canEdit ? <ManualForm key={current} learnerId={learnerId} targetKey={id} current={current} /> : null}
       {showCode ? (
         <p className="mt-2 text-xs text-muted">
           {targetsPage.codeLabel}: {id}
