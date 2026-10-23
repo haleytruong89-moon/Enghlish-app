@@ -316,5 +316,165 @@ describe("S7a skill states (migrations 0022 + 0023)", () => {
     });
   });
 
-  // (Tasks 6 and 7 add their sections here)
+  describe("3. the tutor decides, the parent reads, the student gets nothing", () => {
+    type Out = { id: string; target_key?: string; ids?: string[]; replayed: boolean };
+    const decide = (decision: string, action: string, by: string, reason: string | null = null, clientId = `decide-${randomUUID()}`) =>
+      svc<Out>("select english.eng_decide_skill($1, $2, $3, $4, $5) as r", [decision, action, reason, by, clientId]);
+    const confirmAll = (ids: string[], by: string, clientId = `all-${randomUUID()}`, learner = s.learners.an) =>
+      svc<Out>("select english.eng_confirm_skill_proposals($1, $2::uuid[], $3, $4) as r", [learner, ids, by, clientId]);
+    const manual = (target: string, state: string, reason: string | null, by: string, clientId = `manual-${randomUUID()}`) =>
+      svc<Out>("select english.eng_set_skill_state($1, $2, $3, $4, $5, $6) as r", [s.learners.an, target, state, reason, by, clientId]);
+    const ev = () => ({ auto: [], propose: proof.map((p) => p.episodeId), flag: [proof[2]!.episodeId] });
+    let p1 = ""; // A-T7-OPINION: DEVELOPING → INDEPENDENT (to reject, then confirm a new one)
+    let p2 = ""; // A-X1-TURN: DEVELOPING → INDEPENDENT (confirm-all)
+    let p3 = ""; // A-L4-PROCESS-S: DEVELOPING → INDEPENDENT (confirm-all)
+    let f1 = ""; // A-L4-PROCESS-S ⚑
+    beforeAll(async () => {
+      await apply([
+        row({ target_key: "A-T7-OPINION", auto: "DEVELOPING", propose: "INDEPENDENT", evidence_key: K("7"), evidence: ev() }),
+        row({ target_key: "A-X1-TURN", auto: "DEVELOPING", propose: "INDEPENDENT", evidence_key: K("8"), evidence: ev() }),
+        row({ target_key: "A-L4-PROCESS-S", auto: "DEVELOPING", propose: "INDEPENDENT", raise_flag: true, flag_key: K("9"), evidence_key: K("9"), evidence: ev() }),
+      ]);
+      [p1, p2, p3, f1] = [await openOf("A-T7-OPINION", "PROPOSED"), await openOf("A-X1-TURN", "PROPOSED"), await openOf("A-L4-PROCESS-S", "PROPOSED"), await openOf("A-L4-PROCESS-S", "FLAG")] as [string, string, string, string];
+    });
+
+    it("only An's tutor answers: the parent and Nguyên's tutor get 42501 (tutor_only); no app role can execute the functions", async () => {
+      await fail(decide(p1, "confirm", s.members.parent), "42501", /tutor_only/);
+      await fail(decide(p1, "confirm", s.members.tutorNguyen), "42501", /tutor_only/);
+      await fail(confirmAll([p2], s.members.parent), "42501", /tutor_only/);
+      await fail(manual("A-T7-OPINION", "SUPPORTED", "Lý do thử", s.members.parent), "42501", /tutor_only/);
+      for (const fn of ["eng_decide_skill(uuid, text, text, uuid, text)", "eng_confirm_skill_proposals(uuid, uuid[], uuid, text)", "eng_set_skill_state(uuid, text, text, text, uuid, text)", "eng_skill_states(uuid)", "eng_skill_inbox(uuid, boolean)"]) {
+        expect((await q1<{ ok: boolean }>(`select has_function_privilege('authenticated', 'english.${fn}', 'execute') as ok`))[0]?.ok, fn).toBe(false);
+      }
+    });
+
+    it("'Chưa' needs a reason, keeps the level and closes the proposal; a second answer is refused; the same request again is a replay", async () => {
+      await fail(decide(p1, "reject", s.members.tutorAn, " x "), "23514", /reason_required/);
+      const out = await decide(p1, "reject", s.members.tutorAn, "Bài thứ ba còn dựa vào câu mẫu", "decide-reject-0001");
+      expect(out).toMatchObject({ target_key: "A-T7-OPINION", replayed: false });
+      expect(await stateOf("A-T7-OPINION")).toEqual({ state: "DEVELOPING", flag: false, proposal: false });
+      expect(await decide(p1, "reject", s.members.tutorAn, "Bài thứ ba còn dựa vào câu mẫu", "decide-reject-0001")).toMatchObject({ id: out.id, replayed: true });
+      await fail(decide(p1, "confirm", s.members.tutorAn), "23505", /already_answered/);
+      // the receipt names the decision, never the reason
+      expect(await q1("select payload ? 'reason' as has_reason from english.audit_log where learner_id = $1 and action = 'skill.rejected'", [s.learners.an])).toEqual([{ has_reason: false }]);
+    });
+
+    it("'Xác nhận' moves the level; 'Giữ bậc' keeps it and closes ⚑; a ⚑ is never rejected", async () => {
+      expect(await apply([row({ target_key: "A-T7-OPINION", propose: "INDEPENDENT", evidence_key: K("6"), evidence: ev() })])).toMatchObject({ proposed: 1 });
+      await decide((await openOf("A-T7-OPINION", "PROPOSED"))!, "confirm", s.members.tutorAn);
+      expect(await stateOf("A-T7-OPINION")).toEqual({ state: "INDEPENDENT", flag: false, proposal: false });
+      await fail(decide(f1, "reject", s.members.tutorAn, "Không đồng ý"), "22023", /flag_keep_or_edit/);
+      await decide(f1, "confirm", s.members.tutorAn);
+      expect(await stateOf("A-L4-PROCESS-S")).toEqual({ state: "DEVELOPING", flag: false, proposal: true });
+    });
+
+    it("'Xác nhận tất cả' confirms exactly the shown proposals, refuses a ⚑, is all-or-nothing and replayable", async () => {
+      expect(await apply([row({ target_key: "A-L4-PROCESS-S", raise_flag: true, flag_key: K("a") })])).toMatchObject({ flagged: 1 });
+      const f2 = (await openOf("A-L4-PROCESS-S", "FLAG"))!;
+      const n = await bookCount();
+      await fail(confirmAll([p2, f2], s.members.tutorAn), "22023", /flag_not_bulk/);
+      await fail(confirmAll([p2, p2], s.members.tutorAn), "22023", /bad_ids/);
+      await fail(confirmAll([p2, randomUUID()], s.members.tutorAn), "P0002");
+      expect(await bookCount()).toBe(n);
+      const out = await confirmAll([p2, p3], s.members.tutorAn, "all-0000-0001");
+      expect(out.ids).toHaveLength(2);
+      expect(await confirmAll([p3, p2], s.members.tutorAn, "all-0000-0001")).toMatchObject({ replayed: true });
+      expect([await stateOf("A-X1-TURN"), await stateOf("A-L4-PROCESS-S")]).toEqual([
+        { state: "INDEPENDENT", flag: false, proposal: false },
+        { state: "INDEPENDENT", flag: true, proposal: false },
+      ]);
+      await fail(confirmAll([p2], s.members.tutorAn), "23505", /already_answered/);
+    });
+
+    it("manual: only levels 1–2, a reason, a skill of the set, a different level; it closes an open ⚑ (G3)", async () => {
+      await fail(manual("A-L4-PROCESS-S", "INDEPENDENT", "Lý do đủ dài", s.members.tutorAn), "22023", /manual_levels_1_2/);
+      await fail(manual("A-L4-PROCESS-S", "DEVELOPING", " ", s.members.tutorAn), "23514", /reason_required/);
+      await fail(manual("A-A3-REDRAFT", "DEVELOPING", "Lý do đủ dài", s.members.tutorAn), "22023", /not_in_set/);
+      const out = await manual("A-L4-PROCESS-S", "DEVELOPING", "Hai bài gần đây đều cần câu mẫu", s.members.tutorAn, "manual-0000-0001");
+      expect(await stateOf("A-L4-PROCESS-S")).toEqual({ state: "DEVELOPING", flag: false, proposal: false });
+      expect(await manual("A-L4-PROCESS-S", "DEVELOPING", "Hai bài gần đây đều cần câu mẫu", s.members.tutorAn, "manual-0000-0001")).toMatchObject({ id: out.id, replayed: true });
+      await fail(manual("A-L4-PROCESS-S", "DEVELOPING", "Lý do khác", s.members.tutorAn), "23514", /same_state/);
+    });
+
+    it("eng_skill_states: the 12 skills of A-v1 in set order with state, kind, ⚑, proposal, domain and title", async () => {
+      const r = await svc<{ policy_version: string; set_id: string; rows: { target_key: string; title_vi: string; domain_key: string; state: string; state_kind: string | null; flag: unknown; proposal: unknown }[] }>(
+        "select english.eng_skill_states($1) as r", [s.learners.an]);
+      expect([r.policy_version, r.set_id]).toEqual(["AP-0.3", "A-v1"]);
+      expect(r.rows.map((x) => x.target_key)).toEqual((await q1<{ t: string[] }>("select target_ids as t from english.target_set_definitions where id = 'A-v1'"))[0]!.t);
+      expect(r.rows.find((x) => x.target_key === "A-X1-TURN")).toMatchObject({ state: "INDEPENDENT", state_kind: "CONFIRMED", flag: null, proposal: null, domain_key: "speaking" });
+      expect(r.rows.find((x) => x.target_key === "A-L4-PROCESS-S")).toMatchObject({ state: "DEVELOPING", state_kind: "MANUAL" });
+      expect(r.rows.find((x) => x.target_key === "A-T1-TEXT-R")).toMatchObject({ state: "NOT_OBSERVED", state_kind: null, domain_key: "reading" });
+      expect(r.rows.every((x) => typeof x.title_vi === "string" && x.title_vi.length > 0)).toBe(true);
+    });
+
+    it("eng_skill_inbox: An's tutor can decide An's open items (with evidence links); the parent sees them read-only; Nguyên's tutor sees none; a student is refused", async () => {
+      expect(await apply([row({ target_key: "A-L3-CAUSE-S", auto: "DEVELOPING", propose: "INDEPENDENT", evidence_key: K("b"), evidence: ev() })])).toMatchObject({ proposed: 1 });
+      type Inbox = { open: number; decidable: number; items: { kind: string; learner_id: string; target_key: string; can_decide: boolean; evidence: { episode_id: string; step_no: number }[] }[] };
+      const tutor = await svc<Inbox>("select english.eng_skill_inbox($1, false) as r", [s.members.tutorAn]);
+      const mine = tutor.items.find((i) => i.target_key === "A-L3-CAUSE-S")!;
+      expect(mine).toMatchObject({ kind: "PROPOSED", learner_id: s.learners.an, can_decide: true });
+      expect(mine.evidence.map((e) => e.episode_id)).toEqual(proof.map((p) => p.episodeId));
+      expect(mine.evidence.map((e) => e.step_no)).toEqual([11, 12, 13]);
+      expect(tutor.decidable).toBe(tutor.open);
+      const parent = await svc<Inbox>("select english.eng_skill_inbox($1, false) as r", [s.members.parent]);
+      expect(parent.items.map((i) => i.target_key)).toEqual(tutor.items.map((i) => i.target_key));
+      expect(parent.items.every((i) => !i.can_decide)).toBe(true);
+      expect(parent.decidable).toBe(0);
+      expect((await svc<Inbox>("select english.eng_skill_inbox($1, false) as r", [s.members.tutorNguyen])).items.filter((i) => i.learner_id === s.learners.an)).toEqual([]);
+      await fail(svc("select english.eng_skill_inbox($1, false) as r", [s.members.studentAn]), "42501", /staff_only/);
+    });
+  });
+
+  describe("3b. G4: the reviewer marks work as a new topic / source (episode_marks)", () => {
+    const mark = (episode: string, value: boolean, by: string) => svc<{ value: boolean; replayed: boolean }>("select english.eng_mark_episode_transfer($1, $2, $3) as r", [episode, value, by]);
+    const marksOf = (episode: string) => q1<{ value: boolean }>("select value from english.episode_marks where episode_id = $1 order by seq", [episode]);
+    const transferMarked = async (episode: string) =>
+      (await inputs()).episodes.find((e) => e.episode_id === episode) as unknown as { transfer_marked: boolean } | undefined;
+    let open: { episodeId: string }; // not restricted: no in-session test, not watched live
+
+    beforeAll(async () => {
+      open = await evidence("an", { activityId: await step(w2, 7), daysAgo: 2, scores: { "A-T4-CAUSE": 3 } });
+    });
+
+    it("An's tutor marks and unmarks (the latest row wins); the same value again writes nothing; the engine inputs follow", async () => {
+      const ep = proof[0]!.episodeId;
+      expect((await transferMarked(ep))?.transfer_marked).toBe(false);
+      expect(await mark(ep, true, s.members.tutorAn)).toEqual({ value: true, replayed: false });
+      expect(await mark(ep, true, s.members.tutorAn)).toEqual({ value: true, replayed: true });
+      expect((await transferMarked(ep))?.transfer_marked).toBe(true);
+      expect(await mark(ep, false, s.members.tutorAn)).toEqual({ value: false, replayed: false });
+      expect((await transferMarked(ep))?.transfer_marked).toBe(false);
+      expect(await marksOf(ep)).toEqual([{ value: true }, { value: false }]);
+      expect((await q1<{ n: number }>("select count(*)::int as n from english.audit_log where learner_id = $1 and action = 'episode.transfer_marked'", [s.learners.an]))[0]?.n).toBe(2);
+    });
+
+    it("D15: the parent may mark ordinary work but not an in-session test; Nguyên's tutor and the student are refused", async () => {
+      expect(await mark(open.episodeId, true, s.members.parent)).toMatchObject({ replayed: false });
+      await fail(mark(proof[0]!.episodeId, true, s.members.parent), "42501", /not_reviewer/);
+      await fail(mark(open.episodeId, true, s.members.tutorNguyen), "42501", /not_reviewer/);
+      await fail(mark(open.episodeId, true, s.members.studentAn), "42501", /not_reviewer/);
+      expect(await marksOf(proof[0]!.episodeId)).toHaveLength(2);
+    });
+
+    it("only a first attempt that is not a revision; unknown episode; app roles cannot execute the function", async () => {
+      const retry = await evidence("an", { activityId: await step(w2, 7), daysAgo: 1, scores: { "A-T4-CAUSE": 3 }, mode: "REVISION", facets: ["revision"] });
+      await fail(mark(retry.episodeId, true, s.members.tutorAn), "22023", /first_attempt_only/);
+      await fail(mark(randomUUID(), true, s.members.tutorAn), "P0002");
+      expect((await q1<{ ok: boolean }>("select has_function_privilege('authenticated', 'english.eng_mark_episode_transfer(uuid, boolean, uuid)', 'execute') as ok"))[0]?.ok).toBe(false);
+    });
+
+    it("the marks are append-only, staff read them (the student does not), and the purge counts them", async () => {
+      for (const sql of ["update english.episode_marks set value = false", "delete from english.episode_marks", "truncate english.episode_marks"]) {
+        const err = await db.client.query(sql).then(() => null, (e: unknown) => e as { code?: string });
+        expect(err?.code, sql).toBe("42501");
+      }
+      const count = async (user: string) => (await rowsAs<{ n: number }>(db.client, "authenticated", user, "select count(*)::int as n from english.episode_marks where learner_id = $1", [s.learners.an]))[0]?.n;
+      expect(await count(s.users.tutorAn)).toBeGreaterThan(0);
+      expect(await count(s.users.parent)).toBeGreaterThan(0);
+      expect(await count(s.users.studentAn)).toBe(0);
+      expect(await count(s.users.tutorNguyen)).toBe(0);
+    });
+  });
+
+  // (Task 7 adds its section here)
 });

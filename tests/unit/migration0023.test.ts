@@ -110,5 +110,33 @@ describe("0023_skill_states.sql", () => {
     expect(fn).toContain("for update");
   });
 
-  // (Task 6 adds its tests here)
+  it("decisions and reads are for the server only; only a tutor of the child decides (D15-style); students get no function", () => {
+    for (const name of ["eng_decide_skill", "eng_confirm_skill_proposals", "eng_set_skill_state", "eng_skill_states", "eng_skill_inbox"]) {
+      expect(grantsOf(name), name).toEqual(["service_role"]);
+    }
+    for (const name of ["eng_decide_skill", "eng_confirm_skill_proposals", "eng_set_skill_state"]) {
+      expect(fnText(sql, name)).toContain("v_m.role <> 'tutor' or not english.eng_actor_may_manage(p_by,");
+      expect(fnText(sql, name)).toContain("(tutor_only)");
+    }
+    expect(code).not.toMatch(/grant execute on function english\.eng_[a-z_]+\([^)]*\) to authenticated;/);
+  });
+
+  it("Xác nhận tất cả never takes a ⚑, and a ⚑ is never rejected - it is kept or set by hand", () => {
+    expect(fnText(sql, "eng_confirm_skill_proposals")).toContain("(flag_not_bulk)");
+    expect(fnText(sql, "eng_decide_skill")).toContain("(flag_keep_or_edit)");
+    expect(fnText(sql, "eng_set_skill_state")).toContain("p_state not in ('SUPPORTED', 'DEVELOPING')");
+  });
+
+  it("G4: the transfer mark is checked against the D15 review role, first attempts only, and written append-only", () => {
+    expect(grantsOf("eng_mark_episode_transfer")).toEqual(["service_role"]);
+    const fn = fnText(sql, "eng_mark_episode_transfer");
+    expect(fn).toContain("english.eng_review_role(p_episode, p_by) is null");
+    expect(fn).toContain("(not_reviewer)");
+    expect(fn).toContain("(first_attempt_only)");
+    expect(fn).toContain("insert into english.episode_marks");
+    expect(fn).not.toMatch(/update\s+english\.episodes/i);
+    expect(fnText(sql, "eng_engine_inputs")).toContain("'transfer_marked'");
+  });
+
+  // (end of the migration tests)
 });

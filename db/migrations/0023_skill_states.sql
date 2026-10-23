@@ -519,6 +519,372 @@ revoke execute on function english.eng_reset_skill_states(uuid, uuid) from publi
 grant execute on function english.eng_reset_skill_states(uuid, uuid) to service_role;
 
 
+-- 5. Gia sư của em trả lời (Xác nhận / Chưa / Xác nhận tất cả) hoặc sửa tay bậc 1–2 -------------------------------------------------------
+-- Chỉ gia sư còn quan hệ hiệu lực với em (§1 mục 2, kiểu D15); phụ huynh xem. Lỗi có thẻ (tag) cuối câu để màn hình giải thích.
+-- Một đề xuất / ⚑ chỉ được trả lời một lần (chỉ mục duy nhất responds_to). Gửi lại cùng client id + cùng việc = trả lại dòng cũ.
+create or replace function english.eng_decide_skill(p_decision uuid, p_action text, p_reason text, p_by uuid, p_client_id text) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_d english.mastery_decisions%rowtype;
+  v_l english.learners%rowtype;
+  v_m english.members%rowtype;
+  v_prev english.mastery_decisions%rowtype;
+  v_cur english.competency_state%rowtype;
+  v_reason text := nullif(pg_catalog.btrim(coalesce(p_reason, '')), '');
+  v_kind text;
+  v_to text;
+  v_id uuid;
+begin
+  if p_decision is null or p_action is null or p_by is null or p_client_id is null then
+    raise exception 'eng_decide_skill: decision, action, actor and client id are required' using errcode = '22004';
+  end if;
+  if p_action not in ('confirm', 'reject') then
+    raise exception 'eng_decide_skill: action must be confirm or reject (bad_action)' using errcode = '22023';
+  end if;
+  select * into v_d from english.mastery_decisions d where d.id = p_decision;
+  if not found then
+    raise exception 'eng_decide_skill: proposal not found' using errcode = 'P0002';
+  end if;
+  select * into v_l from english.learners l where l.id = v_d.learner_id for update;
+  select * into v_m from english.members m where m.id = p_by;
+  if v_m.id is null or v_m.role <> 'tutor' or not english.eng_actor_may_manage(p_by, v_d.learner_id) then
+    raise exception 'eng_decide_skill: only a tutor of this learner confirms a skill level (tutor_only)' using errcode = '42501';
+  end if;
+  v_kind := case p_action when 'confirm' then 'CONFIRMED' else 'REJECTED' end;
+
+  select * into v_prev from english.mastery_decisions a where a.responds_to = p_decision;
+  if found then
+    if v_prev.client_id = p_client_id and v_prev.kind = v_kind and v_prev.decided_by_member = p_by then
+      return pg_catalog.jsonb_build_object('id', v_prev.id, 'target_key', v_prev.target_key, 'replayed', true);
+    end if;
+    raise exception 'eng_decide_skill: this proposal was already answered (already_answered)' using errcode = '23505';
+  end if;
+  if v_d.kind not in ('PROPOSED', 'FLAG') then
+    raise exception 'eng_decide_skill: only a proposal or a flag can be answered (not_a_proposal)' using errcode = '22023';
+  end if;
+  if v_d.kind = 'FLAG' and p_action = 'reject' then
+    raise exception 'eng_decide_skill: a flag is kept ("Giữ bậc") or the level is set by hand, never rejected (flag_keep_or_edit)' using errcode = '22023';
+  end if;
+  if v_reason is not null and pg_catalog.length(v_reason) > 300 then
+    raise exception 'eng_decide_skill: the reason is too long (reason_too_long)' using errcode = '22023';
+  end if;
+  if p_action = 'reject' and (v_reason is null or pg_catalog.length(v_reason) < 3) then
+    raise exception 'eng_decide_skill: "Chưa" needs a reason (reason_required)' using errcode = '23514';
+  end if;
+
+  perform english.eng_project_skill_state(v_d.learner_id, v_d.target_key);
+  select * into v_cur from english.competency_state c where c.learner_id = v_d.learner_id and c.target_key = v_d.target_key;
+  if v_d.kind = 'PROPOSED' and p_action = 'confirm' and v_d.to_state = 'TRANSFERABLE' and v_cur.state <> 'INDEPENDENT' then
+    raise exception 'eng_decide_skill: the level changed since this proposal; reload the page (stale_proposal)' using errcode = '23514';
+  end if;
+  -- Xác nhận đề xuất → bậc mới; xác nhận ⚑ ("Giữ bậc") hoặc "Chưa" → bậc giữ nguyên.
+  v_to := case when v_d.kind = 'PROPOSED' and p_action = 'confirm' then v_d.to_state else v_cur.state end;
+  insert into english.mastery_decisions(learner_id, target_key, kind, from_state, to_state, route, conditions, evidence_episode_ids, policy_version,
+                                        decided_by_member, decided_role, reason, responds_to, client_id)
+  values (v_d.learner_id, v_d.target_key, v_kind, v_cur.state, v_to, v_d.route, v_d.conditions, v_d.evidence_episode_ids,
+          coalesce(english.eng_engine_policy(v_d.learner_id), v_d.policy_version), p_by, 'tutor', v_reason, p_decision, p_client_id)
+  returning id into v_id;
+  perform english.eng_project_skill_state(v_d.learner_id, v_d.target_key);
+
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_m.user_id, v_m.role, case v_kind when 'CONFIRMED' then 'skill.confirmed' else 'skill.rejected' end, v_l.family_id, v_d.learner_id,
+          pg_catalog.jsonb_build_object('decision', v_id, 'responds_to', p_decision, 'target_key', v_d.target_key, 'answered', v_d.kind, 'to_state', v_to));
+  return pg_catalog.jsonb_build_object('id', v_id, 'target_key', v_d.target_key, 'replayed', false);
+end
+$$;
+
+-- "Xác nhận tất cả" (§3 bước 4): đúng các đề xuất lên bậc mà màn hình đã hiện (p_ids), cùng một lần; ⚑ không bao giờ đi cùng. Tất cả hoặc không.
+create or replace function english.eng_confirm_skill_proposals(p_learner uuid, p_ids uuid[], p_by uuid, p_client_id text) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_m english.members%rowtype;
+  v_d english.mastery_decisions%rowtype;
+  v_cur english.competency_state%rowtype;
+  v_ids uuid[] := '{}';
+  v_id uuid;
+begin
+  if p_learner is null or p_ids is null or p_by is null or p_client_id is null then
+    raise exception 'eng_confirm_skill_proposals: learner, ids, actor and client id are required' using errcode = '22004';
+  end if;
+  if cardinality(p_ids) not between 1 and 50 or cardinality(p_ids) <> (select pg_catalog.count(distinct x) from unnest(p_ids) as x) then
+    raise exception 'eng_confirm_skill_proposals: 1 to 50 different proposals (bad_ids)' using errcode = '22023';
+  end if;
+  select * into v_l from english.learners l where l.id = p_learner for update;
+  if not found then
+    raise exception 'eng_confirm_skill_proposals: learner not found' using errcode = 'P0002';
+  end if;
+  select * into v_m from english.members m where m.id = p_by;
+  if v_m.id is null or v_m.role <> 'tutor' or not english.eng_actor_may_manage(p_by, p_learner) then
+    raise exception 'eng_confirm_skill_proposals: only a tutor of this learner confirms skill levels (tutor_only)' using errcode = '42501';
+  end if;
+
+  if exists (select 1 from english.mastery_decisions a where a.learner_id = p_learner and a.client_id = p_client_id) then
+    if not exists (select 1 from english.mastery_decisions a
+                   where a.learner_id = p_learner and a.client_id = p_client_id and (a.kind <> 'CONFIRMED' or a.decided_by_member <> p_by))
+       and (select array_agg(a.responds_to order by a.responds_to) from english.mastery_decisions a where a.learner_id = p_learner and a.client_id = p_client_id)
+           = (select array_agg(x order by x) from unnest(p_ids) as x) then
+      return pg_catalog.jsonb_build_object(
+        'ids', (select pg_catalog.jsonb_agg(a.id order by a.seq) from english.mastery_decisions a where a.learner_id = p_learner and a.client_id = p_client_id),
+        'replayed', true);
+    end if;
+    raise exception 'eng_confirm_skill_proposals: this client id was already used for other decisions (client_reused)' using errcode = '23505';
+  end if;
+  if exists (select 1 from unnest(p_ids) as x where not exists (select 1 from english.mastery_decisions d where d.id = x and d.learner_id = p_learner)) then
+    raise exception 'eng_confirm_skill_proposals: a proposal of this learner was not found (not_found)' using errcode = 'P0002';
+  end if;
+  if exists (select 1 from english.mastery_decisions d where d.id = any (p_ids) and d.kind = 'FLAG') then
+    raise exception 'eng_confirm_skill_proposals: a flag is looked at one by one, never confirmed in bulk (flag_not_bulk)' using errcode = '22023';
+  end if;
+  if exists (select 1 from english.mastery_decisions d where d.id = any (p_ids) and d.kind <> 'PROPOSED') then
+    raise exception 'eng_confirm_skill_proposals: only proposals can be confirmed (not_a_proposal)' using errcode = '22023';
+  end if;
+  if exists (select 1 from english.mastery_decisions a where a.responds_to = any (p_ids)) then
+    raise exception 'eng_confirm_skill_proposals: a proposal was already answered (already_answered)' using errcode = '23505';
+  end if;
+
+  for v_d in select d.* from english.mastery_decisions d where d.id = any (p_ids) order by d.seq loop
+    perform english.eng_project_skill_state(p_learner, v_d.target_key);
+    select * into v_cur from english.competency_state c where c.learner_id = p_learner and c.target_key = v_d.target_key;
+    if v_d.to_state = 'TRANSFERABLE' and v_cur.state <> 'INDEPENDENT' then
+      raise exception 'eng_confirm_skill_proposals: a level changed since the proposal; reload the page (stale_proposal)' using errcode = '23514';
+    end if;
+    insert into english.mastery_decisions(learner_id, target_key, kind, from_state, to_state, route, conditions, evidence_episode_ids, policy_version,
+                                          decided_by_member, decided_role, responds_to, client_id)
+    values (p_learner, v_d.target_key, 'CONFIRMED', v_cur.state, v_d.to_state, v_d.route, v_d.conditions, v_d.evidence_episode_ids,
+            coalesce(english.eng_engine_policy(p_learner), v_d.policy_version), p_by, 'tutor', v_d.id, p_client_id)
+    returning id into v_id;
+    v_ids := v_ids || v_id;
+    perform english.eng_project_skill_state(p_learner, v_d.target_key);
+  end loop;
+
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_m.user_id, v_m.role, 'skill.confirmed_all', v_l.family_id, p_learner, pg_catalog.jsonb_build_object('count', cardinality(v_ids)));
+  return pg_catalog.jsonb_build_object('ids', pg_catalog.to_jsonb(v_ids), 'replayed', false);
+end
+$$;
+
+-- Gia sư sửa tay bậc 1–2 (§3 bước 5; G3): có lý do; đóng ⚑ đang mở của kỹ năng đó. Không bao giờ đặt bậc 3–4 bằng tay (chỉ qua đề xuất).
+create or replace function english.eng_set_skill_state(p_learner uuid, p_target text, p_state text, p_reason text, p_by uuid, p_client_id text) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_m english.members%rowtype;
+  v_prev english.mastery_decisions%rowtype;
+  v_cur english.competency_state%rowtype;
+  v_reason text := nullif(pg_catalog.btrim(coalesce(p_reason, '')), '');
+  v_id uuid;
+begin
+  if p_learner is null or p_target is null or p_state is null or p_by is null or p_client_id is null then
+    raise exception 'eng_set_skill_state: learner, skill, state, actor and client id are required' using errcode = '22004';
+  end if;
+  if p_state not in ('SUPPORTED', 'DEVELOPING') then
+    raise exception 'eng_set_skill_state: a level is set by hand only to 1 or 2 (manual_levels_1_2)' using errcode = '22023';
+  end if;
+  if v_reason is not null and pg_catalog.length(v_reason) > 300 then
+    raise exception 'eng_set_skill_state: the reason is too long (reason_too_long)' using errcode = '22023';
+  end if;
+  if v_reason is null or pg_catalog.length(v_reason) < 3 then
+    raise exception 'eng_set_skill_state: a level set by hand needs a reason (reason_required)' using errcode = '23514';
+  end if;
+  select * into v_l from english.learners l where l.id = p_learner for update;
+  if not found then
+    raise exception 'eng_set_skill_state: learner not found' using errcode = 'P0002';
+  end if;
+  select * into v_m from english.members m where m.id = p_by;
+  if v_m.id is null or v_m.role <> 'tutor' or not english.eng_actor_may_manage(p_by, p_learner) then
+    raise exception 'eng_set_skill_state: only a tutor of this learner sets a skill level (tutor_only)' using errcode = '42501';
+  end if;
+  if not (p_target = any (coalesce(english.eng_engine_scope(p_learner), '{}'::text[]))) then
+    raise exception 'eng_set_skill_state: this skill is not in the learner''s set (not_in_set)' using errcode = '22023';
+  end if;
+
+  select * into v_prev from english.mastery_decisions a where a.learner_id = p_learner and a.client_id = p_client_id and a.target_key = p_target;
+  if found then
+    if v_prev.kind = 'MANUAL' and v_prev.to_state = p_state and v_prev.decided_by_member = p_by then
+      return pg_catalog.jsonb_build_object('id', v_prev.id, 'replayed', true);
+    end if;
+    raise exception 'eng_set_skill_state: this client id was already used (client_reused)' using errcode = '23505';
+  end if;
+  perform english.eng_project_skill_state(p_learner, p_target);
+  select * into v_cur from english.competency_state c where c.learner_id = p_learner and c.target_key = p_target;
+  if v_cur.state = p_state then
+    raise exception 'eng_set_skill_state: the new level is the current one (same_state)' using errcode = '23514';
+  end if;
+
+  insert into english.mastery_decisions(learner_id, target_key, kind, from_state, to_state, policy_version, decided_by_member, decided_role, reason,
+                                        responds_to, client_id)
+  values (p_learner, p_target, 'MANUAL', v_cur.state, p_state, coalesce(english.eng_engine_policy(p_learner), 'AP-0.3'), p_by, 'tutor', v_reason,
+          v_cur.flag_decision_id, p_client_id)
+  returning id into v_id;
+  perform english.eng_project_skill_state(p_learner, p_target);
+
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_m.user_id, v_m.role, 'skill.manual', v_l.family_id, p_learner,
+          pg_catalog.jsonb_build_object('decision', v_id, 'target_key', p_target, 'from_state', v_cur.state, 'to_state', p_state));
+  return pg_catalog.jsonb_build_object('id', v_id, 'replayed', false);
+end
+$$;
+
+-- G4 (phụ huynh 23/10): người duyệt đánh dấu "Bài này ở chủ đề / nguồn mới (vận dụng)" trên một bài. Chỉ người được duyệt bài đó theo D15
+-- (eng_review_role: gia sư của em; phụ huynh trừ bài kiểm tra trong buổi / quan sát trực tiếp), chỉ lần làm đầu và không phải bài sửa.
+-- Ghi thêm dòng episode_marks (không sửa episodes.facets); dòng mới nhất quyết định. Gửi lại cùng giá trị = không ghi (replayed).
+create or replace function english.eng_mark_episode_transfer(p_episode uuid, p_value boolean, p_by uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_e english.episodes%rowtype;
+  v_a english.attempts%rowtype;
+  v_l english.learners%rowtype;
+  v_m english.members%rowtype;
+  v_last boolean;
+  v_id uuid;
+begin
+  if p_episode is null or p_value is null or p_by is null then
+    raise exception 'eng_mark_episode_transfer: episode, value and actor are required' using errcode = '22004';
+  end if;
+  select * into v_e from english.episodes e where e.id = p_episode for share;
+  if not found then
+    raise exception 'eng_mark_episode_transfer: episode not found' using errcode = 'P0002';
+  end if;
+  select * into v_m from english.members m where m.id = p_by;
+  if v_m.id is null or english.eng_review_role(p_episode, p_by) is null then
+    raise exception 'eng_mark_episode_transfer: only someone who may review this work marks it (not_reviewer)' using errcode = '42501';
+  end if;
+  select * into v_a from english.attempts t where t.id = v_e.attempt_id;
+  if not v_e.is_first_attempt or v_a.revises_attempt_id is not null or v_a.mode = 'REVISION' then
+    raise exception 'eng_mark_episode_transfer: only a first attempt that is not a revision can be marked (first_attempt_only)' using errcode = '22023';
+  end if;
+  select m.value into v_last from english.episode_marks m where m.episode_id = p_episode and m.mark = 'transfer_check' order by m.seq desc limit 1;
+  if coalesce(v_last, false) = p_value then
+    return pg_catalog.jsonb_build_object('value', p_value, 'replayed', true);
+  end if;
+  select * into v_l from english.learners l where l.id = v_e.learner_id;
+  insert into english.episode_marks(episode_id, learner_id, mark, value, set_by_member)
+  values (p_episode, v_e.learner_id, 'transfer_check', p_value, p_by)
+  returning id into v_id;
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_m.user_id, v_m.role, 'episode.transfer_marked', v_l.family_id, v_e.learner_id,
+          pg_catalog.jsonb_build_object('episode', p_episode, 'mark', v_id, 'value', p_value));
+  return pg_catalog.jsonb_build_object('value', p_value, 'replayed', false);
+end
+$$;
+
+revoke execute on function english.eng_decide_skill(uuid, text, text, uuid, text) from public, anon, authenticated;
+grant execute on function english.eng_decide_skill(uuid, text, text, uuid, text) to service_role;
+revoke execute on function english.eng_confirm_skill_proposals(uuid, uuid[], uuid, text) from public, anon, authenticated;
+grant execute on function english.eng_confirm_skill_proposals(uuid, uuid[], uuid, text) to service_role;
+revoke execute on function english.eng_set_skill_state(uuid, text, text, text, uuid, text) from public, anon, authenticated;
+grant execute on function english.eng_set_skill_state(uuid, text, text, text, uuid, text) to service_role;
+
+-- 6. Đọc (phụ huynh / gia sư; máy chủ gọi sau requireAccess / requireStaff) -----------------------------------------------------------
+-- Trạng thái mọi kỹ năng của bộ hiện tại, theo thứ tự của bộ (Kỹ năng đang theo dõi, Hồ sơ cấp). Kỹ năng chưa có dòng = "Chưa đủ bài".
+create or replace function english.eng_skill_states(p_learner uuid) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_def english.target_set_definitions%rowtype;
+  v_map text := english.eng_current_skill_map();
+begin
+  select * into v_l from english.learners l where l.id = p_learner;
+  if not found then
+    raise exception 'eng_skill_states: learner not found' using errcode = 'P0002';
+  end if;
+  select d.* into v_def
+  from english.target_sets ts join english.target_set_definitions d on d.id = ts.definition_id
+  where ts.learner_id = p_learner and ts.effective_from <= pg_catalog.clock_timestamp()
+  order by ts.effective_from desc, ts.seq desc limit 1;
+
+  return pg_catalog.jsonb_build_object(
+    'policy_version', english.eng_engine_policy(p_learner),
+    'set_id', v_def.id,
+    'rows', coalesce((
+      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+               'target_key', u.k,
+               'title_vi', t.title_vi,
+               'domain_key', (select g.domain_key from english.skill_leaves sl
+                              join english.skill_groups g on g.map_id = sl.map_id and g.key = sl.group_key
+                              where sl.map_id = v_map and sl.kind = 'target' and sl.track_id = v_l.track_id and sl.ref_key = u.k),
+               'state', coalesce(c.state, 'NOT_OBSERVED'),
+               'state_kind', sd.kind,
+               'state_since', c.state_since,
+               'flag', case when f.id is null then null else pg_catalog.jsonb_build_object('id', f.id, 'at', f.created_at) end,
+               'proposal', case when pr.id is null then null
+                                else pg_catalog.jsonb_build_object('id', pr.id, 'to_state', pr.to_state, 'route', pr.route, 'at', pr.created_at) end,
+               'conditions', coalesce(c.conditions, '[]'::jsonb),
+               'route', c.route,
+               'evaluated_at', c.evaluated_at,
+               'updated_at', c.updated_at)
+             order by u.o)
+      from unnest(coalesce(v_def.target_ids, '{}'::text[])) with ordinality as u(k, o)
+      left join english.targets t on t.id = u.k and t.descriptor_version = v_def.descriptor_version
+      left join english.competency_state c on c.learner_id = p_learner and c.target_key = u.k
+      left join english.mastery_decisions sd on sd.id = c.state_decision_id
+      left join english.mastery_decisions f on f.id = c.flag_decision_id
+      left join english.mastery_decisions pr on pr.id = c.proposal_decision_id), '[]'::jsonb));
+end
+$$;
+
+-- Hộp duyệt → tab "Kỹ năng": đề xuất / ⚑ đang mở của mọi em trong phạm vi của p_by (phụ huynh: cả gia đình; gia sư: em còn quan hệ hiệu lực).
+-- can_decide = p_by là gia sư của em đó. Không có điểm, không có tên người học thật khi p_allow_real = false (preview).
+create or replace function english.eng_skill_inbox(p_by uuid, p_allow_real boolean default false) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_m english.members%rowtype;
+begin
+  select * into v_m from english.members m where m.id = p_by;
+  if v_m.id is null or v_m.role not in ('tutor', 'parent') then
+    raise exception 'eng_skill_inbox: staff only (staff_only)' using errcode = '42501';
+  end if;
+  return (
+    with pending as (
+      select d.*, l.alias, l.is_test
+      from english.mastery_decisions d
+      join english.learners l on l.id = d.learner_id
+      where english.eng_actor_may_manage(p_by, l.id) and (p_allow_real or l.is_test)
+        and d.kind in ('PROPOSED', 'FLAG')
+        and not exists (select 1 from english.mastery_decisions a where a.responds_to = d.id)
+        and d.target_key = any (coalesce(english.eng_engine_scope(d.learner_id), '{}'::text[]))
+    )
+    select pg_catalog.jsonb_build_object(
+      'open', (select pg_catalog.count(*) from pending)::int,
+      'decidable', case when v_m.role = 'tutor' then (select pg_catalog.count(*) from pending)::int else 0 end,
+      'items', coalesce((
+        select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+                 'id', p.id, 'kind', p.kind, 'learner_id', p.learner_id, 'alias', p.alias, 'is_test', p.is_test,
+                 'target_key', p.target_key,
+                 'title_vi', (select t.title_vi from english.targets t where t.id = p.target_key order by t.descriptor_version desc limit 1),
+                 'from_state', p.from_state, 'to_state', p.to_state,
+                 'current_state', coalesce((select c.state from english.competency_state c where c.learner_id = p.learner_id and c.target_key = p.target_key), 'NOT_OBSERVED'),
+                 'route', p.route, 'conditions', p.conditions,
+                 'evidence', coalesce((
+                   select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+                            'episode_id', e.id, 'title_vi', i.snapshot -> 'template' ->> 'title_vi', 'step_no', a.step_no, 'at', t.submitted_at)
+                          order by t.submitted_at, e.id)
+                   from english.episodes e
+                   join english.attempts t on t.id = e.attempt_id
+                   join english.activity_instances a on a.id = t.activity_instance_id
+                   join english.inquiry_instances i on i.id = a.inquiry_instance_id
+                   where e.id = any (p.evidence_episode_ids)), '[]'::jsonb),
+                 'created_at', p.created_at,
+                 'can_decide', v_m.role = 'tutor')
+               order by p.alias, p.seq)
+        from pending p), '[]'::jsonb)));
+end
+$$;
+
+revoke execute on function english.eng_skill_states(uuid) from public, anon, authenticated;
+grant execute on function english.eng_skill_states(uuid) to service_role;
+revoke execute on function english.eng_skill_inbox(uuid, boolean) from public, anon, authenticated;
+grant execute on function english.eng_skill_inbox(uuid, boolean) to service_role;
+revoke execute on function english.eng_mark_episode_transfer(uuid, boolean, uuid) from public, anon, authenticated;
+grant execute on function english.eng_mark_episode_transfer(uuid, boolean, uuid) to service_role;
+
 -- 8. Purge: thêm competency_state + mastery_decisions (giữ nguyên mọi dòng của 0021; có test đối chiếu từng dòng).
 create or replace function english.eng_purge_learner(
   p_learner_id uuid,
