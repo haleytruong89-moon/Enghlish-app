@@ -12,6 +12,9 @@ export function TransferMark({ episodeId, initial }: { episodeId: string; initia
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function toggle(next: boolean) {
+    // Optimistic: the box follows the click at once (a controlled checkbox that waits for the server looks broken),
+    // and goes back if the server refuses.
+    setChecked(next);
     setBusy(true);
     setMsg(null);
     try {
@@ -20,12 +23,15 @@ export function TransferMark({ episodeId, initial }: { episodeId: string; initia
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ value: next }),
       });
-      if (res.status === 403) return setMsg({ ok: false, text: reviewPage.tutorOnlyDenied });
+      if (res.status === 403) {
+        setChecked(!next);
+        return setMsg({ ok: false, text: reviewPage.tutorOnlyDenied });
+      }
       if (!res.ok) throw new Error(String(res.status));
-      setChecked(next);
       setMsg({ ok: true, text: reviewPage.transferMarkSaved });
       router.refresh();
     } catch {
+      setChecked(!next);
       setMsg({ ok: false, text: reviewPage.transferMarkError });
     } finally {
       setBusy(false);
