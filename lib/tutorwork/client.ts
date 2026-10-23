@@ -41,6 +41,16 @@ export function failText(r: PostFail): string {
   if (r.error === "reason_required") return tutorWorkErrors.reasonRequired;
   if (r.error === "bad_date") return tutorWorkErrors.badDate;
   if (r.error === "already_superseded") return tutorWorkErrors.alreadySuperseded;
+  if (r.error === "skill_tutor_only") return tutorWorkErrors.skillTutorOnly;
+  if (r.error === "already_answered") return tutorWorkErrors.alreadyAnswered;
+  if (r.error === "stale_proposal") return tutorWorkErrors.staleProposal;
+  if (r.error === "flag_not_bulk") return tutorWorkErrors.flagNotBulk;
+  if (r.error === "flag_keep_or_edit") return tutorWorkErrors.flagKeepOrEdit;
+  if (r.error === "not_a_proposal") return tutorWorkErrors.notAProposal;
+  if (r.error === "manual_levels_1_2") return tutorWorkErrors.manualLevels;
+  if (r.error === "not_in_set") return tutorWorkErrors.notInSet;
+  if (r.error === "same_state") return tutorWorkErrors.sameState;
+  if (r.error === "skill_reason_required") return tutorWorkErrors.skillReasonRequired;
   if (r.status === 403) return tutorWorkErrors.forbidden;
   if (r.status === 409) return tutorWorkErrors.conflict;
   if (r.status === 400) return tutorWorkErrors.invalid;

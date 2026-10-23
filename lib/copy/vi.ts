@@ -334,6 +334,10 @@ export const reviewPage = {
   supportNote: "Ghi chú (không bắt buộc)",
   supportSeparate: "Gợi ý ghi riêng, không làm đổi mức đã chọn.",
   supportSaved: "Đã ghi gợi ý.",
+  transferMark: "Bài này ở chủ đề / nguồn mới (vận dụng)",
+  transferMarkHint: "Chỉ tick khi nội dung khác hẳn các bài đã luyện. Bài được tick tính là bài vận dụng, không phải bài ôn lại.",
+  transferMarkSaved: "Đã ghi.",
+  transferMarkError: "Chưa ghi được. Bạn thử lại sau ít phút.",
   supportError: "Chưa ghi được gợi ý. Bạn thử lại sau ít phút.",
   supportNoteTooLong: (max: number) => `Ghi chú dài quá. Bạn viết ngắn lại, tối đa ${max} ký tự nhé.`,
   supportNoteCount: (n: number, max: number) => `${n}/${max} ký tự`,
@@ -636,6 +640,16 @@ export const tutorWorkErrors = {
   reasonRequired: "Điều chỉnh cấp cần ghi lý do.",
   badDate: "Ngày thi không hợp lệ: không chọn ngày sau hôm nay, không quá 10 năm trước.",
   alreadySuperseded: "Kết quả này đã được sửa trước đó. Tải lại trang để sửa bản mới nhất.",
+  skillTutorOnly: `Chỉ ${tutorHonorific} của em mới xác nhận hoặc sửa được bậc kỹ năng.`,
+  alreadyAnswered: "Đề xuất này đã được trả lời. Tải lại trang để xem.",
+  staleProposal: "Bậc của kỹ năng vừa đổi. Tải lại trang rồi xem lại đề xuất.",
+  flagNotBulk: "Kỹ năng có ⚑ cần xem từng cái, không xác nhận cùng lúc.",
+  flagKeepOrEdit: "Với ⚑, chọn “Giữ bậc” hoặc “Sửa bậc”.",
+  notAProposal: "Mục này không còn là đề xuất. Tải lại trang để xem.",
+  manualLevels: "Chỉ sửa tay được bậc 1–2. Bậc 3–4 đi qua đề xuất.",
+  notInSet: "Kỹ năng này không có trong bộ kỹ năng hiện tại của em.",
+  sameState: "Bậc mới đang trùng bậc hiện tại.",
+  skillReasonRequired: "Cần ghi lý do (ít nhất 3 ký tự).",
 } as const;
 
 /** Màn "Xóa dữ liệu của em" (S5c, chỉ phụ huynh). */

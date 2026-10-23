@@ -1,5 +1,6 @@
 import "server-only";
 import { allowRealLearners } from "@/lib/env";
+import { createUserClient } from "@/lib/supabase/server";
 import { loadTargetsView } from "@/lib/targets/loadTargets";
 import { loadTags } from "@/lib/tutorwork/load";
 import { parseEpisode, parseInbox, parseNotes } from "./shape";
@@ -39,4 +40,19 @@ export async function loadNotesPage(learnerId: string, trackId: string): Promise
     targets: (targets?.rows ?? []).map((r) => ({ id: r.id, title: r.title })),
     tagLabels: Object.fromEntries(tags.map((t) => [t.key, t.label])),
   };
+}
+
+/** G4: is the "new topic / source" mark on this piece of work ticked right now? The latest row wins; null = unknown (e.g. 0023 not applied yet). Staff only (RLS). */
+export async function loadTransferMark(episodeId: string): Promise<boolean | null> {
+  const db = await createUserClient();
+  const { data, error } = await db
+    .from("episode_marks")
+    .select("value")
+    .eq("episode_id", episodeId)
+    .eq("mark", "transfer_check")
+    .order("seq", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ value: boolean }>();
+  if (error) return null;
+  return data?.value ?? false;
 }

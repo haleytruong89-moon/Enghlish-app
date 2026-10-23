@@ -6,6 +6,7 @@
  * D15 (who may decide a checkpoint or live-watched piece of work) is enforced by the database; a refusal there becomes
  * 403 "tutor_only". The handlers never decide it on their own and never return a raw database message.
  */
+import type { EngineHook } from "@/lib/engine/runner";
 import {
   AccessError,
   requireAccess,
@@ -20,6 +21,7 @@ import { allowRealLearners } from "@/lib/env";
 import {
   decisionsBodySchema,
   modifyBodySchema,
+  transferMarkBodySchema,
   noteBodySchema,
   offlineBodySchema,
   supportBodySchema,
@@ -59,6 +61,8 @@ export interface ReviewStore {
   recordReviews(args: { episodeId: string; items: unknown[]; byMemberId: string; clientId: string }): Promise<unknown>;
   modifyDecision(args: { decisionId: string; score: number | null; notObserved: boolean; reason: string; byMemberId: string; clientId: string }): Promise<unknown>;
   recordSupport(args: { attemptId: string; targets: string[]; kind: string; note: string | null; byMemberId: string; clientId: string | null }): Promise<unknown>;
+  /** english.eng_mark_episode_transfer (G4, service role): the reviewer's "new topic / source" mark. The SQL re-checks the actor (D15). */
+  markTransfer(args: { episodeId: string; value: boolean; byMemberId: string }): Promise<unknown>;
   recordOffline(args: {
     activityId: string; provenance: string; text: string; durationSec: number | null; wordCount: number | null;
     sessionDate: string; assistance: string[]; byMemberId: string; clientId: string; backdateReason: string | null;
@@ -73,6 +77,8 @@ export type HandlerDeps = {
   user: AccessUser;
   store: ReviewStore;
   access?: Partial<AccessDeps>;
+  /** S7a: recompute the child's skills after a successful, non-replayed write (fail-soft, D16). */
+  afterWrite?: EngineHook;
 };
 
 export type HandlerResult<T = unknown> = { status: number; body: T };
@@ -194,6 +200,7 @@ export async function handleDecisions(deps: HandlerDeps, episodeId: string, rawB
       clientId: body.client_id,
     })) as { target_key: string; decision_id: string; observation_id: string; replayed: boolean }[];
     const results = raw.map((r) => ({ target_id: r.target_key, decision_id: r.decision_id, replayed: r.replayed }));
+    if (!results.every((r) => r.replayed)) await deps.afterWrite?.(g.grant.learner.id, body.items.map((i) => i.target_id));
     return { status: results.every((r) => r.replayed) ? 200 : 201, body: { results } };
   } catch (err) {
     return fromDbError(err);
@@ -215,7 +222,22 @@ export async function handleModify(deps: HandlerDeps, decisionId: string, rawBod
       byMemberId: g.grant.member.id,
       clientId: body.client_id,
     })) as { decision_id: string; replayed: boolean };
+    if (!r.replayed) await deps.afterWrite?.(g.grant.learner.id, null);
     return { status: r.replayed ? 200 : 201, body: { decision_id: r.decision_id, replayed: r.replayed } };
+  } catch (err) {
+    return fromDbError(err);
+  }
+}
+
+export async function handleMarkTransfer(deps: HandlerDeps, episodeId: string, rawBody: unknown): Promise<HandlerResult> {
+  const g = await guardByRef(deps, episodeId, (id) => deps.store.getEpisodeLearnerId(id), "work:review");
+  if (!g.ok) return g.result;
+  const parsed = transferMarkBodySchema.safeParse(rawBody);
+  if (!parsed.success) return fail(400, "invalid_body");
+  try {
+    const r = (await deps.store.markTransfer({ episodeId, value: parsed.data.value, byMemberId: g.grant.member.id })) as { value: boolean; replayed: boolean };
+    if (!r.replayed) await deps.afterWrite?.(g.grant.learner.id, null);
+    return { status: r.replayed ? 200 : 201, body: { value: r.value, replayed: r.replayed } };
   } catch (err) {
     return fromDbError(err);
   }
@@ -239,6 +261,7 @@ export async function handleSupport(deps: HandlerDeps, attemptId: string, rawBod
       byMemberId: g.grant.member.id,
       clientId: body.client_id ?? null,
     })) as { id: string | number; replayed: boolean };
+    if (!r.replayed) await deps.afterWrite?.(g.grant.learner.id, body.target_ids);
     return { status: r.replayed ? 200 : 201, body: { id: r.id, replayed: r.replayed } };
   } catch (err) {
     return fromDbError(err);
@@ -267,6 +290,7 @@ export async function handleOffline(deps: HandlerDeps, learnerId: string, rawBod
       clientId: body.client_id,
       backdateReason: body.backdate_reason ?? null,
     })) as { attempt_id: string; episode_id: string; attempt_no: number; replayed: boolean };
+    if (!r.replayed) await deps.afterWrite?.(g.grant.learner.id, null);
     return {
       status: r.replayed ? 200 : 201,
       body: { attempt_id: r.attempt_id, episode_id: r.episode_id, attempt_no: r.attempt_no, replayed: r.replayed },
