@@ -144,6 +144,12 @@ test.describe.serial("S5 review", () => {
     await expect(page.getByTestId("decided-A-L2-CHUNKS")).toContainText(scoreLabels.null.short);
   });
 
+  test("S7a: right after the review, An's tutor sees the skill A-L3-CAUSE-W at level 1 or more (the app updated it after the save)", async ({ page }) => {
+    await loginAs(page, "tutorAn");
+    await page.goto(`/learners/${LEARNER_IDS.an}/targets`);
+    await expect(page.getByTestId("skill-row-A-L3-CAUSE-W").getByTestId("skill-scale")).toHaveAttribute("data-level", /^[1-4]$/);
+  });
+
   test("An's tutor: records a live speaking attempt from the learner's page (text only) and can open it to score", async ({ page }) => {
     await loginAs(page, "tutorAn");
     const activityId = await activityIdOf(page, SPEAK_STEP);
@@ -389,6 +395,13 @@ test.describe.serial("S5 review", () => {
         expect([403, 404], `POST decision ${ep}`).toContain(post.status());
       }
       expect((await page.request.get("/api/review/inbox")).status()).toBe(403);
+      // S7a: no skill state for a child, through any door
+      await notFound(page, "/review/skills");
+      expect((await page.request.get("/api/review/skills")).status()).toBe(403);
+      for (const learnerId of Object.values(LEARNER_IDS)) {
+        expect([403, 404]).toContain((await page.request.get(`/api/learners/${learnerId}/skills`)).status());
+        expect([403, 404]).toContain((await page.request.post(`/api/learners/${learnerId}/skills/rebuild`, { data: {} })).status());
+      }
       for (const learnerId of Object.values(LEARNER_IDS)) {
         await notFound(page, `/learners/${learnerId}/notes`);
         expect([403, 404]).toContain((await page.request.get(`/api/learners/${learnerId}/lesson-notes`)).status());
@@ -403,7 +416,7 @@ test.describe.serial("S5 review", () => {
       expect(home.status()).toBe(200);
       const text = await home.text();
       expect(text).not.toMatch(SCORE_PATTERN);
-      for (const k of ["decision", "observation", "lesson_note", "validator", "next_actions", "rationale"]) expect(text, k).not.toContain(k);
+      for (const k of ["decision", "observation", "lesson_note", "validator", "next_actions", "rationale", "mastery", "competency"]) expect(text, k).not.toContain(k);
       expect(await page.locator("body").innerText()).not.toMatch(SCORE_PATTERN);
     });
   }

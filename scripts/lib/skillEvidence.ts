@@ -6,6 +6,7 @@
  */
 import { randomUUID } from "node:crypto";
 import type { ClientBase } from "pg";
+import { devDueOn, seedThrowawayLearner, TEST_LEARNER_AN_ID } from "./seed";
 
 export type EvidenceFacet = "baseline" | "checkpoint" | "delayed_check" | "transfer_check" | "revision";
 export type EvidenceSpec = {
@@ -107,4 +108,66 @@ export async function insertValidatedEpisode(client: ClientBase, learnerId: stri
     ).rows[0]!.id;
   }
   return { attemptId, episodeId, decisionIds };
+}
+
+/** The two writing skills of A-v1 that the e2e suite follows (both are on the checkpoint writing steps of A-W1 11, A-W2 12, A-W3 13). */
+export const E2E_SKILLS = ["A-L3-CAUSE-W", "A-L3-PARA-W"] as const;
+
+export type SkillEvidenceLearner = {
+  learnerId: string;
+  alias: string;
+  tutorMemberId: string;
+  /** activity_instances ids: the three checkpoints and one more INDEPENDENT_CHECK step (A-W2 11) for "new evidence after Chưa". */
+  steps: { w1: string; w2: string; w3: string; extra: string };
+  /** The three validated episodes, oldest first. */
+  episodes: string[];
+};
+
+/**
+ * S7a e2e (D23): a throwaway TEST learner (seedThrowawayLearner) that An (thử)'s tutor also teaches, with A-W1 / A-W2 / A-W3 assigned and
+ * three validated checkpoints 20 / 13 / 5 days ago scored 3 / 4 / 3 on both E2E_SKILLS - enough for "Đang tiến bộ" + a proposal
+ * "Tự làm được" (route 1) once the engine runs. The caller purges it (english.eng_purge_learner). Owner connection only (CI).
+ */
+export async function seedSkillEvidenceLearner(client: ClientBase): Promise<SkillEvidenceLearner> {
+  const t = await seedThrowawayLearner(client);
+  const tutor = (
+    await client.query<{ id: string }>("select member_id as id from english.relationships where learner_id = $1 and relation = 'tutor' order by member_id limit 1", [TEST_LEARNER_AN_ID])
+  ).rows[0]?.id;
+  if (!tutor) throw new Error("An (thử) has no tutor - run the dev seed first");
+  const parent = (
+    await client.query<{ id: string }>("select member_id as id from english.relationships where learner_id = $1 and relation = 'parent' limit 1", [t.learnerId])
+  ).rows[0]!.id;
+  await client.query("insert into english.relationships(member_id, learner_id, relation) values ($1, $2, 'tutor')", [tutor, t.learnerId]);
+
+  const inst: Record<string, string> = {};
+  for (const tpl of ["A-W1-VOLCANOES", "A-W2-WATERCYCLE", "A-W3-EARTHQUAKES"]) {
+    const row = (
+      await client.query<{ date_from: string; date_to: string }>(
+        "select date_from::text as date_from, date_to::text as date_to from english.inquiry_templates where id = $1 and version = 1 and published_at is not null",
+        [tpl],
+      )
+    ).rows[0];
+    if (!row) throw new Error(`${tpl} is not published (apply 0008)`);
+    inst[tpl] = (
+      await client.query<{ id: string }>("select english.eng_assign_inquiry($1, $2, 1, $3, $4, $5) as id", [
+        t.learnerId, tpl, devDueOn(row.date_from, row.date_to), parent, `s7a-e2e:${t.learnerId}:${tpl}`,
+      ])
+    ).rows[0]!.id;
+  }
+  const step = async (tpl: string, n: number) =>
+    (await client.query<{ id: string }>("select id from english.activity_instances where inquiry_instance_id = $1 and step_no = $2", [inst[tpl], n])).rows[0]!.id;
+  const steps = {
+    w1: await step("A-W1-VOLCANOES", 11),
+    w2: await step("A-W2-WATERCYCLE", 12),
+    w3: await step("A-W3-EARTHQUAKES", 13),
+    extra: await step("A-W2-WATERCYCLE", 11),
+  };
+  const episodes: string[] = [];
+  for (const [activityId, daysAgo, score] of [[steps.w1, 20, 3], [steps.w2, 13, 4], [steps.w3, 5, 3]] as const) {
+    const e = await insertValidatedEpisode(client, t.learnerId, tutor, {
+      activityId, daysAgo, scores: Object.fromEntries(E2E_SKILLS.map((k) => [k, score])), facets: ["checkpoint"],
+    });
+    episodes.push(e.episodeId);
+  }
+  return { learnerId: t.learnerId, alias: t.alias, tutorMemberId: tutor, steps, episodes };
 }
