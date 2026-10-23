@@ -8,9 +8,9 @@
  *     ("điểm mạnh", "điểm cần chú ý", "điểm yếu" pass).
  *  3. "N trên M" with M an integer 1-10: "8 trên 10".
  *  4. a percent sign that follows a number: "80%", "80 %".
- *  5. the 0-4 rubric labels of UX_COPY_GUIDE 3.1, in any letter case: "Chưa thể hiện", "Còn thiếu nhiều", "Được một phần", "Đạt yêu cầu", "Vững, rõ ràng".
+ *  5. the two upper 0-4 rubric labels of UX_COPY_GUIDE 3.1, in any letter case: "Đạt yêu cầu", "Vững, rõ ràng" (S7a amendment A).
  * Before matching: NFC, and NBSP / U+202F / U+3000 become a normal space.
- * Mirror of english.eng_has_score_words (migration 0021); both are tested on tests/unit/fixtures/scoreWords.ts.
+ * Mirror of english.eng_has_score_words (migration 0023, amendment A); both are tested on tests/unit/fixtures/scoreWords.ts.
  * Only for the text of adults (feedback, closing note) - never for the child's text, excerpts or reasons.
  */
 // Separators = white space, ASCII punctuation (not digits) and “ ” ‘ ’ … – — (the same set as the SQL function).
@@ -29,7 +29,7 @@ const ci = (w: string): string =>
     .join("");
 
 const DATE_WORDS = ["ngày", "hôm", "từ", "đến", "tới", "trước", "sau", "hạn", "tháng"].map(ci).join("|");
-export const RUBRIC_PHRASES = ["chưa thể hiện", "còn thiếu nhiều", "được một phần", "đạt yêu cầu", "vững rõ ràng"];
+export const RUBRIC_PHRASES = ["đạt yêu cầu", "vững rõ ràng"];
 const RUBRIC = RUBRIC_PHRASES.map((p) =>
   p
     .split(" ")

@@ -6,7 +6,7 @@
  *  2. a number next to "điểm", "diem" or "đ", at most one word apart, either order ("8đ", "6 điểm", "điểm 7");
  *  3. "N trên M" with M 1-10 ("8 trên 10");
  *  4. a percent sign that follows a number ("80%", "80 %");
- *  5. the 0-4 rubric labels (case-insensitive): Chưa thể hiện, Còn thiếu nhiều, Được một phần, Đạt yêu cầu, Vững, rõ ràng.
+ *  5. the two upper 0-4 rubric labels (case-insensitive): Đạt yêu cầu, Vững, rõ ràng (S7a amendment A, 23/10/2026: the three lower labels are ordinary words again).
  * Odd spaces (NBSP, U+202F, U+3000) count as a normal space.
  */
 export const SCORE_WORD_SAMPLES: readonly (readonly [string, boolean])[] = [
@@ -89,9 +89,11 @@ export const SCORE_WORD_SAMPLES: readonly (readonly [string, boolean])[] = [
   ["Đạt yêu cầu", true],
   ["đạt yêu cầu rồi", true],
   ["ĐẠT YÊU CẦU", true],
-  ["Con ở mức Chưa thể hiện", true],
-  ["Còn thiếu nhiều ý", true],
-  ["Được một phần", true],
+  ["Con ở mức Chưa thể hiện", false],
+  ["Còn thiếu nhiều ý", false],
+  ["Được một phần", false],
+  ["con làm được một phần", false],
+  ["chưa thể hiện rõ ý chính", false],
   ["Vững, rõ ràng", true],
   ["vững rõ ràng", true],
   ["Con đạt  yêu cầu", true],
