@@ -3,8 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { RebuildButton } from "@/components/skills/RebuildButton";
 import { SkillRow } from "@/components/skills/SkillRow";
-import { app, learnerWithTrack, targetsPage } from "@/lib/copy/vi";
-import { loadSkillStates } from "@/lib/skills/load";
+import { app, learnerWithTrack, skillStateCopy, targetsPage } from "@/lib/copy/vi";
+import { loadSkillStatesSoft } from "@/lib/skills/load";
 import { createUserClient } from "@/lib/supabase/server";
 import { authorizeTargetsPage } from "@/lib/targets/access";
 import { loadTargetsView } from "@/lib/targets/loadTargets";
@@ -28,7 +28,7 @@ export default async function TargetsPage({ params }: { params: Promise<{ id: st
   if (access.kind === "not-found") notFound();
 
   const { member, learner } = access.grant;
-  const [view, skills] = await Promise.all([loadTargetsView(learner.id), loadSkillStates(learner.id)]);
+  const [view, { skills, failed }] = await Promise.all([loadTargetsView(learner.id), loadSkillStatesSoft(learner.id, "GET /learners/[id]/targets")]);
   const stateOf = new Map((skills?.rows ?? []).map((r) => [r.targetKey, r]));
   const isTutor = member.role === "tutor";
 
@@ -47,6 +47,11 @@ export default async function TargetsPage({ params }: { params: Promise<{ id: st
         ) : (
           <>
             <p className="mt-4 text-muted">{targetsPage.intro}</p>
+            {failed ? (
+              <p role="status" data-testid="skills-unavailable" className="mt-3 rounded-xl border border-line bg-white px-5 py-3 text-sm text-muted">
+                {skillStateCopy.statesUnavailable}
+              </p>
+            ) : null}
             <h2 className="mt-6 text-lg font-semibold">{targetsPage.count(view.rows.length)}</h2>
             <ul className="mt-3 flex flex-col gap-3">
               {view.rows.map((row) => (

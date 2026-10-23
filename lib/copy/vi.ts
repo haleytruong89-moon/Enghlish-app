@@ -1531,6 +1531,7 @@ export const skillStateCopy = {
   manualSave: "Lưu bậc mới",
   rebuild: "Tính lại từ đầu",
   rebuildHint: "Tính lại bậc mọi kỹ năng từ toàn bộ bài đã duyệt. Không tạo đề xuất trùng.",
+  statesUnavailable: "Chưa xem được mức từng kỹ năng lúc này. Phần còn lại của trang vẫn dùng bình thường; bạn tải lại trang sau ít phút nhé.",
   rebuildDone: (n: number) => (n > 0 ? `Đã tính lại. ${n} đề xuất mới đang chờ ${tutorHonorific}.` : "Đã tính lại. Không có đề xuất mới."),
   conditions: {
     l1_evidence: "Bài đã duyệt (kể cả có gợi ý)",
