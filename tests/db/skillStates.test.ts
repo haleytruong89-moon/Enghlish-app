@@ -3,8 +3,13 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CONTENT_DIR } from "../../lib/config/content";
+import { projectDecisions } from "../../lib/engine/project";
+import { rebuildLearner, recomputeLearner } from "../../lib/engine/runner";
+import { parseEngineInputs, sliceTarget } from "../../lib/engine/shape";
+import { ENGINE_VERSION } from "../../lib/engine/types";
 import type { InquiryTemplate } from "../../lib/config/schemas";
 import { addDays, daysBetween, todayVn } from "../../lib/inquiries/dates";
+import { pgEngineStore } from "../../scripts/lib/enginePg";
 import { seedThrowawayLearner } from "../../scripts/lib/seed";
 import { insertValidatedEpisode, type EvidenceSpec } from "../../scripts/lib/skillEvidence";
 import { SCORE_WORD_SAMPLES } from "../unit/fixtures/scoreWords";
@@ -476,5 +481,86 @@ describe("S7a skill states (migrations 0022 + 0023)", () => {
     });
   });
 
-  // (Task 7 adds its section here)
+  describe("4. the TypeScript engine on the real database (runner + pg store)", () => {
+    const store = () => pgEngineStore(db.client);
+    const snap = () => q1("select target_key, state, state_decision_id, flag_decision_id, proposal_decision_id, conditions, route from english.competency_state where learner_id = $1 order by target_key", [s.learners.an]);
+
+    it("recompute: the three checkpoints make SKILL 'Đang tiến bộ' (AUTO) with a proposal 'Tự làm được' that cites them; again → nothing new", async () => {
+      const r = await recomputeLearner(store(), s.learners.an, null);
+      expect(r.results).toHaveLength(12);
+      expect(r.results.find((x) => x.targetKey === SKILL)).toMatchObject({ evidenceState: "INDEPENDENT", route: 1, auto: "DEVELOPING", propose: "INDEPENDENT" });
+      expect(await stateOf(SKILL)).toEqual({ state: "DEVELOPING", flag: false, proposal: true });
+      expect(await q1("select evidence_episode_ids, policy_version, engine_version from english.mastery_decisions where learner_id = $1 and target_key = $2 and kind = 'PROPOSED'", [s.learners.an, SKILL]))
+        .toEqual([{ evidence_episode_ids: proof.map((p) => p.episodeId).sort(), policy_version: "AP-0.3", engine_version: ENGINE_VERSION }]);
+      const n = await bookCount();
+      expect((await recomputeLearner(store(), s.learners.an, null)).applied).toMatchObject({ auto: 0, proposed: 0, flagged: 0 });
+      expect(await bookCount()).toBe(n);
+    });
+
+    it("rebuild twice: the same levels, ⚑, proposals and conditions, and no new row in the book (UAT-16)", async () => {
+      const before = await snap();
+      const n = await bookCount();
+      await rebuildLearner(store(), s.learners.an, s.members.tutorAn);
+      expect(await snap()).toEqual(before);
+      await rebuildLearner(store(), s.learners.an, s.members.parent);
+      expect(await snap()).toEqual(before);
+      expect(await bookCount()).toBe(n);
+    });
+
+    it("the TypeScript projection and the SQL projection agree on every skill", async () => {
+      const inputs = parseEngineInputs(await store().loadInputs(s.learners.an, null));
+      const rows = await q1<{ target_key: string; state: string; state_decision_id: string | null; flag_decision_id: string | null; proposal_decision_id: string | null }>(
+        "select target_key, state, state_decision_id, flag_decision_id, proposal_decision_id from english.competency_state where learner_id = $1", [s.learners.an]);
+      for (const t of inputs.targets) {
+        const p = projectDecisions(sliceTarget(inputs, t.key).decisions);
+        const row = rows.find((x) => x.target_key === t.key)!;
+        expect({ state: p.state, s: p.stateDecisionId, f: p.openFlag?.id ?? null, p: p.openProposal?.id ?? null }, t.key)
+          .toEqual({ state: row.state, s: row.state_decision_id, f: row.flag_decision_id, p: row.proposal_decision_id });
+      }
+    });
+
+    it("the real path: An's closed answer in the app reaches the engine as route-2 evidence of A-T1-TEXT-R (1 item - not enough yet)", async () => {
+      const r = await recomputeLearner(store(), s.learners.an, ["A-T1-TEXT-R"]);
+      expect(r.results.map((x) => x.targetKey)).toEqual(["A-T1-TEXT-R"]);
+      expect(r.results[0]!.conditions.find((c) => c.id === "r2_items")).toMatchObject({ have: 1, need: 8, met: false });
+    });
+
+    it("confirm through the function, then recompute: 'Tự làm được' and nothing new to propose", async () => {
+      await svc("select english.eng_decide_skill($1, 'confirm', null, $2, $3) as r", [(await openOf(SKILL, "PROPOSED"))!, s.members.tutorAn, `decide-${randomUUID()}`]);
+      const n = await bookCount();
+      await recomputeLearner(store(), s.learners.an, [SKILL]);
+      expect(await stateOf(SKILL)).toEqual({ state: "INDEPENDENT", flag: false, proposal: false });
+      expect(await bookCount()).toBe(n);
+    });
+
+    it("after 'Chưa' a recompute does not propose again; one more validated piece of work does (D13)", async () => {
+      const T = "A-T4-CAUSE"; // speaking checkpoints A-W1 8 / A-W2 9 / A-W3 10, first attempts
+      for (const [inst, n, daysAgo] of [[w1, 8, 21], [w2, 9, 14], [w3, 10, 6]] as const) {
+        await evidence("an", { activityId: await step(inst, n), daysAgo, scores: { [T]: 3 }, facets: ["checkpoint"] });
+      }
+      expect((await recomputeLearner(store(), s.learners.an, [T])).applied).toMatchObject({ proposed: 1 });
+      await svc("select english.eng_decide_skill($1, 'reject', 'Chưa đủ chắc ở bài nói', $2, $3) as r", [(await openOf(T, "PROPOSED"))!, s.members.tutorAn, `decide-${randomUUID()}`]);
+      expect((await recomputeLearner(store(), s.learners.an, [T])).applied.proposed).toBe(0);
+      await evidence("an", { activityId: await step(w1, 4), daysAgo: 2, mode: "PRACTICE", scores: { [T]: 2 } });
+      expect((await recomputeLearner(store(), s.learners.an, [T])).applied.proposed).toBe(1);
+      expect(await stateOf(T)).toEqual({ state: "DEVELOPING", flag: false, proposal: true });
+    });
+
+    it("G4 end to end: a delayed check (template mark) + the tutor's 'new topic' mark on another piece of work → PROPOSED 'Vận dụng được'; confirm moves the level", async () => {
+      // SKILL is 'Tự làm được' (confirmed above). A delayed check on A-W1, 19 days after its last practice there:
+      const delayed = await evidence("an", { activityId: await step(w1, 6), daysAgo: 1, scores: { [SKILL]: 3 }, facets: ["delayed_check"] });
+      const transfer = await evidence("an", { activityId: await step(w2, 6), daysAgo: 1, scores: { [SKILL]: 3 } });
+      expect((await recomputeLearner(store(), s.learners.an, [SKILL])).applied.proposed).toBe(0); // no transfer evidence yet
+      await svc("select english.eng_mark_episode_transfer($1, true, $2) as r", [transfer.episodeId, s.members.tutorAn]);
+      const r = await recomputeLearner(store(), s.learners.an, [SKILL]);
+      expect(r.results[0]).toMatchObject({ currentState: "INDEPENDENT", evidenceState: "TRANSFERABLE", propose: "TRANSFERABLE" });
+      expect(r.results[0]!.evidence.propose.sort()).toEqual([delayed.episodeId, transfer.episodeId].sort());
+      await svc("select english.eng_decide_skill($1, 'confirm', null, $2, $3) as r", [(await openOf(SKILL, "PROPOSED"))!, s.members.tutorAn, `decide-${randomUUID()}`]);
+      expect(await stateOf(SKILL)).toEqual({ state: "TRANSFERABLE", flag: false, proposal: false });
+      const n = await bookCount();
+      await recomputeLearner(store(), s.learners.an, null);
+      expect(await bookCount()).toBe(n);
+    });
+  });
+
 });
