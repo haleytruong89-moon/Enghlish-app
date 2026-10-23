@@ -3,7 +3,8 @@ import { levelCopy } from "@/lib/copy/vi";
 import { barFraction } from "@/lib/levels/scale";
 import type { LevelProfile } from "@/lib/levels/types";
 import { levelText } from "@/lib/levels/view";
-import { CEFR_LEVELS } from "@/lib/skillmap/types";
+import { CEFR_LEVELS, type DomainKey } from "@/lib/skillmap/types";
+import { solidLine } from "@/lib/skills/view";
 
 /** Striped fill of an assumed level (with a dashed border and words: never colour alone, UX guide §4.3). */
 const STRIPES = "repeating-linear-gradient(45deg, #CFE0D8 0 6px, #F4F8F5 6px 12px)";
@@ -12,7 +13,7 @@ const STRIPES = "repeating-linear-gradient(45deg, #CFE0D8 0 6px, #F4F8F5 6px 12p
  * 7 horizontal bars (D5): the 6 CEFR domains on one A1 → C2 scale, the thinking domain on its own 1 → 4 scale with the same width.
  * Each bar opens the detail of its domain (?domain=). Staff only.
  */
-export function LevelBars({ profile, learnerId, active }: { profile: LevelProfile; learnerId: string; active: string }) {
+export function LevelBars({ profile, learnerId, active, solid }: { profile: LevelProfile; learnerId: string; active: string; solid?: Partial<Record<DomainKey, { n: number; total: number }>> | null }) {
   return (
     <section aria-labelledby="level-bars-title" className="mt-6 rounded-xl border border-line bg-white p-5" data-testid="level-bars">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -48,6 +49,11 @@ export function LevelBars({ profile, learnerId, active }: { profile: LevelProfil
                   {assumed ? (
                     <span className="block text-xs text-muted" data-testid={`level-assumed-${d.key}`}>
                       {levelCopy.assumed}
+                    </span>
+                  ) : null}
+                  {solidLine(solid?.[d.key]) ? (
+                    <span className="block text-xs text-muted" data-testid={`level-solid-${d.key}`}>
+                      {solidLine(solid?.[d.key])}
                     </span>
                   ) : null}
                 </span>

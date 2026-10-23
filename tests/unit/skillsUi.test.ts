@@ -4,10 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 import { ReviewTabs } from "@/components/review/ReviewTabs";
 import { ConditionList } from "@/components/skills/ConditionList";
 import { ConfirmAllButton } from "@/components/skills/ConfirmAllButton";
+import { RebuildButton } from "@/components/skills/RebuildButton";
 import { SkillProposalCard } from "@/components/skills/SkillProposalCard";
-import { skillStateCopy } from "@/lib/copy/vi";
+import { SkillRow } from "@/components/skills/SkillRow";
+import { SkillScale } from "@/components/skills/SkillScale";
+import { levelLabels, skillStateCopy, targetsPage } from "@/lib/copy/vi";
 import type { Condition } from "@/lib/engine/types";
-import type { SkillInboxItem } from "@/lib/skills/types";
+import type { SkillInboxItem, SkillStateRow } from "@/lib/skills/types";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 const render = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
@@ -67,4 +70,40 @@ describe("ConditionList and ConfirmAllButton", () => {
   });
 });
 
-// (Task 11 adds its tests below this line)
+const stateRow = (o: Partial<SkillStateRow> = {}): SkillStateRow => ({
+  targetKey: "A-L3-CAUSE-W", titleVi: "x", domainKey: "writing", state: "DEVELOPING", auto: true, stateSince: "2026-10-20T12:00:00+07:00", flag: null,
+  proposal: { id: "p1", toState: "INDEPENDENT", route: 1, at: "2026-10-20T12:00:00+07:00" }, conditions: [], route: 1, evaluatedAt: null, ...o,
+});
+
+describe("SkillScale and SkillRow (Kỹ năng đang theo dõi)", () => {
+  it("4 labelled cells, filled up to the level, data-level for tests; 'Chưa đủ bài' fills none and says so", () => {
+    const html = render(createElement(SkillScale, { state: "DEVELOPING" }));
+    expect(html).toContain('data-level="2"');
+    for (const s of ["SUPPORTED", "DEVELOPING", "INDEPENDENT", "TRANSFERABLE"] as const) expect(html).toContain(levelLabels[s].label);
+    expect(html).toContain('aria-current="step"');
+    const none = render(createElement(SkillScale, { state: "NOT_OBSERVED" }));
+    expect(none).toContain('data-level="0"');
+    expect(none).toContain(levelLabels.NOT_OBSERVED.label);
+  });
+
+  it("a row shows the scale, 'Đang chờ xác nhận: Tự làm được', 'App tự cập nhật', ⚑ when open; the tutor gets 'Sửa tay bậc 1–2', the parent does not", () => {
+    const tutor = render(createElement(SkillRow, { id: "A-L3-CAUSE-W", title: "Viết", dimensionName: "Ngôn ngữ", state: stateRow({ flag: { id: "f", at: "x" } }), learnerId: "L1", canEdit: true, showCode: true }));
+    expect(tutor).toContain('id="skill-A-L3-CAUSE-W"');
+    expect(tutor).toContain(skillStateCopy.pending(levelLabels.INDEPENDENT.label));
+    expect(tutor).toContain(skillStateCopy.autoNote);
+    expect(tutor).toContain(skillStateCopy.flagChip);
+    expect(tutor).toContain('data-testid="skill-manual-A-L3-CAUSE-W"');
+    const parent = render(createElement(SkillRow, { id: "A-L3-CAUSE-W", title: "Viết", dimensionName: "Ngôn ngữ", state: stateRow(), learnerId: "L1", canEdit: false, showCode: false }));
+    expect(parent).not.toContain("skill-manual");
+    expect(parent).not.toContain(skillStateCopy.flagChip);
+    const empty = render(createElement(SkillRow, { id: "A-L3-CAUSE-W", title: "Viết", dimensionName: "Ngôn ngữ", state: null, learnerId: "L1", canEdit: true, showCode: false }));
+    expect(empty).toContain('data-level="0"');
+  });
+
+  it("'Tính lại từ đầu' explains that it never makes duplicate proposals", () => {
+    const html = render(createElement(RebuildButton, { learnerId: "L1" }));
+    expect(html).toContain('data-testid="skills-rebuild"');
+    expect(html).toContain(skillStateCopy.rebuildHint);
+    expect(targetsPage.intro).toContain("1–2");
+  });
+});
