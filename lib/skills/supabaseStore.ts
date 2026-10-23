@@ -22,6 +22,6 @@ export function createSupabaseSkillStore(): SkillStore {
     decide: (a) => call("eng_decide_skill", { p_decision: a.decisionId, p_action: a.action, p_reason: a.reason, p_by: a.byMemberId, p_client_id: a.clientId }),
     confirmAll: (a) => call("eng_confirm_skill_proposals", { p_learner: a.learnerId, p_ids: a.ids, p_by: a.byMemberId, p_client_id: a.clientId }),
     setManual: (a) =>
-      call("eng_set_skill_state", { p_learner: a.learnerId, p_target: a.targetKey, p_state: a.state, p_reason: a.reason, p_by: a.byMemberId, p_client_id: a.clientId }),
+      call("eng_set_skill_state", { p_learner: a.learnerId, p_target: a.targetKey, p_state: a.state, p_reason: a.reason, p_by: a.byMemberId, p_client_id: a.clientId, p_evidence_key: a.evidenceKey }),
   };
 }

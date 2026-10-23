@@ -15,15 +15,21 @@ const NO_FACETS: Facets = { baseline: false, checkpoint: false, delayedCheck: fa
 let counter = 0;
 const nextId = () => (counter += 1);
 
-export type EpOpts = Partial<Omit<ScoredEpisode, "facets" | "at">> & { daysAgo?: number; facets?: Partial<Facets> };
+export type EpOpts = Partial<Omit<ScoredEpisode, "facets" | "at" | "validatedAt">> & {
+  daysAgo?: number;
+  facets?: Partial<Facets>;
+  /** Days ago the reviewer validated it (default: the hand-in time, i.e. validated at once). May be negative-free only: use a smaller number than daysAgo for "validated later". */
+  validatedDaysAgo?: number;
+};
 /** One validated episode of the skill under test: by default an unaided first attempt (INDEPENDENT_CHECK), 3/4, 1 day ago, A-W1. */
 export function ep(o: EpOpts = {}): ScoredEpisode {
   const i = nextId();
-  const { daysAgo: d = 1, facets, ...rest } = o;
+  const { daysAgo: d = 1, validatedDaysAgo, facets, ...rest } = o;
+  const transferMarked = rest.transferMarked ?? false;
   return {
-    episodeId: `ep-${i}`, attemptId: `at-${i}`, activityId: `act-${i}`, at: daysAgo(d), contextId: "A-W1-VOLCANOES",
-    isFirstAttempt: true, mode: "INDEPENDENT_CHECK", observedDirectly: false, transferMarked: false, assistance: [], declaredUnknown: false,
-    decisionId: `vd-${i}`, score: 3, ...rest, facets: { ...NO_FACETS, ...facets },
+    episodeId: `ep-${i}`, attemptId: `at-${i}`, activityId: `act-${i}`, at: daysAgo(d), validatedAt: daysAgo(validatedDaysAgo ?? d), contextId: "A-W1-VOLCANOES",
+    isFirstAttempt: true, mode: "INDEPENDENT_CHECK", observedDirectly: false, transferMarked, transferMarkId: transferMarked ? `mk-${i}` : null,
+    assistance: [], declaredUnknown: false, decisionId: `vd-${i}`, score: 3, ...rest, facets: { ...NO_FACETS, ...facets },
   };
 }
 

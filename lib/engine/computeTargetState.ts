@@ -5,7 +5,7 @@
  */
 import { daysSinceLastPractice, vnDay } from "./days";
 import { evidenceKeyOf } from "./key";
-import { projectDecisions } from "./project";
+import { projectDecisions, proposalKeyOf } from "./project";
 import {
   ENGINE_VERSION,
   STATE_LEVEL,
@@ -86,9 +86,10 @@ export function computeTargetState(input: EngineInput): EngineResult {
     const total = counted.reduce((s, a) => s + a.items.length, 0);
     const correct = counted.reduce((s, a) => s + correctOf(a), 0);
     const ids = episodeIds(counted);
+    // S5 (P3-b "bài ôn sau ≥ 14 ngày"): the review must come >= reviewMinDays after the latest exposure of the skill. A step marked
+    // delayed_check gets no shortcut: two quizzes on one day are not a review, whatever the step is called.
     const reviews = counted.filter((a) => {
       if (!atLeastPct(correctOf(a), a.items.length, ra.reviewMinAccuracyPct)) return false;
-      if (a.facets.delayedCheck) return true;
       const gap = daysSinceLastPractice(input.exposures, a.at, a.attemptId, null);
       return gap !== null && gap >= ra.reviewMinDays;
     });
@@ -140,19 +141,40 @@ export function computeTargetState(input: EngineInput): EngineResult {
   if (l4.every((c) => c.met)) level = 4;
   const route: Route | null = level === 0 ? null : level === 3 ? (route1 ? 1 : 2) : 1;
   const level3Ids = route1 ? poolIds : episodeIds(counted);
+  // What each level's conditions actually used (S3, B1). Level 3: route 1 = the pool of decisions, route 2 = the counted attempts.
+  // Level 4: the delayed and transfer episodes' decisions + the marks that made them transfers.
+  const level3Key = evidenceKeyOf(route1 ? pool.map((e) => e.decisionId) : counted.map((a) => a.attemptId));
+  const level4Key = evidenceKeyOf([
+    ...delayed.map((e) => e.decisionId),
+    ...usable.map((e) => e.decisionId),
+    ...usable.flatMap((e) => (e.transferMarkId ? [e.transferMarkId] : [])),
+  ]);
+  const proposeKey = level === 4 ? level4Key : level === 3 ? level3Key : null;
 
-  // What to write (D13, D14): AUTO only upward and only to 1–2; PROPOSED for 3–4 when none is open and this evidence was never proposed
+  // What to write (D13, D14): AUTO only upward and only to 1–2; PROPOSED for 3–4 when none is open and this level's evidence was never proposed
+  const evidenceKey = evidenceKeyOf([
+    ...input.episodes.map((e) => e.decisionId),
+    ...input.autoAttempts.map((a) => a.attemptId),
+    ...input.episodes.flatMap((e) => (e.transferMarkId ? [e.transferMarkId] : [])),
+  ]);
+  // B2: a level a tutor set by hand stands until there is NEW evidence (the key differs from the one stored on that MANUAL row).
+  const held = proj.manualKey !== null && proj.manualKey === evidenceKey;
   const autoLevel = Math.min(level, 2);
-  const auto = autoLevel > curLevel ? stateAt(autoLevel) : null;
+  const auto = !held && autoLevel > curLevel ? stateAt(autoLevel) : null;
   const afterAuto = Math.max(curLevel, autoLevel);
-  const evidenceKey = evidenceKeyOf([...input.episodes.map((e) => e.decisionId), ...input.autoAttempts.map((a) => a.attemptId)]);
-  const propose = level >= 3 && level > afterAuto && proj.openProposal === null && !proj.proposalKeys.has(evidenceKey) ? stateAt(level) : null;
+  const propose =
+    !held && level >= 3 && level > afterAuto && proj.openProposal === null && proposeKey !== null && !proj.proposalKeys.has(proposalKeyOf(stateAt(level), proposeKey))
+      ? stateAt(level)
+      : null;
 
   // ⚑ (D12): level ≥ 2, low unaided evidence after the decision that set it, within conflictWindowDays
   const today = vnDay(input.now);
   const since = proj.stateSince === null ? null : Date.parse(proj.stateSince);
-  const recent = (at: string) => since !== null && Date.parse(at) > since && today - vnDay(at) <= p.conflictWindowDays;
-  const lowEpisodes = curLevel >= 2 ? unaided.filter((e) => !e.facets.baseline && e.score < p.independent.minScoreEach && recent(e.at)) : [];
+  // S2: "after the decision" counts from the later of when the work was handed in and when it was validated (a low result validated late still counts);
+  // the window itself counts from the hand-in day.
+  const recent = (at: string, validatedAt: string = at) =>
+    since !== null && Math.max(Date.parse(at), Date.parse(validatedAt)) > since && today - vnDay(at) <= p.conflictWindowDays;
+  const lowEpisodes = curLevel >= 2 ? unaided.filter((e) => !e.facets.baseline && e.score < p.independent.minScoreEach && recent(e.at, e.validatedAt)) : [];
   const lowAuto = curLevel >= 2 && ra ? counted.filter((a) => recent(a.at) && !atLeastPct(correctOf(a), a.items.length, ra.minAccuracyPct)) : [];
   const conflict = lowEpisodes.length + lowAuto.length > 0;
   const flagKey = conflict ? evidenceKeyOf([...lowEpisodes.map((e) => e.decisionId), ...lowAuto.map((a) => a.attemptId)]) : null;
@@ -165,6 +187,8 @@ export function computeTargetState(input: EngineInput): EngineResult {
       : auto === "SUPPORTED"
         ? l1.length > 0 ? episodeIds(l1) : episodeIds(counted.filter((a) => correctOf(a) > 0))
         : l2.length > 0 ? episodeIds(l2) : l2Auto ? episodeIds(counted) : level3Ids;
+  const autoRoute: Route | null =
+    auto === null ? null : auto === "SUPPORTED" ? (l1.length > 0 ? 1 : 2) : l2.length > 0 ? 1 : l2Auto ? 2 : route1 ? 1 : 2;
   const proposeEvidence = propose === null ? [] : propose === "TRANSFERABLE" ? uniq([...episodeIds(delayed), ...episodeIds(usable)]) : level3Ids;
 
   return {
@@ -173,14 +197,16 @@ export function computeTargetState(input: EngineInput): EngineResult {
     policyVersion: input.policy.version,
     currentState: proj.state,
     evidenceState: stateAt(level),
-    proposedState: stateAt(Math.max(level, curLevel)),
+    proposedState: held ? proj.state : stateAt(Math.max(level, curLevel)),
     route,
+    autoRoute,
     conditions,
     flag: { conflict, key: flagKey, evidence: flagIds },
     auto,
     propose,
     raiseFlag,
     evidenceKey,
+    proposeKey: propose === null ? null : proposeKey,
     evidence: { auto: autoEvidence, propose: proposeEvidence, flag: flagIds },
   };
 }

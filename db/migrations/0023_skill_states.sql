@@ -15,6 +15,15 @@
 -- Học sinh không đọc được bảng nào mới và không có hàm nào mới. Không đụng schema public. Idempotent; chỉ thêm (expand).
 -- Cần 0019 (bản đồ kỹ năng), 0021 (bài sửa) và 0022 (AP-0.3) đã áp.
 
+-- 0. Thiếu 0022 thì dừng ngay, nói rõ cần làm gì (thay vì lỗi khóa ngoại khó hiểu ở dưới).
+do $guard$
+begin
+  if not exists (select 1 from english.assessment_policies p where p.version = 'AP-0.3') then
+    raise exception '0023 cần chính sách AP-0.3: hãy áp 0022_seed_ap_0_3.sql trước, rồi áp lại 0023_skill_states.sql (missing_ap_0_3)' using errcode = 'P0001';
+  end if;
+end
+$guard$;
+
 -- 1. Chính sách engine dùng (D2) ---------------------------------------------------------------------------------------------------
 -- Dòng mới nhất của một danh mục thắng; đổi = thêm dòng (không sửa, không xóa). Không ai đọc thẳng: chỉ qua eng_engine_policy.
 create table if not exists english.engine_policy_map (
@@ -116,7 +125,9 @@ create table if not exists english.mastery_decisions (
     or (kind = 'MANUAL' and to_state in ('SUPPORTED', 'DEVELOPING') and to_state <> from_state and reason is not null))
 );
 create unique index if not exists mastery_decisions_answered_once on english.mastery_decisions(responds_to) where responds_to is not null;
-create unique index if not exists mastery_decisions_evidence_once on english.mastery_decisions(learner_id, target_key, kind, evidence_key) where kind in ('PROPOSED', 'FLAG');
+-- Cùng bằng chứng không đề xuất hai lần CHO CÙNG MỘT BẬC (B1: bậc 3 và bậc 4 nhìn bằng chứng khác nhau) và không gắn cờ hai lần (D12, D13).
+create unique index if not exists mastery_decisions_evidence_once on english.mastery_decisions(learner_id, target_key, to_state, evidence_key) where kind = 'PROPOSED';
+create unique index if not exists mastery_decisions_flag_once on english.mastery_decisions(learner_id, target_key, evidence_key) where kind = 'FLAG';
 create unique index if not exists mastery_decisions_client_once on english.mastery_decisions(learner_id, client_id, target_key) where client_id is not null;
 create index if not exists mastery_decisions_learner_idx on english.mastery_decisions(learner_id, target_key, seq desc);
 
@@ -142,6 +153,8 @@ create table if not exists english.competency_state (
   route smallint check (route in (1, 2)),
   conditions jsonb not null default '[]'::jsonb check (pg_catalog.jsonb_typeof(conditions) = 'array'),
   evaluated_at timestamptz,
+  -- Lúc engine ĐỌC bằng chứng cho các điều kiện trên (eng_engine_inputs.now): lần tính chậm hơn, đọc sớm hơn, không ghi đè điều kiện mới hơn (N2).
+  inputs_at timestamptz,
   policy_version text,
   engine_version text,
   updated_at timestamptz not null default clock_timestamp(),
@@ -310,6 +323,10 @@ begin
                -- G4: dòng mới nhất của dấu "chủ đề / nguồn mới" (episode_marks) quyết định; không có dòng = false.
                'transfer_marked', coalesce((select m.value from english.episode_marks m where m.episode_id = e.id and m.mark = 'transfer_check'
                                             order by m.seq desc limit 1), false),
+               -- id của dòng dấu đang có hiệu lực (bỏ tick rồi tick lại = dòng mới = bằng chứng mới, B1); null = không đang tick.
+               'transfer_mark_id', (select m.id from english.episode_marks m
+                                    where m.value and m.id = (select l.id from english.episode_marks l where l.episode_id = e.id and l.mark = 'transfer_check'
+                                                              order by l.seq desc limit 1)),
                'declared_unknown', 'unknown' = any (t.declared_assistance),
                'assistance', english.eng_attempt_assistance(t.id),
                'scores', sc.scores)
@@ -318,7 +335,7 @@ begin
       join english.attempts t on t.id = e.attempt_id
       cross join lateral (
         select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
-                 'target_key', vd.target_key, 'decision_id', vd.id, 'score', vd.final_score, 'not_observed', vd.final_not_observed)
+                 'target_key', vd.target_key, 'decision_id', vd.id, 'decided_at', vd.created_at, 'score', vd.final_score, 'not_observed', vd.final_not_observed)
                order by vd.target_key) as scores
         from english.validation_decisions vd
         where vd.episode_id = e.id and vd.target_key = any (v_keys) and vd.decision in ('AGREE', 'MODIFY')
@@ -366,7 +383,8 @@ $$;
 
 -- Ghi kết quả của engine cho một em (lib/engine/runner.ts). Hàm KIỂM LẠI mọi luật trước khi ghi (máy chủ có lỗi cũng không hạ bậc được):
 --   AUTO     chỉ bậc 1–2, chỉ đi lên (§1 mục 1);
---   PROPOSED chỉ bậc 3–4, cao hơn bậc hiện tại, bậc 4 chỉ từ "Tự làm được", không có đề xuất đang mở, chưa từng đề xuất cùng khóa bằng chứng (D13);
+--   PROPOSED chỉ bậc 3–4, cao hơn bậc hiện tại, bậc 4 chỉ từ "Tự làm được", không có đề xuất đang mở, chưa từng đề xuất cùng (bậc, khóa bằng chứng) (D13, B1);
+--   AUTO và PROPOSED đều dừng khi bậc hiện tại do gia sư sửa tay trên đúng bằng chứng này (B2: chỉ bằng chứng MỚI mới làm engine đi tiếp);
 --   FLAG     chỉ khi bậc ≥ 2, không có ⚑ đang mở, chưa từng gắn cờ cùng khóa bằng chứng (D12); bậc giữ nguyên.
 -- Rồi cập nhật competency_state (bậc, ⚑, đề xuất từ sổ; điều kiện / đường / lúc tính từ engine). Khóa dòng em: hai lần tính cùng lúc xếp hàng.
 create or replace function english.eng_apply_engine_results(p_learner uuid, p_results jsonb, p_engine_version text) returns jsonb
@@ -380,6 +398,9 @@ declare
   v_cur english.competency_state%rowtype;
   v_to text;
   v_route smallint;
+  v_auto_route smallint;
+  v_basis timestamptz;
+  v_held boolean;
   v_auto int := 0;
   v_proposed int := 0;
   v_flagged int := 0;
@@ -411,34 +432,45 @@ begin
       raise exception 'eng_apply_engine_results: conditions must be an array, the evidence key well-formed and the route 1 or 2 (bad_results)' using errcode = '22023';
     end if;
     v_route := (v_r ->> 'route')::smallint;
+    v_auto_route := coalesce((v_r ->> 'auto_route')::smallint, v_route);
+    if v_auto_route is not null and v_auto_route not in (1, 2) then
+      raise exception 'eng_apply_engine_results: the auto route must be 1 or 2 (bad_results)' using errcode = '22023';
+    end if;
+    v_basis := coalesce((v_r ->> 'computed_at')::timestamptz, pg_catalog.clock_timestamp());
     perform english.eng_project_skill_state(p_learner, v_key);
     select * into v_cur from english.competency_state c where c.learner_id = p_learner and c.target_key = v_key;
+    -- B2: a level a tutor set by hand stands until there is NEW evidence: while the evidence key is the one stored on the latest state
+    -- row (when that row is a MANUAL), the engine writes neither AUTO nor PROPOSED for this skill.
+    v_held := exists (select 1 from english.mastery_decisions m
+                      where m.id = v_cur.state_decision_id and m.kind = 'MANUAL' and m.evidence_key is not null and m.evidence_key = v_r ->> 'evidence_key');
 
     -- (1) Bậc 1–2: app tự cập nhật, chỉ đi lên.
     v_to := v_r ->> 'auto';
-    if v_to is not null and english.eng_skill_level(v_to) between 1 and 2
+    if not v_held and v_to is not null and english.eng_skill_level(v_to) between 1 and 2
        and english.eng_skill_level(v_to) > english.eng_skill_level(v_cur.state) then
       insert into english.mastery_decisions(learner_id, target_key, kind, from_state, to_state, route, conditions, evidence_episode_ids,
                                             evidence_key, policy_version, engine_version)
-      values (p_learner, v_key, 'AUTO', v_cur.state, v_to, v_route, v_r -> 'conditions', english.eng_uuid_array(v_r -> 'evidence' -> 'auto'),
+      values (p_learner, v_key, 'AUTO', v_cur.state, v_to, v_auto_route, v_r -> 'conditions', english.eng_uuid_array(v_r -> 'evidence' -> 'auto'),
               v_r ->> 'evidence_key', v_policy, p_engine_version);
       v_auto := v_auto + 1;
       perform english.eng_project_skill_state(p_learner, v_key);
       select * into v_cur from english.competency_state c where c.learner_id = p_learner and c.target_key = v_key;
     end if;
 
-    -- (2) Bậc 3–4: chỉ đề xuất.
+    -- (2) Bậc 3–4: chỉ đề xuất. Khóa = bằng chứng mà điều kiện của bậc đó thực sự dùng (S3); "đã đề xuất rồi" tính theo (bậc, khóa) (B1).
     v_to := v_r ->> 'propose';
-    if v_to is not null and english.eng_skill_level(v_to) between 3 and 4
+    if not v_held and v_to is not null and english.eng_skill_level(v_to) between 3 and 4
+       and coalesce(v_r ->> 'propose_key', '') ~ '^[0-9]{1,6}-[0-9a-f]{16}$'
        and english.eng_skill_level(v_to) > english.eng_skill_level(v_cur.state)
        and (v_to <> 'TRANSFERABLE' or v_cur.state = 'INDEPENDENT')
        and v_cur.proposal_decision_id is null
        and not exists (select 1 from english.mastery_decisions d
-                       where d.learner_id = p_learner and d.target_key = v_key and d.kind = 'PROPOSED' and d.evidence_key = v_r ->> 'evidence_key') then
+                       where d.learner_id = p_learner and d.target_key = v_key and d.kind = 'PROPOSED' and d.to_state = v_to
+                         and d.evidence_key = v_r ->> 'propose_key') then
       insert into english.mastery_decisions(learner_id, target_key, kind, from_state, to_state, route, conditions, evidence_episode_ids,
                                             evidence_key, policy_version, engine_version)
       values (p_learner, v_key, 'PROPOSED', v_cur.state, v_to, v_route, v_r -> 'conditions', english.eng_uuid_array(v_r -> 'evidence' -> 'propose'),
-              v_r ->> 'evidence_key', v_policy, p_engine_version);
+              v_r ->> 'propose_key', v_policy, p_engine_version);
       v_proposed := v_proposed + 1;
       perform english.eng_project_skill_state(p_learner, v_key);
       select * into v_cur from english.competency_state c where c.learner_id = p_learner and c.target_key = v_key;
@@ -460,10 +492,11 @@ begin
     end if;
 
     -- (4) Điều kiện mới nhất (cho "Còn cần"), đường, lúc tính.
+    -- N2: a slower computation that READ older evidence never overwrites the conditions of a newer one (the level guards above are unchanged).
     update english.competency_state c
-    set conditions = v_r -> 'conditions', route = v_route, evaluated_at = pg_catalog.clock_timestamp(),
+    set conditions = v_r -> 'conditions', route = v_route, evaluated_at = pg_catalog.clock_timestamp(), inputs_at = v_basis,
         policy_version = v_policy, engine_version = p_engine_version
-    where c.learner_id = p_learner and c.target_key = v_key;
+    where c.learner_id = p_learner and c.target_key = v_key and (c.inputs_at is null or c.inputs_at <= v_basis);
   end loop;
 
   return pg_catalog.jsonb_build_object('auto', v_auto, 'proposed', v_proposed, 'flagged', v_flagged, 'policy_version', v_policy);
@@ -667,7 +700,7 @@ end
 $$;
 
 -- Gia sư sửa tay bậc 1–2 (§3 bước 5; G3): có lý do; đóng ⚑ đang mở của kỹ năng đó. Không bao giờ đặt bậc 3–4 bằng tay (chỉ qua đề xuất).
-create or replace function english.eng_set_skill_state(p_learner uuid, p_target text, p_state text, p_reason text, p_by uuid, p_client_id text) returns jsonb
+create or replace function english.eng_set_skill_state(p_learner uuid, p_target text, p_state text, p_reason text, p_by uuid, p_client_id text, p_evidence_key text default null) returns jsonb
 language plpgsql volatile security definer set search_path = ''
 as $$
 declare
@@ -683,6 +716,9 @@ begin
   end if;
   if p_state not in ('SUPPORTED', 'DEVELOPING') then
     raise exception 'eng_set_skill_state: a level is set by hand only to 1 or 2 (manual_levels_1_2)' using errcode = '22023';
+  end if;
+  if p_evidence_key is not null and p_evidence_key !~ '^[0-9]{1,6}-[0-9a-f]{16}$' then
+    raise exception 'eng_set_skill_state: the evidence key is not well-formed (bad_evidence_key)' using errcode = '22023';
   end if;
   if v_reason is not null and pg_catalog.length(v_reason) > 300 then
     raise exception 'eng_set_skill_state: the reason is too long (reason_too_long)' using errcode = '22023';
@@ -715,10 +751,12 @@ begin
     raise exception 'eng_set_skill_state: the new level is the current one (same_state)' using errcode = '23514';
   end if;
 
-  insert into english.mastery_decisions(learner_id, target_key, kind, from_state, to_state, policy_version, decided_by_member, decided_role, reason,
-                                        responds_to, client_id)
-  values (p_learner, p_target, 'MANUAL', v_cur.state, p_state, coalesce(english.eng_engine_policy(p_learner), 'AP-0.3'), p_by, 'tutor', v_reason,
-          v_cur.flag_decision_id, p_client_id)
+  -- B2: p_evidence_key = the engine's key of the evidence the tutor was looking at (lib/engine/runner.ts evidenceKeyFor). The engine writes
+  -- nothing for this skill until the key changes, i.e. until there is new evidence.
+  insert into english.mastery_decisions(learner_id, target_key, kind, from_state, to_state, evidence_key, policy_version, decided_by_member, decided_role,
+                                        reason, responds_to, client_id)
+  values (p_learner, p_target, 'MANUAL', v_cur.state, p_state, p_evidence_key, coalesce(english.eng_engine_policy(p_learner), 'AP-0.3'), p_by, 'tutor',
+          v_reason, v_cur.flag_decision_id, p_client_id)
   returning id into v_id;
   perform english.eng_project_skill_state(p_learner, p_target);
 
@@ -729,8 +767,8 @@ begin
 end
 $$;
 
--- G4 (phụ huynh 23/10): người duyệt đánh dấu "Bài này ở chủ đề / nguồn mới (vận dụng)" trên một bài. Chỉ người được duyệt bài đó theo D15
--- (eng_review_role: gia sư của em; phụ huynh trừ bài kiểm tra trong buổi / quan sát trực tiếp), chỉ lần làm đầu và không phải bài sửa.
+-- G4 (phụ huynh 23/10): gia sư đánh dấu "Bài này ở chủ đề / nguồn mới (vận dụng)" trên một bài. CHỈ gia sư của em (quan hệ còn hiệu lực; S1,
+-- "thầy/cô tick"): phụ huynh chỉ xem. Chỉ lần làm đầu và không phải bài sửa.
 -- Ghi thêm dòng episode_marks (không sửa episodes.facets); dòng mới nhất quyết định. Gửi lại cùng giá trị = không ghi (replayed).
 create or replace function english.eng_mark_episode_transfer(p_episode uuid, p_value boolean, p_by uuid) returns jsonb
 language plpgsql volatile security definer set search_path = ''
@@ -740,6 +778,7 @@ declare
   v_a english.attempts%rowtype;
   v_l english.learners%rowtype;
   v_m english.members%rowtype;
+  v_role text;
   v_last boolean;
   v_id uuid;
 begin
@@ -751,8 +790,13 @@ begin
     raise exception 'eng_mark_episode_transfer: episode not found' using errcode = 'P0002';
   end if;
   select * into v_m from english.members m where m.id = p_by;
-  if v_m.id is null or english.eng_review_role(p_episode, p_by) is null then
+  v_role := english.eng_review_role(p_episode, p_by);
+  if v_m.id is null or v_role is null then
     raise exception 'eng_mark_episode_transfer: only someone who may review this work marks it (not_reviewer)' using errcode = '42501';
+  end if;
+  -- S1: the mark decides what counts as a transfer (level 4), so only the child's tutor sets it; the parent sees it, never sets it (D18).
+  if v_role <> 'tutor' then
+    raise exception 'eng_mark_episode_transfer: only the child''s tutor marks work as a new topic / source (tutor_only) (D15)' using errcode = '42501';
   end if;
   select * into v_a from english.attempts t where t.id = v_e.attempt_id;
   if not v_e.is_first_attempt or v_a.revises_attempt_id is not null or v_a.mode = 'REVISION' then
@@ -777,8 +821,8 @@ revoke execute on function english.eng_decide_skill(uuid, text, text, uuid, text
 grant execute on function english.eng_decide_skill(uuid, text, text, uuid, text) to service_role;
 revoke execute on function english.eng_confirm_skill_proposals(uuid, uuid[], uuid, text) from public, anon, authenticated;
 grant execute on function english.eng_confirm_skill_proposals(uuid, uuid[], uuid, text) to service_role;
-revoke execute on function english.eng_set_skill_state(uuid, text, text, text, uuid, text) from public, anon, authenticated;
-grant execute on function english.eng_set_skill_state(uuid, text, text, text, uuid, text) to service_role;
+revoke execute on function english.eng_set_skill_state(uuid, text, text, text, uuid, text, text) from public, anon, authenticated;
+grant execute on function english.eng_set_skill_state(uuid, text, text, text, uuid, text, text) to service_role;
 
 -- 6. Đọc (phụ huynh / gia sư; máy chủ gọi sau requireAccess / requireStaff) -----------------------------------------------------------
 -- Trạng thái mọi kỹ năng của bộ hiện tại, theo thứ tự của bộ (Kỹ năng đang theo dõi, Hồ sơ cấp). Kỹ năng chưa có dòng = "Chưa đủ bài".

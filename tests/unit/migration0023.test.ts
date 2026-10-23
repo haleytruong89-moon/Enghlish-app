@@ -40,7 +40,9 @@ describe("0023_skill_states.sql", () => {
     expect(code).toContain("revoke insert, update, delete, truncate on english.mastery_decisions, english.competency_state, english.episode_marks from public, anon, authenticated, service_role;");
     expect(code).toContain("check (kind in ('AUTO', 'PROPOSED', 'CONFIRMED', 'REJECTED', 'MANUAL', 'FLAG'))");
     expect(code).toContain("create unique index if not exists mastery_decisions_answered_once on english.mastery_decisions(responds_to) where responds_to is not null;");
-    expect(code).toContain("create unique index if not exists mastery_decisions_evidence_once on english.mastery_decisions(learner_id, target_key, kind, evidence_key) where kind in ('PROPOSED', 'FLAG');");
+    // B1: "already proposed" is per level; a ⚑ is per evidence.
+    expect(code).toContain("create unique index if not exists mastery_decisions_evidence_once on english.mastery_decisions(learner_id, target_key, to_state, evidence_key) where kind = 'PROPOSED';");
+    expect(code).toContain("create unique index if not exists mastery_decisions_flag_once on english.mastery_decisions(learner_id, target_key, evidence_key) where kind = 'FLAG';");
   });
 
   it("never downgrade is in the table: AUTO only up to 1–2, PROPOSED only up to 3–4, ⚑ keeps the level, MANUAL only to 1–2 with a reason", () => {
@@ -104,10 +106,35 @@ describe("0023_skill_states.sql", () => {
     expect(fn).toContain("english.eng_skill_level(v_to) between 1 and 2");
     expect(fn).toContain("english.eng_skill_level(v_to) between 3 and 4");
     expect(fn).toContain("v_cur.proposal_decision_id is null");
-    expect(fn).toContain("d.kind = 'PROPOSED' and d.evidence_key = v_r ->> 'evidence_key'");
+    expect(fn).toContain("d.kind = 'PROPOSED' and d.to_state = v_to");
+    expect(fn).toContain("and d.evidence_key = v_r ->> 'propose_key'");
     expect(fn).toContain("d.kind = 'FLAG' and d.evidence_key = v_r ->> 'flag_key'");
     expect(fn).toContain("english.eng_skill_level(v_cur.state) >= 2");
     expect(fn).toContain("for update");
+  });
+
+  it("B2: apply writes neither AUTO nor PROPOSED while the latest state row is a MANUAL stored with the same evidence key", () => {
+    const fn = fnText(sql, "eng_apply_engine_results");
+    expect(fn).toContain("m.id = v_cur.state_decision_id and m.kind = 'MANUAL' and m.evidence_key is not null and m.evidence_key = v_r ->> 'evidence_key'");
+    expect(fn).toContain("if not v_held and v_to is not null and english.eng_skill_level(v_to) between 1 and 2");
+    expect(fn).toContain("if not v_held and v_to is not null and english.eng_skill_level(v_to) between 3 and 4");
+    expect(fnText(sql, "eng_set_skill_state")).toContain("p_evidence_key text default null");
+    expect(fnText(sql, "eng_set_skill_state")).toContain("insert into english.mastery_decisions(learner_id, target_key, kind, from_state, to_state, evidence_key,");
+  });
+
+  it("N2 / N5: conditions are only overwritten by a computation that read newer-or-equal evidence; AUTO stores its own route", () => {
+    const fn = fnText(sql, "eng_apply_engine_results");
+    expect(fn).toContain("(c.inputs_at is null or c.inputs_at <= v_basis)");
+    expect(fn).toContain("v_auto_route := coalesce((v_r ->> 'auto_route')::smallint, v_route);");
+    expect(code).toContain("inputs_at timestamptz,");
+  });
+
+  it("N7: the first statement stops with a Vietnamese message when 0022 (AP-0.3) is not applied", () => {
+    const first = code.trim().split("\n")[0];
+    expect(first).toBe("do $guard$");
+    expect(code).toContain("where p.version = 'AP-0.3'");
+    expect(code).toContain("hãy áp 0022_seed_ap_0_3.sql trước");
+    expect(code.indexOf("$guard$")).toBeLessThan(code.indexOf("create table if not exists english.engine_policy_map"));
   });
 
   it("decisions and reads are for the server only; only a tutor of the child decides (D15-style); students get no function", () => {
@@ -127,10 +154,12 @@ describe("0023_skill_states.sql", () => {
     expect(fnText(sql, "eng_set_skill_state")).toContain("p_state not in ('SUPPORTED', 'DEVELOPING')");
   });
 
-  it("G4: the transfer mark is checked against the D15 review role, first attempts only, and written append-only", () => {
+  it("G4 / S1: the transfer mark is for the child's tutor only (the parent reads it), first attempts only, and written append-only", () => {
     expect(grantsOf("eng_mark_episode_transfer")).toEqual(["service_role"]);
     const fn = fnText(sql, "eng_mark_episode_transfer");
-    expect(fn).toContain("english.eng_review_role(p_episode, p_by) is null");
+    expect(fn).toContain("v_role := english.eng_review_role(p_episode, p_by);");
+    expect(fn).toContain("if v_role <> 'tutor' then");
+    expect(fn).toContain("(tutor_only) (D15)");
     expect(fn).toContain("(not_reviewer)");
     expect(fn).toContain("(first_attempt_only)");
     expect(fn).toContain("insert into english.episode_marks");

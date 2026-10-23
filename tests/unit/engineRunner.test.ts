@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { isMissingFunction, makeEngineHook, rebuildLearner, recomputeLearner, type EngineStore } from "@/lib/engine/runner";
+import { evidenceKeyFor, isMissingFunction, makeEngineHook, rebuildLearner, recomputeLearner, type EngineStore } from "@/lib/engine/runner";
 import { MAX_EVIDENCE, parseApplied, parseEngineInputs, sliceTarget, toApplyRow } from "@/lib/engine/shape";
 import { ENGINE_VERSION, type EngineResult } from "@/lib/engine/types";
 import { AP03 } from "./fixtures/engine";
@@ -60,6 +60,24 @@ describe("parseEngineInputs + sliceTarget", () => {
     expect(r.decisions).toEqual([]);
   });
 
+  it("S2 / B1: carries when each decision was validated and the id of the transfer tick that counts (defaults: hand-in time, no tick)", () => {
+    const base = raw();
+    const w = sliceTarget(parseEngineInputs(base), "A-L3-CAUSE-W");
+    expect(w.episodes[0]).toMatchObject({ validatedAt: w.episodes[0]!.at, transferMarkId: null });
+    const ep = base.episodes[0]!;
+    const withBoth = raw({ episodes: [{ ...ep, transfer_marked: true, transfer_mark_id: "mk1", scores: ep.scores.map((x) => ({ ...x, decided_at: "2026-10-22T09:00:00.987654+07:00" })) }] });
+    expect(sliceTarget(parseEngineInputs(withBoth), "A-L3-CAUSE-W").episodes[0]).toMatchObject({ transferMarked: true, transferMarkId: "mk1", validatedAt: "2026-10-22T09:00:00.987+07:00" });
+  });
+
+  it("N2: every apply row carries when the inputs were read, and the AUTO route and the proposal key", async () => {
+    const s = store();
+    await recomputeLearner(s, "L1", null);
+    const rows = (s.applyResults.mock.calls as unknown as unknown[][])[0]![1] as { computed_at: string; auto_route: unknown; propose_key: unknown }[];
+    expect(rows).toHaveLength(2);
+    for (const r of rows) expect(r).toMatchObject({ computed_at: "2026-10-23T12:00:00.123+07:00", auto_route: expect.anything() });
+    expect(rows.every((r) => "propose_key" in r)).toBe(true);
+  });
+
   it("reads Postgres timestamps (offset + microseconds) as dates; refuses unknown states and item results", () => {
     const w = sliceTarget(parseEngineInputs(raw()), "A-L3-CAUSE-W");
     expect(w.now.toISOString()).toBe("2026-10-23T05:00:00.123Z");
@@ -99,9 +117,23 @@ describe("recomputeLearner / rebuildLearner", () => {
   it("toApplyRow keeps at most 200 evidence ids per list; parseApplied reads the SQL answer", () => {
     const many = Array.from({ length: 250 }, (_, i) => `e${i}`);
     const r = { targetKey: "K", auto: null, propose: "INDEPENDENT", raiseFlag: false, flag: { conflict: false, key: null, evidence: [] }, route: 1, evidenceKey: "1-0000000000000000", conditions: [], evidence: { auto: [], propose: many, flag: [] } } as unknown as EngineResult;
-    expect(toApplyRow(r).evidence.propose).toHaveLength(MAX_EVIDENCE);
-    expect(toApplyRow(r)).toMatchObject({ target_key: "K", propose: "INDEPENDENT", raise_flag: false, flag_key: null, route: 1 });
+    expect(toApplyRow(r, "2026-10-23T05:00:00.000Z").evidence.propose).toHaveLength(MAX_EVIDENCE);
+    expect(toApplyRow(r, "2026-10-23T05:00:00.000Z")).toMatchObject({ target_key: "K", propose: "INDEPENDENT", raise_flag: false, flag_key: null, route: 1 });
     expect(() => parseApplied({ auto: "1" })).toThrow();
+  });
+});
+
+describe("evidenceKeyFor (B2)", () => {
+  it("is the key the engine would store: the same as a recompute's, null when the skill cannot be computed", async () => {
+    const s = store();
+    const key = await evidenceKeyFor(s, "L1", "A-L3-CAUSE-W");
+    expect(key).toMatch(/^[0-9]{1,6}-[0-9a-f]{16}$/);
+    expect(s.loadInputs).toHaveBeenCalledWith("L1", ["A-L3-CAUSE-W"]);
+    await recomputeLearner(s, "L1", null);
+    const rows = (s.applyResults.mock.calls as unknown as unknown[][])[0]![1] as { target_key: string; evidence_key: string }[];
+    expect(rows.find((r) => r.target_key === "A-L3-CAUSE-W")!.evidence_key).toBe(key);
+    expect(await evidenceKeyFor(store({ loadInputs: vi.fn(async () => raw({ policy: null })) }), "L1", "A-L3-CAUSE-W")).toBeNull();
+    expect(await evidenceKeyFor(s, "L1", "A-NOT-IN-SET")).toBeNull();
   });
 });
 

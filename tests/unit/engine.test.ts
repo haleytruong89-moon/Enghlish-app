@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { computeTargetState, hadHelp } from "@/lib/engine/computeTargetState";
 import { daysSinceLastPractice, vnDay } from "@/lib/engine/days";
 import { evidenceKeyOf } from "@/lib/engine/key";
-import { projectDecisions } from "@/lib/engine/project";
+import { projectDecisions, proposalKeyOf } from "@/lib/engine/project";
 import { ENGINE_VERSION, SKILL_STATES, STATE_LEVEL, stateAt, type Exposure } from "@/lib/engine/types";
 import { AP02, auto, decision, ep, exposure, input, type AutoOpts, type EpOpts } from "./fixtures/engine";
 
@@ -59,7 +59,22 @@ describe("projectDecisions (mirror of english.eng_project_skill_state)", () => {
     const r = decision("REJECTED", "DEVELOPING", { daysAgo: 9, respondsTo: p.id });
     const proj = projectDecisions([r, p, a2, a1]);
     expect(proj).toMatchObject({ state: "DEVELOPING", stateSince: a2.createdAt, stateDecisionId: a2.id, openProposal: null });
-    expect([...proj.proposalKeys]).toEqual([p.evidenceKey]);
+    expect([...proj.proposalKeys]).toEqual([proposalKeyOf("INDEPENDENT", p.evidenceKey!)]);
+  });
+
+  it("B1: a proposal key is scoped to the level proposed - the same key at another level is a different proposal", () => {
+    const p3 = decision("PROPOSED", "INDEPENDENT", { daysAgo: 10, evidenceKey: "5-aaaaaaaaaaaaaaaa" });
+    const proj = projectDecisions([p3]);
+    expect(proj.proposalKeys.has(proposalKeyOf("INDEPENDENT", "5-aaaaaaaaaaaaaaaa"))).toBe(true);
+    expect(proj.proposalKeys.has(proposalKeyOf("TRANSFERABLE", "5-aaaaaaaaaaaaaaaa"))).toBe(false);
+  });
+
+  it("B2: manualKey is the evidence key of the latest state row only while that row is a MANUAL", () => {
+    const a = decision("AUTO", "DEVELOPING", { daysAgo: 20, evidenceKey: "3-bbbbbbbbbbbbbbbb" });
+    const m = decision("MANUAL", "SUPPORTED", { daysAgo: 10, fromState: "DEVELOPING", evidenceKey: "3-cccccccccccccccc" });
+    expect(projectDecisions([a]).manualKey).toBeNull();
+    expect(projectDecisions([a, m]).manualKey).toBe("3-cccccccccccccccc");
+    expect(projectDecisions([a, m, decision("AUTO", "DEVELOPING", { daysAgo: 5, fromState: "SUPPORTED" })]).manualKey).toBeNull();
   });
 
   it("an unanswered PROPOSED / FLAG is open; CONFIRMED of a proposal moves the state; CONFIRMED of a ⚑ keeps it but restarts stateSince", () => {
@@ -206,7 +221,6 @@ describe("level 3 · route 2 (P3-b, receptiveAuto of AP-0.3)", () => {
     ["a blank answer counts as wrong: 9/13 = 69 %", () => readingSet({ a2: { blank: 1 } }), "SUPPORTED"],
     ["a review exactly 14 days after the last practice counts", () => readingSet({ a1Ago: 20, lastPracticeAgo: 16 }), "INDEPENDENT"],
     ["13 days does not", () => readingSet({ a1Ago: 20, lastPracticeAgo: 15 }), "DEVELOPING"],
-    ["a delayed_check step is a review without the 14-day gap", () => readingSet({ a1Ago: 20, lastPracticeAgo: 3, review: { facets: { delayedCheck: true } } }), "INDEPENDENT"],
     ["a review below 70 % is not a review", () => readingSet({ a1: { correct: 4, wrong: 0 }, a2: { correct: 4, wrong: 0 }, review: { correct: 2, wrong: 1 } }), "DEVELOPING"],
     ["a retry is not counted", () => eight({ isFirstAttempt: false }), "DEVELOPING"], // 5 counted items still reach level 2
     ["help on the attempt is not counted", () => eight({ assistance: [{ kind: "external_declared", verification: "declared" }] }), "DEVELOPING"],
@@ -235,6 +249,33 @@ describe("level 3 · route 2 (P3-b, receptiveAuto of AP-0.3)", () => {
   it("G2: level 2 from items never needs a person; level 3 still needs route 2 or route 1", () => {
     const r = run(input({ targetKey: "A-T1-TEXT-R", domain: "reading", autoAttempts: [auto({ correct: 4, wrong: 0 })] }));
     expect(r).toMatchObject({ propose: null, proposedState: "DEVELOPING" });
+  });
+
+  it("S5: two 4/4 quizzes on the same day are not a review, even when the second step is a delayed_check (P3-b: review >= 14 days after the last exposure)", () => {
+    const q1 = auto({ daysAgo: 2, correct: 4, wrong: 0, activityId: "quiz-1" });
+    const q2 = auto({ daysAgo: 2, correct: 4, wrong: 0, activityId: "quiz-2", facets: { delayedCheck: true } });
+    const exposures: Exposure[] = [exposure(2, "A-W1-VOLCANOES", q1.attemptId), exposure(2, "A-W1-VOLCANOES", q2.attemptId)];
+    const r = run(input({ targetKey: "A-T1-TEXT-R", domain: "reading", autoAttempts: [q1, q2], exposures }));
+    expect(condition(r, "r2_items").met).toBe(true);
+    expect(condition(r, "r2_review")).toMatchObject({ have: 0, need: 1, met: false });
+    expect(r).toMatchObject({ evidenceState: "DEVELOPING", propose: null });
+  });
+
+  it("S5: a delayed_check quiz that really is >= 14 days after the last exposure is the review", () => {
+    const q1 = auto({ daysAgo: 20, correct: 4, wrong: 0, activityId: "quiz-1" });
+    const q2 = auto({ daysAgo: 2, correct: 4, wrong: 0, activityId: "quiz-2", facets: { delayedCheck: true } });
+    const exposures: Exposure[] = [exposure(20, "A-W1-VOLCANOES", q1.attemptId), exposure(2, "A-W1-VOLCANOES", q2.attemptId)];
+    expect(run(input({ targetKey: "A-T1-TEXT-R", domain: "reading", autoAttempts: [q1, q2], exposures }))).toMatchObject({ evidenceState: "INDEPENDENT", route: 2, propose: "INDEPENDENT" });
+  });
+
+  it("N5: the AUTO row names the route behind the lift - items for a reading skill, a person's score for a writing skill", () => {
+    expect(run(readingSet())).toMatchObject({ auto: "DEVELOPING", autoRoute: 2, route: 2 });
+    expect(run(input({ targetKey: "A-T1-TEXT-R", domain: "reading", autoAttempts: [auto({ correct: 2 })] }))).toMatchObject({ auto: "SUPPORTED", autoRoute: 2 });
+    expect(run(input({ episodes: [ep({ score: 3 })] }))).toMatchObject({ auto: "DEVELOPING", autoRoute: 1 });
+    expect(run(input({ episodes: [ep({ score: 2 })] }))).toMatchObject({ auto: "SUPPORTED", autoRoute: 1 });
+    expect(run(input()).autoRoute).toBeNull();
+    // both exist: the person's score is what lifted level 1
+    expect(run(input({ targetKey: "A-T1-TEXT-R", domain: "reading", episodes: [ep({ score: 2 })], autoAttempts: [auto({ correct: 2 })] }))).toMatchObject({ auto: "SUPPORTED", autoRoute: 1 });
   });
 
   it("a writing skill never uses route 2 (nor G2), and neither does AP-0.2 (no receptiveAuto)", () => {
@@ -320,6 +361,99 @@ describe("G4: the reviewer's 'new topic / source' mark counts as transfer_check"
   });
 });
 
+describe("B1: level 4 is proposed even when its evidence already existed at the level-3 proposal, or the mark comes later", () => {
+  function setup(o: { mark?: boolean; markId?: string } = {}) {
+    const d = ep({ daysAgo: 3, contextId: "A-W3-EARTHQUAKES", facets: { delayedCheck: true, checkpoint: true } });
+    const t = ep({ daysAgo: 2, contextId: "A-W5-NEWTOPIC", transferMarked: o.mark ?? true });
+    if (o.markId !== undefined) t.transferMarkId = o.markId;
+    const exposures = [exposure(17, "A-W3-EARTHQUAKES"), exposure(3, "A-W3-EARTHQUAKES", d.attemptId), exposure(2, "A-W5-NEWTOPIC", t.attemptId)];
+    return { d, t, episodes: [d, t], exposures };
+  }
+  /** The tutor confirmed 'Tự làm được' on exactly the evidence now present: the level-3 PROPOSED carries the key the OLD engine used for everything. */
+  function confirmedOnThisEvidence(episodes: ReturnType<typeof ep>[], exposures: Exposure[]) {
+    const globalKey = run(input({ episodes, exposures })).evidenceKey;
+    const a = decision("AUTO", "DEVELOPING", { daysAgo: 45 });
+    const p = decision("PROPOSED", "INDEPENDENT", { daysAgo: 40, fromState: "DEVELOPING", evidenceKey: globalKey });
+    const c = decision("CONFIRMED", "INDEPENDENT", { daysAgo: 39, respondsTo: p.id, fromState: "DEVELOPING" });
+    return decided(a, p, c);
+  }
+
+  it("level 3 confirmed, delayed + transfer evidence already there → PROPOSED 'Vận dụng được' with no new evidence", () => {
+    const { episodes, exposures } = setup();
+    const r = run(input({ episodes, exposures, decisions: confirmedOnThisEvidence(episodes, exposures) }));
+    expect(r).toMatchObject({ currentState: "INDEPENDENT", evidenceState: "TRANSFERABLE", propose: "TRANSFERABLE" });
+    expect(r.proposeKey).toBe(evidenceKeyOf([episodes[0]!.decisionId, episodes[1]!.decisionId, episodes[1]!.transferMarkId!]));
+  });
+
+  it("the tutor ticks the transfer mark LATER on an existing episode → PROPOSED; before the tick there is nothing", () => {
+    const before = setup({ mark: false });
+    const decisions = confirmedOnThisEvidence(before.episodes, before.exposures);
+    expect(run(input({ episodes: before.episodes, exposures: before.exposures, decisions })).propose).toBeNull();
+    const after = setup({ mark: true, markId: "mk-later" });
+    const r = run(input({ episodes: [before.d, { ...before.t, transferMarked: true, transferMarkId: "mk-later" }], exposures: before.exposures, decisions }));
+    expect(r.propose).toBe("TRANSFERABLE");
+    expect(after.t.transferMarkId).toBe("mk-later");
+  });
+
+  it("the mark id is part of the evidence: after 'Chưa' the same tick proposes nothing, a new tick (unticked, ticked again) does", () => {
+    const { d, t, exposures } = setup({ markId: "mk-1" });
+    const base = confirmedOnThisEvidence([d, { ...t, transferMarked: false, transferMarkId: null }], exposures);
+    const first = run(input({ episodes: [d, t], exposures, decisions: base }));
+    expect(first.propose).toBe("TRANSFERABLE");
+    const p4 = decision("PROPOSED", "TRANSFERABLE", { daysAgo: 1, fromState: "INDEPENDENT", evidenceKey: first.proposeKey! });
+    const no = decision("REJECTED", "INDEPENDENT", { daysAgo: 0.5, fromState: "INDEPENDENT", respondsTo: p4.id, evidenceKey: null });
+    const decisions = decided(...base, p4, no);
+    expect(run(input({ episodes: [d, t], exposures, decisions })).propose).toBeNull();
+    expect(run(input({ episodes: [d, { ...t, transferMarkId: "mk-2" }], exposures, decisions })).propose).toBe("TRANSFERABLE");
+  });
+
+  it("the global evidence key sees a new tick (B2 'new evidence'), but a lone tick on a skill without that episode changes nothing", () => {
+    const { d, t } = setup({ mark: false });
+    const k0 = run(input({ episodes: [d, t] })).evidenceKey;
+    expect(run(input({ episodes: [d, { ...t, transferMarked: true, transferMarkId: "mk-9" }] })).evidenceKey).not.toBe(k0);
+  });
+});
+
+describe("B2: a level a tutor set by hand stands until there is new evidence", () => {
+  it("2 → 1 by hand on the evidence now present: the same evidence does not lift it again", () => {
+    const eps = [ep({ score: 3 })];
+    const key = run(input({ episodes: eps })).evidenceKey;
+    const a = decision("AUTO", "DEVELOPING", { daysAgo: 20 });
+    const m = decision("MANUAL", "SUPPORTED", { daysAgo: 1, fromState: "DEVELOPING", evidenceKey: key });
+    const r = run(input({ episodes: eps, decisions: decided(a, m) }));
+    expect(r).toMatchObject({ currentState: "SUPPORTED", auto: null, propose: null, proposedState: "SUPPORTED", evidenceState: "DEVELOPING" });
+  });
+
+  it("new evidence after the MANUAL row lets the engine move again", () => {
+    const eps = [ep({ score: 3 })];
+    const key = run(input({ episodes: eps })).evidenceKey;
+    const decisions = decided(decision("AUTO", "DEVELOPING", { daysAgo: 20 }), decision("MANUAL", "SUPPORTED", { daysAgo: 1, fromState: "DEVELOPING", evidenceKey: key }));
+    const r = run(input({ episodes: [...eps, ep({ daysAgo: 0, score: 3 })], decisions }));
+    expect(r).toMatchObject({ auto: "DEVELOPING" });
+  });
+
+  it("⚑ 'Sửa bậc' 3 → 2 does not re-open a proposal for 'Tự làm được' on the same evidence; new evidence does", () => {
+    const eps = three();
+    const key = run(input({ episodes: eps })).evidenceKey;
+    // an OLD proposal on other evidence (so only the manual hold can stop this one)
+    const a = decision("AUTO", "DEVELOPING", { daysAgo: 60 });
+    const p = decision("PROPOSED", "INDEPENDENT", { daysAgo: 50, fromState: "DEVELOPING", evidenceKey: "9-eeeeeeeeeeeeeeee" });
+    const c = decision("CONFIRMED", "INDEPENDENT", { daysAgo: 49, respondsTo: p.id, fromState: "DEVELOPING" });
+    const m = decision("MANUAL", "DEVELOPING", { daysAgo: 0.5, fromState: "INDEPENDENT", evidenceKey: key });
+    const held = run(input({ episodes: eps, decisions: decided(a, p, c, m) }));
+    expect(held).toMatchObject({ currentState: "DEVELOPING", evidenceState: "INDEPENDENT", propose: null, auto: null });
+    const more = run(input({ episodes: [...eps, ep({ daysAgo: 0, contextId: "A-W3-EARTHQUAKES" })], decisions: decided(a, p, c, m) }));
+    expect(more.propose).toBe("INDEPENDENT");
+  });
+
+  it("a MANUAL without a stored key (null) does not hold", () => {
+    const eps = [ep({ score: 3 })];
+    const auto2 = decision("AUTO", "DEVELOPING", { daysAgo: 20 });
+    const m = decision("MANUAL", "SUPPORTED", { daysAgo: 1, fromState: "DEVELOPING", evidenceKey: null });
+    expect(run(input({ episodes: eps, decisions: decided(auto2, m) })).auto).toBe("DEVELOPING");
+  });
+});
+
 describe("never downgrade by itself (§0 item 4)", () => {
   it("a confirmed 'Tự làm được' stays when later evidence only shows help", () => {
     const r = run(input({ episodes: [ep({ mode: "PRACTICE", score: 4 })], decisions: confirmedIndependent() }));
@@ -355,6 +489,16 @@ describe("⚑ conflict window (D12)", () => {
     ["the skill is only at level 1", () => input({ episodes: [ep({ daysAgo: 3, score: 2 })], decisions: decided(decision("AUTO", "SUPPORTED", { daysAgo: 10 })) })],
   ])("no ⚑ when %s", (_name, make) => {
     expect(run(make()).raiseFlag).toBe(false);
+  });
+
+  it("S2: a low result handed in just before the decision but validated just after it still raises ⚑", () => {
+    const decisions = decided(...confirmedIndependent(), decision("CONFIRMED", "INDEPENDENT", { daysAgo: 5, fromState: "INDEPENDENT", respondsTo: "md-keep" }));
+    const lateLow = ep({ daysAgo: 6, validatedDaysAgo: 4, score: 1, facets: { checkpoint: true } });
+    const r = run(input({ episodes: [lateLow], decisions }));
+    expect(r.raiseFlag).toBe(true);
+    expect(r.flag.evidence).toEqual([lateLow.episodeId]);
+    // the same result validated BEFORE the decision is old news
+    expect(run(input({ episodes: [ep({ daysAgo: 6, validatedDaysAgo: 6, score: 1, facets: { checkpoint: true } })], decisions })).raiseFlag).toBe(false);
   });
 
   // Decisions are built oldest first: `seq` follows creation order, and the projection reads only `seq`.
@@ -405,6 +549,40 @@ describe("one open proposal; 'Chưa' blocks the same evidence (D13)", () => {
     const no = decision("REJECTED", "DEVELOPING", { daysAgo: 6, fromState: "DEVELOPING", respondsTo: p.id, evidenceKey: null });
     expect(run(input({ episodes: eps, decisions: decided(a, p, no) })).propose).toBeNull();
     expect(run(input({ episodes: [...eps, ep({ daysAgo: 1, contextId: "A-W3-EARTHQUAKES" })], decisions: decided(a, p, no) })).propose).toBe("INDEPENDENT");
+  });
+
+  it("S3: after 'Chưa' a helped PRACTICE 1/4 (or any work the conditions do not count) brings nothing back", () => {
+    const eps = three();
+    const a = decision("AUTO", "DEVELOPING", { daysAgo: 8 });
+    const p = decision("PROPOSED", "INDEPENDENT", { daysAgo: 7, fromState: "DEVELOPING", evidenceKey: evidenceKeyOf(eps.map((e) => e.decisionId)) });
+    const no = decision("REJECTED", "DEVELOPING", { daysAgo: 6, fromState: "DEVELOPING", respondsTo: p.id, evidenceKey: null });
+    const ds = decided(a, p, no);
+    const helped = ep({ daysAgo: 1, mode: "PRACTICE", score: 1 });
+    const r = run(input({ episodes: [...eps, helped], decisions: ds }));
+    expect(r.evidenceKey).not.toBe(run(input({ episodes: eps, decisions: ds })).evidenceKey); // it IS new evidence for B2 ...
+    expect(r.propose).toBeNull(); // ... but not evidence the level-3 conditions count
+    // a second unaided 3/4 on a day already counted is new qualifying evidence too (it joins the pool)
+    expect(run(input({ episodes: [...eps, ep({ daysAgo: 1, score: 4 })], decisions: ds })).propose).toBe("INDEPENDENT");
+    // a revision or a baseline-only step is not counted either
+    expect(run(input({ episodes: [...eps, ep({ daysAgo: 1, facets: { baseline: true } })], decisions: ds })).propose).toBeNull();
+  });
+
+  it("S3, route 2: after 'Chưa' a helped quiz brings nothing back; a new counted quiz does", () => {
+    const a1 = auto({ daysAgo: 30, correct: 3, wrong: 1, activityId: "quiz-1" });
+    const a2 = auto({ daysAgo: 20, correct: 3, wrong: 1, activityId: "quiz-2" });
+    const rv = auto({ daysAgo: 2, correct: 3, wrong: 1, activityId: "quiz-3" });
+    const exposures: Exposure[] = [exposure(30, "A-W1-VOLCANOES", a1.attemptId), exposure(20, "A-W2-WATERCYCLE", a2.attemptId), exposure(2, "A-W3-EARTHQUAKES", rv.attemptId)];
+    const base = { targetKey: "A-T1-TEXT-R", domain: "reading" as const, exposures };
+    const first = run(input({ ...base, autoAttempts: [a1, a2, rv] }));
+    expect(first).toMatchObject({ propose: "INDEPENDENT", route: 2 });
+    const p = decision("PROPOSED", "INDEPENDENT", { daysAgo: 1.5, fromState: "DEVELOPING", evidenceKey: first.proposeKey! });
+    const no = decision("REJECTED", "DEVELOPING", { daysAgo: 1, fromState: "DEVELOPING", respondsTo: p.id, evidenceKey: null });
+    const ds = decided(decision("AUTO", "DEVELOPING", { daysAgo: 3 }), p, no);
+    expect(run(input({ ...base, autoAttempts: [a1, a2, rv], decisions: ds })).propose).toBeNull();
+    const helped = auto({ daysAgo: 0, correct: 1, wrong: 3, activityId: "quiz-4", mode: "PRACTICE", assistance: [{ kind: "notes", verification: "declared" }] });
+    expect(run(input({ ...base, autoAttempts: [a1, a2, rv, helped], decisions: ds })).propose).toBeNull();
+    const fresh = auto({ daysAgo: 0, correct: 3, wrong: 1, activityId: "quiz-5" });
+    expect(run(input({ ...base, autoAttempts: [a1, a2, rv, fresh], decisions: ds })).propose).toBe("INDEPENDENT");
   });
 
   it("after 'Xác nhận' nothing is left to propose", () => {

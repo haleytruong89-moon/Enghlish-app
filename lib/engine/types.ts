@@ -40,11 +40,15 @@ export type ScoredEpisode = {
   facets: Facets;
   /** G4: the reviewer marked this episode "Bài này ở chủ đề / nguồn mới (vận dụng)" (episode_marks, append-only). Counts as transfer_check like the template facet. */
   transferMarked: boolean;
+  /** episode_marks.id of the row that makes `transferMarked` true (the latest row of the episode); null = not marked. Part of the evidence keys: a new tick is new evidence. */
+  transferMarkId: string | null;
   assistance: AssistanceMark[];
   /** attempts.declared_assistance contains 'unknown' (work recorded outside the app; UAT-06). */
   declaredUnknown: boolean;
   /** validation_decisions.id of the current decision for this skill. */
   decisionId: string;
+  /** validation_decisions.created_at of that decision: when the reviewer validated the work. The ⚑ window starts at the later of this and `at` (S2). */
+  validatedAt: string;
   /** final_score 0..4, or null = "không có cơ hội thể hiện" (never 0). */
   score: 0 | 1 | 2 | 3 | 4 | null;
 };
@@ -136,6 +140,8 @@ export type EngineResult = {
   proposedState: SkillState;
   /** Route that reached evidenceState (1 below level 3 and at level 4); null = nothing yet. */
   route: Route | null;
+  /** Route behind the AUTO lift to level 1–2 (N5): 1 = scored by a person, 2 = auto-checked items. null = no AUTO. */
+  autoRoute: Route | null;
   conditions: Condition[];
   flag: { conflict: boolean; key: string | null; evidence: string[] };
   /** AUTO to write (levels 1–2, only upward). */
@@ -144,7 +150,12 @@ export type EngineResult = {
   propose: SkillState | null;
   /** FLAG to write (⚑, level kept). */
   raiseFlag: boolean;
-  /** Key of every validated decision + auto-checked attempt read for this skill (D13). */
+  /** Key of every validated decision + auto-checked attempt + transfer mark read for this skill (D13). A MANUAL row stores it (B2). */
   evidenceKey: string;
+  /**
+   * Key of the evidence the PROPOSED level's conditions actually use (S3): route 1 = the counted pool, route 2 = the counted attempts,
+   * level 4 = the delayed and transfer episodes + their marks. The same (level, key) is never proposed twice (D13, B1). null = nothing to propose.
+   */
+  proposeKey: string | null;
   evidence: { auto: string[]; propose: string[]; flag: string[] };
 };

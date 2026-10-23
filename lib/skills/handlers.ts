@@ -6,7 +6,7 @@
 import { AccessError, requireAccess, requireStaff, type AccessDeps, type AccessGrant, type AccessUser, type Action } from "@/lib/auth/requireAccess";
 import { apiErrors } from "@/lib/copy/vi";
 import { allowRealLearners } from "@/lib/env";
-import { isMissingFunction, rebuildLearner, recomputeLearner, type EngineStore } from "@/lib/engine/runner";
+import { evidenceKeyFor, isMissingFunction, rebuildLearner, recomputeLearner, type EngineStore } from "@/lib/engine/runner";
 import { fromDbError, ReviewDbError, type HandlerResult } from "@/lib/review/handlers";
 import { confirmAllBodySchema, decideBodySchema, manualBodySchema } from "./schemas";
 import { parseSkillInbox, parseSkillStates } from "./shape";
@@ -20,7 +20,11 @@ export interface SkillStore {
   /** english.eng_decide_skill / eng_confirm_skill_proposals / eng_set_skill_state (service role). */
   decide(a: { decisionId: string; action: "confirm" | "reject"; reason: string | null; byMemberId: string; clientId: string }): Promise<unknown>;
   confirmAll(a: { learnerId: string; ids: string[]; byMemberId: string; clientId: string }): Promise<unknown>;
-  setManual(a: { learnerId: string; targetKey: string; state: "SUPPORTED" | "DEVELOPING"; reason: string; byMemberId: string; clientId: string }): Promise<unknown>;
+  setManual(a: {
+    learnerId: string; targetKey: string; state: "SUPPORTED" | "DEVELOPING"; reason: string; byMemberId: string; clientId: string;
+    /** The engine's key of the evidence the tutor saw (B2); null = unknown. */
+    evidenceKey: string | null;
+  }): Promise<unknown>;
 }
 
 export type SkillDeps = {
@@ -139,9 +143,15 @@ export async function handleManualSkill(deps: SkillDeps, learnerId: string, rawB
   const parsed = manualBodySchema.safeParse(rawBody);
   if (!parsed.success) return fail(400, parsed.error.issues.some((i) => i.path[0] === "reason") ? "skill_reason_required" : "invalid_body");
   const b = parsed.data;
+  // B2: remember what evidence the tutor was looking at, so the engine does not overturn the level in the same breath. Fail-soft: without the
+  // key the level is still set (and the engine may move it when it next runs).
+  const evidenceKey = await evidenceKeyFor(deps.engine, g.grant.learner.id, b.target_key).catch(async (err: unknown) => {
+    if (!isMissingFunction(err)) await deps.log?.(err);
+    return null;
+  });
   try {
     const r = (await deps.store.setManual({
-      learnerId: g.grant.learner.id, targetKey: b.target_key, state: b.state, reason: b.reason, byMemberId: g.grant.member.id, clientId: b.client_id,
+      learnerId: g.grant.learner.id, targetKey: b.target_key, state: b.state, reason: b.reason, byMemberId: g.grant.member.id, clientId: b.client_id, evidenceKey,
     })) as { id: string; replayed: boolean };
     if (!r.replayed) await settle(deps, g.grant.learner.id, [b.target_key]);
     return { status: r.replayed ? 200 : 201, body: { id: r.id, replayed: r.replayed } };

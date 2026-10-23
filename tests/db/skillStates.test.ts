@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { copyFile, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CONTENT_DIR } from "../../lib/config/content";
@@ -10,6 +12,7 @@ import { ENGINE_VERSION } from "../../lib/engine/types";
 import type { InquiryTemplate } from "../../lib/config/schemas";
 import { addDays, daysBetween, todayVn } from "../../lib/inquiries/dates";
 import { pgEngineStore } from "../../scripts/lib/enginePg";
+import { applyMigrations, listMigrations } from "../../scripts/lib/migrate";
 import { seedThrowawayLearner } from "../../scripts/lib/seed";
 import { insertValidatedEpisode, type EvidenceSpec } from "../../scripts/lib/skillEvidence";
 import { SCORE_WORD_SAMPLES } from "../unit/fixtures/scoreWords";
@@ -190,8 +193,15 @@ describe("S7a skill states (migrations 0022 + 0023)", () => {
       decisions: unknown[];
     }>("select english.eng_engine_inputs($1, $2::text[]) as r", [s.learners.an, targets]);
   const K = (c: string) => `3-${c.repeat(16)}`;
-  type Row = { target_key: string; auto?: string | null; propose?: string | null; raise_flag?: boolean; flag_key?: string | null; route?: number | null; evidence_key?: string; conditions?: unknown; evidence?: { auto: string[]; propose: string[]; flag: string[] } };
-  const row = (o: Row) => ({ auto: null, propose: null, raise_flag: false, flag_key: null, route: 1, evidence_key: K("1"), conditions: [], evidence: { auto: [], propose: [], flag: [] }, ...o });
+  type Row = {
+    target_key: string; auto?: string | null; auto_route?: number | null; propose?: string | null; propose_key?: string | null; raise_flag?: boolean; flag_key?: string | null;
+    route?: number | null; evidence_key?: string; conditions?: unknown; evidence?: { auto: string[]; propose: string[]; flag: string[] }; computed_at?: string;
+  };
+  /** propose_key defaults to evidence_key (these tests give one key per row); auto_route to route. */
+  const row = (o: Row) => {
+    const r = { auto: null, propose: null, raise_flag: false, flag_key: null, route: 1, evidence_key: K("1"), conditions: [], evidence: { auto: [], propose: [], flag: [] }, ...o };
+    return { ...r, propose_key: o.propose_key !== undefined ? o.propose_key : r.propose ? r.evidence_key : null };
+  };
   const apply = (rows: unknown[], learner = s.learners.an, version = "S7a-1") =>
     svc<{ auto: number; proposed: number; flagged: number; policy_version: string }>("select english.eng_apply_engine_results($1, $2::jsonb, $3) as r", [learner, JSON.stringify(rows), version]);
   const stateOf = async (k: string, learner = s.learners.an) =>
@@ -348,7 +358,7 @@ describe("S7a skill states (migrations 0022 + 0023)", () => {
       await fail(decide(p1, "confirm", s.members.tutorNguyen), "42501", /tutor_only/);
       await fail(confirmAll([p2], s.members.parent), "42501", /tutor_only/);
       await fail(manual("A-T7-OPINION", "SUPPORTED", "Lý do thử", s.members.parent), "42501", /tutor_only/);
-      for (const fn of ["eng_decide_skill(uuid, text, text, uuid, text)", "eng_confirm_skill_proposals(uuid, uuid[], uuid, text)", "eng_set_skill_state(uuid, text, text, text, uuid, text)", "eng_skill_states(uuid)", "eng_skill_inbox(uuid, boolean)"]) {
+      for (const fn of ["eng_decide_skill(uuid, text, text, uuid, text)", "eng_confirm_skill_proposals(uuid, uuid[], uuid, text)", "eng_set_skill_state(uuid, text, text, text, uuid, text, text)", "eng_skill_states(uuid)", "eng_skill_inbox(uuid, boolean)"]) {
         expect((await q1<{ ok: boolean }>(`select has_function_privilege('authenticated', 'english.${fn}', 'execute') as ok`))[0]?.ok, fn).toBe(false);
       }
     });
@@ -453,12 +463,15 @@ describe("S7a skill states (migrations 0022 + 0023)", () => {
       expect((await q1<{ n: number }>("select count(*)::int as n from english.audit_log where learner_id = $1 and action = 'episode.transfer_marked'", [s.learners.an]))[0]?.n).toBe(2);
     });
 
-    it("D15: the parent may mark ordinary work but not an in-session test; Nguyên's tutor and the student are refused", async () => {
-      expect(await mark(open.episodeId, true, s.members.parent)).toMatchObject({ replayed: false });
-      await fail(mark(proof[0]!.episodeId, true, s.members.parent), "42501", /not_reviewer/);
+    it("S1: only the child's tutor marks - the parent is refused even on ordinary work; Nguyên's tutor and the student are refused too", async () => {
+      await fail(mark(open.episodeId, true, s.members.parent), "42501", /tutor_only/);
+      await fail(mark(proof[0]!.episodeId, true, s.members.parent), "42501", /not_reviewer/); // an in-session test: not even a reviewer
       await fail(mark(open.episodeId, true, s.members.tutorNguyen), "42501", /not_reviewer/);
       await fail(mark(open.episodeId, true, s.members.studentAn), "42501", /not_reviewer/);
+      expect(await marksOf(open.episodeId)).toEqual([]);
       expect(await marksOf(proof[0]!.episodeId)).toHaveLength(2);
+      expect(await mark(open.episodeId, true, s.members.tutorAn)).toMatchObject({ replayed: false });
+      expect(await mark(open.episodeId, false, s.members.tutorAn)).toMatchObject({ replayed: false });
     });
 
     it("only a first attempt that is not a revision; unknown episode; app roles cannot execute the function", async () => {
@@ -533,7 +546,7 @@ describe("S7a skill states (migrations 0022 + 0023)", () => {
       expect(await bookCount()).toBe(n);
     });
 
-    it("after 'Chưa' a recompute does not propose again; one more validated piece of work does (D13)", async () => {
+    it("after 'Chưa' a recompute does not propose again; helped work that no condition counts does not bring it back (S3); one more qualifying piece does (D13)", async () => {
       const T = "A-T4-CAUSE"; // speaking checkpoints A-W1 8 / A-W2 9 / A-W3 10, first attempts
       for (const [inst, n, daysAgo] of [[w1, 8, 21], [w2, 9, 14], [w3, 10, 6]] as const) {
         await evidence("an", { activityId: await step(inst, n), daysAgo, scores: { [T]: 3 }, facets: ["checkpoint"] });
@@ -541,7 +554,9 @@ describe("S7a skill states (migrations 0022 + 0023)", () => {
       expect((await recomputeLearner(store(), s.learners.an, [T])).applied).toMatchObject({ proposed: 1 });
       await svc("select english.eng_decide_skill($1, 'reject', 'Chưa đủ chắc ở bài nói', $2, $3) as r", [(await openOf(T, "PROPOSED"))!, s.members.tutorAn, `decide-${randomUUID()}`]);
       expect((await recomputeLearner(store(), s.learners.an, [T])).applied.proposed).toBe(0);
-      await evidence("an", { activityId: await step(w1, 4), daysAgo: 2, mode: "PRACTICE", scores: { [T]: 2 } });
+      await evidence("an", { activityId: await step(w1, 4), daysAgo: 2, mode: "PRACTICE", scores: { [T]: 1 } });
+      expect((await recomputeLearner(store(), s.learners.an, [T])).applied.proposed).toBe(0); // a helped 1/4: new evidence, but not counted by level 3
+      await evidence("an", { activityId: await step(w3, 5), daysAgo: 1, scores: { [T]: 3 } });
       expect((await recomputeLearner(store(), s.learners.an, [T])).applied.proposed).toBe(1);
       expect(await stateOf(T)).toEqual({ state: "DEVELOPING", flag: false, proposal: true });
     });
@@ -560,6 +575,170 @@ describe("S7a skill states (migrations 0022 + 0023)", () => {
       const n = await bookCount();
       await recomputeLearner(store(), s.learners.an, null);
       expect(await bookCount()).toBe(n);
+    });
+  });
+
+  describe("5. review fixes: B1 level 4, B2 hand-set levels, S1-S3, N2, N5, N7", () => {
+    const store = () => pgEngineStore(db.client);
+    const decideRow = (decision: string, by = s.members.tutorAn) =>
+      svc("select english.eng_decide_skill($1, 'confirm', null, $2, $3) as r", [decision, by, `fix-${randomUUID()}`]);
+    const markT = (episode: string, value: boolean, by = s.members.tutorAn) => svc("select english.eng_mark_episode_transfer($1, $2, $3) as r", [episode, value, by]);
+    const manualAt = async (target: string, state: string, key: string | null) =>
+      svc("select english.eng_set_skill_state($1, $2, $3, 'Em cần thêm câu mẫu', $4, $5, $6) as r", [s.learners.an, target, state, s.members.tutorAn, `fix-manual-${randomUUID()}`, key]);
+    const proposals = (k: string) => q1<{ to_state: string; evidence_key: string }>(
+      "select to_state, evidence_key from english.mastery_decisions where learner_id = $1 and target_key = $2 and kind = 'PROPOSED' order by seq", [s.learners.an, k]);
+    /** Three unaided first attempts (5 days: spread over 14 days, two topics, one in-session test) + a delayed check on W1 and a transfer on W3. */
+    async function level4Evidence(k: string, steps: { w1: number[]; w2: number[]; w3: number }, transferFacet: boolean) {
+      await evidence("an", { activityId: await step(w1, steps.w1[0]!), daysAgo: 40, scores: { [k]: 3 }, facets: ["checkpoint"] });
+      await evidence("an", { activityId: await step(w2, steps.w2[0]!), daysAgo: 33, scores: { [k]: 3 } });
+      await evidence("an", { activityId: await step(w2, steps.w2[1]!), daysAgo: 26, scores: { [k]: 3 } });
+      await evidence("an", { activityId: await step(w1, steps.w1[1]!), daysAgo: 3, scores: { [k]: 3 }, facets: ["delayed_check"] });
+      return evidence("an", { activityId: await step(w3, steps.w3), daysAgo: 2, scores: { [k]: 3 }, facets: transferFacet ? ["transfer_check"] : [] });
+    }
+
+    it("B1: level 3 confirmed while the delayed and transfer work already existed → the next run PROPOSES level 4 with no new evidence", async () => {
+      const k = "A-L2-CHUNKS";
+      await level4Evidence(k, { w1: [1, 2], w2: [1, 2], w3: 1 }, true);
+      expect((await recomputeLearner(store(), s.learners.an, [k])).applied).toMatchObject({ auto: 1, proposed: 1 });
+      expect((await proposals(k)).map((p) => p.to_state)).toEqual(["INDEPENDENT"]);
+      await decideRow((await openOf(k, "PROPOSED"))!);
+      const r = await recomputeLearner(store(), s.learners.an, [k]);
+      expect(r.applied).toMatchObject({ proposed: 1 });
+      expect(r.results[0]).toMatchObject({ currentState: "INDEPENDENT", propose: "TRANSFERABLE" });
+      const rows = await proposals(k);
+      expect(rows.map((p) => p.to_state)).toEqual(["INDEPENDENT", "TRANSFERABLE"]);
+      expect(rows[0]!.evidence_key).not.toBe(rows[1]!.evidence_key);
+      const n = await bookCount();
+      expect((await recomputeLearner(store(), s.learners.an, [k])).applied).toMatchObject({ proposed: 0 }); // one open proposal, same evidence
+      expect(await bookCount()).toBe(n);
+    });
+
+    it("B1: level 3 confirmed, then the tutor ticks the transfer mark on an episode that was already there → PROPOSED level 4", async () => {
+      const k = "A-T1-TEXT-L";
+      const transfer = await level4Evidence(k, { w1: [5, 7], w2: [3, 4], w3: 2 }, false);
+      await recomputeLearner(store(), s.learners.an, [k]);
+      await decideRow((await openOf(k, "PROPOSED"))!);
+      expect((await recomputeLearner(store(), s.learners.an, [k])).applied.proposed).toBe(0); // no transfer evidence yet
+      await markT(transfer.episodeId, true);
+      const r = await recomputeLearner(store(), s.learners.an, [k]);
+      expect(r.results[0]).toMatchObject({ currentState: "INDEPENDENT", propose: "TRANSFERABLE" });
+      expect((await proposals(k)).map((p) => p.to_state)).toEqual(["INDEPENDENT", "TRANSFERABLE"]);
+      // inputs: the id of the tick that counts (null once unticked, a new id once ticked again)
+      const markId = async () => ((await inputs([k])).episodes.find((e) => e.episode_id === transfer.episodeId) as unknown as { transfer_mark_id: string | null }).transfer_mark_id;
+      const first = await markId();
+      expect(first).toMatch(/^[0-9a-f-]{36}$/);
+      await markT(transfer.episodeId, false);
+      expect(await markId()).toBeNull();
+      await markT(transfer.episodeId, true);
+      expect(await markId()).not.toBe(first);
+    });
+
+    it("B2: a level 2 set to 1 by hand stays 1 after the engine settles and after a rebuild; new evidence lets the engine move again", async () => {
+      const k = "A-L1-PAST-W";
+      await evidence("an", { activityId: await step(w3, 3), daysAgo: 4, scores: { [k]: 3 } });
+      await recomputeLearner(store(), s.learners.an, [k]);
+      expect(await stateOf(k)).toMatchObject({ state: "DEVELOPING" });
+      const key = (await recomputeLearner(store(), s.learners.an, [k])).results[0]!.evidenceKey;
+      await manualAt(k, "SUPPORTED", key);
+      const n = await bookCount();
+      expect((await recomputeLearner(store(), s.learners.an, [k])).applied).toMatchObject({ auto: 0, proposed: 0 });
+      expect(await stateOf(k)).toMatchObject({ state: "SUPPORTED" });
+      await rebuildLearner(store(), s.learners.an, s.members.tutorAn);
+      expect(await stateOf(k)).toMatchObject({ state: "SUPPORTED" });
+      expect(await bookCount()).toBe(n);
+      await evidence("an", { activityId: await step(w3, 4), daysAgo: 1, scores: { [k]: 3 } });
+      expect((await recomputeLearner(store(), s.learners.an, [k])).applied).toMatchObject({ auto: 1 });
+      expect(await stateOf(k)).toMatchObject({ state: "DEVELOPING" });
+    });
+
+    it("B2: ⚑ 'Sửa bậc' 3 → 2 does not re-open a proposal for 'Tự làm được' on the same evidence; evidence that counts brings it back", async () => {
+      const k = "A-L2-COMPENSATE-S";
+      for (const [inst, n, daysAgo, facets] of [[w1, 9, 21, ["checkpoint"]], [w2, 8, 14, []], [w3, 6, 5, []]] as const) {
+        await evidence("an", { activityId: await step(inst, n), daysAgo, scores: { [k]: 3 }, facets: [...facets] });
+      }
+      await recomputeLearner(store(), s.learners.an, [k]);
+      await decideRow((await openOf(k, "PROPOSED"))!);
+      expect(await stateOf(k)).toMatchObject({ state: "INDEPENDENT" });
+      const key = (await recomputeLearner(store(), s.learners.an, [k])).results[0]!.evidenceKey;
+      await manualAt(k, "DEVELOPING", key);
+      const r = await recomputeLearner(store(), s.learners.an, [k]);
+      expect(r.results[0]).toMatchObject({ currentState: "DEVELOPING", evidenceState: "INDEPENDENT", propose: null });
+      expect(await stateOf(k)).toEqual({ state: "DEVELOPING", flag: false, proposal: false });
+      await evidence("an", { activityId: await step(w3, 7), daysAgo: 1, scores: { [k]: 4 } });
+      expect((await recomputeLearner(store(), s.learners.an, [k])).applied.proposed).toBe(1);
+    });
+
+    it("B2: the SQL repeats the guard (a caller that forgets it still cannot overturn the tutor); a bad key is refused", async () => {
+      const k = "A-L3-CAUSE-S";
+      await evidence("an", { activityId: await step(w3, 8), daysAgo: 1, scores: { [k]: 3 } });
+      await recomputeLearner(store(), s.learners.an, [k]);
+      const key = (await recomputeLearner(store(), s.learners.an, [k])).results[0]!.evidenceKey;
+      const cur = (await stateOf(k))!.state;
+      const to = cur === "DEVELOPING" ? "SUPPORTED" : "DEVELOPING";
+      await manualAt(k, to, key);
+      const n = await bookCount();
+      const up = row({ target_key: k, auto: "DEVELOPING", evidence_key: key });
+      expect(await apply([up])).toMatchObject({ auto: 0, proposed: 0 });
+      expect(await apply([{ ...up, evidence_key: K("c") }])).toMatchObject({ auto: cur === "DEVELOPING" ? 1 : 0 });
+      expect(await bookCount()).toBe(n + (cur === "DEVELOPING" ? 1 : 0));
+      await fail(manualAt(k, to === "SUPPORTED" ? "DEVELOPING" : "SUPPORTED", "nope"), "22023", /bad_evidence_key/);
+    });
+
+    it("S3: a proposal key is the evidence the level's conditions use - the SQL refuses a bad one and dedupes by (level, key)", async () => {
+      const k = "A-T7-OPINION"; // INDEPENDENT already (section 3)
+      expect(await apply([row({ target_key: k, propose: "TRANSFERABLE", evidence_key: K("5"), propose_key: "x" })])).toMatchObject({ proposed: 0 });
+      expect(await apply([row({ target_key: k, propose: "TRANSFERABLE", evidence_key: K("5") })])).toMatchObject({ proposed: 1 });
+      await answer((await openOf(k, "PROPOSED"))!, "REJECTED", "INDEPENDENT", "INDEPENDENT");
+      expect(await apply([row({ target_key: k, propose: "TRANSFERABLE", evidence_key: K("5") })])).toMatchObject({ proposed: 0 });
+      expect(await apply([row({ target_key: k, propose: "TRANSFERABLE", evidence_key: K("6") })])).toMatchObject({ proposed: 1 });
+    });
+
+    it("N5: the AUTO row names the route behind the lift (items → 2 for a reading skill, a person's score → 1)", async () => {
+      const route = (k: string) => q1<{ route: number | null }>("select route from english.mastery_decisions where learner_id = $1 and target_key = $2 and kind = 'AUTO' order by seq limit 1", [s.learners.an, k]);
+      expect(await route("A-T1-TEXT-R")).toEqual([{ route: 2 }]);
+      expect(await route("A-L1-PAST-W")).toEqual([{ route: 1 }]);
+    });
+
+    it("S2: the engine inputs carry when each decision was validated", async () => {
+      const r = await inputs([SKILL]);
+      const stamps = r.episodes.flatMap((e) => e.scores).map((x) => (x as unknown as { decided_at?: string }).decided_at);
+      expect(stamps.length).toBeGreaterThan(0);
+      expect(stamps.every((t) => typeof t === "string" && !Number.isNaN(Date.parse(t)))).toBe(true);
+    });
+
+    it("N2: a computation that read older evidence never overwrites the conditions of a newer one", async () => {
+      const k = "B-T7-ARGUE";
+      const rowN = (conditions: unknown, at: string) => apply([row({ target_key: k, conditions, computed_at: at })], s.learners.nguyen);
+      const cond = (have: number) => [{ id: "l1_evidence", level: 1, route: 1, have, need: 1, met: have >= 1, evidence: [] }];
+      const stored = async () => (await q1<{ conditions: unknown }>("select conditions from english.competency_state where learner_id = $1 and target_key = $2", [s.learners.nguyen, k]))[0]!.conditions;
+      await rowN(cond(2), "2026-10-23T10:00:00.000Z");
+      await rowN(cond(1), "2026-10-23T09:00:00.000Z"); // slower, older read
+      expect(await stored()).toEqual(cond(2));
+      await rowN(cond(3), "2026-10-23T10:00:00.000Z"); // equal → newer or equal wins
+      expect(await stored()).toEqual(cond(3));
+      await rowN(cond(4), "2026-10-23T11:00:00.000Z");
+      expect(await stored()).toEqual(cond(4));
+    });
+  });
+
+  describe("6. N7: 0023 without 0022 stops with a message that says what to do", () => {
+    it("applying 0023 on a database that has no AP-0.3 raises a Vietnamese message naming 0022", async () => {
+      const dir = await mkdtemp(path.join(tmpdir(), "mig-"));
+      const other = await createTestDb();
+      try {
+        for (const m of await listMigrations()) {
+          if (m.version !== "0022" && Number(m.version) <= 23) await copyFile(m.file, path.join(dir, m.name));
+        }
+        const err = await applyMigrations(other.client, { dir }).then(() => null, (e: unknown) => e as { message?: string; cause?: { code?: string } });
+        expect(err?.cause?.code).toBe("P0001");
+        expect(err?.message).toMatch(/0023_skill_states\.sql failed/);
+        expect(err?.message).toMatch(/0022/);
+        expect(err?.message).toMatch(/AP-0\.3/);
+        expect(err?.message).toMatch(/hãy áp/);
+      } finally {
+        await other.drop();
+        await rm(dir, { recursive: true, force: true });
+      }
     });
   });
 

@@ -26,8 +26,8 @@ const facets = z
 const assistance = z.array(z.object({ kind: z.string(), verification: z.enum(["observed", "declared", "unknown"]), targets: z.array(z.string()) }));
 const episodeRow = z.object({
   episode_id: id, attempt_id: id, activity_id: id, at, context_id: z.string(), is_first_attempt: z.boolean(), mode,
-  observed_directly: z.boolean(), facets, transfer_marked: z.boolean(), declared_unknown: z.boolean(), assistance,
-  scores: z.array(z.object({ target_key: z.string(), decision_id: id, score: z.number().int().min(0).max(4).nullable(), not_observed: z.boolean() })),
+  observed_directly: z.boolean(), facets, transfer_marked: z.boolean(), transfer_mark_id: z.string().nullable().default(null), declared_unknown: z.boolean(), assistance,
+  scores: z.array(z.object({ target_key: z.string(), decision_id: id, decided_at: at.optional(), score: z.number().int().min(0).max(4).nullable(), not_observed: z.boolean() })),
 });
 const autoRow = z.object({
   attempt_id: id, episode_id: id, activity_id: id, at, is_first_attempt: z.boolean(), mode, facets, declared_unknown: z.boolean(), assistance,
@@ -69,8 +69,8 @@ export function sliceTarget(inputs: EngineInputs, key: string): EngineInput {
       const score = sc.not_observed ? null : (sc.score as 0 | 1 | 2 | 3 | 4 | null);
       return [{
         episodeId: e.episode_id, attemptId: e.attempt_id, activityId: e.activity_id, at: e.at, contextId: e.context_id,
-        isFirstAttempt: e.is_first_attempt, mode: e.mode, observedDirectly: e.observed_directly, facets: e.facets, transferMarked: e.transfer_marked,
-        assistance: marks(e.assistance, key), declaredUnknown: e.declared_unknown, decisionId: sc.decision_id, score,
+        isFirstAttempt: e.is_first_attempt, mode: e.mode, observedDirectly: e.observed_directly, facets: e.facets, transferMarked: e.transfer_marked, transferMarkId: e.transfer_mark_id,
+        assistance: marks(e.assistance, key), declaredUnknown: e.declared_unknown, decisionId: sc.decision_id, validatedAt: sc.decided_at ?? e.at, score,
       }];
     }),
     autoAttempts: inputs.auto.flatMap((a) => {
@@ -101,12 +101,18 @@ export type ApplyRow = {
   raise_flag: boolean;
   flag_key: string | null;
   route: 1 | 2 | null;
+  /** Route behind the AUTO lift (N5); null = no AUTO. */
+  auto_route: 1 | 2 | null;
   evidence_key: string;
+  /** Key of the evidence the proposed level used (S3, B1); null = no proposal. */
+  propose_key: string | null;
+  /** When the inputs were read (eng_engine_inputs.now): an older computation never overwrites newer conditions (N2). */
+  computed_at: string;
   conditions: EngineResult["conditions"];
   evidence: { auto: string[]; propose: string[]; flag: string[] };
 };
 const cap = (xs: readonly string[]) => xs.slice(0, MAX_EVIDENCE);
-export function toApplyRow(r: EngineResult): ApplyRow {
+export function toApplyRow(r: EngineResult, computedAt: string): ApplyRow {
   return {
     target_key: r.targetKey,
     auto: r.auto,
@@ -114,7 +120,10 @@ export function toApplyRow(r: EngineResult): ApplyRow {
     raise_flag: r.raiseFlag,
     flag_key: r.flag.key,
     route: r.route,
+    auto_route: r.autoRoute,
     evidence_key: r.evidenceKey,
+    propose_key: r.proposeKey,
+    computed_at: computedAt,
     conditions: r.conditions.map((c) => ({ ...c, evidence: cap(c.evidence) })),
     evidence: { auto: cap(r.evidence.auto), propose: cap(r.evidence.propose), flag: cap(r.evidence.flag) },
   };

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AccessStore, Learner, Member, Relationship } from "@/lib/auth/requireAccess";
 import { tutorWorkErrors } from "@/lib/copy/vi";
+import { evidenceKeyOf } from "@/lib/engine/key";
 import type { EngineStore } from "@/lib/engine/runner";
 import { handleDecisions, handleModify, handleSupport, ReviewDbError, type ReviewStore } from "@/lib/review/handlers";
 import { handleFinishRevision, type RevisionStore } from "@/lib/revision/handlers";
@@ -8,6 +9,7 @@ import { confirmAllBodySchema, decideBodySchema, manualBodySchema } from "@/lib/
 import { handleConfirmAll, handleDecideSkill, handleManualSkill, handleRebuild, handleSkillInbox, handleSkillStates, type SkillDeps, type SkillStore } from "@/lib/skills/handlers";
 import { parseSkillInbox, parseSkillStates } from "@/lib/skills/shape";
 import { failText } from "@/lib/tutorwork/client";
+import { AP03 } from "./fixtures/engine";
 import { handleSubmit, type WorkStore } from "@/lib/work/handlers";
 
 const FAMILY = "f0000000-0000-4000-8000-000000000001";
@@ -58,11 +60,12 @@ const skillStore = (over: Partial<SkillStore> = {}) =>
     setManual: vi.fn(async (): Promise<unknown> => ({ id: "m1", replayed: false })),
     ...over,
   }) satisfies SkillStore;
-const engine = () =>
+const engine = (over: Partial<EngineStore> = {}) =>
   ({
     loadInputs: vi.fn(async (): Promise<unknown> => ({ learner_id: AN, now: "2026-10-23T12:00:00+07:00", policy: null, targets: [], episodes: [], auto: [], exposures: [], decisions: [] })),
     applyResults: vi.fn(async (): Promise<unknown> => ({ auto: 0, proposed: 0, flagged: 0, policy_version: "AP-0.3" })),
     resetStates: vi.fn(async (): Promise<unknown> => ({ targets: 12 })),
+    ...over,
   }) satisfies EngineStore;
 const deps = (user: string | null, store: SkillStore = skillStore(), eng: EngineStore = engine()): SkillDeps => ({
   user: user ? { id: `u-${user}` } : null, store, engine: eng, access: accessDeps, log: vi.fn(async () => {}),
@@ -140,6 +143,26 @@ describe("skill handlers: requireAccess first, then the body, then the store; th
     expect(e.loadInputs).toHaveBeenCalledWith(AN, null);
     expect((await handleManualSkill(deps("tutorAn"), AN, { client_id: "manual-0001", target_key: "A-L3-CAUSE-W", state: "INDEPENDENT", reason: "x y z" })).status).toBe(400);
     expect((await handleManualSkill(deps("tutorAn"), AN, { client_id: "manual-0001", target_key: "A-L3-CAUSE-W", state: "SUPPORTED", reason: "Cần câu mẫu" })).status).toBe(201);
+  });
+
+  it("B2: a level set by hand is stored with the evidence key the engine saw (null when the engine cannot tell); a failing engine never blocks it", async () => {
+    const withPolicy = () => engine({ loadInputs: vi.fn(async (): Promise<unknown> => ({
+      learner_id: AN, now: "2026-10-23T12:00:00+07:00", policy: { version: "AP-0.3", config: AP03.config }, targets: [{ key: "A-L3-CAUSE-W", domain: "writing" }],
+      episodes: [], auto: [], exposures: [], decisions: [],
+    })) });
+    const body = { client_id: "manual-0002", target_key: "A-L3-CAUSE-W", state: "SUPPORTED", reason: "Cần câu mẫu" };
+    const s1 = skillStore();
+    await handleManualSkill(deps("tutorAn", s1, withPolicy()), AN, body);
+    expect(s1.setManual).toHaveBeenCalledWith(expect.objectContaining({ evidenceKey: evidenceKeyOf([]) }));
+    const s2 = skillStore();
+    await handleManualSkill(deps("tutorAn", s2, engine()), AN, body); // no policy: not computable
+    expect(s2.setManual).toHaveBeenCalledWith(expect.objectContaining({ evidenceKey: null }));
+    const s3 = skillStore();
+    const broken = engine({ loadInputs: vi.fn(async () => { throw new Error("boom"); }) });
+    const d3 = deps("tutorAn", s3, broken);
+    expect((await handleManualSkill(d3, AN, body)).status).toBe(201);
+    expect(s3.setManual).toHaveBeenCalledWith(expect.objectContaining({ evidenceKey: null }));
+    expect(d3.log).toHaveBeenCalled();
   });
 
   it("rebuild: tutor and parent; it resets, recomputes every skill and reports what was written", async () => {

@@ -18,8 +18,18 @@ export async function recomputeLearner(store: EngineStore, learnerId: string, ta
   const inputs = parseEngineInputs(await store.loadInputs(learnerId, targets));
   if (inputs.policy === null || inputs.targets.length === 0) return { learnerId, results: [], applied: NOTHING };
   const results = inputs.targets.map((t) => computeTargetState(sliceTarget(inputs, t.key)));
-  const applied = parseApplied(await store.applyResults(learnerId, results.map(toApplyRow), ENGINE_VERSION));
+  const applied = parseApplied(await store.applyResults(learnerId, results.map((r) => toApplyRow(r, inputs.now)), ENGINE_VERSION));
   return { learnerId, results, applied };
+}
+
+/**
+ * B2: the evidence key of ONE skill as the engine sees it now (what a tutor is looking at when setting a level by hand). Stored on the MANUAL row:
+ * the engine writes nothing for the skill until this key changes. null = the skill is not computable (no policy, not in the set).
+ */
+export async function evidenceKeyFor(store: EngineStore, learnerId: string, targetKey: string): Promise<string | null> {
+  const inputs = parseEngineInputs(await store.loadInputs(learnerId, [targetKey]));
+  if (inputs.policy === null || !inputs.targets.some((t) => t.key === targetKey)) return null;
+  return computeTargetState(sliceTarget(inputs, targetKey)).evidenceKey;
 }
 
 /** "Tính lại từ đầu" (§3 step 6): re-project the state from the book, then run the engine on every skill. Twice in a row → the same state, no new row. */
