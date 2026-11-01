@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { loadConfig } from "../../lib/config/content";
-import { learnerWithTrack, levelLabels, targetsPage } from "@/lib/copy/vi";
+import { learnerWithTrack, targetsPage } from "@/lib/copy/vi";
 import { LEARNER_IDS, loginAs, type AccountKey } from "./helpers";
 
 const AN = "An (thử)";
@@ -20,8 +20,9 @@ async function expectTargetsPage(page: Page, who: "an" | "nguyen") {
   const alias = who === "an" ? AN : NGUYEN;
   await expect(page.getByRole("heading", { level: 1, name: targetsPage.title(alias) })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: targetsPage.count(12) })).toBeVisible();
-  // 12 tracked skills, each with the "not enough work yet" level (no states exist in S1)
-  await expect(page.getByText(levelLabels.NOT_OBSERVED.label, { exact: true })).toHaveCount(12);
+  // 12 tracked skills, each with its 4-cell scale (S7a: the levels come from reviewed work, so how many say "Chưa đủ bài" depends on the other specs)
+  await expect(page.getByTestId(/^skill-row-/)).toHaveCount(12);
+  await expect(page.getByTestId("skill-scale")).toHaveCount(12);
   // tracking-only section, apart from (and not counted in) the 12
   await expect(page.getByRole("heading", { level: 2, name: targetsPage.trackingOnlyTitle })).toBeVisible();
   for (const label of EXPECTED_TRACKING[who]) {

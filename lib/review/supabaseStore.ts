@@ -88,6 +88,12 @@ export function createSupabaseReviewStore(): ReviewStore {
       return data;
     },
 
+    async markTransfer({ episodeId, value, byMemberId }) {
+      const { data, error } = await createAdminClient().rpc("eng_mark_episode_transfer", { p_episode: episodeId, p_value: value, p_by: byMemberId });
+      if (error) dbError("eng_mark_episode_transfer", error);
+      return data;
+    },
+
     async recordSupport({ attemptId, targets, kind, note, byMemberId, clientId }) {
       const { data, error } = await createAdminClient().rpc("eng_record_observed_support", {
         p_attempt: attemptId,

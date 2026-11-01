@@ -7,6 +7,7 @@ import {
   handleListNotes,
   handleModify,
   handleOffline,
+  handleMarkTransfer,
   handleSupport,
   handleWriteNote,
   ReviewDbError,
@@ -57,6 +58,7 @@ function makeStore(over: Partial<ReviewStore> = {}) {
     recordReviews: vi.fn(async () => [{ target_key: "A-L3-CAUSE-W", observation_id: "o1", decision_id: "d1", replayed: false }]),
     modifyDecision: vi.fn(async () => ({ decision_id: "d2", supersedes_id: DEC_AN, replayed: false })),
     recordSupport: vi.fn(async () => ({ id: "s1", replayed: false })),
+    markTransfer: vi.fn(async () => ({ value: true, replayed: false })),
     recordOffline: vi.fn(async () => ({ attempt_id: "at1", episode_id: "ep1", attempt_no: 1, replayed: false })),
     writeNote: vi.fn(async () => ({ id: "n1", replayed: false })),
     ...over,
@@ -406,5 +408,33 @@ describe("S5 and the student screen", () => {
     const v = toActivityView(raw, []);
     expect("attempts" in v && v.attempts.map((a) => a.provenance)).toEqual(["offline", "offline"]);
     expect(JSON.stringify(v)).not.toMatch(/tutor_live|manual_import/);
+  });
+});
+
+describe("S7a G4: the reviewer's 'new topic / source' mark", () => {
+  it("goes through work:review (student 403, other tutor 404), validates the body, reaches the store with the member and recomputes once", async () => {
+    const s = makeStore();
+    const afterWrite = vi.fn(async () => {});
+    const d = (u: string | null) => ({ ...deps(u, s), afterWrite });
+    expect((await handleMarkTransfer(d(null), EP_AN, { value: true })).status).toBe(401);
+    expect((await handleMarkTransfer(d("studentAn"), EP_AN, { value: true })).status).toBe(403);
+    expect((await handleMarkTransfer(d("tutorNguyen"), EP_AN, { value: true })).status).toBe(404);
+    expect((await handleMarkTransfer(d("tutorAn"), "not-a-uuid", { value: true })).status).toBe(404);
+    expect((await handleMarkTransfer(d("tutorAn"), EP_AN, { value: "yes" })).status).toBe(400);
+    expect((await handleMarkTransfer(d("tutorAn"), EP_AN, { value: true, extra: 1 })).status).toBe(400);
+    expect(s.markTransfer).not.toHaveBeenCalled();
+    const ok = await handleMarkTransfer(d("tutorAn"), EP_AN, { value: true });
+    expect(ok).toEqual({ status: 201, body: { value: true, replayed: false } });
+    expect(s.markTransfer).toHaveBeenCalledWith({ episodeId: EP_AN, value: true, byMemberId: "m-tutorAn" });
+    expect(afterWrite).toHaveBeenCalledTimes(1);
+    const replay = makeStore({ markTransfer: vi.fn(async () => ({ value: true, replayed: true })) });
+    expect((await handleMarkTransfer({ ...deps("tutorAn", replay), afterWrite }, EP_AN, { value: true })).status).toBe(200);
+    expect(afterWrite).toHaveBeenCalledTimes(1);
+  });
+
+  it("a database refusal (D15 / not a first attempt) becomes a plain answer", async () => {
+    const refuse = (code: string, tag: string) => makeStore({ markTransfer: vi.fn(async () => { throw new ReviewDbError(code, `eng_mark_episode_transfer: x (${tag})`); }) });
+    expect((await handleMarkTransfer(deps("parent", refuse("42501", "not_reviewer")), EP_AN, { value: true })).status).toBe(403);
+    expect((await handleMarkTransfer(deps("tutorAn", refuse("22023", "first_attempt_only")), EP_AN, { value: true })).status).toBe(400);
   });
 });

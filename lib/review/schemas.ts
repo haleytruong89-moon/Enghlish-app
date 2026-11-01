@@ -50,6 +50,10 @@ export const modifyBodySchema = z
   });
 export type ModifyBody = z.infer<typeof modifyBodySchema>;
 
+/** G4 (S7a): the reviewer ticks / unticks "Bài này ở chủ đề / nguồn mới (vận dụng)". The database checks who may (D15) and which work. */
+export const transferMarkBodySchema = z.strictObject({ value: z.boolean() });
+export type TransferMarkBody = z.infer<typeof transferMarkBodySchema>;
+
 export const supportBodySchema = z.strictObject({
   client_id: clientId.optional(),
   kind: z.enum(SUPPORT_KINDS),

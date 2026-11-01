@@ -62,7 +62,8 @@ describe("generated seed migration", () => {
     file: SEED_MIGRATION_FILE,
     allCatalogues: items.catalogues,
     catalogues: items.catalogues,
-    policies: items.policies,
+    // S7a: AP-0.3 is seeded by 0022, not 0006.
+    policies: items.policies.filter((p) => p.id === "AP-0.2-pilot"),
     targetSets: items.targetSets.map((t) => ({ ...t, catalogue: lock.targetSets[t.id]?.catalogue ?? "" })),
   });
 

@@ -4,6 +4,7 @@ import { bandOf } from "@/lib/levels/scale";
 import type { DomainLevel } from "@/lib/levels/types";
 import { dayLabel, domainSentence, levelText } from "@/lib/levels/view";
 import type { SkillGroup } from "@/lib/skillmap/types";
+import { conditionText, skillTitle, stateLabel, type DomainSkills } from "@/lib/skills/view";
 import type { WeakPoint } from "@/lib/tutorwork/types";
 
 const linkClass = "inline-flex min-h-11 items-center text-sm font-medium text-accent underline";
@@ -20,6 +21,7 @@ export function DomainDetail({
   weak,
   learnerId,
   canDecide,
+  skills,
 }: {
   alias: string;
   domain: DomainLevel;
@@ -27,6 +29,8 @@ export function DomainDetail({
   weak: WeakPoint[];
   learnerId: string;
   canDecide: boolean;
+  /** S7a: skill states of this domain; absent / null = the honest empty state (before migration 0023). */
+  skills?: DomainSkills | null;
 }) {
   const band = bandOf(domain.scale, domain.current);
   const content = groups.flatMap((g) => {
@@ -65,12 +69,46 @@ export function DomainDetail({
       ) : null}
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3" data-testid="level-mastery">
-        {[levelCopy.solidTitle, levelCopy.practisingTitle, levelCopy.nextTitle].map((t) => (
-          <div key={t} className="rounded-lg border border-dashed border-line px-3 py-2">
-            <h3 className="text-sm font-semibold">{t}</h3>
-            <p className="text-sm text-muted">{levelCopy.notYet}</p>
-          </div>
-        ))}
+        {skills === null || skills === undefined ? (
+          [levelCopy.solidTitle, levelCopy.practisingTitle, levelCopy.nextTitle].map((t) => (
+            <div key={t} className="rounded-lg border border-dashed border-line px-3 py-2">
+              <h3 className="text-sm font-semibold">{t}</h3>
+              <p className="text-sm text-muted">{levelCopy.notYet}</p>
+            </div>
+          ))
+        ) : skills.total === 0 ? (
+          <p className="text-sm text-muted sm:col-span-3" data-testid="level-mastery-none">
+            {levelCopy.noSkillsInDomain}
+          </p>
+        ) : (
+          [
+            { id: "level-solid", title: `${levelCopy.solidTitle} · ${levelCopy.solidCount(skills.n, skills.total)}`, lines: skills.solid.map((r) => skillTitle(r)) },
+            {
+              id: "level-practising",
+              title: levelCopy.practisingTitle,
+              lines: skills.practising.map((r) => (r.flag ? levelCopy.flagLine(skillTitle(r)) : levelCopy.practisingLine(skillTitle(r), stateLabel(r.state)))),
+            },
+            {
+              id: "level-next",
+              title: levelCopy.nextTitle,
+              lines: skills.next.slice(0, 5).map((x) =>
+                x.pending ? levelCopy.pendingLine(skillTitle(x.row)) : x.need ? levelCopy.nextLine(skillTitle(x.row), conditionText(x.need)) : skillTitle(x.row)),
+            },
+          ].map((box) => (
+            <div key={box.id} className="rounded-lg border border-line px-3 py-2" data-testid={box.id}>
+              <h3 className="text-sm font-semibold">{box.title}</h3>
+              {box.lines.length === 0 ? (
+                <p className="text-sm text-muted">{levelCopy.noneYet}</p>
+              ) : (
+                <ul className="mt-1 flex flex-col gap-1 text-sm">
+                  {box.lines.map((l) => (
+                    <li key={l}>{l}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))
+        )}
       </div>
 
       <div className="mt-4" data-testid="level-weak">

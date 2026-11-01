@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
-import { app, learnerWithTrack, targetsPage } from "@/lib/copy/vi";
+import { RebuildButton } from "@/components/skills/RebuildButton";
+import { SkillRow } from "@/components/skills/SkillRow";
+import { app, learnerWithTrack, skillStateCopy, targetsPage } from "@/lib/copy/vi";
+import { loadSkillStatesSoft } from "@/lib/skills/load";
 import { createUserClient } from "@/lib/supabase/server";
 import { authorizeTargetsPage } from "@/lib/targets/access";
 import { loadTargetsView } from "@/lib/targets/loadTargets";
@@ -25,7 +28,8 @@ export default async function TargetsPage({ params }: { params: Promise<{ id: st
   if (access.kind === "not-found") notFound();
 
   const { member, learner } = access.grant;
-  const view = await loadTargetsView(learner.id);
+  const [view, { skills, failed }] = await Promise.all([loadTargetsView(learner.id), loadSkillStatesSoft(learner.id, "GET /learners/[id]/targets")]);
+  const stateOf = new Map((skills?.rows ?? []).map((r) => [r.targetKey, r]));
   const isTutor = member.role === "tutor";
 
   return (
@@ -43,25 +47,27 @@ export default async function TargetsPage({ params }: { params: Promise<{ id: st
         ) : (
           <>
             <p className="mt-4 text-muted">{targetsPage.intro}</p>
+            {failed ? (
+              <p role="status" data-testid="skills-unavailable" className="mt-3 rounded-xl border border-line bg-white px-5 py-3 text-sm text-muted">
+                {skillStateCopy.statesUnavailable}
+              </p>
+            ) : null}
             <h2 className="mt-6 text-lg font-semibold">{targetsPage.count(view.rows.length)}</h2>
             <ul className="mt-3 flex flex-col gap-3">
               {view.rows.map((row) => (
-                <li key={row.id} className="rounded-xl border border-line bg-white px-5 py-4">
-                  <p className="font-semibold">{row.title}</p>
-                  <p className="mt-1 text-sm text-muted">
-                    {targetsPage.dimension}: {row.dimensionName}
-                  </p>
-                  <p className="mt-2 inline-block rounded-full border border-line px-3 py-1 text-sm">
-                    {row.levelLabel}
-                  </p>
-                  {isTutor ? (
-                    <p className="mt-2 text-xs text-muted">
-                      {targetsPage.codeLabel}: {row.id}
-                    </p>
-                  ) : null}
-                </li>
+                <SkillRow
+                  key={row.id}
+                  id={row.id}
+                  title={row.title}
+                  dimensionName={row.dimensionName}
+                  state={stateOf.get(row.id) ?? null}
+                  learnerId={learner.id}
+                  canEdit={isTutor && skills !== null}
+                  showCode={isTutor}
+                />
               ))}
             </ul>
+            {skills !== null ? <RebuildButton learnerId={learner.id} /> : null}
 
             <h2 className="mt-8 text-base font-semibold text-muted">{targetsPage.trackingOnlyTitle}</h2>
             {view.trackingOnly.length === 0 ? (

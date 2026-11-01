@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { levelCopy } from "@/lib/copy/vi";
+import { levelCopy, levelLabels, skillStateCopy } from "@/lib/copy/vi";
 import { loginAs, type AccountKey } from "./helpers";
 
 // Students never see raw scores (CLAUDE.md, D28). formatScore() renders "3/4 · Đạt yêu cầu".
@@ -14,6 +14,12 @@ for (const key of ["studentAn", "studentNguyen"] as AccountKey[]) {
     const text = await page.locator("body").innerText();
     expect(text).not.toMatch(/đang học (A1|A2|B1|B2|C1|C2)/);
     expect(text).not.toContain(levelCopy.assumed);
+    // S7a: no skill level, no ⚑, no "waiting for confirmation" and no "app updated" note anywhere on the child's home.
+    for (const s of ["SUPPORTED", "DEVELOPING", "INDEPENDENT", "TRANSFERABLE", "NEEDS_CONFIRMATION"] as const) expect(text, s).not.toContain(levelLabels[s].label);
+    expect(text).not.toContain("⚑");
+    expect(text).not.toContain(skillStateCopy.pending("").trim());
+    expect(text).not.toContain(skillStateCopy.autoNote);
+    expect(await page.locator('[data-testid="skill-scale"], [data-testid^="skill-row-"], [data-testid="review-tab-skills"], [data-testid^="transfer-mark"]').count()).toBe(0);
     // S6: the child's revision pages (todo and seen) and the home box are checked in the S6 serial suite of review.spec.ts, on real data.
   });
 }

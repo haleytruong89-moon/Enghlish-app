@@ -1,9 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { loadConfig } from "../../lib/config/content";
+import { loadContentItems } from "../../lib/config/versions";
 import { listMigrations } from "../../scripts/lib/migrate";
 import { as, createAuthUser, createTestDb, errorAs, migrate, rowsAs, seed, type Seeded, type TestDb } from "./helpers";
 
 const cfg = loadConfig();
+const AP03 = loadContentItems().policies.find((p) => p.id === "AP-0.3")!.data;
 const CV = cfg.catalogue.meta.version;
 const CONFIG_TABLES = [
   "tracks", "assessment_policies", "catalogue_versions", "dimensions", "targets",
@@ -59,7 +61,7 @@ describe("S1 configuration (DESIGN §4, §8)", () => {
       );
       expect(await count("select count(*)::int as n from english.activity_templates")).toBe(8);
       expect(await count("select count(*)::int as n from english.target_set_definitions")).toBe(cfg.targetSets.length);
-      expect(await count("select count(*)::int as n from english.assessment_policies")).toBe(1);
+      expect(await count("select count(*)::int as n from english.assessment_policies")).toBe(2);
     });
 
     it("catalogue and policy are published and keep the content hash", async () => {
@@ -75,8 +77,11 @@ describe("S1 configuration (DESIGN §4, §8)", () => {
           published: true,
         },
       ]);
-      const pol = await db.client.query("select version, config, published_at is not null as published from english.assessment_policies");
-      expect(pol.rows).toEqual([{ version: "AP-0.2-pilot", config: cfg.policy.config, published: true }]);
+      const pol = await db.client.query("select version, config, published_at is not null as published from english.assessment_policies order by version");
+      expect(pol.rows).toEqual([
+        { version: "AP-0.2-pilot", config: cfg.policy.config, published: true },
+        { version: "AP-0.3", config: AP03, published: true },
+      ]);
     });
 
     it("targets keep the whole catalogue row in raw and the typed columns agree with it", async () => {
@@ -244,7 +249,7 @@ describe("S1 configuration (DESIGN §4, §8)", () => {
         expect((await reads(user, "aggregate_indicators")).length).toBe(21);
         expect((await reads(user, "tracks")).length).toBe(2);
         expect((await reads(user, "activity_templates")).length).toBe(8);
-        expect((await reads(user, "assessment_policies")).length).toBe(1);
+        expect((await reads(user, "assessment_policies")).length).toBe(2);
         expect((await reads(user, "catalogue_versions")).length).toBe(1);
         expect((await reads(user, "target_set_definitions")).length).toBe(2);
       }
@@ -282,7 +287,7 @@ describe("S1 configuration (DESIGN §4, §8)", () => {
         const pol = await db.client.query("select version from english.assessment_policies order by 1");
         const cat = await db.client.query("select version from english.catalogue_versions order by 1");
         const dim = await db.client.query("select 1 from english.dimensions where catalogue_version = '9.9-draft'");
-        expect(pol.rows.map((r) => r.version)).toEqual(["AP-0.2-pilot"]);
+        expect(pol.rows.map((r) => r.version)).toEqual(["AP-0.2-pilot", "AP-0.3"]);
         expect(cat.rows.map((r) => r.version)).toEqual([CV]);
         expect(dim.rowCount).toBe(0);
       } finally {

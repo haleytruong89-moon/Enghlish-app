@@ -46,13 +46,13 @@
 | Nội bộ | Nhãn | Bậc | Một câu giải thích |
 |---|---|---|---|
 | NOT_OBSERVED | Chưa đủ bài để đánh giá | — | Cần thêm bài làm mới nhận xét được |
-| SUPPORTED | Làm được khi có gợi ý | 1/4 | Làm được khi có câu mẫu, gợi ý hoặc cô nhắc |
+| SUPPORTED | Làm được khi có gợi ý | 1/4 | Làm được khi có câu mẫu, gợi ý hoặc thầy/cô nhắc |
 | DEVELOPING | Đang tiến bộ | 2/4 | Đã tự làm được vài lần, chưa đủ chắc |
-| INDEPENDENT | Tự làm được | 3/4 | Tự làm đúng nhiều lần, ở nhiều chủ đề, cô đã xác nhận |
+| INDEPENDENT | Tự làm được | 3/4 | Tự làm đúng nhiều lần, ở nhiều chủ đề, thầy/cô đã xác nhận |
 | TRANSFERABLE | Vận dụng được | 4/4 | Vẫn nhớ sau ≥ 2 tuần và dùng được ở tình huống mới |
-| NEEDS_CONFIRMATION | Cần cô xem lại | (giữ bậc cũ) | Bài gần đây chưa tốt bằng trước — chưa hạ bậc |
+| NEEDS_CONFIRMATION | ⚑ Cần thầy/cô xem lại | (giữ bậc cũ) | Bài gần đây chưa tốt bằng trước — chưa hạ bậc |
 
-Hiển thị bằng **thang 4 ô có chữ**, không dùng màu đơn thuần.
+Hiển thị bằng **thang 4 ô có chữ**, không dùng màu đơn thuần ("Chưa đủ bài" = không ô nào tô + dòng chữ). Bậc 1–2 do app tự cập nhật từ bài đã duyệt (dòng nhỏ "App tự cập nhật"); bậc 3–4 chỉ sau khi thầy/cô của em bấm **Xác nhận** (S7a). Học sinh không thấy thang, bậc hay ⚑ ở bất cứ đâu.
 
 ### 3.3. Các khái niệm khác
 
@@ -82,6 +82,14 @@ Hiển thị bằng **thang 4 ô có chữ**, không dùng màu đơn thuần.
 | Target set | (không hiện) | 12 kỹ năng đang theo dõi |
 | Not observed (score) | — | Bài này không có cơ hội thể hiện |
 | Coverage | (không hiện) | Số kỹ năng đã "Tự làm được" / số đang theo dõi |
+| Level proposal (S7a) | (không hiện) | Đang chờ xác nhận: Tự làm được · nút **Xác nhận** / **Chưa** (bắt buộc lý do) |
+| Proposal routes (S7a) | (không hiện) | Cách 1: bài thầy/cô đã chấm · Cách 2: câu tự chấm trong app |
+| AUTO level 1–2 (S7a) | (không hiện) | App tự cập nhật |
+| Flag ⚑ (S7a) | (không hiện) | ⚑ Cần thầy/cô xem lại · nút **Giữ bậc** / **Sửa bậc** |
+| Manual level (S7a) | (không hiện) | Sửa tay bậc 1–2 (bắt buộc lý do) |
+| Rebuild (S7a) | (không hiện) | Tính lại từ đầu |
+| Domain summary (S7a) | (không hiện) | Đã vững · n/N điểm đã vững · Đang luyện · Để lên cấp tiếp, còn cần |
+| Transfer mark (S7a, G4) | (không hiện) | Bài này ở chủ đề / nguồn mới (vận dụng) — ô tick trên trang duyệt bài |
 | Policy/catalogue version | (không hiện) | Chỉ trong "Thông tin kỹ thuật" (thu gọn) |
 
 ### 3.4. Tên kỹ năng hiển thị (Track A, target set v1)
@@ -123,5 +131,9 @@ Hiển thị bằng **thang 4 ô có chữ**, không dùng màu đơn thuần.
 | Ôn lại | "Hôm nay ôn: Ong làm mật thế nào? Nói lại mà không xem ghi chép nhé." |
 | Lên bậc (phụ huynh) | "An đã lên 'Tự làm được' ở *Dùng thì quá khứ khi viết* — cô xác nhận ngày 12/11." |
 | Cần xem lại (gia sư) | "Bài gần đây chưa tốt bằng trước. Giữ bậc hiện tại — cô xem lại khi rảnh." |
+| Tính lại xong (phụ huynh/gia sư) | "Đã tính lại. 2 đề xuất mới đang chờ thầy/cô." · "Đã tính lại. Không có đề xuất mới." |
+| "Chưa" / sửa tay không có lý do | "Bạn ghi lý do nhé (ít nhất 3 ký tự)." |
+| Phụ huynh xem tab Kỹ năng | "Phụ huynh xem; chỉ thầy/cô của em xác nhận." |
+| Chưa áp 0023 | "Phần trạng thái kỹ năng chưa sẵn sàng (cần cập nhật cơ sở dữ liệu). Các phần khác vẫn dùng bình thường." |
 | Nộp bài sửa (học sinh) | "Đã nộp bài sửa! Thầy/cô sẽ xem lại." |
 | Góp ý có dạng điểm (người lớn) | "Góp ý cho con không ghi điểm (như “3/4”, “6 điểm”, “80%”). Bạn viết lại bằng lời nhé." |

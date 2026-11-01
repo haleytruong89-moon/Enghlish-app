@@ -13,6 +13,8 @@ import { LevelSummaryCard } from "@/components/levels/LevelSummaryCard";
 import { Milestones } from "@/components/levels/Milestones";
 import { externalCopy, levelCopy, levelFormCopy, studentReviewCopy, tutorHonorificCap } from "@/lib/copy/vi";
 import type { SkillGroup } from "@/lib/skillmap/types";
+import type { SkillStateRow } from "@/lib/skills/types";
+import { domainSkills, skillTitle } from "@/lib/skills/view";
 import type { WeakPoint } from "@/lib/tutorwork/types";
 import { assumedProfile, confirmedProfile } from "./fixtures/levels";
 
@@ -21,6 +23,8 @@ const render = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStati
 const count = (html: string, s: string) => html.split(s).length - 1;
 const L = "b0000000-0000-4000-8000-000000000001";
 const NO_DAT = /đạt/iu;
+const htmlText = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
+const reText = (s: string) => htmlText(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const wp = (tagKey: string, status: WeakPoint["status"]): WeakPoint => ({
   tagKey, label: tagKey, group: null, sources: status === "repeat" ? 2 : 1, bySource: { test: 1, lesson: 0, writing: 0, practice: 0 },
   itemsWrong: { test: 1, practice: 0 }, asked: 0, askedWrong: 0, lastSeen: "2026-10-01", recheckDueOn: null, recheckDue: false, lastRecheck: null, status, events: [],
@@ -234,5 +238,36 @@ describe("RecentLevelChanges: collapsed baselines (S2)", () => {
     expect(html).toContain(`href="/learners/${L}/levels"`);
     expect(html).not.toContain("Tư duy và tự học");
     expect(html).not.toContain("ghi chú chung");
+  });
+});
+
+describe("DomainDetail with skill states (S7a, D20)", () => {
+  const r = (targetKey: string, state: SkillStateRow["state"], o: Partial<SkillStateRow> = {}): SkillStateRow => ({
+    targetKey, titleVi: targetKey, domainKey: "reading", state, auto: false, stateSince: null, flag: null, proposal: null, conditions: [], route: null, evaluatedAt: null, ...o,
+  });
+  it("Đã vững · n/N, Đang luyện (with ⚑), Còn cần (nearest condition, or 'đang chờ thầy/cô xác nhận'); no 'đạt'", () => {
+    const reading = confirmedProfile().domains.find((d) => d.key === "reading")!;
+    const rows = [
+      r("B-T1-EXAM-R", "INDEPENDENT"),
+      r("B-T1-ARG-R", "TRANSFERABLE", { flag: { id: "f", at: "x" } }),
+      r("B-T2-ASSUME-R", "DEVELOPING", { proposal: { id: "p", toState: "INDEPENDENT", route: 2, at: "x" } }),
+      r("B-L2-CLOZE", "SUPPORTED", { domainKey: "vocab" }),
+    ];
+    const html = render(createElement(DomainDetail, { alias: "Nguyên", domain: reading, groups: readingGroups, weak: [], learnerId: L, canDecide: true, skills: domainSkills(rows, "reading") }));
+    const [exam, arg, assume, cloze] = rows.map((x) => skillTitle(x)) as [string, string, string, string];
+    expect(html).not.toContain(levelCopy.notYet);
+    expect(html).toMatch(new RegExp(`data-testid="level-solid"[\\s\\S]*?1/3 điểm đã vững[\\s\\S]*?${reText(exam)}`));
+    expect(html).toMatch(new RegExp(`data-testid="level-practising"[\\s\\S]*?⚑ ${reText(arg)}`));
+    expect(html).toContain(htmlText(levelCopy.pendingLine(assume)));
+    expect(html).not.toContain(htmlText(cloze));
+    expect(html).not.toMatch(NO_DAT);
+    const none = render(createElement(DomainDetail, { alias: "Nguyên", domain: reading, groups: [], weak: [], learnerId: L, canDecide: false, skills: domainSkills([], "reading") }));
+    expect(none).toContain(levelCopy.noSkillsInDomain);
+  });
+
+  it("LevelBars shows 'n/N điểm đã vững' on the bars of domains the set covers", () => {
+    const html = render(createElement(LevelBars, { profile: confirmedProfile(), learnerId: L, active: "reading", solid: { reading: { n: 1, total: 3 } } }));
+    expect(html).toMatch(/data-testid="level-solid-reading"[^>]*>1\/3 điểm đã vững/);
+    expect(html).not.toContain('data-testid="level-solid-grammar"');
   });
 });

@@ -6,6 +6,7 @@
  *   3. validates the body (400) and talks to an injectable WorkStore.
  * Answers go through the allowlist parsers in ./shape: no key, auto-check result, transcript or note can leave here.
  */
+import type { EngineHook } from "@/lib/engine/runner";
 import {
   AccessError,
   requireAccess,
@@ -64,6 +65,8 @@ export type HandlerDeps = {
   user: AccessUser;
   store: WorkStore;
   access?: Partial<AccessDeps>;
+  /** S7a: recompute the child's skills after a new submission (fail-soft, D16). */
+  afterWrite?: EngineHook;
 };
 
 export type HandlerResult<T = unknown> = { status: number; body: T };
@@ -186,6 +189,7 @@ export async function handleSubmit(deps: HandlerDeps, rawBody: unknown): Promise
       provenance: parsed.data.provenance,
     });
     const receipt = toReceipt(raw);
+    if (!receipt.replayed) await deps.afterWrite?.(g.grant.learner.id, null);
     return { status: receipt.replayed ? 200 : 201, body: { receipt } };
   } catch (err) {
     return fromDbError(err);
@@ -249,6 +253,7 @@ export async function handleSubmitRevision(deps: HandlerDeps, activityId: string
       assistance: parsed.data.assistance, provenance: parsed.data.provenance,
     });
     const receipt = toReceipt(raw);
+    if (!receipt.replayed) await deps.afterWrite?.(g.grant.learner.id, null);
     return { status: receipt.replayed ? 200 : 201, body: { receipt } };
   } catch (err) {
     return fromRevisionWorkError(err);

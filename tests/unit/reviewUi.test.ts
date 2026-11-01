@@ -2,12 +2,14 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { ScoreButtons } from "@/components/review/ScoreButtons";
+import { TransferMark } from "@/components/review/TransferMark";
 import { ScoringPanel, type PanelTarget } from "@/components/review/ScoringPanel";
 import { SupportForm } from "@/components/review/SupportForm";
 import { WorkPanel } from "@/components/review/WorkPanel";
 import { concepts, fallbackLabels, formatScore, notesPage, offlineForm, reviewPage, scoreLabels, tutorHonorific, weekdayNames } from "@/lib/copy/vi";
 import { formatWhen, skillLabel } from "@/lib/review/format";
 import { cursorToParam, parseCursor, parseFilter } from "@/lib/review/inbox";
+import { transferMarkMode } from "@/lib/review/transferMark";
 import { SUPPORT_NOTE_MAX, type ReviewDecision, type ReviewEpisodeView } from "@/lib/review/types";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
@@ -246,5 +248,43 @@ describe("S5 work panel", () => {
     expect(html).toContain("Câu mẫu");
     expect(html).toContain("thấy tận mắt");
     expect(html).not.toMatch(/\d\/4/);
+  });
+});
+
+describe("S1 / N4: the transfer box is for the child's tutor only", () => {
+  const view = (o: { role?: "tutor" | "parent"; canDecide?: boolean; first?: boolean; mode?: string; facets?: Record<string, boolean> } = {}) => ({
+    viewer: { role: o.role ?? "tutor", canDecide: o.canDecide ?? true },
+    episode: { isFirstAttempt: o.first ?? true, facets: o.facets ?? {} },
+    attempt: { mode: o.mode ?? "INDEPENDENT_CHECK" },
+  });
+
+  it("the tutor can tick on a first attempt; the parent never sees the box, even on ordinary work they may review", () => {
+    expect(transferMarkMode(view())).toBe("tickable");
+    expect(transferMarkMode(view({ role: "parent" }))).toBe("hidden");
+    expect(transferMarkMode(view({ role: "parent", canDecide: false }))).toBe("hidden");
+    expect(transferMarkMode(view({ canDecide: false }))).toBe("hidden");
+  });
+
+  it("not on a retry or a revision; a template step that is already a transfer check shows ticked and read-only", () => {
+    expect(transferMarkMode(view({ first: false }))).toBe("hidden");
+    expect(transferMarkMode(view({ mode: "REVISION" }))).toBe("hidden");
+    expect(transferMarkMode(view({ facets: { revision: true } }))).toBe("hidden");
+    expect(transferMarkMode(view({ facets: { transfer_check: true } }))).toBe("from_template");
+    expect(transferMarkMode(view({ role: "parent", facets: { transfer_check: true } }))).toBe("hidden");
+  });
+
+  it("the box: ticked state follows `initial`; from a template it is checked, disabled and says why; the hint explains the delayed-check case", () => {
+    const free = renderToStaticMarkup(createElement(TransferMark, { episodeId: "e1", initial: false }));
+    expect(free).not.toContain("checked");
+    expect(free).not.toContain("disabled");
+    const html = (t: string) => t.replace(/"/g, "&quot;");
+    expect(free).toContain(html(reviewPage.transferMarkHint));
+    expect(reviewPage.transferMarkHint).toContain(concepts.delayedCheck.staff);
+    expect(reviewPage.transferMarkHint).toContain(concepts.transferCheck.staff);
+    const fixed = renderToStaticMarkup(createElement(TransferMark, { episodeId: "e1", initial: true, fromTemplate: true }));
+    expect(fixed).toContain('checked=""');
+    expect(fixed).toContain('disabled=""');
+    expect(fixed).toContain(reviewPage.transferMarkFromTemplate);
+    expect(fixed).not.toContain(html(reviewPage.transferMarkHint));
   });
 });

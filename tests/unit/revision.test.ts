@@ -22,12 +22,13 @@ describe("score words (same samples as the database)", () => {
     expect(hasScoreWords("99999999999999999999/10")).toBe(false);
   });
 
-  it("refuses every 0-4 rubric label of the UX guide (copy and rule cannot drift apart)", () => {
-    for (const k of ["0", "1", "2", "3", "4"] as const) {
+  it("refuses the two upper 0-4 rubric labels of the UX guide; the three lower ones are ordinary words again (S7a amendment A)", () => {
+    for (const k of ["3", "4"] as const) {
       expect(hasScoreWords(scoreLabels[k].short), scoreLabels[k].short).toBe(true);
       expect(hasScoreWords(scoreLabels[k].short.toLowerCase()), k).toBe(true);
       expect(hasScoreWords(scoreLabels[k].short.toUpperCase()), k).toBe(true);
     }
+    for (const k of ["0", "1", "2"] as const) expect(hasScoreWords(scoreLabels[k].short), scoreLabels[k].short).toBe(false);
     expect(hasScoreWords(formatScore(3))).toBe(true);
   });
 

@@ -942,3 +942,87 @@ D1 bước "Sửa bài" của chủ đề = bước sửa đầu tiên sau bài,
 ### Tiêu chí đạt
 
 `typecheck`, `lint`, `test` (gồm test database: ma trận vai, học sinh không thấy điểm, vòng 1–2 và chặn vòng 3, thời hạn sửa góp ý, bài sửa không bao giờ là lần đầu, xóa dữ liệu), `gen:config` xanh; CI (E2E + áp migration hai lần) xanh; review Opus; phụ huynh áp `0021` rồi làm 6 bước thử ở trên; gia sư gửi được góp ý cho một bài trong ≤ 2 phút.
+
+## S7a — Trạng thái từng kỹ năng (23/10/2026)
+
+App bắt đầu **tự tính bậc từng kỹ năng** từ bài đã duyệt. Bậc 1–2 app tự cập nhật; bậc 3–4 app chỉ **đề xuất**, thầy/cô của em bấm **Xác nhận** hoặc **Chưa** (bắt buộc lý do). Không bao giờ tự hạ bậc: bài gần đây kém hơn thì hiện ⚑ "Cần thầy/cô xem lại". Học sinh không thấy gì mới.
+
+### Phụ huynh / gia sư làm được gì bây giờ
+
+| Việc | Ở đâu |
+|---|---|
+| Xem đề xuất lên bậc "Tự làm được" / "Vận dụng được" và kỹ năng có ⚑; mở "Xem điều kiện" và từng bài làm được tính | Hộp duyệt → tab **Kỹ năng** |
+| Thầy/cô: **Xác nhận** / **Chưa** (lý do) / **Xác nhận tất cả (n)**; với ⚑: **Giữ bậc** / **Sửa bậc** | Hộp duyệt → tab Kỹ năng |
+| Thầy/cô tick **"Bài này ở chủ đề / nguồn mới (vận dụng)"** trên bài của em (lần làm đầu) để bậc 4 có thể xảy ra. **Chỉ thầy/cô của em**: phụ huynh không thấy ô này. Bước mà mẫu chủ đề đã đánh dấu là bài chủ đề mới thì ô hiện sẵn tick và không sửa được | Trang duyệt một bài |
+| Thang 4 ô có chữ cho 12 kỹ năng, ⚑, "Đang chờ xác nhận: …", "App tự cập nhật"; thầy/cô **Sửa tay bậc 1–2** (lý do); **Tính lại từ đầu** (thầy/cô hoặc phụ huynh) | Kỹ năng đang theo dõi |
+| "Đã vững · n/N điểm đã vững", "Đang luyện", "Để lên cấp tiếp, còn cần" theo từng mảng | Hồ sơ cấp |
+
+Phụ huynh xem được hết nhưng **không** xác nhận bậc 3–4 (chỉ thầy/cô của em).
+
+### SQL cần áp (đúng thứ tự)
+
+1. **`db/migrations/0022_seed_ap_0_3.sql`** — ngưỡng AP-0.3 (sinh tự động bằng `gen:config`).
+2. **`db/migrations/0023_skill_states.sql`** — sổ quyết định + trạng thái + dấu "chủ đề mới" + các hàm + bản mới của hàm xóa dữ liệu một em (giữ mọi dòng cũ) + luật chữ "điểm" thu hẹp (sửa đổi A).
+
+Actions → **Apply database migrations** (gõ APPLY) hoặc dán vào SQL Editor. **Áp cả hai TRƯỚC khi thử preview hoặc gộp PR**; cần `0019`–`0021` đã áp. Chỉ thêm; chạy lại an toàn. Nên bấm chạy tay *Weekly backup* trước. Chưa áp thì tab Kỹ năng báo "chưa sẵn sàng", các trang khác như cũ. Migration kế tiếp: **0024**.
+
+### Cách thử trên preview (gia đình thử)
+
+1. `thu-giasu-an` → Hộp duyệt → mở bài viết của An (thử) → chấm `Viết "vì sao – nên"` 3/4 → lưu.
+2. Vẫn tài khoản đó → thẻ An (thử) → **Kỹ năng đang theo dõi**: kỹ năng đó có ít nhất 1 ô tô và dòng "App tự cập nhật".
+3. Bấm **Tính lại từ đầu** → thấy "Đã tính lại. Không có đề xuất mới." (bấm lại bao nhiêu lần cũng không tạo trùng).
+4. **Sửa tay bậc 1–2** → chọn bậc, để trống lý do → thấy lời nhắc; ghi lý do → lưu → thang đổi **và giữ nguyên** (kể cả sau khi bấm Tính lại từ đầu) cho tới khi em có bài mới được duyệt (B2).
+5. Phụ huynh → Hộp duyệt → tab **Kỹ năng**: thấy "Phụ huynh xem; chỉ thầy/cô của em xác nhận."; không có nút Xác nhận.
+6. `thu-an` → trang chủ: không có thang, bậc, ⚑ hay chữ "Đang chờ xác nhận".
+7. Thầy/cô → mở một bài làm lần đầu → thấy ô "Bài này ở chủ đề / nguồn mới (vận dụng)"; tick rồi bỏ tick đều lưu được. Phụ huynh mở cùng bài → không có ô này (S1).
+
+Đề xuất lên "Tự làm được" cần ≥ 3 bài tự làm lần đầu ở ≥ 2 chủ đề trải ≥ 7 ngày, nên trên preview mới chưa thấy; CI kiểm luồng đó với một em thử có bài lùi ngày (e2e "S7a skill states").
+
+### Sửa đổi A (luật chữ "điểm", phụ huynh duyệt trong spec 23/10)
+
+Góp ý cho con giờ chỉ từ chối **hai** nhãn trên của thang 0–4: "Đạt yêu cầu", "Vững, rõ ràng". "Chưa thể hiện", "Còn thiếu nhiều", "Được một phần" là chữ thường lại ("con làm được một phần" được phép). Bốn loại kia (phân số kiểu điểm, "6 điểm", "8 trên 10", "80%") giữ nguyên.
+
+### Phụ huynh đã trả lời (23/10/2026: "ok mockup S7a", rồi "ok r" cho G1–G4 và D4–D12)
+
+Mockup board 18 (Hộp duyệt → tab Kỹ năng) được duyệt. D4, D5, D6, D8, D9, D10, D12 (mục §17) xác nhận đúng như kế hoạch.
+
+| # | Quyết định | Đã làm |
+|---|---|---|
+| G1 | Giữ nguyên: bậc 2 cần lần làm đầu, không gợi ý, ≥ 3/4 (`developing.minScore = 3`); 2/4 không gợi ý ở bậc 1 | AP-0.3 |
+| G2 | **Đổi:** câu tự chấm trong app có thể đưa kỹ năng lên **bậc 2** trước khi đủ cách 2: ≥ 4 câu được tính (D9) đúng ≥ 75 % → bậc 2 (AUTO); ít câu hơn hoặc thấp hơn nhưng có ≥ 1 câu đúng → bậc 1. Chỉ mảng Đọc / Nghe / Ngữ pháp / Từ vựng. Bậc 3 vẫn cần cách 1 hoặc cách 2. | AP-0.3 `receptiveAuto.developingMinItems = 4`, `developingMinAccuracyPct = 75` (0022 sinh lại trước khi commit); engine + test hai biên (3 vs 4 câu; 74 % vs 75 %) |
+| G3 | Giữ nguyên: ⚑ có **Giữ bậc** và **Sửa bậc**; "Sửa bậc" (form sửa tay) hạ được, cần lý do, chỉ thầy/cô của em; app không bao giờ tự hạ | form sửa tay |
+| G4 | **Đổi:** thầy/cô tick "Bài này ở chủ đề / nguồn mới (vận dụng)" trên trang duyệt bài (`/review/[episodeId]`) để bậc 4 xảy ra được ngay | bảng chỉ thêm `episode_marks` + hàm `eng_mark_episode_transfer` (D15, chỉ lần làm đầu và không phải bài sửa; không sửa `episodes.facets`); engine coi bài có dấu như `transfer_check`; bài có dấu không tính là bài ôn trễ (C7); đưa vào xóa dữ liệu / xem trước; test database (chỉ người được duyệt; học sinh và gia sư kia bị từ chối) + test engine (dấu + bài ôn trễ → bậc 4) |
+
+Ghi chú G4: chọn bảng riêng thay vì thêm facet vào `validation_decisions`, vì `validation_decisions` gắn với một kỹ năng cụ thể và có chỉ mục `first_once`, còn dấu này là của cả bài. Dòng mới nhất của (bài, dấu) quyết định, nên bỏ tick là thêm một dòng `value = false`.
+
+### Sửa sau review Opus (23/10/2026, chưa áp `0023` ở đâu nên sửa thẳng trong file)
+
+| # | Lỗi / thay đổi | Cách sửa |
+|---|---|---|
+| B1 | Bậc 4 không bao giờ được đề xuất nếu bằng chứng đã có từ lúc đề xuất bậc 3, hoặc dấu "chủ đề mới" được tick sau | "Đã đề xuất rồi" tính theo **(bậc, khóa bằng chứng)** ở engine, ở `eng_apply_engine_results` và ở chỉ mục duy nhất (`mastery_decisions_evidence_once` theo `to_state`; ⚑ có chỉ mục riêng `mastery_decisions_flag_once`). Khóa bậc 4 = bài ôn trễ + bài chuyển giao + id dòng dấu đang có hiệu lực (bỏ tick rồi tick lại = bằng chứng mới). Test engine + database |
+| B2 | Bậc thầy/cô sửa tay bị engine đảo ngay trong cùng yêu cầu | Dòng MANUAL lưu **khóa bằng chứng** thầy/cô đang thấy (`p_evidence_key` của `eng_set_skill_state`, tính bằng `evidenceKeyFor`). Khi dòng bậc mới nhất là MANUAL và khóa hiện tại vẫn bằng khóa đó, engine **và** SQL không ghi AUTO / PROPOSED cho kỹ năng; có bằng chứng mới thì đi tiếp. Test: 2→1 giữ nguyên sau settle và sau rebuild; ⚑ "Sửa bậc" 3→2 không mở lại đề xuất bậc 3 |
+| S1 | Dấu "chủ đề mới" là việc của **thầy/cô** (ý phụ huynh, D18), không phải người duyệt nào cũng tick | `eng_mark_episode_transfer` chỉ nhận thầy/cô còn quan hệ hiệu lực với em (`tutor_only`); phụ huynh bị từ chối; ô chỉ hiện cho thầy/cô |
+| S2 | Kết quả thấp được duyệt muộn không bật ⚑ | Engine nhận `validation_decisions.created_at`; "sau quyết định" = sau `max(giờ nộp, giờ duyệt)` |
+| S3 | Sau "Chưa", bất kỳ bài nào cũng làm đề xuất quay lại | Khóa đề xuất = bằng chứng mà điều kiện của bậc đó thực sự dùng (cách 1: nhóm bài được tính; cách 2: các lần làm được tính; bậc 4: bài ôn trễ + chuyển giao + dấu). Bài có gợi ý, bài nháp, bài nền không đưa đề xuất quay lại |
+| S4 | Ô "Sửa tay" giữ lựa chọn cũ khi bậc đổi | `key={current}` + chọn luôn lấy trong các bậc còn hợp lệ |
+| S5 | Cách 2: bước `delayed_check` được coi là bài ôn dù không cách 14 ngày | Bài ôn luôn cần ≥ `reviewMinDays` (14) sau lần luyện gần nhất của kỹ năng; hai bài 4/4 cùng ngày không phải bài ôn |
+| N2 | Lần tính chậm ghi đè điều kiện mới hơn | `competency_state.inputs_at`; chỉ ghi khi lần tính đọc dữ liệu mới hơn hoặc bằng |
+| N3 | Lỗi tải trạng thái làm sập trang Hồ sơ cấp / Kỹ năng đang theo dõi | `loadSkillStatesSoft`: ghi lỗi, hiện trang không có trạng thái + một dòng trung tính |
+| N4 | Bước mẫu đã là "chủ đề mới" vẫn hiện ô tick | Hiện sẵn tick, không sửa được, kèm ghi chú; chữ gợi ý nói rõ tick vào bước "Bài ôn lại sau 2 tuần" thì bài tính là chủ đề mới thay vì ôn lại |
+| N5 | Dòng AUTO ghi sai đường | `auto_route`: đường dẫn tới bậc 1–2 (1 = thầy/cô chấm, 2 = câu tự chấm) |
+| N7 | Thiếu `0022` ra lỗi khóa ngoại khó hiểu | Đầu `0023` có kiểm tra AP-0.3 và báo tiếng Việt "hãy áp 0022 trước" |
+| N8 | `import "server-only"` không ở dòng đầu | Sửa ở `lib/review|revision|work/route.ts` |
+
+### Phụ huynh đã quyết 23/10 (S7a, sau review Opus; "ok đề xuất")
+
+1. **N1. ⚑ cách 2 cần bài trắc nghiệm đủ câu.** Một lần làm cách 2 dưới `minAccuracyPct` (75 %) chỉ bật ⚑ khi chính lần làm đó có **≥ 4 câu được tính** của kỹ năng (`AP-0.3` → `receptiveAuto.flagMinItems: 4`). 2/3 câu: không bật ⚑; 2/4 câu: bật. Số câu tính **theo từng lần làm** (hai bài 2/3 không cộng lại). ⚑ cách 1 (thầy/cô chấm) không đổi. Vì AP-0.3 thêm khóa nên `0022` được sinh lại (chưa áp ở đâu nên không phá bản đã công bố); `content/config.lock.json` đã cập nhật; SQL `eng_apply_engine_results` không kiểm số câu (engine quyết định có ⚑ hay không; SQL chỉ giữ luật "bậc ≥ 2, không ⚑ đang mở, chưa gắn cờ cùng khóa").
+2. **N6. Giao lại cùng một mẫu không phải "lần làm đầu" mới.** Bước của mẫu = (`episodes.context_id` = mã mẫu bài, `activity_instances.step_no`). Với engine, một lần nộp chỉ là lần làm đầu nếu nó là lần làm đầu (`is_first_attempt`) **sớm nhất** của em trên bước đó của mẫu đó, qua mọi lần giao (kể cả bài chưa được duyệt; sớm nhất theo giờ nộp, không theo thứ tự giao). Lần giao sau của cùng bước là **bài ôn**: dùng được làm bài ôn ≥ 14 ngày (cách 2) / bằng chứng "ôn lại" bậc 4 theo khoảng cách ngày, nhưng **không** thêm lần làm đầu cho cách 1, cách 2, bậc 2, ⚑, không tính là "bài khác" (≥ 2 bài), không tính là bài chuyển giao. Mẫu khác, hoặc bước khác của cùng mẫu, vẫn tính riêng. Tính trong `english.eng_engine_inputs` (hàm phụ `eng_is_step_repeat`, trường `step_repeat`), engine đọc `stepRepeat`.
+
+### Quyết định trong kế hoạch
+
+D1–D23 trong `docs/superpowers/plans/2026-10-23-s7a-skill-states.md` (bảng "Decisions"). Các mục §17 đã được phụ huynh xác nhận 23/10 (xem trên).
+
+### Tiêu chí đạt
+
+`typecheck`, `lint`, `test` (gồm test database: ép không hạ bậc, một đề xuất mở, Chưa → không đề xuất lại tới khi có bài mới, tính lại giống hệt, ai được làm gì, dấu "chủ đề mới", xóa dữ liệu), `gen:config` xanh; CI (E2E + áp migration hai lần) xanh; review Opus; phụ huynh áp `0022` rồi `0023` và làm các bước thử ở trên.
+

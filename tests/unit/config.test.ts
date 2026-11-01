@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadConfig } from "@/lib/config/content";
 import { assessmentPolicySchema, catalogueSchema, targetSetsFileSchema } from "@/lib/config/schemas";
 import { buildTargetKey, targetKeyToString } from "@/lib/config/targetKey";
+import { loadContentItems } from "@/lib/config/versions";
 
 const cfg = loadConfig();
 const { catalogue, policy, targetSets } = cfg;
@@ -173,5 +174,48 @@ describe("buildTargetKey", () => {
     const k1 = targetKeyToString(buildTargetKey(t, ctx, mod));
     expect(k1).toBe(targetKeyToString(buildTargetKey(t, ctx, mod)));
     expect(k1).not.toBe(targetKeyToString(buildTargetKey(t, { ...ctx, descriptorVersion: "0.3" }, mod)));
+  });
+});
+
+describe("assessment policy AP-0.3 (S7a)", () => {
+  const items = loadContentItems();
+  const ap02 = items.policies.find((p) => p.id === "AP-0.2-pilot")!.data;
+  const ap03 = items.policies.find((p) => p.id === "AP-0.3")?.data;
+
+  it("keeps every AP-0.2 rule except developing.minScore (G1: level 2 = minScoreEach), adds receptiveAuto (P3-b + G2) and reserves levelGate", () => {
+    expect(ap03).toBeDefined();
+    const { receptiveAuto, levelGate, developing, ...rest } = ap03!;
+    const { developing: developing02, ...rest02 } = ap02;
+    expect(rest).toEqual(rest02);
+    expect(developing02.minScore).toBe(2);
+    expect(developing.minScore).toBe(ap02.independent.minScoreEach);
+    expect(levelGate).toBeNull();
+    expect(receptiveAuto).toEqual({
+      domains: ["reading", "listening", "grammar", "vocab"],
+      minItems: 8,
+      minActivities: 2,
+      minAccuracyPct: 75,
+      developingMinItems: 4,
+      developingMinAccuracyPct: 75,
+      reviewMinDays: 14,
+      reviewMinAccuracyPct: 70,
+      flagMinItems: 4,
+      firstAttemptOnly: true,
+      allowedModes: ["PRACTICE", "INDEPENDENT_CHECK"],
+      maxAssistanceAffectingTarget: 0,
+    });
+  });
+
+  it("is strict: unknown receptiveAuto keys, unknown domains and a filled levelGate are refused; AP-0.2 (without the blocks) still parses", () => {
+    const base = structuredClone(ap03!) as Record<string, unknown>;
+    const ra = base.receptiveAuto as Record<string, unknown>;
+    expect(assessmentPolicySchema.safeParse({ ...base, receptiveAuto: { ...ra, extra: 1 } }).success).toBe(false);
+    expect(assessmentPolicySchema.safeParse({ ...base, receptiveAuto: { ...ra, domains: ["maths"] } }).success).toBe(false);
+    expect(assessmentPolicySchema.safeParse({ ...base, receptiveAuto: { ...ra, minAccuracyPct: 101 } }).success).toBe(false);
+    const withoutFlagMin = Object.fromEntries(Object.entries(ra).filter(([k]) => k !== "flagMinItems"));
+    expect(assessmentPolicySchema.safeParse({ ...base, receptiveAuto: withoutFlagMin }).success).toBe(false); // N1: flagMinItems is required
+    expect(assessmentPolicySchema.safeParse({ ...base, receptiveAuto: { ...ra, flagMinItems: -1 } }).success).toBe(false);
+    expect(assessmentPolicySchema.safeParse({ ...base, levelGate: { minCorePct: 80 } }).success).toBe(false);
+    expect(assessmentPolicySchema.safeParse(ap02).success).toBe(true);
   });
 });

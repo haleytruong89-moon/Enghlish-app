@@ -188,3 +188,18 @@ describe("SM-2: levels:decide", () => {
     expect(await status("tutorAn", NGUYEN, "levels:decide")).toBe(404);
   });
 });
+
+describe("S7a: mastery actions", () => {
+  it("the parent and the child's tutor read skill states and rebuild them; only the tutor decides; students never; outsiders 404", async () => {
+    for (const action of ["mastery:read", "mastery:rebuild"] as const) {
+      expect(await status("tutorAn", AN, action)).toBe(200);
+      expect(await status("parent", AN, action)).toBe(200);
+      expect(await status("studentAn", AN, action)).toBe(403);
+      expect(await status("tutorAn", NGUYEN, action)).toBe(404);
+    }
+    expect(await status("tutorAn", AN, "mastery:decide")).toBe(200);
+    expect(await status("parent", AN, "mastery:decide")).toBe(403);
+    expect(await status("studentAn", AN, "mastery:decide")).toBe(403);
+    expect(await status("tutorNguyen", AN, "mastery:decide")).toBe(404);
+  });
+});

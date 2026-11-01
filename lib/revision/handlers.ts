@@ -3,6 +3,7 @@
  * body (400) and the score-word check (the app refuses first, the database again); then the store (service-role functions that re-check the
  * actor: D15, author, edit window, rounds). Database refusals become codes the panel can explain; raw database messages never leave.
  */
+import type { EngineHook } from "@/lib/engine/runner";
 import { AccessError, requireAccess, type AccessDeps, type AccessGrant, type AccessUser } from "@/lib/auth/requireAccess";
 import { apiErrors } from "@/lib/copy/vi";
 import { fromDbError, ReviewDbError, type HandlerResult } from "@/lib/review/handlers";
@@ -24,7 +25,7 @@ export interface RevisionStore {
   }): Promise<unknown>;
 }
 
-export type RevisionDeps = { user: AccessUser; store: RevisionStore; access?: Partial<AccessDeps> };
+export type RevisionDeps = { user: AccessUser; store: RevisionStore; access?: Partial<AccessDeps>; afterWrite?: EngineHook };
 
 const fail = (status: 400 | 401 | 403 | 404 | 409, error: string): HandlerResult => ({ status, body: { error, message: apiErrors[status] } });
 
@@ -120,6 +121,7 @@ export async function handleFinishRevision(deps: RevisionDeps, attemptId: string
       byMemberId: g.grant.member.id,
       clientId: b.client_id,
     })) as { closing_id: string | null; feedback_id: string | null; revision_activity_id: string | null; replayed: boolean };
+    if (!r.replayed) await deps.afterWrite?.(g.grant.learner.id, null);
     return {
       status: r.replayed ? 200 : 201,
       body: { closing_id: r.closing_id, feedback_id: r.feedback_id, revision_activity_id: r.revision_activity_id, replayed: r.replayed },
