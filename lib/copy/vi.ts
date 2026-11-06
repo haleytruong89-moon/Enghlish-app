@@ -1553,3 +1553,32 @@ export const skillStateCopy = {
   conditionLine: (label: string, have: number, need: number) => `${label}: ${have}/${need}`,
   percentLine: (label: string, have: number, need: number) => `${label}: ${have} % / ${need} %`,
 } as const;
+
+// Studio B1 — why an item is marked on the review screen (spec §5.4, §6). Adults only.
+export const studioIssueText = {
+  numbering: "Số câu phải liền nhau từ 1 (thiếu câu hoặc số nhảy).",
+  part_not_contiguous: "Câu của một phần phải liền nhau.",
+  unknown_part: "Câu này chưa thuộc phần nào.",
+  no_app_items: "Đề không còn câu nào làm được trên app.",
+  empty_stem: "Câu này chưa có đề.",
+  missing_key: "Thiếu đáp án",
+  mcq_options: "Trắc nghiệm cần ít nhất 2 lựa chọn khác chữ cái.",
+  mcq_key: "Đáp án phải là chữ cái của một lựa chọn.",
+  options_not_mcq: "Chỉ câu trắc nghiệm mới có lựa chọn.",
+  no_tag: "Chọn một nhãn cho câu này.",
+  two_tags: "Mỗi câu chỉ một nhãn.",
+  unknown_tag: "Nhãn này không có trong danh sách của em.",
+  unknown_skill: "Kỹ năng này không có trong bộ kỹ năng của em.",
+  score_words: "Giải thích không được có điểm số.",
+  unknown_passage: "Bài đọc của câu này không có trong đề.",
+  ai_review: "AI đề nghị xem lại",
+} as const;
+
+export const studioReviewReasons = {
+  kind: "AI chưa rõ loại câu — đã để là câu mở.",
+  options: "Đã bỏ lựa chọn của câu không phải trắc nghiệm.",
+  tag: "Nhãn AI đề xuất không có trong danh sách.",
+  skill: "Kỹ năng AI đề xuất không có trong bộ kỹ năng của em.",
+  passage: "Không tìm thấy bài đọc của câu này.",
+  explanation: "Giải thích có dạng điểm số — đã xóa.",
+} as const;
