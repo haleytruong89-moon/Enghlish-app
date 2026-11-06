@@ -70,7 +70,7 @@ describe("createFileStorage (service-role helper for the bucket english-work)", 
     expect(f.storage.createBucket).toHaveBeenCalledWith(BUCKET, {
       public: false,
       fileSizeLimit: MAX_FILE_BYTES,
-      allowedMimeTypes: ["application/pdf", "image/png", "image/jpeg", "image/webp"],
+      allowedMimeTypes: ["application/pdf", "image/png", "image/jpeg", "image/webp", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
     });
   });
 

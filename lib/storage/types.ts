@@ -9,3 +9,8 @@ export interface FileStorage {
   /** Delete every object whose path starts with `folder/`. Returns how many were removed. */
   removeFolder(folder: string): Promise<number>;
 }
+
+/** Server-side read of one stored file (Studio B1: the AI reads the tutor's test). Never handed to the browser. */
+export interface FileDownloader {
+  download(path: string): Promise<Uint8Array>;
+}

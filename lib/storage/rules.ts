@@ -2,7 +2,7 @@
  * Rules of the private file bucket `english-work` (migration 0016). Pure: no I/O, so the same checks run on the server (the only
  * place that is trusted) and in the browser (to answer quickly). Nothing here knows about Supabase.
  *
- * Layout: {family_id}/{learner_id | shared}/{file_id}.{pdf|png|jpg|webp}. The database CHECKs the same shape (files_path_shape), and
+ * Layout: {family_id}/{learner_id | shared}/{file_id}.{pdf|png|jpg|webp|docx}. The database CHECKs the same shape (files_path_shape), and
  * the path is always BUILT from ids by the server, never taken from the browser.
  */
 
@@ -19,11 +19,14 @@ export const UPLOAD_LINKS_PER_DAY = 60;
 export const MAX_FILES_PER_SUBMISSION = 6;
 
 export const IMAGE_MIMES = ["image/png", "image/jpeg", "image/webp"] as const;
-export const ALLOWED_MIMES = ["application/pdf", ...IMAGE_MIMES] as const;
+/** Word .docx: accepted ONLY for a Studio test or answer key (Studio B1; same rule as files_kind_mime in 0024). */
+export const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document" as const;
+export const STUDIO_MIMES = ["application/pdf", DOCX_MIME] as const;
+export const ALLOWED_MIMES = ["application/pdf", ...IMAGE_MIMES, DOCX_MIME] as const;
 export type AllowedMime = (typeof ALLOWED_MIMES)[number];
 
 /** What a stored file is for (column files.kind). */
-export const FILE_KINDS = ["assignment_pdf", "answer_key", "result_image", "work_photo", "external_result"] as const;
+export const FILE_KINDS = ["assignment_pdf", "answer_key", "result_image", "work_photo", "external_result", "studio_test", "studio_key"] as const;
 export type FileKind = (typeof FILE_KINDS)[number];
 
 const EXTENSION: Record<AllowedMime, string> = {
@@ -31,6 +34,7 @@ const EXTENSION: Record<AllowedMime, string> = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/webp": "webp",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
 };
 
 export function isAllowedMime(mime: unknown): mime is AllowedMime {
@@ -55,6 +59,9 @@ export function checkFile(kind: FileKind, mime: unknown, bytes: unknown): FileCh
   if (!isAllowedMime(mime)) return { ok: false, reason: "type" };
   if (typeof bytes !== "number" || !Number.isInteger(bytes) || bytes < 1) return { ok: false, reason: "empty" };
   if (bytes > MAX_FILE_BYTES) return { ok: false, reason: "too_big" };
+  const studio = kind === "studio_test" || kind === "studio_key";
+  if (mime === DOCX_MIME && !studio) return { ok: false, reason: "kind" };
+  if (studio && !(STUDIO_MIMES as readonly string[]).includes(mime)) return { ok: false, reason: "kind" };
   if (kind === "assignment_pdf" && mime !== "application/pdf") return { ok: false, reason: "kind" };
   if (kind === "result_image" && !isImageMime(mime)) return { ok: false, reason: "kind" };
   return { ok: true };
@@ -62,7 +69,7 @@ export function checkFile(kind: FileKind, mime: unknown, bytes: unknown): FileCh
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 export const FILE_ID_RE = new RegExp(`^${UUID}$`);
-const PATH_RE = new RegExp(`^(${UUID})/(shared|${UUID})/(${UUID})\\.(pdf|png|jpg|webp)$`);
+const PATH_RE = new RegExp(`^(${UUID})/(shared|${UUID})/(${UUID})\\.(pdf|png|jpg|webp|docx)$`);
 
 export type PathParts = { familyId: string; learnerId: string | null; fileId: string; mime: AllowedMime };
 
