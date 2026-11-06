@@ -1073,3 +1073,11 @@ Code trên nhánh `feature/studio-b1`, chờ CI + review Opus + phụ huynh duy�
 ### Tiêu chí đạt
 
 `typecheck`, `lint`, `test` (gồm test database: RLS, tự chấm chỉ cho mẫu Studio, Đúng/Sai → engine, kết quả một lần mỗi lần làm, xóa dữ liệu một em), `gen:config`, E2E "Studio" với `AI_FAKE=1` (CI), review Opus. Chi phí AI trong tháng ≤ $10.
+
+### Sửa sau review Opus (06/11/2026, `0024` chưa áp ở đâu nên sửa thẳng trong file)
+
+| Nhóm | Sửa |
+|---|---|
+| Chi phí AI | Cổng AI khóa theo gia đình (`pg_advisory_xact_lock`) và GHI chỗ đặt trước giá xấu nhất của lần gọi ngay trong khóa; từ chối khi đã chi + giá xấu nhất ≥ trần; kiểm lại ở ĐẦU mỗi vòng thử (kể cả thử lại và đổi `tool_choice`). Thời gian mỗi lần gọi = min(240 s, còn lại − 20 s), còn dưới 60 s thì không gọi; lỗi hết giờ / 5xx ghi giá ước tính phần đầu vào (không ghi 0). Giá chính thức $2 / $10, tính theo model ĐƯỢC YÊU CẦU, model không có trong bảng bị từ chối (`refused_model`). `AI_FAKE` chỉ khi không phải production (trừ CI). Bản thử (ALLOW_REAL_LEARNERS=false) không bật AI cho gia đình có em thật. |
+| Riêng tư | Khung đề giấy Studio gắn với MỘT em (`test_frames.learner_id`): gia sư em khác không đọc được; kết quả / bài giao của em khác không dùng được; xóa dữ liệu một em xóa luôn khung (đếm trước khi xóa cùng khóa `studio_frames`). Con không bao giờ thấy đáp án mẫu của câu mở. |
+| Đúng đắn | Duyệt kiểm lại kỹ năng ⊆ danh sách Studio của em; "đúng" chỉ đếm kết quả `correct`; Kết quả bài không ghi được lần đầu sẽ được ghi lại khi mở tab "Cần thầy/cô xem"; khóa lạc quan so mốc thời gian (không so chữ, không phụ thuộc múi giờ phiên); không giao được bản đã có bản sửa mới hơn; trùng mã phần / bài đọc chặn Duyệt; file Word quá dài bị từ chối rõ ràng (không cắt ngầm), file Word giải nén > 20 MB bị từ chối; chữ tiếng Việt trong dữ liệu SQL đổi sang mã, hiển thị qua `lib/copy/vi.ts`. |
