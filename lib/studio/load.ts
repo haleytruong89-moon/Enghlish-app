@@ -1,18 +1,18 @@
 // lib/studio/load.ts
 import "server-only";
-import { createUserClient } from "@/lib/supabase/server";
-import { createFileStorage } from "@/lib/storage/server";
-import { docxToText } from "./docx";
-import { handleGetDraft, type StudioDeps } from "./handlers";
-import { createSupabaseStudioStore } from "./supabaseStore";
-import type { DraftPageData } from "./types";
 import { parseGate, type GateReason } from "@/lib/ai/cap";
+import { allowRealLearners } from "@/lib/env";
 import { loadPickerMap } from "@/lib/skillmap/load";
+import { createFileStorage } from "@/lib/storage/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createUserClient } from "@/lib/supabase/server";
 import { loadTags } from "@/lib/tutorwork/load";
 import { buildStudioContext, type StudioContext } from "./context";
-import { parseAiSettings, parseDraftList } from "./shape";
-import type { AiSettingsView, DraftListItem } from "./types";
+import { docxToText } from "./docx";
+import { handleGetDraft, type StudioDeps } from "./handlers";
+import { parseAiSettings, parseDraftList, parsePending } from "./shape";
+import { createSupabaseStudioStore } from "./supabaseStore";
+import type { AiSettingsView, DraftListItem, DraftPageData, PendingInbox } from "./types";
 
 /** Review context of one child (call only after requireAccess / authorizeLearnerPage): the map + current levels, the track's tags, the Studio skills. */
 export async function loadStudioContext(learnerId: string, trackId: string): Promise<StudioContext> {
@@ -72,4 +72,12 @@ export async function loadDraftPage(draftId: string): Promise<{ kind: "ok"; data
   if (res.status !== 200) return { kind: "not-found" };
   const data = res.body as DraftPageData;
   return { kind: "ok", data, isParent: data.gate !== null };
+}
+
+
+/** "Cần thầy/cô xem" of this member (call after authorizeStaffPage). null = unreadable (e.g. 0024 not applied). */
+export async function loadStudioPending(memberId: string): Promise<PendingInbox | null> {
+  const { data, error } = await createAdminClient().rpc("eng_studio_pending", { p_by: memberId, p_allow_real: allowRealLearners() });
+  if (error) return null;
+  return parsePending(data);
 }

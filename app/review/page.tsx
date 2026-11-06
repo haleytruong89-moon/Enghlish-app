@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { ReviewTabs } from "@/components/review/ReviewTabs";
+import { loadStudioPending } from "@/lib/studio/load";
 import { activityLabels, fallbackLabels, modeLabels, provenanceLabels, reviewPage, revisionReviewCopy, type Mode } from "@/lib/copy/vi";
 import { authorizeStaffPage } from "@/lib/review/access";
 import { formatWhen } from "@/lib/review/format";
@@ -27,7 +28,11 @@ export default async function ReviewInboxPage({ searchParams }: { searchParams: 
   const filter = parseFilter(sp.f);
   const after = parseCursor(sp.after);
   // The database filters, orders (oldest first) and pages; the counts on the filter chips come from it too.
-  const [{ items, next, counts }, skillInbox] = await Promise.all([loadInbox(filter, after), loadSkillInbox(access.member.id).catch(() => null)]);
+  const [{ items, next, counts }, skillInbox, studioPending] = await Promise.all([
+    loadInbox(filter, after),
+    loadSkillInbox(access.member.id).catch(() => null),
+    loadStudioPending(access.member.id).catch(() => null),
+  ]);
   const anyTest = items.some((i) => i.isTest);
   const base = filter === "todo" ? "/review" : `/review?f=${filter}`;
 
@@ -40,7 +45,7 @@ export default async function ReviewInboxPage({ searchParams }: { searchParams: 
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{reviewPage.inboxTitle}</h1>
         <p className="mt-1 text-sm text-muted">{reviewPage.inboxIntro}</p>
-        <ReviewTabs active="work" skillsCount={skillTabCount(skillInbox, access.member.role)} />
+        <ReviewTabs active="work" skillsCount={skillTabCount(skillInbox, access.member.role)} studioCount={studioPending?.count ?? null} />
 
         <nav aria-label={reviewPage.filtersLabel} className="mt-6 flex flex-wrap gap-2">
           {FILTERS.map((f) => (

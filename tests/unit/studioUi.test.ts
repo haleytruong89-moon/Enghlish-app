@@ -2,6 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
 import { describe, expect, it } from "vitest";
 import { AiSoftCapBox } from "@/components/settings/AiSoftCapBox";
+import { ReviewTabs } from "@/components/review/ReviewTabs";
+import { StudioPendingCard } from "@/components/review/StudioPendingCard";
 import { ItemCard } from "@/components/studio/ItemCard";
 import { SidePanel } from "@/components/studio/SidePanel";
 import { DraftList } from "@/components/studio/DraftList";
@@ -51,5 +53,28 @@ describe("Studio review screen pieces (board 19)", () => {
     );
     expect(html).toContain(studioIssueText.missing_key);
     expect(html).toContain('data-testid="issue-8-missing_key"');
+  });
+});
+
+describe("Hộp duyệt - Cần thầy/cô xem (board 21)", () => {
+  it("the third tab shows its count, or the plain label when unreadable", () => {
+    expect(renderToStaticMarkup(createElement(ReviewTabs, { active: "work", skillsCount: null, studioCount: 2 }))).toContain("Cần thầy/cô xem (2)");
+    const plain = renderToStaticMarkup(createElement(ReviewTabs, { active: "work", skillsCount: null, studioCount: null }));
+    expect(plain).toContain("Cần thầy/cô xem");
+    expect(plain).not.toContain("Cần thầy/cô xem (");
+  });
+  it("a card shows the waiting days, the expected and accepted answers and who wrote it", () => {
+    const html = renderToStaticMarkup(
+      createElement(StudioPendingCard, {
+        attempt: {
+          attemptId: "a-1", learnerId: "l-1", alias: "Nguyên", isTest: true, activityId: "x", title: "Unit 5", submittedAt: "2026-11-02T03:00:00Z", attemptNo: 1, waitingDays: 3,
+          items: [{ itemId: "q7", n: 7, kind: "transform", stem: "I ____ speak French.", expected: "wish I could", accepted: ["wished I could"], given: "wish I can" }],
+        },
+      }),
+    );
+    expect(html).toContain("chờ 3 ngày");
+    expect(html).toContain("wish I could");
+    expect(html).toContain("wished I could");
+    expect(html).toContain("Nguyên viết");
   });
 });

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { ReviewTabs } from "@/components/review/ReviewTabs";
+import { loadStudioPending } from "@/lib/studio/load";
 import { ConfirmAllButton } from "@/components/skills/ConfirmAllButton";
 import { SkillProposalCard } from "@/components/skills/SkillProposalCard";
 import { reviewPage, skillStateCopy } from "@/lib/copy/vi";
@@ -23,6 +24,7 @@ export default async function ReviewSkillsPage() {
   if (access.kind === "not-found") notFound();
 
   const inbox = await loadSkillInbox(access.member.id);
+  const studioPending = await loadStudioPending(access.member.id).catch(() => null);
   const groups = inbox ? groupInbox(inbox.items) : [];
 
   return (
@@ -35,7 +37,7 @@ export default async function ReviewSkillsPage() {
         <h1 className="mt-2 text-2xl font-bold">{skillStateCopy.title}</h1>
         <p className="mt-1 text-sm text-muted">{skillStateCopy.intro}</p>
         {access.member.role === "parent" ? <p className="mt-1 text-sm text-muted">{skillStateCopy.parentNote}</p> : null}
-        <ReviewTabs active="skills" skillsCount={skillTabCount(inbox, access.member.role)} />
+        <ReviewTabs active="skills" skillsCount={skillTabCount(inbox, access.member.role)} studioCount={studioPending?.count ?? null} />
 
         {inbox === null ? (
           <p className="mt-6 rounded-xl border border-line bg-white px-5 py-4" data-testid="skills-not-ready">
