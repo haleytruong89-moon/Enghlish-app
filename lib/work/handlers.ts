@@ -6,6 +6,7 @@
  *   3. validates the body (400) and talks to an injectable WorkStore.
  * Answers go through the allowlist parsers in ./shape: no key, auto-check result, transcript or note can leave here.
  */
+import { parseStudioReview } from "@/lib/studio/shape";
 import type { EngineHook } from "@/lib/engine/runner";
 import {
   AccessError,
@@ -45,6 +46,8 @@ export interface WorkStore {
   getMyFeedback(): Promise<unknown>;
   /** english.eng_my_activity_note(id) as the signed-in student (S6, G4): the "Chỉ góp ý" note of this activity, or null. */
   getMyActivityNote(activityId: string): Promise<unknown | null>;
+  /** english.eng_my_studio_review(id) as the signed-in student (Studio B1): wrong items + waiting numbers, never a count; null / {} = nothing to show. */
+  getMyStudioReview(activityId: string): Promise<unknown | null>;
   /** english.eng_my_revision(id) as the signed-in student; null = not theirs / nothing to revise there. */
   getMyRevision(activityId: string): Promise<unknown | null>;
   /** english.eng_save_revision_draft as the signed-in student. */
@@ -266,4 +269,12 @@ export async function handleStudentActivityNote(deps: HandlerDeps, activityId: s
   if (!g.ok) return g.result;
   const note = await deps.store.getMyActivityNote(activityId).then(parseMyActivityNote).catch(() => null);
   return { status: 200, body: { note } };
+}
+
+/** "Câu cần xem lại" of a Studio step (board 20). Never fatal for the page: unreadable or not a Studio step → null. */
+export async function handleStudentStudioReview(deps: HandlerDeps, activityId: string): Promise<HandlerResult> {
+  const g = await guardActivity(deps, activityId);
+  if (!g.ok) return g.result;
+  const review = await deps.store.getMyStudioReview(activityId).then(parseStudioReview).catch(() => null);
+  return { status: 200, body: { review } };
 }

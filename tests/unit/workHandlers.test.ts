@@ -5,6 +5,7 @@ import {
   handleSaveRevisionDraft,
   handleStudentActivity,
   handleStudentActivityNote,
+  handleStudentStudioReview,
   handleStudentFeedback,
   handleStudentHome,
   handleStudentRevision,
@@ -79,6 +80,7 @@ function makeStore(over: Partial<WorkStore> = {}) {
     getMyFeedback: vi.fn(async (): Promise<unknown> => ({ items: [] })),
     getMyRevision: vi.fn(async (): Promise<unknown> => rpcRevision),
     getMyActivityNote: vi.fn(async (): Promise<unknown> => null),
+    getMyStudioReview: vi.fn(async (): Promise<unknown> => null),
     saveRevisionDraft: vi.fn(async (): Promise<unknown> => ({ revision: 1, saved_at: "2026-10-14T08:00:00Z", other_tab_changed: false })),
     submitRevision: vi.fn(async (): Promise<unknown> => rpcReceipt),
     getActivity: vi.fn(async (): Promise<unknown> => rpcActivity),
@@ -428,5 +430,19 @@ describe("S6: the child's revision routes", () => {
     expect(await handleStudentActivityNote(deps("studentAn", broken), ACT_AN)).toMatchObject({ status: 200, body: { note: null } });
     expect((await handleStudentActivityNote(deps("studentNguyen", s), ACT_AN)).status).toBe(404);
     expect((await handleStudentActivityNote(deps("parent", s), ACT_AN)).status).toBe(403);
+  });
+});
+
+describe("Studio B1: the child's review", () => {
+  it("Studio review: the child's own step only; a broken or empty answer shows nothing", async () => {
+    const store = makeStore({
+      getMyStudioReview: vi.fn(async (): Promise<unknown> => ({ attempt_no: 1, submitted_at: "2026-11-05T03:00:00Z", wrong: [{ n: 2, stem: "s", given: "B. can't", expected: "A. must", explanation_vi: "x" }], pending: [8] })),
+    });
+    const ok = await handleStudentStudioReview(deps("studentAn", store), ACT_AN);
+    expect(ok.body).toEqual({ review: { attemptNo: 1, submittedAt: "2026-11-05T03:00:00Z", wrong: [{ n: 2, stem: "s", given: "B. can't", expected: "A. must", explanationVi: "x" }], pending: [8] } });
+    const extra = makeStore({ getMyStudioReview: vi.fn(async (): Promise<unknown> => ({ attempt_no: 1, submitted_at: "x", wrong: [], pending: [], correct: 5 })) });
+    expect((await handleStudentStudioReview(deps("studentAn", extra), ACT_AN)).body).toEqual({ review: null });
+    expect((await handleStudentStudioReview(deps("studentNguyen", store), ACT_AN)).status).toBe(404);
+    expect((await handleStudentStudioReview(deps("parent", store), ACT_AN)).status).toBe(403);
   });
 });
