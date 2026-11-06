@@ -164,6 +164,7 @@ jobs:
       - name: Build and start the app (ALLOW_REAL_LEARNERS=false)
         env:
           ALLOW_REAL_LEARNERS: "false"
+          AI_FAKE: "1"
         run: |
           set -euo pipefail
           npm run build
