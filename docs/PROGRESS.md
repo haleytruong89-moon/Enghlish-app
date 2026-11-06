@@ -1026,3 +1026,50 @@ D1–D23 trong `docs/superpowers/plans/2026-10-23-s7a-skill-states.md` (bảng "
 
 `typecheck`, `lint`, `test` (gồm test database: ép không hạ bậc, một đề xuất mở, Chưa → không đề xuất lại tới khi có bài mới, tính lại giống hệt, ai được làm gì, dấu "chủ đề mới", xóa dữ liệu), `gen:config` xanh; CI (E2E + áp migration hai lần) xanh; review Opus; phụ huynh áp `0022` rồi `0023` và làm các bước thử ở trên.
 
+
+
+## Studio B1 — Đề PDF/Word → bài trong app (05/11/2026)
+
+Code trên nhánh `feature/studio-b1`, chờ CI + review Opus + phụ huynh duyệt PR. Spec `docs/superpowers/specs/2026-11-05-studio-b1-design.md`, kế hoạch `docs/superpowers/plans/2026-11-05-studio-b1.md`. Mockup board 19–21 phụ huynh đã duyệt 05/11.
+
+### Đã làm
+
+| Bước | Ở đâu |
+|---|---|
+| Phụ huynh bật AI một lần, ghi đồng ý `ai_text` cho từng em, xem chi phí tháng / trần $10 (báo ở $8) | `/settings/ai`, ô trên trang chủ phụ huynh |
+| Gia sư hoặc phụ huynh của em tải đề + đáp án (PDF hoặc .docx, ≤ 15 MB), cho AI đọc (chạy nền) hoặc soạn tay | thẻ em → "Tạo bài từ đề" (`/studio/new`) |
+| Duyệt đề (board 19): sửa từng câu, nhãn, kỹ năng, đáp án chấp nhận; Duyệt bị chặn khi còn lỗi; Duyệt → mẫu Studio + khung đề giấy; Giao bài | `/studio/drafts/[id]` |
+| Con làm trên trang bài như chủ đề tuần; câu đóng chấm ngay; câu không tự chấm được chờ thầy/cô | `/activities/[id]` |
+| Con thấy "Câu cần xem lại" (câu sai + đáp án đúng + giải thích; số câu chờ). Không điểm, không x/y, không số câu đúng | `/activities/[id]` (board 20) |
+| Hộp duyệt → tab "Cần thầy/cô xem (n)": Đúng / Sai từng câu; "Đúng" = chấp nhận cho lần làm sau | `/review/studio` (board 21) |
+| Hết câu chờ → Kết quả bài + dấu nhãn câu sai → Điểm cần chú ý; engine S7a tính lại (cách 2, câu tự chấm). `lib/engine` không đổi | tự động |
+
+### SQL cần áp
+
+**`db/migrations/0024_studio_b1.sql`** — áp **TRƯỚC khi thử preview hoặc gộp PR** (Actions → Apply database migrations, gõ APPLY, hoặc dán vào SQL Editor). Chỉ thêm; chạy lại an toàn; cần `0022` + `0023` đã áp. Migration kế tiếp sau này là **0025**. Nên bấm chạy tay *Weekly backup* trước.
+
+### Việc phụ huynh cần làm
+
+1. Áp `0024`.
+2. Tạo khóa API trên Anthropic Console, đặt trần $10/tháng ở đó, thêm `ANTHROPIC_API_KEY` vào Vercel (Preview + Production). **Không gửi khóa qua chat.** Kiểm Vercel → Settings → Functions: thời gian chạy tối đa 300 giây (Fluid compute).
+3. Cài đặt AI → Đồng ý và bật.
+4. Thử thật 1 lần trên preview: đề Destination U1–12 (.docx + đáp án) — ghi chi phí thật vào đây: _(chưa thử)_.
+
+### Quyết định (bảng P1–P12 trong kế hoạch)
+
+| # | Trạng thái |
+|---|---|
+| P1 (kỹ năng gắn được = bộ hiện hành ∩ kỹ năng mà danh mục tính ACT-SOURCE-QA) | **Phụ huynh xác nhận 06/11: giữ luật bằng chứng của danh mục (phương án A)** |
+| P2, P3, P5, P6, P8, P9, P10, P12 | Làm theo đề xuất của kế hoạch |
+| P4 (câu bỏ trống hiện trong "Câu cần xem lại"), P11 (bài đã tính rồi, đổi Đúng/Sai không đề xuất lại cùng khóa) | Làm theo đề xuất; thuộc §17 — phụ huynh xác nhận trước khi gộp |
+| P7 (bảng giá `claude-sonnet-5-5` $3 / $15 mỗi triệu token) | Ước tính — kiểm lại trên trang giá Anthropic trước khi gộp; ghi chi phí thật của lần thử |
+
+### Lệch nhỏ so với kế hoạch khi làm (đã ghi)
+
+- `eng_purge_preview` đếm thêm ba khóa `studio_step_sources`, `studio_sources`, `studio_template_keys` (kế hoạch chỉ đếm 5 khóa): các test cũ yêu cầu bản đếm trước khi xóa có đúng các khóa của biên nhận xóa.
+- Test cũ sửa theo thay đổi chủ ý: danh sách loại file của bucket có thêm `.docx` (`practiceFiles`, `fileStorage`, `storageRules`), thông báo `eng_register_file` nói "pdf, png, jpeg, webp and docx".
+- Test `approve` của kế hoạch dùng `base_updated_at: "other"` (5 ký tự) bị schema từ chối trước khi tới chỗ so khóa; dùng một mốc thời gian đủ dài.
+
+### Tiêu chí đạt
+
+`typecheck`, `lint`, `test` (gồm test database: RLS, tự chấm chỉ cho mẫu Studio, Đúng/Sai → engine, kết quả một lần mỗi lần làm, xóa dữ liệu một em), `gen:config`, E2E "Studio" với `AI_FAKE=1` (CI), review Opus. Chi phí AI trong tháng ≤ $10.
