@@ -12,6 +12,8 @@ export type GateState = {
   softReached: boolean;
   allowed: boolean;
   reason: GateReason | null;
+  /** Set when the call was a reservation (eng_ai_gate p_reserve): the worst-case price is already counted until the real run releases it. */
+  reservationId?: string | null;
 };
 
 const num = z.union([z.number(), z.string()]).transform(Number);
@@ -25,19 +27,20 @@ const gateRow = z.object({
   soft_reached: z.boolean(),
   allowed: z.boolean(),
   reason: z.enum(["off", "no_consent", "cap"]).nullable(),
+  reservation_id: z.string().nullable().optional(),
 });
 
 export function parseGate(raw: unknown): GateState {
   const g = gateRow.parse(raw);
   return {
     familyId: g.family_id, enabled: g.enabled, consent: g.consent, spentUsd: g.spent_usd, monthlyCapUsd: g.monthly_cap_usd,
-    softCapUsd: g.soft_cap_usd, softReached: g.soft_reached, allowed: g.allowed, reason: g.reason,
+    softCapUsd: g.soft_cap_usd, softReached: g.soft_reached, allowed: g.allowed, reason: g.reason, reservationId: g.reservation_id ?? null,
   };
 }
 
 /** Mirror of eng_ai_gate: switch, then consent, then the cap; the soft cap only warns. */
-export function gateDecision(s: { enabled: boolean; consent: boolean; spentUsd: number; monthlyCapUsd: number; softCapUsd: number }) {
-  const reason: GateReason | null = !s.enabled ? "off" : !s.consent ? "no_consent" : s.spentUsd >= s.monthlyCapUsd ? "cap" : null;
+export function gateDecision(s: { enabled: boolean; consent: boolean; spentUsd: number; monthlyCapUsd: number; softCapUsd: number; estimateUsd?: number }) {
+  const reason: GateReason | null = !s.enabled ? "off" : !s.consent ? "no_consent" : s.spentUsd + (s.estimateUsd ?? 0) >= s.monthlyCapUsd ? "cap" : null;
   return { allowed: reason === null, reason, softReached: s.spentUsd >= s.softCapUsd };
 }
 

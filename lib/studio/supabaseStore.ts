@@ -20,13 +20,15 @@ export function createSupabaseStudioStore(): StudioStore {
     getAttemptLearnerId: (id) => learnerOf("attempts", id),
     issueUploadTicket: (a) => call("eng_issue_upload_ticket", { p_learner: a.learnerId, p_by: a.byMemberId }),
     aiGate: (l) => call("eng_ai_gate", { p_learner: l }),
+    aiReserve: (a) =>
+      call("eng_ai_gate", { p_learner: a.learnerId, p_estimate: a.estimateUsd, p_reserve: true, p_draft: a.draftId, p_model: a.model, p_by: a.byMemberId }),
     aiSettings: (m) => call("eng_ai_settings", { p_by: m }),
     setAiSettings: (a) => call("eng_set_ai_settings", { p_enabled: a.enabled, p_notice_version: a.noticeVersion, p_by: a.byMemberId }),
     logAiRun: async (r) =>
       String(
         await call("eng_log_ai_run", {
           p_family: r.familyId, p_draft: r.draftId, p_model: r.model, p_prompt_version: r.promptVersion, p_input: r.inputTokens, p_output: r.outputTokens,
-          p_cost: r.costUsd, p_status: r.status, p_error: r.errorCode, p_by: r.byMemberId,
+          p_cost: r.costUsd, p_status: r.status, p_error: r.errorCode, p_by: r.byMemberId, p_release: r.releasesRunId,
         }),
       ),
     createDraft: (a) =>

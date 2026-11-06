@@ -10,6 +10,7 @@ export type AiDocument = { kind: "pdf"; title: string; base64: string } | { kind
 export type ToolSpec = { name: string; description: string; input_schema: Record<string, unknown> };
 export type ToolCall = { model: string; documents: AiDocument[]; instructions: string; tool: ToolSpec; maxTokens: number; toolChoice: "tool" | "auto" };
 export type Usage = { inputTokens: number; outputTokens: number };
+export type CallOptions = { timeoutMs?: number };
 export type ToolResult = { input: unknown; usage: Usage; model: string };
 export type AiErrorCode = "http_400" | "tool_choice" | "http_401" | "http_429" | "http_5xx" | "network" | "timeout" | "no_tool";
 
@@ -75,4 +76,13 @@ export async function postToolCall(c: ToolCall, opts: { apiKey: string; fetchImp
   const use = body?.content?.find((x) => x.type === "tool_use" && x.name === c.tool.name);
   if (!use) throw new AiCallError("no_tool", usage);
   return { input: use.input, usage, model: String(body?.model ?? c.model) };
+}
+
+/**
+ * Rough input size of a call in tokens (text and tool schema: 3 characters per token; a PDF: 3 bytes per token), never more than 200 000.
+ * Used to reserve the worst-case price before a call and to price a call that timed out without a usage report.
+ */
+export function estimateInputTokens(c: ToolCall): number {
+  const chars = c.documents.reduce((n, d) => n + (d.kind === "pdf" ? Math.ceil(d.base64.length * 0.75) : d.text.length), 0) + c.instructions.length + JSON.stringify(c.tool).length;
+  return Math.min(200_000, Math.ceil(chars / 3));
 }

@@ -12,7 +12,11 @@ export function studioModel(env: Env = process.env): string {
 export function studioToolChoice(env: Env = process.env): "tool" | "auto" {
   return env.STUDIO_TOOL_CHOICE === "auto" ? "auto" : "tool";
 }
-/** AI_FAKE=1 → the fixture instead of the network (tests, CI). Never in Vercel production. */
+/**
+ * AI_FAKE=1 → the fixture instead of the network (tests, CI). Never on Vercel production and never when NODE_ENV is production — except
+ * in CI (CI=true, where the e2e app runs a production build with the fake on purpose).
+ */
 export function aiFake(env: Env = process.env): boolean {
-  return env.AI_FAKE === "1" && env.VERCEL_ENV !== "production";
+  if (env.AI_FAKE !== "1" || env.VERCEL_ENV === "production") return false;
+  return env.NODE_ENV !== "production" || env.CI === "true";
 }

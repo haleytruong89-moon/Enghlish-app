@@ -41,6 +41,11 @@ describe("config + prompt", () => {
     expect(studioToolChoice({ STUDIO_TOOL_CHOICE: "auto" })).toBe("auto");
     expect(aiFake({ AI_FAKE: "1" })).toBe(true);
     expect(aiFake({ AI_FAKE: "1", VERCEL_ENV: "production" })).toBe(false);
+    // a production build never fakes the AI unless it is CI (the e2e app is a production build)
+    expect(aiFake({ AI_FAKE: "1", NODE_ENV: "production" })).toBe(false);
+    expect(aiFake({ AI_FAKE: "1", NODE_ENV: "production", CI: "true" })).toBe(true);
+    expect(aiFake({ AI_FAKE: "1", NODE_ENV: "production", CI: "true", VERCEL_ENV: "production" })).toBe(false);
+    expect(aiFake({ NODE_ENV: "development" })).toBe(false);
   });
   it("the versioned prompt exists, has the three list slots and asks for the key from the tutor's file", () => {
     const p = loadPrompt(STUDIO_PROMPT.file);

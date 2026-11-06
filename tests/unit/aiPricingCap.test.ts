@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { gateDecision, refusalStatus, vnMonthStart } from "@/lib/ai/cap";
-import { estimateCostUsd, FALLBACK_PRICE, MODEL_PRICES } from "@/lib/ai/pricing";
+import { estimateCostUsd, isPricedModel, MODEL_PRICES } from "@/lib/ai/pricing";
 
 describe("pricing (estimate, one table)", () => {
-  it("cost = tokens × price per million; unknown models use the most expensive row", () => {
+  it("cost = tokens × price per million (Sonnet 5.5: $2 in / $10 out); a model with no price is refused, never guessed", () => {
     const p = MODEL_PRICES["claude-sonnet-5-5"]!;
     expect(estimateCostUsd("claude-sonnet-5-5", 1_000_000, 0)).toBe(p.inputPerMTok);
     expect(estimateCostUsd("claude-sonnet-5-5", 20_000, 8_000)).toBeCloseTo((20_000 * p.inputPerMTok + 8_000 * p.outputPerMTok) / 1e6, 6);
-    expect(estimateCostUsd("some-new-model", 0, 1_000_000)).toBe(FALLBACK_PRICE.outputPerMTok);
+    expect([p.inputPerMTok, p.outputPerMTok]).toEqual([2, 10]);
+    expect(isPricedModel("some-new-model")).toBe(false);
+    expect(() => estimateCostUsd("some-new-model", 0, 1_000_000)).toThrow(/no price/);
   });
 });
 

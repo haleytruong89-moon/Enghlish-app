@@ -38,11 +38,14 @@ create table if not exists english.ai_runs (
   input_tokens int not null default 0 check (input_tokens >= 0),
   output_tokens int not null default 0 check (output_tokens >= 0),
   cost_usd numeric(10, 6) not null default 0 check (cost_usd >= 0),
-  status text not null check (status in ('ok', 'error', 'refused_cap', 'refused_off')),
+  status text not null check (status in ('ok', 'error', 'refused_cap', 'refused_off', 'refused_model', 'reserved')),
   error_code text check (error_code is null or error_code ~ '^[a-z0-9_]{1,40}$'),
   by_member uuid,
+  -- 'reserved' = the worst-case price of a call, written under the family lock BEFORE the call; the row that logs the real cost points back
+  -- at it (releases_run_id) and the reservation then stops counting. A reservation nobody released (crash) keeps counting: the cap errs on the safe side.
+  releases_run_id uuid references english.ai_runs(id),
   at timestamptz not null default clock_timestamp(),
-  constraint ai_runs_refused_free check (status not in ('refused_cap', 'refused_off') or (cost_usd = 0 and input_tokens = 0 and output_tokens = 0))
+  constraint ai_runs_refused_free check (status not in ('refused_cap', 'refused_off', 'refused_model') or (cost_usd = 0 and input_tokens = 0 and output_tokens = 0))
 );
 create index if not exists ai_runs_family_at_idx on english.ai_runs(family_id, at desc);
 create index if not exists ai_runs_draft_idx on english.ai_runs(draft_id);
@@ -754,13 +757,16 @@ as $$
   select coalesce(sum(r.cost_usd), 0)::numeric
   from english.ai_runs r
   where r.family_id = p_family
+    and not exists (select 1 from english.ai_runs x where x.releases_run_id = r.id)
     and r.at >= (pg_catalog.date_trunc('month', pg_catalog.now() at time zone 'Asia/Ho_Chi_Minh') at time zone 'Asia/Ho_Chi_Minh')
 $$;
 revoke execute on function english.eng_ai_month_spent(uuid) from public, anon, authenticated, service_role;
 
 -- 3b. Cổng AI cho một em: công tắc của gia đình + đồng ý ai_text mới nhất của em + chi phí tháng < trần. Không có dòng cài đặt = tắt.
-create or replace function english.eng_ai_gate(p_learner uuid) returns jsonb
-language plpgsql stable security definer set search_path = ''
+create or replace function english.eng_ai_gate(
+  p_learner uuid, p_estimate numeric default 0, p_reserve boolean default false, p_draft uuid default null, p_model text default null, p_by uuid default null
+) returns jsonb
+language plpgsql volatile security definer set search_path = ''
 as $$
 declare
   v_l english.learners%rowtype;
@@ -769,17 +775,35 @@ declare
   v_spent numeric;
   v_cap numeric;
   v_soft numeric;
+  v_est numeric := coalesce(p_estimate, 0);
+  v_reason text;
+  v_run uuid;
 begin
+  if v_est < 0 then
+    raise exception 'eng_ai_gate: the estimate cannot be negative' using errcode = '22023';
+  end if;
   select * into v_l from english.learners l where l.id = p_learner;
   if not found then
     raise exception 'eng_ai_gate: learner not found' using errcode = 'P0002';
   end if;
+  -- One family spends one call at a time through this check: the lock is held until the end of this transaction, and a reservation row
+  -- is written inside it, so a second caller sees the first one's worst-case price (no overshoot of the hard cap by parallel calls).
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('eng_ai_gate:' || v_l.family_id::text, 0));
   select * into v_s from english.ai_settings s where s.family_id = v_l.family_id;
   select c.granted into v_consent from english.consents c
   where c.learner_id = p_learner and c.scope = 'ai_text' order by c.at desc, c.id desc limit 1;
   v_spent := english.eng_ai_month_spent(v_l.family_id);
   v_cap := coalesce(v_s.monthly_cap_usd, 10);
   v_soft := coalesce(v_s.soft_cap_usd, 8);
+  v_reason := case when not coalesce(v_s.enabled, false) then 'off'
+                   when not coalesce(v_consent, false) then 'no_consent'
+                   when v_spent + v_est >= v_cap then 'cap'
+                   else null end;
+  if v_reason is null and p_reserve then
+    insert into english.ai_runs(family_id, purpose, draft_id, model, input_tokens, output_tokens, cost_usd, status, error_code, by_member)
+    values (v_l.family_id, 'studio_extract', p_draft, p_model, 0, 0, v_est, 'reserved', 'reserved', p_by)
+    returning id into v_run;
+  end if;
   return pg_catalog.jsonb_build_object(
     'family_id', v_l.family_id,
     'enabled', coalesce(v_s.enabled, false),
@@ -788,11 +812,9 @@ begin
     'monthly_cap_usd', v_cap,
     'soft_cap_usd', v_soft,
     'soft_reached', v_spent >= v_soft,
-    'allowed', coalesce(v_s.enabled, false) and coalesce(v_consent, false) and v_spent < v_cap,
-    'reason', case when not coalesce(v_s.enabled, false) then 'off'
-                   when not coalesce(v_consent, false) then 'no_consent'
-                   when v_spent >= v_cap then 'cap'
-                   else null end);
+    'allowed', v_reason is null,
+    'reason', v_reason,
+    'reservation_id', v_run);
 end
 $$;
 
@@ -861,7 +883,8 @@ $$;
 
 -- 3e. Một lần gọi AI (hoặc một lần bị từ chối): chỉ số, không nội dung.
 create or replace function english.eng_log_ai_run(
-  p_family uuid, p_draft uuid, p_model text, p_prompt_version text, p_input int, p_output int, p_cost numeric, p_status text, p_error text, p_by uuid
+  p_family uuid, p_draft uuid, p_model text, p_prompt_version text, p_input int, p_output int, p_cost numeric, p_status text, p_error text, p_by uuid,
+  p_release uuid default null
 ) returns uuid
 language plpgsql volatile security definer set search_path = ''
 as $$
@@ -871,8 +894,8 @@ begin
   if p_family is null or p_status is null then
     raise exception 'eng_log_ai_run: family and status are required' using errcode = '22004';
   end if;
-  insert into english.ai_runs(family_id, purpose, draft_id, model, prompt_version, input_tokens, output_tokens, cost_usd, status, error_code, by_member)
-  values (p_family, 'studio_extract', p_draft, p_model, p_prompt_version, coalesce(p_input, 0), coalesce(p_output, 0), coalesce(p_cost, 0), p_status, p_error, p_by)
+  insert into english.ai_runs(family_id, purpose, draft_id, model, prompt_version, input_tokens, output_tokens, cost_usd, status, error_code, by_member, releases_run_id)
+  values (p_family, 'studio_extract', p_draft, p_model, p_prompt_version, coalesce(p_input, 0), coalesce(p_output, 0), coalesce(p_cost, 0), p_status, p_error, p_by, p_release)
   returning id into v_id;
   return v_id;
 end
@@ -1282,10 +1305,10 @@ as $$
   from (select * from english.studio_drafts x where x.learner_id = p_learner and x.status <> 'discarded' order by x.updated_at desc limit 30) d
 $$;
 
-revoke execute on function english.eng_ai_gate(uuid) from public, anon, authenticated;
+revoke execute on function english.eng_ai_gate(uuid, numeric, boolean, uuid, text, uuid) from public, anon, authenticated;
 revoke execute on function english.eng_ai_settings(uuid) from public, anon, authenticated;
 revoke execute on function english.eng_set_ai_settings(boolean, text, uuid) from public, anon, authenticated;
-revoke execute on function english.eng_log_ai_run(uuid, uuid, text, text, int, int, numeric, text, text, uuid) from public, anon, authenticated;
+revoke execute on function english.eng_log_ai_run(uuid, uuid, text, text, int, int, numeric, text, text, uuid, uuid) from public, anon, authenticated;
 revoke execute on function english.eng_studio_skills(uuid) from public, anon, authenticated;
 revoke execute on function english.eng_create_studio_draft(uuid, text, jsonb, jsonb, boolean, uuid, text) from public, anon, authenticated;
 revoke execute on function english.eng_edit_studio_draft(uuid, uuid, text) from public, anon, authenticated;
@@ -1297,10 +1320,10 @@ revoke execute on function english.eng_approve_studio_draft(uuid, text, jsonb, u
 revoke execute on function english.eng_assign_studio(uuid, date, date, uuid, text) from public, anon, authenticated;
 revoke execute on function english.eng_studio_draft(uuid) from public, anon, authenticated;
 revoke execute on function english.eng_studio_drafts(uuid) from public, anon, authenticated;
-grant execute on function english.eng_ai_gate(uuid) to service_role;
+grant execute on function english.eng_ai_gate(uuid, numeric, boolean, uuid, text, uuid) to service_role;
 grant execute on function english.eng_ai_settings(uuid) to service_role;
 grant execute on function english.eng_set_ai_settings(boolean, text, uuid) to service_role;
-grant execute on function english.eng_log_ai_run(uuid, uuid, text, text, int, int, numeric, text, text, uuid) to service_role;
+grant execute on function english.eng_log_ai_run(uuid, uuid, text, text, int, int, numeric, text, text, uuid, uuid) to service_role;
 grant execute on function english.eng_studio_skills(uuid) to service_role;
 grant execute on function english.eng_create_studio_draft(uuid, text, jsonb, jsonb, boolean, uuid, text) to service_role;
 grant execute on function english.eng_edit_studio_draft(uuid, uuid, text) to service_role;

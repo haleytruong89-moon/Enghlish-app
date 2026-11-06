@@ -6,7 +6,7 @@
 import { AccessError, requireAccess, requireStaff, type AccessDeps, type AccessGrant, type AccessUser, type Action, type Member } from "@/lib/auth/requireAccess";
 import { parseGate, refusalStatus } from "@/lib/ai/cap";
 import { AI_NOTICE_VERSION } from "@/lib/ai/config";
-import type { ToolCall, ToolResult } from "@/lib/ai/request";
+import type { CallOptions, ToolCall, ToolResult } from "@/lib/ai/request";
 import { apiErrors } from "@/lib/copy/vi";
 import type { EngineHook } from "@/lib/engine/runner";
 import { allowRealLearners } from "@/lib/env";
@@ -31,6 +31,7 @@ export interface StudioStore {
   getAttemptLearnerId(attemptId: string): Promise<string | null>;
   issueUploadTicket(a: { learnerId: string; byMemberId: string }): Promise<unknown>;
   aiGate(learnerId: string): Promise<unknown>;
+  aiReserve(a: { learnerId: string; estimateUsd: number; draftId: string; model: string; byMemberId: string }): Promise<unknown>;
   aiSettings(byMemberId: string): Promise<unknown>;
   setAiSettings(a: { enabled: boolean; noticeVersion: string; byMemberId: string }): Promise<unknown>;
   logAiRun(r: RunLog): Promise<string>;
@@ -48,7 +49,7 @@ export interface StudioStore {
   decide(a: { attemptId: string; items: { item_id: string; result: string }[]; byMemberId: string; clientId: string }): Promise<unknown>;
 }
 
-export type StudioAi = { call: (c: ToolCall) => Promise<ToolResult>; model: string; toolChoice: "tool" | "auto"; prompt: { text: string; version: string } };
+export type StudioAi = { call: (c: ToolCall, o?: CallOptions) => Promise<ToolResult>; model: string; toolChoice: "tool" | "auto"; prompt: { text: string; version: string } };
 export type StudioDeps = {
   user: AccessUser;
   store: StudioStore;
@@ -120,6 +121,7 @@ export function fromStudioDbError(err: unknown): HandlerResult {
 
 const extractStoreOf = (s: StudioStore): ExtractStore => ({
   gate: async (l) => parseGate(await s.aiGate(l)),
+  reserve: async (a) => parseGate(await s.aiReserve(a)),
   logRun: (r) => s.logAiRun(r),
   finish: async (draftId, payload, runId) => (await s.finishExtraction({ draftId, payload, runId })) as { applied: boolean },
   fail: async (draftId, errorCode, runId) => (await s.failExtraction({ draftId, errorCode, runId })) as { applied: boolean },
@@ -171,7 +173,7 @@ export async function handleCreateDraft(deps: StudioDeps, learnerId: string, raw
     if (!gate.allowed && gate.reason) {
       await deps.store.logAiRun({
         familyId: learner.familyId, draftId: null, model: null, promptVersion: null, inputTokens: 0, outputTokens: 0, costUsd: 0,
-        status: refusalStatus(gate.reason), errorCode: gate.reason, byMemberId: member.id,
+        status: refusalStatus(gate.reason), errorCode: gate.reason, byMemberId: member.id, releasesRunId: null,
       });
       return fail(409, `ai_${gate.reason}`);
     }
@@ -314,6 +316,11 @@ export async function handleSetAiSettings(deps: StudioDeps, raw: unknown): Promi
   if (s.member.role !== "parent") return fail(403, "parent_only");
   const p = aiSettingsBodySchema.safeParse(raw);
   if (!p.success) return fail(400, "invalid_body");
+  // Preview isolation: with ALLOW_REAL_LEARNERS=false, AI (consent rows, spend) is switched on only for a family of test learners.
+  if (p.data.enabled && !(deps.access?.allowRealLearners ?? allowRealLearners())) {
+    const current = parseAiSettings(await deps.store.aiSettings(s.member.id));
+    if (current.learners.some((l) => !l.isTest)) return fail(409, "real_learners_blocked");
+  }
   try {
     return { status: 200, body: { settings: parseAiSettings(await deps.store.setAiSettings({ enabled: p.data.enabled, noticeVersion: AI_NOTICE_VERSION, byMemberId: s.member.id })) } };
   } catch (err) {

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { AiCallError, type ToolCall } from "@/lib/ai/request";
 import type { GateState } from "@/lib/ai/cap";
-import { runExtraction, type ExtractDeps, type ExtractJob } from "@/lib/studio/extract";
+import { runExtraction, type ExtractDeps, type ExtractJob, type RunLog } from "@/lib/studio/extract";
 import { CTX_B, FAKE_EXTRACT } from "./fixtures/studio";
 
 const LEARNER = "e0000000-0000-4000-8000-00000000b001";
@@ -18,7 +18,8 @@ function deps(call: ExtractDeps["call"], gate = okGate) {
   const calls: ToolCall[] = [];
   const store = {
     gate: vi.fn(async () => gate),
-    logRun: vi.fn(async () => "run-1"),
+    reserve: vi.fn(async (_a: { estimateUsd: number; learnerId: string; draftId: string; model: string; byMemberId: string }) => ({ ...gate, reservationId: gate.allowed ? "resv-1" : null })),
+    logRun: vi.fn(async (_r: RunLog) => "run-1"),
     finish: vi.fn(async () => ({ applied: true })),
     fail: vi.fn(async () => ({ applied: true })),
   };
@@ -82,5 +83,58 @@ describe("runExtraction (spec §3 step 2, §5)", () => {
     expect(calls).toHaveLength(0);
     expect(store.logRun).toHaveBeenCalledWith(expect.objectContaining({ status: "refused_cap", costUsd: 0 }));
     expect(store.fail).toHaveBeenCalledWith(job.draftId, "ai_cap", null);
+  });
+
+  it("every iteration reserves the worst-case price first (retries and the tool_choice switch included) and settles that reservation", async () => {
+    let n = 0;
+    const { d, store } = deps(async () => {
+      n += 1;
+      if (n === 1) throw new AiCallError("tool_choice");
+      if (n === 2) throw new AiCallError("http_5xx", { inputTokens: 5, outputTokens: 0 });
+      return good();
+    });
+    expect((await runExtraction(d, job)).status).toBe("ok");
+    expect(store.reserve).toHaveBeenCalledTimes(3);
+    expect(store.reserve.mock.calls[0]![0]).toEqual(expect.objectContaining({ learnerId: LEARNER, draftId: job.draftId, model: "claude-sonnet-5-5", estimateUsd: expect.any(Number) }));
+    expect(store.reserve.mock.calls[0]![0].estimateUsd).toBeGreaterThan(0);
+    for (const c of store.logRun.mock.calls) expect(c[0]).toMatchObject({ releasesRunId: "resv-1" });
+  });
+
+  it("the cap reached between two tries (a refused reservation in the loop) stops the job: no further call", async () => {
+    const { d, store, calls } = deps(async () => { throw new AiCallError("http_5xx", { inputTokens: 5, outputTokens: 0 }); });
+    store.reserve.mockImplementationOnce(async () => ({ ...okGate, reservationId: "resv-1" })).mockImplementationOnce(async () => ({ ...okGate, allowed: false, reason: "cap", reservationId: null }));
+    expect(await runExtraction(d, job)).toEqual({ status: "failed", code: "ai_cap", tries: 1 });
+    expect(calls).toHaveLength(1);
+    expect(store.logRun).toHaveBeenCalledWith(expect.objectContaining({ status: "refused_cap", costUsd: 0 }));
+  });
+
+  it("a timeout or a 5xx without usage is logged with the ESTIMATED input cost, not 0", async () => {
+    const { d, store } = deps(async () => { throw new AiCallError("timeout"); });
+    await runExtraction({ ...d, maxTries: 1 }, job);
+    const row = store.logRun.mock.calls[0]![0];
+    expect(row.status).toBe("error");
+    expect(row.inputTokens).toBeGreaterThan(0);
+    expect(row.costUsd).toBeGreaterThan(0);
+  });
+
+  it("per-call timeout = min(240 s, remaining - 20 s); with less than 60 s left no call is started", async () => {
+    const seen: (number | undefined)[] = [];
+    const { d, store } = deps(good);
+    const timed = { ...d, now: () => 0, call: async (c: ToolCall, o?: { timeoutMs?: number }) => { seen.push(o?.timeoutMs); return good(); }, budgetMs: 100_000 };
+    await runExtraction(timed, job);
+    expect(seen).toEqual([80_000]);
+    let ticks = 0; // started at 0, then 50 s later: 50 s left of 100 s is too little
+    const { d: d2, store: s2 } = deps(good);
+    expect(await runExtraction({ ...d2, now: () => (ticks++ === 0 ? 0 : 50_000), budgetMs: 100_000 }, job)).toEqual({ status: "failed", code: "timeout", tries: 0 });
+    expect(s2.fail).toHaveBeenCalledWith(job.draftId, "timeout", null);
+    expect(store.reserve).toHaveBeenCalledTimes(1);
+  });
+
+  it("a model with no price is refused before anything is read or reserved", async () => {
+    const { d, store, calls } = deps(good);
+    expect(await runExtraction({ ...d, model: "claude-unknown-9" }, job)).toEqual({ status: "refused", code: "ai_model", tries: 0 });
+    expect(calls).toHaveLength(0);
+    expect(store.reserve).not.toHaveBeenCalled();
+    expect(store.logRun).toHaveBeenCalledWith(expect.objectContaining({ status: "refused_model", costUsd: 0 }));
   });
 });

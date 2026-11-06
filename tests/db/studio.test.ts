@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { applyMigrations } from "../../scripts/lib/migrate";
 import { asCommit, createTestDb, migrate, rowsAs, seed, type Seeded, type TestDb } from "./helpers";
 import { recomputeLearner } from "../../lib/engine/runner";
@@ -354,4 +356,52 @@ describe("Studio B1 (migration 0024)", () => {
   });
 
   // (later tasks add describe blocks here)
+});
+
+/** The hard cap under parallel calls: the gate takes a per-family lock and writes a reservation inside it. */
+describe("Studio B1: AI hard cap under concurrency (migration 0024)", () => {
+  let db: TestDb;
+  let s: Seeded;
+  const extra: Client[] = [];
+  beforeAll(async () => {
+    db = await createTestDb();
+    await migrate(db.client);
+    s = await seed(db.client);
+    await db.client.query("select english.eng_set_ai_settings(true, 'ai-studio-v1', $1)", [s.members.parent]);
+    await db.client.query("insert into english.ai_runs(family_id, purpose, status, cost_usd) values ($1, 'studio_extract', 'ok', 9.90)", [s.familyId]);
+    for (let i = 0; i < 2; i += 1) {
+      const c = new Client(pgConfigFromUrl(db.url));
+      await c.connect();
+      extra.push(c);
+    }
+  });
+  afterAll(async () => {
+    await Promise.all(extra.map((c) => c.end()));
+    await db?.drop();
+  });
+  const reserve = (c: Client, est: number) =>
+    c.query<{ r: { allowed: boolean; reason: string | null; reservation_id: string | null } }>(
+      "select english.eng_ai_gate($1, $2, true, null, 'claude-sonnet-5-5', $3) as r",
+      [s.learners.nguyen, est, s.members.parent],
+    );
+
+  it("two parallel calls at $9.90 whose worst case is $0.06 each: at most one passes; the other is refused as 'cap'", async () => {
+    const [a, b] = await Promise.all([reserve(extra[0]!, 0.06), reserve(extra[1]!, 0.06)]);
+    const got = [a.rows[0]!.r, b.rows[0]!.r];
+    expect(got.filter((g) => g.allowed)).toHaveLength(1);
+    expect(got.find((g) => !g.allowed)).toMatchObject({ reason: "cap", reservation_id: null });
+    const rows = await db.client.query("select cost_usd::float as c from english.ai_runs where status = 'reserved'");
+    expect(rows.rows).toEqual([{ c: 0.06 }]);
+  });
+
+  it("the reservation counts until the real run releases it; then only the real cost counts (no double counting)", async () => {
+    const spent = async () => Number((await db.client.query<{ r: { spent_usd: number } }>("select english.eng_ai_gate($1) as r", [s.learners.nguyen])).rows[0]!.r.spent_usd);
+    expect(await spent()).toBeCloseTo(9.96, 4);
+    const resv = (await db.client.query<{ id: string }>("select id from english.ai_runs where status = 'reserved'")).rows[0]!.id;
+    await db.client.query(
+      "select english.eng_log_ai_run($1, null, 'claude-sonnet-5-5', 'studio-extract.v1', 1000, 500, 0.007, 'ok', null, $2, $3)",
+      [s.familyId, s.members.parent, resv],
+    );
+    expect(await spent()).toBeCloseTo(9.907, 4);
+  });
 });

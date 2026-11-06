@@ -45,6 +45,7 @@ function store(over: Partial<StudioStore> = {}): StudioStore {
     getAttemptLearnerId: vi.fn(async (id: string) => (id === ATTEMPT ? NGUYEN : null)),
     issueUploadTicket: vi.fn(async () => ({ issued: 1 })),
     aiGate: vi.fn(async () => GATE_ON),
+    aiReserve: vi.fn(async () => ({ ...GATE_ON, reservation_id: null })),
     aiSettings: vi.fn(async () => ({ enabled: true, monthly_cap_usd: 10, soft_cap_usd: 8, spent_usd: 1.5, runs_month: 2, soft_reached: false, updated_at: null, learners: [] })),
     setAiSettings: vi.fn(async () => ({ enabled: false, monthly_cap_usd: 10, soft_cap_usd: 8, spent_usd: 1.5, runs_month: 2, soft_reached: false, updated_at: null, learners: [] })),
     logAiRun: vi.fn(async () => "run-1"),
@@ -79,7 +80,7 @@ function deps(user: string | null, s: StudioStore = store(), extra: Partial<Stud
     access: { store: access, allowRealLearners: false, now: new Date("2026-11-05T08:00:00Z") },
     schedule: (job) => jobs.push(job),
     loadContext: async () => CTX_B,
-    getAi: () => ({ call: async () => ({ input: FAKE_EXTRACT, usage: { inputTokens: 1, outputTokens: 1 }, model: "m" }), model: "m", toolChoice: "tool", prompt: { text: "{{TAGS}}", version: "studio-extract.v1" } }),
+    getAi: () => ({ call: async () => ({ input: FAKE_EXTRACT, usage: { inputTokens: 1, outputTokens: 1 }, model: "claude-sonnet-5-5" }), model: "claude-sonnet-5-5", toolChoice: "tool", prompt: { text: "{{TAGS}}", version: "studio-extract.v1" } }),
     docxToText: async () => "x",
     newId: () => FILE,
     ...extra,
@@ -171,6 +172,13 @@ describe("Studio API (requireAccess first; tutor or parent of the child)", () =>
     expect((await handleSetAiSettings(deps("parent", s), { enabled: false })).status).toBe(200);
     expect(s.setAiSettings).toHaveBeenCalledWith({ enabled: false, noticeVersion: "ai-studio-v1", byMemberId: "m-parent" });
     expect((await handleSetAiSettings(deps("studentNguyen"), { enabled: true })).status).toBe(403);
+  });
+
+  it("preview isolation: with ALLOW_REAL_LEARNERS=false AI cannot be switched ON for a family that has a real learner (off is always allowed)", async () => {
+    const withReal = store({ aiSettings: vi.fn(async () => ({ enabled: false, monthly_cap_usd: 10, soft_cap_usd: 8, spent_usd: 0, runs_month: 0, soft_reached: false, updated_at: null, learners: [{ id: AN, alias: "An", is_test: true, ai_text: null }, { id: NGUYEN, alias: "Nguyên", is_test: false, ai_text: null }] })) });
+    expect(await handleSetAiSettings(deps("parent", withReal), { enabled: true })).toMatchObject({ status: 409, body: { error: "real_learners_blocked" } });
+    expect(withReal.setAiSettings).not.toHaveBeenCalled();
+    expect((await handleSetAiSettings(deps("parent", withReal), { enabled: false })).status).toBe(200);
   });
 
   it("pending inbox: staff only, real learners hidden on previews", async () => {
