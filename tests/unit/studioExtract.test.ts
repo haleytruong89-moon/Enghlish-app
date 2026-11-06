@@ -114,6 +114,7 @@ describe("runExtraction (spec §3 step 2, §5)", () => {
     const row = store.logRun.mock.calls[0]![0];
     expect(row.status).toBe("error");
     expect(row.inputTokens).toBeGreaterThan(0);
+    expect(row.outputTokens).toBeGreaterThan(0); // worst case: the whole output allowance, not 0
     expect(row.costUsd).toBeGreaterThan(0);
   });
 

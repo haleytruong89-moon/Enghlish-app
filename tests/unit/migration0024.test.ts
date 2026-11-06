@@ -18,7 +18,9 @@ const NEW_TABLES = ["ai_settings", "ai_runs", "studio_drafts", "studio_item_meta
 describe("0024_studio_b1.sql", () => {
   it("ends by recording its own version, is expand-only, never touches schema public, grants table by table", () => {
     expect(sql.trim().endsWith("insert into english.schema_migrations(version) values ('0024') on conflict do nothing;")).toBe(true);
-    expect(code).not.toMatch(/drop\s+table|drop\s+column|rename\s+(to|column)|drop\s+function|alter\s+column\s+\w+\s+type/i);
+    expect(code).not.toMatch(/drop\s+table|drop\s+column|rename\s+(to|column)|alter\s+column\s+\w+\s+type/i);
+    // the only drops: earlier signatures of functions THIS migration creates (first-draft leftovers), never anything from 0001–0023
+    expect([...code.matchAll(/drop\s+function\s+if\s+exists\s+english\.(\w+)/gi)].map((m) => m[1]).sort()).toEqual(["eng_ai_gate", "eng_log_ai_run", "eng_studio_retry_results"]);
     expect(code).not.toMatch(/\bpublic\./);
     expect(code).not.toMatch(/grant\s+[a-z, ]+on all tables/i);
     // the only statement on another schema: the private bucket's MIME list (guarded like 0016)
@@ -249,7 +251,7 @@ describe("0024_studio_b1.sql", () => {
     expect(gate).toContain("pg_catalog.pg_advisory_xact_lock(");
     expect(gate).toContain("v_spent + v_est >= v_cap");
     expect(gate).toContain("'reserved'");
-    expect(fnText(sql, "eng_ai_month_spent")).toContain("not exists (select 1 from english.ai_runs x where x.releases_run_id = r.id)");
+    expect(fnText(sql, "eng_ai_month_spent")).toContain("not (r.status = 'reserved' and exists (select 1 from english.ai_runs x where x.releases_run_id = r.id))");
     expect(code).not.toMatch(/updated_at::text\s*<>/);
     expect(fnText(sql, "eng_save_studio_draft")).toContain("english.eng_same_instant(v_d.updated_at, p_base)");
     expect(code).toContain("alter table english.test_frames add column if not exists learner_id uuid references english.learners(id);");

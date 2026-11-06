@@ -134,7 +134,8 @@ export async function runExtraction(deps: ExtractDeps, job: ExtractJob): Promise
       return { status: "ok", code: null, tries: t };
     } catch (err) {
       const e = err instanceof AiCallError ? err : new AiCallError("network");
-      const usage = e.usage.inputTokens === 0 && e.usage.outputTokens === 0 && COSTS_INPUT.has(e.code) ? { inputTokens: inputEstimate, outputTokens: 0 } : e.usage;
+      // No usage report from a call that may have run: log the WORST case (estimated input + the full output allowance), never 0.
+      const usage = e.usage.inputTokens === 0 && e.usage.outputTokens === 0 && COSTS_INPUT.has(e.code) ? { inputTokens: inputEstimate, outputTokens: toolCall.maxTokens } : e.usage;
       lastRun = await log("error", e.code, usage, deps.model, reservation);
       lastCode = e.code;
       if (e.code === "tool_choice" && toolChoice === "tool") {

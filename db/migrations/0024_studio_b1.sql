@@ -49,6 +49,7 @@ create table if not exists english.ai_runs (
 );
 create index if not exists ai_runs_family_at_idx on english.ai_runs(family_id, at desc);
 create index if not exists ai_runs_draft_idx on english.ai_runs(draft_id);
+create unique index if not exists ai_runs_release_once on english.ai_runs(releases_run_id) where releases_run_id is not null;
 
 -- 1c. Mẫu chủ đề: thêm loại 'studio' = mẫu riêng của MỘT em, sinh lúc Duyệt (không nằm trong content/ hay config.lock.json).
 alter table english.inquiry_templates add column if not exists kind text not null default 'topic';
@@ -777,7 +778,7 @@ revoke execute on function english.eng_register_file(uuid, uuid, text, jsonb, uu
 
 -- 3a0. Khóa lạc quan: so MỐC THỜI GIAN (timestamptz), không so chữ — chữ phụ thuộc TimeZone của phiên. Chữ không đọc được = khác.
 create or replace function english.eng_same_instant(p_ts timestamptz, p_base text) returns boolean
-language plpgsql immutable set search_path = ''
+language plpgsql stable set search_path = ''
 as $$
 begin
   return p_ts = p_base::timestamptz;
@@ -794,12 +795,14 @@ as $$
   select coalesce(sum(r.cost_usd), 0)::numeric
   from english.ai_runs r
   where r.family_id = p_family
-    and not exists (select 1 from english.ai_runs x where x.releases_run_id = r.id)
+    and not (r.status = 'reserved' and exists (select 1 from english.ai_runs x where x.releases_run_id = r.id))
     and r.at >= (pg_catalog.date_trunc('month', pg_catalog.now() at time zone 'Asia/Ho_Chi_Minh') at time zone 'Asia/Ho_Chi_Minh')
 $$;
 revoke execute on function english.eng_ai_month_spent(uuid) from public, anon, authenticated, service_role;
 
 -- 3b. Cổng AI cho một em: công tắc của gia đình + đồng ý ai_text mới nhất của em + chi phí tháng < trần. Không có dòng cài đặt = tắt.
+-- Chữ ký cũ từ bản nháp đầu của 0024 (nếu đã chạy ở đâu đó): bỏ để không còn hai bản trùng tên.
+drop function if exists english.eng_ai_gate(uuid);
 create or replace function english.eng_ai_gate(
   p_learner uuid, p_estimate numeric default 0, p_reserve boolean default false, p_draft uuid default null, p_model text default null, p_by uuid default null
 ) returns jsonb
@@ -919,6 +922,7 @@ end
 $$;
 
 -- 3e. Một lần gọi AI (hoặc một lần bị từ chối): chỉ số, không nội dung.
+drop function if exists english.eng_log_ai_run(uuid, uuid, text, text, int, int, numeric, text, text, uuid);
 create or replace function english.eng_log_ai_run(
   p_family uuid, p_draft uuid, p_model text, p_prompt_version text, p_input int, p_output int, p_cost numeric, p_status text, p_error text, p_by uuid,
   p_release uuid default null
@@ -930,6 +934,16 @@ declare
 begin
   if p_family is null or p_status is null then
     raise exception 'eng_log_ai_run: family and status are required' using errcode = '22004';
+  end if;
+  if p_release is not null then
+    -- Only a reservation of the SAME family, not released yet (the unique index ai_runs_release_once also holds under concurrency).
+    perform 1 from english.ai_runs r
+    where r.id = p_release and r.family_id = p_family and r.status = 'reserved'
+      and not exists (select 1 from english.ai_runs x where x.releases_run_id = r.id)
+    for update;
+    if not found then
+      raise exception 'eng_log_ai_run: p_release must be an unreleased reservation of this family (bad_release)' using errcode = '23514';
+    end if;
   end if;
   insert into english.ai_runs(family_id, purpose, draft_id, model, prompt_version, input_tokens, output_tokens, cost_usd, status, error_code, by_member, releases_run_id)
   values (p_family, 'studio_extract', p_draft, p_model, p_prompt_version, coalesce(p_input, 0), coalesce(p_output, 0), coalesce(p_cost, 0), p_status, p_error, p_by, p_release)
@@ -1332,7 +1346,8 @@ as $$
     'superseded_by', (select n.id from english.studio_drafts n where n.supersedes_draft_id = d.id and n.status <> 'discarded'),
     'test_file', (select pg_catalog.jsonb_build_object('id', f.id, 'mime', f.mime, 'path', f.path) from english.files f where f.id = d.test_file_id),
     'key_file', (select pg_catalog.jsonb_build_object('id', f.id, 'mime', f.mime, 'path', f.path) from english.files f where f.id = d.key_file_id),
-    'ai_cost_usd', (select coalesce(sum(r.cost_usd), 0) from english.ai_runs r where r.draft_id = d.id),
+    'ai_cost_usd', (select coalesce(sum(r.cost_usd), 0) from english.ai_runs r where r.draft_id = d.id
+                    and not (r.status = 'reserved' and exists (select 1 from english.ai_runs x where x.releases_run_id = r.id))),
     'assigned', coalesce((
       select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
                'instance_id', i.id, 'activity_id', a.id, 'due_on', i.due_on, 'start_on', english.eng_step_effective_date(a.id), 'assigned_at', i.assigned_at)
@@ -1524,7 +1539,8 @@ revoke execute on function english.eng_studio_after_episode() from public, anon,
 
 -- Thử ghi lại Kết quả bài cho các lần làm Studio đã nộp, đã hết câu chờ mà chưa có kết quả (lần ghi tự động từng lỗi — lỗi chỉ vào app_errors).
 -- Idempotent (eng_record_studio_result trả replayed khi đã có). Chỉ cho em mà người gọi quản lý được. Trả số kết quả vừa ghi.
-create or replace function english.eng_studio_retry_results(p_by uuid) returns int
+drop function if exists english.eng_studio_retry_results(uuid);
+create or replace function english.eng_studio_retry_results(p_by uuid, p_allow_real boolean default false) returns int
 language plpgsql volatile security definer set search_path = ''
 as $$
 declare
@@ -1535,16 +1551,28 @@ begin
   if p_by is null then
     raise exception 'eng_studio_retry_results: actor is required' using errcode = '22004';
   end if;
+  -- Only attempts that are READY (checks + episode, no result, no item still waiting for a person), so waiting ones never crowd the window;
+  -- real learners only where the app allows them; an attempt whose last retry failed less than an hour ago is left alone (no error row per page view).
   for v_a in
     select t.id
     from english.attempts t
+    join english.learners l on l.id = t.learner_id
     join english.activity_instances a on a.id = t.activity_instance_id
     join english.inquiry_instances i on i.id = a.inquiry_instance_id
     join english.inquiry_templates tp on tp.id = i.template_id and tp.version = i.template_version and tp.kind = 'studio'
-    where exists (select 1 from english.attempt_auto_checks c where c.attempt_id = t.id)
-      and exists (select 1 from english.episodes e where e.attempt_id = t.id)
+    join english.attempt_auto_checks c on c.attempt_id = t.id
+    where exists (select 1 from english.episodes e where e.attempt_id = t.id)
       and not exists (select 1 from english.results r where r.attempt_id = t.id)
+      and not exists (
+        select 1 from pg_catalog.jsonb_each(c.checks -> 'items') as e(k, v)
+        where e.v ->> 'result' = 'needs_person'
+          and not exists (select 1 from english.item_decisions d where d.attempt_id = t.id and d.item_id = e.k))
+      and (p_allow_real or l.is_test)
       and english.eng_actor_may_manage(p_by, t.learner_id)
+      and not exists (
+        select 1 from english.app_errors ae
+        where ae.route = 'db:retry' and ae.code = 'studio_result' and ae.details ->> 'attempt' = t.id::text
+          and ae.at > pg_catalog.now() - interval '1 hour')
     order by t.submitted_at
     limit 50
   loop
@@ -1559,8 +1587,8 @@ begin
   return v_n;
 end
 $$;
-revoke execute on function english.eng_studio_retry_results(uuid) from public, anon, authenticated;
-grant execute on function english.eng_studio_retry_results(uuid) to service_role;
+revoke execute on function english.eng_studio_retry_results(uuid, boolean) from public, anon, authenticated;
+grant execute on function english.eng_studio_retry_results(uuid, boolean) to service_role;
 drop trigger if exists episodes_studio_result on english.episodes;
 create trigger episodes_studio_result
   after insert on english.episodes

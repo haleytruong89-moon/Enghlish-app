@@ -186,7 +186,7 @@ describe("Studio API (requireAccess first; tutor or parent of the child)", () =>
     const s = store();
     expect((await handlePending(deps("parent", s))).status).toBe(200);
     expect(s.pending).toHaveBeenCalledWith({ byMemberId: "m-parent", allowReal: false });
-    expect(s.retryResults).toHaveBeenCalledWith("m-parent"); // a result that failed to write once is retried when the inbox opens
+    expect(s.retryResults).toHaveBeenCalledWith({ byMemberId: "m-parent", allowReal: false }); // a result that failed to write once is retried when the inbox opens
     expect((await handlePending(deps("studentNguyen"))).status).toBe(403);
   });
 });

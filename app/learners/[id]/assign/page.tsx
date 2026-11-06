@@ -17,7 +17,7 @@ export default async function AssignPracticePage({ params }: { params: Promise<{
   const { member, learner } = await requireLearnerPage(id, "practice:write");
   const [tags, frames, assignments, map] = await Promise.all([
     loadTags(learner.trackId),
-    loadFrames(learner.trackId),
+    loadFrames(learner.trackId, learner.id),
     loadAssignments(learner.id),
     loadPickerMap(learner.id),
   ]);

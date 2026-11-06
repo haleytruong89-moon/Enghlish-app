@@ -116,6 +116,7 @@ export async function handleRecordResult(deps: TutorWorkDeps, learnerId: string,
   } catch (err) {
     // A second FIRST attempt of the same test: its own answer, so the form can say "choose 'Làm lại' or fix the saved one".
     if (err instanceof ReviewDbError && err.code === "23505" && /\(duplicate_first\)/.test(err.detail)) return fail(409, "duplicate_first");
+    if (err instanceof ReviewDbError && err.code === "23514" && /\(frame_other_learner\)/.test(err.detail)) return fail(400, "frame_other_learner");
     return fromDbError(err);
   }
 }

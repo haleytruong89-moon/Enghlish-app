@@ -165,6 +165,47 @@ describe("Studio B1 review findings (migration 0024)", () => {
     expect((await assign(e.id)).activity_id).toBeTruthy();
   });
 
+  it("the draft's AI cost sums real runs only: a released reservation does not count", async () => {
+    const d = await newDraft((x) => x);
+    const resv = (await q1<{ id: string }>("insert into english.ai_runs(family_id, purpose, draft_id, status, cost_usd) values ($1, 'studio_extract', $2, 'reserved', 0.75) returning id", [s.familyId, d.id]))[0]!.id;
+    await q1("insert into english.ai_runs(family_id, purpose, draft_id, status, cost_usd, releases_run_id) values ($1, 'studio_extract', $2, 'ok', 0.05, $3)", [s.familyId, d.id, resv]);
+    const view = await svc<{ ai_cost_usd: number }>("select english.eng_studio_draft($1) as r", [d.id]);
+    expect(Number(view.ai_cost_usd)).toBeCloseTo(0.05, 6);
+  });
+
+  it("retry: only READY attempts (not those still waiting for a person), no real learner unless allowed, one error row per hour per attempt", async () => {
+    // an attempt that still waits for a person is not touched and never crowds anything
+    const w = await newDraft((x) => x);
+    await approve(w);
+    const wa = await assign(w.id);
+    await submit(wa.activity_id, { q1: "B. had", q7: "I wish I could", q8: "is said to be a" }); // q7 / q8 wait
+    expect(await svc<number>("select english.eng_studio_retry_results($1, true) as r", [s.members.tutorNguyen])).toBe(0);
+    // an eligible one, written while the automatic write is off
+    const d = await newDraft((x) => ({ ...x, items: x.items.filter((i) => i.n <= 4).map((i) => ({ ...i })) }));
+    await approve(d);
+    const act = await assign(d.id);
+    await q1("alter table english.episodes disable trigger episodes_studio_result");
+    let att: { attempt_id: string };
+    try {
+      att = await submit(act.activity_id, { q1: "B. had", q2: "A. must", q3: "A. off", q4: "C. A visit that changed Lan's plans" });
+    } finally {
+      await q1("alter table english.episodes enable trigger episodes_studio_result");
+    }
+    // a failure logged within the last hour: left alone; an old one (2 h): tried again
+    await q1("insert into english.app_errors(route, code, message, details) values ('db:retry', 'studio_result', 'x', $1)", [JSON.stringify({ attempt: att.attempt_id })]);
+    expect(await svc<number>("select english.eng_studio_retry_results($1, true) as r", [s.members.tutorNguyen])).toBe(0);
+    await q1("update english.app_errors set at = now() - interval '2 hours' where details ->> 'attempt' = $1", [att.attempt_id]);
+    // real learners are skipped unless the app allows them
+    await q1("update english.learners set is_test = false where id = $1", [s.learners.nguyen]);
+    try {
+      expect(await svc<number>("select english.eng_studio_retry_results($1, false) as r", [s.members.tutorNguyen])).toBe(0);
+    } finally {
+      await q1("update english.learners set is_test = true where id = $1", [s.learners.nguyen]);
+    }
+    expect(await svc<number>("select english.eng_studio_retry_results($1, false) as r", [s.members.tutorNguyen])).toBe(1);
+    expect(await q1("select 1 from english.results where attempt_id = $1", [att.attempt_id])).toHaveLength(1);
+  });
+
   it("purge removes the child's Studio frames; the dry run counts the same key", async () => {
     const before = (await q1<{ n: number }>("select count(*)::int as n from english.test_frames where learner_id = $1", [s.learners.nguyen]))[0]!.n;
     expect(before).toBeGreaterThan(0);

@@ -362,6 +362,12 @@ describe("Studio B1 (migration 0024)", () => {
 describe("Studio B1: AI hard cap under concurrency (migration 0024)", () => {
   let db: TestDb;
   let s: Seeded;
+  const fail = async (p: Promise<unknown>, code: string, re?: RegExp) => {
+    const err = await p.then(() => null, (e: unknown) => e as { code?: string; message?: string });
+    expect(err, "expected an error").not.toBeNull();
+    expect(err?.code, err?.message).toBe(code);
+    if (re) expect(err?.message).toMatch(re);
+  };
   const extra: Client[] = [];
   beforeAll(async () => {
     db = await createTestDb();
@@ -403,5 +409,18 @@ describe("Studio B1: AI hard cap under concurrency (migration 0024)", () => {
       [s.familyId, s.members.parent, resv],
     );
     expect(await spent()).toBeCloseTo(9.907, 4);
+  });
+
+  it("a release must name an unreleased reservation of the same family: an 'ok' run, another family's row, a second release are all refused", async () => {
+    const log = (release: string | null, family = s.familyId) =>
+      db.client.query("select english.eng_log_ai_run($1, null, 'claude-sonnet-5-5', 'studio-extract.v1', 1, 1, 0.001, 'ok', null, $2, $3)", [family, s.members.parent, release]);
+    const ok = (await db.client.query<{ id: string }>("select id from english.ai_runs where status = 'ok' limit 1")).rows[0]!.id;
+    await fail(log(ok), "23514", /\(bad_release\)/);
+    const released = (await db.client.query<{ id: string }>("select releases_run_id as id from english.ai_runs where releases_run_id is not null limit 1")).rows[0]!.id;
+    await fail(log(released), "23514", /\(bad_release\)/); // already released once
+    await fail(log(randomUUID()), "23514", /\(bad_release\)/);
+    // an 'ok' run is never excluded from the month: only a RELEASED reservation stops counting
+    const spent = Number((await db.client.query<{ r: { spent_usd: number } }>("select english.eng_ai_gate($1) as r", [s.learners.nguyen])).rows[0]!.r.spent_usd);
+    expect(spent).toBeGreaterThan(9.9);
   });
 });

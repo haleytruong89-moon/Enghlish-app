@@ -48,7 +48,7 @@ export interface StudioStore {
   assign(a: { draftId: string; startOn: string; dueOn: string; byMemberId: string; clientId: string }): Promise<unknown>;
   pending(a: { byMemberId: string; allowReal: boolean }): Promise<unknown>;
   /** Writes the Kết quả bài of submitted Studio attempts that have no pending item and no result yet (idempotent; returns how many). */
-  retryResults(byMemberId: string): Promise<unknown>;
+  retryResults(a: { byMemberId: string; allowReal: boolean }): Promise<unknown>;
   decide(a: { attemptId: string; items: { item_id: string; result: string }[]; byMemberId: string; clientId: string }): Promise<unknown>;
 }
 
@@ -335,8 +335,9 @@ export async function handleSetAiSettings(deps: StudioDeps, raw: unknown): Promi
 export async function handlePending(deps: StudioDeps): Promise<HandlerResult> {
   const s = await staff(deps);
   if (!s.ok) return s.result;
-  await deps.store.retryResults(s.member.id).catch(async (err: unknown) => deps.log?.(err)); // fail-soft: the inbox must still open
-  return { status: 200, body: parsePending(await deps.store.pending({ byMemberId: s.member.id, allowReal: deps.access?.allowRealLearners ?? allowRealLearners() })) };
+  const allowReal = deps.access?.allowRealLearners ?? allowRealLearners();
+  await deps.store.retryResults({ byMemberId: s.member.id, allowReal }).catch(async (err: unknown) => deps.log?.(err)); // fail-soft: the inbox must still open
+  return { status: 200, body: parsePending(await deps.store.pending({ byMemberId: s.member.id, allowReal })) };
 }
 
 export async function handleDecide(deps: StudioDeps, attemptId: string, raw: unknown): Promise<HandlerResult> {

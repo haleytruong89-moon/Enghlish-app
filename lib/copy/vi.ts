@@ -636,6 +636,7 @@ export const tutorWorkErrors = {
   badMonth: "Chọn một tháng trong 24 tháng gần đây, không phải tháng sau.",
   staleReport: "Báo cáo tháng này vừa được người khác sửa. Tải lại trang rồi sửa lại.",
   unknownGroup: "Nhóm này không có trong bản đồ kỹ năng. Tải lại trang rồi chọn lại.",
+  frameOtherLearner: "Khung đề này thuộc về em khác. Chọn khung của em này.",
   alreadyGrouped: "Nhãn này đã được xếp vào nhóm khác. Tải lại trang để xem.",
   levelTutorOnly: `Chỉ ${tutorHonorific} của em mới xác nhận hoặc điều chỉnh được cấp.`,
   alreadyConfirmed: "Mảng này đã được xác nhận rồi. Tải lại trang rồi dùng “Điều chỉnh cấp”.",

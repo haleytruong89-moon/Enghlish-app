@@ -42,7 +42,7 @@ export function createSupabaseStudioStore(): StudioStore {
     discardDraft: (a) => call("eng_discard_studio_draft", { p_draft: a.draftId, p_by: a.byMemberId }),
     approveDraft: (a) => call("eng_approve_studio_draft", { p_draft: a.draftId, p_base: a.base, p_build: a.build, p_by: a.byMemberId }),
     assign: (a) => call("eng_assign_studio", { p_draft: a.draftId, p_start: a.startOn, p_due: a.dueOn, p_by: a.byMemberId, p_client_id: a.clientId }),
-    retryResults: (m) => call("eng_studio_retry_results", { p_by: m }),
+    retryResults: (a) => call("eng_studio_retry_results", { p_by: a.byMemberId, p_allow_real: a.allowReal }),
     pending: (a) => call("eng_studio_pending", { p_by: a.byMemberId, p_allow_real: a.allowReal }),
     decide: (a) => call("eng_decide_studio_items", { p_attempt: a.attemptId, p_items: a.items, p_by: a.byMemberId, p_client_id: a.clientId }),
   };
