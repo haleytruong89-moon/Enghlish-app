@@ -97,7 +97,7 @@ describe("S5b-1 PR B: practice assignments, submissions, files (migration 0016)"
           insert into storage.buckets(id, name, public) values ('launcher-files', 'launcher-files', true);
           insert into storage.buckets(id, name, public, file_size_limit) values ('english-work', 'english-work', true, 1);`);
         await migrate(own.client);
-        const want = { id: "english-work", public: false, file_size_limit: "15728640", allowed_mime_types: ["application/pdf", "image/png", "image/jpeg", "image/webp"] };
+        const want = { id: "english-work", public: false, file_size_limit: "15728640", allowed_mime_types: ["application/pdf", "image/png", "image/jpeg", "image/webp", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"] }; // 0024 adds .docx
         const rows = (await own.client.query("select id, public, file_size_limit::text as file_size_limit, allowed_mime_types from storage.buckets order by id")).rows;
         expect(rows).toEqual([want, { id: "launcher-files", public: true, file_size_limit: null, allowed_mime_types: null }]);
         await migrate(own.client, true);
