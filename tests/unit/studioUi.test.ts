@@ -4,10 +4,12 @@ import { describe, expect, it } from "vitest";
 import { AiSoftCapBox } from "@/components/settings/AiSoftCapBox";
 import { ReviewTabs } from "@/components/review/ReviewTabs";
 import { StudioPendingCard } from "@/components/review/StudioPendingCard";
+import { StudioReview } from "@/components/student/StudioReview";
 import { ItemCard } from "@/components/studio/ItemCard";
 import { SidePanel } from "@/components/studio/SidePanel";
 import { DraftList } from "@/components/studio/DraftList";
-import { aiSettingsCopy, studioCopy, studioIssueText } from "@/lib/copy/vi";
+import { aiSettingsCopy, studioCopy, studioIssueText, studioStudentCopy } from "@/lib/copy/vi";
+import { isStudioStep } from "@/lib/studio/view";
 import { normalizeExtract } from "@/lib/studio/normalize";
 import { aiExtractSchema } from "@/lib/studio/schema";
 import { summarizeDraft } from "@/lib/studio/summary";
@@ -76,5 +78,35 @@ describe("Hộp duyệt - Cần thầy/cô xem (board 21)", () => {
     expect(html).toContain("wish I could");
     expect(html).toContain("wished I could");
     expect(html).toContain("Nguyên viết");
+  });
+});
+
+
+describe("Câu cần xem lại (board 20)", () => {
+  const review = {
+    attemptNo: 1, submittedAt: "2026-11-05T03:00:00Z",
+    wrong: [
+      { n: 2, stem: "The lights are on. She ____ be at home.", given: "B. can't", expected: "A. must", explanationVi: "Có bằng chứng chắc chắn nên dùng must." },
+      { n: 5, stem: "Why did Lan change her mind?", given: "", expected: "B. The robot room was interesting", explanationVi: null },
+    ],
+    pending: [7, 8],
+  };
+  it("shows wrong items, the right answer, why, and the waiting numbers — never a score or a count of right items", () => {
+    const html = renderToStaticMarkup(createElement(StudioReview, { review }, null));
+    expect(html).toContain(studioStudentCopy.title);
+    expect(html).toContain("A. must");
+    expect(html).toContain(studioStudentCopy.blank);
+    expect(html).toContain(studioStudentCopy.pending(2));
+    expect(html).toContain("Câu 7, 8");
+    const text = html.replace(/<[^>]+>/g, " ");
+    expect(text).not.toMatch(/\d+\s*\/\s*\d+|%|điểm|đúng\s+\d/i);
+  });
+});
+
+describe("isStudioStep", () => {
+  it("only q<n> items make a Studio step", () => {
+    expect(isStudioStep([{ id: "q1" }, { id: "q12" }])).toBe(true);
+    expect(isStudioStep([{ id: "W4-R1" }])).toBe(false);
+    expect(isStudioStep([])).toBe(false);
   });
 });

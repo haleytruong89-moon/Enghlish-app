@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { messages, work } from "@/lib/copy/vi";
+import { isStudioStep, questionNumber } from "@/lib/studio/view";
 import { ASSISTANCE_VALUES, type SupportedActivityView, type Assistance, type DraftContent, type ItemView, type Receipt } from "@/lib/work/types";
 import { baseRevisionOf, formatHm, nonEmptyAnswers, wordsOf } from "@/lib/work/view";
 
@@ -143,6 +144,7 @@ export function WorkForm({ activity }: { activity: SupportedActivityView }) {
       dirty.current = false;
       pending.current = null;
       setReceipt(json.receipt);
+      if (isStudioStep(step.items) && !json.receipt.replayed) router.refresh(); // Studio: the page now shows "Câu cần xem lại" (board 20)
       setAttemptCount((n) => n + (json.receipt.replayed ? 0 : 1));
       // No router.refresh() here: for a one-time check the page would re-render without this form and the receipt would vanish
       // a moment after it appeared. The home page is dynamic (fetched fresh on navigation); a retry refreshes in again().
@@ -221,7 +223,7 @@ export function WorkForm({ activity }: { activity: SupportedActivityView }) {
           {step.items.map((it, i) => (
             <fieldset key={it.id} data-testid={`question-${it.id}`} className="m-0 flex flex-col gap-1 border-0 p-0">
               <legend className="mb-1 text-[15px] font-semibold leading-snug">
-                <span className="text-muted">{work.questionLabel(i + 1)}. </span>
+                <span className="text-muted">{work.questionLabel(questionNumber(it.id, i))}. </span>
                 <span lang="en">{it.stem}</span>
               </legend>
               {isChoice(it) ? (
@@ -243,7 +245,7 @@ export function WorkForm({ activity }: { activity: SupportedActivityView }) {
                 ))
               ) : it.kind === "open" || it.kind === "transform" ? (
                 <textarea
-                  aria-label={`${work.answerLabel} — ${work.questionLabel(i + 1)}`}
+                  aria-label={`${work.answerLabel} — ${work.questionLabel(questionNumber(it.id, i))}`}
                   rows={it.kind === "open" ? 5 : 2}
                   value={answers[it.id] ?? ""}
                   placeholder={work.answerHint}
@@ -258,7 +260,7 @@ export function WorkForm({ activity }: { activity: SupportedActivityView }) {
               ) : (
                 <input
                   type="text"
-                  aria-label={`${work.answerLabel} — ${work.questionLabel(i + 1)}`}
+                  aria-label={`${work.answerLabel} — ${work.questionLabel(questionNumber(it.id, i))}`}
                   value={answers[it.id] ?? ""}
                   placeholder={work.answerHint}
                   maxLength={2000}
