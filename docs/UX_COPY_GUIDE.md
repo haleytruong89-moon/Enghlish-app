@@ -109,6 +109,22 @@ Hiển thị bằng **thang 4 ô có chữ**, không dùng màu đơn thuần ("
 | A-T7-OPINION | Nêu ý kiến có lý do, ví dụ | Nói ý kiến của mình |
 | A-X1-TURN | Nói trôi chảy (cô nghe trực tiếp) | Nói liền mạch |
 
+### 3.5. Studio (đề PDF/Word → bài trong app, Studio B1)
+
+Mọi chữ lấy từ `studioCopy` / `studioStudentCopy` / `studioInboxCopy` / `aiSettingsCopy` / `studioErrors` / `studioIssueText` trong `lib/copy/vi.ts`. Chữ cho con đi qua `studioStudentCopy`; test `studioCopy.test.ts` quét điểm / x/y / %.
+
+| Ngữ cảnh | Chữ | Ai thấy |
+|---|---|---|
+| Liên kết trên thẻ em, tiêu đề trang | Tạo bài từ đề | Phụ huynh, gia sư |
+| Hai nút khi tạo | Cho AI đọc đề · Soạn tay | Phụ huynh, gia sư |
+| Chờ AI | AI đang đọc đề… | Phụ huynh, gia sư |
+| Màn Duyệt | Duyệt đề · Chỉ câu cần xem · Kỹ năng cả phần · Đáp án (theo file của thầy/cô) · Đáp án chấp nhận · Nhãn · Kỹ năng · Không có kỹ năng phù hợp · Thiếu đáp án | Phụ huynh, gia sư |
+| Khung bên phải | Bài sẽ tạo: App tự chấm · Có thể cần thầy/cô xem · Tính bậc kỹ năng · Chỉ tín hiệu (nhãn) · Khung đề giấy | Phụ huynh, gia sư |
+| Giao bài | Giao bài · Ngày làm · Hạn nộp | Phụ huynh, gia sư |
+| Con xem lại bài | Câu cần xem lại · Bạn viết · Bạn để trống câu này · Nên là · Vì sao · Thầy/cô sẽ xem n câu này · Về Việc tiếp theo · Làm lại. **Không bao giờ** điểm, x/y, số câu đúng | Học sinh |
+| Hộp duyệt, tab mới | Cần thầy/cô xem · chờ n ngày · Đúng · Sai · "Đã xong bài này của …: đúng x/y câu làm trên app…" | Phụ huynh, gia sư |
+| Cài đặt AI | Cài đặt AI · Đồng ý và bật · Tắt AI · chi phí tháng | Chỉ phụ huynh |
+
 ## 4. Quy tắc trình bày
 
 1. **Kết luận trước, số sau.** Mỗi màn phụ huynh mở đầu bằng 1–2 câu tóm tắt bằng lời.
