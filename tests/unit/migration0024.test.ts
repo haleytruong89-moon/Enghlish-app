@@ -202,5 +202,44 @@ describe("0024_studio_b1.sql", () => {
     expect(f).toContain("'Thầy/cô', 'Tài liệu của thầy/cô, chỉ dùng trong gia đình'");
   });
 
+  it("the child's review: student-only, own released step, Studio only; never a count, a total, a tag or a skill", () => {
+    const f = fnText(sql, "eng_my_studio_review");
+    expect(grantsOf("eng_my_studio_review")).toEqual(["authenticated"]);
+    expect(code).toContain("revoke execute on function english.eng_my_studio_review(uuid) from public, anon, service_role;");
+    expect(f).toContain("m.user_id = auth.uid() and m.role = 'student'");
+    expect(f).toContain("english.eng_activity_released(p_activity)");
+    expect(f).toContain("if v_kind is distinct from 'studio' then return '{}'::jsonb; end if;");
+    for (const bad of ["'correct'", "'total'", "'checked'", "tag_key", "reading_skill_key", "target_id", "english.results", "studio_item_meta", "accepted_additions"]) {
+      expect(f, bad).not.toContain(bad);
+    }
+    expect(f).toContain("r.res in ('incorrect', 'blank')");
+  });
+
+  it("results: written only when no item waits, idempotent per attempt, practice source, first / retry from the episode; tags from the item meta", () => {
+    const f = fnText(sql, "eng_record_studio_result");
+    expect(code).toContain("revoke execute on function english.eng_record_studio_result(uuid, uuid) from public, anon, authenticated, service_role;");
+    expect(f).toContain("if v_pending > 0 then");
+    expect(f).toContain("from english.results r where r.attempt_id = p_attempt");
+    expect(f).toContain("'frame', 'home', case when v_first then 'first' else 'retry' end, 'practice'");
+    expect(f).toContain("coalesce(m.tag_key, m.reading_skill_key)");
+    expect(f).toContain("'practice', v_id, (x ->> 'n')::int, v_first, v_on, v_by");
+    const trg = fnText(sql, "eng_studio_after_episode");
+    expect(trg).toContain("exception when others then");
+    expect(trg).toContain("'studio_result'");
+    expect(code).toMatch(/create trigger episodes_studio_result\s+after insert on english\.episodes\s+for each row execute function english\.eng_studio_after_episode\(\);/);
+  });
+
+  it("verdicts: tutor or parent of the child, only waiting items, once each; 'Đúng' on transform/short adds an accepted answer for LATER attempts", () => {
+    const f = fnText(sql, "eng_decide_studio_items");
+    expect(grantsOf("eng_decide_studio_items")).toEqual(["service_role"]);
+    expect(f).toContain("english.eng_actor_may_manage(p_by, v_t.learner_id)");
+    for (const tag of ["(not_studio)", "(not_pending_item)", "(already_decided)", "(duplicate_item)"]) expect(f).toContain(tag);
+    expect(f).toContain("insert into english.accepted_additions(");
+    expect(f).toContain("on conflict do nothing");
+    expect(f).toContain("english.eng_record_studio_result(p_attempt, p_by)");
+    expect(f).not.toMatch(/update english\.attempt_auto_checks|delete from english\.results/);
+    expect(grantsOf("eng_studio_pending")).toEqual(["service_role"]);
+  });
+
   // (later tasks add their tests here)
 });

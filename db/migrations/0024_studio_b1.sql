@@ -1313,6 +1313,372 @@ grant execute on function english.eng_assign_studio(uuid, date, date, uuid, text
 grant execute on function english.eng_studio_draft(uuid) to service_role;
 grant execute on function english.eng_studio_drafts(uuid) to service_role;
 
+-- 4. Kết quả, Đúng/Sai, Hộp duyệt, phần con xem lại ------------------------------------------------------------------------------
+
+-- 4a. Kết quả bài + dấu nhãn của MỘT lần làm bài Studio, khi mọi câu đã có đúng / sai / bỏ trống (câu chờ đã được người lớn xử).
+-- Nguồn 'practice' (Studio · Luyện), khung đề của mẫu, lần đầu (episode.is_first_attempt) → dấu nhãn counts = true, làm lại → false.
+-- Câu chỉ làm trên giấy: not_in_app_items (không đúng, không sai). Người ghi (P5): người Đúng/Sai cuối cùng, không có thì người Duyệt đề.
+-- Gọi lại = trả kết quả đã có (một kết quả mỗi lần làm). Nội bộ.
+create or replace function english.eng_record_studio_result(p_attempt uuid, p_by uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_t english.attempts%rowtype;
+  v_i english.inquiry_instances%rowtype;
+  v_tpl english.inquiry_templates%rowtype;
+  v_d english.studio_drafts%rowtype;
+  v_f english.test_frames%rowtype;
+  v_existing english.results%rowtype;
+  v_checks jsonb;
+  v_first boolean;
+  v_pending int;
+  v_wrong int[];
+  v_skip int[];
+  v_tags jsonb;
+  v_by uuid;
+  v_role text;
+  v_on date;
+  v_id uuid := pg_catalog.gen_random_uuid();
+  v_correct int;
+begin
+  select * into v_t from english.attempts t where t.id = p_attempt for update;
+  if not found then
+    return pg_catalog.jsonb_build_object('recorded', false, 'reason', 'not_found');
+  end if;
+  select * into v_existing from english.results r where r.attempt_id = p_attempt;
+  if found then
+    return pg_catalog.jsonb_build_object('recorded', true, 'replayed', true, 'result_id', v_existing.id, 'correct', v_existing.correct,
+      'in_app', v_existing.total_items - cardinality(v_existing.not_in_app_items), 'tags', pg_catalog.jsonb_array_length(v_existing.item_tags));
+  end if;
+  select i.* into v_i from english.activity_instances a join english.inquiry_instances i on i.id = a.inquiry_instance_id where a.id = v_t.activity_instance_id;
+  select * into v_tpl from english.inquiry_templates t where t.id = v_i.template_id and t.version = v_i.template_version;
+  if v_tpl.kind is distinct from 'studio' then
+    return pg_catalog.jsonb_build_object('recorded', false, 'reason', 'not_studio');
+  end if;
+  select c.checks into v_checks from english.attempt_auto_checks c where c.attempt_id = p_attempt;
+  select e.is_first_attempt into v_first from english.episodes e where e.attempt_id = p_attempt;
+  if v_checks is null or v_first is null then
+    return pg_catalog.jsonb_build_object('recorded', false, 'reason', 'not_ready');
+  end if;
+  select pg_catalog.count(*)::int into v_pending
+  from pg_catalog.jsonb_each(v_checks -> 'items') as e(k, v)
+  where e.v ->> 'result' = 'needs_person'
+    and not exists (select 1 from english.item_decisions d where d.attempt_id = p_attempt and d.item_id = e.k);
+  if v_pending > 0 then
+    return pg_catalog.jsonb_build_object('recorded', false, 'reason', 'pending', 'pending', v_pending);
+  end if;
+  select * into v_d from english.studio_drafts d where d.template_id = v_tpl.id and d.template_version = v_tpl.version and d.status = 'approved';
+  select * into v_f from english.test_frames f where f.id = v_d.frame_id;
+  if v_f.id is null then
+    raise exception 'eng_record_studio_result: the test has no paper frame' using errcode = 'P0002';
+  end if;
+
+  select coalesce(array_agg(m.n order by m.n), '{}') into v_wrong
+  from english.studio_item_meta m
+  cross join lateral (
+    select case
+             when v_checks -> 'items' -> m.item_id ->> 'result' = 'needs_person'
+               then (select d.result from english.item_decisions d where d.attempt_id = p_attempt and d.item_id = m.item_id)
+             else v_checks -> 'items' -> m.item_id ->> 'result'
+           end as res) r
+  where m.template_id = v_tpl.id and m.template_version = v_tpl.version and not m.out_of_app and r.res in ('incorrect', 'blank');
+  select coalesce(array_agg(m.n order by m.n), '{}') into v_skip
+  from english.studio_item_meta m
+  where m.template_id = v_tpl.id and m.template_version = v_tpl.version and m.out_of_app;
+  select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('n', m.n, 'tag_key', coalesce(m.tag_key, m.reading_skill_key)) order by m.n), '[]'::jsonb)
+  into v_tags
+  from english.studio_item_meta m
+  where m.template_id = v_tpl.id and m.template_version = v_tpl.version and m.n = any (v_wrong);
+
+  v_by := coalesce(p_by,
+                   (select d.by_member from english.item_decisions d where d.attempt_id = p_attempt order by d.at desc, d.id desc limit 1),
+                   v_d.approved_by_member);
+  select m.role into v_role from english.members m where m.id = v_by;
+  if v_role is null or v_role not in ('tutor', 'parent') then
+    v_by := v_d.approved_by_member;
+    select m.role into v_role from english.members m where m.id = v_by;
+  end if;
+  if v_role is null or v_role not in ('tutor', 'parent') then
+    raise exception 'eng_record_studio_result: no adult to record the result' using errcode = '23514';
+  end if;
+  v_on := (v_t.submitted_at at time zone 'Asia/Ho_Chi_Minh')::date;
+  v_correct := v_f.total_items - cardinality(v_wrong) - cardinality(v_skip);
+
+  insert into english.results(
+    id, learner_id, assignment_id, frame_id, mode, context, attempt, source, used_hint, title, total_items, correct, wrong_items, not_in_app_items,
+    item_tags, taken_on, recorded_by_member, recorded_role, supersedes_id, client_id, attempt_id)
+  values (v_id, v_t.learner_id, null, v_f.id, 'frame', 'home', case when v_first then 'first' else 'retry' end, 'practice', false, v_f.title,
+          v_f.total_items, v_correct, v_wrong, v_skip, v_tags, v_on, v_by, v_role, null, 'studio:' || p_attempt::text, p_attempt);
+
+  insert into english.tag_marks(learner_id, tag_key, source, source_id, item_no, counts, marked_on, recorded_by_member)
+  select v_t.learner_id, x ->> 'tag_key', 'practice', v_id, (x ->> 'n')::int, v_first, v_on, v_by
+  from pg_catalog.jsonb_array_elements(v_tags) as x;
+
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (null, 'system', 'studio.result_recorded', v_tpl.family_id, v_t.learner_id,
+          pg_catalog.jsonb_build_object('result', v_id, 'attempt', p_attempt, 'first', v_first));
+
+  return pg_catalog.jsonb_build_object('recorded', true, 'replayed', false, 'result_id', v_id, 'correct', v_correct,
+    'in_app', v_f.total_items - cardinality(v_skip), 'tags', pg_catalog.jsonb_array_length(v_tags));
+end
+$$;
+revoke execute on function english.eng_record_studio_result(uuid, uuid) from public, anon, authenticated, service_role;
+
+-- 4b. Nộp bài Studio không còn câu chờ → ghi kết quả ngay. Chạy sau khi episode được ghi (dòng cuối của eng_submit_attempt, sau phần tự chấm).
+-- KHÔNG BAO GIỜ làm hỏng lần nộp của con: lỗi ghi vào app_errors; eng_decide_studio_items gọi lại cùng hàm (idempotent).
+create or replace function english.eng_studio_after_episode() returns trigger
+language plpgsql security definer set search_path = ''
+as $$
+begin
+  if exists (select 1 from english.attempt_auto_checks c where c.attempt_id = new.attempt_id) then
+    begin
+      perform english.eng_record_studio_result(new.attempt_id, null);
+    exception when others then
+      insert into english.app_errors(route, code, message, details)
+      values ('db:episodes', 'studio_result', pg_catalog.left(sqlstate || ': ' || sqlerrm, 300), pg_catalog.jsonb_build_object('attempt', new.attempt_id));
+    end;
+  end if;
+  return null;
+end
+$$;
+revoke execute on function english.eng_studio_after_episode() from public, anon, authenticated, service_role;
+drop trigger if exists episodes_studio_result on english.episodes;
+create trigger episodes_studio_result
+  after insert on english.episodes
+  for each row execute function english.eng_studio_after_episode();
+
+-- 4c. "Cần thầy/cô xem": Đúng / Sai cho câu chờ của một lần làm (gia sư hoặc phụ huynh của em — bài Luyện, D15). Một lần mỗi câu;
+-- gửi lại cùng kết quả = bỏ qua. "Đúng" cho transform / short → đáp án chấp nhận của mẫu (lần làm SAU tự chấm đúng; bài này không chấm lại).
+-- Hết câu chờ → Kết quả bài + dấu nhãn. Engine chạy lại ở máy chủ (hook S7a) sau khi hàm này trả về.
+create or replace function english.eng_decide_studio_items(p_attempt uuid, p_items jsonb, p_by uuid, p_client_id text) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_t english.attempts%rowtype;
+  v_m english.members%rowtype;
+  v_i english.inquiry_instances%rowtype;
+  v_tpl english.inquiry_templates%rowtype;
+  v_checks jsonb;
+  v_step jsonb;
+  v_answers jsonb;
+  v_x jsonb;
+  v_item text;
+  v_res text;
+  v_prev text;
+  v_kind text;
+  v_given text;
+  v_n int := 0;
+  v_pending int;
+  v_out jsonb;
+begin
+  if p_attempt is null or p_items is null or p_by is null then
+    raise exception 'eng_decide_studio_items: attempt, items and actor are required' using errcode = '22004';
+  end if;
+  if p_client_id is null or pg_catalog.length(pg_catalog.btrim(p_client_id)) not between 8 and 100 then
+    raise exception 'eng_decide_studio_items: client_id must be 8..100 characters' using errcode = '22023';
+  end if;
+  if pg_catalog.jsonb_typeof(p_items) is distinct from 'array' or pg_catalog.jsonb_array_length(p_items) not between 1 and 300 then
+    raise exception 'eng_decide_studio_items: items must be a list of 1..300 verdicts (bad_items)' using errcode = '22023';
+  end if;
+  if (select pg_catalog.count(distinct x ->> 'item_id') from pg_catalog.jsonb_array_elements(p_items) x) <> pg_catalog.jsonb_array_length(p_items) then
+    raise exception 'eng_decide_studio_items: an item appears twice (duplicate_item)' using errcode = '22023';
+  end if;
+  select * into v_t from english.attempts t where t.id = p_attempt for update;
+  if not found then
+    raise exception 'eng_decide_studio_items: attempt not found' using errcode = 'P0002';
+  end if;
+  select * into v_m from english.members m where m.id = p_by;
+  if v_m.id is null or v_m.role not in ('tutor', 'parent') or not english.eng_actor_may_manage(p_by, v_t.learner_id) then
+    raise exception 'eng_decide_studio_items: this member may not check work of this learner' using errcode = '42501';
+  end if;
+  select i.* into v_i from english.activity_instances a join english.inquiry_instances i on i.id = a.inquiry_instance_id where a.id = v_t.activity_instance_id;
+  select * into v_tpl from english.inquiry_templates t where t.id = v_i.template_id and t.version = v_i.template_version;
+  if v_tpl.kind is distinct from 'studio' then
+    raise exception 'eng_decide_studio_items: this is not a Studio test (not_studio)' using errcode = '23514';
+  end if;
+  select c.checks into v_checks from english.attempt_auto_checks c where c.attempt_id = p_attempt;
+  select x into v_step from pg_catalog.jsonb_array_elements(v_i.snapshot -> 'steps') as x
+  where (x ->> 'step_no')::int = (select a.step_no from english.activity_instances a where a.id = v_t.activity_instance_id);
+  select av.content -> 'answers' into v_answers from english.artifact_versions av
+  where av.attempt_id = p_attempt and av.kind = 'answers' order by av.version desc limit 1;
+
+  for v_x in select x from pg_catalog.jsonb_array_elements(p_items) as x loop
+    v_item := v_x ->> 'item_id';
+    v_res := v_x ->> 'result';
+    if v_item is null or v_res is null or v_res not in ('correct', 'incorrect') then
+      raise exception 'eng_decide_studio_items: each verdict is {item_id, result: correct|incorrect} (bad_items)' using errcode = '22023';
+    end if;
+    if (v_checks -> 'items' -> v_item ->> 'result') is distinct from 'needs_person' then
+      raise exception 'eng_decide_studio_items: item % is not waiting for a person (not_pending_item)', v_item using errcode = '23514';
+    end if;
+    select d.result into v_prev from english.item_decisions d where d.attempt_id = p_attempt and d.item_id = v_item;
+    if v_prev is not null then
+      if v_prev <> v_res then
+        raise exception 'eng_decide_studio_items: item % already has another verdict (already_decided)', v_item using errcode = '23505';
+      end if;
+      continue;
+    end if;
+    insert into english.item_decisions(attempt_id, learner_id, item_id, result, by_member, by_role, client_id)
+    values (p_attempt, v_t.learner_id, v_item, v_res, p_by, v_m.role, p_client_id);
+    v_n := v_n + 1;
+    if v_res = 'correct' then
+      select it ->> 'kind' into v_kind from pg_catalog.jsonb_array_elements(coalesce(v_step -> 'items', '[]'::jsonb)) as it where it ->> 'id' = v_item;
+      v_given := english.eng_clean_text(coalesce(v_answers ->> v_item, ''));
+      if v_kind in ('transform', 'short') and v_given <> '' and pg_catalog.length(v_given) <= 2000 then
+        insert into english.accepted_additions(template_id, template_version, item_id, learner_id, answer, by_member, from_attempt_id)
+        values (v_tpl.id, v_tpl.version, v_item, v_t.learner_id, v_given, p_by, p_attempt)
+        on conflict do nothing;
+      end if;
+    end if;
+  end loop;
+
+  if v_n > 0 then
+    insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+    values (v_m.user_id, v_m.role, 'studio.items_decided', v_tpl.family_id, v_t.learner_id,
+            pg_catalog.jsonb_build_object('attempt', p_attempt, 'count', v_n));
+  end if;
+  v_out := english.eng_record_studio_result(p_attempt, p_by);
+  select pg_catalog.count(*)::int into v_pending
+  from pg_catalog.jsonb_each(v_checks -> 'items') as e(k, v)
+  where e.v ->> 'result' = 'needs_person'
+    and not exists (select 1 from english.item_decisions d where d.attempt_id = p_attempt and d.item_id = e.k);
+  return pg_catalog.jsonb_build_object('decided', v_n, 'pending', v_pending, 'result', v_out);
+end
+$$;
+revoke execute on function english.eng_decide_studio_items(uuid, jsonb, uuid, text) from public, anon, authenticated;
+grant execute on function english.eng_decide_studio_items(uuid, jsonb, uuid, text) to service_role;
+
+-- 4d. Hộp duyệt → "Cần thầy/cô xem": mọi lần làm bài Studio còn câu chờ của các em mà người này quản lý (gia sư của em / phụ huynh).
+-- Mỗi câu: số câu, đề, đáp án (phần trước " / " đầu tiên), các đáp án chấp nhận (phần còn lại + accepted_additions), câu em viết.
+create or replace function english.eng_studio_pending(p_by uuid, p_allow_real boolean default false) returns jsonb
+language sql stable security definer set search_path = ''
+as $$
+  with ls as (
+    select l.id, l.alias, l.is_test
+    from english.learners l
+    join english.members m on m.id = p_by and m.role in ('tutor', 'parent')
+    where english.eng_actor_may_manage(p_by, l.id) and (l.is_test or p_allow_real)
+  ),
+  att as (
+    select t.id as attempt_id, t.learner_id, t.activity_instance_id, t.submitted_at, t.attempt_no,
+           i.id as instance_id, i.template_id, i.template_version, i.snapshot, a.step_no, c.checks, ls.alias, ls.is_test,
+           (select av.content -> 'answers' from english.artifact_versions av
+            where av.attempt_id = t.id and av.kind = 'answers' order by av.version desc limit 1) as answers
+    from english.attempts t
+    join ls on ls.id = t.learner_id
+    join english.activity_instances a on a.id = t.activity_instance_id
+    join english.inquiry_instances i on i.id = a.inquiry_instance_id
+    join english.inquiry_templates tp on tp.id = i.template_id and tp.version = i.template_version and tp.kind = 'studio'
+    join english.attempt_auto_checks c on c.attempt_id = t.id
+  ),
+  waiting as (
+    select att.attempt_id, q.x, q.o
+    from att
+    cross join lateral (
+      select st.s from pg_catalog.jsonb_array_elements(att.snapshot -> 'steps') as st(s) where (st.s ->> 'step_no')::int = att.step_no
+    ) step
+    cross join lateral pg_catalog.jsonb_array_elements(coalesce(step.s -> 'items', '[]'::jsonb)) with ordinality as q(x, o)
+    where att.checks -> 'items' -> (q.x ->> 'id') ->> 'result' = 'needs_person'
+      and not exists (select 1 from english.item_decisions d where d.attempt_id = att.attempt_id and d.item_id = q.x ->> 'id')
+  )
+  select pg_catalog.jsonb_build_object(
+    'count', (select pg_catalog.count(*) from waiting),
+    'items', coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+      'attempt_id', att.attempt_id, 'learner_id', att.learner_id, 'alias', att.alias, 'is_test', att.is_test,
+      'activity_id', att.activity_instance_id, 'title', att.snapshot -> 'template' ->> 'title_vi',
+      'submitted_at', att.submitted_at, 'attempt_no', att.attempt_no,
+      'waiting_days', english.eng_today_vn() - (att.submitted_at at time zone 'Asia/Ho_Chi_Minh')::date,
+      'items', (
+        select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+                 'item_id', w.x ->> 'id', 'n', substring(w.x ->> 'id' from 2)::int, 'kind', w.x ->> 'kind', 'stem', w.x ->> 'stem',
+                 'expected', nullif(pg_catalog.split_part(english.eng_clean_text(coalesce(k.answer, '')), ' / ', 1), ''),
+                 'accepted',
+                   (select coalesce(pg_catalog.jsonb_agg(p.alt order by p.ord), '[]'::jsonb)
+                    from pg_catalog.regexp_split_to_table(english.eng_clean_text(coalesce(k.answer, '')), ' / ') with ordinality as p(alt, ord)
+                    where p.ord > 1)
+                   || (select coalesce(pg_catalog.jsonb_agg(aa.answer order by aa.at), '[]'::jsonb)
+                       from english.accepted_additions aa
+                       where aa.template_id = att.template_id and aa.template_version = att.template_version and aa.item_id = w.x ->> 'id'),
+                 'given', coalesce(att.answers ->> (w.x ->> 'id'), ''))
+               order by w.o)
+        from waiting w
+        left join english.instance_item_keys k on k.inquiry_instance_id = att.instance_id and k.item_id = w.x ->> 'id'
+        where w.attempt_id = att.attempt_id))
+      order by att.submitted_at, att.attempt_id), '[]'::jsonb))
+  from att
+  where exists (select 1 from waiting w where w.attempt_id = att.attempt_id)
+$$;
+revoke execute on function english.eng_studio_pending(uuid, boolean) from public, anon, authenticated;
+grant execute on function english.eng_studio_pending(uuid, boolean) to service_role;
+
+-- 4e. Con xem lại bài Studio vừa nộp (màn 20): chỉ CÂU SAI (tự chấm sai / bỏ trống / người lớn chấm Sai) của lần nộp gần nhất — đề, câu em
+-- viết, đáp án đúng (phần trước " / " đầu tiên; trắc nghiệm = chữ của lựa chọn), giải thích — và số in trên đề của câu còn chờ.
+-- KHÔNG có số câu đúng, tổng câu, tỉ lệ, nhãn, kỹ năng. Bài chủ đề tuần / chưa nộp: {}. Không phải bài của người gọi / chưa mở: null.
+create or replace function english.eng_my_studio_review(p_activity uuid) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_member uuid;
+  v_act english.activity_instances%rowtype;
+  v_inst english.inquiry_instances%rowtype;
+  v_kind text;
+  v_t english.attempts%rowtype;
+  v_checks jsonb;
+  v_answers jsonb;
+  v_step jsonb;
+begin
+  select m.id into v_member from english.members m where m.user_id = auth.uid() and m.role = 'student';
+  if v_member is null then return null; end if;
+  select a.* into v_act
+  from english.activity_instances a
+  join english.learners l on l.id = a.learner_id
+  where a.id = p_activity and l.member_id = v_member;
+  if not found or not english.eng_activity_released(p_activity) then return null; end if;
+  select * into v_inst from english.inquiry_instances i where i.id = v_act.inquiry_instance_id;
+  select t.kind into v_kind from english.inquiry_templates t where t.id = v_inst.template_id and t.version = v_inst.template_version;
+  if v_kind is distinct from 'studio' then return '{}'::jsonb; end if;
+  select t.* into v_t from english.attempts t where t.activity_instance_id = p_activity order by t.attempt_no desc limit 1;
+  if not found then return '{}'::jsonb; end if;
+  select c.checks into v_checks from english.attempt_auto_checks c where c.attempt_id = v_t.id;
+  if v_checks is null then return '{}'::jsonb; end if;
+  select av.content -> 'answers' into v_answers from english.artifact_versions av
+  where av.attempt_id = v_t.id and av.kind = 'answers' order by av.version desc limit 1;
+  select x into v_step from pg_catalog.jsonb_array_elements(v_inst.snapshot -> 'steps') as x where (x ->> 'step_no')::int = v_act.step_no;
+
+  return pg_catalog.jsonb_build_object(
+    'attempt_no', v_t.attempt_no,
+    'submitted_at', v_t.submitted_at,
+    'wrong', coalesce((
+      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+               'n', substring(it ->> 'id' from 2)::int,
+               'stem', it ->> 'stem',
+               'given', coalesce(v_answers ->> (it ->> 'id'), ''),
+               'expected', case
+                 when it ->> 'kind' = 'mcq' then (
+                   select o.opt from pg_catalog.jsonb_array_elements_text(coalesce(it -> 'options', '[]'::jsonb)) with ordinality as o(opt, ord)
+                   where o.ord - 1 = english.eng_resolve_option(coalesce(it -> 'options', '[]'::jsonb), k.answer))
+                 else nullif(pg_catalog.split_part(english.eng_clean_text(coalesce(k.answer, '')), ' / ', 1), '') end,
+               'explanation_vi', k.explanation_vi)
+             order by substring(it ->> 'id' from 2)::int)
+      from pg_catalog.jsonb_array_elements(coalesce(v_step -> 'items', '[]'::jsonb)) as it
+      left join english.instance_item_keys k on k.inquiry_instance_id = v_inst.id and k.item_id = it ->> 'id'
+      cross join lateral (
+        select case
+                 when v_checks -> 'items' -> (it ->> 'id') ->> 'result' = 'needs_person'
+                   then (select d.result from english.item_decisions d where d.attempt_id = v_t.id and d.item_id = it ->> 'id')
+                 else v_checks -> 'items' -> (it ->> 'id') ->> 'result'
+               end as res) r
+      where r.res in ('incorrect', 'blank')), '[]'::jsonb),
+    'pending', coalesce((
+      select pg_catalog.jsonb_agg(substring(e.k from 2)::int order by substring(e.k from 2)::int)
+      from pg_catalog.jsonb_each(v_checks -> 'items') as e(k, v)
+      where e.v ->> 'result' = 'needs_person'
+        and not exists (select 1 from english.item_decisions d where d.attempt_id = v_t.id and d.item_id = e.k)), '[]'::jsonb));
+end
+$$;
+revoke execute on function english.eng_my_studio_review(uuid) from public, anon, service_role;
+grant execute on function english.eng_my_studio_review(uuid) to authenticated;
+
 -- 5. Purge: thêm các bảng Studio (giữ nguyên mọi dòng của 0023; có test đối chiếu từng dòng).
 create or replace function english.eng_purge_learner(
   p_learner_id uuid,
