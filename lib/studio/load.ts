@@ -1,5 +1,11 @@
 // lib/studio/load.ts
 import "server-only";
+import { createUserClient } from "@/lib/supabase/server";
+import { createFileStorage } from "@/lib/storage/server";
+import { docxToText } from "./docx";
+import { handleGetDraft, type StudioDeps } from "./handlers";
+import { createSupabaseStudioStore } from "./supabaseStore";
+import type { DraftPageData } from "./types";
 import { parseGate, type GateReason } from "@/lib/ai/cap";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -42,4 +48,28 @@ export async function loadDraftList(learnerId: string): Promise<DraftListItem[]>
   const { data, error } = await createAdminClient().rpc("eng_studio_drafts", { p_learner: learnerId });
   if (error) throw new Error(`eng_studio_drafts failed: ${error.code ?? "error"}`);
   return parseDraftList(data);
+}
+
+/** The page calls the same handler as GET /api/studio/drafts/:id (one access path). No AI and no background job from a page. */
+export async function loadDraftPage(draftId: string): Promise<{ kind: "ok"; data: DraftPageData; isParent: boolean } | { kind: "login" } | { kind: "not-found" }> {
+  const supabase = await createUserClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const deps: StudioDeps = {
+    user,
+    store: createSupabaseStudioStore(),
+    storage: createFileStorage(),
+    schedule: () => undefined,
+    loadContext: loadStudioContext,
+    getAi: () => {
+      throw new Error("no AI from a page");
+    },
+    docxToText,
+  };
+  const res = await handleGetDraft(deps, draftId);
+  if (res.status === 401) return { kind: "login" };
+  if (res.status !== 200) return { kind: "not-found" };
+  const data = res.body as DraftPageData;
+  return { kind: "ok", data, isParent: data.gate !== null };
 }

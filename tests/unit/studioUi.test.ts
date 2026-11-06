@@ -2,8 +2,15 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
 import { describe, expect, it } from "vitest";
 import { AiSoftCapBox } from "@/components/settings/AiSoftCapBox";
+import { ItemCard } from "@/components/studio/ItemCard";
+import { SidePanel } from "@/components/studio/SidePanel";
 import { DraftList } from "@/components/studio/DraftList";
-import { aiSettingsCopy, studioCopy } from "@/lib/copy/vi";
+import { aiSettingsCopy, studioCopy, studioIssueText } from "@/lib/copy/vi";
+import { normalizeExtract } from "@/lib/studio/normalize";
+import { aiExtractSchema } from "@/lib/studio/schema";
+import { summarizeDraft } from "@/lib/studio/summary";
+import { validateDraft } from "@/lib/studio/validate";
+import { CTX_B, FAKE_EXTRACT } from "./fixtures/studio";
 
 const S = { enabled: true, monthlyCapUsd: 10, softCapUsd: 8, spentUsd: 8.5, runsMonth: 9, softReached: true, updatedAt: null, learners: [] };
 
@@ -23,5 +30,26 @@ describe("Studio draft list", () => {
     );
     expect(html).toContain("Đã duyệt · Đã giao 1 lần");
     expect(html).toContain('href="/studio/drafts/d-1"');
+  });
+});
+
+describe("Studio review screen pieces (board 19)", () => {
+  const draft = normalizeExtract(aiExtractSchema.parse(FAKE_EXTRACT), CTX_B);
+  const issues = validateDraft(draft, CTX_B);
+  it("side panel: no AI cost line for a tutor; the parent sees this run and the month", () => {
+    const summary = summarizeDraft(draft, issues);
+    expect(renderToStaticMarkup(createElement(SidePanel, { summary, aiCostUsd: null, gate: null }))).not.toContain("side-ai-cost");
+    const gate = { familyId: "f", enabled: true, consent: true, spentUsd: 1.5, monthlyCapUsd: 10, softCapUsd: 8, softReached: false, allowed: true, reason: null };
+    const html = renderToStaticMarkup(createElement(SidePanel, { summary, aiCostUsd: 0.12, gate }));
+    expect(html).toContain("$0.12");
+    expect(html).toContain("Tháng này: $1.50 / $10.00");
+  });
+  it("item 8 (no key) shows its blocking chip", () => {
+    const item = draft.items.find((i) => i.n === 8)!;
+    const html = renderToStaticMarkup(
+      createElement(ItemCard, { item, parts: draft.parts, passages: draft.passages, context: CTX_B, issues: issues.filter((i) => i.n === 8), onChange: () => undefined, onRemove: () => undefined }),
+    );
+    expect(html).toContain(studioIssueText.missing_key);
+    expect(html).toContain('data-testid="issue-8-missing_key"');
   });
 });

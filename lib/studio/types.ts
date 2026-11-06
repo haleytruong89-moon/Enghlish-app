@@ -1,6 +1,10 @@
 // lib/studio/types.ts
 /** Typed views of the Studio functions of migration 0024 (camelCase, already validated by shape.ts). */
+import type { GateState } from "@/lib/ai/cap";
+import type { StudioContext } from "./context";
 import type { StudioDraft } from "./schema";
+import type { DraftSummary } from "./summary";
+import type { Issue } from "./validate";
 
 export type DraftStatus = "extracting" | "ai_failed" | "draft" | "approved" | "discarded";
 export type DraftView = {
@@ -30,3 +34,5 @@ export type AiSettingsView = {
   enabled: boolean; monthlyCapUsd: number; softCapUsd: number; spentUsd: number; runsMonth: number; softReached: boolean; updatedAt: string | null;
   learners: { id: string; alias: string; isTest: boolean; aiText: boolean | null }[];
 };
+
+export type DraftPageData = { draft: DraftView; context: StudioContext; issues: Issue[]; summary: DraftSummary; can_approve: boolean; gate: GateState | null };
