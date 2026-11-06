@@ -132,5 +132,9 @@ describe("Studio B1 (migration 0024)", () => {
     });
   });
 
+  describe.skip("3. AI settings, drafts, approve, assign", () => {
+    // replaced in Task 7 (needs lib/studio/normalize + buildTemplate)
+  });
+
   // (later tasks add describe blocks here)
 });

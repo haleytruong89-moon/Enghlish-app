@@ -1,0 +1,51 @@
+{
+  "title": "Destination B1 — Unit 5 (bài thử)",
+  "parts": [
+    { "key": "A", "name": "Part A — Grammar", "instructions": "Choose the best answer A, B, C or D." },
+    { "key": "B", "name": "Part B — Reading", "instructions": "Read the text and choose the best answer." },
+    { "key": "C", "name": "Part C — Word formation", "instructions": "Use the word in capitals to form a word that fits the gap." },
+    { "key": "D", "name": "Part D — Sentence transformation", "instructions": "Complete the second sentence so that it means the same as the first." },
+    { "key": "E", "name": "Part E — Picture", "instructions": "Look at the picture and write one sentence." }
+  ],
+  "passages": [
+    {
+      "ref": "P1",
+      "title": "A day at the science museum",
+      "text": "Last Saturday, Lan visited the science museum with her class. She had expected a boring day, but the robot room changed her mind. A small robot answered her questions about the planets and even told a joke. On the bus home, Lan decided she wanted to learn how to build robots."
+    }
+  ],
+  "items": [
+    { "n": 1, "part": "A", "kind": "mcq", "out_of_app": false, "stem": "I wish I ____ more time to read.",
+      "options": [{ "letter": "A", "text": "have" }, { "letter": "B", "text": "had" }, { "letter": "C", "text": "will have" }, { "letter": "D", "text": "am having" }],
+      "passage_ref": null, "key": "B", "accepted": [], "tag_key": "wish-would-rather", "target_id": null, "reading_skill_key": null,
+      "explanation_vi": "Sau wish (ước điều trái với hiện tại) dùng quá khứ đơn: had.", "needs_review": false, "review_reason": null },
+    { "n": 2, "part": "A", "kind": "mcq", "out_of_app": false, "stem": "The lights are on. She ____ be at home.",
+      "options": [{ "letter": "A", "text": "must" }, { "letter": "B", "text": "can't" }, { "letter": "C", "text": "needn't" }, { "letter": "D", "text": "shouldn't" }],
+      "passage_ref": null, "key": "A", "accepted": [], "tag_key": "modal-suy-doan", "target_id": null, "reading_skill_key": null,
+      "explanation_vi": "Có bằng chứng chắc chắn (đèn sáng) nên dùng must để suy đoán.", "needs_review": false, "review_reason": null },
+    { "n": 3, "part": "A", "kind": "mcq", "out_of_app": false, "stem": "The meeting was put ____ until Friday.",
+      "options": [{ "letter": "A", "text": "off" }, { "letter": "B", "text": "on" }, { "letter": "C", "text": "up" }, { "letter": "D", "text": "in" }],
+      "passage_ref": null, "key": "A", "accepted": [], "tag_key": "cum-dong-tu", "target_id": "B-L2-CLOZE", "reading_skill_key": null,
+      "explanation_vi": "Put off nghĩa là hoãn lại.", "needs_review": false, "review_reason": null },
+    { "n": 4, "part": "B", "kind": "mcq", "out_of_app": false, "stem": "What is the text mainly about?",
+      "options": [{ "letter": "A", "text": "A boring school trip" }, { "letter": "B", "text": "How robots are built" }, { "letter": "C", "text": "A visit that changed Lan's plans" }, { "letter": "D", "text": "A bus journey" }],
+      "passage_ref": "P1", "key": "C", "accepted": [], "tag_key": null, "target_id": "B-T1-EXAM-R", "reading_skill_key": "doc-main-idea",
+      "explanation_vi": "Cả bài kể chuyến đi làm Lan đổi ý muốn học làm robot.", "needs_review": false, "review_reason": null },
+    { "n": 5, "part": "B", "kind": "mcq", "out_of_app": false, "stem": "Why did Lan change her mind about the day?",
+      "options": [{ "letter": "A", "text": "The bus was fast" }, { "letter": "B", "text": "The robot room was interesting" }, { "letter": "C", "text": "Her friends were there" }, { "letter": "D", "text": "The museum was empty" }],
+      "passage_ref": "P1", "key": "B", "accepted": [], "tag_key": null, "target_id": null, "reading_skill_key": "doc-inference",
+      "explanation_vi": "Câu 'the robot room changed her mind' cho thấy phòng robot làm Lan thích thú.", "needs_review": false, "review_reason": null },
+    { "n": 6, "part": "C", "kind": "word_form", "out_of_app": false, "stem": "Her ____ made everyone smile. (HAPPY)",
+      "options": [], "passage_ref": null, "key": "happiness", "accepted": [], "tag_key": "dang-tu", "target_id": "B-L2-CLOZE", "reading_skill_key": null,
+      "explanation_vi": "Sau tính từ sở hữu her cần danh từ: happiness.", "needs_review": false, "review_reason": null },
+    { "n": 7, "part": "D", "kind": "transform", "out_of_app": false, "stem": "It's a pity I can't speak French. (WISH) → I ____ speak French.",
+      "options": [], "passage_ref": null, "key": "wish I could", "accepted": [], "tag_key": "wish-would-rather", "target_id": null, "reading_skill_key": null,
+      "explanation_vi": "Ước điều không có thật ở hiện tại: wish + could.", "needs_review": false, "review_reason": null },
+    { "n": 8, "part": "D", "kind": "transform", "out_of_app": false, "stem": "People say that he is a genius. (SAID) → He ____ a genius.",
+      "options": [], "passage_ref": null, "key": null, "accepted": [], "tag_key": "bi-dong-nho-tuong-thuat", "target_id": null, "reading_skill_key": null,
+      "explanation_vi": "Bị động tường thuật: be said to be.", "needs_review": true, "review_reason": "Không thấy đáp án câu 8 trong file đáp án." },
+    { "n": 9, "part": "E", "kind": "open", "out_of_app": true, "stem": "Look at the picture and write one sentence about it.",
+      "options": [], "passage_ref": null, "key": null, "accepted": [], "tag_key": "tu-vung-ngu-canh", "target_id": null, "reading_skill_key": null,
+      "explanation_vi": "", "needs_review": false, "review_reason": null }
+  ]
+}

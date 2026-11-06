@@ -745,6 +745,574 @@ end
 $$;
 revoke execute on function english.eng_register_file(uuid, uuid, text, jsonb, uuid) from public, anon, authenticated, service_role;
 
+-- 3. Ghi: AI, bản nháp, Duyệt, Giao (service_role sau requireAccess; hàm kiểm lại người thao tác) ------------------------------------
+
+-- 3a. Chi phí AI tháng này (tháng lịch Việt Nam) của một gia đình. Nội bộ.
+create or replace function english.eng_ai_month_spent(p_family uuid) returns numeric
+language sql stable security definer set search_path = ''
+as $$
+  select coalesce(sum(r.cost_usd), 0)::numeric
+  from english.ai_runs r
+  where r.family_id = p_family
+    and r.at >= (pg_catalog.date_trunc('month', pg_catalog.now() at time zone 'Asia/Ho_Chi_Minh') at time zone 'Asia/Ho_Chi_Minh')
+$$;
+revoke execute on function english.eng_ai_month_spent(uuid) from public, anon, authenticated, service_role;
+
+-- 3b. Cổng AI cho một em: công tắc của gia đình + đồng ý ai_text mới nhất của em + chi phí tháng < trần. Không có dòng cài đặt = tắt.
+create or replace function english.eng_ai_gate(p_learner uuid) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_s english.ai_settings%rowtype;
+  v_consent boolean;
+  v_spent numeric;
+  v_cap numeric;
+  v_soft numeric;
+begin
+  select * into v_l from english.learners l where l.id = p_learner;
+  if not found then
+    raise exception 'eng_ai_gate: learner not found' using errcode = 'P0002';
+  end if;
+  select * into v_s from english.ai_settings s where s.family_id = v_l.family_id;
+  select c.granted into v_consent from english.consents c
+  where c.learner_id = p_learner and c.scope = 'ai_text' order by c.at desc, c.id desc limit 1;
+  v_spent := english.eng_ai_month_spent(v_l.family_id);
+  v_cap := coalesce(v_s.monthly_cap_usd, 10);
+  v_soft := coalesce(v_s.soft_cap_usd, 8);
+  return pg_catalog.jsonb_build_object(
+    'family_id', v_l.family_id,
+    'enabled', coalesce(v_s.enabled, false),
+    'consent', coalesce(v_consent, false),
+    'spent_usd', v_spent,
+    'monthly_cap_usd', v_cap,
+    'soft_cap_usd', v_soft,
+    'soft_reached', v_spent >= v_soft,
+    'allowed', coalesce(v_s.enabled, false) and coalesce(v_consent, false) and v_spent < v_cap,
+    'reason', case when not coalesce(v_s.enabled, false) then 'off'
+                   when not coalesce(v_consent, false) then 'no_consent'
+                   when v_spent >= v_cap then 'cap'
+                   else null end);
+end
+$$;
+
+-- 3c. Màn Cài đặt AI (chỉ phụ huynh của gia đình).
+create or replace function english.eng_ai_settings(p_by uuid) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_m english.members%rowtype;
+  v_s english.ai_settings%rowtype;
+  v_spent numeric;
+begin
+  select * into v_m from english.members m where m.id = p_by;
+  if v_m.id is null or v_m.role <> 'parent' then
+    raise exception 'eng_ai_settings: only a parent reads the AI settings (parent_only)' using errcode = '42501';
+  end if;
+  select * into v_s from english.ai_settings s where s.family_id = v_m.family_id;
+  v_spent := english.eng_ai_month_spent(v_m.family_id);
+  return pg_catalog.jsonb_build_object(
+    'enabled', coalesce(v_s.enabled, false),
+    'monthly_cap_usd', coalesce(v_s.monthly_cap_usd, 10),
+    'soft_cap_usd', coalesce(v_s.soft_cap_usd, 8),
+    'spent_usd', v_spent,
+    'soft_reached', v_spent >= coalesce(v_s.soft_cap_usd, 8),
+    'runs_month', (select pg_catalog.count(*) from english.ai_runs r where r.family_id = v_m.family_id and r.status in ('ok', 'error')
+                     and r.at >= (pg_catalog.date_trunc('month', pg_catalog.now() at time zone 'Asia/Ho_Chi_Minh') at time zone 'Asia/Ho_Chi_Minh')),
+    'updated_at', v_s.updated_at,
+    'learners', coalesce((
+      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+               'id', l.id, 'alias', l.alias, 'is_test', l.is_test,
+               'ai_text', (select c.granted from english.consents c where c.learner_id = l.id and c.scope = 'ai_text' order by c.at desc, c.id desc limit 1))
+             order by l.track_id, l.alias)
+      from english.learners l where l.family_id = v_m.family_id), '[]'::jsonb));
+end
+$$;
+
+-- 3d. Bật / tắt AI (chỉ phụ huynh): một dòng cài đặt + một dòng đồng ý ai_text (granted = bật hay tắt) cho MỖI em của gia đình.
+create or replace function english.eng_set_ai_settings(p_enabled boolean, p_notice_version text, p_by uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_m english.members%rowtype;
+begin
+  if p_enabled is null or p_by is null then
+    raise exception 'eng_set_ai_settings: enabled and actor are required' using errcode = '22004';
+  end if;
+  if p_notice_version is null or p_notice_version !~ '^[a-z0-9._-]{1,40}$' then
+    raise exception 'eng_set_ai_settings: notice version must be a short code' using errcode = '22023';
+  end if;
+  select * into v_m from english.members m where m.id = p_by;
+  if v_m.id is null or v_m.role <> 'parent' then
+    raise exception 'eng_set_ai_settings: only a parent changes the AI settings (parent_only)' using errcode = '42501';
+  end if;
+  insert into english.ai_settings(family_id, enabled, updated_by_member, updated_at)
+  values (v_m.family_id, p_enabled, p_by, pg_catalog.clock_timestamp())
+  on conflict (family_id) do update set enabled = excluded.enabled, updated_by_member = excluded.updated_by_member, updated_at = excluded.updated_at;
+  insert into english.consents(learner_id, subject_member_id, notice_version, scope, granted, recorded_by)
+  select l.id, p_by, p_notice_version, 'ai_text', p_enabled, p_by
+  from english.learners l where l.family_id = v_m.family_id;
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, payload)
+  values (v_m.user_id, v_m.role, 'ai.settings_changed', v_m.family_id,
+          pg_catalog.jsonb_build_object('enabled', p_enabled, 'notice_version', p_notice_version));
+  return english.eng_ai_settings(p_by);
+end
+$$;
+
+-- 3e. Một lần gọi AI (hoặc một lần bị từ chối): chỉ số, không nội dung.
+create or replace function english.eng_log_ai_run(
+  p_family uuid, p_draft uuid, p_model text, p_prompt_version text, p_input int, p_output int, p_cost numeric, p_status text, p_error text, p_by uuid
+) returns uuid
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  if p_family is null or p_status is null then
+    raise exception 'eng_log_ai_run: family and status are required' using errcode = '22004';
+  end if;
+  insert into english.ai_runs(family_id, purpose, draft_id, model, prompt_version, input_tokens, output_tokens, cost_usd, status, error_code, by_member)
+  values (p_family, 'studio_extract', p_draft, p_model, p_prompt_version, coalesce(p_input, 0), coalesce(p_output, 0), coalesce(p_cost, 0), p_status, p_error, p_by)
+  returning id into v_id;
+  return v_id;
+end
+$$;
+
+-- 3f. Kỹ năng gắn được cho câu của đề Studio (P1): bộ kỹ năng hiện hành của em ∩ kỹ năng mà danh mục tính "ACT-SOURCE-QA" là bài được
+-- tính (cùng cách đọc evidence_tasks với eng_check_inquiry_template, 0007). Kỹ năng khác sẽ bị trigger công bố mẫu từ chối.
+create or replace function english.eng_studio_skills(p_learner uuid) returns jsonb
+language sql stable security definer set search_path = ''
+as $$
+  with cur as (
+    select d.target_ids, d.descriptor_version
+    from english.target_sets ts
+    join english.target_set_definitions d on d.id = ts.definition_id
+    where ts.learner_id = p_learner and ts.effective_from <= pg_catalog.clock_timestamp()
+    order by ts.effective_from desc, ts.seq desc
+    limit 1
+  )
+  select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('id', t.id, 'title_vi', t.title_vi) order by u.o), '[]'::jsonb)
+  from cur
+  cross join lateral unnest(cur.target_ids) with ordinality as u(k, o)
+  join english.targets t on t.id = u.k and t.descriptor_version = cur.descriptor_version
+  where exists (
+    select 1 from pg_catalog.jsonb_array_elements_text(t.raw -> 'evidence_tasks') as e
+    where substring(pg_catalog.regexp_replace(e, '\s*\([^)]*\)', '', 'g') from '.*(ACT-[A-Z0-9-]+)') = 'ACT-SOURCE-QA')
+$$;
+
+-- 3g. Tạo bản nháp (gia sư hoặc phụ huynh của em). p_extract = true → 'extracting' (máy chủ đã qua cổng AI), false → nháp trống (Soạn tay).
+-- File: {id, mime, bytes} đã kiểm ở máy chủ; đường dẫn do eng_register_file tính. Gửi lại cùng client_id = cùng bản nháp.
+create or replace function english.eng_create_studio_draft(
+  p_learner uuid, p_title text, p_test_file jsonb, p_key_file jsonb, p_extract boolean, p_by uuid, p_client_id text
+) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_m english.members%rowtype;
+  v_title text := pg_catalog.regexp_replace(pg_catalog.btrim(coalesce(p_title, '')), '\s+', ' ', 'g');
+  v_existing english.studio_drafts%rowtype;
+  v_test uuid;
+  v_key uuid;
+  v_id uuid;
+begin
+  if p_learner is null or p_extract is null or p_by is null then
+    raise exception 'eng_create_studio_draft: learner, mode and actor are required' using errcode = '22004';
+  end if;
+  if p_client_id is null or pg_catalog.length(pg_catalog.btrim(p_client_id)) < 8 or pg_catalog.length(p_client_id) > 100 then
+    raise exception 'eng_create_studio_draft: client_id must be 8..100 characters' using errcode = '22023';
+  end if;
+  if pg_catalog.length(v_title) not between 1 and 160 then
+    raise exception 'eng_create_studio_draft: a title of 1..160 characters is required (bad_title)' using errcode = '22023';
+  end if;
+  select * into v_l from english.learners l where l.id = p_learner for update;
+  if not found then
+    raise exception 'eng_create_studio_draft: learner not found' using errcode = 'P0002';
+  end if;
+  select * into v_m from english.members m where m.id = p_by;
+  if v_m.id is null or v_m.role not in ('tutor', 'parent') or not english.eng_actor_may_manage(p_by, p_learner) then
+    raise exception 'eng_create_studio_draft: this member may not make tests for this learner' using errcode = '42501';
+  end if;
+  select * into v_existing from english.studio_drafts d where d.learner_id = p_learner and d.client_id = p_client_id;
+  if found then
+    if v_existing.title <> v_title then
+      raise exception 'eng_create_studio_draft: client_id was already used for another draft' using errcode = '23505';
+    end if;
+    return pg_catalog.jsonb_build_object('id', v_existing.id, 'status', v_existing.status, 'replayed', true);
+  end if;
+  if p_extract and p_test_file is null then
+    raise exception 'eng_create_studio_draft: AI needs the test file (test_file_required)' using errcode = '22023';
+  end if;
+  if p_test_file is not null then
+    v_test := english.eng_register_file(v_l.family_id, p_learner, 'studio_test', p_test_file, p_by);
+  end if;
+  if p_key_file is not null then
+    v_key := english.eng_register_file(v_l.family_id, p_learner, 'studio_key', p_key_file, p_by);
+  end if;
+  insert into english.studio_drafts(family_id, learner_id, track_id, title, test_file_id, key_file_id, status, created_by_member, updated_by_member, client_id)
+  values (v_l.family_id, p_learner, v_l.track_id, v_title, v_test, v_key, case when p_extract then 'extracting' else 'draft' end, p_by, p_by, p_client_id)
+  returning id into v_id;
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_m.user_id, v_m.role, 'studio.draft_created', v_l.family_id, p_learner,
+          pg_catalog.jsonb_build_object('draft', v_id, 'extract', p_extract));
+  return pg_catalog.jsonb_build_object('id', v_id, 'status', case when p_extract then 'extracting' else 'draft' end, 'replayed', false);
+end
+$$;
+
+-- 3h. "Sửa đề đã duyệt": nháp mới thay bản đã duyệt (chép tên, nội dung, file). Đã có nháp đang mở thay bản này → trả nháp đó.
+create or replace function english.eng_edit_studio_draft(p_draft uuid, p_by uuid, p_client_id text) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_d english.studio_drafts%rowtype;
+  v_m english.members%rowtype;
+  v_open uuid;
+  v_id uuid;
+begin
+  if p_draft is null or p_by is null or p_client_id is null or pg_catalog.length(pg_catalog.btrim(p_client_id)) not between 8 and 100 then
+    raise exception 'eng_edit_studio_draft: draft, actor and client_id are required' using errcode = '22004';
+  end if;
+  select * into v_d from english.studio_drafts d where d.id = p_draft for update;
+  if not found then
+    raise exception 'eng_edit_studio_draft: draft not found' using errcode = 'P0002';
+  end if;
+  select * into v_m from english.members m where m.id = p_by;
+  if v_m.id is null or v_m.role not in ('tutor', 'parent') or not english.eng_actor_may_manage(p_by, v_d.learner_id) then
+    raise exception 'eng_edit_studio_draft: this member may not edit tests of this learner' using errcode = '42501';
+  end if;
+  if v_d.status <> 'approved' then
+    raise exception 'eng_edit_studio_draft: only an approved test is edited this way (not_approved)' using errcode = '23514';
+  end if;
+  select d.id into v_open from english.studio_drafts d where d.supersedes_draft_id = p_draft and d.status <> 'discarded';
+  if v_open is not null then
+    return pg_catalog.jsonb_build_object('id', v_open, 'replayed', true);
+  end if;
+  insert into english.studio_drafts(family_id, learner_id, track_id, title, test_file_id, key_file_id, status, payload, created_by_member, updated_by_member,
+                                    supersedes_draft_id, client_id)
+  values (v_d.family_id, v_d.learner_id, v_d.track_id, v_d.title, v_d.test_file_id, v_d.key_file_id, 'draft', v_d.payload, p_by, p_by, p_draft, p_client_id)
+  returning id into v_id;
+  return pg_catalog.jsonb_build_object('id', v_id, 'replayed', false);
+end
+$$;
+
+-- 3i. Lưu bản nháp (nội dung đã được zod kiểm ở máy chủ). Khóa lạc quan theo updated_at (dạng chữ, micro giây).
+create or replace function english.eng_save_studio_draft(p_draft uuid, p_title text, p_payload jsonb, p_base text, p_by uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_d english.studio_drafts%rowtype;
+  v_title text := pg_catalog.regexp_replace(pg_catalog.btrim(coalesce(p_title, '')), '\s+', ' ', 'g');
+  v_at timestamptz;
+begin
+  if p_draft is null or p_payload is null or p_base is null or p_by is null then
+    raise exception 'eng_save_studio_draft: draft, payload, base and actor are required' using errcode = '22004';
+  end if;
+  select * into v_d from english.studio_drafts d where d.id = p_draft for update;
+  if not found then
+    raise exception 'eng_save_studio_draft: draft not found' using errcode = 'P0002';
+  end if;
+  if not english.eng_actor_may_manage(p_by, v_d.learner_id) then
+    raise exception 'eng_save_studio_draft: this member may not edit tests of this learner' using errcode = '42501';
+  end if;
+  if v_d.status not in ('draft', 'ai_failed') then
+    raise exception 'eng_save_studio_draft: this draft cannot be edited now (not_editable)' using errcode = '23514';
+  end if;
+  if v_d.updated_at::text <> p_base then
+    raise exception 'eng_save_studio_draft: the draft changed in the meantime (draft_changed)' using errcode = '23505';
+  end if;
+  if pg_catalog.length(v_title) not between 1 and 160 then
+    raise exception 'eng_save_studio_draft: a title of 1..160 characters is required (bad_title)' using errcode = '22023';
+  end if;
+  update english.studio_drafts set title = v_title, payload = p_payload, status = 'draft', error_code = null, updated_by_member = p_by
+  where id = p_draft
+  returning updated_at into v_at;
+  return pg_catalog.jsonb_build_object('updated_at', v_at::text);
+end
+$$;
+
+-- 3j. Kết thúc phần AI (máy chủ, chạy nền). Chỉ đổi bản nháp còn đang 'extracting' (đã bỏ / đã quá giờ thì không đè).
+create or replace function english.eng_finish_studio_extraction(p_draft uuid, p_payload jsonb, p_run uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_n int;
+begin
+  update english.studio_drafts set payload = p_payload, status = 'draft', ai_run_id = p_run, error_code = null
+  where id = p_draft and status = 'extracting';
+  get diagnostics v_n = row_count;
+  return pg_catalog.jsonb_build_object('applied', v_n = 1);
+end
+$$;
+
+create or replace function english.eng_fail_studio_extraction(p_draft uuid, p_error text, p_run uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_n int;
+begin
+  if p_error is null or p_error !~ '^[a-z0-9_]{1,40}$' then
+    raise exception 'eng_fail_studio_extraction: error code required' using errcode = '22023';
+  end if;
+  update english.studio_drafts set status = 'ai_failed', error_code = p_error, ai_run_id = coalesce(p_run, ai_run_id)
+  where id = p_draft and status = 'extracting';
+  get diagnostics v_n = row_count;
+  return pg_catalog.jsonb_build_object('applied', v_n = 1);
+end
+$$;
+
+create or replace function english.eng_discard_studio_draft(p_draft uuid, p_by uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_d english.studio_drafts%rowtype;
+begin
+  select * into v_d from english.studio_drafts d where d.id = p_draft for update;
+  if not found then
+    raise exception 'eng_discard_studio_draft: draft not found' using errcode = 'P0002';
+  end if;
+  if not english.eng_actor_may_manage(p_by, v_d.learner_id) then
+    raise exception 'eng_discard_studio_draft: this member may not change tests of this learner' using errcode = '42501';
+  end if;
+  if v_d.status in ('approved', 'discarded') then
+    raise exception 'eng_discard_studio_draft: this draft is already final (not_editable)' using errcode = '23514';
+  end if;
+  update english.studio_drafts set status = 'discarded', updated_by_member = p_by where id = p_draft;
+  return pg_catalog.jsonb_build_object('id', p_draft, 'status', 'discarded');
+end
+$$;
+
+-- 3k. Duyệt: mẫu Studio (1 bước ACT-SOURCE-QA, PRACTICE) + bài đọc + khóa + nhãn câu + khung đề giấy, một transaction. Máy chủ dựng
+-- p_build từ chính nội dung đã lưu (lib/studio/buildTemplate.ts) sau khi kiểm (validate.ts); ở đây kiểm hình, người thao tác, khóa lạc quan;
+-- các trigger sẵn có của mẫu / khóa / khung đề kiểm phần còn lại (không đáp án trong bước, kỹ năng hợp lệ, đủ khóa, đủ câu 1..N, nhãn có thật).
+create or replace function english.eng_approve_studio_draft(p_draft uuid, p_base text, p_build jsonb, p_by uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_d english.studio_drafts%rowtype;
+  v_prev english.studio_drafts%rowtype;
+  v_l english.learners%rowtype;
+  v_m english.members%rowtype;
+  v_cat text;
+  v_tid text;
+  v_ver int;
+  v_prev_frame uuid;
+  v_frame uuid;
+  v_today date := english.eng_today_vn();
+  v_items jsonb := p_build -> 'template' -> 'items';
+  v_passages jsonb := coalesce(p_build -> 'passages', '[]'::jsonb);
+  v_sources jsonb;
+begin
+  if p_draft is null or p_base is null or p_build is null or p_by is null then
+    raise exception 'eng_approve_studio_draft: draft, base, build and actor are required' using errcode = '22004';
+  end if;
+  select * into v_d from english.studio_drafts d where d.id = p_draft for update;
+  if not found then
+    raise exception 'eng_approve_studio_draft: draft not found' using errcode = 'P0002';
+  end if;
+  select * into v_m from english.members m where m.id = p_by;
+  if v_m.id is null or v_m.role not in ('tutor', 'parent') or not english.eng_actor_may_manage(p_by, v_d.learner_id) then
+    raise exception 'eng_approve_studio_draft: this member may not approve tests of this learner' using errcode = '42501';
+  end if;
+  if v_d.status <> 'draft' then
+    raise exception 'eng_approve_studio_draft: only a saved draft can be approved (not_draft)' using errcode = '23514';
+  end if;
+  if v_d.updated_at::text <> p_base then
+    raise exception 'eng_approve_studio_draft: the draft changed in the meantime (draft_changed)' using errcode = '23505';
+  end if;
+  -- Hình của p_build (máy chủ dựng; đây là lưới an toàn).
+  if pg_catalog.jsonb_typeof(v_items) is distinct from 'array' or pg_catalog.jsonb_array_length(v_items) = 0 then
+    raise exception 'eng_approve_studio_draft: no item can be done in the app (no_app_items)' using errcode = '23514';
+  end if;
+  if exists (select 1 from pg_catalog.jsonb_array_elements(v_items) x where coalesce(x ->> 'id', '') !~ '^q[1-9][0-9]{0,2}$')
+     or (select pg_catalog.count(*) from pg_catalog.jsonb_array_elements(p_build -> 'keys')) <> pg_catalog.jsonb_array_length(v_items)
+     or exists (select 1 from pg_catalog.jsonb_array_elements(v_items) x
+                where (select pg_catalog.count(*) from pg_catalog.jsonb_array_elements(p_build -> 'keys') k where k ->> 'item_id' = x ->> 'id') <> 1)
+     or (select pg_catalog.count(*) from pg_catalog.jsonb_array_elements(p_build -> 'meta')) <> (p_build -> 'frame' ->> 'total')::int
+     or exists (select 1 from pg_catalog.jsonb_array_elements(v_passages) p where coalesce(p ->> 'ref', '') !~ '^[A-Za-z0-9]{1,10}$') then
+    raise exception 'eng_approve_studio_draft: the build does not match its own items (bad_build)' using errcode = '22023';
+  end if;
+  select * into v_l from english.learners l where l.id = v_d.learner_id;
+  select d.catalogue_version into v_cat
+  from english.target_sets ts join english.target_set_definitions d on d.id = ts.definition_id
+  where ts.learner_id = v_l.id and ts.effective_from <= pg_catalog.clock_timestamp()
+  order by ts.effective_from desc, ts.seq desc limit 1;
+  if v_cat is null then
+    raise exception 'eng_approve_studio_draft: the learner has no skill set yet (no_target_set)' using errcode = '23514';
+  end if;
+  if v_d.supersedes_draft_id is not null then
+    select * into v_prev from english.studio_drafts d where d.id = v_d.supersedes_draft_id;
+    v_tid := v_prev.template_id;
+    v_prev_frame := v_prev.frame_id;
+    select max(t.version) + 1 into v_ver from english.inquiry_templates t where t.id = v_tid;
+  else
+    v_tid := v_l.track_id || '-ST-' || pg_catalog.lpad(pg_catalog.nextval('english.studio_template_seq')::text, 6, '0');
+    v_ver := 1;
+  end if;
+
+  select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+           'id', 'ST-' || v_tid || '-' || (p ->> 'ref'), 'version', v_ver, 'title', p ->> 'title', 'modality', 'text', 'url', null) order by o), '[]'::jsonb)
+  into v_sources
+  from pg_catalog.jsonb_array_elements(v_passages) with ordinality as x(p, o);
+
+  insert into english.sources(id, version, title, url, author, rights_note, modality, body, source_hash, published_at)
+  select 'ST-' || v_tid || '-' || (p ->> 'ref'), v_ver, p ->> 'title', null, 'Thầy/cô', 'Tài liệu của thầy/cô, chỉ dùng trong gia đình', 'text', p ->> 'text',
+         pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p ->> 'text', 'UTF8')), 'hex'), pg_catalog.clock_timestamp()
+  from pg_catalog.jsonb_array_elements(v_passages) as p;
+
+  insert into english.inquiry_templates(id, version, track_id, title_vi, big_question_en, big_question_vi, week, date_from, date_to, domain_bucket,
+                                        target_ids, steps, sources, catalogue_version, status, source_hash, kind, family_id, learner_id)
+  values (v_tid, v_ver, v_l.track_id, v_d.title, v_d.title, v_d.title, 0, v_today, v_today, 'studio',
+          array(select pg_catalog.jsonb_array_elements_text(coalesce(p_build -> 'template' -> 'target_ids', '[]'::jsonb))),
+          pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
+            'step_no', 1, 'activity_type', 'ACT-SOURCE-QA', 'mode', 'PRACTICE', 'purpose', '[]'::jsonb,
+            'target_ids', coalesce(p_build -> 'template' -> 'target_ids', '[]'::jsonb),
+            'prompt_en', p_build -> 'template' ->> 'prompt_en',
+            'time_min', (p_build -> 'template' ->> 'time_min')::int,
+            'planned_date', v_today,
+            'self_check_vi', '[]'::jsonb,
+            'items', v_items)),
+          v_sources, v_cat, 'draft',
+          pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p_build::text, 'UTF8')), 'hex'),
+          'studio', v_l.family_id, v_l.id);
+
+  insert into english.template_step_sources(template_id, template_version, step_no, source_id, source_version, position)
+  select v_tid, v_ver, 1, 'ST-' || v_tid || '-' || (p ->> 'ref'), v_ver, o::int
+  from pg_catalog.jsonb_array_elements(v_passages) with ordinality as x(p, o);
+
+  insert into english.template_item_keys(template_id, template_version, item_id, step_no, kind, answer, explanation_vi)
+  select v_tid, v_ver, k ->> 'item_id', 1, k ->> 'kind', nullif(pg_catalog.btrim(coalesce(k ->> 'answer', '')), ''), nullif(pg_catalog.btrim(coalesce(k ->> 'explanation_vi', '')), '')
+  from pg_catalog.jsonb_array_elements(p_build -> 'keys') as k;
+
+  update english.inquiry_templates set status = 'published', published_at = pg_catalog.clock_timestamp()
+  where id = v_tid and version = v_ver;
+
+  insert into english.studio_item_meta(template_id, template_version, item_id, learner_id, n, part, tag_key, reading_skill_key, out_of_app)
+  select v_tid, v_ver, 'q' || (x ->> 'n'), v_l.id, (x ->> 'n')::int, x ->> 'part', x ->> 'tag_key', x ->> 'reading_skill_key', (x ->> 'out_of_app')::boolean
+  from pg_catalog.jsonb_array_elements(p_build -> 'meta') as x;
+
+  insert into english.test_frames(family_id, track_id, title, total_items, parts, items, scale, supersedes_id, created_by)
+  values (v_l.family_id, v_l.track_id, pg_catalog.left(v_d.title, 160) || ' (' || v_tid || ')', (p_build -> 'frame' ->> 'total')::int,
+          p_build -> 'frame' -> 'parts', p_build -> 'frame' -> 'items', null,
+          case when v_prev_frame is not null and not exists (select 1 from english.test_frames f where f.supersedes_id = v_prev_frame)
+               then v_prev_frame else null end,
+          p_by)
+  returning id into v_frame;
+
+  update english.studio_drafts
+  set status = 'approved', approved_by_member = p_by, approved_at = pg_catalog.clock_timestamp(), template_id = v_tid, template_version = v_ver,
+      frame_id = v_frame, updated_by_member = p_by
+  where id = p_draft;
+
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_m.user_id, v_m.role, 'studio.approved', v_l.family_id, v_l.id,
+          pg_catalog.jsonb_build_object('draft', p_draft, 'template', v_tid, 'version', v_ver, 'frame', v_frame));
+  return pg_catalog.jsonb_build_object('template_id', v_tid, 'version', v_ver, 'frame_id', v_frame);
+end
+$$;
+
+-- 3l. Giao đề đã duyệt (P10): giao với hạn nộp, rồi dời bước tới ngày làm (nếu khác) — sự kiện có lý do, chỉ người lớn thấy.
+create or replace function english.eng_assign_studio(p_draft uuid, p_start date, p_due date, p_by uuid, p_client_id text) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_d english.studio_drafts%rowtype;
+  v_replay boolean;
+  v_inst uuid;
+  v_act uuid;
+begin
+  if p_draft is null or p_start is null or p_due is null or p_by is null or p_client_id is null then
+    raise exception 'eng_assign_studio: draft, dates, actor and client_id are required' using errcode = '22004';
+  end if;
+  select * into v_d from english.studio_drafts d where d.id = p_draft;
+  if not found then
+    raise exception 'eng_assign_studio: draft not found' using errcode = 'P0002';
+  end if;
+  if not english.eng_actor_may_manage(p_by, v_d.learner_id) then
+    raise exception 'eng_assign_studio: this member may not assign work to this learner' using errcode = '42501';
+  end if;
+  if v_d.status <> 'approved' then
+    raise exception 'eng_assign_studio: approve the test first (not_approved)' using errcode = '23514';
+  end if;
+  if p_start > p_due then
+    raise exception 'eng_assign_studio: the start day is after the due day (start_after_due)' using errcode = '23514';
+  end if;
+  v_replay := exists (select 1 from english.inquiry_instances i where i.learner_id = v_d.learner_id and i.client_request_id = p_client_id);
+  v_inst := english.eng_assign_inquiry(v_d.learner_id, v_d.template_id, v_d.template_version, p_due, p_by, p_client_id);
+  select a.id into v_act from english.activity_instances a where a.inquiry_instance_id = v_inst and a.step_no = 1;
+  if not v_replay and p_start <> p_due then
+    perform english.eng_activity_event(v_act, 'reschedule', p_start, 'Studio: ngày làm do người giao chọn', p_by);
+  end if;
+  return pg_catalog.jsonb_build_object('instance_id', v_inst, 'activity_id', v_act, 'replayed', v_replay);
+end
+$$;
+
+-- 3m. Đọc bản nháp / danh sách (service_role sau requireAccess). updated_at trả dạng chữ (dùng lại làm khóa lạc quan).
+create or replace function english.eng_studio_draft(p_draft uuid) returns jsonb
+language sql stable security definer set search_path = ''
+as $$
+  select pg_catalog.jsonb_build_object(
+    'id', d.id, 'learner_id', d.learner_id, 'family_id', d.family_id, 'track_id', d.track_id, 'title', d.title, 'status', d.status,
+    'error_code', d.error_code, 'payload', d.payload, 'updated_at', d.updated_at::text, 'created_at', d.created_at,
+    -- AI đang đọc mà không đổi gì quá 6 phút = coi như hỏng (máy chủ đánh dấu 'timeout' khi đọc, §10 mục 4).
+    'stale', d.status = 'extracting' and d.updated_at < pg_catalog.clock_timestamp() - interval '6 minutes',
+    'approved_at', d.approved_at, 'approved_by_member', d.approved_by_member, 'template_id', d.template_id, 'template_version', d.template_version,
+    'frame_id', d.frame_id, 'supersedes_draft_id', d.supersedes_draft_id,
+    'superseded_by', (select n.id from english.studio_drafts n where n.supersedes_draft_id = d.id and n.status <> 'discarded'),
+    'test_file', (select pg_catalog.jsonb_build_object('id', f.id, 'mime', f.mime, 'path', f.path) from english.files f where f.id = d.test_file_id),
+    'key_file', (select pg_catalog.jsonb_build_object('id', f.id, 'mime', f.mime, 'path', f.path) from english.files f where f.id = d.key_file_id),
+    'ai_cost_usd', (select coalesce(sum(r.cost_usd), 0) from english.ai_runs r where r.draft_id = d.id),
+    'assigned', coalesce((
+      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+               'instance_id', i.id, 'activity_id', a.id, 'due_on', i.due_on, 'start_on', english.eng_step_effective_date(a.id), 'assigned_at', i.assigned_at)
+             order by i.assigned_at)
+      from english.inquiry_instances i
+      join english.activity_instances a on a.inquiry_instance_id = i.id and a.step_no = 1
+      where i.template_id = d.template_id and i.template_version = d.template_version), '[]'::jsonb))
+  from english.studio_drafts d where d.id = p_draft
+$$;
+
+create or replace function english.eng_studio_drafts(p_learner uuid) returns jsonb
+language sql stable security definer set search_path = ''
+as $$
+  select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+           'id', d.id, 'title', d.title, 'status', d.status, 'updated_at', d.updated_at, 'template_id', d.template_id,
+           'template_version', d.template_version, 'superseded', exists (select 1 from english.studio_drafts n where n.supersedes_draft_id = d.id and n.status = 'approved'),
+           'assigned', (select pg_catalog.count(*) from english.inquiry_instances i where i.template_id = d.template_id and i.template_version = d.template_version))
+         order by d.updated_at desc), '[]'::jsonb)
+  from (select * from english.studio_drafts x where x.learner_id = p_learner and x.status <> 'discarded' order by x.updated_at desc limit 30) d
+$$;
+
+revoke execute on function english.eng_ai_gate(uuid) from public, anon, authenticated;
+revoke execute on function english.eng_ai_settings(uuid) from public, anon, authenticated;
+revoke execute on function english.eng_set_ai_settings(boolean, text, uuid) from public, anon, authenticated;
+revoke execute on function english.eng_log_ai_run(uuid, uuid, text, text, int, int, numeric, text, text, uuid) from public, anon, authenticated;
+revoke execute on function english.eng_studio_skills(uuid) from public, anon, authenticated;
+revoke execute on function english.eng_create_studio_draft(uuid, text, jsonb, jsonb, boolean, uuid, text) from public, anon, authenticated;
+revoke execute on function english.eng_edit_studio_draft(uuid, uuid, text) from public, anon, authenticated;
+revoke execute on function english.eng_save_studio_draft(uuid, text, jsonb, text, uuid) from public, anon, authenticated;
+revoke execute on function english.eng_finish_studio_extraction(uuid, jsonb, uuid) from public, anon, authenticated;
+revoke execute on function english.eng_fail_studio_extraction(uuid, text, uuid) from public, anon, authenticated;
+revoke execute on function english.eng_discard_studio_draft(uuid, uuid) from public, anon, authenticated;
+revoke execute on function english.eng_approve_studio_draft(uuid, text, jsonb, uuid) from public, anon, authenticated;
+revoke execute on function english.eng_assign_studio(uuid, date, date, uuid, text) from public, anon, authenticated;
+revoke execute on function english.eng_studio_draft(uuid) from public, anon, authenticated;
+revoke execute on function english.eng_studio_drafts(uuid) from public, anon, authenticated;
+grant execute on function english.eng_ai_gate(uuid) to service_role;
+grant execute on function english.eng_ai_settings(uuid) to service_role;
+grant execute on function english.eng_set_ai_settings(boolean, text, uuid) to service_role;
+grant execute on function english.eng_log_ai_run(uuid, uuid, text, text, int, int, numeric, text, text, uuid) to service_role;
+grant execute on function english.eng_studio_skills(uuid) to service_role;
+grant execute on function english.eng_create_studio_draft(uuid, text, jsonb, jsonb, boolean, uuid, text) to service_role;
+grant execute on function english.eng_edit_studio_draft(uuid, uuid, text) to service_role;
+grant execute on function english.eng_save_studio_draft(uuid, text, jsonb, text, uuid) to service_role;
+grant execute on function english.eng_finish_studio_extraction(uuid, jsonb, uuid) to service_role;
+grant execute on function english.eng_fail_studio_extraction(uuid, text, uuid) to service_role;
+grant execute on function english.eng_discard_studio_draft(uuid, uuid) to service_role;
+grant execute on function english.eng_approve_studio_draft(uuid, text, jsonb, uuid) to service_role;
+grant execute on function english.eng_assign_studio(uuid, date, date, uuid, text) to service_role;
+grant execute on function english.eng_studio_draft(uuid) to service_role;
+grant execute on function english.eng_studio_drafts(uuid) to service_role;
+
 -- 5. Purge: thêm các bảng Studio (giữ nguyên mọi dòng của 0023; có test đối chiếu từng dòng).
 create or replace function english.eng_purge_learner(
   p_learner_id uuid,

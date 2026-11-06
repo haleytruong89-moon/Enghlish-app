@@ -165,5 +165,42 @@ describe("0024_studio_b1.sql", () => {
     expect(f).toContain("if p_kind in ('studio_test', 'studio_key') and v_mime not in ('application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') then");
   });
 
+  it("section 3: every callable function is service_role only, re-checks the actor, and never takes a path or a learner id from the draft body", () => {
+    for (const fn of [
+      "eng_ai_gate", "eng_ai_settings", "eng_set_ai_settings", "eng_log_ai_run", "eng_studio_skills", "eng_create_studio_draft",
+      "eng_edit_studio_draft", "eng_save_studio_draft", "eng_finish_studio_extraction", "eng_fail_studio_extraction",
+      "eng_discard_studio_draft", "eng_approve_studio_draft", "eng_assign_studio", "eng_studio_draft", "eng_studio_drafts",
+    ]) {
+      expect(grantsOf(fn), fn).toEqual(["service_role"]);
+      expect(fnText(sql, fn), fn).toContain("security definer set search_path = ''");
+    }
+    expect(code).toContain("revoke execute on function english.eng_ai_month_spent(uuid) from public, anon, authenticated, service_role;");
+    for (const fn of ["eng_create_studio_draft", "eng_edit_studio_draft", "eng_save_studio_draft", "eng_discard_studio_draft", "eng_approve_studio_draft", "eng_assign_studio"]) {
+      expect(fnText(sql, fn), fn).toContain("english.eng_actor_may_manage(p_by,");
+    }
+    for (const fn of ["eng_ai_settings", "eng_set_ai_settings"]) expect(fnText(sql, fn)).toContain("(parent_only)");
+  });
+
+  it("the month is the Vietnamese calendar month; consent rows are written for every child of the family", () => {
+    expect(fnText(sql, "eng_ai_month_spent")).toContain(
+      "(pg_catalog.date_trunc('month', pg_catalog.now() at time zone 'Asia/Ho_Chi_Minh') at time zone 'Asia/Ho_Chi_Minh')",
+    );
+    const set = fnText(sql, "eng_set_ai_settings");
+    expect(set).toContain("insert into english.consents(learner_id, subject_member_id, notice_version, scope, granted, recorded_by)");
+    expect(set).toContain("'ai_text', p_enabled, p_by");
+  });
+
+  it("approve: publishes the template only after its sources and keys, writes meta and the paper frame, locks the draft", () => {
+    const f = fnText(sql, "eng_approve_studio_draft");
+    const at = (s: string) => f.indexOf(s);
+    expect(f).toContain("for update");
+    expect(f).toContain("(draft_changed)");
+    expect(at("insert into english.sources(")).toBeLessThan(at("insert into english.inquiry_templates("));
+    expect(at("insert into english.template_item_keys(")).toBeLessThan(at("update english.inquiry_templates set status = 'published'"));
+    expect(at("update english.inquiry_templates set status = 'published'")).toBeLessThan(at("insert into english.studio_item_meta("));
+    expect(f).toContain("insert into english.test_frames(");
+    expect(f).toContain("'Thầy/cô', 'Tài liệu của thầy/cô, chỉ dùng trong gia đình'");
+  });
+
   // (later tasks add their tests here)
 });
