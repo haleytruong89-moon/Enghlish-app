@@ -60,6 +60,7 @@ function store(over: Partial<StudioStore> = {}): StudioStore {
     approveDraft: vi.fn(async () => ({ template_id: "B-ST-000001", version: 1, frame_id: "x" })),
     assign: vi.fn(async () => ({ instance_id: "i", activity_id: "a", replayed: false })),
     pending: vi.fn(async () => ({ count: 0, items: [] })),
+    retryResults: vi.fn(async () => 0),
     decide: vi.fn(async () => ({ decided: 1, pending: 0, result: { recorded: true, correct: 5, in_app: 8 } })),
     ...over,
   };
@@ -185,6 +186,7 @@ describe("Studio API (requireAccess first; tutor or parent of the child)", () =>
     const s = store();
     expect((await handlePending(deps("parent", s))).status).toBe(200);
     expect(s.pending).toHaveBeenCalledWith({ byMemberId: "m-parent", allowReal: false });
+    expect(s.retryResults).toHaveBeenCalledWith("m-parent"); // a result that failed to write once is retried when the inbox opens
     expect((await handlePending(deps("studentNguyen"))).status).toBe(403);
   });
 });

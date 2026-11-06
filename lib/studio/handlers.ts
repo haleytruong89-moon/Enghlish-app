@@ -3,6 +3,7 @@
  * 403 wrong role), then the body (400), then the injectable stores (service-role functions that check the actor again). A tutor never
  * receives AI cost or the month's spend (spec §7). Stored file paths never leave the server.
  */
+import { sameInstant } from "./instant";
 import { AccessError, requireAccess, requireStaff, type AccessDeps, type AccessGrant, type AccessUser, type Action, type Member } from "@/lib/auth/requireAccess";
 import { parseGate, refusalStatus } from "@/lib/ai/cap";
 import { AI_NOTICE_VERSION } from "@/lib/ai/config";
@@ -46,6 +47,8 @@ export interface StudioStore {
   approveDraft(a: { draftId: string; base: string; build: unknown; byMemberId: string }): Promise<unknown>;
   assign(a: { draftId: string; startOn: string; dueOn: string; byMemberId: string; clientId: string }): Promise<unknown>;
   pending(a: { byMemberId: string; allowReal: boolean }): Promise<unknown>;
+  /** Writes the Kết quả bài of submitted Studio attempts that have no pending item and no result yet (idempotent; returns how many). */
+  retryResults(byMemberId: string): Promise<unknown>;
   decide(a: { attemptId: string; items: { item_id: string; result: string }[]; byMemberId: string; clientId: string }): Promise<unknown>;
 }
 
@@ -254,7 +257,7 @@ export async function handleApprove(deps: StudioDeps, draftId: string, raw: unkn
   const p = approveBodySchema.safeParse(raw);
   if (!p.success) return fail(400, "invalid_body");
   const { view } = parseDraft(await deps.store.draft(draftId), { showCost: false });
-  if (view.updatedAt !== p.data.base_updated_at) return fail(409, "draft_changed");
+  if (!sameInstant(view.updatedAt, p.data.base_updated_at)) return fail(409, "draft_changed");
   if (view.status !== "draft") return fail(400, "not_draft");
   const blocking = blockingIssues(validateDraft(view.payload, await deps.loadContext(g.grant.learner.id, g.grant.learner.trackId)));
   if (blocking.length > 0) return fail(400, "blocked", { issues: blocking });
@@ -332,6 +335,7 @@ export async function handleSetAiSettings(deps: StudioDeps, raw: unknown): Promi
 export async function handlePending(deps: StudioDeps): Promise<HandlerResult> {
   const s = await staff(deps);
   if (!s.ok) return s.result;
+  await deps.store.retryResults(s.member.id).catch(async (err: unknown) => deps.log?.(err)); // fail-soft: the inbox must still open
   return { status: 200, body: parsePending(await deps.store.pending({ byMemberId: s.member.id, allowReal: deps.access?.allowRealLearners ?? allowRealLearners() })) };
 }
 

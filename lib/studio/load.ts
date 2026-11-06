@@ -77,6 +77,8 @@ export async function loadDraftPage(draftId: string): Promise<{ kind: "ok"; data
 
 /** "Cần thầy/cô xem" of this member (call after authorizeStaffPage). null = unreadable (e.g. 0024 not applied). */
 export async function loadStudioPending(memberId: string): Promise<PendingInbox | null> {
+  // The automatic Kết quả bài write may have failed once: write it now (idempotent, fail-soft).
+  await createAdminClient().rpc("eng_studio_retry_results", { p_by: memberId });
   const { data, error } = await createAdminClient().rpc("eng_studio_pending", { p_by: memberId, p_allow_real: allowRealLearners() });
   if (error) return null;
   return parsePending(data);

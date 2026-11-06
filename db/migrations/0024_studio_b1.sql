@@ -178,6 +178,31 @@ alter table english.results add constraint results_source_frame check (mode <> '
 alter table english.results drop constraint if exists results_studio_shape;
 alter table english.results add constraint results_studio_shape check (attempt_id is not null or cardinality(not_in_app_items) = 0);
 
+-- 1h2. Khung đề giấy của đề Studio thuộc MỘT em (learner_id); khung của chủ đề / nhập tay (learner_id null) như cũ.
+alter table english.test_frames add column if not exists learner_id uuid references english.learners(id);
+create index if not exists test_frames_learner_idx on english.test_frames(learner_id) where learner_id is not null;
+drop policy if exists test_frames_select on english.test_frames;
+create policy test_frames_select on english.test_frames
+  for select to authenticated
+  using (english.eng_is_staff() and family_id = english.eng_member_family_id() and (learner_id is null or english.eng_is_staff_of(learner_id)));
+-- Khung của em nào chỉ dùng cho kết quả / bài giao của em đó (nếu không thì lộ khung + chặn xóa dữ liệu của em đó).
+create or replace function english.eng_check_frame_owner() returns trigger
+language plpgsql set search_path = ''
+as $$
+begin
+  if new.frame_id is not null and exists (
+    select 1 from english.test_frames f where f.id = new.frame_id and f.learner_id is not null and f.learner_id <> new.learner_id) then
+    raise exception '%: this frame belongs to another learner (frame_other_learner)', tg_table_name using errcode = '23514';
+  end if;
+  return new;
+end
+$$;
+revoke execute on function english.eng_check_frame_owner() from public, anon, authenticated, service_role;
+drop trigger if exists results_frame_owner on english.results;
+create trigger results_frame_owner before insert on english.results for each row execute function english.eng_check_frame_owner();
+drop trigger if exists assignments_frame_owner on english.assignments;
+create trigger assignments_frame_owner before insert on english.assignments for each row execute function english.eng_check_frame_owner();
+
 -- 1i. File: đề và đáp án Studio (PDF hoặc Word .docx). .docx CHỈ cho hai loại này. Bản cũ của mỗi CHECK là trường hợp riêng của bản mới.
 alter table english.files drop constraint if exists files_kind_check;
 alter table english.files add constraint files_kind_check
@@ -750,6 +775,18 @@ revoke execute on function english.eng_register_file(uuid, uuid, text, jsonb, uu
 
 -- 3. Ghi: AI, bản nháp, Duyệt, Giao (service_role sau requireAccess; hàm kiểm lại người thao tác) ------------------------------------
 
+-- 3a0. Khóa lạc quan: so MỐC THỜI GIAN (timestamptz), không so chữ — chữ phụ thuộc TimeZone của phiên. Chữ không đọc được = khác.
+create or replace function english.eng_same_instant(p_ts timestamptz, p_base text) returns boolean
+language plpgsql immutable set search_path = ''
+as $$
+begin
+  return p_ts = p_base::timestamptz;
+exception when others then
+  return false;
+end
+$$;
+revoke execute on function english.eng_same_instant(timestamptz, text) from public, anon, authenticated, service_role;
+
 -- 3a. Chi phí AI tháng này (tháng lịch Việt Nam) của một gia đình. Nội bộ.
 create or replace function english.eng_ai_month_spent(p_family uuid) returns numeric
 language sql stable security definer set search_path = ''
@@ -1040,7 +1077,7 @@ begin
   if v_d.status not in ('draft', 'ai_failed') then
     raise exception 'eng_save_studio_draft: this draft cannot be edited now (not_editable)' using errcode = '23514';
   end if;
-  if v_d.updated_at::text <> p_base then
+  if not english.eng_same_instant(v_d.updated_at, p_base) then
     raise exception 'eng_save_studio_draft: the draft changed in the meantime (draft_changed)' using errcode = '23505';
   end if;
   if pg_catalog.length(v_title) not between 1 and 160 then
@@ -1139,7 +1176,7 @@ begin
   if v_d.status <> 'draft' then
     raise exception 'eng_approve_studio_draft: only a saved draft can be approved (not_draft)' using errcode = '23514';
   end if;
-  if v_d.updated_at::text <> p_base then
+  if not english.eng_same_instant(v_d.updated_at, p_base) then
     raise exception 'eng_approve_studio_draft: the draft changed in the meantime (draft_changed)' using errcode = '23505';
   end if;
   -- Hình của p_build (máy chủ dựng; đây là lưới an toàn).
@@ -1162,6 +1199,15 @@ begin
   if v_cat is null then
     raise exception 'eng_approve_studio_draft: the learner has no skill set yet (no_target_set)' using errcode = '23514';
   end if;
+  -- Kỹ năng gắn cho câu phải nằm trong danh sách Studio của em (bộ hiện hành ∩ ACT-SOURCE-QA, P1): máy chủ đã kiểm, đây là lưới an toàn.
+  if exists (
+    select 1
+    from (select t.v from pg_catalog.jsonb_array_elements_text(coalesce(p_build -> 'template' -> 'target_ids', '[]'::jsonb)) as t(v)
+          union
+          select i ->> 'target_id' from pg_catalog.jsonb_array_elements(v_items) as i where i ->> 'target_id' is not null) used(id)
+    where used.id not in (select sk ->> 'id' from pg_catalog.jsonb_array_elements(english.eng_studio_skills(v_l.id)) as sk)) then
+    raise exception 'eng_approve_studio_draft: a skill is not one the learner can be tagged with in a Studio test (bad_skill)' using errcode = '22023';
+  end if;
   if v_d.supersedes_draft_id is not null then
     select * into v_prev from english.studio_drafts d where d.id = v_d.supersedes_draft_id;
     v_tid := v_prev.template_id;
@@ -1178,7 +1224,7 @@ begin
   from pg_catalog.jsonb_array_elements(v_passages) with ordinality as x(p, o);
 
   insert into english.sources(id, version, title, url, author, rights_note, modality, body, source_hash, published_at)
-  select 'ST-' || v_tid || '-' || (p ->> 'ref'), v_ver, p ->> 'title', null, 'Thầy/cô', 'Tài liệu của thầy/cô, chỉ dùng trong gia đình', 'text', p ->> 'text',
+  select 'ST-' || v_tid || '-' || (p ->> 'ref'), v_ver, p ->> 'title', null, 'studio:tutor', 'studio:private-use', 'text', p ->> 'text',
          pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(p ->> 'text', 'UTF8')), 'hex'), pg_catalog.clock_timestamp()
   from pg_catalog.jsonb_array_elements(v_passages) as p;
 
@@ -1213,8 +1259,8 @@ begin
   select v_tid, v_ver, 'q' || (x ->> 'n'), v_l.id, (x ->> 'n')::int, x ->> 'part', x ->> 'tag_key', x ->> 'reading_skill_key', (x ->> 'out_of_app')::boolean
   from pg_catalog.jsonb_array_elements(p_build -> 'meta') as x;
 
-  insert into english.test_frames(family_id, track_id, title, total_items, parts, items, scale, supersedes_id, created_by)
-  values (v_l.family_id, v_l.track_id, pg_catalog.left(v_d.title, 160) || ' (' || v_tid || ')', (p_build -> 'frame' ->> 'total')::int,
+  insert into english.test_frames(family_id, learner_id, track_id, title, total_items, parts, items, scale, supersedes_id, created_by)
+  values (v_l.family_id, v_l.id, v_l.track_id, pg_catalog.left(v_d.title, 160) || ' (' || v_tid || ')', (p_build -> 'frame' ->> 'total')::int,
           p_build -> 'frame' -> 'parts', p_build -> 'frame' -> 'items', null,
           case when v_prev_frame is not null and not exists (select 1 from english.test_frames f where f.supersedes_id = v_prev_frame)
                then v_prev_frame else null end,
@@ -1260,10 +1306,13 @@ begin
     raise exception 'eng_assign_studio: the start day is after the due day (start_after_due)' using errcode = '23514';
   end if;
   v_replay := exists (select 1 from english.inquiry_instances i where i.learner_id = v_d.learner_id and i.client_request_id = p_client_id);
+  if not v_replay and exists (select 1 from english.studio_drafts n where n.supersedes_draft_id = p_draft and n.status = 'approved') then
+    raise exception 'eng_assign_studio: a newer version of this test was approved; assign that one (superseded)' using errcode = '23514';
+  end if;
   v_inst := english.eng_assign_inquiry(v_d.learner_id, v_d.template_id, v_d.template_version, p_due, p_by, p_client_id);
   select a.id into v_act from english.activity_instances a where a.inquiry_instance_id = v_inst and a.step_no = 1;
   if not v_replay and p_start <> p_due then
-    perform english.eng_activity_event(v_act, 'reschedule', p_start, 'Studio: ngày làm do người giao chọn', p_by);
+    perform english.eng_activity_event(v_act, 'reschedule', p_start, 'studio_start_chosen', p_by);
   end if;
   return pg_catalog.jsonb_build_object('instance_id', v_inst, 'activity_id', v_act, 'replayed', v_replay);
 end
@@ -1396,18 +1445,26 @@ begin
     raise exception 'eng_record_studio_result: the test has no paper frame' using errcode = 'P0002';
   end if;
 
-  select coalesce(array_agg(m.n order by m.n), '{}') into v_wrong
-  from english.studio_item_meta m
-  cross join lateral (
-    select case
-             when v_checks -> 'items' -> m.item_id ->> 'result' = 'needs_person'
-               then (select d.result from english.item_decisions d where d.attempt_id = p_attempt and d.item_id = m.item_id)
-             else v_checks -> 'items' -> m.item_id ->> 'result'
-           end as res) r
-  where m.template_id = v_tpl.id and m.template_version = v_tpl.version and not m.out_of_app and r.res in ('incorrect', 'blank');
-  select coalesce(array_agg(m.n order by m.n), '{}') into v_skip
-  from english.studio_item_meta m
-  where m.template_id = v_tpl.id and m.template_version = v_tpl.version and m.out_of_app;
+  -- Đúng = kết quả 'correct' (tự chấm hoặc Đúng của người lớn). Sai = 'incorrect' / 'blank'. Câu chỉ làm trên giấy, hoặc câu app không có kết quả
+  -- chấm nào, không tính đúng cũng không tính sai (nằm trong not_in_app_items).
+  select coalesce(array_agg(z.n order by z.n) filter (where z.cls = 'wrong'), '{}'),
+         coalesce(array_agg(z.n order by z.n) filter (where z.cls = 'skip'), '{}'),
+         (pg_catalog.count(*) filter (where z.cls = 'correct'))::int
+  into v_wrong, v_skip, v_correct
+  from (
+    select m.n,
+           case when m.out_of_app then 'skip'
+                when r.res = 'correct' then 'correct'
+                when r.res in ('incorrect', 'blank') then 'wrong'
+                else 'skip' end as cls
+    from english.studio_item_meta m
+    cross join lateral (
+      select case
+               when v_checks -> 'items' -> m.item_id ->> 'result' = 'needs_person'
+                 then (select d.result from english.item_decisions d where d.attempt_id = p_attempt and d.item_id = m.item_id)
+               else v_checks -> 'items' -> m.item_id ->> 'result'
+             end as res) r
+    where m.template_id = v_tpl.id and m.template_version = v_tpl.version) z;
   select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('n', m.n, 'tag_key', coalesce(m.tag_key, m.reading_skill_key)) order by m.n), '[]'::jsonb)
   into v_tags
   from english.studio_item_meta m
@@ -1425,7 +1482,6 @@ begin
     raise exception 'eng_record_studio_result: no adult to record the result' using errcode = '23514';
   end if;
   v_on := (v_t.submitted_at at time zone 'Asia/Ho_Chi_Minh')::date;
-  v_correct := v_f.total_items - cardinality(v_wrong) - cardinality(v_skip);
 
   insert into english.results(
     id, learner_id, assignment_id, frame_id, mode, context, attempt, source, used_hint, title, total_items, correct, wrong_items, not_in_app_items,
@@ -1465,6 +1521,46 @@ begin
 end
 $$;
 revoke execute on function english.eng_studio_after_episode() from public, anon, authenticated, service_role;
+
+-- Thử ghi lại Kết quả bài cho các lần làm Studio đã nộp, đã hết câu chờ mà chưa có kết quả (lần ghi tự động từng lỗi — lỗi chỉ vào app_errors).
+-- Idempotent (eng_record_studio_result trả replayed khi đã có). Chỉ cho em mà người gọi quản lý được. Trả số kết quả vừa ghi.
+create or replace function english.eng_studio_retry_results(p_by uuid) returns int
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_a uuid;
+  v_n int := 0;
+  v_r jsonb;
+begin
+  if p_by is null then
+    raise exception 'eng_studio_retry_results: actor is required' using errcode = '22004';
+  end if;
+  for v_a in
+    select t.id
+    from english.attempts t
+    join english.activity_instances a on a.id = t.activity_instance_id
+    join english.inquiry_instances i on i.id = a.inquiry_instance_id
+    join english.inquiry_templates tp on tp.id = i.template_id and tp.version = i.template_version and tp.kind = 'studio'
+    where exists (select 1 from english.attempt_auto_checks c where c.attempt_id = t.id)
+      and exists (select 1 from english.episodes e where e.attempt_id = t.id)
+      and not exists (select 1 from english.results r where r.attempt_id = t.id)
+      and english.eng_actor_may_manage(p_by, t.learner_id)
+    order by t.submitted_at
+    limit 50
+  loop
+    begin
+      v_r := english.eng_record_studio_result(v_a, null);
+      if (v_r ->> 'recorded')::boolean and not coalesce((v_r ->> 'replayed')::boolean, false) then v_n := v_n + 1; end if;
+    exception when others then
+      insert into english.app_errors(route, code, message, details)
+      values ('db:retry', 'studio_result', pg_catalog.left(sqlstate || ': ' || sqlerrm, 300), pg_catalog.jsonb_build_object('attempt', v_a));
+    end;
+  end loop;
+  return v_n;
+end
+$$;
+revoke execute on function english.eng_studio_retry_results(uuid) from public, anon, authenticated;
+grant execute on function english.eng_studio_retry_results(uuid) to service_role;
 drop trigger if exists episodes_studio_result on english.episodes;
 create trigger episodes_studio_result
   after insert on english.episodes
@@ -1679,8 +1775,8 @@ begin
                'expected', case
                  when it ->> 'kind' = 'mcq' then (
                    select o.opt from pg_catalog.jsonb_array_elements_text(coalesce(it -> 'options', '[]'::jsonb)) with ordinality as o(opt, ord)
-                   where o.ord - 1 = english.eng_resolve_option(coalesce(it -> 'options', '[]'::jsonb), k.answer))
-                 else nullif(pg_catalog.split_part(english.eng_clean_text(coalesce(k.answer, '')), ' / ', 1), '') end,
+                   where o.ord - 1 = english.eng_resolve_option(coalesce(it -> 'options', '[]'::jsonb), case when k.kind = 'answer' then k.answer end))
+                 else nullif(pg_catalog.split_part(english.eng_clean_text(coalesce(case when k.kind = 'answer' then k.answer end, '')), ' / ', 1), '') end,
                'explanation_vi', k.explanation_vi)
              order by substring(it ->> 'id' from 2)::int)
       from pg_catalog.jsonb_array_elements(coalesce(v_step -> 'items', '[]'::jsonb)) as it
@@ -1762,6 +1858,7 @@ declare
   n_studio_sources int := 0;
   n_studio_template_keys int := 0;
   n_studio_templates int := 0;
+  n_studio_frames int := 0;
   v_receipt jsonb;
 begin
   if p_learner_id is null then
@@ -1919,6 +2016,10 @@ begin
   delete from english.inquiry_templates it where it.kind = 'studio' and it.learner_id = p_learner_id;
   get diagnostics n_studio_templates = row_count;
 
+  -- Khung đề giấy của đề Studio (kết quả, bài giao và nháp trỏ tới khung đã xóa ở trên).
+  delete from english.test_frames tf where tf.learner_id = p_learner_id;
+  get diagnostics n_studio_frames = row_count;
+
   delete from english.target_sets ts where ts.learner_id = p_learner_id;
   get diagnostics n_target_sets = row_count;
 
@@ -1996,6 +2097,7 @@ begin
       'studio_sources', n_studio_sources,
       'studio_template_keys', n_studio_template_keys,
       'studio_templates', n_studio_templates,
+      'studio_frames', n_studio_frames,
       'login_names', n_login_names,
       'learners', 1,
       'members', n_members
@@ -2075,6 +2177,7 @@ begin
       'studio_item_meta', (select pg_catalog.count(*) from english.studio_item_meta x where x.learner_id = p_learner),
       'studio_drafts', (select pg_catalog.count(*) from english.studio_drafts x where x.learner_id = p_learner),
       'studio_templates', (select pg_catalog.count(*) from english.inquiry_templates x where x.kind = 'studio' and x.learner_id = p_learner),
+      'studio_frames', (select pg_catalog.count(*) from english.test_frames x where x.learner_id = p_learner),
       -- (the receipt of the purge lists these three too, and the dry run must report exactly the same keys)
       'studio_step_sources', (select pg_catalog.count(*) from english.template_step_sources x
         where exists (select 1 from english.inquiry_templates t where t.id = x.template_id and t.version = x.template_version and t.kind = 'studio' and t.learner_id = p_learner)),

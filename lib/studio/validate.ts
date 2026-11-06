@@ -9,7 +9,7 @@ import { tagOf, type StudioContext } from "./context";
 import { CLOSED_STUDIO_KINDS, type StudioDraft, type StudioItem } from "./schema";
 
 export const ISSUE_CODES = [
-  "numbering", "part_not_contiguous", "unknown_part", "no_app_items",
+  "numbering", "duplicate_part", "duplicate_passage", "part_not_contiguous", "unknown_part", "no_app_items",
   "empty_stem", "missing_key", "mcq_options", "mcq_key", "options_not_mcq",
   "no_tag", "two_tags", "unknown_tag", "unknown_skill", "score_words", "unknown_passage",
   "ai_review",
@@ -26,6 +26,8 @@ export function validateDraft(d: StudioDraft, ctx: StudioContext): Issue[] {
   const nums = d.items.map((i) => i.n).sort((a, b) => a - b);
   if (nums.length > 0 && (nums.some((v, k) => v !== k + 1) || new Set(nums).size !== nums.length)) block(null, "numbering");
   const partKeys = new Set(d.parts.map((p) => p.key));
+  if (partKeys.size !== d.parts.length) block(null, "duplicate_part");
+  if (new Set(d.passages.map((p) => p.ref)).size !== d.passages.length) block(null, "duplicate_passage");
   for (const p of d.parts) {
     const ns = d.items.filter((i) => i.part === p.key).map((i) => i.n);
     if (ns.length === 0) continue;

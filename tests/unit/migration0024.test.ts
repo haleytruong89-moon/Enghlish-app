@@ -199,7 +199,10 @@ describe("0024_studio_b1.sql", () => {
     expect(at("insert into english.template_item_keys(")).toBeLessThan(at("update english.inquiry_templates set status = 'published'"));
     expect(at("update english.inquiry_templates set status = 'published'")).toBeLessThan(at("insert into english.studio_item_meta("));
     expect(f).toContain("insert into english.test_frames(");
-    expect(f).toContain("'Thầy/cô', 'Tài liệu của thầy/cô, chỉ dùng trong gia đình'");
+    // no Vietnamese words in the data: stable codes, rendered by lib/copy/vi.ts
+    expect(f).toContain("'studio:tutor', 'studio:private-use'");
+    expect(f).toContain("target_ids");
+    expect(f).toContain("(bad_skill)");
   });
 
   it("the child's review: student-only, own released step, Studio only; never a count, a total, a tag or a skill", () => {
@@ -239,6 +242,21 @@ describe("0024_studio_b1.sql", () => {
     expect(f).toContain("english.eng_record_studio_result(p_attempt, p_by)");
     expect(f).not.toMatch(/update english\.attempt_auto_checks|delete from english\.results/);
     expect(grantsOf("eng_studio_pending")).toEqual(["service_role"]);
+  });
+
+  it("hard-cap safety: the gate locks the family and reserves inside the lock; the optimistic lock compares instants; frames belong to a child", () => {
+    const gate = fnText(sql, "eng_ai_gate");
+    expect(gate).toContain("pg_catalog.pg_advisory_xact_lock(");
+    expect(gate).toContain("v_spent + v_est >= v_cap");
+    expect(gate).toContain("'reserved'");
+    expect(fnText(sql, "eng_ai_month_spent")).toContain("not exists (select 1 from english.ai_runs x where x.releases_run_id = r.id)");
+    expect(code).not.toMatch(/updated_at::text\s*<>/);
+    expect(fnText(sql, "eng_save_studio_draft")).toContain("english.eng_same_instant(v_d.updated_at, p_base)");
+    expect(code).toContain("alter table english.test_frames add column if not exists learner_id uuid references english.learners(id);");
+    expect(code).toContain("(learner_id is null or english.eng_is_staff_of(learner_id))");
+    expect(fnText(sql, "eng_assign_studio")).toContain("(superseded)");
+    expect(code).not.toMatch(/ngày làm do người giao chọn/);
+    expect(grantsOf("eng_studio_retry_results")).toEqual(["service_role"]);
   });
 
   // (later tasks add their tests here)

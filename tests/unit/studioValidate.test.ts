@@ -50,4 +50,11 @@ describe("validateDraft — what blocks Duyệt (spec §5.4, §6; plan P2)", () 
     expect(blockingIssues(issues)).toEqual([]);
     expect(issues.some((i) => i.n === 8 && i.code === "ai_review" && !i.blocking)).toBe(true);
   });
+
+  it("two parts with the same key, or two reading texts with the same ref, block Duyệt", () => {
+    const d = withItem(8, { key: "is said to be" });
+    expect(codes({ ...d, parts: [...d.parts, { ...d.parts[0]! }] })).toContain("-:duplicate_part");
+    expect(codes({ ...d, passages: [...d.passages, { ...d.passages[0]! }] })).toContain("-:duplicate_passage");
+    expect(codes(d)).not.toContain("-:duplicate_part");
+  });
 });
