@@ -8,4 +8,4 @@ export function questionNumber(itemId: string, index: number): number {
 }
 export const formatUsd = (n: number) => `$${n.toFixed(2)}`;
 export const aiFailedText = (code: string | null) => studioCopy.aiFailedReason[code ?? ""] ?? studioCopy.aiFailedReason.ai_failed;
-export const studioErrorText = (code: string | null | undefined) => (code && studioErrors[code]) || studioErrors.invalid;
+export const studioErrorText = (code: string | null | undefined): string => (code && studioErrors[code]) || studioErrors.invalid || "";

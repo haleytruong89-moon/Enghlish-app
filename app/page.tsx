@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { LearnerCard } from "@/components/LearnerCard";
+import { AiSoftCapBox } from "@/components/settings/AiSoftCapBox";
 import { RecentLevelChanges } from "@/components/levels/RecentLevelChanges";
 import { StudentHome } from "@/components/student/StudentHome";
 import Link from "next/link";
-import { home, reviewPage, todayPage } from "@/lib/copy/vi";
+import { aiSettingsCopy, home, reviewPage, todayPage } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { formatDay } from "@/lib/review/format";
 import { loadToday, type TodayData } from "@/lib/tutorwork/load";
@@ -13,6 +14,7 @@ import { loadRecentLevelChanges } from "@/lib/levels/load";
 import { countToDecide } from "@/lib/review/load";
 import { revisionsAvailable } from "@/lib/revision/load";
 import { safeColor } from "@/lib/home/visible";
+import { loadAiSettings } from "@/lib/studio/load";
 import { loadStudentHome } from "@/lib/work/load";
 
 export const dynamic = "force-dynamic";
@@ -79,6 +81,8 @@ export default async function HomePage() {
   );
   // "Thay đổi cấp gần đây" (parent only). null = could not be read: the box is left out rather than claiming "no change".
   const recent = isParent ? await loadRecentLevelChanges(data.learners) : null;
+  // Studio B1: the soft-cap box of the AI spend (parent only; null = unreadable, e.g. 0024 not applied yet).
+  const aiSettings = isParent ? await loadAiSettings(data.memberId).catch(() => null) : null;
   // "Bài đã sửa" needs migration 0021: until it is applied the link on each card is left out (no dead link).
   const revisionsReady = await revisionsAvailable();
   return (
@@ -95,7 +99,13 @@ export default async function HomePage() {
         >
           {toDecide === null ? reviewPage.link : reviewPage.linkCount(toDecide)}
         </Link>
+        {isParent ? (
+          <Link href="/settings/ai" data-testid="ai-settings-link" className="ml-3 inline-flex min-h-12 items-center text-sm text-accent underline">
+            {aiSettingsCopy.navLink}
+          </Link>
+        ) : null}
         {recent ? <RecentLevelChanges items={recent} /> : null}
+        {aiSettings ? <AiSoftCapBox settings={aiSettings} /> : null}
         <ul className="mt-6 flex flex-col gap-3">
           {data.learners.map((l, i) => (
             <LearnerCard key={l.id} learner={l} today={todays[i] ?? null} role={role} revisionsReady={revisionsReady} />
