@@ -461,6 +461,290 @@ create policy item_decisions_select on english.item_decisions
   for select to authenticated
   using (english.eng_is_staff_of(learner_id));
 
+-- 2. Đọc mẫu Studio, tự chấm, đầu vào engine, đăng ký file ---------------------------------------------------------------------
+
+-- 2a. Mẫu Studio (và khóa, nối nguồn, bài đọc của nó): CHỈ phụ huynh và gia sư của chính em đó (spec §7). Mẫu chủ đề tuần: như 0007.
+drop policy if exists inquiry_templates_select on english.inquiry_templates;
+create policy inquiry_templates_select on english.inquiry_templates
+  for select to authenticated
+  using (published_at is not null and ((kind = 'topic' and english.eng_staff_has_track(track_id)) or (kind = 'studio' and english.eng_is_staff_of(learner_id))));
+
+create or replace function english.eng_staff_may_read_template(p_id text, p_version int) returns boolean
+language sql stable security definer set search_path = ''
+as $$
+  select exists (
+    select 1 from english.inquiry_templates t
+    where t.id = p_id and t.version = p_version
+      and t.published_at is not null
+      and ((t.kind = 'topic' and english.eng_staff_has_track(t.track_id))
+           or (t.kind = 'studio' and english.eng_is_staff_of(t.learner_id))))
+$$;
+
+create or replace function english.eng_staff_may_read_source(p_id text, p_version int) returns boolean
+language sql stable security definer set search_path = ''
+as $$
+  select exists (
+    select 1 from english.inquiry_templates t
+    where t.published_at is not null
+      and t.sources @> pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object('id', p_id, 'version', p_version))
+      and ((t.kind = 'topic' and english.eng_staff_has_track(t.track_id))
+           or (t.kind = 'studio' and english.eng_is_staff_of(t.learner_id))))
+$$;
+revoke execute on function english.eng_staff_may_read_template(text, int) from public, anon;
+revoke execute on function english.eng_staff_may_read_source(text, int) from public, anon;
+grant execute on function english.eng_staff_may_read_template(text, int) to authenticated, service_role;
+grant execute on function english.eng_staff_may_read_source(text, int) to authenticated, service_role;
+
+-- 2b. Tự chấm. Nhánh của mẫu chủ đề tuần = đúng bản 0009. CHỈ mẫu Studio: transform / short có đáp án → so như gap (eng_norm_answer) với
+-- đáp án (" / ") ∪ đáp án chấp nhận của mẫu (accepted_additions, áp cho lần làm SAU khi được thêm); không khớp → 'needs_person'
+-- (người lớn Đúng/Sai). open: để trống → 'blank', còn lại 'needs_person'. Không bao giờ ra điểm 0–4.
+create or replace function english.eng_compute_auto_checks(p_instance uuid, p_step jsonb, p_answers jsonb) returns jsonb
+language plpgsql stable set search_path = ''
+as $$
+declare
+  v_item jsonb;
+  v_id text;
+  v_kind text;
+  v_opts jsonb;
+  v_key text;
+  v_given text;
+  v_res text;
+  v_ki int;
+  v_gi int;
+  v_items jsonb := '{}'::jsonb;
+  v_total int := 0;
+  v_checked int := 0;
+  v_correct int := 0;
+  v_studio boolean := false;
+  v_tpl text;
+  v_ver int;
+begin
+  select t.kind = 'studio', t.id, t.version into v_studio, v_tpl, v_ver
+  from english.inquiry_instances i
+  join english.inquiry_templates t on t.id = i.template_id and t.version = i.template_version
+  where i.id = p_instance;
+  v_studio := coalesce(v_studio, false);
+
+  for v_item in select x from pg_catalog.jsonb_array_elements(coalesce(p_step -> 'items', '[]'::jsonb)) as x loop
+    v_id := v_item ->> 'id';
+    v_kind := v_item ->> 'kind';
+    v_opts := coalesce(v_item -> 'options', '[]'::jsonb);
+    v_given := coalesce(p_answers ->> v_id, '');
+    v_total := v_total + 1;
+    v_res := 'needs_person';
+
+    if v_kind in ('mcq', 'gap', 'word_form') then
+      select k.answer into v_key
+      from english.instance_item_keys k
+      where k.inquiry_instance_id = p_instance and k.item_id = v_id and k.kind = 'answer';
+
+      if v_key is not null and pg_catalog.btrim(v_key) <> '' then
+        if pg_catalog.jsonb_array_length(v_opts) > 0 then
+          v_ki := english.eng_resolve_option(v_opts, v_key);
+          if v_ki is not null then
+            v_gi := english.eng_resolve_option(v_opts, v_given);
+            v_res := case when english.eng_clean_text(v_given) = '' then 'blank'
+                          when v_gi is not null and v_gi = v_ki then 'correct'
+                          else 'incorrect' end;
+          end if;
+        else
+          v_res := case
+            when english.eng_clean_text(v_given) = '' then 'blank'
+            when exists (
+              select 1 from pg_catalog.regexp_split_to_table(english.eng_clean_text(v_key), ' / ') as a
+              where english.eng_norm_answer(a) = english.eng_norm_answer(v_given)) then 'correct'
+            else 'incorrect' end;
+        end if;
+      end if;
+    elsif v_studio and v_kind in ('transform', 'short') then
+      select k.answer into v_key
+      from english.instance_item_keys k
+      where k.inquiry_instance_id = p_instance and k.item_id = v_id and k.kind = 'answer';
+      if v_key is not null and pg_catalog.btrim(v_key) <> '' then
+        v_res := case
+          when english.eng_clean_text(v_given) = '' then 'blank'
+          when exists (
+            select 1 from pg_catalog.regexp_split_to_table(english.eng_clean_text(v_key), ' / ') as a
+            where english.eng_norm_answer(a) = english.eng_norm_answer(v_given))
+            or exists (
+              select 1 from english.accepted_additions aa
+              where aa.template_id = v_tpl and aa.template_version = v_ver and aa.item_id = v_id
+                and english.eng_norm_answer(aa.answer) = english.eng_norm_answer(v_given)) then 'correct'
+          else 'needs_person' end;
+      end if;
+    elsif v_studio and v_kind = 'open' and english.eng_clean_text(v_given) = '' then
+      v_res := 'blank';
+    end if;
+
+    if v_res <> 'needs_person' then
+      v_checked := v_checked + 1;
+      if v_res = 'correct' then v_correct := v_correct + 1; end if;
+    end if;
+    v_items := v_items || pg_catalog.jsonb_build_object(v_id, pg_catalog.jsonb_build_object('kind', v_kind, 'result', v_res));
+  end loop;
+
+  return pg_catalog.jsonb_build_object('version', 1, 'total', v_total, 'checked', v_checked, 'correct', v_correct, 'items', v_items);
+end
+$$;
+revoke execute on function english.eng_compute_auto_checks(uuid, jsonb, jsonb) from public, anon, authenticated, service_role;
+
+-- 2c. Đầu vào engine = bản 0023, chỉ đổi khối 'auto': câu 'needs_person' lấy Đúng/Sai của người lớn (item_decisions); chưa có thì bỏ qua câu đó. Hình JSON không đổi.
+create or replace function english.eng_engine_inputs(p_learner uuid, p_targets text[] default null) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_policy text;
+  v_map text := english.eng_current_skill_map();
+  v_keys text[];
+begin
+  if p_learner is null then
+    raise exception 'eng_engine_inputs: learner id is required' using errcode = '22004';
+  end if;
+  select * into v_l from english.learners l where l.id = p_learner;
+  if not found then
+    raise exception 'eng_engine_inputs: learner not found' using errcode = 'P0002';
+  end if;
+  v_policy := english.eng_engine_policy(p_learner);
+  v_keys := array(
+    select u.k from unnest(coalesce(english.eng_engine_scope(p_learner), '{}'::text[])) with ordinality as u(k, o)
+    where p_targets is null or u.k = any (p_targets)
+    order by u.o);
+
+  return pg_catalog.jsonb_build_object(
+    'learner_id', p_learner,
+    'now', pg_catalog.clock_timestamp(),
+    'policy', case when v_policy is null then null else pg_catalog.jsonb_build_object(
+      'version', v_policy,
+      'config', (select p.config from english.assessment_policies p where p.version = v_policy)) end,
+    'targets', coalesce((
+      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+               'key', u.k,
+               'domain', (select g.domain_key from english.skill_leaves sl
+                          join english.skill_groups g on g.map_id = sl.map_id and g.key = sl.group_key
+                          where sl.map_id = v_map and sl.kind = 'target' and sl.track_id = v_l.track_id and sl.ref_key = u.k))
+             order by u.o)
+      from unnest(v_keys) with ordinality as u(k, o)), '[]'::jsonb),
+    'episodes', coalesce((
+      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+               'episode_id', e.id, 'attempt_id', t.id, 'activity_id', t.activity_instance_id, 'at', t.submitted_at,
+               'context_id', e.context_id, 'is_first_attempt', e.is_first_attempt, 'step_repeat', english.eng_is_step_repeat(t.id), 'mode', t.mode,
+               'observed_directly', e.observed_directly, 'facets', e.facets,
+               -- G4: dòng mới nhất của dấu "chủ đề / nguồn mới" (episode_marks) quyết định; không có dòng = false.
+               'transfer_marked', coalesce((select m.value from english.episode_marks m where m.episode_id = e.id and m.mark = 'transfer_check'
+                                            order by m.seq desc limit 1), false),
+               -- id của dòng dấu đang có hiệu lực (bỏ tick rồi tick lại = dòng mới = bằng chứng mới, B1); null = không đang tick.
+               'transfer_mark_id', (select m.id from english.episode_marks m
+                                    where m.value and m.id = (select l.id from english.episode_marks l where l.episode_id = e.id and l.mark = 'transfer_check'
+                                                              order by l.seq desc limit 1)),
+               'declared_unknown', 'unknown' = any (t.declared_assistance),
+               'assistance', english.eng_attempt_assistance(t.id),
+               'scores', sc.scores)
+             order by t.submitted_at, e.id)
+      from english.episodes e
+      join english.attempts t on t.id = e.attempt_id
+      cross join lateral (
+        select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+                 'target_key', vd.target_key, 'decision_id', vd.id, 'decided_at', vd.created_at, 'score', vd.final_score, 'not_observed', vd.final_not_observed)
+               order by vd.target_key) as scores
+        from english.validation_decisions vd
+        where vd.episode_id = e.id and vd.target_key = any (v_keys) and vd.decision in ('AGREE', 'MODIFY')
+          and not exists (select 1 from english.validation_decisions s where s.supersedes_id = vd.id)) sc
+      where e.learner_id = p_learner and sc.scores is not null), '[]'::jsonb),
+    'auto', coalesce((
+      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+               'attempt_id', t.id, 'episode_id', e.id, 'activity_id', t.activity_instance_id, 'at', t.submitted_at,
+               'is_first_attempt', e.is_first_attempt, 'step_repeat', english.eng_is_step_repeat(t.id), 'mode', t.mode, 'facets', e.facets,
+               'declared_unknown', 'unknown' = any (t.declared_assistance),
+               'assistance', english.eng_attempt_assistance(t.id),
+               'items', it.items)
+             order by t.submitted_at, t.id)
+      from english.attempt_auto_checks c
+      join english.attempts t on t.id = c.attempt_id
+      join english.episodes e on e.attempt_id = t.id
+      join english.activity_instances a on a.id = t.activity_instance_id
+      join english.inquiry_instances i on i.id = a.inquiry_instance_id
+      cross join lateral (
+        select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+                 'item_id', x ->> 'id', 'target_key', x ->> 'target_id', 'result', r.res)
+               order by x ->> 'id') as items
+        from pg_catalog.jsonb_array_elements(i.snapshot -> 'steps') as st
+        cross join lateral pg_catalog.jsonb_array_elements(coalesce(st -> 'items', '[]'::jsonb)) as x
+        cross join lateral (
+          select case
+                   when (c.checks -> 'items' -> (x ->> 'id') ->> 'result') = 'needs_person'
+                     then (select d.result from english.item_decisions d where d.attempt_id = c.attempt_id and d.item_id = x ->> 'id')
+                   else c.checks -> 'items' -> (x ->> 'id') ->> 'result'
+                 end as res) r
+        where (st ->> 'step_no')::int = a.step_no
+          and x ->> 'target_id' = any (v_keys)
+          and r.res in ('correct', 'incorrect', 'blank')) it
+      where c.learner_id = p_learner and it.items is not null), '[]'::jsonb),
+    'exposures', coalesce((
+      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+               'target_key', x.target_key, 'at', x.at, 'attempt_id', x.attempt_id, 'context_id', e.context_id)
+             order by x.at, x.id)
+      from english.exposure_log x
+      left join english.episodes e on e.attempt_id = x.attempt_id
+      where x.learner_id = p_learner and x.target_key = any (v_keys)), '[]'::jsonb),
+    'decisions', coalesce((
+      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+               'id', d.id, 'seq', d.seq, 'target_key', d.target_key, 'kind', d.kind, 'from_state', d.from_state, 'to_state', d.to_state,
+               'evidence_key', d.evidence_key, 'responds_to', d.responds_to, 'created_at', d.created_at)
+             order by d.seq)
+      from english.mastery_decisions d
+      where d.learner_id = p_learner and d.target_key = any (v_keys)), '[]'::jsonb));
+end
+$$;
+revoke execute on function english.eng_engine_inputs(uuid, text[]) from public, anon, authenticated;
+grant execute on function english.eng_engine_inputs(uuid, text[]) to service_role;
+
+-- 2d. Đăng ký file = bản 0016 + Word .docx (chỉ cho đề / đáp án Studio).
+create or replace function english.eng_register_file(p_family uuid, p_learner uuid, p_kind text, p_file jsonb, p_by uuid) returns uuid
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_id uuid;
+  v_mime text;
+  v_bytes int;
+  v_ext text;
+begin
+  if pg_catalog.jsonb_typeof(p_file) is distinct from 'object'
+     or (select pg_catalog.count(*) from pg_catalog.jsonb_object_keys(p_file)) <> 3
+     or (p_file ->> 'id') is null or (p_file ->> 'id') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+     or pg_catalog.jsonb_typeof(p_file -> 'mime') is distinct from 'string'
+     or (p_file ->> 'bytes') is null or (p_file ->> 'bytes') !~ '^[0-9]{1,9}$' then
+    raise exception 'eng_register_file: each file is {id, mime, bytes}' using errcode = '22023';
+  end if;
+  v_id := (p_file ->> 'id')::uuid;
+  v_mime := p_file ->> 'mime';
+  v_bytes := (p_file ->> 'bytes')::int;
+  if v_mime not in ('application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') then
+    raise exception 'eng_register_file: only pdf, png, jpeg, webp and docx files are accepted' using errcode = '22023';
+  end if;
+  if v_mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' and p_kind not in ('studio_test', 'studio_key') then
+    raise exception 'eng_register_file: a Word file is accepted only for a Studio test or answer key' using errcode = '22023';
+  end if;
+  if p_kind in ('studio_test', 'studio_key') and v_mime not in ('application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') then
+    raise exception 'eng_register_file: a Studio test or answer key must be a PDF or a .docx file' using errcode = '22023';
+  end if;
+  if v_bytes < 1 or v_bytes > 15728640 then
+    raise exception 'eng_register_file: a file must be between 1 byte and 15 MB' using errcode = '22023';
+  end if;
+  if p_kind = 'assignment_pdf' and v_mime <> 'application/pdf' then
+    raise exception 'eng_register_file: an assignment file must be a PDF' using errcode = '22023';
+  end if;
+  if p_kind = 'result_image' and v_mime = 'application/pdf' then
+    raise exception 'eng_register_file: a result screenshot must be an image' using errcode = '22023';
+  end if;
+  v_ext := case v_mime when 'application/pdf' then 'pdf' when 'image/png' then 'png' when 'image/jpeg' then 'jpg' when 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' then 'docx' else 'webp' end;
+  insert into english.files(id, family_id, learner_id, kind, path, mime, bytes, uploaded_by_member)
+  values (v_id, p_family, p_learner, p_kind, p_family::text || '/' || coalesce(p_learner::text, 'shared') || '/' || v_id::text || '.' || v_ext, v_mime, v_bytes, p_by);
+  return v_id;
+end
+$$;
+revoke execute on function english.eng_register_file(uuid, uuid, text, jsonb, uuid) from public, anon, authenticated, service_role;
+
 -- 5. Purge: thêm các bảng Studio (giữ nguyên mọi dòng của 0023; có test đối chiếu từng dòng).
 create or replace function english.eng_purge_learner(
   p_learner_id uuid,

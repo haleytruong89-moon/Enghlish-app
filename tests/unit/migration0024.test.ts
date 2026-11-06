@@ -11,7 +11,6 @@ const fnText = (src: string, name: string) => {
   return src.slice(start, src.indexOf("\n$$;", start));
 };
 const lines = (s: string) => s.split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("--"));
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- used by the grant tests of later tasks
 const grantsOf = (name: string) =>
   [...code.matchAll(new RegExp(`grant execute on function english\\.${name}\\([^)]*\\) to ([a-z_, ]+);`, "g"))].map((m) => m[1]);
 const NEW_TABLES = ["ai_settings", "ai_runs", "studio_drafts", "studio_item_meta", "accepted_additions", "item_decisions"];
@@ -116,6 +115,54 @@ describe("0024_studio_b1.sql", () => {
       expect(preview).toContain(`'${k}', (select pg_catalog.count(*) from english.${k} x where x.learner_id = p_learner),`);
     }
     expect(preview).toContain("'studio_templates', (select pg_catalog.count(*) from english.inquiry_templates x where x.kind = 'studio' and x.learner_id = p_learner),");
+  });
+
+  it("Studio templates, their keys, step sources and reading texts: only the adults of THAT child; weekly topics unchanged", () => {
+    expect(code).toMatch(
+      /create policy inquiry_templates_select on english\.inquiry_templates\s+for select to authenticated\s+using \(published_at is not null and \(\(kind = 'topic' and english\.eng_staff_has_track\(track_id\)\) or \(kind = 'studio' and english\.eng_is_staff_of\(learner_id\)\)\)\);/,
+    );
+    for (const fn of ["eng_staff_may_read_template", "eng_staff_may_read_source"]) {
+      const f = fnText(sql, fn);
+      expect(f).toContain("(t.kind = 'topic' and english.eng_staff_has_track(t.track_id))");
+      expect(f).toContain("(t.kind = 'studio' and english.eng_is_staff_of(t.learner_id))");
+    }
+  });
+
+  it("auto-check: the weekly-topic branch is the 0009 text; transform / short / open get a Studio-only branch", () => {
+    const old09 = readFileSync(path.join(MIGRATIONS_DIR, "0009_student_work.sql"), "utf8");
+    const now = new Set(lines(fnText(sql, "eng_compute_auto_checks")));
+    for (const l of lines(fnText(old09, "eng_compute_auto_checks"))) expect(now.has(l), l).toBe(true);
+    const f = fnText(sql, "eng_compute_auto_checks");
+    expect(f).toContain("if v_studio and v_kind in ('transform', 'short') then");
+    expect(f).toContain("from english.accepted_additions aa");
+    expect(f).toContain("else 'needs_person' end;");
+    expect(f).toContain("elsif v_studio and v_kind = 'open' and english.eng_clean_text(v_given) = '' then");
+    expect(code).toContain("revoke execute on function english.eng_compute_auto_checks(uuid, jsonb, jsonb) from public, anon, authenticated, service_role;");
+  });
+
+  it("engine input: the 0023 function with ONE changed block (decided needs_person items); same keys in the JSON", () => {
+    const old23 = readFileSync(path.join(MIGRATIONS_DIR, "0023_skill_states.sql"), "utf8");
+    const before = lines(fnText(old23, "eng_engine_inputs"));
+    const after = lines(fnText(sql, "eng_engine_inputs"));
+    const removed = before.filter((l) => !after.includes(l));
+    expect(removed).toEqual([
+      "'item_id', x ->> 'id', 'target_key', x ->> 'target_id', 'result', c.checks -> 'items' -> (x ->> 'id') ->> 'result')",
+      "and (c.checks -> 'items' -> (x ->> 'id') ->> 'result') in ('correct', 'incorrect', 'blank')) it",
+    ]);
+    const f = fnText(sql, "eng_engine_inputs");
+    expect(f).toContain("then (select d.result from english.item_decisions d where d.attempt_id = c.attempt_id and d.item_id = x ->> 'id')");
+    expect(f).toContain("and r.res in ('correct', 'incorrect', 'blank')) it");
+    expect(grantsOf("eng_engine_inputs")).toEqual(["service_role"]);
+  });
+
+  it("file register: .docx only for the two Studio kinds; the old checks stay", () => {
+    const old16 = readFileSync(path.join(MIGRATIONS_DIR, "0016_practice_files.sql"), "utf8");
+    const f = fnText(sql, "eng_register_file");
+    const keep = lines(fnText(old16, "eng_register_file")).filter((l) => !l.includes("only pdf, png, jpeg and webp") && !l.startsWith("if v_mime not in") && !l.startsWith("v_ext :="));
+    const now = new Set(lines(f));
+    for (const l of keep) expect(now.has(l), l).toBe(true);
+    expect(f).toContain("if v_mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' and p_kind not in ('studio_test', 'studio_key') then");
+    expect(f).toContain("if p_kind in ('studio_test', 'studio_key') and v_mime not in ('application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') then");
   });
 
   // (later tasks add their tests here)

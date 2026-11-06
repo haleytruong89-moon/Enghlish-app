@@ -229,7 +229,7 @@ describe("S5b-1 PR B: practice assignments, submissions, files (migration 0016)"
       expect((await q1<{ tag_keys: string[] }>("select tag_keys from english.assignments where id = $1", [ok.id]))[0]?.tag_keys).toEqual(["dang-tu"]);
       await fail(makeLink("https://example.org/a", { frame: randomUUID() }), "23514", /frame is not available/);
       await fail(makePdf({ main: png() }), "22023", /must be a PDF/);
-      await fail(makePdf({ main: pdf({ mime: "text/html" }) }), "22023", /only pdf, png, jpeg and webp/);
+      await fail(makePdf({ main: pdf({ mime: "text/html" }) }), "22023", /only pdf, png, jpeg, webp and docx/);
       await fail(makePdf({ main: pdf({ bytes: 15 * 1024 * 1024 + 1 }) }), "22023", /15 MB/);
       await fail(makePdf({ main: pdf({ bytes: 0 }) }), "22023", /15 MB/);
       await fail(makePdf({ main: pdf({ id: "not-a-uuid" }) }), "22023");
