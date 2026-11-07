@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { asCommit, createTestDb, migrate, seed, type Seeded, type TestDb } from "./helpers";
+import { asCommit, createAuthUser, createTestDb, migrate, seed, type Seeded, type TestDb } from "./helpers";
 
 describe("W1 workdesk (migration 0025)", () => {
   let db: TestDb; let s: Seeded;
@@ -23,7 +23,7 @@ describe("W1 workdesk (migration 0025)", () => {
       await fail(svc("insert into english.teaching_notes(learner_id, field, text, author_member, author_role, client_id) values ($1,'focus','x',$2,'tutor','c-00000001')", [NG(), M().tutorNguyen]), "42501");
     });
     it("students read nothing; tutor of the child and parent of the family read", async () => {
-      await q1(`insert into english.teaching_notes(learner_id, field, text, author_member, author_role, client_id) values ($1,'focus','Đảo ngữ',$2,'tutor','c-seed-0001')`, [NG(), M().tutorNguyen]);
+      await svc("select english.eng_write_teaching_note($1,'focus','Đảo ngữ',$2,'c-seed-0001') as r", [NG(), M().tutorNguyen]);
       const read = (uid: string) => asCommit(db.client, "authenticated", uid, async (q) => (await q("select count(*)::int as n from english.teaching_notes where learner_id = $1", [NG()])).rows[0] as { n: number });
       expect((await read(s.users.studentNguyen)).n).toBe(0);
       expect((await read(s.users.tutorNguyen)).n).toBe(1);
@@ -94,9 +94,101 @@ describe("W1 workdesk (migration 0025)", () => {
       await svc("select english.eng_write_intake($1,'{\"goals\":[]}'::jsonb,$2,'pg-00000002') as r", [L, M().tutorNguyen]);
       const dry = await svc<{ counts: Record<string, number> }>("select english.eng_purge_preview($1) as r", [L]);
       expect(dry.counts.teaching_notes).toBe(1); expect(dry.counts.learner_intake).toBe(1);
+      const fbBefore = await q1<{ n: string; e: string }>("select (select count(*) from english.app_feedback) as n, (select count(*) from english.app_feedback_events) as e");
       const receipt = await svc<{ deleted: Record<string, number> }>("select english.eng_purge_learner($1,$2) as r", [L, s.users.parent]);
       expect(receipt.deleted.teaching_notes).toBe(1); expect(receipt.deleted.learner_intake).toBe(1);
       expect(await q1("select 1 from english.teaching_notes where learner_id=$1", [L])).toEqual([]);
+      const fbAfter = await q1<{ n: string; e: string }>("select (select count(*) from english.app_feedback) as n, (select count(*) from english.app_feedback_events) as e");
+      expect(fbAfter).toEqual(fbBefore);
+      expect(Number(fbBefore[0]!.n)).toBeGreaterThan(0);
+    });
+  });
+
+  describe("5. replay safety, limits, audit", () => {
+    const send = (by: string, o: { kind?: string; text?: string; clientId?: string } = {}) =>
+      svc<{ id: string; replayed: boolean }>("select english.eng_send_app_feedback($1,'Ghi buổi học',$2,$3,$4) as r", [o.kind ?? "bug", o.text ?? "Nút không bấm được", by, o.clientId ?? randomUUID()]);
+    const upd = (by: string, id: string, status: string, reply: string | null, clientId: string = randomUUID()) =>
+      svc<{ id: string; replayed: boolean }>("select english.eng_update_app_feedback($1,$2,$3,$4,$5) as r", [id, status, reply, by, clientId]);
+    it("L1: the same client id with different content is refused (23505 client_id_reused) in all four functions", async () => {
+      await svc("select english.eng_write_teaching_note($1,'avoid','A',$2,'reuse-0001') as r", [NG(), M().tutorNguyen]);
+      await fail(svc("select english.eng_write_teaching_note($1,'avoid','B',$2,'reuse-0001') as r", [NG(), M().tutorNguyen]), "23505", /\(client_id_reused\)/);
+      await svc("select english.eng_write_intake($1,'{\"goals\":[]}'::jsonb,$2,'reuse-0002') as r", [NG(), M().tutorNguyen]);
+      await fail(svc("select english.eng_write_intake($1,'{\"goals\":[],\"note\":\"x\"}'::jsonb,$2,'reuse-0002') as r", [NG(), M().tutorNguyen]), "23505", /\(client_id_reused\)/);
+      const f = await send(M().parent, { clientId: "reuse-0003" });
+      expect((await send(M().parent, { clientId: "reuse-0003" })).replayed).toBe(true);
+      await fail(send(M().parent, { clientId: "reuse-0003", text: "Khác" }), "23505", /\(client_id_reused\)/);
+      await upd(M().parent, f.id, "in_progress", "ok", "reuse-0004");
+      expect((await upd(M().parent, f.id, "in_progress", "ok", "reuse-0004")).replayed).toBe(true);
+      await fail(upd(M().parent, f.id, "done", "ok", "reuse-0004"), "23505", /\(client_id_reused\)/);
+    });
+    it("L2: a 90-character client id works (the 'new' event id is derived separately); 91 is refused", async () => {
+      const id = "x".repeat(90);
+      const r = await send(M().parent, { clientId: id });
+      expect((await send(M().parent, { clientId: id })).replayed).toBe(true);
+      expect((await q1("select 1 from english.app_feedback_events where feedback_id=$1 and status='new'", [r.id])).length).toBe(1);
+      await fail(send(M().parent, { clientId: "y".repeat(91) }), "22023", /\(bad_client_id\)/);
+    });
+    it("L4: 'wont_do' needs a non-empty reply (23514 reply_required)", async () => {
+      const f = await send(M().parent);
+      await fail(upd(M().parent, f.id, "wont_do", null), "23514", /\(reply_required\)/);
+      await fail(upd(M().parent, f.id, "wont_do", "   "), "23514", /\(reply_required\)/);
+      expect((await upd(M().parent, f.id, "wont_do", "Chưa làm kỳ này")).replayed).toBe(false);
+    });
+    it("L10: sending / updating leaves audit rows without text", async () => {
+      const f = await send(M().tutorNguyen, { text: "RIÊNG-TƯ-12345" });
+      await upd(M().parent, f.id, "done", "RIÊNG-TƯ-67890");
+      const rows = await q1<{ action: string; payload: unknown }>("select action, payload from english.audit_log where action like 'app_feedback.%' order by id desc limit 2");
+      expect(rows.map((r) => r.action).sort()).toEqual(["app_feedback.sent", "app_feedback.updated"]);
+      expect(JSON.stringify(rows)).not.toContain("RIÊNG-TƯ");
+    });
+    it("M3: an intake of about 11000 characters is accepted (cap 12000)", async () => {
+      const big = { goals: [], strengths: { vocab: "a".repeat(10000) } };
+      expect((await svc<{ replayed: boolean }>("select english.eng_write_intake($1,$2::jsonb,$3,$4) as r", [NG(), JSON.stringify(big), M().tutorNguyen, randomUUID()])).replayed).toBe(false);
+      const huge = { goals: [], strengths: { vocab: "a".repeat(12100) } };
+      await fail(svc("select english.eng_write_intake($1,$2::jsonb,$3,$4) as r", [NG(), JSON.stringify(huge), M().tutorNguyen, randomUUID()]), "22023", /\(bad_content\)/);
+    });
+  });
+
+  describe("6. who sees app feedback (tutor: own items only; parent: all; ended tutor and other families: none)", () => {
+    const send = (by: string, text: string) => svc<{ id: string }>("select english.eng_send_app_feedback('suggestion','Hộp duyệt',$1,$2,$3) as r", [text, by, randomUUID()]);
+    const seen = (uid: string, table = "app_feedback") => asCommit(db.client, "authenticated", uid, async (q) => (await q(`select id from english.${table}`)).rows.map((r) => (r as { id: string }).id));
+    const evSeen = (uid: string) => asCommit(db.client, "authenticated", uid, async (q) => (await q("select feedback_id from english.app_feedback_events")).rows.map((r) => (r as { feedback_id: string }).feedback_id));
+    let endedUser = ""; let endedMember = ""; let otherParentUser = "";
+    beforeAll(async () => {
+      endedUser = await createAuthUser(db.client, "ended-tutor@test.local");
+      endedMember = (await q1<{ id: string }>("insert into english.members(user_id, family_id, role, display_name) values ($1,$2,'tutor','Gia sư cũ') returning id", [endedUser, s.familyId]))[0]!.id;
+      await q1("insert into english.relationships(member_id, learner_id, relation, valid_from, valid_to) values ($1,$2,'tutor','2026-01-01','2026-02-01')", [endedMember, NG()]);
+      otherParentUser = await createAuthUser(db.client, "other-parent@test.local");
+      const fam = (await q1<{ id: string }>("insert into english.families(name) values ('Gia đình khác') returning id"))[0]!.id;
+      await q1("insert into english.members(user_id, family_id, role, display_name) values ($1,$2,'parent','Phụ huynh khác')", [otherParentUser, fam]);
+    });
+    it("tutorAn cannot see tutorNguyen's item; the parent sees both; students and other families see none", async () => {
+      const a = await send(M().tutorAn, "Của gia sư An");
+      const n = await send(M().tutorNguyen, "Của gia sư Nguyên");
+      const mine = await seen(s.users.tutorAn);
+      expect(mine).toContain(a.id); expect(mine).not.toContain(n.id);
+      const theirs = await seen(s.users.tutorNguyen);
+      expect(theirs).toContain(n.id); expect(theirs).not.toContain(a.id);
+      const all = await seen(s.users.parent);
+      expect(all).toContain(a.id); expect(all).toContain(n.id);
+      expect((await evSeen(s.users.tutorAn))).not.toContain(n.id);
+      expect((await evSeen(s.users.parent))).toEqual(expect.arrayContaining([a.id, n.id]));
+      for (const uid of [s.users.studentAn, s.users.studentNguyen, otherParentUser]) {
+        expect(await seen(uid)).toEqual([]);
+        expect(await evSeen(uid)).toEqual([]);
+      }
+    });
+    it("an ended tutor can neither send nor read (staff_only), nor write notes", async () => {
+      await fail(send(endedMember, "x"), "42501", /\(staff_only\)/);
+      expect(await seen(endedUser)).toEqual([]);
+      await fail(svc("select english.eng_write_teaching_note($1,'focus','x',$2,'ended-0001') as r", [NG(), endedMember]), "42501", /\(tutor_only\)/);
+    });
+    it("a tutor who sent feedback loses sight of it once the relationship ends", async () => {
+      const f = await send(M().tutorAn, "Trước khi hết hạn");
+      expect(await seen(s.users.tutorAn)).toContain(f.id);
+      await q1("update english.relationships set valid_from='2026-01-01', valid_to='2026-02-01' where member_id=$1", [M().tutorAn]);
+      expect(await seen(s.users.tutorAn)).toEqual([]);
+      await q1("update english.relationships set valid_from='2026-01-01', valid_to=null where member_id=$1", [M().tutorAn]);
     });
   });
 });

@@ -44,7 +44,7 @@ create table if not exists english.app_feedback (
   kind text not null check (kind in ('bug', 'hard_to_use', 'suggestion', 'question')),
   screen text not null check (pg_catalog.length(pg_catalog.btrim(screen)) between 1 and 80),
   text text not null check (pg_catalog.length(pg_catalog.btrim(text)) between 1 and 1000),
-  client_id text not null check (pg_catalog.length(pg_catalog.btrim(client_id)) between 8 and 100),
+  client_id text not null check (pg_catalog.length(pg_catalog.btrim(client_id)) between 8 and 90),
   created_at timestamptz not null default clock_timestamp(),
   unique (family_id, client_id)
 );
@@ -92,14 +92,43 @@ drop policy if exists teaching_notes_select on english.teaching_notes;
 create policy teaching_notes_select on english.teaching_notes for select to authenticated using (english.eng_is_staff_of(learner_id));
 drop policy if exists learner_intake_select on english.learner_intake;
 create policy learner_intake_select on english.learner_intake for select to authenticated using (english.eng_is_staff_of(learner_id));
--- góp ý về app: người lớn (tutor/parent) cùng gia đình đọc; học sinh không
+-- góp ý về app (DOMAIN §2, mặc định đã chọn): phụ huynh của gia đình thấy TẤT CẢ; gia sư chỉ thấy góp ý MÌNH gửi (và sự kiện / trả lời của
+-- chúng) và chỉ khi còn quan hệ gia sư hiệu lực với ít nhất một em của gia đình; học sinh không thấy gì.
+create or replace function english.eng_tutor_active_in_family(p_member uuid) returns boolean
+language sql stable security definer set search_path = ''
+as $$
+  select exists (
+    select 1
+    from english.members m
+    join english.relationships r on r.member_id = m.id and r.relation = 'tutor'
+    join english.learners l on l.id = r.learner_id and l.family_id = m.family_id
+    where m.id = p_member and m.role = 'tutor'
+      and r.valid_from <= now() and (r.valid_to is null or r.valid_to > now())
+  )
+$$;
+revoke execute on function english.eng_tutor_active_in_family(uuid) from public, anon, authenticated;
+grant execute on function english.eng_tutor_active_in_family(uuid) to service_role;
+
+create or replace function english.eng_may_see_feedback(p_family uuid, p_by_member uuid) returns boolean
+language sql stable security definer set search_path = ''
+as $$
+  select exists (
+    select 1
+    from english.members m
+    where m.user_id = auth.uid() and m.family_id = p_family
+      and (m.role = 'parent'
+           or (m.role = 'tutor' and m.id = p_by_member and english.eng_tutor_active_in_family(m.id)))
+  )
+$$;
+revoke execute on function english.eng_may_see_feedback(uuid, uuid) from public, anon;
+grant execute on function english.eng_may_see_feedback(uuid, uuid) to authenticated, service_role;
+
 drop policy if exists app_feedback_select on english.app_feedback;
 create policy app_feedback_select on english.app_feedback for select to authenticated
-  using (exists (select 1 from english.members m where m.user_id = auth.uid() and m.family_id = app_feedback.family_id and m.role in ('tutor', 'parent')));
+  using (english.eng_may_see_feedback(family_id, by_member));
 drop policy if exists app_feedback_events_select on english.app_feedback_events;
 create policy app_feedback_events_select on english.app_feedback_events for select to authenticated
-  using (exists (select 1 from english.app_feedback f join english.members m on m.family_id = f.family_id
-                 where f.id = app_feedback_events.feedback_id and m.user_id = auth.uid() and m.role in ('tutor', 'parent')));
+  using (exists (select 1 from english.app_feedback f where f.id = app_feedback_events.feedback_id and english.eng_may_see_feedback(f.family_id, f.by_member)));
 
 create or replace function english.eng_write_teaching_note(p_learner uuid, p_field text, p_text text, p_by uuid, p_client_id text)
 returns jsonb language plpgsql volatile security definer set search_path = '' as $$
@@ -119,7 +148,12 @@ begin
     raise exception 'eng_write_teaching_note: text over 600 characters (too_long)' using errcode = '22023';
   end if;
   select * into v_prev from english.teaching_notes t where t.learner_id = p_learner and t.client_id = p_client_id and t.field = p_field;
-  if found then return pg_catalog.jsonb_build_object('id', v_prev.id, 'replayed', true); end if;
+  if found then
+    if v_prev.text is distinct from v_text or v_prev.author_member <> p_by then
+      raise exception 'eng_write_teaching_note: client id already used for different content (client_id_reused)' using errcode = '23505';
+    end if;
+    return pg_catalog.jsonb_build_object('id', v_prev.id, 'replayed', true);
+  end if;
   insert into english.teaching_notes(learner_id, field, text, author_member, author_role, client_id)
   values (p_learner, p_field, v_text, p_by, 'tutor', p_client_id) returning id into v_id;
   insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
@@ -147,11 +181,16 @@ begin
      or pg_catalog.jsonb_typeof(coalesce(p_content -> 'weaknesses', '{}'::jsonb)) <> 'object'
      or exists (select 1 from pg_catalog.jsonb_object_keys(coalesce(p_content -> 'strengths', '{}'::jsonb)) k where not (k = any (v_domains)))
      or exists (select 1 from pg_catalog.jsonb_object_keys(coalesce(p_content -> 'weaknesses', '{}'::jsonb)) k where not (k = any (v_domains)))
-     or pg_catalog.length(p_content::text) > 6000 then
+     or pg_catalog.length(p_content::text) > 12000 then
     raise exception 'eng_write_intake: content must be {goals:[], strengths:{domain}, weaknesses:{domain}, note} (bad_content)' using errcode = '22023';
   end if;
   select * into v_prev from english.learner_intake i where i.learner_id = p_learner and i.client_id = p_client_id;
-  if found then return pg_catalog.jsonb_build_object('id', v_prev.id, 'replayed', true); end if;
+  if found then
+    if v_prev.content is distinct from p_content or v_prev.author_member <> p_by then
+      raise exception 'eng_write_intake: client id already used for different content (client_id_reused)' using errcode = '23505';
+    end if;
+    return pg_catalog.jsonb_build_object('id', v_prev.id, 'replayed', true);
+  end if;
   insert into english.learner_intake(learner_id, content, author_member, author_role, client_id)
   values (p_learner, p_content, p_by, 'tutor', p_client_id) returning id into v_id;
   insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
@@ -169,17 +208,28 @@ begin
     raise exception 'eng_send_app_feedback: kind, screen, text, actor and client id are required' using errcode = '22004';
   end if;
   select * into v_member from english.members m where m.id = p_by;
-  if v_member.id is null or v_member.role not in ('tutor', 'parent') then
-    raise exception 'eng_send_app_feedback: only a tutor or parent sends app feedback (staff_only)' using errcode = '42501';
+  if v_member.id is null or v_member.role not in ('tutor', 'parent')
+     or (v_member.role = 'tutor' and not english.eng_tutor_active_in_family(v_member.id)) then
+    raise exception 'eng_send_app_feedback: only a parent or a tutor with a current relationship sends app feedback (staff_only)' using errcode = '42501';
   end if;
   if p_kind not in ('bug', 'hard_to_use', 'suggestion', 'question') then
     raise exception 'eng_send_app_feedback: unknown kind (bad_kind)' using errcode = '22023';
   end if;
+  if pg_catalog.length(pg_catalog.btrim(p_client_id)) not between 8 and 90 then
+    raise exception 'eng_send_app_feedback: client id must be 8..90 characters (bad_client_id)' using errcode = '22023';
+  end if;
   select * into v_prev from english.app_feedback f where f.family_id = v_member.family_id and f.client_id = p_client_id;
-  if found then return pg_catalog.jsonb_build_object('id', v_prev.id, 'replayed', true); end if;
+  if found then
+    if v_prev.kind <> p_kind or v_prev.screen <> pg_catalog.btrim(p_screen) or v_prev.text <> pg_catalog.btrim(p_text) or v_prev.by_member <> p_by then
+      raise exception 'eng_send_app_feedback: client id already used for different content (client_id_reused)' using errcode = '23505';
+    end if;
+    return pg_catalog.jsonb_build_object('id', v_prev.id, 'replayed', true);
+  end if;
   insert into english.app_feedback(family_id, by_member, by_role, kind, screen, text, client_id)
   values (v_member.family_id, p_by, v_member.role, p_kind, pg_catalog.btrim(p_screen), pg_catalog.btrim(p_text), p_client_id) returning id into v_id;
   insert into english.app_feedback_events(feedback_id, status, reply, by_member, client_id) values (v_id, 'new', null, p_by, p_client_id || ':new');
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_member.user_id, v_member.role, 'app_feedback.sent', v_member.family_id, null, pg_catalog.jsonb_build_object('kind', p_kind));
   return pg_catalog.jsonb_build_object('id', v_id, 'replayed', false);
 end $$;
 revoke all on function english.eng_send_app_feedback(text, text, text, uuid, text) from public, anon, authenticated;
@@ -201,10 +251,20 @@ begin
   if p_status not in ('new', 'in_progress', 'done', 'wont_do') then
     raise exception 'eng_update_app_feedback: unknown status (bad_status)' using errcode = '22023';
   end if;
+  if p_status = 'wont_do' and pg_catalog.btrim(coalesce(p_reply, '')) = '' then
+    raise exception 'eng_update_app_feedback: a reply is required when the answer is "will not do" (reply_required)' using errcode = '23514';
+  end if;
   select * into v_prev from english.app_feedback_events e where e.feedback_id = p_feedback and e.client_id = p_client_id;
-  if found then return pg_catalog.jsonb_build_object('id', v_prev.id, 'replayed', true); end if;
+  if found then
+    if v_prev.status <> p_status or v_prev.reply is distinct from nullif(pg_catalog.btrim(coalesce(p_reply, '')), '') or v_prev.by_member <> p_by then
+      raise exception 'eng_update_app_feedback: client id already used for different content (client_id_reused)' using errcode = '23505';
+    end if;
+    return pg_catalog.jsonb_build_object('id', v_prev.id, 'replayed', true);
+  end if;
   insert into english.app_feedback_events(feedback_id, status, reply, by_member, client_id)
   values (p_feedback, p_status, nullif(pg_catalog.btrim(coalesce(p_reply, '')), ''), p_by, p_client_id) returning id into v_id;
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_member.user_id, v_member.role, 'app_feedback.updated', v_member.family_id, null, pg_catalog.jsonb_build_object('status', p_status));
   return pg_catalog.jsonb_build_object('id', v_id, 'replayed', false);
 end $$;
 revoke all on function english.eng_update_app_feedback(uuid, text, text, uuid, text) from public, anon, authenticated;
