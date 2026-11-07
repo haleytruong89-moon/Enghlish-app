@@ -1061,7 +1061,8 @@ Code trên nhánh `feature/studio-b1`, chờ CI + review Opus + phụ huynh duy�
 |---|---|
 | P1 (kỹ năng gắn được = bộ hiện hành ∩ kỹ năng mà danh mục tính ACT-SOURCE-QA) | **Phụ huynh xác nhận 06/11: giữ luật bằng chứng của danh mục (phương án A)** |
 | P2, P3, P5, P6, P8, P9, P10, P12 | Làm theo đề xuất của kế hoạch |
-| P4 (câu bỏ trống hiện trong "Câu cần xem lại"), P11 (bài đã tính rồi, đổi Đúng/Sai không đề xuất lại cùng khóa) | Làm theo đề xuất; thuộc §17 — phụ huynh xác nhận trước khi gộp |
+| P4 (câu bỏ trống hiện trong "Câu cần xem lại"), P11 (bài đã tính rồi, đổi Đúng/Sai không đề xuất lại cùng khóa) | **Phụ huynh xác nhận 07/11: theo đề xuất** |
+| Câu khi không có câu cần xem lại ("Không có câu nào cần xem lại lúc này.") | **Phụ huynh xác nhận 07/11: giữ nguyên (A)** |
 | P7 (bảng giá `claude-sonnet-5-5`) | **Đã giải quyết 06/11: giá chính thức $2 vào / $10 ra mỗi triệu token** (platform.claude.com/docs, models/sonnet-5-5/overview). Giá tính theo model ĐƯỢC YÊU CẦU; model không có trong bảng bị từ chối (`refused_model`). Vẫn ghi chi phí thật của lần thử |
 
 ### Lệch nhỏ so với kế hoạch khi làm (đã ghi)
