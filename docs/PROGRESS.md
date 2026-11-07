@@ -1086,3 +1086,55 @@ Code trên nhánh `feature/studio-b1`, chờ CI + review Opus + phụ huynh duy�
 Vòng review thứ hai (06/11): chi phí AI của bản nháp không cộng chỗ đặt trước đã giải phóng; chỉ một chỗ đặt trước CHƯA giải phóng của đúng gia đình mới được giải phóng (một lần); lỗi hết giờ / 5xx ghi giá xấu nhất (đầu vào ước tính + toàn bộ phần đầu ra cho phép); ghi lại Kết quả bài chỉ cho lần làm đã sẵn sàng, bỏ qua em thật khi `ALLOW_REAL_LEARNERS=false`, và một lỗi chỉ ghi một dòng mỗi giờ cho mỗi lần làm; danh sách khung đề chỉ gồm khung của gia đình và khung Studio của đúng em; `eng_same_instant` là STABLE; bỏ chữ ký hàm cũ của bản nháp đầu.
 
 **Giới hạn đã biết:** bảo vệ file Word giải nén (> 20 MB) đọc kích thước khai báo trong thư mục zip; file zip cố tình khai sai không bị chặn ở bước này. Chỉ người lớn trong gia đình tải file lên nên chấp nhận ở B1.
+
+## W1 · Ghi chú dạy học + Hồ sơ đầu vào + Góp ý về app (08/11/2026)
+
+Code trên nhánh `feature/w1-notes-feedback`, **chờ phụ huynh duyệt PR** (đã review Opus, đã sửa các lỗi trung bình / thấp). Spec `docs/superpowers/specs/2026-11-08-tutor-workdesk-design.md` (§3, §4 W1, §6), luật `docs/DOMAIN.md`, kế hoạch `docs/superpowers/plans/2026-11-08-w1-notes-feedback.md`. Không AI; con không thấy gì mới.
+
+### Đã làm
+
+| Việc | Ở đâu |
+|---|---|
+| Thầy/cô của em sửa 4 ô **Ghi chú dạy học** (Đang tập trung vào · Cách giải thích hợp với con · Lỗi hay lặp lại · Cần tránh). Mỗi lần lưu là một dòng mới, lịch sử giữ đủ; phụ huynh chỉ xem | thẻ trên `/learners/[id]/levels` (Hồ sơ cấp) |
+| Thầy/cô ghi **Hồ sơ đầu vào**: mục tiêu (kèm mốc), điểm mạnh / yếu ban đầu theo 7 mảng, ghi chú | cùng trang |
+| **Góp ý về app**: thầy/cô hoặc phụ huynh gửi (Lỗi / Khó dùng / Đề xuất / Câu hỏi + màn nào); phụ huynh đổi trạng thái (Mới · Đang sửa · Đã sửa · Không làm) và trả lời; chọn "Không làm" thì bắt buộc có lý do | trang `/feedback`, nút "Góp ý về app" ở đầu mọi trang của người lớn (mang theo tên màn đang mở) |
+| Xóa dữ liệu một em xóa luôn ghi chú dạy học + hồ sơ đầu vào của em đó (góp ý về app thuộc gia đình, không xóa) | `eng_purge_learner` / `eng_purge_preview` |
+
+### SQL cần phụ huynh áp
+
+**`db/migrations/0025_workdesk_w1.sql`** — áp **TRƯỚC khi thử preview hoặc gộp** (chỉ thêm; chạy lại an toàn; cần `0024` đã áp). Chưa áp thì trang Hồ sơ cấp và `/feedback` hiện một dòng báo "chưa dùng được vì cơ sở dữ liệu chưa cập nhật" thay vì lỗi. Migration kế tiếp sau này là **0026**.
+
+### Cách thử trên preview (5 bước)
+
+1. Đăng nhập tài khoản **thầy/cô của Nguyên (thử)** → thẻ của Nguyên (thử) → **Hồ sơ cấp**. Cuộn tới hai thẻ mới "Hồ sơ đầu vào" và "Ghi chú dạy học".
+2. Bấm **Cập nhật hồ sơ** → thêm một mục tiêu (ví dụ "Thi vào 10", mốc 06/2027), gõ một điểm mạnh và một điểm yếu → **Lưu hồ sơ**. Hồ sơ hiện lại đúng chữ vừa gõ.
+3. Ở thẻ **Ghi chú dạy học** bấm **Sửa**, điền ô "Đang tập trung vào" và "Lỗi hay lặp lại" → **Lưu** ("Đã lưu."). Sửa lại ô đầu lần nữa và lưu: chữ mới hiện ra (chữ cũ vẫn nằm trong lịch sử).
+4. Bấm **Góp ý về app** ở đầu trang → chọn "Khó dùng", viết vài chữ → **Gửi**. Dòng mới hiện ra với trạng thái **Mới**. (Thầy/cô chỉ thấy các góp ý do chính mình gửi.)
+5. Đăng xuất, đăng nhập **phụ huynh** → Hồ sơ cấp của Nguyên (thử): ghi chú và hồ sơ hiện ở chế độ chỉ xem, không có nút Sửa. Vào **Góp ý về app**: thấy góp ý của cả nhà; đổi trạng thái sang "Đang sửa" + trả lời → đăng nhập lại thầy/cô: thấy trạng thái và lời trả lời. Thử chọn "Không làm" không ghi lý do: app nhắc phải ghi lý do. Đăng nhập tài khoản của **con**: không thấy gì mới.
+
+### Tiêu chí đạt (spec §6 W1)
+
+- Thầy/cô sửa được 4 ô Ghi chú dạy học; lịch sử giữ đủ (mỗi lần lưu là một dòng mới, không sửa đè).
+- Gửi được góp ý về app; thầy/cô thấy trạng thái phụ huynh đổi và lời trả lời.
+- Con không thấy gì mới (học sinh không đọc được bảng nào của W1).
+- Chỉ thầy/cô của em ghi được ghi chú / hồ sơ đầu vào; phụ huynh chỉ xem; xóa dữ liệu một em xóa đúng hai bảng đó.
+
+### Giả định (chờ phụ huynh)
+
+Các điểm dưới đây chưa có trong spec; tôi chọn mặc định như sau, phụ huynh đổi được ở lát sau:
+
+1. **Ai thấy góp ý nào (M5):** phụ huynh thấy **tất cả** góp ý của gia đình; thầy/cô chỉ thấy góp ý **mình gửi** (kèm trạng thái và lời trả lời). Thầy/cô hết quan hệ hiệu lực với mọi em của gia đình thì không gửi, không đọc được nữa. (Lý do: riêng tư giữa các thầy/cô, DOMAIN §2.)
+2. **Bản preview (M4):** khi `ALLOW_REAL_LEARNERS=false`, trang `/feedback` và hai API góp ý chỉ dùng được với gia đình **không có em thật**; gia đình có em thật nhận 404.
+3. **"Không làm" (L4):** phải kèm lý do trả lời (app và cơ sở dữ liệu đều chặn). Danh sách chỉ hiện lời trả lời của lần cập nhật **mới nhất** (cập nhật sau mà không có lời thì không hiện lời cũ).
+4. **Giới hạn hồ sơ đầu vào:** tối đa 12000 ký tự cả hồ sơ (ngoài giới hạn từng ô); quá thì báo "Hồ sơ đầu vào quá dài hoặc sai mảng".
+5. **Mã gửi (`client_id`):** 8–90 ký tự; gửi lại cùng mã với nội dung khác bị từ chối (409), cùng nội dung thì coi như gửi lại (không tạo dòng thứ hai).
+6. **Chữ "AI":** thẻ Ghi chú dạy học ghi "Khi có AI soạn nháp, AI sẽ đọc mục này" (AI chưa đọc ở W1).
+7. **Nhật ký:** gửi / cập nhật góp ý ghi `audit_log` (`app_feedback.sent` / `app_feedback.updated`, chỉ loại / trạng thái, không có chữ).
+
+### Sửa sau review Opus (08/11/2026; `0025` chưa áp ở đâu nên sửa thẳng trong file)
+
+Ghi chú dạy học đọc dòng mới nhất của **từng ô** (không mất ô cũ sau nhiều lần sửa ô khác); chưa áp `0025` thì trang báo nhẹ thay vì lỗi 500; lưu nhiều ô bị lỗi giữa chừng thì báo ô nào đã lưu và tải lại, thử lại dùng lại cùng mã; phạm vi xem góp ý theo vai; mã `client_id` bị dùng lại cho nội dung khác bị chặn (23505); mã tối đa 90 ký tự; thêm nút "Góp ý về app" ở mọi trang người lớn.
+
+### Tiêu chí kiểm tra
+
+`typecheck`, `lint`, `test` (unit 1046 · database 605, gồm RLS từng vai, gia sư hết hạn, gia đình khác, xóa dữ liệu một em), `test:e2e --list` liệt kê 7 test W1 (chạy trong CI với Supabase local).
