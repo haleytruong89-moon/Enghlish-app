@@ -1,4 +1,4 @@
-# Bàn làm việc gia sư — spec (bản nháp 0.1 · 08/11/2026)
+# Bàn làm việc gia sư — spec (bản nháp 0.2 · 08/11/2026)
 
 Trạng thái: **NHÁP 0.2, chờ phụ huynh duyệt cả bản** (D-W1…D-W8 đã chốt 08/11). Chưa chia kế hoạch lát, chưa code.
 Đi cùng: `docs/DOMAIN.md` (luật + dữ liệu; mọi quy tắc tính, trạng thái, bất biến nằm ở đó). Hub: `TUTOR_WORKDESK_REVIEW_2026-11-07.md`, `AI_QUALITY_PLAN_2026-11-07.md`, `TUTOR_SESSION_30MIN_2026-11-07.md`.

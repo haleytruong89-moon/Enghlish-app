@@ -1,4 +1,4 @@
-# Luật và dữ liệu nghiệp vụ · Bàn làm việc gia sư (bản nháp 0.1 · 08/11/2026)
+# Luật và dữ liệu nghiệp vụ · Bàn làm việc gia sư (bản nháp 0.2 · 08/11/2026)
 
 Trạng thái: **NHÁP 0.2 — phụ huynh đã chốt D-W1…D-W8 ngày 08/11** (mục 13); phần còn lại chờ duyệt cả bản. Viết trước spec `docs/superpowers/specs/2026-11-08-tutor-workdesk-design.md` để chốt phần khó đổi về sau (dữ liệu, phiên bản, cách tính, trạng thái, quyền) trước khi code.
 Nguồn: bản bấm thử + trang luồng (07/11), `TUTOR_WORKDESK_REVIEW_2026-11-07.md`, `AI_QUALITY_PLAN_2026-11-07.md`, câu trả lời thay gia sư của phụ huynh (08/11, mục 12), hiện trạng code đến migration `0024`.
