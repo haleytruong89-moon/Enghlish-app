@@ -1092,9 +1092,9 @@ Vòng review thứ hai (06/11): chi phí AI của bản nháp không cộng ch�
 Nhánh `feature/session-log-quickfix`. Kế hoạch: `docs/superpowers/plans/2026-11-07-session-log-quickfix.md`.
 
 **Đã làm (không đổi cơ sở dữ liệu, API, zod, giới hạn):**
-- Tìm không cần dấu ở mọi ô chọn theo bản đồ kỹ năng (`lib/text/fold.ts` → `foldVi`, dùng trong `DomainTabs`).
+- Tìm không cần dấu ở mọi ô chọn có ô tìm kiếm (`lib/text/fold.ts` → `foldVi`, dùng trong `DomainTabs`): Ghi buổi học (kỹ năng + điểm cần củng cố), duyệt bài viết (nhãn), giao bài luyện. Ghi kết quả bài và Studio dùng danh sách thường (không có ô tìm kiếm).
 - "Kỹ năng đã luyện hôm nay": dòng "Đã chọn n" + thẻ đã chọn có nút ✕ (chỉ khi chưa lưu). Từ khóa tìm được giữ sau khi chọn.
-- Nút "Như buổi trước": điền kỹ năng đã luyện (chỉ kỹ năng còn trong bộ hiện tại) và điểm củng cố (chỉ nhãn còn dùng được, tối đa 3). Không chép ngày, "Hôm nay học", lời nhắn, ghi chú phụ huynh, hỏi lại. `loadLastNote` đọc thêm `practised_target_ids`.
+- Nút "Như buổi trước": THÊM kỹ năng đã luyện (chỉ kỹ năng còn trong bộ hiện tại) và điểm củng cố (chỉ nhãn còn dùng được và không bị ẩn, tối đa 3) của buổi trước vào những gì đã chọn, không thay thế; nút ẩn khi không còn gì để thêm; dòng "Đã thêm …" mất khi bạn đổi lựa chọn. Phụ huynh bấm nút này thì chép từ buổi gần nhất mà phụ huynh thấy được (ghi chú được chia sẻ), giống khung "Buổi trước". Không chép ngày, "Hôm nay học", lời nhắn, ghi chú phụ huynh, hỏi lại. `loadLastNote` đọc thêm `practised_target_ids`.
 - Giữ tối đa 3 điểm củng cố (Q1); không chép "Hôm nay học" (Q2).
 
 **Thử trên preview:**

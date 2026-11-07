@@ -59,7 +59,7 @@ describe("DomainTabs search is accent-insensitive", () => {
   });
   it("matching the group name still lists the items of the group", () => {
     const group = acc.flatMap((b) => b.groups)[0]!;
-    expect(find(group.name).length).toBeGreaterThanOrEqual(group.items.length);
+    expect(find(group.name).sort()).toEqual(group.items.map((t) => t.key).sort());
   });
 });
 

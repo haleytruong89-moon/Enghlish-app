@@ -23,7 +23,7 @@ Gia sư đang dùng màn này hằng ngày. Đợt này chỉ sửa cho dễ dù
 
 ## 3. Thay đổi
 
-1. **Tìm không cần dấu** — hàm mới `lib/text/fold.ts` → `foldVi(s)`: chuẩn hóa NFD, bỏ dấu, `đ → d`, chữ thường, gộp khoảng trắng. `DomainTabs` dùng hàm này cho cả từ gõ vào và tên mục / tên nhóm. Sửa một chỗ thì **mọi ô chọn theo bản đồ kỹ năng** cùng được: Ghi buổi học, Ghi kết quả bài, duyệt bài viết, Studio.
+1. **Tìm không cần dấu** — hàm mới `lib/text/fold.ts` → `foldVi(s)`: chuẩn hóa NFD, bỏ dấu, `đ → d`, chữ thường, gộp khoảng trắng. `DomainTabs` dùng hàm này cho cả từ gõ vào và tên mục / tên nhóm. Sửa một chỗ thì mọi ô chọn **có ô tìm kiếm** (`DomainTabs`) cùng được: Ghi buổi học (kỹ năng + điểm cần củng cố), duyệt bài viết (nhãn), giao bài luyện. Ghi kết quả bài và Studio dùng danh sách thường (không có ô tìm kiếm) nên không đổi.
 2. **"Kỹ năng đã luyện" có dòng "Đã chọn n" + các thẻ đã chọn** (bấm ✕ để bỏ khi chưa lưu), giống phần "Điểm cần củng cố" (`TagChips` đã có "Đang chọn: …").
 3. **Nút "Như buổi trước"** ở đầu form (chỉ hiện khi buổi trước có chọn gì đó). Bấm thì điền lại:
    - kỹ năng đã luyện của buổi trước, **chỉ những kỹ năng còn trong bộ kỹ năng hiện tại** của em;

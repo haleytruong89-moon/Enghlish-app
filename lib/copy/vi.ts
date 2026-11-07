@@ -966,9 +966,9 @@ export const sessionNotePage = {
   practisedChosen: (n: number) => `Đã chọn ${n}`,
   practisedRemove: (title: string) => `Bỏ kỹ năng ${title}`,
   sameAsLast: "Như buổi trước",
-  sameAsLastHelp: "Điền lại kỹ năng đã luyện và điểm cần củng cố của buổi trước. Không chép ngày, “Hôm nay học”, lời nhắn hay ghi chú; bạn vẫn sửa được trước khi lưu.",
-  sameAsLastDone: (skills: number, weak: number) => `Đã điền ${skills} kỹ năng và ${weak} điểm củng cố từ buổi trước.`,
-  sameAsLastSkipped: (n: number) => `${n} mục không điền được vì không còn trong danh sách hiện tại (hoặc vượt giới hạn).`,
+  sameAsLastHelp: "Thêm kỹ năng đã luyện và điểm cần củng cố của buổi trước vào những gì bạn đã chọn (không thay thế). Không chép ngày, “Hôm nay học”, lời nhắn hay ghi chú; bạn vẫn sửa được trước khi lưu.",
+  sameAsLastDone: (skills: number, weak: number) => `Đã thêm ${skills} kỹ năng và ${weak} điểm cần củng cố từ buổi trước.`,
+  sameAsLastSkipped: (n: number) => `${n} mục không còn dùng được hoặc vượt số tối đa nên không điền.`,
 } as const;
 
 export const weakPage = {
