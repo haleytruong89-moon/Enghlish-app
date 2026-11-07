@@ -3,6 +3,8 @@ import { AppHeader } from "@/components/AppHeader";
 import { DomainDetail } from "@/components/levels/DomainDetail";
 import { LevelBars } from "@/components/levels/LevelBars";
 import { LevelSummaryCard } from "@/components/levels/LevelSummaryCard";
+import { IntakeCard } from "@/components/workdesk/IntakeCard";
+import { TeachingNotesCard } from "@/components/workdesk/TeachingNotesCard";
 import { Milestones } from "@/components/levels/Milestones";
 import { learnerWithTrack, levelCopy, skillStateCopy } from "@/lib/copy/vi";
 import { loadLevelProfile } from "@/lib/levels/load";
@@ -12,6 +14,7 @@ import { loadSkillMap } from "@/lib/skillmap/load";
 import { loadSkillStatesSoft } from "@/lib/skills/load";
 import { domainSkills, solidByDomain } from "@/lib/skills/view";
 import { loadWeakPoints } from "@/lib/tutorwork/load";
+import { loadIntake, loadTeachingNotes } from "@/lib/workdesk/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
 export const dynamic = "force-dynamic";
@@ -24,11 +27,13 @@ export default async function LevelsPage({ params, searchParams }: { params: Pro
   const { id } = await params;
   const { domain } = await searchParams;
   const { member, learner } = await requireLearnerPage(id, "tutorwork:read");
-  const [profile, map, weak, { skills, failed }] = await Promise.all([
+  const [profile, map, weak, { skills, failed }, notes, intake] = await Promise.all([
     loadLevelProfile(learner.id),
     loadSkillMap(learner.id),
     loadWeakPoints(learner.id, "8"),
     loadSkillStatesSoft(learner.id, "GET /learners/[id]/levels"),
+    loadTeachingNotes(learner.id),
+    loadIntake(learner.id),
   ]);
   const focus = strongestWeakest(profile.domains).weakest[0]?.key;
   const active = profile.domains.find((d) => d.key === domain) ?? profile.domains.find((d) => d.key === focus) ?? profile.domains[0]!;
@@ -46,6 +51,8 @@ export default async function LevelsPage({ params, searchParams }: { params: Pro
         <h1 className="mt-2 text-2xl font-bold">{levelCopy.title(learner.alias)}</h1>
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
         <p className="mt-3 text-muted">{levelCopy.intro}</p>
+        <IntakeCard learnerId={learner.id} view={intake} canEdit={canDecide} domains={profile.domains.map((d) => ({ key: d.key, name: d.name }))} />
+        <TeachingNotesCard learnerId={learner.id} alias={learner.alias} view={notes} canEdit={canDecide} />
         <LevelSummaryCard alias={learner.alias} profile={profile} />
         {failed ? (
           <p role="status" data-testid="skills-unavailable" className="mt-4 rounded-xl border border-line bg-white px-5 py-3 text-sm text-muted">

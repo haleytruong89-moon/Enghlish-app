@@ -153,3 +153,13 @@ Mọi chữ lấy từ `studioCopy` / `studioStudentCopy` / `studioInboxCopy` / 
 | Chưa áp 0023 | "Phần trạng thái kỹ năng chưa sẵn sàng (cần cập nhật cơ sở dữ liệu). Các phần khác vẫn dùng bình thường." |
 | Nộp bài sửa (học sinh) | "Đã nộp bài sửa! Thầy/cô sẽ xem lại." |
 | Góp ý có dạng điểm (người lớn) | "Góp ý cho con không ghi điểm (như “3/4”, “6 điểm”, “80%”). Bạn viết lại bằng lời nhé." |
+
+## W1 · Ghi chú dạy học, Hồ sơ đầu vào, Góp ý về app (08/11/2026)
+
+Khóa mới trong `lib/copy/vi.ts` (người dạy luôn gọi bằng `tutorHonorific`, không viết cứng "cô"):
+
+- `teachingNotes` — thẻ "Ghi chú dạy học" trên trang Hồ sơ cấp: 4 ô (Đang tập trung vào · Cách giải thích hợp với con · Lỗi hay lặp lại · Cần tránh), nút Sửa / Lưu, dòng "Cập nhật … · tên".
+- `intakeCopy` — thẻ "Hồ sơ đầu vào": Mục tiêu (+ mốc), Điểm mạnh / yếu ban đầu theo 7 mảng, Ghi chú.
+- `appFeedback` — trang `/feedback` và nút "Góp ý về app": 4 loại (Lỗi · Khó dùng · Đề xuất · Câu hỏi), trạng thái (Mới · Đang sửa · Đã sửa · Không làm), ô trả lời của phụ huynh.
+
+Học sinh không thấy gì ở W1. Không có chữ nào có dạng điểm.
