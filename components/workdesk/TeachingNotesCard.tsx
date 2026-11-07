@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { teachingNotes } from "@/lib/copy/vi";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { failText, postJson } from "@/lib/tutorwork/client";
@@ -15,24 +15,48 @@ export function TeachingNotesCard({ learnerId, alias, view, canEdit }: { learner
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
+  // One client id per field, made when editing starts and reused on a retry (a repeated request is a replay, never a second row). If the text of a
+  // field changed since the id was used, that field gets a fresh id (the server refuses one id with two different texts).
+  const ids = useRef<Record<string, { id: string; text: string }>>({});
+  const savedFields = useRef<Set<string>>(new Set());
+
   const start = () => {
-    setDraft(Object.fromEntries(NOTE_FIELDS.map((f) => [f, view.fields[f]?.text ?? ""])));
+    const text = Object.fromEntries(NOTE_FIELDS.map((f) => [f, view.fields[f]?.text ?? ""]));
+    setDraft(text);
+    ids.current = Object.fromEntries(NOTE_FIELDS.map((f) => [f, { id: crypto.randomUUID(), text: text[f] ?? "" }]));
+    savedFields.current = new Set();
     setMsg(null);
     setEditing(true);
   };
 
+  const cancel = () => {
+    setEditing(false);
+    if (savedFields.current.size > 0) router.refresh();
+  };
+
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    const changed = NOTE_FIELDS.filter((f) => (draft[f] ?? "") !== (view.fields[f]?.text ?? ""));
-    if (changed.length === 0) return setMsg({ ok: false, text: teachingNotes.nothingChanged });
+    // Fields already saved in this edit are not sent again; the rest are those that differ from what was loaded.
+    const todo = NOTE_FIELDS.filter((f) => !savedFields.current.has(f) && (draft[f] ?? "") !== (view.fields[f]?.text ?? ""));
+    if (todo.length === 0) return setMsg({ ok: false, text: savedFields.current.size > 0 ? teachingNotes.saved : teachingNotes.nothingChanged });
     setBusy(true);
     setMsg(null);
-    for (const f of changed) {
-      const r = await postJson(`/api/learners/${learnerId}/teaching-notes`, { field: f, text: draft[f] ?? "", client_id: crypto.randomUUID() });
+    for (const f of todo) {
+      const text = draft[f] ?? "";
+      const cur = ids.current[f];
+      if (!cur || cur.text !== text) ids.current[f] = { id: crypto.randomUUID(), text };
+      const r = await postJson(`/api/learners/${learnerId}/teaching-notes`, { field: f, text, client_id: ids.current[f]!.id });
       if (!r.ok) {
         setBusy(false);
+        const done = NOTE_FIELDS.filter((x) => savedFields.current.has(x));
+        const failed = todo.filter((x) => !savedFields.current.has(x));
+        if (done.length > 0) {
+          router.refresh();
+          return setMsg({ ok: false, text: `${teachingNotes.partial(done.map((x) => teachingNotes.fields[x]).join(", "), failed.map((x) => teachingNotes.fields[x]).join(", "))} ${failText(r)}` });
+        }
         return setMsg({ ok: false, text: failText(r) });
       }
+      savedFields.current.add(f);
     }
     setBusy(false);
     setEditing(false);
@@ -72,7 +96,7 @@ export function TeachingNotesCard({ learnerId, alias, view, canEdit }: { learner
             <button type="submit" disabled={busy} data-testid="notes-save" className="min-h-11 rounded-xl bg-accent px-5 text-sm font-semibold text-white disabled:opacity-60">
               {busy ? teachingNotes.saving : teachingNotes.save}
             </button>
-            <button type="button" disabled={busy} onClick={() => setEditing(false)} className="min-h-11 rounded-xl border border-line bg-white px-5 text-sm font-medium">
+            <button type="button" disabled={busy} onClick={cancel} className="min-h-11 rounded-xl border border-line bg-white px-5 text-sm font-medium">
               {teachingNotes.cancel}
             </button>
           </div>

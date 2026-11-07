@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { ReadingReportForm } from "@/components/tutor/ReadingReportForm";
-import { learnerWithTrack, readingPage } from "@/lib/copy/vi";
+import { appFeedback, learnerWithTrack, readingPage } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { loadReadingReport, loadReadingTags } from "@/lib/reading/load";
 import { monthsBack } from "@/lib/reading/months";
@@ -23,7 +23,7 @@ export default async function ReadingNewPage({ params, searchParams }: { params:
 
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} />
+      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.reading} />
       <main className="mx-auto max-w-3xl px-4 py-10" data-testid="reading-page">
         <Link href={`/learners/${learner.id}/weak`} className="inline-flex min-h-11 items-center text-sm text-accent underline">{readingPage.back}</Link>
         <h1 className="mt-2 text-2xl font-bold">{readingPage.title(learner.alias)}</h1>

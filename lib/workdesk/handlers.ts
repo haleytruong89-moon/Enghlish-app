@@ -6,6 +6,8 @@
 import { AccessError, requireAccess, requireStaff, type AccessDeps, type AccessGrant, type AccessUser, type Member } from "@/lib/auth/requireAccess";
 import { apiErrors } from "@/lib/copy/vi";
 import { fromDbError, ReviewDbError, type HandlerResult } from "@/lib/review/handlers";
+import { allowRealLearners } from "@/lib/env";
+import { feedbackAllowedHere } from "./guard";
 import { appFeedbackBodySchema, feedbackUpdateBodySchema, intakeBodySchema, teachingNoteBodySchema } from "./schemas";
 
 export interface WorkdeskStore {
@@ -17,6 +19,8 @@ export interface WorkdeskStore {
   sendFeedback(a: { kind: string; screen: string; text: string; byMemberId: string; clientId: string }): Promise<unknown>;
   /** english.eng_update_app_feedback (service role). */
   updateFeedback(a: { feedbackId: string; status: string; reply: string | null; byMemberId: string; clientId: string }): Promise<unknown>;
+  /** Does the family have a real (is_test = false) learner? (service role; for the preview guard of the feedback routes.) */
+  familyHasRealLearner(familyId: string): Promise<boolean>;
 }
 
 export type WorkdeskDeps = { user: AccessUser; store: WorkdeskStore; access?: Partial<AccessDeps> };
@@ -33,9 +37,13 @@ async function guardLearner(deps: WorkdeskDeps, learnerId: string): Promise<{ ok
   }
 }
 
+/** Tutor or parent; on a preview (real learners not allowed) only for families without a real learner, else a plain 404 (M4). */
 async function guardStaff(deps: WorkdeskDeps): Promise<{ ok: true; member: Member } | { ok: false; result: HandlerResult }> {
   try {
-    return { ok: true, member: await requireStaff(deps.user, deps.access) };
+    const member = await requireStaff(deps.user, deps.access);
+    const allowReal = deps.access?.allowRealLearners ?? allowRealLearners();
+    if (!(await feedbackAllowedHere(allowReal, member.familyId, (f) => deps.store.familyHasRealLearner(f)))) return { ok: false, result: fail(404, "not_found") };
+    return { ok: true, member };
   } catch (err) {
     if (err instanceof AccessError) return { ok: false, result: fail(err.status, err.message) };
     throw err;
@@ -48,7 +56,10 @@ const DB_ANSWERS: { code: string; tag: string; status: FailStatus; error: string
   { code: "42501", tag: "parent_only", status: 403, error: "feedback_parent_only" },
   { code: "42501", tag: "staff_only", status: 403, error: "forbidden" },
   { code: "22023", tag: "bad_field", status: 400, error: "invalid" },
-  { code: "22023", tag: "bad_content", status: 400, error: "invalid" },
+  { code: "22023", tag: "bad_content", status: 400, error: "bad_content" },
+  { code: "22023", tag: "bad_client_id", status: 400, error: "invalid" },
+  { code: "23514", tag: "reply_required", status: 400, error: "reply_required" },
+  { code: "23505", tag: "client_id_reused", status: 409, error: "client_id_reused" },
   { code: "22023", tag: "bad_kind", status: 400, error: "invalid" },
   { code: "22023", tag: "bad_status", status: 400, error: "invalid" },
   { code: "22023", tag: "too_long", status: 400, error: "too_long" },
@@ -120,6 +131,7 @@ export async function handleUpdateAppFeedback(deps: WorkdeskDeps, feedbackId: st
   if (!parsed.success) return fail(400, "invalid_body");
   const b = parsed.data;
   const reply = b.reply?.trim();
+  if (b.status === "wont_do" && !reply) return fail(400, "reply_required");
   try {
     return done(
       (await deps.store.updateFeedback({ feedbackId, status: b.status, reply: reply && reply.length > 0 ? reply : null, byMemberId: g.member.id, clientId: b.client_id })) as {

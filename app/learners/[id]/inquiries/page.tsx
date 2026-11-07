@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { AssignForm } from "@/components/inquiries/AssignForm";
 import { StepActions } from "@/components/inquiries/StepActions";
 import { OfflineForm } from "@/components/review/OfflineForm";
-import { activityLabels, app, fallbackLabels, inquiriesPage, learnerWithTrack, modeLabels, purposeLabels, type Mode } from "@/lib/copy/vi";
+import { activityLabels, app, appFeedback, fallbackLabels, inquiriesPage, learnerWithTrack, modeLabels, purposeLabels, type Mode } from "@/lib/copy/vi";
 import { authorizeInquiriesPage } from "@/lib/inquiries/access";
 import { addDays, dateWindow, defaultDueOn, todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi, safeExternalUrl } from "@/lib/inquiries/format";
@@ -36,7 +36,7 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
 
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} />
+      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.inquiries} />
       <main className="mx-auto max-w-2xl px-4 py-10">
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {inquiriesPage.back}

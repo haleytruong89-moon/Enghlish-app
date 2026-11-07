@@ -1,5 +1,5 @@
 /** Browser-side helpers for the S5b-1 forms (no server-only imports). */
-import { appFeedback, teachingNotes, tutorWorkErrors } from "@/lib/copy/vi";
+import { appFeedback, intakeCopy, teachingNotes, tutorWorkErrors } from "@/lib/copy/vi";
 
 export type PostOk<T> = { ok: true; status: number; body: T };
 export type PostFail = { ok: false; status: number; error: string };
@@ -45,6 +45,9 @@ export function failText(r: PostFail): string {
   if (r.error === "teaching_tutor_only") return teachingNotes.readOnly;
   if (r.error === "feedback_parent_only") return appFeedback.parentOnly;
   if (r.error === "too_long") return teachingNotes.tooLong;
+  if (r.error === "bad_content") return intakeCopy.badContent;
+  if (r.error === "reply_required") return appFeedback.replyRequired;
+  if (r.error === "client_id_reused") return appFeedback.clientReused;
   if (r.error === "skill_tutor_only") return tutorWorkErrors.skillTutorOnly;
   if (r.error === "already_answered") return tutorWorkErrors.alreadyAnswered;
   if (r.error === "stale_proposal") return tutorWorkErrors.staleProposal;

@@ -48,6 +48,7 @@ function UpdateRow({ item }: { item: AppFeedbackView }) {
 
   async function update(e: React.FormEvent) {
     e.preventDefault();
+    if (status === "wont_do" && !reply.trim()) return setMsg({ ok: false, text: appFeedback.replyRequired });
     setBusy(true);
     setMsg(null);
     const r = await postJson(`/api/feedback/${item.id}`, { status, reply: reply.trim() || undefined, client_id: crypto.randomUUID() });
@@ -71,7 +72,7 @@ function UpdateRow({ item }: { item: AppFeedbackView }) {
         </select>
       </label>
       <label className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
-        <span className="text-muted">{appFeedback.reply}</span>
+        <span className="text-muted">{appFeedback.reply}{status === "wont_do" ? " *" : ""}</span>
         <input value={reply} maxLength={FEEDBACK_REPLY_MAX} placeholder={appFeedback.replyHint} onChange={(e) => setReply(e.target.value)} data-testid={`fb-replybox-${item.id}`} className="min-h-11 rounded-lg border border-line bg-white px-3" />
       </label>
       <button type="submit" disabled={busy} data-testid={`fb-update-${item.id}`} className="min-h-11 rounded-xl bg-accent px-4 text-sm font-semibold text-white disabled:opacity-60">

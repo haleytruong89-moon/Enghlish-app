@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { ExternalResultForm } from "@/components/levels/ExternalResultForm";
-import { externalCopy, learnerWithTrack } from "@/lib/copy/vi";
+import { appFeedback, externalCopy, learnerWithTrack } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { loadExternalResult, loadLevelProfile } from "@/lib/levels/load";
 import { EXAM_DAYS_BACK } from "@/lib/levels/types";
@@ -24,7 +24,7 @@ export default async function ExternalNewPage({ params, searchParams }: { params
   const problem = lookup && lookup.state !== "live" ? (lookup.state === "superseded" ? externalCopy.alreadyCorrected : externalCopy.notFound) : null;
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} />
+      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.external} />
       <main className="mx-auto max-w-2xl px-4 py-10" data-testid="external-page">
         <Link href={`/learners/${learner.id}/levels`} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {externalCopy.back}

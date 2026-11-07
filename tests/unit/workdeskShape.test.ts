@@ -42,7 +42,7 @@ describe("parseIntake", () => {
 
 describe("parseFeedback", () => {
   const fb = (id: string, at: string) => ({ id, kind: "bug", screen: "S", text: "t", by_member: "t1", by_role: "tutor", created_at: at });
-  it("status = newest event, reply = newest reply; 'new' first, then newest first", () => {
+  it("status and reply both come from the newest event (a later event without a reply shows none); 'new' first, then newest first", () => {
     const v = parseFeedback(
       [fb("a", "2026-11-01T00:00:00Z"), fb("b", "2026-11-02T00:00:00Z"), fb("c", "2026-11-03T00:00:00Z")],
       [
@@ -55,6 +55,6 @@ describe("parseFeedback", () => {
       name,
     );
     expect(v.map((x) => x.id)).toEqual(["b", "c", "a"]);
-    expect(v[2]).toMatchObject({ status: "done", reply: "Sẽ sửa", byName: "Cô Lan" });
+    expect(v[2]).toMatchObject({ status: "done", reply: null, byName: "Cô Lan" });
   });
 });

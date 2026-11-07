@@ -73,19 +73,14 @@ const eventRow = z.object({
   created_at: z.string(),
 });
 
-/** Latest event gives the status (and the latest reply, if any); "new" first, then newest first. */
+/** The latest event gives the status AND the reply (a later event without a reply shows none); "new" first, then newest first. */
 export function parseFeedback(rawFeedback: unknown, rawEvents: unknown, nameOf: NameLookup): AppFeedbackView[] {
   const fbs = z.array(feedbackRow).parse(rawFeedback ?? []);
   const events = z.array(eventRow).parse(rawEvents ?? []);
   const latest = new Map<string, (typeof events)[number]>();
-  const reply = new Map<string, (typeof events)[number]>();
   for (const e of events) {
     const cur = latest.get(e.feedback_id);
     if (!cur || e.created_at > cur.created_at) latest.set(e.feedback_id, e);
-    if (e.reply) {
-      const rc = reply.get(e.feedback_id);
-      if (!rc || e.created_at > rc.created_at) reply.set(e.feedback_id, e);
-    }
   }
   const views = fbs.map((f): AppFeedbackView => {
     const ev = latest.get(f.id);
@@ -98,7 +93,7 @@ export function parseFeedback(rawFeedback: unknown, rawEvents: unknown, nameOf: 
       byRole: f.by_role,
       at: f.created_at,
       status: ev?.status ?? "new",
-      reply: reply.get(f.id)?.reply ?? null,
+      reply: ev?.reply ?? null,
       statusAt: ev?.created_at ?? f.created_at,
     };
   });

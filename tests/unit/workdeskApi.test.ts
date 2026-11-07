@@ -30,9 +30,10 @@ const store = (over: Partial<WorkdeskStore> = {}) =>
     writeIntake: vi.fn(async (): Promise<unknown> => ({ id: "i1", replayed: false })),
     sendFeedback: vi.fn(async (): Promise<unknown> => ({ id: "f1", replayed: false })),
     updateFeedback: vi.fn(async (): Promise<unknown> => ({ id: "e1", replayed: false })),
+    familyHasRealLearner: vi.fn(async () => false),
     ...over,
   }) satisfies WorkdeskStore;
-const deps = (user: string | null, s: WorkdeskStore): WorkdeskDeps => ({ user: user ? { id: `u-${user}` } : null, store: s, access: { store: access, allowRealLearners: false, now: NOW } });
+const deps = (user: string | null, s: WorkdeskStore, allowReal = false): WorkdeskDeps => ({ user: user ? { id: `u-${user}` } : null, store: s, access: { store: access, allowRealLearners: allowReal, now: NOW } });
 const note = { field: "focus", text: "Đảo ngữ", client_id: "tn-00000001" };
 const intake = { goals: [{ title: "Thi vào 10", due: "2027-06" }], strengths: { vocab: "Từ vựng khá", grammar: "" }, weaknesses: { listening: "Nghe yếu" }, note: "", client_id: "in-00000001" };
 const fb = { kind: "hard_to_use", screen: "Ghi buổi học", text: "Chọn kỹ năng phải cuộn lâu", client_id: "fb-00000001" };
@@ -114,5 +115,45 @@ describe("handleSendAppFeedback / handleUpdateAppFeedback", () => {
   it("an unknown feedback id answers 404", async () => {
     const s = store({ updateFeedback: vi.fn(async (): Promise<unknown> => { throw new ReviewDbError("P0002", "not found"); }) });
     expect((await handleUpdateAppFeedback(deps("parent", s), FB, upd)).status).toBe(404);
+  });
+});
+
+describe("client id, wont_do reply, database answers", () => {
+  it("client_id is trimmed and 8..90 characters", () => {
+    expect(teachingNoteBodySchema.safeParse({ ...note, client_id: " 1234567 " }).success).toBe(false);
+    expect(teachingNoteBodySchema.safeParse({ ...note, client_id: "x".repeat(90) }).success).toBe(true);
+    expect(teachingNoteBodySchema.safeParse({ ...note, client_id: "x".repeat(91) }).success).toBe(false);
+    expect(appFeedbackBodySchema.safeParse({ ...fb, client_id: "y".repeat(91) }).success).toBe(false);
+  });
+  it("'wont_do' without a reply is 400 reply_required before the database; with a reply it goes through", async () => {
+    const s = store();
+    expect(await handleUpdateAppFeedback(deps("parent", s), FB, { status: "wont_do", client_id: "fu-00000002" })).toMatchObject({ status: 400, body: { error: "reply_required" } });
+    expect(await handleUpdateAppFeedback(deps("parent", s), FB, { status: "wont_do", reply: "   ", client_id: "fu-00000002" })).toMatchObject({ status: 400, body: { error: "reply_required" } });
+    expect(s.updateFeedback).not.toHaveBeenCalled();
+    expect((await handleUpdateAppFeedback(deps("parent", s), FB, { status: "wont_do", reply: "Để sau", client_id: "fu-00000002" })).status).toBe(201);
+  });
+  it("maps bad_content (specific), client_id_reused (409) and reply_required from the database", async () => {
+    const thr = (code: string, detail: string) => store({ writeIntake: vi.fn(async (): Promise<unknown> => { throw new ReviewDbError(code, detail); }), updateFeedback: vi.fn(async (): Promise<unknown> => { throw new ReviewDbError(code, detail); }) });
+    expect(await handleWriteIntake(deps("tutorNguyen", thr("22023", "x (bad_content)")), NGUYEN, intake)).toMatchObject({ status: 400, body: { error: "bad_content" } });
+    expect(await handleWriteIntake(deps("tutorNguyen", thr("23505", "x (client_id_reused)")), NGUYEN, intake)).toMatchObject({ status: 409, body: { error: "client_id_reused" } });
+    expect(await handleUpdateAppFeedback(deps("parent", thr("23514", "x (reply_required)")), FB, upd)).toMatchObject({ status: 400, body: { error: "reply_required" } });
+  });
+});
+
+describe("M4 preview guard on the feedback routes", () => {
+  it("ALLOW_REAL_LEARNERS=false: a family with a real learner gets 404 on send and update; a test-only family works", async () => {
+    const real = store({ familyHasRealLearner: vi.fn(async () => true) });
+    expect((await handleSendAppFeedback(deps("tutorAn", real, false), fb)).status).toBe(404);
+    expect((await handleUpdateAppFeedback(deps("parent", real, false), FB, upd)).status).toBe(404);
+    expect(real.sendFeedback).not.toHaveBeenCalled();
+    expect(real.updateFeedback).not.toHaveBeenCalled();
+    const testOnly = store({ familyHasRealLearner: vi.fn(async () => false) });
+    expect((await handleSendAppFeedback(deps("tutorAn", testOnly, false), fb)).status).toBe(201);
+    expect((await handleUpdateAppFeedback(deps("parent", testOnly, false), FB, upd)).status).toBe(201);
+  });
+  it("ALLOW_REAL_LEARNERS=true: the real-learner lookup is not even needed", async () => {
+    const real = store({ familyHasRealLearner: vi.fn(async () => true) });
+    expect((await handleSendAppFeedback(deps("tutorAn", real, true), fb)).status).toBe(201);
+    expect(real.familyHasRealLearner).not.toHaveBeenCalled();
   });
 });

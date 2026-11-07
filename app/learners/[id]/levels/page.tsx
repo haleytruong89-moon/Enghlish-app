@@ -6,7 +6,7 @@ import { LevelSummaryCard } from "@/components/levels/LevelSummaryCard";
 import { IntakeCard } from "@/components/workdesk/IntakeCard";
 import { TeachingNotesCard } from "@/components/workdesk/TeachingNotesCard";
 import { Milestones } from "@/components/levels/Milestones";
-import { appFeedback, learnerWithTrack, levelCopy, skillStateCopy } from "@/lib/copy/vi";
+import { appFeedback, learnerWithTrack, levelCopy, skillStateCopy, teachingNotes } from "@/lib/copy/vi";
 import { loadLevelProfile } from "@/lib/levels/load";
 import { strongestWeakest } from "@/lib/levels/scale";
 import { groupWeakPoints } from "@/lib/skillmap/group";
@@ -51,8 +51,16 @@ export default async function LevelsPage({ params, searchParams }: { params: Pro
         <h1 className="mt-2 text-2xl font-bold">{levelCopy.title(learner.alias)}</h1>
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
         <p className="mt-3 text-muted">{levelCopy.intro}</p>
-        <IntakeCard learnerId={learner.id} view={intake} canEdit={canDecide} domains={profile.domains.map((d) => ({ key: d.key, name: d.name }))} />
-        <TeachingNotesCard learnerId={learner.id} alias={learner.alias} view={notes} canEdit={canDecide} />
+        {intake.available && notes.available ? (
+          <>
+            <IntakeCard learnerId={learner.id} view={intake.data} canEdit={canDecide} domains={profile.domains.map((d) => ({ key: d.key, name: d.name }))} />
+            <TeachingNotesCard learnerId={learner.id} alias={learner.alias} view={notes.data} canEdit={canDecide} />
+          </>
+        ) : (
+          <p role="status" data-testid="workdesk-unavailable" className="mt-6 rounded-xl border border-line bg-white px-5 py-3 text-sm text-muted">
+            {teachingNotes.unavailable}
+          </p>
+        )}
         <LevelSummaryCard alias={learner.alias} profile={profile} />
         {failed ? (
           <p role="status" data-testid="skills-unavailable" className="mt-4 rounded-xl border border-line bg-white px-5 py-3 text-sm text-muted">

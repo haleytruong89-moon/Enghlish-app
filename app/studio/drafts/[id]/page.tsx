@@ -7,7 +7,7 @@ import { DraftEditor } from "@/components/studio/DraftEditor";
 import { EditApprovedButton } from "@/components/studio/EditApprovedButton";
 import { ExtractWaiting } from "@/components/studio/ExtractWaiting";
 import { SidePanel } from "@/components/studio/SidePanel";
-import { studioCopy } from "@/lib/copy/vi";
+import { appFeedback, studioCopy } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { formatDay } from "@/lib/review/format";
 import { loadDraftPage } from "@/lib/studio/load";
@@ -24,7 +24,7 @@ export default async function DraftPage({ params }: { params: Promise<{ id: stri
   const { draft, summary, gate } = r.data;
   return (
     <>
-      <AppHeader />
+      <AppHeader feedbackScreen={appFeedback.screens.studioDraft} />
       <main className="mx-auto max-w-6xl px-4 py-8" data-testid="studio-draft" data-status={draft.status}>
         <Link href={`/studio/new?learner=${draft.learnerId}`} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {studioCopy.newTitle}

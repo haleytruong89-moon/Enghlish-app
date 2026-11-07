@@ -39,7 +39,20 @@ describe("TeachingNotesCard", () => {
     expect(parent).toContain(teachingNotes.readOnly);
   });
   it("never writes the tutor's title by hand", () => {
-    expect(html(filled, false)).not.toMatch(/\bcô\b/);
+    const BARE_CO = /(^|[^\p{L}])cô([^\p{L}]|$)/iu;
+    // negative self-check: the pattern really catches a hand-written "cô" (also in Vietnamese text, where \b fails on accents)
+    expect(BARE_CO.test("Nhờ cô xem giúp")).toBe(true);
+    expect(BARE_CO.test("Cô Lan")).toBe(true);
+    expect(BARE_CO.test("cô")).toBe(true);
+    expect(BARE_CO.test("côn trùng")).toBe(false);
+    // (author names are data, so render without one)
+    const anon: TeachingNotesView = { ...filled, fields: { ...filled.fields, focus: { text: "Đảo ngữ", at: "2026-11-05T00:00:00Z", authorName: "" } } };
+    // the one allowed spelling is the shared honorific "thầy/cô"; once that is taken out, no bare "cô" may remain
+    const noHonorific = (h: string) => h.replaceAll(tutorHonorific, "");
+    expect(BARE_CO.test(noHonorific("Nhờ cô xem"))).toBe(true);
+    expect(noHonorific(html(anon, false))).not.toMatch(BARE_CO);
+    expect(noHonorific(html(anon, true))).not.toMatch(BARE_CO);
+    expect(noHonorific(teachingNotes.intro("Nguyên"))).not.toMatch(BARE_CO);
     expect(teachingNotes.intro("Nguyên")).toContain(tutorHonorific);
   });
 });

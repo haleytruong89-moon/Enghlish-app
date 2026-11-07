@@ -3,7 +3,8 @@ import { z } from "zod";
 import { DOMAIN_KEYS } from "@/lib/skillmap/types";
 import { FEEDBACK_KINDS, FEEDBACK_REPLY_MAX, FEEDBACK_SCREEN_MAX, FEEDBACK_STATUSES, FEEDBACK_TEXT_MAX, INTAKE_GOALS_MAX, INTAKE_TEXT_MAX, NOTE_FIELDS, NOTE_MAX } from "./types";
 
-const clientId = z.string().min(8).max(100);
+/** Same 8..90 as the app_feedback check in migration 0025 (the "new" event id adds a short suffix). */
+const clientId = z.string().trim().min(8).max(90);
 
 export const teachingNoteBodySchema = z.strictObject({
   field: z.enum(NOTE_FIELDS),
