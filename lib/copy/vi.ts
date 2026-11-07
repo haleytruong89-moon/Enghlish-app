@@ -963,6 +963,12 @@ export const sessionNotePage = {
   previousReinforce: "Củng cố",
   previousMessage: "Đã nhắn em",
   historyLink: "Xem tất cả ghi chú buổi học",
+  practisedChosen: (n: number) => `Đã chọn ${n}`,
+  practisedRemove: (title: string) => `Bỏ kỹ năng ${title}`,
+  sameAsLast: "Như buổi trước",
+  sameAsLastHelp: "Điền lại kỹ năng đã luyện và điểm cần củng cố của buổi trước. Không chép ngày, “Hôm nay học”, lời nhắn hay ghi chú; bạn vẫn sửa được trước khi lưu.",
+  sameAsLastDone: (skills: number, weak: number) => `Đã điền ${skills} kỹ năng và ${weak} điểm củng cố từ buổi trước.`,
+  sameAsLastSkipped: (n: number) => `${n} mục không điền được vì không còn trong danh sách hiện tại (hoặc vượt giới hạn).`,
 } as const;
 
 export const weakPage = {

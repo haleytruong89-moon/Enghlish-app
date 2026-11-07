@@ -236,6 +236,11 @@ const noteRow = z.object({
     .nullable()
     .optional()
     .transform((v) => v ?? []),
+  practised_target_ids: z
+    .array(text)
+    .nullable()
+    .optional()
+    .transform((v) => v ?? []),
   message_to_learner: nullableText,
   author_role: z
     .enum(["tutor", "parent"])
@@ -254,6 +259,7 @@ export function parseLastNote(raw: unknown): LastNote | null {
         sessionDate: n.session_date,
         studied: n.goals,
         weakTagKeys: n.weak_tag_keys,
+        practisedTargetIds: n.practised_target_ids,
         message: n.message_to_learner,
         authorRole: n.author_role,
       }

@@ -1,13 +1,14 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { DomainTabs, nextTabKey } from "@/components/tutor/DomainTabs";
+import { DomainTabs, nextTabKey, searchHits } from "@/components/tutor/DomainTabs";
 import { effectiveDomain, GroupPicker } from "@/components/tutor/GroupPicker";
 import { SetGroupControl } from "@/components/tutor/SetGroupControl";
 import { DomainTiles } from "@/components/tutor/DomainTiles";
 import { TagChips } from "@/components/tutor/TagChips";
 import { TagSelect } from "@/components/tutor/TagSelect";
 import { skillMapCopy, weakPage } from "@/lib/copy/vi";
+import { foldVi } from "@/lib/text/fold";
 import { groupTags, groupWeakPoints } from "@/lib/skillmap/group";
 import type { TagInfo, WeakPoint } from "@/lib/tutorwork/types";
 import { fixtureMap, levelledMap } from "./fixtures/skillMap";
@@ -46,6 +47,19 @@ describe("DomainTabs", () => {
     expect(html).not.toContain('data-testid="item-doc-hieu"'); // hidden from the picker
     expect(html).toContain(skillMapCopy.emptyDomain); // listening has nothing
     expect(html).toContain(`aria-label="${skillMapCopy.search}"`);
+  });
+});
+
+describe("DomainTabs search is accent-insensitive", () => {
+  const acc = groupTags(map, [tag("dang-tu", { label: "Dạng từ" }), tag("cum-dong-tu", { label: "Cụm động từ" })]);
+  const find = (q: string) => searchHits(acc, foldVi(q), (t: TagInfo) => t.label).map((h) => h.it.key);
+  it("an unaccented query finds an accented item", () => {
+    expect(find("dang tu")).toEqual(["dang-tu"]);
+    expect(find("CUM DONG")).toEqual(["cum-dong-tu"]);
+  });
+  it("matching the group name still lists the items of the group", () => {
+    const group = acc.flatMap((b) => b.groups)[0]!;
+    expect(find(group.name).length).toBeGreaterThanOrEqual(group.items.length);
   });
 });
 

@@ -102,7 +102,7 @@ export async function loadLastNote(learnerId: string): Promise<LastNote | null> 
   const db = await createUserClient();
   const { data, error } = await db
     .from("lesson_notes")
-    .select("id, session_date, goals, weak_tag_keys, message_to_learner, author_role, supersedes_id")
+    .select("id, session_date, goals, weak_tag_keys, practised_target_ids, message_to_learner, author_role, supersedes_id")
     .eq("learner_id", learnerId)
     .order("session_date", { ascending: false })
     .order("created_at", { ascending: false })

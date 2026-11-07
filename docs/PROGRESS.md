@@ -1086,3 +1086,23 @@ Code trên nhánh `feature/studio-b1`, chờ CI + review Opus + phụ huynh duy�
 Vòng review thứ hai (06/11): chi phí AI của bản nháp không cộng chỗ đặt trước đã giải phóng; chỉ một chỗ đặt trước CHƯA giải phóng của đúng gia đình mới được giải phóng (một lần); lỗi hết giờ / 5xx ghi giá xấu nhất (đầu vào ước tính + toàn bộ phần đầu ra cho phép); ghi lại Kết quả bài chỉ cho lần làm đã sẵn sàng, bỏ qua em thật khi `ALLOW_REAL_LEARNERS=false`, và một lỗi chỉ ghi một dòng mỗi giờ cho mỗi lần làm; danh sách khung đề chỉ gồm khung của gia đình và khung Studio của đúng em; `eng_same_instant` là STABLE; bỏ chữ ký hàm cũ của bản nháp đầu.
 
 **Giới hạn đã biết:** bảo vệ file Word giải nén (> 20 MB) đọc kích thước khai báo trong thư mục zip; file zip cố tình khai sai không bị chặn ở bước này. Chỉ người lớn trong gia đình tải file lên nên chấp nhận ở B1.
+
+## Session-log quick fix (07/11/2026)
+
+Nhánh `feature/session-log-quickfix`. Kế hoạch: `docs/superpowers/plans/2026-11-07-session-log-quickfix.md`.
+
+**Đã làm (không đổi cơ sở dữ liệu, API, zod, giới hạn):**
+- Tìm không cần dấu ở mọi ô chọn theo bản đồ kỹ năng (`lib/text/fold.ts` → `foldVi`, dùng trong `DomainTabs`).
+- "Kỹ năng đã luyện hôm nay": dòng "Đã chọn n" + thẻ đã chọn có nút ✕ (chỉ khi chưa lưu). Từ khóa tìm được giữ sau khi chọn.
+- Nút "Như buổi trước": điền kỹ năng đã luyện (chỉ kỹ năng còn trong bộ hiện tại) và điểm củng cố (chỉ nhãn còn dùng được, tối đa 3). Không chép ngày, "Hôm nay học", lời nhắn, ghi chú phụ huynh, hỏi lại. `loadLastNote` đọc thêm `practised_target_ids`.
+- Giữ tối đa 3 điểm củng cố (Q1); không chép "Hôm nay học" (Q2).
+
+**Thử trên preview:**
+1. Đăng nhập gia sư thử → An (thử) hoặc Nguyên (thử) → **Ghi buổi học**.
+2. Ô tìm kỹ năng: gõ `doc` hoặc `dieu kien` (không dấu) → ra kết quả.
+3. Chọn 3 kỹ năng → thấy "Đã chọn 3" và 3 thẻ; bấm ✕ một thẻ → còn 2.
+4. Lưu buổi. Mở "Ghi buổi học" lần nữa → bấm **Như buổi trước** → kỹ năng + điểm củng cố của buổi trước được điền sẵn.
+
+**SQL cần phụ huynh áp:** không có.
+
+**Trạng thái:** chờ review Opus + phụ huynh duyệt PR.

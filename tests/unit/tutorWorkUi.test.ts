@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { LearnerCard } from "@/components/LearnerCard";
+import { PractisedChosen } from "@/components/tutor/PractisedChosen";
 import { PendingTags } from "@/components/tutor/PendingTags";
 import { ResultForm } from "@/components/tutor/ResultForm";
 import { SessionNoteForm } from "@/components/tutor/SessionNoteForm";
@@ -45,7 +46,7 @@ const today = (over: Partial<TodayData> = {}): TodayData => {
   const w = weakView([weakTag(), weakTag({ tagKey: "cum-dong-tu", label: "Cụm động từ", sources: 1, status: "watch", recheckDue: true, recheckDueOn: "2026-10-16" })]);
   return {
     weak: w, repeats: w.tags.filter((t) => t.status === "repeat"), due: w.tags.filter((t) => t.recheckDue), untagged: [untagged],
-    lastNote: { id: "n1", sessionDate: "2026-10-15", studied: "Unit 7", weakTagKeys: ["cau-dieu-kien-dao-ngu", "x-gone"], message: "Had it not been for + N", authorRole: "tutor" },
+    lastNote: { id: "n1", sessionDate: "2026-10-15", studied: "Unit 7", weakTagKeys: ["cau-dieu-kien-dao-ngu", "x-gone"], practisedTargetIds: [], message: "Had it not been for + N", authorRole: "tutor" },
     recent: { id: "r0", title: "Destination U1-12", takenOn: "2026-10-16", total: 60, correct: 50 },
     practice: [],
     tagLabels: { "cau-dieu-kien-dao-ngu": "Câu điều kiện & đảo ngữ", "cum-dong-tu": "Cụm động từ" }, ...over,
@@ -206,12 +207,30 @@ describe("S5b-1 'Chờ gắn nhãn' and 'Ghi buổi học' and writing tags", ()
     const html = render(
       createElement(SessionNoteForm, {
         ...note, due: [],
-        previous: { id: "n1", sessionDate: "2026-10-15", studied: "Unit 7", weakTagKeys: ["dang-tu", "x-gone"], message: "Ôn nhé", authorRole: "tutor" },
+        previous: { id: "n1", sessionDate: "2026-10-15", studied: "Unit 7", weakTagKeys: ["dang-tu", "x-gone"], practisedTargetIds: [], message: "Ôn nhé", authorRole: "tutor" },
       }),
     );
     expect(html).toContain(sessionNotePage.recheckNone);
     expect(html).toContain("Dạng từ");
     expect(html).not.toContain("x-gone");
+  });
+  it("session note: count line starts at 0; 'Như buổi trước' shows only when the previous note has skills or weak points", () => {
+    const none = render(createElement(SessionNoteForm, { ...note, due: [] }));
+    expect(none).toContain(sessionNotePage.practisedChosen(0));
+    expect(none).not.toContain('data-testid="session-same-as-last"');
+    const prev = (over: object) => ({ id: "n1", sessionDate: "2026-10-15", studied: "Unit 7", weakTagKeys: [], practisedTargetIds: [], message: "Ôn nhé", authorRole: "tutor" as const, ...over });
+    expect(render(createElement(SessionNoteForm, { ...note, due: [], previous: prev({}) }))).not.toContain('data-testid="session-same-as-last"');
+    const withSkills = render(createElement(SessionNoteForm, { ...note, due: [], previous: prev({ practisedTargetIds: ["B-W-1"] }) }));
+    expect(withSkills).toContain('data-testid="session-same-as-last"');
+    expect(withSkills).toContain(sessionNotePage.sameAsLast);
+    expect(render(createElement(SessionNoteForm, { ...note, due: [], previous: prev({ weakTagKeys: ["dang-tu"] }) }))).toContain('data-testid="session-same-as-last"');
+  });
+  it("chosen skills: the count and a remove button per chip", () => {
+    const html = render(createElement(PractisedChosen, { chosen: [{ id: "a", title: "Đọc hiểu" }, { id: "b", title: "Đảo ngữ" }], onRemove: vi.fn(), testId: "p" }));
+    expect(html).toContain(sessionNotePage.practisedChosen(2));
+    expect(html).toContain(`aria-label="${sessionNotePage.practisedRemove("Đọc hiểu")}"`);
+    expect(html).toContain('data-testid="p-remove-b"');
+    expect(render(createElement(PractisedChosen, { chosen: [], onRemove: vi.fn(), testId: "p" }))).not.toContain("<button");
   });
   it("tag chips: at most `max` can be chosen - the rest are disabled once full; saved tags stay ticked and locked", () => {
     const html = render(createElement(TagChips, { tags, map, selected: ["dang-tu", "cum-dong-tu"], onChange: vi.fn(), max: 2, onAdd: vi.fn() }));
