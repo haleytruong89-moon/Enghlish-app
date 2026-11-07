@@ -130,6 +130,7 @@ export type LastNote = {
   sessionDate: string;
   studied: string | null;
   weakTagKeys: string[];
+  practisedTargetIds: string[];
   message: string | null;
   authorRole: "tutor" | "parent";
 };

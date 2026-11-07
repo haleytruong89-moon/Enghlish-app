@@ -453,8 +453,10 @@ describe("S5b-1 parsing what the database returns", () => {
   it("last note: the newest row", () => {
     expect(parseLastNote([])).toBeNull();
     expect(parseLastNote([{ id: "n1", session_date: "2026-10-16", goals: null, weak_tag_keys: ["dang-tu"], message_to_learner: null, author_role: null }])).toMatchObject({
-      id: "n1", weakTagKeys: ["dang-tu"], authorRole: "tutor",
+      id: "n1", weakTagKeys: ["dang-tu"], authorRole: "tutor", practisedTargetIds: [],
     });
+    expect(parseLastNote([{ id: "n2", session_date: "2026-10-16", goals: null, weak_tag_keys: [], practised_target_ids: ["B-W-1"], message_to_learner: null, author_role: "tutor" }])?.practisedTargetIds).toEqual(["B-W-1"]);
+    expect(parseLastNote([{ id: "n3", session_date: "2026-10-16", goals: null, weak_tag_keys: [], practised_target_ids: null, message_to_learner: null, author_role: "tutor" }])?.practisedTargetIds).toEqual([]);
   });
 });
 
