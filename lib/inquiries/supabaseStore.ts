@@ -21,6 +21,8 @@ export function createSupabaseInquiryStore(): InquiryStore {
         .from("inquiry_templates")
         .select("id, version, title_vi, big_question_en, big_question_vi, week, date_from, date_to, domain_bucket, steps")
         .eq("track_id", trackId)
+        // Studio tests are assigned from their own page (Studio B1), never from "Giao chủ đề".
+        .eq("kind", "topic")
         .not("published_at", "is", null)
         .returns<TemplateRow[]>();
       if (error) dbError("inquiry_templates lookup", error);

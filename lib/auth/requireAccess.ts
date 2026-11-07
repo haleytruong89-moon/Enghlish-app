@@ -30,6 +30,8 @@ export type Action =
   | "mastery:read" //      skill states, proposals and the skills inbox (S7a) - tutor and parent; never students
   | "mastery:decide" //    confirm / "Chưa" / confirm all / set a level 1–2 by hand (S7a) - the child's tutor only; the database checks it again
   | "mastery:rebuild" //   "Tính lại từ đầu" (S7a) - tutor and parent
+  | "studio:read" //       Studio drafts and tests of a child (Studio B1) - tutor and parent; never students
+  | "studio:write" //      upload, edit, approve, assign a Studio test, decide "Cần thầy/cô xem" items - tutor and parent of the child
   | "targets:read" //        tracked-skills page (target set) — parent and tutor only
   | "inquiries:read" //     assigned inquiries + assignable templates — parent and tutor only
   | "inquiries:assign" //   assign an inquiry template — parent and tutor only
@@ -56,6 +58,8 @@ export const ACTIONS_BY_ROLE: Record<Role, readonly Action[]> = {
     "mastery:read",
     "mastery:decide",
     "mastery:rebuild",
+    "studio:read",
+    "studio:write",
   ],
   parent: [
     "learner:read",
@@ -72,6 +76,8 @@ export const ACTIONS_BY_ROLE: Record<Role, readonly Action[]> = {
     "consent:read",
     "mastery:read",
     "mastery:rebuild",
+    "studio:read",
+    "studio:write",
     "admin",
   ],
 };

@@ -25,13 +25,14 @@ describe("bucket constants", () => {
     expect(BUCKET).toBe("english-work");
     expect(MAX_FILE_BYTES).toBe(15 * 1024 * 1024);
     expect(SIGNED_URL_TTL_SECONDS).toBe(300);
-    expect([...ALLOWED_MIMES]).toEqual(["application/pdf", "image/png", "image/jpeg", "image/webp"]);
+    // S B1: .docx for Studio files only (checkFile)
+    expect([...ALLOWED_MIMES]).toEqual(["application/pdf", "image/png", "image/jpeg", "image/webp", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]);
   });
 });
 
 describe("file checks (mime + size)", () => {
   it("accepts the four types up to exactly 15 MB", () => {
-    for (const mime of ALLOWED_MIMES) expect(checkFile("work_photo", mime, MAX_FILE_BYTES)).toEqual({ ok: true });
+    for (const mime of ALLOWED_MIMES.filter((m) => !m.includes("wordprocessingml"))) expect(checkFile("work_photo", mime, MAX_FILE_BYTES)).toEqual({ ok: true });
     expect(checkFile("work_photo", "image/png", 1)).toEqual({ ok: true });
   });
   it("refuses other types (html, svg, gif, word, empty, missing)", () => {
@@ -151,5 +152,23 @@ describe("deleteLearnerFolder (purge helper)", () => {
     await expect(deleteLearnerFolder(storage, FAMILY, "")).rejects.toThrow();
     await expect(deleteLearnerFolder(storage, "../", LEARNER)).rejects.toThrow();
     expect(removeFolder).not.toHaveBeenCalled();
+  });
+});
+
+describe("Studio files (B1): PDF or Word .docx, only for the test and its answer key", () => {
+  const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  it("accepts .docx only for studio_test / studio_key; Studio kinds refuse images", () => {
+    expect(checkFile("studio_test", DOCX, 10)).toEqual({ ok: true });
+    expect(checkFile("studio_key", "application/pdf", 10)).toEqual({ ok: true });
+    expect(checkFile("studio_test", "image/png", 10)).toEqual({ ok: false, reason: "kind" });
+    expect(checkFile("answer_key", DOCX, 10)).toEqual({ ok: false, reason: "kind" });
+    expect(checkFile("work_photo", DOCX, 10)).toEqual({ ok: false, reason: "kind" });
+    expect(checkFile("studio_test", "application/msword", 10)).toEqual({ ok: false, reason: "type" });
+    expect(checkFile("studio_test", DOCX, MAX_FILE_BYTES + 1)).toEqual({ ok: false, reason: "too_big" });
+  });
+  it("paths end in .docx and parse back", () => {
+    const p = buildPath({ familyId: "e0000000-0000-4000-8000-000000000001", learnerId: "e0000000-0000-4000-8000-00000000b001", fileId: "e0000000-0000-4000-8000-0000000000f1", mime: DOCX });
+    expect(p.endsWith(".docx")).toBe(true);
+    expect(parsePath(p)?.ext).toBe("docx");
   });
 });

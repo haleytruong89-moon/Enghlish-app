@@ -1,9 +1,10 @@
 import "server-only";
 import { createUserClient } from "@/lib/supabase/server";
 import type { MyActivityNote, MyFeedbackItem, MyRevisionView } from "@/lib/revision/types";
-import { handleStudentActivity, handleStudentActivityNote, handleStudentHome, handleStudentRevision } from "./handlers";
+import { handleStudentActivity, handleStudentActivityNote, handleStudentHome, handleStudentRevision, handleStudentStudioReview } from "./handlers";
 import { createSupabaseWorkStore } from "./supabaseStore";
 import type { ReviewItem } from "@/lib/levels/types";
+import type { StudioReviewView } from "@/lib/studio/types";
 import type { ActivityView, HomeView } from "./types";
 
 export type StudentHomeData =
@@ -51,4 +52,11 @@ export async function loadRevisionPage(activityId: string): Promise<RevisionPage
   if (res.status === 401) return { kind: "login" };
   if (res.status !== 200) return { kind: "not-found" };
   return { kind: "ok", revision: (res.body as { revision: MyRevisionView }).revision };
+}
+
+/** Board 20 data of a Studio step for the signed-in child; null for weekly topics, before the first submission, or on any error. */
+export async function loadStudioReview(activityId: string): Promise<StudioReviewView | null> {
+  const user = await currentUser();
+  const res = await handleStudentStudioReview({ user, store: createSupabaseWorkStore() }, activityId).catch(() => null);
+  return (res?.body as { review?: StudioReviewView | null } | undefined)?.review ?? null;
 }

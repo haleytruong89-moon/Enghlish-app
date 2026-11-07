@@ -203,3 +203,17 @@ describe("S7a: mastery actions", () => {
     expect(await status("tutorNguyen", AN, "mastery:decide")).toBe(404);
   });
 });
+
+describe("Studio B1: studio actions", () => {
+  it("the parent and the child's tutor read and write Studio; students never (403); the other child's tutor 404; no login 401", async () => {
+    for (const action of ["studio:read", "studio:write"] as const) {
+      expect(await status("tutorAn", AN, action)).toBe(200);
+      expect(await status("parent", AN, action)).toBe(200);
+      expect(await status("parent", NGUYEN, action)).toBe(200);
+      expect(await status("studentAn", AN, action)).toBe(403);
+      expect(await status("tutorAn", NGUYEN, action)).toBe(404);
+      expect(await status("otherParent", AN, action)).toBe(404);
+      expect(await status(null, AN, action)).toBe(401);
+    }
+  });
+});

@@ -31,13 +31,15 @@ export async function loadTags(trackId: string): Promise<TagInfo[]> {
   return parseTags(data);
 }
 
-/** Frames (newest version of each) the family has for this track. */
-export async function loadFrames(trackId: string): Promise<FrameView[]> {
+/** Frames (newest version of each) the family has for this track, plus this child's own Studio frames. */
+export async function loadFrames(trackId: string, learnerId: string): Promise<FrameView[]> {
   const db = await createUserClient();
   const { data, error } = await db
     .from("test_frames")
     .select("id, title, total_items, parts, items, scale, supersedes_id")
     .eq("track_id", trackId)
+    // family frames (learner_id null) + Studio frames of THIS child only (a parent can read every child's Studio frames)
+    .or(`learner_id.is.null,learner_id.eq.${learnerId}`)
     .order("created_at", { ascending: true });
   if (error) fail("test_frames lookup", error);
   const rows = (data ?? []) as { id: string; supersedes_id: string | null }[];

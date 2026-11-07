@@ -24,9 +24,9 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [
-    { name: "chromium", testIgnore: /purge\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
+    { name: "chromium", testIgnore: /(purge|studio)\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     // The purge spec creates and deletes a throwaway learner in the test family (the parent's home then lists 3 children for a moment),
-    // so it runs only after every other spec has finished.
-    { name: "purge", testMatch: /purge\.spec\.ts/, dependencies: ["chromium"], use: { ...devices["Desktop Chrome"] } },
+    // so it runs only after every other spec has finished. The studio spec adds an assignment to "Nguyên (thử)", so it runs last too.
+    { name: "purge", testMatch: /(purge|studio)\.spec\.ts/, dependencies: ["chromium"], use: { ...devices["Desktop Chrome"] } },
   ],
 });

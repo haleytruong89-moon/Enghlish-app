@@ -32,6 +32,7 @@ export function failText(r: PostFail): string {
   if (r.error === "duplicate_month") return tutorWorkErrors.duplicateMonth;
   if (r.error === "bad_month") return tutorWorkErrors.badMonth;
   if (r.error === "stale_report") return tutorWorkErrors.staleReport;
+  if (r.error === "frame_other_learner") return tutorWorkErrors.frameOtherLearner;
   if (r.error === "unknown_group") return tutorWorkErrors.unknownGroup;
   if (r.error === "already_grouped") return tutorWorkErrors.alreadyGrouped;
   if (r.error === "level_tutor_only") return tutorWorkErrors.levelTutorOnly;

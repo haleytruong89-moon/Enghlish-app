@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ALLOWED_MIMES, BUCKET, MAX_FILE_BYTES, SIGNED_URL_TTL_SECONDS } from "./rules";
-import type { FileStorage } from "./types";
+import type { FileDownloader, FileStorage } from "./types";
 
 /**
  * The only place the service-role client touches Supabase Storage, and ONLY the bucket `english-work`.
@@ -41,9 +41,15 @@ function normalizeMime(raw: unknown): string {
   return typeof raw === "string" ? (raw.split(";")[0] ?? "").trim().toLowerCase() : "";
 }
 
-export function createFileStorage(client: AdminClient = createAdminClient()): FileStorage {
+export function createFileStorage(client: AdminClient = createAdminClient()): FileStorage & FileDownloader {
   const bucket = () => client.storage.from(BUCKET);
   return {
+    async download(path) {
+      const { data, error } = await bucket().download(path);
+      if (error || !data) throw new Error(`storage: could not read a stored file (${error?.message ?? "no data"})`);
+      return new Uint8Array(await data.arrayBuffer());
+    },
+
     async createUpload(path) {
       let res = await bucket().createSignedUploadUrl(path);
       if (res.error && isMissingBucket(res.error)) {

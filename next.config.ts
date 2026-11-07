@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  // Studio B1: the extraction route reads prompts/*.md at run time (lib/ai/prompts.ts).
+  outputFileTracingIncludes: { "/api/learners/[id]/studio/drafts": ["./prompts/**/*"] },
   async headers() {
     return [
       {

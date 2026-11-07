@@ -743,7 +743,8 @@ describe("S5b-1 PR A: results, tag marks, weak points, lesson note v2 (migration
       for (const table of ["test_frames", "results", "tag_marks", "recheck_events"] as const) {
         const rows = await rowsAs<{ learner_id?: string; family_id?: string }>(db.client, "authenticated", parent2User, `select * from english.${table}`);
         for (const r of rows) {
-          expect(r.learner_id === undefined || r.learner_id === learner2, `${table} leaked ${r.learner_id}`).toBe(true);
+          // test_frames.learner_id (0024) is null for a frame of the family, set for a Studio frame of one child
+          expect(r.learner_id === undefined || r.learner_id === learner2 || (table === "test_frames" && r.learner_id === null), `${table} leaked ${r.learner_id}`).toBe(true);
           expect(r.family_id === undefined || r.family_id === family2, `${table} leaked a frame`).toBe(true);
         }
       }

@@ -303,6 +303,18 @@ describe("S5b-1 handlers: writes", () => {
     await expect(run("XX000")).rejects.toBeInstanceOf(ReviewDbError);
   });
 
+  it("a Studio frame of another child is 400 frame_other_learner, with a Vietnamese sentence and no database text", async () => {
+    const s = makeStore({
+      recordResult: vi.fn(async () => {
+        throw new ReviewDbError("23514", "results: this frame belongs to another learner (frame_other_learner)");
+      }),
+    });
+    const r = await handleRecordResult(deps("tutorAn", s), AN, goodFrame);
+    expect(r).toMatchObject({ status: 400, body: { error: "frame_other_learner" } });
+    expect(JSON.stringify(r.body)).not.toContain("results:");
+    expect(failText({ ok: false, status: 400, error: "frame_other_learner" } as never)).toBe(tutorWorkErrors.frameOtherLearner);
+  });
+
   it("a second first attempt of the same test is 409 duplicate_first (its own code, no database text)", async () => {
     const s = makeStore({
       recordResult: vi.fn(async () => {

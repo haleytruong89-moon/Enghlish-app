@@ -4,9 +4,10 @@ import { AppHeader } from "@/components/AppHeader";
 import { RevisionForm } from "@/components/revision/RevisionForm";
 import { ActivityNote } from "@/components/student/FeedbackBox";
 import { SourceReader } from "@/components/student/SourceReader";
+import { StudioReview } from "@/components/student/StudioReview";
 import { WorkForm } from "@/components/student/WorkForm";
 import { concepts, messages, modeLabels, revisionCopy, work } from "@/lib/copy/vi";
-import { loadActivityPage, loadRevisionPage } from "@/lib/work/load";
+import { loadActivityPage, loadRevisionPage, loadStudioReview } from "@/lib/work/load";
 import { formatHm, stepTitle } from "@/lib/work/view";
 
 export const dynamic = "force-dynamic";
@@ -77,6 +78,10 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
     );
   }
   const last = a.attempts[a.attempts.length - 1];
+  // Studio B1: "Câu cần xem lại" (board 20) once something is submitted; null for weekly topics.
+  const studio = a.attempts.length > 0 ? await loadStudioReview(id) : null;
+  // P12: reading text beside the questions on wide screens.
+  const sideBySide = a.shape === "answers" && a.sources.some((s) => s.modality === "text" && !!s.text);
   const chip = a.purpose.includes("delayed_check")
     ? concepts.delayedCheck.student
     : a.purpose.includes("transfer_check")
@@ -86,7 +91,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
   return (
     <>
       <AppHeader />
-      <main className="mx-auto flex max-w-xl flex-col gap-3.5 px-5 py-5">
+      <main className={`mx-auto flex flex-col gap-3.5 px-5 py-5 ${sideBySide ? "max-w-xl lg:max-w-6xl" : "max-w-xl"}`}>
         <header className="flex items-center gap-2">
           <Link href="/" className="flex min-h-11 min-w-11 items-center text-sm font-semibold text-accent">
             {work.back(a.titleVi)}
@@ -115,20 +120,28 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
           </p>
         </section>
 
-        <SourceReader sources={a.sources} />
-        {a.canSubmit ? (
-          <WorkForm activity={a} />
-        ) : (
-          <section data-testid="already-submitted" className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-4">
-            <p role="status" className="text-[15px] font-semibold text-accent">
-              {last ? (last.provenance === "offline" ? work.doneOffline : work.alreadySubmitted(formatHm(last.submittedAt))) : ""}
-            </p>
-            <p className="text-sm text-muted">{work.checkOnce}</p>
-            <Link href="/" className="flex min-h-12 items-center self-start rounded-xl bg-accent px-5 text-base font-bold text-white">
-              {work.homeLink}
-            </Link>
-          </section>
-        )}
+        <div className={sideBySide ? "flex flex-col gap-3.5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6" : "flex flex-col gap-3.5"}>
+          <div className={sideBySide ? "lg:sticky lg:top-4" : undefined}>
+            <SourceReader sources={a.sources} />
+          </div>
+          <div className="flex flex-col gap-3.5">
+            {studio ? (
+              <StudioReview review={studio}>{a.canSubmit ? <WorkForm activity={a} /> : null}</StudioReview>
+            ) : a.canSubmit ? (
+              <WorkForm activity={a} />
+            ) : (
+              <section data-testid="already-submitted" className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-4">
+                <p role="status" className="text-[15px] font-semibold text-accent">
+                  {last ? (last.provenance === "offline" ? work.doneOffline : work.alreadySubmitted(formatHm(last.submittedAt))) : ""}
+                </p>
+                <p className="text-sm text-muted">{work.checkOnce}</p>
+                <Link href="/" className="flex min-h-12 items-center self-start rounded-xl bg-accent px-5 text-base font-bold text-white">
+                  {work.homeLink}
+                </Link>
+              </section>
+            )}
+          </div>
+        </div>
       </main>
     </>
   );

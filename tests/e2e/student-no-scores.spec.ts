@@ -20,6 +20,9 @@ for (const key of ["studentAn", "studentNguyen"] as AccountKey[]) {
     expect(text).not.toContain(skillStateCopy.pending("").trim());
     expect(text).not.toContain(skillStateCopy.autoNote);
     expect(await page.locator('[data-testid="skill-scale"], [data-testid^="skill-row-"], [data-testid="review-tab-skills"], [data-testid^="transfer-mark"]').count()).toBe(0);
+    // Studio B1: the child's review block, when present, never shows a ratio, a percentage or a count of right items.
+    const review = page.locator('[data-testid="studio-review"]');
+    if (await review.count()) expect(await review.innerText()).not.toMatch(/\d+\s*\/\s*\d+|%|đúng\s+\d/i);
     // S6: the child's revision pages (todo and seen) and the home box are checked in the S6 serial suite of review.spec.ts, on real data.
   });
 }

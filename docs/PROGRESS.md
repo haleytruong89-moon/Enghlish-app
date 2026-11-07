@@ -1026,3 +1026,63 @@ D1–D23 trong `docs/superpowers/plans/2026-10-23-s7a-skill-states.md` (bảng "
 
 `typecheck`, `lint`, `test` (gồm test database: ép không hạ bậc, một đề xuất mở, Chưa → không đề xuất lại tới khi có bài mới, tính lại giống hệt, ai được làm gì, dấu "chủ đề mới", xóa dữ liệu), `gen:config` xanh; CI (E2E + áp migration hai lần) xanh; review Opus; phụ huynh áp `0022` rồi `0023` và làm các bước thử ở trên.
 
+
+
+## Studio B1 — Đề PDF/Word → bài trong app (05/11/2026)
+
+Code trên nhánh `feature/studio-b1`, chờ CI + review Opus + phụ huynh duyệt PR. Spec `docs/superpowers/specs/2026-11-05-studio-b1-design.md`, kế hoạch `docs/superpowers/plans/2026-11-05-studio-b1.md`. Mockup board 19–21 phụ huynh đã duyệt 05/11.
+
+### Đã làm
+
+| Bước | Ở đâu |
+|---|---|
+| Phụ huynh bật AI một lần, ghi đồng ý `ai_text` cho từng em, xem chi phí tháng / trần $10 (báo ở $8) | `/settings/ai`, ô trên trang chủ phụ huynh |
+| Gia sư hoặc phụ huynh của em tải đề + đáp án (PDF hoặc .docx, ≤ 15 MB), cho AI đọc (chạy nền) hoặc soạn tay | thẻ em → "Tạo bài từ đề" (`/studio/new`) |
+| Duyệt đề (board 19): sửa từng câu, nhãn, kỹ năng, đáp án chấp nhận; Duyệt bị chặn khi còn lỗi; Duyệt → mẫu Studio + khung đề giấy; Giao bài | `/studio/drafts/[id]` |
+| Con làm trên trang bài như chủ đề tuần; câu đóng chấm ngay; câu không tự chấm được chờ thầy/cô | `/activities/[id]` |
+| Con thấy "Câu cần xem lại" (câu sai + đáp án đúng + giải thích; số câu chờ). Không điểm, không x/y, không số câu đúng | `/activities/[id]` (board 20) |
+| Hộp duyệt → tab "Cần thầy/cô xem (n)": Đúng / Sai từng câu; "Đúng" = chấp nhận cho lần làm sau | `/review/studio` (board 21) |
+| Hết câu chờ → Kết quả bài + dấu nhãn câu sai → Điểm cần chú ý; engine S7a tính lại (cách 2, câu tự chấm). `lib/engine` không đổi | tự động |
+
+### SQL cần áp
+
+**`db/migrations/0024_studio_b1.sql`** — áp **TRƯỚC khi thử preview hoặc gộp PR** (Actions → Apply database migrations, gõ APPLY, hoặc dán vào SQL Editor). Chỉ thêm; chạy lại an toàn; cần `0022` + `0023` đã áp. Migration kế tiếp sau này là **0025**. Nên bấm chạy tay *Weekly backup* trước.
+
+### Việc phụ huynh cần làm
+
+1. Áp `0024`.
+2. Tạo khóa API trên Anthropic Console, đặt trần $10/tháng ở đó, thêm `ANTHROPIC_API_KEY` vào Vercel (Preview + Production). **Không gửi khóa qua chat.** Kiểm Vercel → Settings → Functions: thời gian chạy tối đa 300 giây (Fluid compute).
+3. Cài đặt AI → Đồng ý và bật.
+4. Thử thật 1 lần trên preview: đề Destination U1–12 (.docx + đáp án) — ghi chi phí thật vào đây: _(chưa thử)_.
+
+### Quyết định (bảng P1–P12 trong kế hoạch)
+
+| # | Trạng thái |
+|---|---|
+| P1 (kỹ năng gắn được = bộ hiện hành ∩ kỹ năng mà danh mục tính ACT-SOURCE-QA) | **Phụ huynh xác nhận 06/11: giữ luật bằng chứng của danh mục (phương án A)** |
+| P2, P3, P5, P6, P8, P9, P10, P12 | Làm theo đề xuất của kế hoạch |
+| P4 (câu bỏ trống hiện trong "Câu cần xem lại"), P11 (bài đã tính rồi, đổi Đúng/Sai không đề xuất lại cùng khóa) | **Phụ huynh xác nhận 07/11: theo đề xuất** |
+| Câu khi không có câu cần xem lại ("Không có câu nào cần xem lại lúc này.") | **Phụ huynh xác nhận 07/11: giữ nguyên (A)** |
+| P7 (bảng giá `claude-sonnet-5-5`) | **Đã giải quyết 06/11: giá chính thức $2 vào / $10 ra mỗi triệu token** (platform.claude.com/docs, models/sonnet-5-5/overview). Giá tính theo model ĐƯỢC YÊU CẦU; model không có trong bảng bị từ chối (`refused_model`). Vẫn ghi chi phí thật của lần thử |
+
+### Lệch nhỏ so với kế hoạch khi làm (đã ghi)
+
+- `eng_purge_preview` đếm thêm ba khóa `studio_step_sources`, `studio_sources`, `studio_template_keys` (kế hoạch chỉ đếm 5 khóa): các test cũ yêu cầu bản đếm trước khi xóa có đúng các khóa của biên nhận xóa.
+- Test cũ sửa theo thay đổi chủ ý: danh sách loại file của bucket có thêm `.docx` (`practiceFiles`, `fileStorage`, `storageRules`), thông báo `eng_register_file` nói "pdf, png, jpeg, webp and docx".
+- Test `approve` của kế hoạch dùng `base_updated_at: "other"` (5 ký tự) bị schema từ chối trước khi tới chỗ so khóa; dùng một mốc thời gian đủ dài.
+
+### Tiêu chí đạt
+
+`typecheck`, `lint`, `test` (gồm test database: RLS, tự chấm chỉ cho mẫu Studio, Đúng/Sai → engine, kết quả một lần mỗi lần làm, xóa dữ liệu một em), `gen:config`, E2E "Studio" với `AI_FAKE=1` (CI), review Opus. Chi phí AI trong tháng ≤ $10.
+
+### Sửa sau review Opus (06/11/2026, `0024` chưa áp ở đâu nên sửa thẳng trong file)
+
+| Nhóm | Sửa |
+|---|---|
+| Chi phí AI | Cổng AI khóa theo gia đình (`pg_advisory_xact_lock`) và GHI chỗ đặt trước giá xấu nhất của lần gọi ngay trong khóa; từ chối khi đã chi + giá xấu nhất ≥ trần; kiểm lại ở ĐẦU mỗi vòng thử (kể cả thử lại và đổi `tool_choice`). Thời gian mỗi lần gọi = min(240 s, còn lại − 20 s), còn dưới 60 s thì không gọi; lỗi hết giờ / 5xx ghi giá ước tính phần đầu vào (không ghi 0). Giá chính thức $2 / $10, tính theo model ĐƯỢC YÊU CẦU, model không có trong bảng bị từ chối (`refused_model`). `AI_FAKE` chỉ khi không phải production (trừ CI). Bản thử (ALLOW_REAL_LEARNERS=false) không bật AI cho gia đình có em thật. |
+| Riêng tư | Khung đề giấy Studio gắn với MỘT em (`test_frames.learner_id`): gia sư em khác không đọc được; kết quả / bài giao của em khác không dùng được; xóa dữ liệu một em xóa luôn khung (đếm trước khi xóa cùng khóa `studio_frames`). Con không bao giờ thấy đáp án mẫu của câu mở. |
+| Đúng đắn | Duyệt kiểm lại kỹ năng ⊆ danh sách Studio của em; "đúng" chỉ đếm kết quả `correct`; Kết quả bài không ghi được lần đầu sẽ được ghi lại khi mở tab "Cần thầy/cô xem"; khóa lạc quan so mốc thời gian (không so chữ, không phụ thuộc múi giờ phiên); không giao được bản đã có bản sửa mới hơn; trùng mã phần / bài đọc chặn Duyệt; file Word quá dài bị từ chối rõ ràng (không cắt ngầm), file Word giải nén > 20 MB bị từ chối; chữ tiếng Việt trong dữ liệu SQL đổi sang mã, hiển thị qua `lib/copy/vi.ts`. |
+
+Vòng review thứ hai (06/11): chi phí AI của bản nháp không cộng chỗ đặt trước đã giải phóng; chỉ một chỗ đặt trước CHƯA giải phóng của đúng gia đình mới được giải phóng (một lần); lỗi hết giờ / 5xx ghi giá xấu nhất (đầu vào ước tính + toàn bộ phần đầu ra cho phép); ghi lại Kết quả bài chỉ cho lần làm đã sẵn sàng, bỏ qua em thật khi `ALLOW_REAL_LEARNERS=false`, và một lỗi chỉ ghi một dòng mỗi giờ cho mỗi lần làm; danh sách khung đề chỉ gồm khung của gia đình và khung Studio của đúng em; `eng_same_instant` là STABLE; bỏ chữ ký hàm cũ của bản nháp đầu.
+
+**Giới hạn đã biết:** bảo vệ file Word giải nén (> 20 MB) đọc kích thước khai báo trong thư mục zip; file zip cố tình khai sai không bị chặn ở bước này. Chỉ người lớn trong gia đình tải file lên nên chấp nhận ở B1.

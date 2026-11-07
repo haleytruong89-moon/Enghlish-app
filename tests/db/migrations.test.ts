@@ -82,11 +82,11 @@ describe("migrations", () => {
       where n.nspname = 'english' and c.relkind = 'r'`);
     expect(rows.map((r) => r.relname).sort()).toEqual(
       [
-        "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
-        "app_errors", "artifact_versions", "assessment_policies", "assignment_events", "assignments", "assistance_events", "attempt_auto_checks",
+        "accepted_additions", "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
+        "ai_runs", "ai_settings", "app_errors", "artifact_versions", "assessment_policies", "assignment_events", "assignments", "assistance_events", "attempt_auto_checks",
         "attempts", "audit_log", "catalogue_versions", "competency_state", "consents", "dimensions", "engine_policy_map", "episode_marks", "episodes", "error_tags", "exposure_log", "external_results",
-        "families", "feedback_notes", "files", "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "lesson_notes", "level_decisions", "login_names", "mastery_decisions", "members",
-        "observations", "reading_reports", "recheck_events", "relationships", "results", "revision_checks", "revision_marks", "schema_migrations", "skill_domains", "skill_groups", "skill_leaves", "skill_maps", "source_transcripts", "sources", "submissions", "tag_marks",
+        "families", "feedback_notes", "files", "inquiry_instances", "inquiry_templates", "instance_item_keys", "item_decisions", "learners", "lesson_notes", "level_decisions", "login_names", "mastery_decisions", "members",
+        "observations", "reading_reports", "recheck_events", "relationships", "results", "revision_checks", "revision_marks", "schema_migrations", "skill_domains", "skill_groups", "skill_leaves", "skill_maps", "source_transcripts", "sources", "studio_drafts", "studio_item_meta", "submissions", "tag_marks",
         "target_set_definitions", "target_sets", "targets", "template_item_keys", "template_step_sources", "test_frames", "track_settings", "tracks", "tutorwork_settings", "upload_tickets",
         "validation_decisions", "working_drafts",
       ],
@@ -115,11 +115,11 @@ describe("migrations", () => {
       where n.nspname = 'english' and c.relkind = 'r' order by 1`);
     const readable = rows.filter((r) => r.s).map((r) => r.relname);
     expect(readable).toEqual([
-      "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
+      "accepted_additions", "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
       "artifact_versions", "assessment_policies", "assignment_events", "assignments", "assistance_events", "attempt_auto_checks", "attempts",
       "audit_log", "catalogue_versions", "competency_state", "consents", "dimensions", "episode_marks", "episodes", "error_tags", "exposure_log", "external_results", "families", "feedback_notes", "files",
-      "inquiry_instances", "inquiry_templates", "instance_item_keys", "learners", "lesson_notes", "level_decisions", "mastery_decisions", "members", "observations",
-      "reading_reports", "recheck_events", "relationships", "results", "revision_checks", "revision_marks", "skill_domains", "skill_groups", "skill_leaves", "skill_maps", "source_transcripts", "sources", "submissions", "tag_marks", "target_set_definitions",
+      "inquiry_instances", "inquiry_templates", "instance_item_keys", "item_decisions", "learners", "lesson_notes", "level_decisions", "mastery_decisions", "members", "observations",
+      "reading_reports", "recheck_events", "relationships", "results", "revision_checks", "revision_marks", "skill_domains", "skill_groups", "skill_leaves", "skill_maps", "source_transcripts", "sources", "studio_drafts", "studio_item_meta", "submissions", "tag_marks", "target_set_definitions",
       "target_sets", "targets", "template_item_keys", "template_step_sources", "test_frames", "tracks", "validation_decisions",
       "working_drafts",
     ]);

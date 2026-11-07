@@ -27,7 +27,7 @@ export function SourceReader({ sources }: { sources: SourceView[] }) {
             <p id={`src-${s.id}`} lang="en" className="text-[17px] font-semibold leading-snug">
               {sourceTitle(s.title)}
             </p>
-            {s.author ? <p className="text-[13px] text-muted">{work.byAuthor(s.author)}</p> : null}
+            {s.author ? <p className="text-[13px] text-muted">{work.byAuthor(s.author === "studio:tutor" ? work.studioSourceAuthor : s.author)}</p> : null}
             {s.modality === "text" && s.text ? (
               <div lang="en" className="flex flex-col gap-3 text-[15px] leading-relaxed">
                 {s.text
@@ -51,7 +51,7 @@ export function SourceReader({ sources }: { sources: SourceView[] }) {
               </a>
             ) : null}
             {s.modality !== "text" && !href ? <p className="text-sm text-muted">{work.noLink}</p> : null}
-            {s.rightsNote ? <p className="text-xs text-muted">{s.rightsNote}</p> : null}
+            {s.rightsNote ? <p className="text-xs text-muted">{s.rightsNote === "studio:private-use" ? work.studioSourceRights : s.rightsNote}</p> : null}
           </section>
         );
       })}
