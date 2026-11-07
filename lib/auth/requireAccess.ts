@@ -27,6 +27,7 @@ export type Action =
   | "practice:read" //      assigned practice, what the student sent, and its files - tutor and parent; never students (S5b-1 PR B)
   | "practice:write" //     give / retract practice, upload its files, submit on the student's behalf - tutor and parent
   | "levels:decide" //     confirm the starting levels / adjust one level (SM-2) - the child's tutor only; the database checks it again
+  | "teaching:write" //    write teaching notes and the intake profile (W1) - the child's tutor only; the database checks it again
   | "mastery:read" //      skill states, proposals and the skills inbox (S7a) - tutor and parent; never students
   | "mastery:decide" //    confirm / "Chưa" / confirm all / set a level 1–2 by hand (S7a) - the child's tutor only; the database checks it again
   | "mastery:rebuild" //   "Tính lại từ đầu" (S7a) - tutor and parent
@@ -55,6 +56,7 @@ export const ACTIONS_BY_ROLE: Record<Role, readonly Action[]> = {
     "practice:read",
     "practice:write",
     "levels:decide",
+    "teaching:write",
     "mastery:read",
     "mastery:decide",
     "mastery:rebuild",
