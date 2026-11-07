@@ -31,4 +31,33 @@ describe("W1 workdesk (migration 0025)", () => {
       expect((await read(s.users.tutorAn)).n).toBe(0);
     });
   });
+
+  describe("2. writing notes and intake", () => {
+    const note = (by: string, o: { learner?: string; field?: string; text?: string; clientId?: string } = {}) =>
+      svc<{ id: string; replayed: boolean }>("select english.eng_write_teaching_note($1,$2,$3,$4,$5) as r",
+        [o.learner ?? NG(), o.field ?? "focus", o.text ?? "Đảo ngữ, câu điều kiện hỗn hợp", by, o.clientId ?? randomUUID()]);
+    const intake = (by: string, content: unknown, clientId = randomUUID()) =>
+      svc<{ id: string; replayed: boolean }>("select english.eng_write_intake($1,$2::jsonb,$3,$4) as r", [NG(), JSON.stringify(content), by, clientId]);
+    it("the child's tutor writes a note field; replay returns the same id; the latest row per field is current", async () => {
+      const a = await note(M().tutorNguyen, { clientId: "tn-00000001" });
+      expect(a.replayed).toBe(false);
+      expect(await note(M().tutorNguyen, { clientId: "tn-00000001" })).toEqual({ id: a.id, replayed: true });
+      await note(M().tutorNguyen, { text: "Đảo ngữ thôi" });
+      const rows = await q1<{ text: string }>("select text from english.teaching_notes where learner_id=$1 and field='focus' order by created_at desc limit 1", [NG()]);
+      expect(rows[0]?.text).toBe("Đảo ngữ thôi");
+    });
+    it("parent and a tutor of another child cannot write; bad field / too long rejected", async () => {
+      await fail(note(M().parent), "42501", /\(tutor_only\)/);
+      await fail(note(M().tutorAn), "42501", /\(tutor_only\)/);
+      await fail(note(M().tutorNguyen, { field: "mood" }), "22023", /\(bad_field\)/);
+      await fail(note(M().tutorNguyen, { text: "x".repeat(601) }), "22023", /\(too_long\)/);
+    });
+    it("intake: goals + strengths/weaknesses by domain; unknown domain rejected; parent rejected", async () => {
+      const ok = { goals: [{ title: "Thi vào 10", due: "2027-06" }], strengths: { vocab: "Từ vựng khá" }, weaknesses: { listening: "Nghe yếu" }, note: "" };
+      expect((await intake(M().tutorNguyen, ok)).replayed).toBe(false);
+      await fail(intake(M().tutorNguyen, { ...ok, strengths: { music: "x" } }), "22023", /\(bad_content\)/);
+      await fail(intake(M().tutorNguyen, { goals: "no" }), "22023", /\(bad_content\)/);
+      await fail(intake(M().parent, ok), "42501", /\(tutor_only\)/);
+    });
+  });
 });
