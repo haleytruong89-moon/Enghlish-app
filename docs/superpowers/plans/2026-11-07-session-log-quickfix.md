@@ -1,6 +1,6 @@
 # Sửa nhanh "Ghi buổi học" (đợt 1) — kế hoạch
 
-Ngày: 07/11/2026 · Nhánh: `feature/session-log-quickfix` · Trạng thái: **chờ phụ huynh duyệt kế hoạch**
+Ngày: 07/11/2026 · Nhánh: `feature/session-log-quickfix` · Trạng thái: **phụ huynh duyệt kế hoạch 07/11** (Q1 = giữ 3, Q2 = không chép "Hôm nay học")
 Model: kế hoạch + review cuối = Opus · code = Sonnet (`builder`).
 
 ## 1. Vì sao làm
@@ -61,5 +61,5 @@ Gia sư đang dùng màn này hằng ngày. Đợt này chỉ sửa cho dễ dù
 
 | # | Câu hỏi | Đề xuất |
 |---|---|---|
-| Q1 | "Điểm cần củng cố" giữ tối đa 3 hay nâng 5? | **Giữ 3** trong đợt này. Nâng 5 cần migration `0025` (đổi ràng buộc trong cơ sở dữ liệu) và đổi cách tính "Điểm cần chú ý". Hỏi gia sư ở buổi 30 phút trước khi đổi |
-| Q2 | "Như buổi trước" có chép cả ô "Hôm nay học" không? | **Không**: nội dung buổi thường khác nhau, chép dễ quên sửa |
+| Q1 ✅ giữ 3 (07/11) | "Điểm cần củng cố" giữ tối đa 3 hay nâng 5? | **Giữ 3** trong đợt này. Nâng 5 cần migration `0025` (đổi ràng buộc trong cơ sở dữ liệu) và đổi cách tính "Điểm cần chú ý". Hỏi gia sư ở buổi 30 phút trước khi đổi |
+| Q2 ✅ không chép (07/11) | "Như buổi trước" có chép cả ô "Hôm nay học" không? | **Không**: nội dung buổi thường khác nhau, chép dễ quên sửa |
