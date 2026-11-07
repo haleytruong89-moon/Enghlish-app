@@ -85,4 +85,18 @@ describe("W1 workdesk (migration 0025)", () => {
       await fail(upd(M().parent, randomUUID(), "done"), "P0002");
     });
   });
+
+  describe("4. purge", () => {
+    it("dry run counts teaching_notes and learner_intake; purge removes them; app_feedback untouched", async () => {
+      const L = (await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1,'Em thử xóa W1','B',true,'active') returning id", [s.familyId]))[0]!.id;
+      await q1("insert into english.relationships(member_id, learner_id, relation) values ($1,$2,'tutor')", [M().tutorNguyen, L]);
+      await svc("select english.eng_write_teaching_note($1,'focus','x',$2,'pg-00000001') as r", [L, M().tutorNguyen]);
+      await svc("select english.eng_write_intake($1,'{\"goals\":[]}'::jsonb,$2,'pg-00000002') as r", [L, M().tutorNguyen]);
+      const dry = await svc<{ counts: Record<string, number> }>("select english.eng_purge_preview($1) as r", [L]);
+      expect(dry.counts.teaching_notes).toBe(1); expect(dry.counts.learner_intake).toBe(1);
+      const receipt = await svc<{ deleted: Record<string, number> }>("select english.eng_purge_learner($1,$2) as r", [L, s.users.parent]);
+      expect(receipt.deleted.teaching_notes).toBe(1); expect(receipt.deleted.learner_intake).toBe(1);
+      expect(await q1("select 1 from english.teaching_notes where learner_id=$1", [L])).toEqual([]);
+    });
+  });
 });
