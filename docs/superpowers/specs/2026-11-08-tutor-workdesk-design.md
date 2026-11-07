@@ -1,6 +1,6 @@
 # Bàn làm việc gia sư — spec (bản nháp 0.1 · 08/11/2026)
 
-Trạng thái: **NHÁP, chờ phụ huynh duyệt.** Chưa chia kế hoạch lát, chưa code.
+Trạng thái: **NHÁP 0.2, chờ phụ huynh duyệt cả bản** (D-W1…D-W8 đã chốt 08/11). Chưa chia kế hoạch lát, chưa code.
 Đi cùng: `docs/DOMAIN.md` (luật + dữ liệu; mọi quy tắc tính, trạng thái, bất biến nằm ở đó). Hub: `TUTOR_WORKDESK_REVIEW_2026-11-07.md`, `AI_QUALITY_PLAN_2026-11-07.md`, `TUTOR_SESSION_30MIN_2026-11-07.md`.
 Bản bấm thử: https://claude.ai/artifact/BxGqLyRiixGeJhWDFsmfVT · Trang luồng: https://claude.ai/artifact/GNJifVVkmQxok3Jdg56RvJ
 
@@ -57,7 +57,7 @@ Mỗi lát = một nhánh = một PR; có migration thì phụ huynh áp trướ
 |---|---|---|---|---|
 | **W0** ✅ | Sửa nhanh Ghi buổi (PR #23) | — | — | Gia sư đang dùng hằng ngày |
 | **W1** | Hồ sơ đầu vào (mục tiêu, mạnh/yếu ban đầu) + **Ghi chú dạy học** + **Góp ý về app** (gửi + trạng thái + màn phụ huynh trả lời) | `learner_goals`, `teaching_notes`, `app_feedback`, `app_feedback_events` | — | Nhỏ, không AI. Có kênh góp ý ngay từ lát đầu, các lát sau nhận góp ý thật |
-| **W2** | **Giáo trình**: nạp PDF mục lục → AI đọc → duyệt Unit + bảng nối Unit → nhãn → "đang học đến"; Ghi buổi chọn Unit đã dạy | `curricula`, `curriculum_versions`, `curriculum_units`, `curriculum_unit_points`, `curriculum_unit_events`; `lesson_notes` thêm Unit | Công thức `curriculum-toc.v1` | Nền cho mọi lát sau |
+| **W2** | **Giáo trình**: nạp PDF mục lục → AI đọc → duyệt Unit + bảng nối Unit → nhãn → "đang học đến"; chép giáo trình sang em kia; Ghi buổi chọn Unit đã dạy | `curricula`, `curriculum_versions`, `curriculum_units`, `curriculum_unit_points`, `curriculum_unit_events`; `lesson_notes` thêm Unit | Công thức `curriculum-toc.v1` | Nền cho mọi lát sau |
 | **W3** | **Mức điểm kiến thức** (`PP-0.1`) + **Bản đồ kiến thức** + **Nạp bài đã làm** (cách đọc giống cách ②) | `point_policies` (seed), `point_decisions` (chỉ thêm), `point_state` (dẫn xuất); `attempts.provenance` thêm `imported` + mức hỗ trợ + ngày làm thật + mã băm file | Công thức `read-answers.v1` | Cần W2 để nối Unit; dùng ngay Progress Test thật |
 | **W4** | **4 cách giao bài**: ② file → con nộp ảnh/file → AI đọc → code so đáp án; ③ link → con nộp ảnh trang kết quả → điểm theo phần; ④ nhập nhanh khi ghi buổi. Chờ duyệt gom mọi cách nộp + vòng góp ý ngắn cho AI | `submission_files`, `ai_feedback` (chỉ thêm) | `read-answers.v1` (dùng lại), `read-result-page.v1` | Gia sư dùng cả 4 cách (08/11) |
 | **W5** | **Lộ trình 12 tháng nhiều dòng** (có phiên bản, chỉ duyệt phần thay đổi, phụ huynh được báo) + **Kiểm tra tiến độ tháng** (Studio B1 đánh dấu "kiểm tra tháng") | `roadmap_versions` (chỉ thêm) | `roadmap.v1` | Cần độ phủ giáo trình (W2) + mức (W3) |
@@ -74,7 +74,7 @@ Thứ tự có thể đổi W4 ↔ W5 nếu gia sư cần lộ trình sớm hơn
 - Màn duyệt: từng câu, "Vì sao AI làm vậy", độ chắc; câu không chắc lên đầu và chặn Duyệt; Sửa / Bỏ có lý do tùy chọn; *Tốt / Tạm / Phải sửa nhiều*.
 - Bộ đề chuẩn từ tài liệu thật (Progress Test + đáp án, mục lục Destination, bài Mixed conditionals; thêm Reading Explorer 3 / Great Writing 4 / Listening & Notetaking 1 khi có PDF) chạy mỗi khi đổi công thức hoặc model.
 - Trần $10/tháng; hết trần → "Soạn tay" ở mọi việc. `AI_FAKE=1` trong CI.
-- **Danh tính** (D-W7): đề xuất giữ luật cũ, chỉ gửi bí danh + hồ sơ học tập.
+- **Danh tính** (✅ D-W7 08/11): chỉ gửi bí danh + hồ sơ học tập; giữ luật lọc tên hiện có.
 
 **Dữ liệu:**
 - Migration chỉ thêm, idempotent.
@@ -108,5 +108,5 @@ Thứ tự có thể đổi W4 ↔ W5 nếu gia sư cần lộ trình sớm hơn
 
 ## 8. Còn chờ
 - 🕓 Gia sư: tên quyển Cambridge và sách kỹ năng của An; 4 mục nhận xét tháng quen dùng; cấp khởi điểm 7 mảng + điểm cốt lõi đợt 1 (việc cũ).
-- ❓ Phụ huynh: D-W1 … D-W8 (`docs/DOMAIN.md` §13).
+- ✅ D-W1 … D-W8 đã chốt 08/11 (`docs/DOMAIN.md` §13). Phụ huynh còn duyệt cả bản spec + DOMAIN.
 - Buổi 30 phút với gia sư vẫn nên làm (bấm thử bản mẫu + PR #23) trước khi lên kế hoạch W1.

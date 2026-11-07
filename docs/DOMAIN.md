@@ -1,10 +1,10 @@
 # Luật và dữ liệu nghiệp vụ · Bàn làm việc gia sư (bản nháp 0.1 · 08/11/2026)
 
-Trạng thái: **NHÁP, chờ phụ huynh duyệt.** Viết trước spec `docs/superpowers/specs/2026-11-08-tutor-workdesk-design.md` để chốt phần khó đổi về sau (dữ liệu, phiên bản, cách tính, trạng thái, quyền) trước khi code.
+Trạng thái: **NHÁP 0.2 — phụ huynh đã chốt D-W1…D-W8 ngày 08/11** (mục 13); phần còn lại chờ duyệt cả bản. Viết trước spec `docs/superpowers/specs/2026-11-08-tutor-workdesk-design.md` để chốt phần khó đổi về sau (dữ liệu, phiên bản, cách tính, trạng thái, quyền) trước khi code.
 Nguồn: bản bấm thử + trang luồng (07/11), `TUTOR_WORKDESK_REVIEW_2026-11-07.md`, `AI_QUALITY_PLAN_2026-11-07.md`, câu trả lời thay gia sư của phụ huynh (08/11, mục 12), hiện trạng code đến migration `0024`.
 Khi file này mâu thuẫn với PRD Family / DESIGN: **PRD và DESIGN thắng**, trừ những dòng ghi rõ "đổi so với PRD", là chỗ cần phụ huynh duyệt.
 
-Ký hiệu: ✅ đã chốt (ghi ngày) · ❓ cần phụ huynh quyết (mục 13) · 🕓 chờ gia sư xác nhận.
+Ký hiệu: ✅ đã chốt (ghi ngày) · ❓ cần phụ huynh quyết · 🕓 chờ gia sư xác nhận.
 
 ---
 
@@ -30,7 +30,7 @@ Ký hiệu: ✅ đã chốt (ghi ngày) · ❓ cần phụ huynh quyết (mục 
 |---|---|---|
 | **Con** | Làm và nộp bài được giao (trong app, ảnh, file, ảnh trang kết quả); xem "Câu cần xem lại", góp ý, lời nhắn | Thấy điểm, x/y, %, mức, nhãn kỹ năng, nhận xét cho phụ huynh, nháp AI chưa duyệt |
 | **Gia sư của em** (quan hệ còn hiệu lực) | Mọi việc chuyên môn: hồ sơ đầu vào, Ghi chú dạy học, giáo trình, lộ trình, giao bài, xem/duyệt mọi nháp AI, phán Đúng/Sai, xác nhận mức 3–4 và cấp, nhận xét tháng, góp ý cho AI, góp ý về app | Thấy hay sửa em không do mình dạy; sửa công thức AI; đổi luật cứng |
-| **Phụ huynh** | Xem mọi thứ của con mình; bật AI, trần chi phí, đồng ý `ai_text`; xem "Tổng hợp góp ý"; sửa công thức AI (tạo phiên bản mới); trả lời góp ý về app; nạp bài đã làm, ghi buổi (như hiện nay) | Xác nhận mức 3–4, cấp, bài kiểm tra trong buổi (D14/D15, chỉ gia sư); duyệt nháp chuyên môn của AI thay gia sư ❓D-W8 |
+| **Phụ huynh** | Xem mọi thứ của con mình; bật AI, trần chi phí, đồng ý `ai_text`; xem "Tổng hợp góp ý"; sửa công thức AI (tạo phiên bản mới); trả lời góp ý về app; nạp bài đã làm, ghi buổi (như hiện nay) | Xác nhận mức 3–4, cấp, bài kiểm tra trong buổi (D14/D15, chỉ gia sư); duyệt nháp chuyên môn của AI thay gia sư (chỉ được **bỏ** nháp) ✅ D-W8 08/11 |
 | **AI** | Đọc tài liệu được đưa vào, soạn nháp theo công thức | Ghi thẳng vào bằng chứng, mức, cấp; tự giao bài; tự đổi công thức; chấm bài viết/nói thay người |
 
 - Tiến độ, điểm, mức **do server tính**. Trình duyệt chỉ gửi sự kiện (nộp, chọn, duyệt); không gửi "đã hoàn thành" hay "đạt mức".
@@ -46,13 +46,13 @@ Bản đồ kỹ năng SM-1 (7 mảng · 40 nhóm), danh mục kỹ năng 0.2.1,
 
 | Thực thể | Là gì | Quy tắc |
 |---|---|---|
-| **Giáo trình** (`curriculum`) | Một quyển sách hoặc nguồn mà gia sư dạy cho **một em**: Destination C1&C2, Reading Explorer 3, SGK Global Success 6… Không giới hạn số lượng ✅ 07/11 | Có `kind`: **kiến thức** (đo bằng điểm kiến thức) hay **kỹ năng** (đo bằng dạng câu hoặc tiêu chí). Có `level_note` (vd "Quyển 3 ≈ B1+"). Thuộc đúng 1 em; giáo trình dùng chung cho 2 em thì tạo 2 bản |
+| **Giáo trình** (`curriculum`) | Một quyển sách hoặc nguồn mà gia sư dạy cho **một em** (✅ D-W2 08/11): Destination C1&C2, Reading Explorer 3, SGK Global Success 6… Không giới hạn số lượng ✅ 07/11 | Có `kind`: **kiến thức** (đo bằng điểm kiến thức) hay **kỹ năng** (đo bằng dạng câu hoặc tiêu chí). Có `level_note` (vd "Quyển 3 ≈ B1+"). Thuộc đúng 1 em; giáo trình dùng chung cho 2 em thì tạo 2 bản (có nút **chép mục lục + bảng nối sang em kia**, sau đó mỗi bản đi riêng) |
 | **Phiên bản giáo trình** | Mục lục + bảng nối Unit → điểm tại một thời điểm | **Nháp** thì sửa tự do. **Đã duyệt** thì bất biến; sửa = phiên bản mới (mục 4) |
 | **Unit** | Một đơn vị trong mục lục (Unit, Lesson, Chapter) | Có thứ tự, tên, trang. Unit "bỏ qua" vẫn giữ trong phiên bản, chỉ đánh dấu |
 | **Nối Unit → điểm** | Unit dạy những điểm nào | Mỗi dòng trỏ tới **đúng một** mục có sẵn: nhãn (`error_tags`: nhãn hạt giống hoặc nhãn riêng có nhóm SM-1), **hoặc** kỹ năng danh mục, **hoặc** dạng câu đọc/nghe (nhãn "Kỹ năng đọc" 0018 + nhãn nghe mới), **hoặc** tiêu chí viết/nói. Không có "điểm" nào ngoài danh sách đóng; điểm mới = nhãn riêng mới (bắt buộc nhóm SM-1, như hiện nay) ✅ 07/11 (danh sách đóng) |
-| **Thang chấm viết/nói** | Tiêu chí Cambridge ✅ 08/11: Content · Communicative Achievement · Organisation · Language, mỗi tiêu chí 0–5 | Lưu như cấu hình có phiên bản (`CAM-WS-1`). Nối sang kỹ năng danh mục: ❓D-W4 |
+| **Thang chấm viết/nói** | Tiêu chí Cambridge ✅ 08/11: Content · Communicative Achievement · Organisation · Language, mỗi tiêu chí 0–5 | Lưu như cấu hình có phiên bản (`CAM-WS-1`). Lưu thang 0–5 **và** nối sang kỹ năng danh mục ✅ D-W4 08/11 |
 
-**Điểm kiến thức = nhãn.** Không tạo bảng "điểm" thứ hai. Lý do: bằng chứng hiện có (`tag_marks`, `studio_item_meta`, "Điểm cần chú ý", ô chọn nhãn) đều gắn với nhãn. Một điểm của Destination U7 "bị động vô nhân xưng" chính là một nhãn có nhóm SM-1. ❓D-W1
+**Điểm kiến thức = nhãn.** Không tạo bảng "điểm" thứ hai. Lý do: bằng chứng hiện có (`tag_marks`, `studio_item_meta`, "Điểm cần chú ý", ô chọn nhãn) đều gắn với nhãn. Một điểm của Destination U7 "bị động vô nhân xưng" chính là một nhãn có nhóm SM-1. ✅ D-W1 08/11
 
 ### Tầng C · Hồ sơ từng em (sinh ra khi học)
 
@@ -101,7 +101,7 @@ Cùng 4 mức và cùng tinh thần với S7a để gia sư chỉ học một lu
 
 "Câu được tính" = một câu có đáp án đóng, gắn đúng điểm đó, đã chấm (tự chấm hoặc gia sư phán), **lần làm đầu của em trên câu đó**, không hỗ trợ. "Dịp" = một lần làm (một bài, một ngày).
 
-| Mức | Điều kiện (đề xuất `PP-0.1`, ❓D-W3) |
+| Mức | Điều kiện (`PP-0.1`, ✅ D-W3 08/11) |
 |---|---|
 | 1 · Mới gặp | Điểm có trong Unit đã dạy ở một buổi, **hoặc** có ≥ 1 câu đã làm (đúng hay sai) |
 | 2 · Đang tiến bộ | ≥ 1 câu được tính **đúng**, **hoặc** ≥ 1 câu đúng có hỗ trợ (bài làm cùng gia sư, bài nạp "có hỗ trợ") |
@@ -123,9 +123,9 @@ Viết / nói: mức theo **tiêu chí Cambridge** đi qua đường bằng ch�
 ### 5.3 Nạp bài đã làm (bài kiểm tra cũ)
 - Đầu vào: file bài con làm + file đáp án + **ngày làm thật** + **mức hỗ trợ** (*tự làm* · *tự làm rồi chữa cùng cô* · *làm cùng cô*).
 - AI đọc câu trả lời của con; **code so với đáp án**; câu AI không chắc → "Cần xem", gia sư phán.
-- *Tự làm* và *tự làm rồi chữa cùng cô* = câu trả lời là của con → **được tính**. AI phải bỏ qua dấu chữa (mực khác màu, ghi chú) và chỉ đọc câu trả lời ban đầu; câu không tách được → "Cần xem".
+- *Tự làm* và *tự làm rồi chữa cùng cô* = câu trả lời là của con → **được tính** (✅ D-W6 08/11). AI phải bỏ qua dấu chữa (mực khác màu, ghi chú) và chỉ đọc câu trả lời ban đầu; câu không tách được → "Cần xem".
 - *Làm cùng cô* = có hỗ trợ → tối đa mức 2.
-- Ngày tính mức = ngày làm thật, không phải ngày nạp. Ngày làm thật không được trước 2026-08-01 ❓D-W5 và không sau hôm nay.
+- Ngày tính mức = ngày làm thật, không phải ngày nạp. Ngày làm thật **không giới hạn về quá khứ** (gia sư tự cân nhắc, ✅ D-W5 08/11), không sau hôm nay.
 - **Nạp trùng**: cùng mã băm file bài làm, **hoặc** cùng (tên đề, ngày làm) của cùng em → app báo "có thể đã nạp" và chặn, trừ khi gia sư chọn "Đây là lần làm khác".
 
 | Ví dụ | Kết quả |
@@ -190,7 +190,7 @@ Cách ③ chỉ ghi **điểm theo phần** nếu trang kết quả không ghi c
 ## 8. Ca biên bắt buộc xét
 - Giáo trình dùng cho cả 2 em (vd từ điển, sách ngữ pháp chung) → 2 bản riêng; không chia sẻ trạng thái.
 - Đổi gia sư giữa chừng → giáo trình, ghi chú, lộ trình thuộc **em**, không thuộc gia sư; gia sư mới thấy hết khi có quan hệ.
-- Gia sư nghỉ (hết quan hệ) → nháp AI đang chờ duyệt của người đó: giữ, gia sư khác hoặc phụ huynh **bỏ** được, không duyệt thay ❓D-W8.
+- Gia sư nghỉ (hết quan hệ) → nháp AI đang chờ duyệt của người đó: giữ, gia sư khác hoặc phụ huynh **bỏ** được, không duyệt thay (✅ D-W8).
 - Ảnh bài làm mờ, xoay ngược, thiếu trang → AI báo "không đọc được trang n", không đoán.
 - Một câu có 2 đáp án đúng → "đáp án chấp nhận" (đã có), lần sau tự chấm.
 - Con nộp 2 lần (2 thiết bị) → `client_submission_id` duy nhất (đã có); lần sau là lần làm 2.
@@ -205,7 +205,7 @@ Cách ③ chỉ ghi **điểm theo phần** nếu trang kết quả không ghi c
 ### 9.1 Ba lớp ✅ 07/11
 | Lớp | Ai giữ | Gồm |
 |---|---|---|
-| 1 Luật cứng | Phụ huynh (code) | Chỉ nháp; danh sách đóng; câu không chắc phải đánh dấu; đề xuất phải dẫn bằng chứng; con không thấy điểm; không gửi danh tính (tới khi chốt D1 ở spec) |
+| 1 Luật cứng | Phụ huynh (code) | Chỉ nháp; danh sách đóng; câu không chắc phải đánh dấu; đề xuất phải dẫn bằng chứng; con không thấy điểm; không gửi tên thật — chỉ bí danh + hồ sơ học tập (✅ D-W7 08/11) |
 | 2 Công thức từng việc | Phụ huynh (`prompts/*.vN.md`) | Cách làm, khung đầu ra JSON bắt buộc, ví dụ từ tài liệu thật |
 | 3 Hiểu biết về con | Gia sư | Ghi chú dạy học + câu trả lời "Câu hỏi cho cô" + 1 dòng ghi chú lần này |
 
@@ -238,7 +238,7 @@ Lớp / đợt, chứng chỉ, streak, bảng xếp hạng, video; chat tự do 
 | Reading Explorer | **Quyển 3** (≈ B1+) | Mảng Đọc của Nguyên thấp hơn hẳn mảng Ngữ pháp / Từ vựng (Destination C1–C2) → lộ trình nhiều dòng, mỗi dòng một cấp |
 | Great Writing | **Quyển 4**, thỉnh thoảng ôn lại cách triển khai đoạn văn, viết câu gọn, không lặp / rối ý | Viết: tiêu chí Organisation + Language là trọng tâm; nhãn riêng cho "câu lặp ý", "triển khai đoạn" |
 | Listening & Notetaking | **Quyển 1** | Mảng Nghe thấp nhất. Mục tiêu C1 ~10/2027 có rủi ro ở Nghe → đưa vào lộ trình như một dòng riêng, báo phụ huynh |
-| Chấm viết / nói | **Tiêu chí Cambridge** | Thang `CAM-WS-1` (4 tiêu chí × 0–5) ❓D-W4 |
+| Chấm viết / nói | **Tiêu chí Cambridge** | Thang `CAM-WS-1` (4 tiêu chí × 0–5), nối sang kỹ năng ✅ D-W4 |
 | Progress Test U1–12 | **Tự làm, sau đó chữa cùng cô** | Câu trả lời là của con → được tính; AI bỏ qua dấu chữa |
 | Nhận xét T10 | Viết **sau** bài test | Lệch giữa nhận xét và test là lệch thật → cờ "Cần đối chiếu" |
 | Điểm cần củng cố mỗi buổi | **1–3 là đủ** | Giữ tối đa 3 (khớp PR #23) |
@@ -248,14 +248,14 @@ Lớp / đợt, chứng chỉ, streak, bảng xếp hạng, video; chat tự do 
 | Góp ý phụ huynh → cô | **Zalo như hiện tại** | Bỏ kênh này khỏi app (mục 2) |
 | Giáo trình của An | **SGK Global Success 6 · Cambridge (Flyers/KET…) · sách kỹ năng đọc/viết · đề ôn thi trường** | 🕓 tên quyển Cambridge + sách kỹ năng cụ thể |
 
-## 13. Cần phụ huynh quyết (cửa một chiều)
-| # | Quyết định | Đề xuất | Vì sao khó đổi về sau |
+## 13. Quyết định cửa một chiều (phụ huynh chốt 08/11)
+| # | Quyết định | Đã chốt | Vì sao khó đổi về sau |
 |---|---|---|---|
-| D-W1 | Điểm kiến thức = **nhãn** (dùng chung `error_tags`), không bảng riêng | **Đồng ý** | Mọi bằng chứng và màn hình hiện có đều theo nhãn; tách ra sau phải chuyển dữ liệu |
-| D-W2 | Giáo trình thuộc **từng em** (dùng chung thì 2 bản) | **Đồng ý** | Trạng thái "đang học đến", lộ trình là của em |
-| D-W3 | Luật mức điểm kiến thức `PP-0.1` như mục 5.2 (4 câu · 75 % · 2 dịp; mức 4: ≥ 14 ngày + nguồn khác; 3–4 gia sư xác nhận) | **Đồng ý**, chỉnh sau pilot bằng `PP-0.2` | Mức đã tính dựa vào bản chính sách |
-| D-W4 | Tiêu chí Cambridge: lưu riêng thang 0–5 (`CAM-WS-1`) **và** nối mỗi tiêu chí sang kỹ năng danh mục để engine S7a dùng | **Lưu riêng + nối** (Content→L4/T, Communicative→L8, Organisation→L3, Language→L1+L2), quy đổi 0–5 → 0–4 bằng bảng cố định có phiên bản | Đổi thang sau khi đã chấm phải quy đổi lại |
-| D-W5 | Nạp bài cũ: chỉ nhận bài làm từ **01/08/2026** | **Đồng ý** (đủ cho năm học này) | Bài quá cũ làm sai mức hiện tại |
-| D-W6 | Bài nạp "tự làm rồi chữa cùng cô" **được tính** như tự làm | **Đồng ý**, AI phải tách được câu trả lời gốc; không tách được → cần xem | Ảnh hưởng mức 3 của nhiều điểm ngay từ đầu |
-| D-W7 | D1: có gửi **tên thật** của con cho AI không | **Không cần** — AI chỉ cần hồ sơ học tập; dùng bí danh giữ được mọi chức năng | Đổi thì phải sửa luật lọc tên trong `lib/ai` |
-| D-W8 | Phụ huynh có được duyệt nháp chuyên môn của AI (bài gợi ý, lộ trình) khi gia sư bận không | **Không** — phụ huynh được **bỏ** nháp, không duyệt; chuyên môn là của gia sư (đúng nguyên tắc 07/11) | Đổi về sau thì phải tách quyền duyệt theo từng việc |
+| D-W1 | Điểm kiến thức = **nhãn** (dùng chung `error_tags`), không bảng riêng | ✅ **Dùng chung nhãn** | Mọi bằng chứng và màn hình hiện có đều theo nhãn; tách ra sau phải chuyển dữ liệu |
+| D-W2 | Giáo trình thuộc **từng em** (dùng chung thì 2 bản) | ✅ **Mỗi em một bản** (+ nút chép sang em kia) | Trạng thái "đang học đến", lộ trình là của em |
+| D-W3 | Luật mức điểm kiến thức `PP-0.1` như mục 5.2 (4 câu · 75 % · 2 dịp; mức 4: ≥ 14 ngày + nguồn khác; 3–4 gia sư xác nhận) | ✅ **Đồng ý** `PP-0.1`; chỉnh sau pilot bằng `PP-0.2` | Mức đã tính dựa vào bản chính sách |
+| D-W4 | Tiêu chí Cambridge: lưu riêng thang 0–5 (`CAM-WS-1`) **và** nối mỗi tiêu chí sang kỹ năng danh mục để engine S7a dùng | ✅ **Lưu 0–5 + nối** (Content→L4/T, Communicative→L8, Organisation→L3, Language→L1+L2; quy đổi 0–5 → 0–4 bằng bảng cố định có phiên bản) | Đổi thang sau khi đã chấm phải quy đổi lại |
+| D-W5 | Nạp bài cũ: giới hạn ngày làm thật về quá khứ | ✅ **Không giới hạn** (gia sư tự cân nhắc; ngày ≤ hôm nay) | Bài quá cũ làm sai mức hiện tại |
+| D-W6 | Bài nạp "tự làm rồi chữa cùng cô" **được tính** như tự làm | ✅ **Được tính** nếu AI tách được câu trả lời gốc; không tách được → cần xem | Ảnh hưởng mức 3 của nhiều điểm ngay từ đầu |
+| D-W7 | D1: có gửi **tên thật** của con cho AI không | ✅ **Không** — chỉ bí danh + hồ sơ học tập | Đổi thì phải sửa luật lọc tên trong `lib/ai` |
+| D-W8 | Phụ huynh có được duyệt nháp chuyên môn của AI (bài gợi ý, lộ trình) khi gia sư bận không | ✅ **Không** — phụ huynh chỉ được bỏ nháp | Đổi về sau thì phải tách quyền duyệt theo từng việc |
