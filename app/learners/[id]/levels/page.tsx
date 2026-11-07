@@ -6,7 +6,7 @@ import { LevelSummaryCard } from "@/components/levels/LevelSummaryCard";
 import { IntakeCard } from "@/components/workdesk/IntakeCard";
 import { TeachingNotesCard } from "@/components/workdesk/TeachingNotesCard";
 import { Milestones } from "@/components/levels/Milestones";
-import { learnerWithTrack, levelCopy, skillStateCopy } from "@/lib/copy/vi";
+import { appFeedback, learnerWithTrack, levelCopy, skillStateCopy } from "@/lib/copy/vi";
 import { loadLevelProfile } from "@/lib/levels/load";
 import { strongestWeakest } from "@/lib/levels/scale";
 import { groupWeakPoints } from "@/lib/skillmap/group";
@@ -43,7 +43,7 @@ export default async function LevelsPage({ params, searchParams }: { params: Pro
 
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} />
+      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.levels} />
       <main className="mx-auto max-w-4xl px-4 py-10" data-testid="levels-page">
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {levelCopy.back}

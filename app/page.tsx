@@ -5,7 +5,7 @@ import { AiSoftCapBox } from "@/components/settings/AiSoftCapBox";
 import { RecentLevelChanges } from "@/components/levels/RecentLevelChanges";
 import { StudentHome } from "@/components/student/StudentHome";
 import Link from "next/link";
-import { aiSettingsCopy, home, reviewPage, todayPage } from "@/lib/copy/vi";
+import { aiSettingsCopy, appFeedback, home, reviewPage, todayPage } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { formatDay } from "@/lib/review/format";
 import { loadToday, type TodayData } from "@/lib/tutorwork/load";
@@ -87,7 +87,7 @@ export default async function HomePage() {
   const revisionsReady = await revisionsAvailable();
   return (
     <>
-      <AppHeader name={data.displayName} showTestBadge={anyTest} />
+      <AppHeader name={data.displayName} showTestBadge={anyTest} feedbackScreen={appFeedback.screens.home} />
       <main className="mx-auto max-w-4xl px-4 py-10" data-testid="today-page">
         <h1 className="text-2xl font-bold">{todayPage.title(formatDay(todayVn()))}</h1>
         {isParent ? <p className="mt-2 text-muted">{home.parentSummary(data.learners.length)}</p> : null}

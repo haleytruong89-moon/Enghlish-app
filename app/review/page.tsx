@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { ReviewTabs } from "@/components/review/ReviewTabs";
 import { loadStudioPending } from "@/lib/studio/load";
-import { activityLabels, fallbackLabels, modeLabels, provenanceLabels, reviewPage, revisionReviewCopy, type Mode } from "@/lib/copy/vi";
+import { activityLabels, appFeedback, fallbackLabels, modeLabels, provenanceLabels, reviewPage, revisionReviewCopy, type Mode } from "@/lib/copy/vi";
 import { authorizeStaffPage } from "@/lib/review/access";
 import { formatWhen } from "@/lib/review/format";
 import { cursorToParam, FILTERS, parseCursor, parseFilter } from "@/lib/review/inbox";
@@ -38,7 +38,7 @@ export default async function ReviewInboxPage({ searchParams }: { searchParams: 
 
   return (
     <>
-      <AppHeader name={access.member.displayName} showTestBadge={anyTest} />
+      <AppHeader name={access.member.displayName} showTestBadge={anyTest} feedbackScreen={appFeedback.screens.review} />
       <main className="mx-auto max-w-3xl px-4 py-10">
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {reviewPage.back}

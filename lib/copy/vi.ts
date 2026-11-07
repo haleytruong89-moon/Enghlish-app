@@ -1863,6 +1863,7 @@ export const appFeedback = {
   kind: "Loại góp ý",
   screen: "Ở màn",
   screenDefault: "Trang chủ",
+  screens: { home: "Hôm nay", review: "Hộp duyệt", levels: "Hồ sơ cấp" },
   text: "Bạn gặp gì / muốn gì?",
   textHint: "Ví dụ: chọn kỹ năng phải cuộn lâu; muốn chọn lại như buổi trước",
   send: "Gửi",

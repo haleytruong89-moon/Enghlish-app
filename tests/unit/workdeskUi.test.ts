@@ -1,10 +1,13 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { AppHeader } from "@/components/AppHeader";
+import { FeedbackForm } from "@/components/workdesk/FeedbackForm";
+import { FeedbackList } from "@/components/workdesk/FeedbackList";
 import { IntakeCard } from "@/components/workdesk/IntakeCard";
 import { TeachingNotesCard } from "@/components/workdesk/TeachingNotesCard";
-import { intakeCopy, teachingNotes, tutorHonorific } from "@/lib/copy/vi";
-import type { IntakeView, TeachingNotesView } from "@/lib/workdesk/types";
+import { appFeedback, intakeCopy, teachingNotes, tutorHonorific } from "@/lib/copy/vi";
+import type { AppFeedbackView, IntakeView, TeachingNotesView } from "@/lib/workdesk/types";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 
@@ -51,5 +54,43 @@ describe("IntakeCard", () => {
     expect(h).toContain("Đảo ngữ");
     expect(h).not.toContain('data-testid="intake-edit"');
     expect(html(intake, true)).toContain('data-testid="intake-edit"');
+  });
+});
+
+describe("FeedbackList", () => {
+  const item = (id: string, status: AppFeedbackView["status"], reply: string | null = null): AppFeedbackView => ({
+    id, kind: "hard_to_use", screen: "Ghi buổi học", text: "Chọn kỹ năng phải cuộn lâu", byName: "Cô Lan", byRole: "tutor", at: "2026-11-05T00:00:00Z", status, reply, statusAt: "2026-11-05T00:00:00Z",
+  });
+  const html = (role: "parent" | "tutor", items = [item("a", "new"), item("b", "in_progress", "Bản sau sẽ sửa")]) => renderToStaticMarkup(createElement(FeedbackList, { items, role }));
+  it("the parent gets a status select and a reply box per item", () => {
+    const h = html("parent");
+    expect(h).toContain('data-testid="fb-status-a"');
+    expect(h).toContain('data-testid="fb-replybox-b"');
+  });
+  it("the tutor sees only the status label and the reply", () => {
+    const h = html("tutor");
+    expect(h).not.toContain("fb-status-");
+    expect(h).toContain(appFeedback.statuses.in_progress);
+    expect(h).toContain("Bản sau sẽ sửa");
+  });
+  it("keeps the order it is given (the loader sorts 'new' first) and shows the empty line", () => {
+    const h = html("tutor");
+    expect(h.indexOf("fb-a")).toBeLessThan(h.indexOf("fb-b"));
+    expect(html("tutor", [])).toContain(appFeedback.empty);
+  });
+});
+
+describe("FeedbackForm and the header link", () => {
+  it("renders the 4 kinds as toggle buttons", () => {
+    const h = renderToStaticMarkup(createElement(FeedbackForm, { defaultScreen: "Hộp duyệt" }));
+    for (const k of Object.values(appFeedback.kinds)) expect(h).toContain(k);
+    expect(h).toContain('aria-pressed="true"');
+    expect(h).toContain("Hộp duyệt");
+  });
+  it("the header shows the link only when a screen label is given, and carries it", () => {
+    expect(renderToStaticMarkup(createElement(AppHeader, {}))).not.toContain("feedback-link");
+    const h = renderToStaticMarkup(createElement(AppHeader, { feedbackScreen: "Hộp duyệt" }));
+    expect(h).toContain(appFeedback.link);
+    expect(h).toContain(`/feedback?screen=${encodeURIComponent("Hộp duyệt")}`);
   });
 });
