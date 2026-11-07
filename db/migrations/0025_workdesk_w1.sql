@@ -161,4 +161,53 @@ end $$;
 revoke all on function english.eng_write_intake(uuid, jsonb, uuid, text) from public, anon, authenticated;
 grant execute on function english.eng_write_intake(uuid, jsonb, uuid, text) to service_role;
 
+create or replace function english.eng_send_app_feedback(p_kind text, p_screen text, p_text text, p_by uuid, p_client_id text)
+returns jsonb language plpgsql volatile security definer set search_path = '' as $$
+declare v_member english.members%rowtype; v_prev english.app_feedback%rowtype; v_id uuid;
+begin
+  if p_kind is null or p_screen is null or p_text is null or p_by is null or p_client_id is null then
+    raise exception 'eng_send_app_feedback: kind, screen, text, actor and client id are required' using errcode = '22004';
+  end if;
+  select * into v_member from english.members m where m.id = p_by;
+  if v_member.id is null or v_member.role not in ('tutor', 'parent') then
+    raise exception 'eng_send_app_feedback: only a tutor or parent sends app feedback (staff_only)' using errcode = '42501';
+  end if;
+  if p_kind not in ('bug', 'hard_to_use', 'suggestion', 'question') then
+    raise exception 'eng_send_app_feedback: unknown kind (bad_kind)' using errcode = '22023';
+  end if;
+  select * into v_prev from english.app_feedback f where f.family_id = v_member.family_id and f.client_id = p_client_id;
+  if found then return pg_catalog.jsonb_build_object('id', v_prev.id, 'replayed', true); end if;
+  insert into english.app_feedback(family_id, by_member, by_role, kind, screen, text, client_id)
+  values (v_member.family_id, p_by, v_member.role, p_kind, pg_catalog.btrim(p_screen), pg_catalog.btrim(p_text), p_client_id) returning id into v_id;
+  insert into english.app_feedback_events(feedback_id, status, reply, by_member, client_id) values (v_id, 'new', null, p_by, p_client_id || ':new');
+  return pg_catalog.jsonb_build_object('id', v_id, 'replayed', false);
+end $$;
+revoke all on function english.eng_send_app_feedback(text, text, text, uuid, text) from public, anon, authenticated;
+grant execute on function english.eng_send_app_feedback(text, text, text, uuid, text) to service_role;
+
+create or replace function english.eng_update_app_feedback(p_feedback uuid, p_status text, p_reply text, p_by uuid, p_client_id text)
+returns jsonb language plpgsql volatile security definer set search_path = '' as $$
+declare v_member english.members%rowtype; v_fb english.app_feedback%rowtype; v_prev english.app_feedback_events%rowtype; v_id uuid;
+begin
+  if p_feedback is null or p_status is null or p_by is null or p_client_id is null then
+    raise exception 'eng_update_app_feedback: feedback, status, actor and client id are required' using errcode = '22004';
+  end if;
+  select * into v_member from english.members m where m.id = p_by;
+  select * into v_fb from english.app_feedback f where f.id = p_feedback;
+  if v_fb.id is null then raise exception 'eng_update_app_feedback: feedback not found' using errcode = 'P0002'; end if;
+  if v_member.id is null or v_member.role <> 'parent' or v_member.family_id <> v_fb.family_id then
+    raise exception 'eng_update_app_feedback: only a parent of the family updates feedback (parent_only)' using errcode = '42501';
+  end if;
+  if p_status not in ('new', 'in_progress', 'done', 'wont_do') then
+    raise exception 'eng_update_app_feedback: unknown status (bad_status)' using errcode = '22023';
+  end if;
+  select * into v_prev from english.app_feedback_events e where e.feedback_id = p_feedback and e.client_id = p_client_id;
+  if found then return pg_catalog.jsonb_build_object('id', v_prev.id, 'replayed', true); end if;
+  insert into english.app_feedback_events(feedback_id, status, reply, by_member, client_id)
+  values (p_feedback, p_status, nullif(pg_catalog.btrim(coalesce(p_reply, '')), ''), p_by, p_client_id) returning id into v_id;
+  return pg_catalog.jsonb_build_object('id', v_id, 'replayed', false);
+end $$;
+revoke all on function english.eng_update_app_feedback(uuid, text, text, uuid, text) from public, anon, authenticated;
+grant execute on function english.eng_update_app_feedback(uuid, text, text, uuid, text) to service_role;
+
 insert into english.schema_migrations(version) values ('0025') on conflict do nothing;

@@ -60,4 +60,29 @@ describe("W1 workdesk (migration 0025)", () => {
       await fail(intake(M().parent, ok), "42501", /\(tutor_only\)/);
     });
   });
+
+  describe("3. app feedback", () => {
+    const send = (by: string, o: { kind?: string; screen?: string; text?: string; clientId?: string } = {}) =>
+      svc<{ id: string; replayed: boolean }>("select english.eng_send_app_feedback($1,$2,$3,$4,$5) as r",
+        [o.kind ?? "hard_to_use", o.screen ?? "Ghi buổi học", o.text ?? "Chọn kỹ năng phải cuộn lâu", by, o.clientId ?? randomUUID()]);
+    const upd = (by: string, id: string, status: string, reply: string | null = null, clientId = randomUUID()) =>
+      svc<{ id: string; replayed: boolean }>("select english.eng_update_app_feedback($1,$2,$3,$4,$5) as r", [id, status, reply, by, clientId]);
+    it("tutor or parent sends; a 'new' event is created; a student cannot", async () => {
+      const r = await send(M().tutorNguyen);
+      expect((await q1<{ status: string }>("select status from english.app_feedback_events where feedback_id=$1", [r.id]))[0]?.status).toBe("new");
+      expect((await send(M().parent)).replayed).toBe(false);
+      await fail(send(M().studentNguyen), "42501", /\(staff_only\)/);
+      await fail(send(M().tutorNguyen, { kind: "praise" }), "22023", /\(bad_kind\)/);
+    });
+    it("only the parent changes status / replies; the latest event is current; unknown id rejected", async () => {
+      const r = await send(M().tutorAn);
+      await fail(upd(M().tutorAn, r.id, "done"), "42501", /\(parent_only\)/);
+      await upd(M().parent, r.id, "in_progress", "Mẹ: bản sau sẽ sửa");
+      await upd(M().parent, r.id, "done");
+      const ev = await q1<{ status: string; reply: string | null }>("select status, reply from english.app_feedback_events where feedback_id=$1 order by created_at desc", [r.id]);
+      expect(ev.map((e) => e.status)).toEqual(["done", "in_progress", "new"]);
+      await fail(upd(M().parent, r.id, "fixed"), "22023", /\(bad_status\)/);
+      await fail(upd(M().parent, randomUUID(), "done"), "P0002");
+    });
+  });
 });
