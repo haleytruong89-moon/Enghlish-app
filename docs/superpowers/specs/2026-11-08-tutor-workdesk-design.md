@@ -85,6 +85,16 @@ Thứ tự có thể đổi W4 ↔ W5 nếu gia sư cần lộ trình sớm hơn
 
 **Giao diện:** chữ trong `lib/copy/vi.ts`; người dạy là "thầy/cô" (`tutorHonorific`); điện thoại 390 px không cuộn ngang; ô bấm ≥ 44 px; tìm không dấu (W0).
 
+**Quy tắc giao diện cho máy tính** (gia sư chủ yếu dùng máy tính; audit bản bấm thử 08/11 ở 1366×768 và 1920×1080):
+1. **Màn duyệt rộng**: mọi màn xem / duyệt việc AI làm và bài nộp rộng ~1100 px (hoặc trang riêng); thanh hành động **luôn hiện ở đáy** ("Còn n câu cần xử lý · Duyệt & giao"); nút "Đóng" ở góc trên.
+2. **Việc cần làm trước, ở trên cùng**: Bàn làm việc = tiêu đề + nút "Ghi buổi học hôm nay" (góc phải) → "Chờ duyệt" → nhắc việc → 3 khung tóm tắt. Không để việc chính phải cuộn mới thấy ở 1366×768.
+3. **Nhắc việc đúng chỗ**: đủ danh sách chỉ ở Bàn làm việc; trang khác chỉ hiện dòng nhắc liên quan tới trang đó.
+4. **Danh sách dài = bảng gọn** (Chờ duyệt, bài giao): một dòng một mục — Loại · Nội dung · Từ ngày · Cần làm · Nút; lọc theo loại; mục cũ nhất trên cùng; cột nút cố định độ rộng.
+5. **Cột trái cố định** khi cuộn; "Góp ý về app" luôn thấy.
+6. Không lặp cùng một danh sách ở 2 trang (Bàn làm việc chỉ tóm tắt số bài giao; danh sách đầy đủ ở "Buổi học & bài giao").
+7. Form: nhãn luôn ở **trên** ô, lưới 2 cột thẳng hàng; nhãn trạng thái dạng viên nhỏ, không kéo giãn.
+8. Nội dung rộng tối đa ~1240 px trên màn lớn.
+
 **Thử:** mỗi lát có test đơn vị cho quy tắc tính (ví dụ ở DOMAIN §5), test DB cho quyền + bất biến, một E2E đường chính; review Opus trước khi mở PR; hướng dẫn thử trên preview trong PR.
 
 ## 6. Tiêu chí chấp nhận theo lát (rút gọn)
@@ -109,4 +119,5 @@ Thứ tự có thể đổi W4 ↔ W5 nếu gia sư cần lộ trình sớm hơn
 ## 8. Còn chờ
 - 🕓 Gia sư: tên quyển Cambridge và sách kỹ năng của An; 4 mục nhận xét tháng quen dùng; cấp khởi điểm 7 mảng + điểm cốt lõi đợt 1 (việc cũ).
 - ✅ D-W1 … D-W8 đã chốt 08/11 (`docs/DOMAIN.md` §13). Phụ huynh còn duyệt cả bản spec + DOMAIN.
-- Buổi 30 phút với gia sư vẫn nên làm (bấm thử bản mẫu + PR #23) trước khi lên kế hoạch W1.
+- Bước thiết kế coi như xong (phụ huynh, 08/11): gia sư đã xem bản bấm thử; audit giao diện máy tính đã sửa vào bản bấm thử (mục 5).
+- **Thử AI bằng dùng thật** (phụ huynh 08/11): không làm nhánh thử riêng. Lần đầu gia sư nạp mục lục (W2) và bài đã làm (W3) chính là lần thử: ghi chi phí từng lần (`ai_runs`) và % câu gia sư phải sửa vào `docs/PROGRESS.md`; file đó vào bộ đề chuẩn. Trần $10 giữ chi phí; màn duyệt bắt buộc giữ chất lượng. Nếu AI đọc sai nhiều (gia sư sửa > 20 % câu) → dừng, chỉnh công thức trước khi đi tiếp.
