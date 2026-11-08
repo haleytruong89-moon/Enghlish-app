@@ -221,4 +221,53 @@ describe("W2 curriculum (migration 0026)", () => {
   });
 
 
+  describe("5. lesson note v3 (Unit đã dạy hôm nay)", () => {
+    it("records taught units of the CURRENT version; empty 'studied' becomes the unit names; replays and wrong units are refused; v2 is unchanged", async () => {
+      const c = await create(M().tutorNguyen, { title: "Destination (ghi buổi)" });
+      await save(c.version_id, twentySix());
+      await approve(c.version_id, twentySix());
+      const cur = c.curriculum_id;
+      const call = (units: unknown, clientId: string = randomUUID(), studied: string | null = null) =>
+        svc<{ id: string; replayed: boolean }>(
+          "select english.eng_write_lesson_note_v3($1, current_date, $2, '{}', null, null, '[]'::jsonb, null, $3, $4, '{}', $5::jsonb) as r",
+          [NG(), studied, M().tutorNguyen, clientId, JSON.stringify(units)]);
+      const cid = `ln-${randomUUID()}`;
+      const r = await call([{ curriculum_id: cur, unit_code: "U13" }], cid);
+      expect(await q1("select goals from english.lesson_notes where id = $1", [r.id])).toEqual([{ goals: "U13 · Unit 13" }]);
+      expect(await q1("select unit_code, version_id = (select id from english.curriculum_versions where curriculum_id = $2 and status = 'approved') as cur from english.lesson_note_units where lesson_note_id = $1", [r.id, cur]))
+        .toEqual([{ unit_code: "U13", cur: true }]);
+      expect(await call([{ curriculum_id: cur, unit_code: "U13" }], cid)).toEqual({ id: r.id, replayed: true });
+      await fail(call([{ curriculum_id: cur, unit_code: "U14" }], cid), "23505");
+      await fail(call([{ curriculum_id: cur, unit_code: "U99" }]), "23514", /\(unknown_unit\)/);
+      await fail(call([{ curriculum_id: cur, unit_code: "U1" }, { curriculum_id: cur, unit_code: "U1" }]), "22023", /\(bad_units\)/);
+      const anCur = await create(M().tutorAn, { learner: AN(), title: "Global Success 6" });
+      await fail(call([{ curriculum_id: anCur.curriculum_id, unit_code: "U1" }]), "23514", /\(unknown_unit\)/);
+      const plain = await svc<{ id: string }>(
+        "select english.eng_write_lesson_note_v2($1, current_date, 'Ôn U12', '{}', null, null, '[]'::jsonb, null, $2, $3) as r", [NG(), M().tutorNguyen, randomUUID()]);
+      expect(await q1("select count(*)::int as n from english.lesson_note_units where lesson_note_id = $1", [plain.id])).toEqual([{ n: 0 }]);
+    });
+
+  });
+
+  describe("6. purge", () => {
+    it("dry run and purge count the six curriculum tables the same way", async () => {
+      const L = (await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1,'Em thử xóa W2','B',true,'active') returning id", [s.familyId]))[0]!.id;
+      await q1("insert into english.relationships(member_id, learner_id, relation) values ($1,$2,'tutor')", [M().tutorNguyen, L]);
+      const c = await create(M().tutorNguyen, { learner: L, file: pdf() });
+      const u = [unitRow(1, ["cum-dong-tu"]), unitRow(2)];
+      await save(c.version_id, u);
+      await approve(c.version_id, u);
+      await setStatus(c.curriculum_id, "U1", "in_progress");
+      await svc("select english.eng_write_lesson_note_v3($1, current_date, null, '{}', null, null, '[]'::jsonb, null, $2, $3, '{}', $4::jsonb) as r",
+        [L, M().tutorNguyen, randomUUID(), JSON.stringify([{ curriculum_id: c.curriculum_id, unit_code: "U1" }])]);
+      const want = { curricula: 1, curriculum_versions: 1, curriculum_units: 2, curriculum_unit_points: 1, curriculum_unit_events: 1, lesson_note_units: 1 };
+      const dry = await svc<{ counts: Record<string, number> }>("select english.eng_purge_preview($1) as r", [L]);
+      expect(dry.counts).toMatchObject(want);
+      const receipt = await svc<{ deleted: Record<string, number> }>("select english.eng_purge_learner($1,$2) as r", [L, s.users.parent]);
+      expect(receipt.deleted).toMatchObject({ ...want, files: 1 });
+      expect(Object.keys(receipt.deleted).sort()).toEqual(Object.keys(dry.counts).sort());
+      expect(await q1("select count(*)::int as n from english.curriculum_versions where learner_id = $1", [L])).toEqual([{ n: 0 }]);
+    });
+  });
+
 });
