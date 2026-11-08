@@ -1206,7 +1206,7 @@ G1–G14 ở đầu `docs/superpowers/plans/2026-11-08-w2-curriculum.md`.
 
 ## Khung bàn làm việc (08/11/2026)
 
-**Trạng thái:** code trên nhánh `feature/workdesk-shell` (dựa trên `feature/w2-curriculum`, PR #26 vẫn chờ phụ huynh gộp). Chờ CI (job "E2E smoke" chạy `tests/e2e/shell.spec.ts`) + review Opus + phụ huynh duyệt PR.
+**Trạng thái:** code trên nhánh `feature/workdesk-shell` (dựa trên `main` sau khi gộp W2 — PR #26). Chờ CI (job "E2E smoke" chạy `tests/e2e/shell.spec.ts`) + review Opus + phụ huynh duyệt PR.
 
 **SQL cần áp: không có.** Không migration, không route API mới, không AI.
 
