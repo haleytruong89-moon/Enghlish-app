@@ -2086,6 +2086,43 @@ export const shellCopy = {
   aiDraftNote: "Mọi thứ AI soạn là nháp: chưa duyệt thì con chưa thấy.",
 } as const;
 
+export const pendingCopy = {
+  title: (alias: string) => `Chờ duyệt · ${alias}`,
+  intro: `Bài con nộp và nháp AI đang chờ ${tutorHonorific}. Mục cũ nhất ở trên. Mở từng mục ra xem, sửa rồi mới duyệt ở trang đó.`,
+  filtersLabel: "Lọc việc chờ",
+  groups: { all: "Tất cả", work: "Bài nộp", check: "Cần xem câu", ai: "Nháp AI", skills: "Kỹ năng" },
+  groupCount: (label: string, n: number) => `${label} (${n})`,
+  cols: { kind: "Loại", content: "Nội dung", since: "Từ ngày", need: "Cần làm" },
+  kinds: {
+    work: "Bài nộp",
+    studioCheck: `Cần ${tutorHonorific} xem`,
+    studioDraft: "Nháp AI · đề",
+    curriculumDraft: "Nháp AI · giáo trình",
+    skill: "Đề xuất kỹ năng",
+    flag: "⚑ Cần xem lại",
+  },
+  need: {
+    studioCheck: (n: number) => `${n} câu cần xem`,
+    studioDraft: "Xem nháp, sửa rồi duyệt",
+    curriculumDraft: "Duyệt Unit và bảng nối",
+    aiFailed: "AI chưa đọc được · soạn tay",
+    skill: "Xem điều kiện rồi xác nhận",
+    flag: "Xem bằng chứng",
+  },
+  open: "Mở",
+  noDate: "—",
+  empty: "Không có gì chờ duyệt.",
+  emptyGroup: "Không có mục nào ở nhóm này.",
+  failed: (what: string) => `Chưa đọc được phần “${what}”. Các phần khác vẫn đúng.`,
+  sources: { work: "Bài làm", studio: `Cần ${tutorHonorific} xem`, skills: "Kỹ năng", drafts: "Nháp đề", curricula: "Giáo trình" },
+  more: "Còn bài khác chưa hiện ở đây. Mở Hộp duyệt đầy đủ.",
+  fullInbox: "Hộp duyệt đầy đủ",
+  deskTitle: (n: number) => `Chờ duyệt · ${n}`,
+  deskOpenAll: "Mở tất cả",
+  deskMore: (n: number) => `+ ${n} mục nữa`,
+  deskPartial: "Có phần chưa đọc được; mở Chờ duyệt để xem.",
+} as const;
+
 /** Error codes of the curriculum routes → text (unknown codes fall back to apiErrors). */
 export const curriculumErrors: Record<string, string> = {
   invalid_body: "Thiếu thông tin hoặc thông tin chưa đúng dạng.",
