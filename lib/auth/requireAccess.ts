@@ -33,6 +33,9 @@ export type Action =
   | "mastery:rebuild" //   "Tính lại từ đầu" (S7a) - tutor and parent
   | "studio:read" //       Studio drafts and tests of a child (Studio B1) - tutor and parent; never students
   | "studio:write" //      upload, edit, approve, assign a Studio test, decide "Cần thầy/cô xem" items - tutor and parent of the child
+  | "curriculum:read" //   curricula, their versions, units and unit statuses (W2) - tutor and parent; never students
+  | "curriculum:write" //  add a curriculum, upload its contents, edit / discard a draft, set a unit's status (W2) - tutor and parent
+  | "curriculum:approve" // approve a curriculum version (W2, D-W8) - the child's tutor only; the database checks it again
   | "targets:read" //        tracked-skills page (target set) — parent and tutor only
   | "inquiries:read" //     assigned inquiries + assignable templates — parent and tutor only
   | "inquiries:assign" //   assign an inquiry template — parent and tutor only
@@ -62,6 +65,9 @@ export const ACTIONS_BY_ROLE: Record<Role, readonly Action[]> = {
     "mastery:rebuild",
     "studio:read",
     "studio:write",
+    "curriculum:read",
+    "curriculum:write",
+    "curriculum:approve",
   ],
   parent: [
     "learner:read",
@@ -80,6 +86,8 @@ export const ACTIONS_BY_ROLE: Record<Role, readonly Action[]> = {
     "mastery:rebuild",
     "studio:read",
     "studio:write",
+    "curriculum:read",
+    "curriculum:write",
     "admin",
   ],
 };

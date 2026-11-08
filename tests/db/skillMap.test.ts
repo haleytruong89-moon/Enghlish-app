@@ -54,7 +54,7 @@ describe("SM-1 skill map (migration 0019)", () => {
     });
 
     it("every seed tag still in use has exactly one leaf, and A's doc-hieu is hidden from the picker", async () => {
-      expect(await n(`select count(*)::int as n from english.error_tags t where t.family_id is null and t.retired_at is null
+      expect(await n(`select count(*)::int as n from english.error_tags t where t.family_id is null and t.retired_at is null and t.group_key is null
                       and not exists (select 1 from english.skill_leaves lf where lf.map_id = 'SM-1' and lf.kind = 'tag' and lf.track_id = t.track_id and lf.ref_key = t.key)`)).toBe(0);
       expect(await q1("select track_id, ref_key, group_key from english.skill_leaves where hidden_in_picker")).toEqual([
         { track_id: "A", ref_key: "doc-hieu", group_key: "re-gist-detail" },
@@ -209,7 +209,7 @@ describe("SM-1 skill map (migration 0019)", () => {
       expect(m.domains.flatMap((d) => d.groups)).toHaveLength(40);
       const all = leavesOf(m);
       const tags = all.filter((l) => l.kind === "tag");
-      expect(tags.filter((l) => !l.custom)).toHaveLength(24);
+      expect(tags.filter((l) => !l.custom)).toHaveLength(32); // 24 tags with a leaf + 8 listening tags of 0026 (group_key)
       expect(tags.every((l) => l.track_id === m.track_id)).toBe(true);
       expect(tags.filter((l) => l.custom).map((l) => [l.ref_key, l.group]).sort()).toEqual([[grouped, "gr-emphasis"], [oldKey, "wr-sentence-mech"]].sort());
       const targets = all.filter((l) => l.kind === "target");
@@ -231,7 +231,7 @@ describe("SM-1 skill map (migration 0019)", () => {
       const m = await mapOf(AN());
       expect(m.assumed).toEqual({ grammar: "A2", vocab: "A2", reading: "A2", listening: "A2", writing: "A2", speaking: "A2", thinking: 1 });
       const all = leavesOf(m);
-      expect(all.filter((l) => l.kind === "tag")).toHaveLength(16);
+      expect(all.filter((l) => l.kind === "tag")).toHaveLength(21); // 16 + 5 listening tags of 0026
       expect(all.filter((l) => l.hidden_in_picker).map((l) => [l.ref_key, l.label_vi, l.group])).toEqual([["doc-hieu", "Đọc hiểu (KET Reading)", "re-gist-detail"]]);
       expect(all.filter((l) => l.in_set)).toHaveLength(12);
       expect(all.some((l) => l.custom)).toBe(false);

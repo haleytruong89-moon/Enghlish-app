@@ -26,7 +26,7 @@ export const ALLOWED_MIMES = ["application/pdf", ...IMAGE_MIMES, DOCX_MIME] as c
 export type AllowedMime = (typeof ALLOWED_MIMES)[number];
 
 /** What a stored file is for (column files.kind). */
-export const FILE_KINDS = ["assignment_pdf", "answer_key", "result_image", "work_photo", "external_result", "studio_test", "studio_key"] as const;
+export const FILE_KINDS = ["assignment_pdf", "answer_key", "result_image", "work_photo", "external_result", "studio_test", "studio_key", "curriculum_toc"] as const;
 export type FileKind = (typeof FILE_KINDS)[number];
 
 const EXTENSION: Record<AllowedMime, string> = {
@@ -62,7 +62,7 @@ export function checkFile(kind: FileKind, mime: unknown, bytes: unknown): FileCh
   const studio = kind === "studio_test" || kind === "studio_key";
   if (mime === DOCX_MIME && !studio) return { ok: false, reason: "kind" };
   if (studio && !(STUDIO_MIMES as readonly string[]).includes(mime)) return { ok: false, reason: "kind" };
-  if (kind === "assignment_pdf" && mime !== "application/pdf") return { ok: false, reason: "kind" };
+  if ((kind === "assignment_pdf" || kind === "curriculum_toc") && mime !== "application/pdf") return { ok: false, reason: "kind" };
   if (kind === "result_image" && !isImageMime(mime)) return { ok: false, reason: "kind" };
   return { ok: true };
 }

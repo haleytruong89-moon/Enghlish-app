@@ -5,6 +5,7 @@ import { appFeedback, learnerWithTrack, sessionNotePage } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { loadTargetsView } from "@/lib/targets/loadTargets";
+import { loadTaughtChoices } from "@/lib/curriculum/load";
 import { loadLastNote, loadTags, loadWeakPoints } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
@@ -14,12 +15,13 @@ export const dynamic = "force-dynamic";
 export default async function NewSessionNotePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { member, learner } = await requireLearnerPage(id, "tutorwork:write");
-  const [tags, weak, previous, targets, map] = await Promise.all([
+  const [tags, weak, previous, targets, map, taughtChoices] = await Promise.all([
     loadTags(learner.trackId),
     loadWeakPoints(learner.id, "all"),
     loadLastNote(learner.id),
     loadTargetsView(learner.id),
     loadPickerMap(learner.id),
+    loadTaughtChoices(learner.id),
   ]);
   const today = todayVn();
 
@@ -43,6 +45,7 @@ export default async function NewSessionNotePage({ params }: { params: Promise<{
             previous={previous}
             today={today}
             minDate={addDays(today, -120)}
+            taughtChoices={taughtChoices}
           />
         </div>
       </main>

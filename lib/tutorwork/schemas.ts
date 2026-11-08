@@ -1,3 +1,4 @@
+import { taughtUnitsSchema } from "@/lib/curriculum/schema";
 /** Request bodies for the S5b-1 routes (zod). Parsed AFTER requireAccess, so outsiders always get 404. */
 import { z } from "zod";
 import { GROUP_KEY_RE } from "@/lib/skillmap/types";
@@ -103,6 +104,8 @@ export const sessionNoteBodySchema = z.strictObject({
   /** Skills (targets.id) practised in the session; the database checks they belong to the learner's track. */
   practised_target_ids: z.array(z.string().trim().min(1).max(100)).max(MAX_PRACTISED_PER_NOTE).default([]),
   supersedes_id: uuid.optional(),
+  /** W2: units taught today ("Unit đã dạy hôm nay"); the database checks each is in a current curriculum of the learner. */
+  taught_units: taughtUnitsSchema,
 });
 export type SessionNoteBody = z.infer<typeof sessionNoteBodySchema>;
 

@@ -50,6 +50,14 @@ describe("the new SQL arguments are only sent when needed (works before AND afte
     await createSupabaseTutorWorkStore().writeSessionNote(noteArgs(["A-L3-CAUSE-S"]));
     expect((rpc.mock.calls[0] as [string, Record<string, unknown>])[1].p_practised_target_ids).toEqual(["A-L3-CAUSE-S"]);
   });
+  it("lesson note: without taught units the v2 call is unchanged (works before 0026); with units it is v3", async () => {
+    await createSupabaseTutorWorkStore().writeSessionNote({ ...noteArgs([]), taughtUnits: [] });
+    expect((rpc.mock.calls[0] as [string]).at(0)).toBe("eng_write_lesson_note_v2");
+    await createSupabaseTutorWorkStore().writeSessionNote({ ...noteArgs([]), taughtUnits: [{ curriculum_id: "c0000000-0000-4000-8000-0000000000c1", unit_code: "U13" }] });
+    const [name, params] = rpc.mock.calls[1] as [string, Record<string, unknown>];
+    expect(name).toBe("eng_write_lesson_note_v3");
+    expect(params.p_taught_units).toEqual([{ curriculum_id: "c0000000-0000-4000-8000-0000000000c1", unit_code: "U13" }]);
+  });
   it("offline attempt: p_backdate_reason is left out without a reason, sent with one", async () => {
     await createSupabaseReviewStore().recordOffline(offlineArgs(null));
     expect(Object.keys((rpc.mock.calls[0] as [string, Record<string, unknown>])[1])).not.toContain("p_backdate_reason");

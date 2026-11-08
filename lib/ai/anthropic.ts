@@ -2,7 +2,7 @@
 import "server-only";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { AI_FAKE_FIXTURE, aiFake } from "./config";
+import { aiFake, fakeFixtureFor } from "./config";
 import { AiCallError, postToolCall, type CallOptions, type ToolCall, type ToolResult } from "./request";
 
 /**
@@ -12,7 +12,7 @@ import { AiCallError, postToolCall, type CallOptions, type ToolCall, type ToolRe
 export function createToolCaller(env: Record<string, string | undefined> = process.env): (c: ToolCall, o?: CallOptions) => Promise<ToolResult> {
   if (aiFake(env)) {
     return async (c) => ({
-      input: JSON.parse(readFileSync(path.join(process.cwd(), AI_FAKE_FIXTURE), "utf8")) as unknown,
+      input: JSON.parse(readFileSync(path.join(process.cwd(), fakeFixtureFor(c.tool.name)), "utf8")) as unknown,
       usage: { inputTokens: 1000, outputTokens: 500 },
       model: c.model,
     });

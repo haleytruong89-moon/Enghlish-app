@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { assignPage, fallbackLabels, home, inquiriesPage, learnerWithTrack, levelCopy, notesPage, purgePage, readingPage, revisionReviewCopy, sourceLabels, studioCopy, targetsPage, todayPage, tutorHonorific, weakPage } from "@/lib/copy/vi";
+import { assignPage, fallbackLabels, home, inquiriesPage, learnerWithTrack, levelCopy, notesPage, purgePage, readingPage, revisionReviewCopy, sourceLabels, curriculumCopy, studioCopy, targetsPage, todayPage, tutorHonorific, weakPage } from "@/lib/copy/vi";
 import { safeColor, type LearnerSummary } from "@/lib/home/visible";
 import { todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi } from "@/lib/inquiries/format";
@@ -222,6 +222,9 @@ export function LearnerCard({
         </Link>
         <Link href={`/studio/new?learner=${learner.id}`} data-testid={`studio-link-${learner.id}`} className={linkClass}>
           {studioCopy.navLink}
+        </Link>
+        <Link href={`/learners/${learner.id}/curricula`} data-testid={`curricula-link-${learner.id}`} className={linkClass}>
+          {curriculumCopy.navLink}
         </Link>
         <Link href={`/learners/${learner.id}/targets`} className={linkClass}>
           {targetsPage.link}

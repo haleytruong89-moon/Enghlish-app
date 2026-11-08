@@ -27,7 +27,9 @@ const SCORE = /\d+\s*\/\s*\d+|%/;
 test("the parent turns AI on (one ai_text consent per child)", async ({ page }) => {
   await loginAs(page, "parent");
   await page.goto("/settings/ai");
-  await page.getByTestId("ai-enable").click();
+  // curriculum.spec (W2) may already have turned AI on in an earlier project: only click when it is still off.
+  await expect(page.getByTestId("ai-enable").or(page.getByTestId("ai-disable"))).toBeVisible();
+  if (await page.getByTestId("ai-enable").isVisible()) await page.getByTestId("ai-enable").click();
   await expect(page.getByTestId("ai-state")).toHaveText(aiSettingsCopy.on);
   expect((await q("select 1 from english.consents where scope = 'ai_text' and granted and learner_id = $1", [NGUYEN])).length).toBeGreaterThan(0);
 });

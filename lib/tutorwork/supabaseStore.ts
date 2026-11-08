@@ -91,6 +91,25 @@ export function createSupabaseTutorWorkStore(): TutorWorkStore {
     },
 
     async writeSessionNote(a) {
+      // W2: units taught today → v3 (0026). Without units the v2 call is unchanged, so the code also runs before 0026 is applied.
+      if (a.taughtUnits && a.taughtUnits.length > 0) {
+        const { data, error } = await db().rpc("eng_write_lesson_note_v3", {
+          p_learner: a.learnerId,
+          p_session_date: a.sessionDate,
+          p_studied: a.studied,
+          p_weak_tags: a.weakTags,
+          p_message: a.message,
+          p_note_for_parent: a.noteForParent,
+          p_rechecks: a.rechecks,
+          p_supersedes: a.supersedes,
+          p_by: a.byMemberId,
+          p_client_id: a.clientId,
+          p_practised_target_ids: a.practisedTargetIds,
+          p_taught_units: a.taughtUnits,
+        });
+        if (error) dbError("eng_write_lesson_note_v3", error);
+        return data;
+      }
       const { data, error } = await db().rpc("eng_write_lesson_note_v2", {
         p_learner: a.learnerId,
         p_session_date: a.sessionDate,
