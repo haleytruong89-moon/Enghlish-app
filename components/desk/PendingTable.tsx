@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { pendingCopy, reviewPage } from "@/lib/copy/vi";
-import { PENDING_GROUPS, pendingView, type PendingGroup, type PendingRow } from "@/lib/desk/pending";
+import { PENDING_GROUPS, type PendingGroup, type PendingRow } from "@/lib/desk/pending";
 import { todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi } from "@/lib/inquiries/format";
 
