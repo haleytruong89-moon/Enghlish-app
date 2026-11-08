@@ -5,7 +5,8 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: 
 vi.mock("next/link", () => ({ default: (p: { href: string; children: React.ReactNode }) => createElement("a", { href: p.href }, p.children) }));
 import { CurriculumCard } from "@/components/curriculum/CurriculumCard";
 import { curriculumCopy } from "@/lib/copy/vi";
-import { buildCards } from "@/lib/curriculum/shape";
+import { buildCards, taughtChoices } from "@/lib/curriculum/shape";
+import { TaughtUnitsPicker } from "@/components/curriculum/TaughtUnitsPicker";
 import { MapTable } from "@/components/curriculum/MapTable";
 
 const L = "b0000000-0000-4000-8000-000000000001";
@@ -37,5 +38,12 @@ describe("Giáo trình screens", () => {
       labelOf: { "bi-dong-nho-tuong-thuat": "Bị động, nhờ ai làm, tường thuật" },
     }));
     expect(html).toContain("Bị động, nhờ ai làm, tường thuật");
+  });
+  it("the session chooser offers the current unit and the next one as chips, the rest in a select (skipped U3 not offered)", () => {
+    const html = renderToStaticMarkup(createElement(TaughtUnitsPicker, { choices: taughtChoices([card]), value: [], onChange: () => undefined }));
+    expect(html).toContain(`data-testid="taught-${C}-U13"`);
+    expect(html).toContain(`data-testid="taught-${C}-U14"`);
+    expect(html).not.toContain(`data-testid="taught-${C}-U12"`);
+    expect(html).not.toContain(">U3 · Unit 3<");
   });
 });

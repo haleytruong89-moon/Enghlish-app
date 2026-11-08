@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
-import { fallbackLabels, sessionNotePage } from "@/lib/copy/vi";
+import { curriculumCopy, fallbackLabels, sessionNotePage } from "@/lib/copy/vi";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { firstTab, groupTargets } from "@/lib/skillmap/group";
 import type { SkillMapView } from "@/lib/skillmap/types";
@@ -22,6 +22,10 @@ import {
 } from "@/lib/tutorwork/types";
 import { placeOfTag } from "@/lib/skillmap/group";
 import { applySameAsLast } from "@/lib/tutorwork/sameAsLast";
+import { TaughtUnitsPicker } from "@/components/curriculum/TaughtUnitsPicker";
+import { UnitProposal } from "@/components/curriculum/UnitProposal";
+import type { TaughtUnit } from "@/lib/curriculum/schema";
+import type { TaughtChoice } from "@/lib/curriculum/shape";
 import { DomainTabs } from "./DomainTabs";
 import { PractisedChosen } from "./PractisedChosen";
 import { TagChips } from "./TagChips";
@@ -40,6 +44,7 @@ export function SessionNoteForm({
   today,
   minDate,
   map,
+  taughtChoices = [],
 }: {
   learnerId: string;
   tags: TagInfo[];
@@ -51,6 +56,8 @@ export function SessionNoteForm({
   minDate: string;
   /** The skill map of this learner (SM-1): skills and tags are picked by domain. */
   map: SkillMapView;
+  /** W2: approved curricula of the child for "Unit đã dạy hôm nay" (empty before 0026 or when none is approved). */
+  taughtChoices?: TaughtChoice[];
 }) {
   const router = useRouter();
   const { tags, add, setGroup } = useTags(learnerId, initialTags);
@@ -65,6 +72,8 @@ export function SessionNoteForm({
   const skillBuckets = useMemo(() => groupTargets(map, skills), [map, skills]);
   const [skillTab, setSkillTab] = useState<string>(() => firstTab(skillBuckets));
   const [saved, setSaved] = useState(false);
+  const [taught, setTaught] = useState<TaughtUnit[]>([]);
+  const [savedId, setSavedId] = useState<string | null>(null);
   const [sameNote, setSameNote] = useState<{ practised: string; weak: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const clientId = useRef<string>(crypto.randomUUID());
@@ -94,7 +103,7 @@ export function SessionNoteForm({
     e.preventDefault();
     setError(null);
     const answered = Object.entries(rechecks).flatMap(([tag_key, result]) => (result ? [{ tag_key, result }] : []));
-    if (!studied.trim() && weak.length === 0 && practised.length === 0 && !message.trim() && !parentNote.trim() && answered.length === 0) return setError(sessionNotePage.empty);
+    if (!studied.trim() && weak.length === 0 && practised.length === 0 && !message.trim() && !parentNote.trim() && answered.length === 0 && taught.length === 0) return setError(sessionNotePage.empty);
     if (answered.some((a) => a.result === "ok" && weak.includes(a.tag_key))) return setError(sessionNotePage.recheckConflict);
     setBusy(true);
     const r = await postJson<{ id: string }>(`/api/learners/${learnerId}/session-notes`, {
@@ -106,9 +115,11 @@ export function SessionNoteForm({
       ...(message.trim() ? { message: message.trim() } : {}),
       ...(parentNote.trim() ? { note_for_parent: parentNote.trim() } : {}),
       rechecks: answered,
+      ...(taught.length > 0 ? { taught_units: taught } : {}),
     });
     setBusy(false);
     if (!r.ok) return setError(failText(r));
+    setSavedId(r.body.id);
     setSaved(true);
     router.refresh();
   }
@@ -155,6 +166,14 @@ export function SessionNoteForm({
             className={`min-h-11 max-w-56 ${field}`}
           />
         </label>
+
+        {taughtChoices.length > 0 ? (
+          <div className="flex flex-col gap-1">
+            <h2 className="text-base font-semibold">{curriculumCopy.taughtTitle}</h2>
+            <p className="text-sm text-muted">{curriculumCopy.taughtHelp}</p>
+            <TaughtUnitsPicker choices={taughtChoices} value={taught} onChange={setTaught} disabled={saved} />
+          </div>
+        ) : null}
 
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-muted">{sessionNotePage.studied}</span>
@@ -276,6 +295,8 @@ export function SessionNoteForm({
             </Link>
           </div>
         ) : null}
+
+        {saved && savedId ? <UnitProposal choices={taughtChoices} taught={taught} lessonNoteId={savedId} /> : null}
 
         <section className="flex flex-col gap-3 rounded-xl border border-line bg-white p-4" data-testid="recheck-panel">
           <h2 className="text-base font-semibold">{sessionNotePage.recheckTitle}</h2>

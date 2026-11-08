@@ -11,6 +11,7 @@ import { apiErrors } from "@/lib/copy/vi";
 import { fromDbError, ReviewDbError, type HandlerResult } from "@/lib/review/handlers";
 import { addTagBodySchema, resultBodySchema, sessionNoteBodySchema, setTagGroupBodySchema, tagItemsBodySchema, writingTagsBodySchema } from "./schemas";
 import { customTagKey } from "./frameScore";
+import type { TaughtUnit } from "@/lib/curriculum/schema";
 
 export interface TutorWorkStore {
   /** Which learner a result / episode belongs to (service role, read-only), or null. */
@@ -51,6 +52,8 @@ export interface TutorWorkStore {
     supersedes: string | null;
     byMemberId: string;
     clientId: string;
+    /** W2 (0026): sent only when not empty (then eng_write_lesson_note_v3 is called). */
+    taughtUnits?: TaughtUnit[];
   }): Promise<unknown>;
 }
 
@@ -227,6 +230,7 @@ export async function handleWriteSessionNote(deps: TutorWorkDeps, learnerId: str
       supersedes: b.supersedes_id ?? null,
       byMemberId: g.grant.member.id,
       clientId: b.client_id,
+      taughtUnits: b.taught_units,
     })) as { id: string; replayed: boolean };
     return {
       status: r.replayed ? 200 : 201,
