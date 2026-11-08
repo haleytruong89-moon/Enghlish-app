@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
-import { levelCopy, resultPage, studentReviewCopy, sessionNotePage, tagPicker, todayPage, weakPage } from "@/lib/copy/vi";
+import { levelCopy, resultPage, studentReviewCopy, sessionNotePage, tagPicker, todayPage, weakPage, deskCopy } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { LEARNER_IDS, loginAs } from "./helpers";
@@ -19,7 +19,7 @@ async function notFound(page: Page, target: string) {
 test.describe.serial("S5b-1 tutor work", () => {
   test("the tutor's home is 'Hôm nay' with the two main actions for the child", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
-    await expect(page.getByRole("heading", { level: 1, name: new RegExp(`^${todayPage.titlePrefix}`) })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: new RegExp(`^${deskCopy.titlePrefix}`) })).toBeVisible();
     await expect(page.getByTestId(`action-note-${NG}`)).toContainText(todayPage.noteAction);
     await expect(page.getByTestId(`action-result-${NG}`)).toContainText(todayPage.resultAction);
     await expect(page.getByTestId(`attention-${NG}`)).toBeVisible();

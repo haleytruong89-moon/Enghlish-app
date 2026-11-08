@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { app, auth, home, learnerWithTrack, todayPage } from "@/lib/copy/vi";
-import { loginAs, type AccountKey } from "./helpers";
+import { app, auth, deskCopy, home, learnerWithTrack } from "@/lib/copy/vi";
+import { LEARNER_IDS, loginAs, type AccountKey } from "./helpers";
 
 const AN = "An (thử)";
 const NGUYEN = "Nguyên (thử)";
@@ -8,10 +8,10 @@ const NGUYEN = "Nguyên (thử)";
 test.describe("each account lands on the right home", () => {
   test("parent sees both learners with their track label", async ({ page }) => {
     await loginAs(page, "parent");
-    await expect(page.getByRole("heading", { level: 1, name: new RegExp(`^${todayPage.titlePrefix}`) })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: new RegExp(`^${deskCopy.titlePrefix}`) })).toBeVisible();
     await expect(page.getByText(home.parentSummary(2))).toBeVisible();
-    await expect(page.getByText(learnerWithTrack(AN, "A"))).toBeVisible();
-    await expect(page.getByText(learnerWithTrack(NGUYEN, "B"))).toBeVisible();
+    await expect(page.getByTestId(`learner-option-${LEARNER_IDS.an}`)).toContainText(learnerWithTrack(AN, "A"));
+    await expect(page.getByTestId(`learner-option-${LEARNER_IDS.nguyen}`)).toContainText(learnerWithTrack(NGUYEN, "B"));
     await expect(page.getByText(app.testBadge)).toBeVisible();
   });
 
@@ -22,9 +22,9 @@ test.describe("each account lands on the right home", () => {
   for (const t of tutors) {
     test(`${t.key} sees only their own learner`, async ({ page }) => {
       await loginAs(page, t.key);
-      await expect(page.getByRole("heading", { level: 1, name: new RegExp(`^${todayPage.titlePrefix}`) })).toBeVisible();
-      await expect(page.getByText(learnerWithTrack(t.own, t.ownTrack))).toBeVisible();
-      await expect(page.getByRole("listitem")).toHaveCount(1);
+      await expect(page.getByRole("heading", { level: 1, name: new RegExp(`^${deskCopy.titlePrefix}`) })).toBeVisible();
+      await expect(page.getByTestId("learner-switcher")).toHaveCount(0);
+      await expect(page.getByTestId("shell-learner")).toContainText(learnerWithTrack(t.own, t.ownTrack));
       await expect(page.getByText(t.other)).toHaveCount(0);
     });
   }

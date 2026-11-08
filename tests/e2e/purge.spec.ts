@@ -31,7 +31,8 @@ test.describe("S5c purge screen", () => {
     const usersBefore = await authUsers();
 
     await loginAs(page, "parent");
-    await page.getByTestId(`delete-link-${t.learnerId}`).click();
+    await page.goto(`/?learner=${t.learnerId}`);
+    await page.getByTestId("nav-delete").click();
     await expect(page).toHaveURL(new RegExp(`/learners/${t.learnerId}/delete$`));
     await expect(page.getByRole("heading", { level: 1, name: purgePage.title(t.alias) })).toBeVisible();
     // the dry run: the one result and the one lesson note of the throwaway learner are listed, nothing deleted yet
@@ -72,7 +73,7 @@ test.describe("S5c purge screen", () => {
       await loginAs(page, "tutorAn");
       expect((await page.goto(`/learners/${t.learnerId}/delete`))?.status()).toBe(404);
       expect((await page.request.post(`/api/learners/${t.learnerId}/purge`, { data: { confirm_name: t.alias }, headers: same })).status()).toBe(404);
-      await expect(page.getByTestId(`delete-link-${TEST_LEARNER_AN_ID}`)).toHaveCount(0); // no link on a tutor's card
+      await expect(page.getByTestId("nav-delete")).toHaveCount(0); // no parent group for a tutor
       await page.context().clearCookies();
       await loginAs(page, "studentAn");
       expect((await page.goto(`/learners/${TEST_LEARNER_AN_ID}/delete`))?.status()).toBe(404);
