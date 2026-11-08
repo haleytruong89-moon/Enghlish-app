@@ -152,6 +152,19 @@ describe("level 1, level 4, never lowering, dedup, hold", () => {
     expect(newer.auto).toBe("DEVELOPING");
   });
 
+  it("S6: the hold after a hand-set level looks at counted answers only: a lesson note or a helped practice does not lift it, a new counted answer does", () => {
+    const key = computePointLevel(base({})).evidenceKey;
+    const manual = dec("MANUAL", "DEVELOPING", "SUPPORTED", { evidenceKey: key });
+    expect(computePointLevel(base({ taughtUnit: true, decisions: [manual] })).evidenceKey).toBe(key);
+    expect(computePointLevel(base({ supportedCorrect: 2, supportedAttempted: 2, decisions: [manual] })).evidenceKey).toBe(key);
+    const lifted = computePointLevel(base({ supportedCorrect: 2, supportedAttempted: 2, taughtUnit: true, decisions: [manual] }));
+    expect(lifted.currentState).toBe("SUPPORTED");
+    expect(lifted.auto).toBeNull();
+    const withNew = computePointLevel(base({ counted: [q("2026-10-02", true, "A", "A:9")], decisions: [manual] }));
+    expect(withNew.evidenceKey).not.toBe(key);
+    expect(withNew.auto).toBe("DEVELOPING");
+  });
+
   it("⚑ is raised once per evidence, never below level 3, never when one is open", () => {
     const confirmed = dec("CONFIRMED", "DEVELOPING", "INDEPENDENT", { respondsTo: "p0" });
     const bad = [q("2026-12-01", false, "A", "A:1"), q("2026-12-02", false, "A", "A:2"), q("2026-12-03", true, "A", "A:3")];

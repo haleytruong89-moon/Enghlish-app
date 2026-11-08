@@ -61,7 +61,8 @@ export function computePointLevel(input: PointEngineInput): PointEngineResult {
   const refOf = (c: CountedQuestion) => c.ref;
   const proposeKey = level >= 3 ? evidenceKeyOf(counted.map(refOf)) : null;
   // The evidence only (never the book): a MANUAL row stores the key the tutor was looking at, so it must not change when that row is written (B2).
-  const evidenceKey = evidenceKeyOf([...input.counted.map(refOf), `sc:${input.supportedCorrect}`, `sa:${input.supportedAttempted}`, `tu:${input.taughtUnit}`]);
+  // Counted answers ONLY (no help counters, no taught-Unit flag): a lesson note or a helped practice must not lift a "Hạ mức" hold; a new counted answer does.
+  const evidenceKey = evidenceKeyOf(input.counted.map(refOf));
   const held = proj.manualKey !== null && proj.manualKey === evidenceKey;
 
   const autoLevel = Math.min(evidenceLevel, 2);
