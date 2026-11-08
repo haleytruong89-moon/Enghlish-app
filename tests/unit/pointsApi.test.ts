@@ -50,6 +50,7 @@ const INBOX = {
 const pointStore = (over: Partial<PointStore> = {}) =>
   ({
     getDecisionLearnerId: vi.fn(async (id: string) => (id === DEC ? NGUYEN : null)),
+    getDecisionTag: vi.fn(async () => "cum-dong-tu"),
     map: vi.fn(async (): Promise<unknown> => ({ learner_id: NGUYEN, policy_version: "PP-0.1", points: [] })),
     inbox: vi.fn(async (): Promise<unknown> => INBOX),
     decide: vi.fn(async (): Promise<unknown> => ({ id: "c1", tag_key: "cum-dong-tu", replayed: false })),
@@ -76,7 +77,7 @@ describe("point decisions", () => {
     const e = pointEngine();
     const r = await handleDecidePoint(pdeps("tutorNguyen", s, e), DEC, confirm);
     expect(r).toEqual({ status: 201, body: { id: "c1", replayed: false } });
-    expect(s.decide).toHaveBeenCalledWith({ decisionId: DEC, action: "confirm", reason: null, byMemberId: "m-tutorNguyen", clientId: "point-0001" });
+    expect(s.decide).toHaveBeenCalledWith({ decisionId: DEC, action: "confirm", reason: null, byMemberId: "m-tutorNguyen", clientId: "point-0001", evidenceKey: null });
     expect(e.loadInputs).toHaveBeenCalledWith(NGUYEN, ["cum-dong-tu"]);
     expect((await handleDecidePoint(pdeps("parent"), DEC, confirm)).status).toBe(403);
     expect((await handleDecidePoint(pdeps("tutorAn"), DEC, confirm)).status).toBe(404);
@@ -94,6 +95,14 @@ describe("point decisions", () => {
     const d = pdeps("tutorNguyen", pointStore(), broken);
     expect((await handleDecidePoint(d, DEC, confirm)).status).toBe(201);
     expect(d.log).toHaveBeenCalled();
+  });
+  it("'Hạ mức' (lower) needs a reason, is for the child's tutor only, and passes the evidence key the tutor is looking at", async () => {
+    expect((await handleDecidePoint(pdeps("tutorNguyen"), DEC, { client_id: "point-0009", action: "lower" })).body).toMatchObject({ error: "skill_reason_required" });
+    expect((await handleDecidePoint(pdeps("parent"), DEC, { client_id: "point-0009", action: "lower", reason: "sai lại hai lần" })).status).toBe(403);
+    const store = pointStore();
+    const r = await handleDecidePoint(pdeps("tutorNguyen", store), DEC, { client_id: "point-0009", action: "lower", reason: "sai lại hai lần" });
+    expect(r.status).toBe(201);
+    expect(store.decide).toHaveBeenCalledWith(expect.objectContaining({ action: "lower", reason: "sai lại hai lần" }));
   });
   it("database tags become friendly answers", async () => {
     const err = (code: string, tag: string) => pointStore({ decide: vi.fn(async () => Promise.reject(new ReviewDbError(code, `eng_decide_point: x (${tag})`))) });

@@ -7,7 +7,7 @@ import { AccessError, requireAccess, requireStaff, type AccessDeps, type AccessG
 import { apiErrors } from "@/lib/copy/vi";
 import { allowRealLearners } from "@/lib/env";
 import { isMissingFunction } from "@/lib/engine/runner";
-import { rebuildPoints, recomputePoints, type PointEngineStore } from "@/lib/engine/points/runner";
+import { pointEvidenceKeyFor, rebuildPoints, recomputePoints, type PointEngineStore } from "@/lib/engine/points/runner";
 import { fromDbError, ReviewDbError, type HandlerResult } from "@/lib/review/handlers";
 import { decidePointBodySchema } from "./schemas";
 import { parsePointInbox, parsePointMap } from "./shape";
@@ -15,11 +15,13 @@ import { parsePointInbox, parsePointMap } from "./shape";
 export interface PointStore {
   /** Which learner a point decision belongs to (service role, read-only), or null. */
   getDecisionLearnerId(decisionId: string): Promise<string | null>;
+  /** The point (error_tags.key) of a decision, or null. */
+  getDecisionTag(decisionId: string): Promise<string | null>;
   /** english.eng_point_map / eng_point_inbox (service role, after requireAccess / requireStaff). */
   map(learnerId: string): Promise<unknown>;
   inbox(a: { byMemberId: string; allowReal: boolean }): Promise<unknown>;
   /** english.eng_decide_point (service role). */
-  decide(a: { decisionId: string; action: "confirm" | "reject"; reason: string | null; byMemberId: string; clientId: string }): Promise<unknown>;
+  decide(a: { decisionId: string; action: "confirm" | "reject" | "lower"; reason: string | null; byMemberId: string; clientId: string; evidenceKey: string | null }): Promise<unknown>;
 }
 
 export type PointDeps = {
@@ -54,6 +56,7 @@ const DB_ANSWERS: { code: string; tag: string; status: FailStatus; error: string
   { code: "23514", tag: "stale_proposal", status: 409, error: "stale_proposal" },
   { code: "22023", tag: "flag_keep_or_edit", status: 400, error: "flag_keep_or_edit" },
   { code: "22023", tag: "not_a_proposal", status: 400, error: "not_a_proposal" },
+  { code: "22023", tag: "not_a_flag", status: 400, error: "not_a_proposal" },
   { code: "22023", tag: "reason_too_long", status: 400, error: "invalid_body" },
   { code: "22023", tag: "bad_action", status: 400, error: "invalid_body" },
 ];
@@ -95,8 +98,14 @@ export async function handleDecidePoint(deps: PointDeps, decisionId: string, raw
   if (!parsed.success) return fail(400, parsed.error.issues.some((i) => i.path[0] === "reason") ? "skill_reason_required" : "invalid_body");
   const b = parsed.data;
   try {
+    // Lowering a level is a hand-set level: remember the evidence the tutor is looking at, so the engine does not lift it again on the same evidence (B2).
+    let evidenceKey: string | null = null;
+    if (b.action === "lower") {
+      const tag = await deps.store.getDecisionTag(decisionId);
+      if (tag) evidenceKey = await pointEvidenceKeyFor(deps.engine, g.grant.learner.id, tag).catch(() => null);
+    }
     const r = (await deps.store.decide({
-      decisionId, action: b.action, reason: b.reason && b.reason.length > 0 ? b.reason : null, byMemberId: g.grant.member.id, clientId: b.client_id,
+      decisionId, action: b.action, reason: b.reason && b.reason.length > 0 ? b.reason : null, byMemberId: g.grant.member.id, clientId: b.client_id, evidenceKey,
     })) as { id: string; tag_key: string; replayed: boolean };
     if (!r.replayed) {
       try {

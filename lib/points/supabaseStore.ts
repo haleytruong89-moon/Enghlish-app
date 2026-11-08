@@ -17,8 +17,13 @@ export function createSupabasePointsStore(): PointStore {
       if (error) throw new ReviewDbError(error.code ?? "unknown", `point_decisions lookup: ${error.message ?? error.code ?? "error"}`);
       return data?.learner_id ?? null;
     },
+    async getDecisionTag(id) {
+      const { data, error } = await createAdminClient().from("point_decisions").select("tag_key").eq("id", id).maybeSingle<{ tag_key: string }>();
+      if (error) throw new ReviewDbError(error.code ?? "unknown", `point_decisions lookup: ${error.message ?? error.code ?? "error"}`);
+      return data?.tag_key ?? null;
+    },
     map: (learnerId) => call("eng_point_map", { p_learner: learnerId }),
     inbox: (a) => call("eng_point_inbox", { p_by: a.byMemberId, p_allow_real: a.allowReal }),
-    decide: (a) => call("eng_decide_point", { p_decision: a.decisionId, p_action: a.action, p_reason: a.reason, p_by: a.byMemberId, p_client_id: a.clientId }),
+    decide: (a) => call("eng_decide_point", { p_decision: a.decisionId, p_action: a.action, p_reason: a.reason, p_by: a.byMemberId, p_client_id: a.clientId, p_evidence_key: a.evidenceKey }),
   };
 }

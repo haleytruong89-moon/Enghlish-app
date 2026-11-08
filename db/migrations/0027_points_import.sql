@@ -478,7 +478,10 @@ grant execute on function english.eng_reset_point_states(uuid, uuid) to service_
 
 -- 6. Gia sư của em trả lời một đề xuất điểm; hộp duyệt; Bản đồ kiến thức -------------------------------------------------------------------
 -- Chỉ gia sư còn quan hệ hiệu lực với em (R1/D15); phụ huynh xem. Từng điểm một (H5): không có hàm "xác nhận tất cả" cho điểm.
-create or replace function english.eng_decide_point(p_decision uuid, p_action text, p_reason text, p_by uuid, p_client_id text) returns jsonb
+-- p_action: confirm (xác nhận đề xuất / "Giữ mức" một ⚑) · reject ("Chưa", cần lý do) · lower (CHỈ cho ⚑: gia sư hạ mức xuống "Đang tiến bộ" bằng một dòng MANUAL
+-- có lý do, trả lời đúng ⚑ đó; p_evidence_key = khóa bằng chứng gia sư đang xem để engine không tự nâng lại cùng bằng chứng, B2). Sổ chỉ thêm; phụ huynh chỉ xem.
+drop function if exists english.eng_decide_point(uuid, text, text, uuid, text);
+create or replace function english.eng_decide_point(p_decision uuid, p_action text, p_reason text, p_by uuid, p_client_id text, p_evidence_key text default null) returns jsonb
 language plpgsql volatile security definer set search_path = ''
 as $$
 declare
@@ -495,8 +498,8 @@ begin
   if p_decision is null or p_action is null or p_by is null or p_client_id is null then
     raise exception 'eng_decide_point: decision, action, actor and client id are required' using errcode = '22004';
   end if;
-  if p_action not in ('confirm', 'reject') then
-    raise exception 'eng_decide_point: action must be confirm or reject (bad_action)' using errcode = '22023';
+  if p_action not in ('confirm', 'reject', 'lower') then
+    raise exception 'eng_decide_point: action must be confirm, reject or lower (bad_action)' using errcode = '22023';
   end if;
   select * into v_d from english.point_decisions d where d.id = p_decision;
   if not found then
@@ -507,7 +510,7 @@ begin
   if v_m.id is null or v_m.role <> 'tutor' or not english.eng_actor_may_manage(p_by, v_d.learner_id) then
     raise exception 'eng_decide_point: only a tutor of this learner confirms a point level (tutor_only)' using errcode = '42501';
   end if;
-  v_kind := case p_action when 'confirm' then 'CONFIRMED' else 'REJECTED' end;
+  v_kind := case p_action when 'confirm' then 'CONFIRMED' when 'lower' then 'MANUAL' else 'REJECTED' end;
 
   select * into v_prev from english.point_decisions a where a.responds_to = p_decision;
   if found then
@@ -520,13 +523,19 @@ begin
     raise exception 'eng_decide_point: only a proposal or a flag can be answered (not_a_proposal)' using errcode = '22023';
   end if;
   if v_d.kind = 'FLAG' and p_action = 'reject' then
-    raise exception 'eng_decide_point: a flag is kept ("Giữ mức"), never rejected (flag_keep_or_edit)' using errcode = '22023';
+    raise exception 'eng_decide_point: a flag is kept ("Giữ mức") or lowered ("Hạ mức"), never rejected (flag_keep_or_edit)' using errcode = '22023';
+  end if;
+  if p_action = 'lower' and v_d.kind <> 'FLAG' then
+    raise exception 'eng_decide_point: only a flag can be answered by lowering the level (not_a_flag)' using errcode = '22023';
+  end if;
+  if p_evidence_key is not null and p_evidence_key !~ '^[0-9]{1,6}-[0-9a-f]{16}$' then
+    raise exception 'eng_decide_point: the evidence key is malformed (bad_results)' using errcode = '22023';
   end if;
   if v_reason is not null and pg_catalog.length(v_reason) > 300 then
     raise exception 'eng_decide_point: the reason is too long (reason_too_long)' using errcode = '22023';
   end if;
-  if p_action = 'reject' and (v_reason is null or pg_catalog.length(v_reason) < 3) then
-    raise exception 'eng_decide_point: "Chưa" needs a reason (reason_required)' using errcode = '23514';
+  if p_action in ('reject', 'lower') and (v_reason is null or pg_catalog.length(v_reason) < 3) then
+    raise exception 'eng_decide_point: this answer needs a reason (reason_required)' using errcode = '23514';
   end if;
 
   perform english.eng_project_point_state(v_d.learner_id, v_d.tag_key);
@@ -534,16 +543,23 @@ begin
   if v_d.kind = 'PROPOSED' and p_action = 'confirm' and v_d.to_state = 'TRANSFERABLE' and v_cur.state <> 'INDEPENDENT' then
     raise exception 'eng_decide_point: the level changed since this proposal; reload the page (stale_proposal)' using errcode = '23514';
   end if;
-  v_to := case when v_d.kind = 'PROPOSED' and p_action = 'confirm' then v_d.to_state else v_cur.state end;
-  insert into english.point_decisions(learner_id, tag_key, kind, from_state, to_state, conditions, evidence_item_refs, policy_version,
+  if p_action = 'lower' then
+    if english.eng_point_level(v_cur.state) < 3 then
+      raise exception 'eng_decide_point: the level changed since this flag; reload the page (stale_proposal)' using errcode = '23514';
+    end if;
+    v_to := 'DEVELOPING';
+  else
+    v_to := case when v_d.kind = 'PROPOSED' and p_action = 'confirm' then v_d.to_state else v_cur.state end;
+  end if;
+  insert into english.point_decisions(learner_id, tag_key, kind, from_state, to_state, conditions, evidence_item_refs, evidence_key, policy_version,
                                       decided_by_member, decided_role, reason, responds_to, client_id)
-  values (v_d.learner_id, v_d.tag_key, v_kind, v_cur.state, v_to, v_d.conditions, v_d.evidence_item_refs,
+  values (v_d.learner_id, v_d.tag_key, v_kind, v_cur.state, v_to, v_d.conditions, v_d.evidence_item_refs, case when p_action = 'lower' then p_evidence_key end,
           coalesce(english.eng_point_policy(), v_d.policy_version), p_by, 'tutor', v_reason, p_decision, p_client_id)
   returning id into v_id;
   perform english.eng_project_point_state(v_d.learner_id, v_d.tag_key);
 
   insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
-  values (v_m.user_id, v_m.role, case v_kind when 'CONFIRMED' then 'point.confirmed' else 'point.rejected' end, v_l.family_id, v_d.learner_id,
+  values (v_m.user_id, v_m.role, case v_kind when 'CONFIRMED' then 'point.confirmed' when 'MANUAL' then 'point.lowered' else 'point.rejected' end, v_l.family_id, v_d.learner_id,
           pg_catalog.jsonb_build_object('decision', v_id, 'responds_to', p_decision, 'tag_key', v_d.tag_key, 'answered', v_d.kind, 'to_state', v_to));
   return pg_catalog.jsonb_build_object('id', v_id, 'tag_key', v_d.tag_key, 'replayed', false);
 end
@@ -682,8 +698,8 @@ begin
 end
 $$;
 
-revoke execute on function english.eng_decide_point(uuid, text, text, uuid, text) from public, anon, authenticated;
-grant execute on function english.eng_decide_point(uuid, text, text, uuid, text) to service_role;
+revoke execute on function english.eng_decide_point(uuid, text, text, uuid, text, text) from public, anon, authenticated;
+grant execute on function english.eng_decide_point(uuid, text, text, uuid, text, text) to service_role;
 revoke execute on function english.eng_point_inbox(uuid, boolean) from public, anon, authenticated;
 grant execute on function english.eng_point_inbox(uuid, boolean) to service_role;
 revoke execute on function english.eng_point_map(uuid) from public, anon, authenticated;

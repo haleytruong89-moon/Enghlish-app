@@ -301,6 +301,29 @@ describe("W3 points + import (migration 0027)", () => {
       expect(await apply([row("thanh-ngu", { propose: "INDEPENDENT", propose_key: ek(8) })], L)).toMatchObject({ proposed: 0 });
       expect((await inbox(M().tutorNguyen)).items.filter((i) => i.learner_id === L)).toHaveLength(0);
     });
+    it("a tutor can LOWER a ⚑ level by hand (MANUAL row with a reason, append-only); the parent and a non-flag cannot; the engine does not lift it again on the same evidence", async () => {
+      const L = (await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1,'Em thử hạ','B',true,'active') returning id", [s.familyId]))[0]!.id;
+      await q1("insert into english.relationships(member_id, learner_id, relation) values ($1,$2,'tutor')", [M().tutorNguyen, L]);
+      const tag = "cum-dong-tu";
+      await apply([row(tag, { auto: "DEVELOPING", propose: "INDEPENDENT", propose_key: ek(7) })], L);
+      const prop = (await q1<{ id: string }>("select id from english.point_decisions where learner_id=$1 and kind='PROPOSED'", [L]))[0]!.id;
+      await svc("select english.eng_decide_point($1,'confirm',null,$2,$3) as r", [prop, M().tutorNguyen, randomUUID()]);
+      await apply([row(tag, { raise_flag: true, flag_key: ek(6), evidence_key: ek(2) })], L);
+      const flag = (await q1<{ id: string }>("select id from english.point_decisions where learner_id=$1 and kind='FLAG'", [L]))[0]!.id;
+      const lower = (id: string, by: string, reason: string | null = "Sai lại hai lần ở bài ôn") =>
+        svc<{ id: string; replayed: boolean }>("select english.eng_decide_point($1,'lower',$2,$3,$4,$5) as r", [id, reason, by, randomUUID(), ek(2)]);
+      await fail(lower(flag, M().parent), "42501", /\(tutor_only\)/);
+      await fail(lower(flag, M().tutorNguyen, null), "23514", /\(reason_required\)/);
+      await fail(lower(prop, M().tutorNguyen), "23505", /\(already_answered\)/); // answered already
+      await lower(flag, M().tutorNguyen);
+      const st = (await q1<{ state: string; flag_decision_id: string | null }>("select state, flag_decision_id from english.point_state where learner_id=$1 and tag_key=$2", [L, tag]))[0]!;
+      expect(st).toEqual({ state: "DEVELOPING", flag_decision_id: null });
+      const m = (await q1<{ kind: string; reason: string; responds_to: string; from_state: string; to_state: string }>("select kind, reason, responds_to, from_state, to_state from english.point_decisions where learner_id=$1 and kind='MANUAL'", [L]))[0]!;
+      expect(m).toEqual({ kind: "MANUAL", reason: "Sai lại hai lần ở bài ôn", responds_to: flag, from_state: "INDEPENDENT", to_state: "DEVELOPING" });
+      // the same evidence does not lift it back
+      expect(await apply([row(tag, { auto: "DEVELOPING", evidence_key: ek(2) })], L)).toMatchObject({ auto: 0 });
+      await fail(db.client.query("update english.point_decisions set reason='x y z' where learner_id=$1 and kind='MANUAL'", [L]), "42501");
+    });
     it("the map lists every point with evidence by question (right / wrong / with help) and the level, without raw scores", async () => {
       const [, , , t4] = await seedTags();
       await importWork({ results: "cic", tags: [t4!], day: "2026-10-26", title: "Task 6 map" });

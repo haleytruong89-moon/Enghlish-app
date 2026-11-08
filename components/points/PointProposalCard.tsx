@@ -19,6 +19,7 @@ const button = "min-h-11 rounded-lg px-4 text-sm font-semibold disabled:opacity-
 export function PointProposalCard({ item }: { item: PointInboxItem }) {
   const router = useRouter();
   const [rejecting, setRejecting] = useState(false);
+  const [lowering, setLowering] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -26,11 +27,11 @@ export function PointProposalCard({ item }: { item: PointInboxItem }) {
   const flag = item.kind === "FLAG";
   const msgId = `point-msg-${item.id}`;
 
-  async function send(action: "confirm" | "reject") {
+  async function send(action: "confirm" | "reject" | "lower") {
     setMsg(null);
-    if (action === "reject" && reason.trim().length < POINT_REASON_MIN) return setMsg(pointStateCopy.reasonRequired);
+    if (action !== "confirm" && reason.trim().length < POINT_REASON_MIN) return setMsg(pointStateCopy.reasonRequired);
     setBusy(true);
-    const r = await postJson(`/api/review/points/${item.id}`, { client_id: clientId, action, ...(action === "reject" ? { reason: reason.trim() } : {}) });
+    const r = await postJson(`/api/review/points/${item.id}`, { client_id: clientId, action, ...(action !== "confirm" ? { reason: reason.trim() } : {}) });
     setBusy(false);
     setClientId(clientIdAfter(r, clientId));
     if (!r.ok) return setMsg(failText(r));
@@ -73,10 +74,37 @@ export function PointProposalCard({ item }: { item: PointInboxItem }) {
         <p className="mt-3 inline-block rounded-full border border-line px-3 py-1 text-xs" data-testid="point-waiting">
           {pointStateCopy.waitingTutor}
         </p>
+      ) : flag && lowering ? (
+        <div className="mt-3 flex flex-col gap-2">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-muted">{pointStateCopy.lowerReason}</span>
+            <textarea
+              data-testid="point-lower-reason"
+              value={reason}
+              maxLength={POINT_REASON_MAX}
+              rows={2}
+              placeholder={pointStateCopy.lowerHint}
+              aria-describedby={describedBy(msg && msgId)}
+              onChange={(e) => setReason(e.target.value)}
+              className="rounded-lg border border-line bg-white px-3 py-2"
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={busy} onClick={() => send("lower")} data-testid="point-lower-send" className={`${button} bg-accent text-white`}>
+              {busy ? pointStateCopy.saving : pointStateCopy.rejectSend}
+            </button>
+            <button type="button" onClick={() => setLowering(false)} className={`${button} border border-line`}>
+              {pointStateCopy.cancel}
+            </button>
+          </div>
+        </div>
       ) : flag ? (
         <div className="mt-3 flex flex-wrap gap-2">
           <button type="button" disabled={busy} onClick={() => send("confirm")} data-testid="point-keep" aria-describedby={describedBy(msg && msgId)} className={`${button} bg-accent text-white`}>
             {busy ? pointStateCopy.saving : pointStateCopy.keep}
+          </button>
+          <button type="button" onClick={() => setLowering(true)} data-testid="point-lower-open" className={`${button} border border-accent text-accent`}>
+            {pointStateCopy.lower}
           </button>
         </div>
       ) : rejecting ? (
