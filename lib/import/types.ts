@@ -16,3 +16,11 @@ export type ReadItem = {
   result: ReadResult;
 };
 export type ReadPayload = { items: ReadItem[] };
+
+/** Who helped (DOMAIN §5 "mức hỗ trợ"): stored on the batch and on the imported attempt. */
+export const SUPPORT_LEVELS = ["tu_lam", "tu_lam_chua", "lam_cung_co"] as const;
+export type SupportLevel = (typeof SUPPORT_LEVELS)[number];
+export const IMPORT_STATUSES = ["reading", "ai_failed", "draft", "confirmed", "discarded"] as const;
+export type ImportStatus = (typeof IMPORT_STATUSES)[number];
+/** A read that is still "reading" after this long is treated as failed (the background job died). */
+export const STALE_READING_MS = 6 * 60_000;

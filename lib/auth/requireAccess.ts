@@ -31,6 +31,11 @@ export type Action =
   | "mastery:read" //      skill states, proposals and the skills inbox (S7a) - tutor and parent; never students
   | "mastery:decide" //    confirm / "Chưa" / confirm all / set a level 1–2 by hand (S7a) - the child's tutor only; the database checks it again
   | "mastery:rebuild" //   "Tính lại từ đầu" (S7a) - tutor and parent
+  | "points:read" //       knowledge-point map and proposals (W3) - tutor and parent; never students
+  | "points:decide" //     confirm / "Chưa" a point level 3–4 (W3) - the child's tutor only; the database checks it again
+  | "points:rebuild" //    "Tính lại từ đầu" for points (W3) - tutor and parent
+  | "import:upload" //     upload and read finished paper work (W3) - tutor and parent
+  | "import:confirm" //    confirm the result of imported work (W3) - the child's tutor only; the database checks it again
   | "studio:read" //       Studio drafts and tests of a child (Studio B1) - tutor and parent; never students
   | "studio:write" //      upload, edit, approve, assign a Studio test, decide "Cần thầy/cô xem" items - tutor and parent of the child
   | "curriculum:read" //   curricula, their versions, units and unit statuses (W2) - tutor and parent; never students
@@ -63,6 +68,11 @@ export const ACTIONS_BY_ROLE: Record<Role, readonly Action[]> = {
     "mastery:read",
     "mastery:decide",
     "mastery:rebuild",
+    "points:read",
+    "points:decide",
+    "points:rebuild",
+    "import:upload",
+    "import:confirm",
     "studio:read",
     "studio:write",
     "curriculum:read",
@@ -84,6 +94,9 @@ export const ACTIONS_BY_ROLE: Record<Role, readonly Action[]> = {
     "consent:read",
     "mastery:read",
     "mastery:rebuild",
+    "points:read",
+    "points:rebuild",
+    "import:upload",
     "studio:read",
     "studio:write",
     "curriculum:read",

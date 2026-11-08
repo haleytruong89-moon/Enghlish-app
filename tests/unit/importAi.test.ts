@@ -12,7 +12,7 @@ import { gradeRead, normalizeRead } from "@/lib/import/normalize";
 import { buildReadCall, fillReadPrompt, READ_TOOL_NAME, readAnswersTool } from "@/lib/import/readTool";
 import { aiReadSchema, readPayloadSchema } from "@/lib/import/schema";
 
-const tag = (key: string) => ({ key, label: key, domain: "Ngữ pháp", group: "G", custom: false });
+const tag = (key: string) => ({ key, label: key, domain: "Ngữ pháp", group: "G", custom: false, reading: false });
 const CTX: ReadContext = { tags: ["cum-dong-tu", "thanh-ngu", "bi-dong-nho-tuong-thuat", "dang-tu", "tu-vung-ngu-canh", "modal-suy-doan", "cau-dieu-kien-dao-ngu", "wish-would-rather"].map(tag) };
 const GATE = { familyId: "f", enabled: true, consent: true, spentUsd: 0, monthlyCapUsd: 10, softCapUsd: 8, softReached: false, allowed: true, reason: null, reservationId: "res" };
 const FIXTURE = "tests/fixtures/import/fake-read-answers.json";
