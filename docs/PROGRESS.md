@@ -1165,7 +1165,7 @@ Ghi chú dạy học đọc dòng mới nhất của **từng ô** (không mất
 
 **Trạng thái:** code trên nhánh `feature/w2-curriculum` (dựa trên `feature/w1-notes-feedback`), chờ CI + review Opus + phụ huynh duyệt PR.
 
-**SQL cần phụ huynh áp (theo thứ tự, TRƯỚC khi thử preview hoặc gộp): `0025_workdesk_w1.sql` rồi `0026_curriculum.sql`** (chỉ thêm; 0026 cần 0025). Chưa áp 0026: Ghi buổi vẫn chạy như cũ (không có ô "Unit đã dạy"); trang Giáo trình báo lỗi tải.
+**SQL: `0025_workdesk_w1.sql` và `0026_curriculum.sql` ĐÃ ÁP (08/11, workflow "Apply database migrations"; chạy lại lần 2 không còn gì để áp).** Không sửa hai file này nữa. Chưa áp 0026: Ghi buổi vẫn chạy như cũ (không có ô "Unit đã dạy"); trang Giáo trình báo lỗi tải.
 
 ### Đã làm
 | Việc | Ở đâu |
