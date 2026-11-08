@@ -2,6 +2,12 @@
 /** AI settings read from the environment (no secret here). Pure: tests pass their own env. */
 export const DEFAULT_STUDIO_MODEL = "claude-sonnet-5-5";
 export const AI_FAKE_FIXTURE = "tests/fixtures/studio/fake-extract.json";
+/** AI_FAKE answer per tool name (each AI job has its own forced tool); a tool not listed gets the Studio fixture. */
+export const AI_FAKE_FIXTURES: Record<string, string> = {
+  save_exercise: AI_FAKE_FIXTURE,
+  save_curriculum_toc: "tests/fixtures/curriculum/fake-toc.json",
+};
+export const fakeFixtureFor = (toolName: string): string => AI_FAKE_FIXTURES[toolName] ?? AI_FAKE_FIXTURE;
 /** Version of the short consent text on /settings/ai (consents.notice_version). Change the text → new version. */
 export const AI_NOTICE_VERSION = "ai-studio-v1";
 type Env = Record<string, string | undefined>;
