@@ -40,11 +40,11 @@ describe("W3 points + import (migration 0027)", () => {
   const finishRead = (id: string) => svc("select english.eng_finish_import_read($1,$2::jsonb,null) as r", [id, JSON.stringify({ items: [] })]);
   const updatedAt = async (id: string) => (await q1<{ t: string }>("select updated_at::text as t from english.import_batches where id = $1", [id]))[0]!.t;
   /** results: one char per question: c = correct, i = incorrect, b = blank, p = paper only (out_of_app). tags: tag of every question (cycled). */
-  const buildOf = (results: string, tags: string[]) => {
+  const buildOf = (results: string, tags: string[], partLabel = "A") => {
     const items: unknown[] = []; const keys: unknown[] = []; const meta: unknown[] = []; const res: unknown[] = [];
     [...results].forEach((ch, idx) => {
       const n = idx + 1; const tag = tags[idx % tags.length];
-      meta.push({ n, part: "A", tag_key: tag, reading_skill_key: null, out_of_app: ch === "p" });
+      meta.push({ n, part: partLabel, tag_key: tag, reading_skill_key: null, out_of_app: ch === "p" });
       if (ch === "p") return;
       items.push({ id: `q${n}`, kind: "short", stem: `Câu ${n}`, options: [], target_id: null });
       keys.push({ item_id: `q${n}`, kind: "answer", answer: "x", explanation_vi: null });
@@ -54,11 +54,11 @@ describe("W3 points + import (migration 0027)", () => {
   };
   type Conf = { template_id: string; version: number; attempt_id: string; counted: number; tags: string[]; replayed: boolean };
   /** Whole path: create (by the tutor), AI read finished, confirmed by the tutor. */
-  const importWork = async (o: { results: string; tags: string[]; day?: string; support?: string; learner?: string; title?: string; by?: string }) => {
+  const importWork = async (o: { results: string; tags: string[]; day?: string; support?: string; learner?: string; title?: string; by?: string; part?: string }) => {
     const by = o.by ?? M().tutorNguyen;
     const c = await create(by, { learner: o.learner, day: o.day, support: o.support, title: o.title });
     await finishRead(c.id);
-    const conf = await svc<Conf>("select english.eng_confirm_import($1,$2,$3::jsonb,$4,$5) as r", [c.id, await updatedAt(c.id), JSON.stringify(buildOf(o.results, o.tags)), by, randomUUID()]);
+    const conf = await svc<Conf>("select english.eng_confirm_import($1,$2,$3::jsonb,$4,$5) as r", [c.id, await updatedAt(c.id), JSON.stringify(buildOf(o.results, o.tags, o.part)), by, randomUUID()]);
     return { ...c, ...conf };
   };
   type Pt = { tag_key: string; counted: { ref: string; day: number; correct: boolean; source_id: string }[]; supported_correct: number; supported_attempted: number; taught_unit: boolean; title_vi: string | null; decisions: unknown[] };
@@ -484,6 +484,24 @@ describe("W3 points + import (migration 0027)", () => {
       expect((await list(M().parent)).every((i) => !i.can_confirm)).toBe(true);
       expect(await list(M().tutorAn)).toEqual([]);
       expect((await list(M().tutorNguyen)).map((i) => i.id)).toContain(r.id);
+    });
+  });
+
+  describe("13. after the second Opus review", () => {
+    const freshLearner = async (alias: string) => {
+      const L = (await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1,$2,'B',true,'active') returning id", [s.familyId, alias]))[0]!.id;
+      await q1("insert into english.relationships(member_id, learner_id, relation) values ($1,$2,'tutor')", [M().tutorNguyen, L]);
+      await q1("insert into english.target_sets(learner_id, definition_id, assigned_by) select $1, definition_id, assigned_by from english.target_sets where learner_id=$2 order by effective_from desc limit 1", [L, NG()]);
+      return L;
+    };
+    it("S1: a long part label such as '2024-2025 Part 1-10' does not overflow integer in inputs, map and reset", async () => {
+      const L = await freshLearner("Em thử nhãn mảng dài");
+      const [tag] = await seedTags();
+      await importWork({ results: "cccc", tags: [tag!], learner: L, title: "Long part", part: "2024-2025 Part 1-10" });
+      expect((await inputs(L, [tag!])).points[0]!.counted).toHaveLength(4);
+      const map = await svc<{ points: { tag_key: string; answers: unknown[] }[] }>("select english.eng_point_map($1) as r", [L]);
+      expect(map.points.find((x) => x.tag_key === tag)!.answers).toHaveLength(4);
+      await svc("select english.eng_reset_point_states($1,$2) as r", [L, M().parent]).catch((e: { message?: string }) => { throw e; });
     });
   });
 

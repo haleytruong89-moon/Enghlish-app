@@ -234,7 +234,7 @@ begin
                t.submitted_at as at,
                t.id as attempt_id,
                -- Thứ tự trong CÙNG ngày/lần làm: số của mảng ("Part II" → 2), rồi chữ của mảng, rồi SỐ câu (không phải chữ: q2 < q10).
-               coalesce(nullif(pg_catalog.regexp_replace(coalesce(m.part, ''), '[^0-9]', '', 'g'), ''), '0')::int as part_no,
+               coalesce(nullif(pg_catalog.left(pg_catalog.regexp_replace(coalesce(m.part, ''), '[^0-9]', '', 'g'), 9), ''), '0')::int as part_no,
                coalesce(m.part, '') as part,
                m.n as qn,
                (t.declared_assistance = array['none']) as unsupported,
@@ -644,7 +644,7 @@ begin
                coalesce(pg_catalog.to_char(t.taken_on, 'YYYY-MM-DD'), pg_catalog.to_char(t.submitted_at at time zone 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD')) as at,
                t.submitted_at as ts,
                t.id as attempt_id,
-               coalesce(nullif(pg_catalog.regexp_replace(coalesce(m.part, ''), '[^0-9]', '', 'g'), ''), '0')::int as part_no,
+               coalesce(nullif(pg_catalog.left(pg_catalog.regexp_replace(coalesce(m.part, ''), '[^0-9]', '', 'g'), 9), ''), '0')::int as part_no,
                coalesce(m.part, '') as part,
                m.n as qn,
                (t.declared_assistance <> array['none']) as support,

@@ -31,7 +31,8 @@ export const slot = (part: string, n: number): string => `${part}#${n}`;
 /** "Part II" → 2, "B" → 0: numbers inside a part label sort numerically ("Part 2" before "Part 10"). */
 const partNo = (part: string): number => {
   const d = part.replace(/\D/g, "");
-  return d === "" ? 0 : Number(d);
+  // First 9 digits only, like the database (a long label such as "2024-2025 Part 1-10" must not overflow there).
+  return d === "" ? 0 : Number(d.slice(0, 9));
 };
 /** Paper order: by part number, then part label, then question number; ties keep the order given. */
 export function sortPaperOrder<T extends { part: string; n: number }>(rows: readonly T[]): T[] {
