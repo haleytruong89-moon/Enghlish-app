@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { deskCopy, home } from "@/lib/copy/vi";
+import { deskCopy } from "@/lib/copy/vi";
 import { buildNav, type NavRole } from "@/lib/shell/nav";
 import { LEARNER_IDS, loginAs, type AccountKey } from "./helpers";
 
