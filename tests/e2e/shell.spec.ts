@@ -20,7 +20,7 @@ test.describe("workdesk shell", () => {
     await expect(page.getByTestId("staff-sidebar")).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: deskCopy.title("Nguyên (thử)") })).toBeVisible();
     await expect(page.getByTestId("nav-desk")).toHaveAttribute("aria-current", "page");
-    await expect(page.getByTestId("nav-knowledge")).toHaveAttribute("aria-disabled", "true");
+    await expect(page.getByTestId("nav-roadmap")).toHaveAttribute("aria-disabled", "true");
     await expect(page.getByTestId("learner-switcher")).toHaveCount(0);
     await expect(page.getByTestId("shell-learner")).toContainText("Nguyên (thử)");
     const box = await page.getByTestId("desk-inbox").boundingBox();
