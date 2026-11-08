@@ -88,6 +88,16 @@ test.describe.serial("S5b-1 tutor work", () => {
     await expect(page.getByRole("checkbox", { name: new RegExp(label) })).toHaveAttribute("aria-checked", "true");
   });
 
+  test("session note: an unaccented search finds the tag, and the count of chosen skills shows", async ({ page }) => {
+    await loginAs(page, "tutorNguyen");
+    await page.goto(`/learners/${NG}/notes/new`);
+    await page.getByTestId("search-session-tags").fill("dang tu");
+    await page.getByTestId("tag-chip-dang-tu").click();
+    await expect(page.getByTestId("session-tags-chosen")).toContainText("Dạng từ");
+    await page.getByTestId("session-practised").getByRole("tabpanel").locator('button[data-testid^="session-practised-"]').first().click();
+    await expect(page.getByTestId("session-practised-count")).toHaveText(sessionNotePage.practisedChosen(1));
+  });
+
   test("session note: tags (max 3), message, note for the parent - the parent reads it, the child's page for it is closed to the student", async ({ page }) => {
     const studied = `Buổi thử ${Date.now()}`;
     await loginAs(page, "tutorNguyen");

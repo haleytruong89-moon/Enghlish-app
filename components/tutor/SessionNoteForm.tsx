@@ -20,7 +20,10 @@ import {
   type TagInfo,
   type WeakPoint,
 } from "@/lib/tutorwork/types";
+import { placeOfTag } from "@/lib/skillmap/group";
+import { applySameAsLast } from "@/lib/tutorwork/sameAsLast";
 import { DomainTabs } from "./DomainTabs";
+import { PractisedChosen } from "./PractisedChosen";
 import { TagChips } from "./TagChips";
 import { useTags } from "./useTags";
 
@@ -62,9 +65,30 @@ export function SessionNoteForm({
   const skillBuckets = useMemo(() => groupTargets(map, skills), [map, skills]);
   const [skillTab, setSkillTab] = useState<string>(() => firstTab(skillBuckets));
   const [saved, setSaved] = useState(false);
+  const [sameNote, setSameNote] = useState<{ practised: string; weak: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const clientId = useRef<string>(crypto.randomUUID());
   const labelOf = new Map(tags.map((t) => [t.key, t.label]));
+
+  const sameResult = useMemo(() => {
+    if (!previous) return null;
+    const hidden = tags.filter((t) => placeOfTag(map, t)?.hidden).map((t) => t.key);
+    return applySameAsLast(previous, { practised, weak }, skills.map((x) => x.id), tags.map((t) => t.key), hidden);
+  }, [previous, practised, weak, skills, tags, map]);
+  const canAddFromPrevious = !!sameResult && sameResult.addedSkills + sameResult.addedWeak > 0;
+  function fillFromPrevious() {
+    if (!sameResult || !canAddFromPrevious) return;
+    const skipped = sameResult.skippedSkills + sameResult.skippedWeak;
+    setPractised(sameResult.practised);
+    setWeak(sameResult.weak);
+    setSameNote({
+      practised: sameResult.practised.join("\u0000"),
+      weak: sameResult.weak.join("\u0000"),
+      text: `${sessionNotePage.sameAsLastDone(sameResult.addedSkills, sameResult.addedWeak)}${skipped > 0 ? ` ${sessionNotePage.sameAsLastSkipped(skipped)}` : ""}`,
+    });
+  }
+  // The status line only stays while the picks are exactly what the button produced.
+  const sameNoteText = sameNote && sameNote.practised === practised.join("\u0000") && sameNote.weak === weak.join("\u0000") ? sameNote.text : null;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -96,6 +120,29 @@ export function SessionNoteForm({
   return (
     <form onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]" data-testid="session-form">
       <fieldset disabled={saved} className="m-0 flex min-w-0 flex-col gap-5 rounded-xl border border-line bg-white p-4">
+        {canAddFromPrevious || sameNoteText ? (
+          <div className="flex flex-col gap-1">
+            {canAddFromPrevious ? (
+              <>
+                <button
+                  type="button"
+                  onClick={fillFromPrevious}
+                  data-testid="session-same-as-last"
+                  className="min-h-11 self-start rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent"
+                >
+                  {sessionNotePage.sameAsLast}
+                </button>
+                <p className="text-xs text-muted">{sessionNotePage.sameAsLastHelp}</p>
+              </>
+            ) : null}
+            {sameNoteText ? (
+              <p role="status" className="text-sm text-accent" data-testid="session-same-as-last-note">
+                {sameNoteText}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-muted">{sessionNotePage.date}</span>
           <input
@@ -128,7 +175,14 @@ export function SessionNoteForm({
           {skills.length === 0 ? (
             <p className="text-sm text-muted">{sessionNotePage.practisedNone}</p>
           ) : (
-            <div className="mt-2">
+            <div className="mt-2 flex flex-col gap-3">
+              {saved ? null : (
+                <PractisedChosen
+                  chosen={practised.map((id) => ({ id, title: skills.find((x) => x.id === id)?.title ?? id }))}
+                  onRemove={(id) => setPractised((cur) => cur.filter((k) => k !== id))}
+                  testId="session-practised"
+                />
+              )}
               <DomainTabs
                 buckets={skillBuckets}
                 active={skillTab}

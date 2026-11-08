@@ -2,6 +2,7 @@
 
 import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { skillMapCopy } from "@/lib/copy/vi";
+import { foldVi } from "@/lib/text/fold";
 import type { Bucket, BucketGroup } from "@/lib/skillmap/group";
 
 /** ARIA tabs keyboard rule: arrows move to the neighbour (wrapping), Home / End to the ends; any other key does nothing. */
@@ -13,6 +14,17 @@ export function nextTabKey(keys: string[], current: string, pressed: string): st
   if (pressed === "Home") return keys[0]!;
   if (pressed === "End") return keys[keys.length - 1]!;
   return null;
+}
+
+/** Accent-insensitive search over every domain: matches the item text or its group name. `q` must already be folded. */
+export function searchHits<T>(buckets: Bucket<T>[], q: string, itemText: (item: T) => string): { it: T; place: string }[] {
+  return buckets.flatMap((b) =>
+    [...b.groups, ...b.far].flatMap((g) =>
+      g.items
+        .filter((it) => foldVi(itemText(it)).includes(q) || foldVi(g.name).includes(q))
+        .map((it) => ({ it, place: b.key === g.key ? b.name : skillMapCopy.place(b.name, g.name) })),
+    ),
+  );
 }
 
 /**
@@ -40,16 +52,8 @@ export function DomainTabs<T>({
 }) {
   const [query, setQuery] = useState("");
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const q = query.trim().toLowerCase();
-  const hits = q
-    ? buckets.flatMap((b) =>
-        [...b.groups, ...b.far].flatMap((g) =>
-          g.items
-            .filter((it) => itemText(it).toLowerCase().includes(q) || g.name.toLowerCase().includes(q))
-            .map((it) => ({ it, place: b.key === g.key ? b.name : skillMapCopy.place(b.name, g.name) })),
-        ),
-      )
-    : [];
+  const q = foldVi(query);
+  const hits = q ? searchHits(buckets, q, itemText) : [];
 
   const groupList = (groups: BucketGroup<T>[]) =>
     groups.map((g) => (
