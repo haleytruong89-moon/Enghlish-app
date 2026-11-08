@@ -54,7 +54,7 @@ describe("grading is done by code", () => {
     expect(gradeRead("across", "across", "low")).toBe("needs_person");
     expect(gradeRead("across", null, "high")).toBe("needs_person");
   });
-  it("drops a tag outside the closed list, keeps the first of a duplicate number, sorts by number", () => {
+  it("drops a tag outside the closed list, never drops a duplicate (both rows stay as \"Cần xem\"), sorts by number", () => {
     const out = normalizeRead(
       aiReadSchema.parse({
         questions: [
@@ -65,7 +65,7 @@ describe("grading is done by code", () => {
       }),
       CTX,
     );
-    expect(out.items.map((i) => [i.n, i.tag, i.result])).toEqual([[1, "cum-dong-tu", "incorrect"], [2, null, "correct"]]);
+    expect(out.items.map((i) => [i.n, i.tag, i.result])).toEqual([[1, "cum-dong-tu", "needs_person"], [1, null, "needs_person"], [2, null, "correct"]]);
     expect(readPayloadSchema.safeParse(out).success).toBe(true);
   });
 });
