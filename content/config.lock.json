@@ -68,5 +68,11 @@
       "sha256": "cfc1b9066fc45499ed535b40a3eb4939c0292664f880485443c6016d3042958c",
       "migration": "0011_seed_b_w1_homework_1_b_w2_phones_1_b_w3_trans.sql"
     }
+  },
+  "pointPolicies": {
+    "PP-0.1": {
+      "sha256": "b439543cbb11cc90d2a6502fbc601b224794cee78b3c3d3e9d902d6046cfede8",
+      "migration": "0028_seed_point_policy_pp_0_1.sql"
+    }
   }
 }

@@ -41,6 +41,9 @@ beforeEach(() => {
   // S7a: AP-0.3 lives in 0022, which this S1 fixture does not copy - keep the fixture at catalogue + AP-0.2 + target sets.
   delete (lock.policies as Record<string, unknown>)["AP-0.3"];
   rmSync(path.join(paths.contentDir, "assessment_policy_AP-0.3.json"), { force: true });
+  // W3: PP-0.1 lives in 0028 (the point policy has its own tests below).
+  delete lock.pointPolicies;
+  rmSync(path.join(paths.contentDir, "point_policy_PP-0.1.json"), { force: true });
   writeFileSync(lockPath, JSON.stringify(lock, null, 2) + "\n");
 });
 afterEach(() => rmSync(tmp, { recursive: true, force: true }));
@@ -157,5 +160,26 @@ describe("--new", () => {
     writeJson("target_sets_v1.json", v1);
     await expect(generateNew(paths)).rejects.toThrow(/published version target set A-v1 changed/);
     expect(migrations()).not.toContain("0007_seed_b_v2.sql");
+  });
+});
+
+describe("point policy PP-0.1 (W3)", () => {
+  it("is locked in 0028_seed_point_policy_pp_0_1.sql and the file carries the same hash", () => {
+    const lock = JSON.parse(readFileSync(path.join(CONTENT_DIR, LOCK_FILE), "utf8")) as { pointPolicies: Record<string, { sha256: string; migration: string }> };
+    expect(Object.keys(lock.pointPolicies)).toEqual(["PP-0.1"]);
+    expect(lock.pointPolicies["PP-0.1"]?.migration).toBe("0028_seed_point_policy_pp_0_1.sql");
+    const sql = readFileSync(path.join(MIGRATIONS_DIR, "0028_seed_point_policy_pp_0_1.sql"), "utf8");
+    expect(sql).toContain(lock.pointPolicies["PP-0.1"]?.sha256 ?? "x");
+  });
+
+  it("a locked point policy that changed is refused; a new PP-0.2 file goes into the next migration", async () => {
+    const real = JSON.parse(readFileSync(path.join(CONTENT_DIR, "point_policy_PP-0.1.json"), "utf8")) as { version: string; config: { independent: { minCounted: number } } };
+    writeJson("point_policy_PP-0.1.json", real);
+    const first = await generateNew(paths);
+    expect(first?.file).toMatch(/^0007_seed_/);
+    real.config.independent.minCounted = 5;
+    writeJson("point_policy_PP-0.1.json", real);
+    const { problems } = await checkConfig(paths);
+    expect(problems.join(" ")).toContain("published version point policy PP-0.1 changed");
   });
 });

@@ -19,6 +19,7 @@ import {
   type TargetSetDefinition,
 } from "./schemas";
 import { CONTENT_DIR, sourceHash } from "./content";
+import { pointPolicyFileSchema, type PointPolicyFile } from "./pointPolicySchema";
 
 export const LOCK_FILE = "config.lock.json";
 
@@ -39,7 +40,9 @@ export type InquiryTemplateItem = {
   hash: string;
   data: InquiryTemplate;
 };
-export type ContentItem = CatalogueItem | PolicyItem | TargetSetItem | InquiryTemplateItem;
+/** Knowledge-point level policy (W3); its lock id is the policy version, e.g. PP-0.1. */
+export type PointPolicyItem = { kind: "pointPolicy"; id: string; file: string; hash: string; data: PointPolicyFile };
+export type ContentItem = CatalogueItem | PolicyItem | TargetSetItem | InquiryTemplateItem | PointPolicyItem;
 
 export type ContentItems = {
   catalogues: CatalogueItem[];
@@ -49,6 +52,7 @@ export type ContentItems = {
   inquiryTemplates: InquiryTemplateItem[];
   /** Templates still `draft` (waiting for a content decision): validated by the schema, never seeded or locked. */
   draftInquiryTemplates: InquiryTemplateItem[];
+  pointPolicies: PointPolicyItem[];
 };
 
 export type LockEntry = {
@@ -63,9 +67,10 @@ export type ConfigLock = {
   policies: Record<string, LockEntry>;
   targetSets: Record<string, LockEntry>;
   inquiryTemplates: Record<string, LockEntry>;
+  pointPolicies: Record<string, LockEntry>;
 };
 
-export const emptyLock = (): ConfigLock => ({ catalogues: {}, policies: {}, targetSets: {}, inquiryTemplates: {} });
+export const emptyLock = (): ConfigLock => ({ catalogues: {}, policies: {}, targetSets: {}, inquiryTemplates: {}, pointPolicies: {} });
 
 export const INQUIRIES_DIR = "inquiries";
 export const inquiryLockId = (id: string, version: number) => `${id}@${version}`;
@@ -123,8 +128,15 @@ export function loadContentItems(dir: string = CONTENT_DIR): ContentItems {
     (data.status === "published" ? inquiryTemplates : draftInquiryTemplates).push(item);
   }
 
+  const pointPolicies: PointPolicyItem[] = files(dir, /^point_policy_.+\.json$/).map((file) => {
+    const raw = readJson(dir, file);
+    const data = pointPolicyFileSchema.parse(raw);
+    if (file !== `point_policy_${data.version}.json`) throw new Error(`${file}: file name must be point_policy_${data.version}.json`);
+    return { kind: "pointPolicy", id: data.version, file, hash: sourceHash(raw), data };
+  });
+
   const seen = new Set<string>();
-  for (const item of [...catalogues, ...policies, ...targetSets, ...inquiryTemplates, ...draftInquiryTemplates]) {
+  for (const item of [...catalogues, ...policies, ...targetSets, ...inquiryTemplates, ...draftInquiryTemplates, ...pointPolicies]) {
     const key = `${item.kind}:${item.id}`;
     if (seen.has(key)) throw new Error(`duplicate ${item.kind} id ${item.id} in content/`);
     seen.add(key);
@@ -140,7 +152,7 @@ export function loadContentItems(dir: string = CONTENT_DIR): ContentItems {
     }
   }
   assertSourceIdsUnique([...inquiryTemplates, ...draftInquiryTemplates]);
-  return { catalogues, policies, targetSets, inquiryTemplates, draftInquiryTemplates };
+  return { catalogues, policies, targetSets, inquiryTemplates, draftInquiryTemplates, pointPolicies };
 }
 
 /**
@@ -181,6 +193,7 @@ export function readLock(dir: string = CONTENT_DIR): ConfigLock {
     policies: o.policies ?? {},
     targetSets: o.targetSets ?? {},
     inquiryTemplates: o.inquiryTemplates ?? {},
+    pointPolicies: o.pointPolicies ?? {},
   };
 }
 
@@ -196,6 +209,7 @@ export function serializeLock(lock: ConfigLock): string {
         targetSets: sort(lock.targetSets),
         // Omitted while empty, so the lock file written by S1 stays byte-identical.
         ...(Object.keys(lock.inquiryTemplates).length ? { inquiryTemplates: sort(lock.inquiryTemplates) } : {}),
+        ...(Object.keys(lock.pointPolicies).length ? { pointPolicies: sort(lock.pointPolicies) } : {}),
       },
       null,
       2,

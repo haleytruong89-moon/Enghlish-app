@@ -1,0 +1,10 @@
+{
+  "version": "PP-0.1",
+  "config": {
+    "developing": { "minCorrect": 1 },
+    "independent": { "minCounted": 4, "minAccuracyPct": 75, "minDistinctDays": 2 },
+    "transferable": { "minCountedCorrect": 2, "minDaysFromLastOccasion": 14, "requiresDifferentSource": true },
+    "flag": { "window": 3, "minWrong": 2 },
+    "supportCapLevel": 2
+  }
+}
