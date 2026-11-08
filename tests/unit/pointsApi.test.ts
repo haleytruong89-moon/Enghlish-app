@@ -149,6 +149,7 @@ const importStore = (over: Partial<ImportStore> = {}): ImportStore => ({
   discard: vi.fn(async () => ({ id: BATCH, status: "discarded" })),
   files: vi.fn(async () => ({ work: { path: "f/l/w.png", mime: "image/png" }, key: { path: "f/l/k.pdf", mime: "application/pdf" } })),
   retry: vi.fn(async () => ({ id: BATCH, status: "reading", applied: true })),
+  pending: vi.fn(async () => []),
   confirm: vi.fn(async () => ({ template_id: "B-IM-000001", attempt_id: "att-1", counted: 51, tags: ["cum-dong-tu"], replayed: false })),
   ...over,
 });

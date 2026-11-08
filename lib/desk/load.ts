@@ -6,6 +6,7 @@ import { loadLevelProfile, loadRecentLevelChanges } from "@/lib/levels/load";
 import type { LevelProfile, RecentChange } from "@/lib/levels/types";
 import { loadInbox } from "@/lib/review/load";
 import type { InboxCursor, InboxItem } from "@/lib/review/types";
+import { loadImportPending } from "@/lib/import/load";
 import { loadPointInbox } from "@/lib/points/load";
 import { loadSkillInbox } from "@/lib/skills/load";
 import type { ShellData } from "@/lib/shell/shell";
@@ -15,7 +16,7 @@ import { loadToday, type TodayData } from "@/lib/tutorwork/load";
 import { loadIntake } from "@/lib/workdesk/load";
 import { buildPendingRows, PENDING_MAX_PAGES, PENDING_PAGE_SIZE, type PendingRow } from "./pending";
 
-export type PendingSource = "work" | "studio" | "skills" | "points" | "drafts" | "curricula";
+export type PendingSource = "work" | "studio" | "skills" | "points" | "drafts" | "curricula" | "imports";
 export type PendingRowsResult = { rows: PendingRow[]; failed: PendingSource[]; more: boolean };
 
 async function settle<T>(p: Promise<T | null>): Promise<T | null> {
@@ -44,13 +45,14 @@ export async function loadWorkPages(): Promise<{ items: InboxItem[]; more: boole
  * that cannot be read (error, or null before its migration) is listed in `failed` and the others still show.
  */
 export async function loadPendingRows(memberId: string, role: "tutor" | "parent", learnerId: string): Promise<PendingRowsResult> {
-  const [work, studio, skills, points, drafts, curricula] = await Promise.all([
+  const [work, studio, skills, points, drafts, curricula, imports] = await Promise.all([
     settle(loadWorkPages()),
     settle(loadStudioPending(memberId)),
     settle(loadSkillInbox(memberId)),
     settle(loadPointInbox(memberId)),
     settle(loadDraftList(learnerId)),
     settle(loadCurriculumCards(learnerId)),
+    settle(loadImportPending(memberId)),
   ]);
   const failed: PendingSource[] = [];
   if (work === null) failed.push("work");
@@ -59,8 +61,9 @@ export async function loadPendingRows(memberId: string, role: "tutor" | "parent"
   if (points === null) failed.push("points");
   if (drafts === null) failed.push("drafts");
   if (curricula === null) failed.push("curricula");
+  if (imports === null) failed.push("imports");
   return {
-    rows: buildPendingRows({ learnerId, role, work: work?.items ?? [], studio: studio?.attempts ?? [], skills: skills?.items ?? [], points: points?.items ?? [], drafts: drafts ?? [], curricula: curricula ?? [] }),
+    rows: buildPendingRows({ learnerId, role, work: work?.items ?? [], studio: studio?.attempts ?? [], skills: skills?.items ?? [], points: points?.items ?? [], drafts: drafts ?? [], curricula: curricula ?? [], imports: imports ?? [] }),
     failed,
     more: work?.more ?? false,
   };

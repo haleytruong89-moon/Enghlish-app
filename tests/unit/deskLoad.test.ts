@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-const m = { loadInbox: vi.fn(), loadStudioPending: vi.fn(), loadSkillInbox: vi.fn(), loadPointInbox: vi.fn(), loadDraftList: vi.fn(), loadCurriculumCards: vi.fn() };
+const m = { loadInbox: vi.fn(), loadStudioPending: vi.fn(), loadSkillInbox: vi.fn(), loadPointInbox: vi.fn(), loadDraftList: vi.fn(), loadCurriculumCards: vi.fn(), loadImportPending: vi.fn() };
 vi.mock("@/lib/review/load", () => ({ loadInbox: (...a: unknown[]) => m.loadInbox(...a) }));
 vi.mock("@/lib/studio/load", () => ({ loadStudioPending: (...a: unknown[]) => m.loadStudioPending(...a), loadDraftList: (...a: unknown[]) => m.loadDraftList(...a), loadAiSettings: vi.fn() }));
 vi.mock("@/lib/skills/load", () => ({ loadSkillInbox: (...a: unknown[]) => m.loadSkillInbox(...a) }));
 vi.mock("@/lib/points/load", () => ({ loadPointInbox: (...a: unknown[]) => m.loadPointInbox(...a) }));
 vi.mock("@/lib/curriculum/load", () => ({ loadCurriculumCards: (...a: unknown[]) => m.loadCurriculumCards(...a) }));
+vi.mock("@/lib/import/load", () => ({ loadImportPending: (...a: unknown[]) => m.loadImportPending(...a) }));
 vi.mock("@/lib/tutorwork/load", () => ({ loadToday: vi.fn() }));
 vi.mock("@/lib/workdesk/load", () => ({ loadIntake: vi.fn() }));
 vi.mock("@/lib/levels/load", () => ({ loadLevelProfile: vi.fn(), loadRecentLevelChanges: vi.fn() }));
@@ -21,6 +22,7 @@ beforeEach(() => {
   m.loadPointInbox.mockResolvedValue({ open: 0, decidable: 0, items: [] });
   m.loadDraftList.mockResolvedValue([]);
   m.loadCurriculumCards.mockResolvedValue([]);
+  m.loadImportPending.mockResolvedValue([]);
 });
 
 describe("loadPendingRows", () => {
@@ -32,6 +34,11 @@ describe("loadPendingRows", () => {
     expect(m.loadPointInbox).toHaveBeenCalledWith("m1");
     expect(m.loadDraftList).toHaveBeenCalledWith("L1");
     expect(m.loadCurriculumCards).toHaveBeenCalledWith("L1");
+    expect(m.loadImportPending).toHaveBeenCalledWith("m1");
+  });
+  it("imports not ready (0027 not applied) are named `imports`; the others still show", async () => {
+    m.loadImportPending.mockResolvedValue(null);
+    expect((await loadPendingRows("m1", "tutor", "L1")).failed).toEqual(["imports"]);
   });
   it("one failing / not-ready source does not take the page down: it is named in `failed`", async () => {
     m.loadStudioPending.mockResolvedValue(null); // 0024 not applied

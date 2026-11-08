@@ -19,6 +19,21 @@ const draft = (over: Partial<DraftListItem> = {}): DraftListItem => ({ id: "d1",
 const card = (over: Partial<CurriculumCard> = {}): CurriculumCard => ({ id: "c1", title: "Destination C1&C2", levelNote: null, current: null, progress: null, open: { versionId: "v1", version: 1, status: "draft", errorCode: null }, events: [], ...over } as CurriculumCard);
 const input = (over: Partial<PendingInput> = {}): PendingInput => ({ learnerId: L, role: "tutor", work: [work()], studio: [studio()], skills: [skill(), skill({ id: "k2", kind: "FLAG" })], drafts: [draft()], curricula: [card()], ...over });
 
+describe("Chờ duyệt — unfinished imports (W3)", () => {
+  const imp = (status: "reading" | "draft" | "ai_failed", over: Record<string, unknown> = {}) => ({ id: `m-${status}`, learnerId: L, title: "Progress Test", status, takenOn: "2026-10-23", updatedAt: "2026-11-05T03:00:00Z", canConfirm: true, ...over });
+  it("reading, draft and ai_failed imports of THIS child are link-only rows to /imports/<id>; other children's are left out", () => {
+    const rows = buildPendingRows(input({ work: [], studio: [], skills: [], drafts: [], curricula: [], imports: [imp("reading"), imp("draft"), imp("ai_failed"), imp("draft", { id: "x", learnerId: O })] }));
+    expect(rows.map((r) => [r.key, r.href, r.kind])).toEqual([
+      ["import-m-reading", "/imports/m-reading", "import"], ["import-m-draft", "/imports/m-draft", "import"], ["import-m-ai_failed", "/imports/m-ai_failed", "import"],
+    ].sort((a, b) => a[0]!.localeCompare(b[0]!)));
+    expect(rows.every((r) => r.group === "check" && r.label === pendingCopy.kinds.import)).toBe(true);
+  });
+  it("a parent sees a draft as waiting for the tutor (only the tutor confirms, R8)", () => {
+    const rows = buildPendingRows(input({ role: "parent", work: [], studio: [], skills: [], drafts: [], curricula: [], imports: [imp("draft"), imp("ai_failed")] }));
+    expect(Object.fromEntries(rows.map((r) => [r.key, r.waitingTutor]))).toEqual({ "import-m-draft": true, "import-m-ai_failed": false });
+  });
+});
+
 describe("Chờ duyệt rows", () => {
   it("one row per waiting item of THIS child, oldest first, undated last", () => {
     const rows = buildPendingRows(input({ work: [work(), work({ episodeId: "e9", learnerId: O })], studio: [studio(), studio({ attemptId: "s9", learnerId: O })] }));

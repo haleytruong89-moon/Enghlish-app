@@ -4,6 +4,7 @@
  */
 import { activityLabels, curriculumCopy, fallbackLabels, pendingCopy, reviewPage, revisionReviewCopy } from "@/lib/copy/vi";
 import type { CurriculumCard } from "@/lib/curriculum/shape";
+import type { ImportPendingItem } from "@/lib/import/pending";
 import type { PointInboxItem } from "@/lib/points/types";
 import { pointTitle } from "@/lib/points/view";
 import type { InboxItem } from "@/lib/review/types";
@@ -13,7 +14,7 @@ import type { DraftListItem, PendingAttempt } from "@/lib/studio/types";
 
 export const PENDING_GROUPS = ["all", "work", "check", "ai", "skills"] as const;
 export type PendingGroup = (typeof PENDING_GROUPS)[number];
-export type PendingKind = "work" | "studio_check" | "studio_draft" | "curriculum_draft" | "skill" | "point" | "flag";
+export type PendingKind = "work" | "studio_check" | "studio_draft" | "curriculum_draft" | "skill" | "point" | "flag" | "import";
 export type PendingRow = { key: string; kind: PendingKind; group: Exclude<PendingGroup, "all">; label: string; title: string; since: string | null; need: string; href: string; waitingTutor: boolean };
 export type PendingInput = {
   learnerId: string;
@@ -27,6 +28,8 @@ export type PendingInput = {
   drafts: readonly DraftListItem[];
   /** Curricula of THIS child (loadCurriculumCards is per child). */
   curricula: readonly CurriculumCard[];
+  /** Unfinished imports (W3): reading / draft / ai_failed. They only LINK to /imports/<id>; the child's tutor confirms there (R8). */
+  imports?: readonly ImportPendingItem[];
 };
 /**
  * The S5 inbox RPC has no learner filter and returns at most 100 rows (oldest first) across ALL the caller's children, so one
@@ -56,7 +59,7 @@ export function pendingView(p: { rows: readonly unknown[]; failed: readonly unkn
   };
 }
 
-const GROUP_OF: Record<PendingKind, Exclude<PendingGroup, "all">> = { work: "work", studio_check: "check", studio_draft: "ai", curriculum_draft: "ai", skill: "skills", point: "skills", flag: "skills" };
+const GROUP_OF: Record<PendingKind, Exclude<PendingGroup, "all">> = { work: "work", studio_check: "check", studio_draft: "ai", curriculum_draft: "ai", skill: "skills", point: "skills", flag: "skills", import: "check" };
 const WAITING = ["draft", "ai_failed"] as const;
 const isWaiting = (s: string) => (WAITING as readonly string[]).includes(s);
 
@@ -106,6 +109,14 @@ export function buildPendingRows(i: PendingInput): PendingRow[] {
       href: `/curricula/versions/${c.open.versionId}`,
       // Only the child's tutor approves a curriculum (D-W8); the parent may only discard a draft.
       waitingTutor: i.role !== "tutor" && c.open.status === "draft",
+    });
+  }
+  for (const m of i.imports ?? []) {
+    if (m.learnerId !== i.learnerId) continue;
+    push({
+      key: `import-${m.id}`, kind: "import", label: pendingCopy.kinds.import, title: m.title, since: m.updatedAt,
+      need: m.status === "reading" ? pendingCopy.need.importReading : m.status === "ai_failed" ? pendingCopy.need.importFailed : pendingCopy.need.import,
+      href: `/imports/${m.id}`, waitingTutor: i.role !== "tutor" && m.status === "draft",
     });
   }
   return rows.sort(byOldest);

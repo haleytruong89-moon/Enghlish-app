@@ -47,6 +47,7 @@ export function createSupabaseImportStore(): ImportStore {
       const key = by.get(b.data.key_file_id);
       return work && key ? { work: { path: work.path, mime: work.mime }, key: { path: key.path, mime: key.mime } } : null;
     },
+    pending: (a) => call("eng_import_pending", { p_by: a.byMemberId, p_allow_real: a.allowReal }),
     retry: (a) => call("eng_retry_import_read", { p_batch: a.batchId, p_by: a.byMemberId, p_to: a.to }),
     batch: (id) => call("eng_import_batch", { p_batch: id }),
     finish: (a) => call("eng_finish_import_read", { p_batch: a.batchId, p_payload: a.payload, p_run: a.runId }),

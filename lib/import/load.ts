@@ -5,7 +5,10 @@ import { createFileStorage } from "@/lib/storage/server";
 import { createUserClient } from "@/lib/supabase/server";
 import { loadTags } from "@/lib/tutorwork/load";
 import { buildReadContext, type ReadContext } from "./context";
+import { isMissingFunction } from "@/lib/engine/runner";
+import { allowRealLearners } from "@/lib/env";
 import { handleGetImport, type ImportDeps } from "./handlers";
+import { parseImportPending, type ImportPendingItem } from "./pending";
 import type { ImportPageData } from "./shape";
 import { createSupabaseImportStore } from "./supabaseStore";
 
@@ -36,4 +39,14 @@ export async function loadImportPage(batchId: string): Promise<{ kind: "ok"; dat
   if (r.status === 200) return { kind: "ok", data: r.body as ImportPageData };
   if (r.status === 401) return { kind: "login" };
   return { kind: "not-found" };
+}
+
+/** Unfinished imports for this staff member (call only after authorizeStaffPage / the child's page gate). null = migration 0027 not applied yet. */
+export async function loadImportPending(memberId: string): Promise<ImportPendingItem[] | null> {
+  try {
+    return parseImportPending(await createSupabaseImportStore().pending({ byMemberId: memberId, allowReal: allowRealLearners() }));
+  } catch (err) {
+    if (isMissingFunction(err)) return null;
+    throw err;
+  }
 }

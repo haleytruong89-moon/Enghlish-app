@@ -35,6 +35,8 @@ export interface ImportStore {
   }): Promise<unknown>;
   /** The two stored files of a batch (server only: paths never leave the server). */
   files(batchId: string): Promise<{ work: { path: string; mime: string }; key: { path: string; mime: string } } | null>;
+  /** english.eng_import_pending: unfinished imports of the children this member may manage. */
+  pending(a: { byMemberId: string; allowReal: boolean }): Promise<unknown>;
   /** english.eng_retry_import_read: ai_failed → reading (retry) or → draft (manual). */
   retry(a: { batchId: string; to: "reading" | "draft"; byMemberId: string }): Promise<unknown>;
   /** english.eng_import_batch (one row as jsonb). */
