@@ -3,7 +3,7 @@
  * slice builds is "soon": shown, never a link, until that slice flips its status here. No track branching: the same model for every
  * child; only the learner id differs.
  */
-import { aiSettingsCopy, assignPage, levelCopy, notesPage, purgePage, readingPage, resultPage, revisionReviewCopy, sessionNotePage, shellCopy, skillStateCopy, studioCopy, studioInboxCopy, targetsPage, weakPage } from "@/lib/copy/vi";
+import { aiSettingsCopy, assignPage, importCopy, levelCopy, notesPage, purgePage, readingPage, resultPage, revisionReviewCopy, sessionNotePage, shellCopy, skillStateCopy, studioCopy, studioInboxCopy, targetsPage, weakPage } from "@/lib/copy/vi";
 
 export const SECTION_KEYS = ["desk", "profile", "knowledge", "roadmap", "sessions", "assign", "curricula", "inbox"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
@@ -37,7 +37,7 @@ export const SECTIONS: readonly SectionDef[] = [
       { key: "reading", label: readingPage.link, href: `${L(id)}/reading/new` },
     ],
   },
-  { key: "knowledge", status: "soon", lane: "W3", root: (id) => `${L(id)}/knowledge`, children: () => [] },
+  { key: "knowledge", status: "live", lane: null, root: (id) => `${L(id)}/knowledge`, children: () => [] },
   { key: "roadmap", status: "soon", lane: "W5", root: (id) => `${L(id)}/roadmap`, children: () => [] },
   {
     key: "sessions", status: "live", lane: null, root: (id) => `${L(id)}/notes`,
@@ -53,6 +53,7 @@ export const SECTIONS: readonly SectionDef[] = [
       { key: "studio", label: studioCopy.navLink, href: `/studio/new${learnerQuery(id)}` },
       { key: "inquiries", label: shellCopy.inquiriesChild, href: `${L(id)}/inquiries` },
       { key: "results", label: resultPage.link, href: `${L(id)}/results/new` },
+      { key: "import", label: importCopy.link, href: `${L(id)}/imports/new` },
     ],
   },
   { key: "curricula", status: "live", lane: null, root: (id) => `${L(id)}/curricula`, children: () => [] },

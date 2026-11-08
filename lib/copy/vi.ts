@@ -2102,6 +2102,7 @@ export const pendingCopy = {
     studioDraft: "Nháp AI · đề",
     curriculumDraft: "Nháp AI · giáo trình",
     skill: "Đề xuất kỹ năng",
+    point: "Đề xuất điểm kiến thức",
     flag: "⚑ Cần xem lại",
   },
   need: {
@@ -2110,6 +2111,7 @@ export const pendingCopy = {
     curriculumDraft: "Duyệt Unit và bảng nối",
     aiFailed: "AI chưa đọc được · soạn tay",
     skill: "Xem điều kiện rồi xác nhận",
+    point: "Xem điều kiện rồi xác nhận",
     flag: "Xem bằng chứng",
   },
   open: "Mở",
@@ -2117,7 +2119,7 @@ export const pendingCopy = {
   empty: "Không có gì chờ duyệt.",
   emptyGroup: "Không có mục nào ở nhóm này.",
   failed: (what: string) => `Chưa đọc được phần “${what}”. Các phần khác vẫn đúng.`,
-  sources: { work: "Bài làm", studio: `Cần ${tutorHonorific} xem`, skills: "Kỹ năng", drafts: "Nháp đề", curricula: "Giáo trình" },
+  sources: { work: "Bài làm", studio: `Cần ${tutorHonorific} xem`, skills: "Kỹ năng", points: "Điểm kiến thức", drafts: "Nháp đề", curricula: "Giáo trình" },
   more: "Có thể còn bài cũ hơn chưa hiện ở đây.",
   fullInbox: "Mở danh sách đầy đủ",
   deskTitle: (n: number | string) => `Chờ duyệt · ${n}`,
@@ -2232,6 +2234,7 @@ export const pointStateCopy = {
 } as const;
 
 export const pointMapCopy = {
+  back: "← Bàn làm việc",
   title: "Bản đồ kiến thức",
   intro: (name: string) => `Mức từng điểm kiến thức của ${name}, gom theo mảng và nhóm. Con không thấy trang này.`,
   levels: { NOT_OBSERVED: "Mới gặp", SUPPORTED: "Mới gặp", DEVELOPING: "Đang tiến bộ", INDEPENDENT: "Tự làm được", TRANSFERABLE: "Vận dụng được" } as const,
@@ -2257,6 +2260,7 @@ export const pointMapCopy = {
 } as const;
 
 export const importCopy = {
+  back: "← Bàn làm việc",
   link: "Nạp bài đã làm",
   title: "Nạp bài đã làm",
   intro: `Tải bài con đã làm trên giấy (ảnh hoặc PDF) và file đáp án. AI đọc câu trả lời, app so với đáp án, ${tutorHonorific} xem và xác nhận. Con không thấy gì ở đây.`,

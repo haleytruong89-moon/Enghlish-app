@@ -34,7 +34,7 @@ describe("workdesk shell wiring", () => {
   });
   it("staff pages outside /learners/[id] use the shell and no AppHeader", () => {
     for (const f of [
-      "app/review/page.tsx", "app/review/[episodeId]/page.tsx", "app/review/skills/page.tsx", "app/review/studio/page.tsx",
+      "app/review/page.tsx", "app/review/[episodeId]/page.tsx", "app/review/skills/page.tsx", "app/review/studio/page.tsx", "app/imports/[id]/page.tsx",
       "app/studio/new/page.tsx", "app/studio/drafts/[id]/page.tsx", "app/curricula/versions/[id]/page.tsx", "app/feedback/page.tsx", "app/settings/ai/page.tsx",
     ]) {
       const src = read(f);

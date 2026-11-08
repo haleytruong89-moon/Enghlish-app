@@ -7,10 +7,13 @@ import { ReviewTabs } from "@/components/review/ReviewTabs";
 import { loadStudioPending } from "@/lib/studio/load";
 import { ConfirmAllButton } from "@/components/skills/ConfirmAllButton";
 import { SkillProposalCard } from "@/components/skills/SkillProposalCard";
-import { reviewPage, skillStateCopy } from "@/lib/copy/vi";
+import { pointStateCopy, reviewPage, skillStateCopy } from "@/lib/copy/vi";
 import { authorizeStaffPage } from "@/lib/review/access";
+import { PointProposalCard } from "@/components/points/PointProposalCard";
+import { loadPointInbox } from "@/lib/points/load";
+import { combinedTabCount, groupPointInbox, mergeInboxGroups } from "@/lib/points/view";
 import { loadSkillInbox } from "@/lib/skills/load";
-import { groupInbox, skillTabCount } from "@/lib/skills/view";
+import { groupInbox } from "@/lib/skills/view";
 import { createUserClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -26,9 +29,12 @@ export default async function ReviewSkillsPage({ searchParams }: { searchParams:
   if (access.kind === "not-found") notFound();
   const shell = await requireShell(firstParam((await searchParams).learner));
 
-  const inbox = await loadSkillInbox(access.member.id);
-  const studioPending = await loadStudioPending(access.member.id).catch(() => null);
-  const groups = inbox ? groupInbox(inbox.items) : [];
+  const [inbox, pointInbox, studioPending] = await Promise.all([
+    loadSkillInbox(access.member.id),
+    loadPointInbox(access.member.id).catch(() => null),
+    loadStudioPending(access.member.id).catch(() => null),
+  ]);
+  const groups = mergeInboxGroups(inbox ? groupInbox(inbox.items) : [], pointInbox ? groupPointInbox(pointInbox.items) : []);
 
   return (
     <StaffShell shell={shell}>
@@ -39,9 +45,14 @@ export default async function ReviewSkillsPage({ searchParams }: { searchParams:
         <h1 className="mt-2 text-2xl font-bold">{skillStateCopy.title}</h1>
         <p className="mt-1 text-sm text-muted">{skillStateCopy.intro}</p>
         {access.member.role === "parent" ? <p className="mt-1 text-sm text-muted">{skillStateCopy.parentNote}</p> : null}
-        <ReviewTabs active="skills" skillsCount={skillTabCount(inbox, access.member.role)} studioCount={studioPending?.count ?? null} />
+        <ReviewTabs active="skills" skillsCount={combinedTabCount(inbox, pointInbox, access.member.role)} studioCount={studioPending?.count ?? null} />
 
-        {inbox === null ? (
+        {inbox !== null && pointInbox === null ? (
+          <p className="mt-4 rounded-xl border border-line bg-white px-5 py-3 text-sm text-muted" data-testid="points-not-ready">
+            {pointStateCopy.notReady}
+          </p>
+        ) : null}
+        {inbox === null && pointInbox === null ? (
           <p className="mt-6 rounded-xl border border-line bg-white px-5 py-4" data-testid="skills-not-ready">
             {skillStateCopy.notReady}
           </p>
@@ -54,15 +65,27 @@ export default async function ReviewSkillsPage({ searchParams }: { searchParams:
             <section key={g.learnerId} className="mt-6" data-testid={`skills-group-${g.learnerId}`} aria-labelledby={`skills-group-title-${g.learnerId}`}>
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <h2 id={`skills-group-title-${g.learnerId}`} className="text-lg font-semibold">
-                  {skillStateCopy.groupTitle(g.alias, g.items.length)}
+                  {skillStateCopy.groupTitle(g.alias, g.total)}
                 </h2>
-                {g.proposalIds.length > 1 ? <ConfirmAllButton learnerId={g.learnerId} ids={g.proposalIds} /> : null}
+                {g.skills && g.skills.proposalIds.length > 1 ? <ConfirmAllButton learnerId={g.learnerId} ids={g.skills.proposalIds} /> : null}
               </div>
-              <ul className="mt-3 flex flex-col gap-3">
-                {g.items.map((i) => (
-                  <SkillProposalCard key={i.id} item={i} />
-                ))}
-              </ul>
+              {g.skills ? (
+                <ul className="mt-3 flex flex-col gap-3">
+                  {g.skills.items.map((i) => (
+                    <SkillProposalCard key={i.id} item={i} />
+                  ))}
+                </ul>
+              ) : null}
+              {g.points ? (
+                <div data-testid={`points-group-${g.learnerId}`}>
+                  <h3 className="mt-4 text-base font-semibold">{pointStateCopy.sectionTitle}</h3>
+                  <ul className="mt-2 flex flex-col gap-3">
+                    {g.points.items.map((i) => (
+                      <PointProposalCard key={i.id} item={i} />
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </section>
           ))
         )}
