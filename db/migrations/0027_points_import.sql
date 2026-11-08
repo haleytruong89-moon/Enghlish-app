@@ -199,7 +199,7 @@ $$;
 revoke execute on function english.eng_project_point_state(uuid, text) from public, anon, authenticated, service_role;
 
 -- 4. Engine điểm: đọc bằng chứng (service_role, sau requireAccess) ------------------------------------------------------------------
--- "Câu được tính" của một điểm = câu ĐÓNG đã chấm (tự chấm hoặc Đúng/Sai của người lớn; 'blank' và 'needs_person' chưa phán KHÔNG tính),
+-- "Câu được tính" của một điểm = câu ĐÓNG đã chấm (tự chấm hoặc Đúng/Sai của người lớn; 'needs_person' chưa phán KHÔNG tính; 'blank' = để trống = SAI),
 -- gắn đúng điểm đó (studio_item_meta.tag_key hoặc reading_skill_key - H4), LẦN LÀM ĐẦU của em (không phải sửa bài / giao lại bước), KHÔNG hỗ trợ
 -- (declared_assistance = {none}). day = ngày lịch Việt Nam của ngày làm thật (attempts.taken_on nếu có, không thì submitted_at). source_id = mẫu đề.
 -- supported_* = cùng điều kiện nhưng CÓ hỗ trợ: chỉ nâng tới mức 2 (supportCapLevel), không bao giờ tính cho mức 3.
@@ -233,10 +233,18 @@ begin
                m.template_id as source_id,
                t.submitted_at as at,
                t.id as attempt_id,
+               -- Thứ tự trong CÙNG ngày/lần làm: số của mảng ("Part II" → 2), rồi chữ của mảng, rồi SỐ câu (không phải chữ: q2 < q10).
+               coalesce(nullif(pg_catalog.regexp_replace(coalesce(m.part, ''), '[^0-9]', '', 'g'), ''), '0')::int as part_no,
+               coalesce(m.part, '') as part,
+               m.n as qn,
                (t.declared_assistance = array['none']) as unsupported,
-               case when (c.checks -> 'items' -> m.item_id ->> 'result') = 'needs_person'
-                      then (select d.result from english.item_decisions d where d.attempt_id = t.id and d.item_id = m.item_id)
-                    else c.checks -> 'items' -> m.item_id ->> 'result' end as res
+               -- Câu để trống (đã có cơ hội làm) tính là SAI, như eng_record_studio_result và S7a; câu chỉ ở giấy (out_of_app) đã bị loại ở dưới.
+               case when (case when (c.checks -> 'items' -> m.item_id ->> 'result') = 'needs_person'
+                                 then (select d.result from english.item_decisions d where d.attempt_id = t.id and d.item_id = m.item_id)
+                               else c.checks -> 'items' -> m.item_id ->> 'result' end) = 'blank' then 'incorrect'
+                    else case when (c.checks -> 'items' -> m.item_id ->> 'result') = 'needs_person'
+                                then (select d.result from english.item_decisions d where d.attempt_id = t.id and d.item_id = m.item_id)
+                              else c.checks -> 'items' -> m.item_id ->> 'result' end end as res
         from english.studio_item_meta m
         join english.inquiry_instances i on i.learner_id = p_learner and i.template_id = m.template_id and i.template_version = m.template_version
         join english.activity_instances a on a.inquiry_instance_id = i.id and a.step_no = 1
@@ -268,15 +276,13 @@ begin
                  select 1 from english.curriculum_unit_points up
                  join english.curriculum_units u on u.version_id = up.version_id and u.code = up.code
                  where up.learner_id = p_learner and up.tag_key = g.tag
-                   and (coalesce((select ev.status from english.curriculum_unit_events ev
-                                  where ev.curriculum_id = u.curriculum_id and ev.unit_code = u.code
-                                  order by ev.created_at desc, ev.id desc limit 1), 'not_started') in ('in_progress', 'done')
-                        or exists (select 1 from english.lesson_note_units ln
-                                   where ln.learner_id = p_learner and ln.curriculum_id = u.curriculum_id and ln.unit_code = u.code))),
+                   -- Mức 1 từ Unit cần "đã dạy ở một buổi" = có ghi chú buổi học gắn Unit đó (không chỉ đánh dấu "Đang học").
+                   and exists (select 1 from english.lesson_note_units ln
+                               where ln.learner_id = p_learner and ln.curriculum_id = u.curriculum_id and ln.unit_code = u.code)),
                'counted', coalesce((
                  select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
                           'ref', q.ref, 'day', q.day, 'correct', q.res = 'correct', 'source_id', q.source_id, 'first', true)
-                        order by q.day, q.at, q.ref)
+                        order by q.day, q.at, q.attempt_id, q.part_no, q.part, q.qn, q.ref)
                  from q where q.tag = g.tag and q.unsupported and q.res in ('correct', 'incorrect')), '[]'::jsonb),
                'supported_correct', (select pg_catalog.count(*) from q where q.tag = g.tag and not q.unsupported and q.res = 'correct')::int,
                'supported_attempted', (select pg_catalog.count(*) from q where q.tag = g.tag and not q.unsupported and q.res in ('correct', 'incorrect'))::int,
@@ -292,6 +298,19 @@ end
 $$;
 revoke execute on function english.eng_point_inputs(uuid, text[]) from public, anon, authenticated;
 grant execute on function english.eng_point_inputs(uuid, text[]) to service_role;
+
+-- Bằng chứng lưu trong sổ: tối đa 400 câu GẦN NHẤT (mảng đã xếp cũ → mới); bản đầy đủ luôn dựng lại được từ eng_point_inputs.
+create or replace function english.eng_bounded_refs(p_arr jsonb) returns text[]
+language sql immutable set search_path = ''
+as $$
+  select coalesce(array(
+    select z.r from (
+      select t.r, t.o from pg_catalog.jsonb_array_elements_text(
+        case when pg_catalog.jsonb_typeof(coalesce(p_arr, 'null'::jsonb)) = 'array' then p_arr else '[]'::jsonb end) with ordinality as t(r, o)
+      order by t.o desc limit 400) z
+    order by z.o), '{}'::text[])
+$$;
+revoke execute on function english.eng_bounded_refs(jsonb) from public, anon, authenticated, service_role;
 
 -- 5. Ghi kết quả engine điểm ----------------------------------------------------------------------------------------------------------
 -- KIỂM LẠI mọi luật trước khi ghi (máy chủ có lỗi cũng không hạ mức được), giống eng_apply_engine_results (0023):
@@ -313,6 +332,10 @@ declare
   v_auto int := 0;
   v_proposed int := 0;
   v_flagged int := 0;
+  v_failed int := 0;
+  v_s_auto int;
+  v_s_proposed int;
+  v_s_flagged int;
 begin
   if p_learner is null or p_results is null or p_engine_version is null then
     raise exception 'eng_apply_point_results: learner, results and engine version are required' using errcode = '22004';
@@ -339,6 +362,9 @@ begin
       raise exception 'eng_apply_point_results: conditions must be an array and the evidence key well-formed (bad_results)' using errcode = '22023';
     end if;
     v_basis := coalesce((v_r ->> 'computed_at')::timestamptz, pg_catalog.clock_timestamp());
+    -- Một điểm lỗi (ghi sổ bị từ chối…) không làm hỏng cả vòng: điểm đó được bỏ qua (khôi phục điểm bắt đầu), các điểm khác vẫn được ghi.
+    v_s_auto := v_auto; v_s_proposed := v_proposed; v_s_flagged := v_flagged;
+    begin
     perform english.eng_project_point_state(p_learner, v_key);
     select * into v_cur from english.point_state c where c.learner_id = p_learner and c.tag_key = v_key;
     v_held := exists (select 1 from english.point_decisions m
@@ -350,7 +376,7 @@ begin
        and english.eng_point_level(v_to) > english.eng_point_level(v_cur.state) then
       insert into english.point_decisions(learner_id, tag_key, kind, from_state, to_state, conditions, evidence_item_refs, evidence_key, policy_version, engine_version)
       values (p_learner, v_key, 'AUTO', v_cur.state, v_to, v_r -> 'conditions',
-              coalesce(array(select pg_catalog.jsonb_array_elements_text(coalesce(v_r -> 'evidence' -> 'auto', '[]'::jsonb))), '{}'::text[]),
+              english.eng_bounded_refs(v_r -> 'evidence' -> 'auto'),
               v_r ->> 'evidence_key', v_policy, p_engine_version);
       v_auto := v_auto + 1;
       perform english.eng_project_point_state(p_learner, v_key);
@@ -369,7 +395,7 @@ begin
                          and d.evidence_key = v_r ->> 'propose_key') then
       insert into english.point_decisions(learner_id, tag_key, kind, from_state, to_state, conditions, evidence_item_refs, evidence_key, policy_version, engine_version)
       values (p_learner, v_key, 'PROPOSED', v_cur.state, v_to, v_r -> 'conditions',
-              coalesce(array(select pg_catalog.jsonb_array_elements_text(coalesce(v_r -> 'evidence' -> 'propose', '[]'::jsonb))), '{}'::text[]),
+              english.eng_bounded_refs(v_r -> 'evidence' -> 'propose'),
               v_r ->> 'propose_key', v_policy, p_engine_version);
       v_proposed := v_proposed + 1;
       perform english.eng_project_point_state(p_learner, v_key);
@@ -385,7 +411,7 @@ begin
                        where d.learner_id = p_learner and d.tag_key = v_key and d.kind = 'FLAG' and d.evidence_key = v_r ->> 'flag_key') then
       insert into english.point_decisions(learner_id, tag_key, kind, from_state, to_state, conditions, evidence_item_refs, evidence_key, policy_version, engine_version)
       values (p_learner, v_key, 'FLAG', v_cur.state, v_cur.state, v_r -> 'conditions',
-              coalesce(array(select pg_catalog.jsonb_array_elements_text(coalesce(v_r -> 'evidence' -> 'flag', '[]'::jsonb))), '{}'::text[]),
+              english.eng_bounded_refs(v_r -> 'evidence' -> 'flag'),
               v_r ->> 'flag_key', v_policy, p_engine_version);
       v_flagged := v_flagged + 1;
       perform english.eng_project_point_state(p_learner, v_key);
@@ -396,9 +422,13 @@ begin
     set conditions = v_r -> 'conditions', evaluated_at = pg_catalog.clock_timestamp(), inputs_at = v_basis,
         policy_version = v_policy, engine_version = p_engine_version
     where c.learner_id = p_learner and c.tag_key = v_key and (c.inputs_at is null or c.inputs_at <= v_basis);
+    exception when others then
+      v_auto := v_s_auto; v_proposed := v_s_proposed; v_flagged := v_s_flagged;
+      v_failed := v_failed + 1;
+    end;
   end loop;
 
-  return pg_catalog.jsonb_build_object('auto', v_auto, 'proposed', v_proposed, 'flagged', v_flagged, 'policy_version', v_policy);
+  return pg_catalog.jsonb_build_object('auto', v_auto, 'proposed', v_proposed, 'flagged', v_flagged, 'failed', v_failed, 'policy_version', v_policy);
 end
 $$;
 
@@ -597,10 +627,18 @@ begin
                (select tp.title_vi from english.inquiry_templates tp where tp.id = m.template_id and tp.version = m.template_version) as title,
                coalesce(pg_catalog.to_char(t.taken_on, 'YYYY-MM-DD'), pg_catalog.to_char(t.submitted_at at time zone 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD')) as at,
                t.submitted_at as ts,
+               t.id as attempt_id,
+               coalesce(nullif(pg_catalog.regexp_replace(coalesce(m.part, ''), '[^0-9]', '', 'g'), ''), '0')::int as part_no,
+               coalesce(m.part, '') as part,
+               m.n as qn,
                (t.declared_assistance <> array['none']) as support,
-               case when (c.checks -> 'items' -> m.item_id ->> 'result') = 'needs_person'
-                      then (select d.result from english.item_decisions d where d.attempt_id = t.id and d.item_id = m.item_id)
-                    else c.checks -> 'items' -> m.item_id ->> 'result' end as res
+               -- Câu để trống (đã có cơ hội làm) tính là SAI, như eng_record_studio_result và S7a; câu chỉ ở giấy (out_of_app) đã bị loại ở dưới.
+               case when (case when (c.checks -> 'items' -> m.item_id ->> 'result') = 'needs_person'
+                                 then (select d.result from english.item_decisions d where d.attempt_id = t.id and d.item_id = m.item_id)
+                               else c.checks -> 'items' -> m.item_id ->> 'result' end) = 'blank' then 'incorrect'
+                    else case when (c.checks -> 'items' -> m.item_id ->> 'result') = 'needs_person'
+                                then (select d.result from english.item_decisions d where d.attempt_id = t.id and d.item_id = m.item_id)
+                              else c.checks -> 'items' -> m.item_id ->> 'result' end end as res
         from english.studio_item_meta m
         join english.inquiry_instances i on i.learner_id = p_learner and i.template_id = m.template_id and i.template_version = m.template_version
         join english.activity_instances a on a.inquiry_instance_id = i.id and a.step_no = 1
@@ -631,7 +669,7 @@ begin
                'answers', coalesce((
                  select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
                           'ref', q.ref, 'title', q.title, 'at', q.at, 'correct', q.res = 'correct', 'support', q.support)
-                        order by q.ts, q.ref)
+                        order by q.ts, q.attempt_id, q.part_no, q.part, q.qn, q.ref)
                  from qa q where q.tag = i.tag and q.res in ('correct', 'incorrect')), '[]'::jsonb))
              order by dm.ord nulls last, g.ord nulls last, i.tag)
       from inp i
@@ -818,9 +856,11 @@ create policy import_batches_select on english.import_batches
 -- 7c. Tạo bài nạp: gia sư CỦA EM HOẶC phụ huynh tải (R8); xác nhận kết quả thì chỉ gia sư (eng_confirm_import).
 -- Trùng: cùng mã băm file bài, HOẶC cùng tên đề + ngày làm — của cùng em, bài chưa bỏ — bị chặn (duplicate_import) trừ khi p_allow_other
 -- ("Đây là lần làm khác"). Ngày làm không ở tương lai (D-W5: quá khứ thì không giới hạn).
+-- p_manual = "Soạn tay" (DOMAIN §6/§8; hết trần AI → làm thủ công): bài nạp vào thẳng 'draft' với danh sách câu trống, gia sư tự gõ từng câu.
+drop function if exists english.eng_create_import(uuid, text, jsonb, jsonb, date, text, text, uuid, text, boolean);
 create or replace function english.eng_create_import(
   p_learner uuid, p_title text, p_work_file jsonb, p_key_file jsonb, p_taken_on date, p_support text, p_source_hash text,
-  p_by uuid, p_client_id text, p_allow_other boolean default false
+  p_by uuid, p_client_id text, p_allow_other boolean default false, p_manual boolean default false
 ) returns jsonb
 language plpgsql volatile security definer set search_path = ''
 as $$
@@ -876,14 +916,14 @@ begin
   v_work := english.eng_register_file(v_l.family_id, p_learner, 'import_work', p_work_file, p_by);
   v_key := english.eng_register_file(v_l.family_id, p_learner, 'import_key', p_key_file, p_by);
   insert into english.import_batches(family_id, learner_id, track_id, title, work_file_id, key_file_id, taken_on, support_level, source_hash,
-                                     allow_other, created_by_member, updated_by_member, client_id)
+                                     allow_other, created_by_member, updated_by_member, client_id, status)
   values (v_l.family_id, p_learner, v_l.track_id, v_title, v_work, v_key, p_taken_on, p_support, p_source_hash,
-          coalesce(p_allow_other, false), p_by, p_by, p_client_id)
+          coalesce(p_allow_other, false), p_by, p_by, p_client_id, case when coalesce(p_manual, false) then 'draft' else 'reading' end)
   returning id into v_id;
   insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
   values (v_m.user_id, v_m.role, 'import.created', v_l.family_id, p_learner,
-          pg_catalog.jsonb_build_object('batch', v_id, 'taken_on', p_taken_on, 'support_level', p_support));
-  return pg_catalog.jsonb_build_object('id', v_id, 'status', 'reading', 'replayed', false);
+          pg_catalog.jsonb_build_object('batch', v_id, 'taken_on', p_taken_on, 'support_level', p_support, 'manual', coalesce(p_manual, false)));
+  return pg_catalog.jsonb_build_object('id', v_id, 'status', case when coalesce(p_manual, false) then 'draft' else 'reading' end, 'replayed', false);
 end
 $$;
 
@@ -914,6 +954,59 @@ begin
   where id = p_batch and status = 'reading';
   get diagnostics v_n = row_count;
   return pg_catalog.jsonb_build_object('applied', v_n = 1);
+end
+$$;
+
+-- 7d2. Sau khi AI đọc hỏng: "Thử lại" (ai_failed → reading, cùng bài nạp, không tạo bài trùng) hoặc "Soạn tay" (ai_failed → draft, danh sách trống).
+-- Gia sư CỦA EM hoặc phụ huynh (như tải lên). Trả applied=false nếu bài không còn ở ai_failed (đã đổi trong lúc đó).
+create or replace function english.eng_retry_import_read(p_batch uuid, p_by uuid, p_to text) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_b english.import_batches%rowtype;
+  v_m english.members%rowtype;
+  v_l english.learners%rowtype;
+begin
+  if p_batch is null or p_by is null or p_to is null or p_to not in ('reading', 'draft') then
+    raise exception 'eng_retry_import_read: batch, actor and a target of reading or draft are required (bad_target)' using errcode = '22023';
+  end if;
+  select * into v_b from english.import_batches b where b.id = p_batch for update;
+  if not found then
+    raise exception 'eng_retry_import_read: import not found' using errcode = 'P0002';
+  end if;
+  select * into v_m from english.members m where m.id = p_by;
+  if v_m.id is null or v_m.role not in ('tutor', 'parent') or not english.eng_actor_may_manage(p_by, v_b.learner_id) then
+    raise exception 'eng_retry_import_read: this member may not change this import (staff_only)' using errcode = '42501';
+  end if;
+  if v_b.status <> 'ai_failed' then
+    return pg_catalog.jsonb_build_object('id', p_batch, 'status', v_b.status, 'applied', false);
+  end if;
+  update english.import_batches set status = p_to, error_code = null, updated_by_member = p_by where id = p_batch;
+  select * into v_l from english.learners l where l.id = v_b.learner_id;
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_m.user_id, v_m.role, case p_to when 'reading' then 'import.retried' else 'import.manual' end, v_l.family_id, v_b.learner_id,
+          pg_catalog.jsonb_build_object('batch', p_batch));
+  return pg_catalog.jsonb_build_object('id', p_batch, 'status', p_to, 'applied', true);
+end
+$$;
+
+-- 7d3. Bài nạp chưa xong của các em trong phạm vi p_by (cho "Chờ duyệt" của từng em): chỉ liên kết, không quyết gì. Không có tên người học thật khi p_allow_real = false.
+create or replace function english.eng_import_pending(p_by uuid, p_allow_real boolean default false) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_m english.members%rowtype;
+begin
+  select * into v_m from english.members m where m.id = p_by;
+  if v_m.id is null or v_m.role not in ('tutor', 'parent') then
+    raise exception 'eng_import_pending: staff only (staff_only)' using errcode = '42501';
+  end if;
+  return coalesce((
+    select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+             'id', b.id, 'learner_id', b.learner_id, 'title', b.title, 'status', b.status, 'taken_on', b.taken_on,
+             'updated_at', b.updated_at, 'can_confirm', v_m.role = 'tutor') order by b.created_at, b.id)
+    from english.import_batches b join english.learners l on l.id = b.learner_id
+    where b.status in ('reading', 'draft', 'ai_failed') and english.eng_actor_may_manage(p_by, l.id) and (p_allow_real or l.is_test)), '[]'::jsonb);
 end
 $$;
 
@@ -954,12 +1047,16 @@ as $$
     'support_level', b.support_level, 'status', b.status, 'payload', b.payload, 'error_code', b.error_code,
     'work_file_id', b.work_file_id, 'key_file_id', b.key_file_id, 'allow_other', b.allow_other,
     'template_id', b.template_id, 'attempt_id', b.attempt_id,
-    'updated_at', b.updated_at::text, 'created_at', b.created_at)
+    'updated_at', b.updated_at::text, 'touched_at', b.updated_at, 'created_at', b.created_at)
   from english.import_batches b where b.id = p_batch
 $$;
 
-revoke execute on function english.eng_create_import(uuid, text, jsonb, jsonb, date, text, text, uuid, text, boolean) from public, anon, authenticated;
-grant execute on function english.eng_create_import(uuid, text, jsonb, jsonb, date, text, text, uuid, text, boolean) to service_role;
+revoke execute on function english.eng_create_import(uuid, text, jsonb, jsonb, date, text, text, uuid, text, boolean, boolean) from public, anon, authenticated;
+grant execute on function english.eng_create_import(uuid, text, jsonb, jsonb, date, text, text, uuid, text, boolean, boolean) to service_role;
+revoke execute on function english.eng_retry_import_read(uuid, uuid, text) from public, anon, authenticated;
+grant execute on function english.eng_retry_import_read(uuid, uuid, text) to service_role;
+revoke execute on function english.eng_import_pending(uuid, boolean) from public, anon, authenticated;
+grant execute on function english.eng_import_pending(uuid, boolean) to service_role;
 revoke execute on function english.eng_finish_import_read(uuid, jsonb, uuid) from public, anon, authenticated;
 grant execute on function english.eng_finish_import_read(uuid, jsonb, uuid) to service_role;
 revoke execute on function english.eng_fail_import_read(uuid, text, uuid) from public, anon, authenticated;
@@ -1261,7 +1358,7 @@ $$;
 alter table english.ai_runs drop constraint if exists ai_runs_purpose_check;
 alter table english.ai_runs add constraint ai_runs_purpose_check check (purpose in ('studio_extract', 'curriculum_toc', 'read_answers'));
 
--- Cổng AI = bản 0026 (nới p_purpose: thêm 'read_answers') (cuối, mặc định 'studio_extract') cho dòng giữ chỗ. Chữ ký cũ bỏ để không còn hai bản trùng tên.
+-- Cổng AI = bản 0026 (cùng chữ ký, create or replace) với p_purpose nhận thêm 'read_answers'; p_purpose là tham số cuối, mặc định 'studio_extract'.
 create or replace function english.eng_ai_gate(
   p_learner uuid, p_estimate numeric default 0, p_reserve boolean default false, p_draft uuid default null, p_model text default null, p_by uuid default null,
   p_purpose text default 'studio_extract'

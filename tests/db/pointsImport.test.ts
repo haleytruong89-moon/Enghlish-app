@@ -346,6 +346,113 @@ describe("W3 points + import (migration 0027)", () => {
     });
   });
 
+  describe("12. after the Opus review (blank = wrong, bounded evidence, manual path, retry, pending list, taught Unit)", () => {
+    const freshLearner = async (alias: string) => {
+      const L = (await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1,$2,'B',true,'active') returning id", [s.familyId, alias]))[0]!.id;
+      await q1("insert into english.relationships(member_id, learner_id, relation) values ($1,$2,'tutor')", [M().tutorNguyen, L]);
+      await q1("insert into english.target_sets(learner_id, definition_id, assigned_by) select $1, definition_id, assigned_by from english.target_sets where learner_id=$2 order by effective_from desc limit 1", [L, NG()]);
+      return L;
+    };
+    it("a blank answer counts as WRONG (10 blanks + 4 correct is not 100 %); paper-only rows stay out; the map shows the blanks as wrong too", async () => {
+      const L = await freshLearner("Em thử trống");
+      const [tag] = await seedTags();
+      await importWork({ results: "bbbbbbbbbbccccpp", tags: [tag!], learner: L, title: "Blank test" });
+      const p = (await inputs(L, [tag!])).points[0]!;
+      expect(p.counted).toHaveLength(14);
+      expect(p.counted.filter((c) => c.correct)).toHaveLength(4);
+      const r = await recomputePoints(pgPointStore(db.client), L, [tag!]);
+      expect(r.results[0]!.evidenceState).toBe("DEVELOPING"); // 4/14 < 75 %, one day
+      const map = await svc<{ points: { tag_key: string; answers: { correct: boolean }[] }[] }>("select english.eng_point_map($1) as r", [L]);
+      expect(map.points.find((x) => x.tag_key === tag)!.answers.filter((a) => !a.correct)).toHaveLength(10);
+    });
+    it("same-day questions are ordered by the NUMBER (q2 before q10), not by text", async () => {
+      const L = await freshLearner("Em thử thứ tự");
+      const [tag] = await seedTags();
+      await importWork({ results: "icccccccccc", tags: [tag!], learner: L, title: "Order test" }); // q1 wrong, q2..q11 right
+      const refs = (await inputs(L, [tag!])).points[0]!.counted.map((c) => (c as unknown as { ref: string }).ref.split(":")[1]);
+      expect(refs).toEqual(["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11"]);
+    });
+    it("the book keeps the most recent 400 evidence refs, and one failing point does not stop the others", async () => {
+      const L = await freshLearner("Em thử giới hạn");
+      const many = Array.from({ length: 450 }, (_, i) => `T:q${i}:a`);
+      expect(await apply([row("cum-dong-tu", { auto: "DEVELOPING", evidence: { auto: many, propose: [], flag: [] } })], L)).toMatchObject({ auto: 1, failed: 0 });
+      const refs = (await q1<{ r: string[] }>("select evidence_item_refs as r from english.point_decisions where learner_id=$1 and tag_key='cum-dong-tu'", [L]))[0]!.r;
+      expect(refs).toHaveLength(400);
+      expect(refs[0]).toBe("T:q50:a");
+      expect(refs[399]).toBe("T:q449:a");
+      await q1("create or replace function english.tmp_boom() returns trigger language plpgsql as $f$ begin if new.tag_key = 'boom-point' then raise exception 'boom'; end if; return new; end $f$");
+      await q1("create trigger tmp_boom before insert on english.point_decisions for each row execute function english.tmp_boom()");
+      try {
+        const out = await apply([row("boom-point", { auto: "DEVELOPING" }), row("thanh-ngu", { auto: "DEVELOPING" })], L);
+        expect(out).toMatchObject({ auto: 1, failed: 1 });
+        expect((await q1("select state from english.point_state where learner_id=$1 and tag_key='thanh-ngu'", [L]))[0]).toEqual({ state: "DEVELOPING" });
+        expect(await q1("select 1 from english.point_decisions where learner_id=$1 and tag_key='boom-point'", [L])).toEqual([]);
+      } finally {
+        await q1("drop trigger tmp_boom on english.point_decisions");
+        await q1("drop function english.tmp_boom()");
+      }
+    });
+    it("Level 1 from a Unit needs a lesson note naming the Unit (status 'in progress' alone is not 'taught')", async () => {
+      const L = await freshLearner("Em thử Unit");
+      const tag = "cum-dong-tu";
+      const c = await svc<{ curriculum_id: string; version_id: string }>("select english.eng_create_curriculum($1,'Giáo trình thử','x',null,false,$2,$3) as r", [L, M().tutorNguyen, randomUUID()]);
+      const units = [{ code: "U1", title: "Unit 1", section: "Grammar", page: 6, skipped: false, points: [tag], missing_points: [], needs_review: false, review_reason: null, origin: "ai", dropped: false, edit_reason: null }];
+      const ver = async () => (await q1<{ t: string }>("select updated_at::text as t from english.curriculum_versions where id = $1", [c.version_id]))[0]!.t;
+      await svc("select english.eng_save_curriculum_draft($1,$2::jsonb,$3,$4) as r", [c.version_id, JSON.stringify({ units, ignored: [] }), await ver(), M().tutorNguyen]);
+      await svc("select english.eng_approve_curriculum_version($1,$2,$3::jsonb,null,$4) as r", [c.version_id, await ver(), JSON.stringify(units.map(({ code, title, section, page, skipped, points }) => ({ code, title, section, page, skipped, points }))), M().tutorNguyen]);
+      await svc("select english.eng_set_unit_status($1,'U1','in_progress',null,$2,$3) as r", [c.curriculum_id, M().tutorNguyen, randomUUID()]);
+      expect((await inputs(L, [tag])).points.find((p) => p.tag_key === tag)!.taught_unit).toBe(false);
+      await svc("select english.eng_write_lesson_note_v3($1, current_date, null, '{}', null, null, '[]'::jsonb, null, $2, $3, '{}', $4::jsonb) as r", [L, M().tutorNguyen, randomUUID(), JSON.stringify([{ curriculum_id: c.curriculum_id, unit_code: "U1" }])]);
+      expect((await inputs(L, [tag])).points.find((p) => p.tag_key === tag)!.taught_unit).toBe(true);
+      const r = await recomputePoints(pgPointStore(db.client), L, [tag]);
+      expect(r.results[0]!.evidenceState).toBe("SUPPORTED");
+    });
+    it("manual path: a manual import starts as an EMPTY draft (no AI); ai_failed → draft and ai_failed → reading (retry) work on the same batch; nothing else moves", async () => {
+      const m = await svc<Cr>("select english.eng_create_import($1,$2,$3::jsonb,$4::jsonb,'2026-10-20','tu_lam',$5,$6,$7,false,true) as r", [NG(), `Manual ${randomUUID().slice(0, 6)}`, JSON.stringify(pdf()), JSON.stringify(pdf()), hash(), M().tutorNguyen, randomUUID()]);
+      expect(m.status).toBe("draft");
+      const b = await svc<{ status: string; payload: { items: unknown[] }; touched_at: string }>("select english.eng_import_batch($1) as r", [m.id]);
+      expect(b.payload).toEqual({ items: [] });
+      expect(b.touched_at).toMatch(/^\d{4}-/);
+      // a tutor confirms a manual draft with typed rows
+      const conf = await svc<Conf>("select english.eng_confirm_import($1,$2,$3::jsonb,$4,$5) as r", [m.id, await updatedAt(m.id), JSON.stringify(buildOf("cic", [(await seedTags())[0]!])), M().tutorNguyen, randomUUID()]);
+      expect(conf.counted).toBe(3);
+      // retry / manual from ai_failed
+      const f = await create(M().tutorNguyen);
+      await svc("select english.eng_fail_import_read($1,'timeout',null) as r", [f.id]);
+      await fail(svc("select english.eng_retry_import_read($1,$2,'reading') as r", [f.id, M().tutorAn]), "42501");
+      await fail(svc("select english.eng_retry_import_read($1,$2,'confirmed') as r", [f.id, M().parent]), "22023", /\(bad_target\)/);
+      expect(await svc("select english.eng_retry_import_read($1,$2,'reading') as r", [f.id, M().parent])).toMatchObject({ status: "reading", applied: true });
+      expect((await svc<{ error_code: string | null }>("select english.eng_import_batch($1) as r", [f.id])).error_code).toBeNull();
+      // not ai_failed any more → nothing happens
+      expect(await svc("select english.eng_retry_import_read($1,$2,'draft') as r", [f.id, M().parent])).toMatchObject({ status: "reading", applied: false });
+      await svc("select english.eng_fail_import_read($1,'timeout',null) as r", [f.id]);
+      expect(await svc("select english.eng_retry_import_read($1,$2,'draft') as r", [f.id, M().tutorNguyen])).toMatchObject({ status: "draft", applied: true });
+    });
+    it("discarding an ai_failed import frees the same file for a new import (no duplicate); an undiscarded one still blocks", async () => {
+      const h = hash();
+      const a = await create(M().tutorNguyen, { hash: h });
+      await svc("select english.eng_fail_import_read($1,'timeout',null) as r", [a.id]);
+      await fail(create(M().tutorNguyen, { hash: h }), "23505", /\(duplicate_import\)/);
+      await svc("select english.eng_discard_import($1,$2) as r", [a.id, M().tutorNguyen]);
+      expect((await create(M().tutorNguyen, { hash: h })).status).toBe("reading");
+    });
+    it("the pending list shows unfinished imports of the caller's children only (draft, reading, ai_failed), never confirmed or discarded", async () => {
+      const L = await freshLearner("Em thử chờ");
+      const mk = (title: string) => create(M().tutorNguyen, { learner: L, title });
+      const r = await mk("Pending reading");
+      const d = await mk("Pending draft"); await finishRead(d.id);
+      const f = await mk("Pending failed"); await svc("select english.eng_fail_import_read($1,'timeout',null) as r", [f.id]);
+      const x = await mk("Pending discarded"); await svc("select english.eng_discard_import($1,$2) as r", [x.id, M().parent]);
+      type P = { id: string; learner_id: string; status: string; can_confirm: boolean };
+      const list = async (by: string) => (await svc<P[]>("select english.eng_import_pending($1,false) as r", [by])).filter((i) => i.learner_id === L);
+      expect((await list(M().tutorNguyen)).map((i) => i.status).sort()).toEqual(["ai_failed", "draft", "reading"]);
+      expect((await list(M().tutorNguyen)).every((i) => i.can_confirm)).toBe(true);
+      expect((await list(M().parent)).every((i) => !i.can_confirm)).toBe(true);
+      expect(await list(M().tutorAn)).toEqual([]);
+      expect((await list(M().tutorNguyen)).map((i) => i.id)).toContain(r.id);
+    });
+  });
+
   describe("11. the TypeScript point engine on the real database (DOMAIN §5.2 examples 1 and 2)", () => {
     it("Progress Test then homework: level 2 (AUTO) then a proposal for 'Tự làm được'; again → nothing new; rebuild twice → the same book", async () => {
       const L = (await q1<{ id: string }>("insert into english.learners(family_id, alias, track_id, is_test, status) values ($1,'Em thử engine','B',true,'active') returning id", [s.familyId]))[0]!.id;

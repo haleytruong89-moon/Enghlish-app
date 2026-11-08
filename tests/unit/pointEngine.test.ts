@@ -103,6 +103,22 @@ describe("level 1, level 4, never lowering, dedup, hold", () => {
     expect(computePointLevel(base({ decisions, counted: same })).propose).toBeNull();
   });
 
+  it("level 4 needs >= 2 correct answers THEMSELVES from a new source (one new + one old source answer is not enough)", () => {
+    const decisions = [dec("CONFIRMED", "DEVELOPING", "INDEPENDENT", { respondsTo: "p0" })];
+    const head = [q("2026-10-01", true, "A"), q("2026-10-01", true, "A"), q("2026-10-05", true, "A"), q("2026-10-05", true, "A")];
+    const mixed = [...head, q("2026-10-19", true, "B"), q("2026-10-19", true, "A")];
+    expect(computePointLevel(base({ decisions, counted: mixed })).propose).toBeNull();
+    const both = [...head, q("2026-10-19", true, "B"), q("2026-10-19", true, "B")];
+    expect(computePointLevel(base({ decisions, counted: both })).propose).toBe("TRANSFERABLE");
+  });
+
+  it("help lifts a point only as far as the policy's supportCapLevel", () => {
+    const withCap = (supportCapLevel: number) => base({ supportedCorrect: 2, supportedAttempted: 2, policy: { version: "PP-0.1", config: { ...PP01, supportCapLevel } } });
+    expect(computePointLevel(withCap(2)).evidenceState).toBe("DEVELOPING");
+    expect(computePointLevel(withCap(1)).evidenceState).toBe("SUPPORTED");
+    expect(computePointLevel(withCap(0)).evidenceState).toBe("NOT_OBSERVED");
+  });
+
   it("evidence for level 4 while still at level 2 proposes level 3 first (level 4 only from 'Tự làm được')", () => {
     const counted = [q("2026-10-01", true, "A"), q("2026-10-01", true, "A"), q("2026-10-05", true, "A"), q("2026-10-05", true, "A"), q("2026-10-19", true, "B"), q("2026-10-19", true, "B")];
     const r = computePointLevel(base({ counted }));

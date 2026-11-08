@@ -11,7 +11,7 @@ export interface PointEngineStore {
 }
 
 export type PointRecomputeSummary = { learnerId: string; results: PointEngineResult[]; applied: PointApplied };
-const NOTHING: PointApplied = { auto: 0, proposed: 0, flagged: 0, policyVersion: null };
+const NOTHING: PointApplied = { auto: 0, proposed: 0, flagged: 0, failed: 0, policyVersion: null };
 
 /** Recompute the points of one child (null = every point with evidence, taught or in the book) and write the outcome. */
 export async function recomputePoints(store: PointEngineStore, learnerId: string, tags: string[] | null = null): Promise<PointRecomputeSummary> {

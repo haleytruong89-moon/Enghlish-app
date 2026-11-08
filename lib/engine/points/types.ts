@@ -30,7 +30,7 @@ export type PointDecision = {
 
 export type PointEngineInput = {
   tagKey: string;
-  /** The point is in a Unit that was taught (in progress / done / in a lesson note). */
+  /** The point is in a Unit that was taught at a session (a lesson note names the Unit); "in progress" alone is not enough. */
   taughtUnit: boolean;
   counted: CountedQuestion[];
   /** Correct answers WITH help (a tutor session, "làm cùng thầy/cô"): lift to level 2 at most. */

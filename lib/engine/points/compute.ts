@@ -27,9 +27,10 @@ export function computePointLevel(input: PointEngineInput): PointEngineResult {
   for (const c of counted) occByDay.set(c.day, [...(occByDay.get(c.day) ?? []), c]);
 
   // Level 1: the point was taught, or at least one question was done (right or wrong, with or without help).
-  const level1 = input.taughtUnit || counted.length > 0 || input.supportedAttempted > 0 || input.supportedCorrect > 0;
+  const level1 = input.taughtUnit || counted.length > 0 || (p.supportCapLevel >= 1 && (input.supportedAttempted > 0 || input.supportedCorrect > 0));
   // Level 2: >= minCorrect counted correct answers, or >= minCorrect correct answers with help (help lifts to level 2 at most).
-  const level2 = correctCounted.length >= p.developing.minCorrect || input.supportedCorrect >= p.developing.minCorrect;
+  // Help alone lifts a point at most to the policy's supportCapLevel (PP-0.1: 2).
+  const level2 = correctCounted.length >= p.developing.minCorrect || (input.supportedCorrect >= p.developing.minCorrect && p.supportCapLevel >= 2);
   // Level 3: enough counted questions, enough of them right, on enough different days.
   const level3 =
     counted.length >= p.independent.minCounted &&
@@ -43,8 +44,9 @@ export function computePointLevel(input: PointEngineInput): PointEngineResult {
     const gap = day - Math.max(...earlier);
     const corr = qs.filter((x) => x.correct);
     const priorSources = new Set(counted.filter((c) => c.day < day).map((c) => c.sourceId));
-    const differentSource = !p.transferable.requiresDifferentSource || corr.some((x) => !priorSources.has(x.sourceId));
-    return gap >= p.transferable.minDaysFromLastOccasion && corr.length >= p.transferable.minCountedCorrect && differentSource;
+    // H2: the correct answers that make the occasion count must THEMSELVES come from a source no earlier day used.
+    const usable = p.transferable.requiresDifferentSource ? corr.filter((x) => !priorSources.has(x.sourceId)) : corr;
+    return gap >= p.transferable.minDaysFromLastOccasion && usable.length >= p.transferable.minCountedCorrect;
   };
   const level4 = level3 && [...occByDay.entries()].some(([day, qs]) => level4Occasion(day, qs));
 

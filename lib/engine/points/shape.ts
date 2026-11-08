@@ -66,7 +66,8 @@ export type PointApplyRow = {
   conditions: PointEngineResult["conditions"];
   evidence: { auto: string[]; propose: string[]; flag: string[] };
 };
-const cap = (xs: readonly string[]) => xs.slice(0, MAX_POINT_EVIDENCE);
+/** The most recent MAX_POINT_EVIDENCE questions (refs run oldest → newest); the database keeps the same bound. */
+const cap = (xs: readonly string[]) => xs.slice(-MAX_POINT_EVIDENCE);
 export function toPointApplyRow(r: PointEngineResult, computedAt: string): PointApplyRow {
   return {
     tag_key: r.tagKey,
@@ -82,9 +83,9 @@ export function toPointApplyRow(r: PointEngineResult, computedAt: string): Point
   };
 }
 
-export type PointApplied = { auto: number; proposed: number; flagged: number; policyVersion: string | null };
-const appliedRow = z.object({ auto: z.number().int(), proposed: z.number().int(), flagged: z.number().int(), policy_version: z.string().nullable() });
+export type PointApplied = { auto: number; proposed: number; flagged: number; failed: number; policyVersion: string | null };
+const appliedRow = z.object({ auto: z.number().int(), proposed: z.number().int(), flagged: z.number().int(), failed: z.number().int().optional().default(0), policy_version: z.string().nullable() });
 export function parsePointApplied(raw: unknown): PointApplied {
   const a = appliedRow.parse(raw);
-  return { auto: a.auto, proposed: a.proposed, flagged: a.flagged, policyVersion: a.policy_version };
+  return { auto: a.auto, proposed: a.proposed, flagged: a.flagged, failed: a.failed, policyVersion: a.policy_version };
 }
