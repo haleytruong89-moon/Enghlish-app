@@ -1241,3 +1241,53 @@ K8 (lịch buổi học thuộc lát nào: chưa có bảng lịch), và xem l�
 - [ ] Điện thoại 390 px không cuộn ngang; ô bấm ≥ 44 px
 - [ ] Màn của con không đổi; link cũ vẫn chạy
 - [ ] CI xanh (typecheck, lint, unit, E2E smoke); review Opus xong
+
+## W3 · Mức điểm kiến thức + Bản đồ kiến thức + Nạp bài đã làm (08/11/2026)
+
+**Trạng thái:** code trên nhánh `feature/w3-points-import` (dựa trên `main` sau khi gộp W1, W2 và khung bàn làm việc — PR #27), chờ CI + review Opus + phụ huynh duyệt PR.
+
+**SQL cần phụ huynh áp: `0027_points_import.sql` rồi `0028_seed_point_policy_pp_0_1.sql` — TRƯỚC khi thử preview** (workflow "Apply database migrations", hoặc SQL Editor theo thứ tự). `0025` và `0026` đã áp từ 08/11. Chỉ thêm, không sửa gì đã có; chưa áp thì Bản đồ kiến thức và Nạp bài báo nhẹ "chưa sẵn sàng", mọi màn cũ vẫn chạy (Chờ duyệt ghi "Chưa đọc được phần Điểm kiến thức").
+
+**H1–H7 đã duyệt 08/11** (plan `docs/superpowers/plans/2026-11-08-w3-points-import.md`, mục Assumptions): ngưỡng `PP-0.1` đúng §5.2 (H1); "nguồn khác" của mức 4 = mẫu đề khác (H2); Bản đồ kiến thức là trang riêng (H3); nhãn đọc/nghe cùng engine điểm (H4); mức 3–4 xác nhận từng điểm, không "xác nhận tất cả" (H5); bài nạp chỉ có câu đóng, câu tự luận chỉ ở khung giấy (H6); `provenance='imported'` là giá trị mới (H7).
+
+### Đã làm
+| Việc | Ở đâu |
+|---|---|
+| Sổ điểm **tách riêng** khỏi kỹ năng (S7a): `point_policies`, `point_decisions` (chỉ thêm), `point_state` (dẫn xuất, tính lại được). Lý do tách: khóa theo nhãn (`error_tags.key`) thay vì mục tiêu, nên không đụng bậc kỹ năng đang chạy | `0027` mục 2–5 |
+| Chính sách `PP-0.1` đưa vào bằng `gen:config -- --new` (khóa trong `content/config.lock.json`, không sửa được) | `content/point_policy_PP-0.1.json`, `0028` |
+| Engine điểm thuần, cùng kỷ luật S7a: **không tự hạ bậc**; app tự đặt mức 1–2; mức 3–4 chỉ **đề xuất**; một đề xuất mở cho mỗi (em, điểm); không đề xuất / gắn cờ lại cùng bằng chứng; ⚑ khi 2/3 câu gần nhất sai; sửa tay mức 1–2 giữ nguyên khi bằng chứng chưa đổi (B2) | `lib/engine/points/*` |
+| Đề xuất điểm nằm trong **cùng tab "Kỹ năng"** của Hộp duyệt, mỗi điểm một thẻ: thầy/cô của em bấm Xác nhận / Chưa (có lý do); phụ huynh chỉ xem. Cũng hiện trong "Chờ duyệt" của em, nhưng chỉ là liên kết | `/review/skills`, `components/points/*`, `lib/desk/pending.ts` |
+| **Bản đồ kiến thức** `/learners/[id]/knowledge` (mảng › nhóm › điểm, thang 4 ô có chữ, bằng chứng từng câu Đúng/Sai, "trong giáo trình …"); "Tính lại mức điểm từ đầu"; mục cột trái "Bản đồ kiến thức" đã sáng | `lib/points/*`, `lib/shell/nav.ts` |
+| **Nạp bài đã làm**: thầy/cô hoặc phụ huynh tải file bài con làm (ảnh/PDF) + file đáp án (PDF/ảnh/Word) + ngày làm thật + mức hỗ trợ → AI đọc (`prompts/read-answers.v1.md`, bỏ dấu chữa, câu không chắc = "Cần xem") → app **so đáp án bằng code** → thầy/cô xem, sửa, chọn nhãn trong danh sách đóng → **chỉ thầy/cô của em** xác nhận | `/learners/[id]/imports/new`, `/imports/[id]`, `lib/import/*` |
+| Bài đã nạp thành một mẫu `imported` + một lần làm `provenance='imported'` + kết quả từng câu. **Không** là "lần làm đầu" của bước nào đã giao (R2): bậc kỹ năng S7a không đổi (có test). Con không thấy bài nạp | `0027` mục 7–8 |
+| Chống nạp trùng: cùng mã băm file bài, hoặc cùng tên đề + ngày; muốn nạp lại phải đánh dấu "Đây là lần làm khác" | `eng_create_import` |
+| Xóa dữ liệu một em gồm các bảng mới (đối chiếu từng dòng) | `0027` mục 9 |
+
+### Cách thử trên preview (gia đình thử; phụ huynh bật AI ở Cài đặt AI)
+1. Đăng nhập gia sư Nguyên (thử) → cột trái **Giao bài** → **Nạp bài đã làm**. Tên đề "Progress Test 1–12", chọn file bài (ảnh hoặc PDF) + file đáp án, ngày làm là một ngày đã qua, mức hỗ trợ "Tự làm rồi chữa cùng thầy/cô" → **Cho AI đọc**.
+2. Chờ 1–3 phút → màn "Xem và xác nhận bài nạp": 60 câu, các câu "Cần xem" ở trên, nút **Xác nhận và tính mức** tắt cho tới khi mọi câu xong ("Còn n câu cần xử lý"). Đánh Đúng/Sai cho câu AI không chắc, chọn nhãn cho câu chưa có nhãn → Xác nhận.
+3. Nạp **thêm một lần nữa** (bài khác hoặc làm ở ngày khác, ngày khác với lần đầu): một lần nạp đơn lẻ chỉ đủ lên "Đang tiến bộ", mức "Tự làm được" cần bằng chứng ở ít nhất 2 ngày.
+4. Hộp duyệt → tab **Kỹ năng**: dưới "Điểm kiến thức" có đề xuất lên "Tự làm được". Mở "Xem điều kiện" → Xác nhận từng điểm.
+5. **Bản đồ kiến thức** của Nguyên: điểm vừa xác nhận ở "Tự làm được"; mở "Bằng chứng từng câu" thấy Đúng/Sai (không có điểm số).
+6. Phụ huynh: thấy Bản đồ và đề xuất nhưng chỉ có dòng "Chờ thầy/cô xác nhận", không nút Xác nhận. Nạp lại đúng file đó → báo "có thể đã nạp rồi".
+7. Đăng nhập Nguyên (thử): không có gì mới; `/learners/<id>/knowledge` và `/learners/<id>/imports/new` = 404.
+
+### Thử AI bằng dùng thật (spec §8)
+Lần nạp Progress Test thật đầu tiên = lần thử. Ghi lại: chi phí (`ai_runs`, purpose `read_answers`) và **% câu gia sư phải sửa** (Đúng/Sai hoặc nhãn). Sửa > 20 % → **dừng**, chỉnh `read-answers.v1` (bản v2) trước khi nạp đề khác. Chạy thử bằng `AI_FAKE=1` dùng `tests/fixtures/import/fake-read-answers.json` (60 câu từ đề Progress Test thật: 51 đúng, câu 50 "across" sai, 3 câu "Cần xem").
+
+| Đề | Ngày nạp | Lần gọi AI | Chi phí | Câu AI đọc | Phải sửa | Kết luận |
+|---|---|---|---|---|---|---|
+| (chờ lần dùng thật) | | | | | | |
+
+### Quyết định kỹ thuật cần biết
+- **Chưa có đường "soạn tay" cho Nạp bài.** AI là cách duy nhất đọc bài; AI tắt / chưa đồng ý / hết trần thì **không tạo gì** và màn nói rõ lý do (khác Giáo trình, nơi vẫn soạn tay được).
+- AI đọc được **ảnh** (PNG/JPG/WebP) nhờ một loại tài liệu mới `image` trong `lib/ai/request.ts`; file đáp án Word được đổi thành chữ trên máy chủ như Studio.
+- Không gửi gì do người gõ cho AI (kể cả tên đề); chỉ gửi hai file + danh sách nhãn.
+- Làm cùng thầy/cô ("Làm cùng thầy/cô") chỉ nâng tối đa lên mức "Đang tiến bộ".
+
+### Tiêu chí đạt (spec §6 W3)
+- [ ] Nạp Progress Test: 60 câu, câu không chắc lên đầu, không xác nhận một cú bấm
+- [ ] Thầy/cô xác nhận xong thì mức điểm tính lại, đề xuất 3–4 vào tab Kỹ năng
+- [ ] Phụ huynh không xác nhận được; con không thấy bài nạp, mức, nhãn
+- [ ] Bản đồ kiến thức đúng mức, bằng chứng từng câu Đúng/Sai
+- [ ] Nạp trùng bị chặn; bậc kỹ năng S7a không đổi sau khi nạp
