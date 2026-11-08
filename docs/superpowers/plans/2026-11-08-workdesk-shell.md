@@ -2,6 +2,8 @@
 
 > **For agentic workers:** Implement this plan task-by-task.
 > Steps use checkbox (`- [ ]`) syntax for tracking.
+>
+> **K1–K16 đã duyệt 08/11** (phụ huynh chấp nhận đề xuất của plan; mục "Assumptions" bên dưới là bản ghi quyết định).
 
 **Goal:** Trang người lớn (gia sư + phụ huynh) trông và đi lại giống bản bấm thử đã thống nhất: thanh trên + **cột trái cố định** (Bàn làm việc · Hồ sơ học sinh · Bản đồ kiến thức · Lộ trình · Buổi học · Giao bài · Giáo trình · Chờ duyệt · Góp ý về app), trang **Bàn làm việc** thay trang chủ cũ, trang **Chờ duyệt** dạng bảng gọn có lọc. Chỉ dùng trang và dữ liệu đã có (S0–S7a, Studio B1, W0–W2). Không SQL, không API mới, không AI. Màn của con không đổi.
 
