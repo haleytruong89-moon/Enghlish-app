@@ -1,8 +1,16 @@
 import "server-only";
 import { loadCurriculumCards } from "@/lib/curriculum/load";
+import type { CurriculumCard } from "@/lib/curriculum/shape";
+import type { LearnerSummary } from "@/lib/home/visible";
+import { loadLevelProfile, loadRecentLevelChanges } from "@/lib/levels/load";
+import type { LevelProfile, RecentChange } from "@/lib/levels/types";
 import { loadInbox } from "@/lib/review/load";
 import { loadSkillInbox } from "@/lib/skills/load";
-import { loadDraftList, loadStudioPending } from "@/lib/studio/load";
+import type { ShellData } from "@/lib/shell/shell";
+import { loadAiSettings, loadDraftList, loadStudioPending } from "@/lib/studio/load";
+import type { AiSettingsView } from "@/lib/studio/types";
+import { loadToday, type TodayData } from "@/lib/tutorwork/load";
+import { loadIntake } from "@/lib/workdesk/load";
 import { buildPendingRows, PENDING_LOAD_LIMIT, type PendingRow } from "./pending";
 
 export type PendingSource = "work" | "studio" | "skills" | "drafts" | "curricula";
@@ -39,4 +47,29 @@ export async function loadPendingRows(memberId: string, role: "tutor" | "parent"
     failed,
     more: (work?.next ?? null) !== null,
   };
+}
+
+export type DeskData = {
+  today: TodayData | null;
+  pending: PendingRowsResult;
+  intakeMissing: boolean | null;
+  curricula: CurriculumCard[] | null;
+  profile: LevelProfile | null;
+  recent: RecentChange[] | null;
+  aiSettings: AiSettingsView | null;
+};
+
+/** Everything the desk of one child needs. Call ONLY after the page gate of that child (admin-client loaders). Never throws. */
+export async function loadDesk(shell: ShellData, learner: LearnerSummary): Promise<DeskData> {
+  const parent = shell.role === "parent";
+  const [today, pending, intake, curricula, profile, recent, aiSettings] = await Promise.all([
+    settle(loadToday(learner.id, learner.trackId, { role: shell.role, memberId: shell.memberId })),
+    loadPendingRows(shell.memberId, shell.role, learner.id),
+    settle(loadIntake(learner.id)),
+    settle(loadCurriculumCards(learner.id)),
+    settle(loadLevelProfile(learner.id)),
+    parent ? settle(loadRecentLevelChanges(shell.learners)) : Promise.resolve(null),
+    parent ? settle(loadAiSettings(shell.memberId)) : Promise.resolve(null),
+  ]);
+  return { today, pending, intakeMissing: intake && intake.available ? intake.data === null : null, curricula, profile, recent, aiSettings };
 }

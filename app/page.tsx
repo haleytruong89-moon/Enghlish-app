@@ -1,25 +1,21 @@
 import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
-import { LearnerCard } from "@/components/LearnerCard";
-import { AiSoftCapBox } from "@/components/settings/AiSoftCapBox";
-import { RecentLevelChanges } from "@/components/levels/RecentLevelChanges";
+import { DeskView } from "@/components/desk/DeskView";
+import { StaffShell } from "@/components/shell/StaffShell";
 import { StudentHome } from "@/components/student/StudentHome";
-import Link from "next/link";
-import { aiSettingsCopy, appFeedback, home, reviewPage, todayPage } from "@/lib/copy/vi";
-import { todayVn } from "@/lib/inquiries/dates";
-import { formatDay } from "@/lib/review/format";
-import { loadToday, type TodayData } from "@/lib/tutorwork/load";
+import { deskCopy, home } from "@/lib/copy/vi";
+import { loadDesk } from "@/lib/desk/load";
 import { loadHome } from "@/lib/home/loadHome";
-import { loadRecentLevelChanges } from "@/lib/levels/load";
-import { countToDecide } from "@/lib/review/load";
-import { revisionsAvailable } from "@/lib/revision/load";
 import { safeColor } from "@/lib/home/visible";
-import { loadAiSettings } from "@/lib/studio/load";
+import { todayVn } from "@/lib/inquiries/dates";
+import { revisionsAvailable } from "@/lib/revision/load";
+import { firstParam, toShell } from "@/lib/shell/shell";
+import { requireLearnerPage } from "@/lib/tutorwork/page";
 import { loadStudentHome } from "@/lib/work/load";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ learner?: string | string[] }> }) {
   const data = await loadHome();
   if (data.kind === "signed-out") redirect("/login");
 
@@ -60,58 +56,26 @@ export default async function HomePage() {
     );
   }
 
-  const isParent = data.kind === "parent";
-  // How much work waits for this person. A failed lookup must not take the whole home page down: show the link without a number.
-  let toDecide: number | null = null;
-  try {
-    toDecide = await countToDecide();
-  } catch {
-    toDecide = null;
+  // Staff (tutor / parent): Bàn làm việc of one child (plan K9), in the workdesk shell.
+  const shell = toShell(data, firstParam((await searchParams).learner), await revisionsAvailable());
+  if (!shell) redirect("/login"); // unreachable: students returned above
+  const learner = shell.current;
+  if (!learner) {
+    return (
+      <StaffShell shell={shell}>
+        <div data-testid="today-page">
+          <h1 className="text-2xl font-bold" data-testid="desk-title">{deskCopy.titleEmpty}</h1>
+          <p className="mt-3 text-muted">{shell.role === "parent" ? home.parentSummary(0) : home.tutorEmpty}</p>
+        </div>
+      </StaffShell>
+    );
   }
-  // "Hôm nay" numbers per child. One failed lookup must not take the whole page down: that card just leaves out its attention part.
-  const role = isParent ? "parent" : "tutor";
-  const todays = await Promise.all(
-    data.learners.map(async (l): Promise<TodayData | null> => {
-      try {
-        return await loadToday(l.id, l.trackId, { role, memberId: data.memberId });
-      } catch {
-        return null;
-      }
-    }),
-  );
-  // "Thay đổi cấp gần đây" (parent only). null = could not be read: the box is left out rather than claiming "no change".
-  const recent = isParent ? await loadRecentLevelChanges(data.learners) : null;
-  // Studio B1: the soft-cap box of the AI spend (parent only; null = unreadable, e.g. 0024 not applied yet).
-  const aiSettings = isParent ? await loadAiSettings(data.memberId).catch(() => null) : null;
-  // "Bài đã sửa" needs migration 0021: until it is applied the link on each card is left out (no dead link).
-  const revisionsReady = await revisionsAvailable();
+  // The child comes from the RLS-scoped list; the gate runs anyway before the admin-client loaders of the desk.
+  await requireLearnerPage(learner.id, "tutorwork:read");
+  const desk = await loadDesk(shell, learner);
   return (
-    <>
-      <AppHeader name={data.displayName} showTestBadge={anyTest} feedbackScreen={appFeedback.screens.home} />
-      <main className="mx-auto max-w-4xl px-4 py-10" data-testid="today-page">
-        <h1 className="text-2xl font-bold">{todayPage.title(formatDay(todayVn()))}</h1>
-        {isParent ? <p className="mt-2 text-muted">{home.parentSummary(data.learners.length)}</p> : null}
-        {data.learners.length === 0 && !isParent ? <p className="mt-4 text-muted">{home.tutorEmpty}</p> : null}
-        <Link
-          href="/review"
-          data-testid="review-link"
-          className="mt-5 inline-flex min-h-12 items-center rounded-xl bg-accent px-5 text-base font-semibold text-white"
-        >
-          {toDecide === null ? reviewPage.link : reviewPage.linkCount(toDecide)}
-        </Link>
-        {isParent ? (
-          <Link href="/settings/ai" data-testid="ai-settings-link" className="ml-3 inline-flex min-h-12 items-center text-sm text-accent underline">
-            {aiSettingsCopy.navLink}
-          </Link>
-        ) : null}
-        {recent ? <RecentLevelChanges items={recent} /> : null}
-        {aiSettings ? <AiSoftCapBox settings={aiSettings} /> : null}
-        <ul className="mt-6 flex flex-col gap-3">
-          {data.learners.map((l, i) => (
-            <LearnerCard key={l.id} learner={l} today={todays[i] ?? null} role={role} revisionsReady={revisionsReady} />
-          ))}
-        </ul>
-      </main>
-    </>
+    <StaffShell shell={shell}>
+      <DeskView shell={shell} learner={learner} data={desk} todayIso={todayVn()} />
+    </StaffShell>
   );
 }

@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { LearnerCard } from "@/components/LearnerCard";
+import { ProfileBox } from "@/components/desk/ProfileBox";
 import { RecentLevelChanges } from "@/components/levels/RecentLevelChanges";
 import { ReviewByDomain } from "@/components/student/ReviewByDomain";
 import { AdjustForm } from "@/components/levels/AdjustForm";
@@ -112,13 +112,11 @@ describe("Milestones", () => {
     expect(empty).toContain(levelCopy.historyNone);
   });
 
-  it("the learner card links to Hồ sơ cấp", () => {
-    const html = render(createElement(LearnerCard, {
-      learner: { id: L, alias: "Nguyên (thử)", trackId: "B", status: "active", isTest: true, color: null }, today: null, role: "parent",
-    }));
+  it("the desk's profile box links to Hồ sơ cấp", () => {
+    const html = render(createElement(ProfileBox, { learnerId: L, alias: "Nguyên (thử)", profile: null, weak: [] }));
     expect(html).toContain(`href="/learners/${L}/levels"`);
-    expect(html).toContain(levelCopy.link);
   });
+
 });
 
 describe("Milestones: corrections (A2)", () => {
