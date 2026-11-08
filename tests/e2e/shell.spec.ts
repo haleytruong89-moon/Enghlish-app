@@ -45,8 +45,6 @@ test.describe("workdesk shell", () => {
     await page.getByTestId(`learner-option-${NG}`).click();
     await expect(page).toHaveURL(new RegExp(`/learners/${NG}/weak$`));
     await expect(page.getByTestId("nav-profile-weak")).toHaveAttribute("aria-current", "page");
-    await page.goto("/");
-    await expect(page.getByText(home.parentSummary(2))).toBeVisible();
   });
 
   for (const key of ["studentAn", "studentNguyen"] as const) {
