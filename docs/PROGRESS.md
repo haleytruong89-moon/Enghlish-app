@@ -1160,3 +1160,46 @@ Ghi chú dạy học đọc dòng mới nhất của **từng ô** (không mất
 ### Tiêu chí kiểm tra
 
 `typecheck`, `lint`, `test` (unit 1046 · database 605, gồm RLS từng vai, gia sư hết hạn, gia đình khác, xóa dữ liệu một em), `test:e2e --list` liệt kê 7 test W1 (chạy trong CI với Supabase local).
+
+## W2 · Giáo trình (08/11/2026)
+
+**Trạng thái:** code trên nhánh `feature/w2-curriculum` (dựa trên `feature/w1-notes-feedback`), chờ CI + review Opus + phụ huynh duyệt PR.
+
+**SQL cần phụ huynh áp (theo thứ tự, TRƯỚC khi thử preview hoặc gộp): `0025_workdesk_w1.sql` rồi `0026_curriculum.sql`** (chỉ thêm; 0026 cần 0025). Chưa áp 0026: Ghi buổi vẫn chạy như cũ (không có ô "Unit đã dạy"); trang Giáo trình báo lỗi tải.
+
+### Đã làm
+| Việc | Ở đâu |
+|---|---|
+| 6 bảng: `curricula` (của một em, không có `kind`), `curriculum_versions` (nháp → đã duyệt → thay bằng bản mới; đã duyệt bất biến), `curriculum_units` + `curriculum_unit_points` (sinh lúc Duyệt; mỗi dòng nối = 1 nhãn trong danh sách đóng), `curriculum_unit_events` (chỉ thêm), `lesson_note_units` | `0026` mục 2–3 |
+| Thêm giáo trình / Nạp mục lục (PDF) / Soạn tay / Sửa = bản mới / Bỏ nháp: gia sư hoặc phụ huynh. **Duyệt: chỉ thầy/cô của em** (D-W8) | `0026` mục 4, `lib/curriculum/handlers.ts` |
+| AI đọc mục lục: `prompts/curriculum-toc.v1.md`, tool bắt buộc, code kiểm (số Unit liền mạch, mã trùng, điểm ngoài danh sách → "cần xem"), trần $10, `ai_runs` purpose `curriculum_toc` | `lib/curriculum/{tocTool,extract,normalize,validate}.ts` |
+| Màn duyệt rộng: dòng cần xem lên đầu, thanh dính đáy "Còn n dòng cần xử lý · Duyệt", lý do sửa/bỏ (không bắt buộc), Tốt/Tạm/Phải sửa nhiều | `/curricula/versions/[id]` |
+| "Đang học đến" + độ phủ (đúng 3 ví dụ DOMAIN §5.1), trạng thái Unit | `lib/curriculum/progress.ts`, `/learners/[id]/curricula`, `/learners/[id]/curricula/[curriculumId]` |
+| Ghi buổi: "Unit đã dạy hôm nay" → đề xuất "Đang học" (thầy/cô bấm) | `SessionNoteForm`, `eng_write_lesson_note_v3` |
+| 13 nhãn dạng câu nghe (B 8 · A 5) mang nhóm mảng Nghe (R7) | `content/tags/listening_*.json`, `0026` mục 6 |
+| Xóa dữ liệu một em gồm 6 bảng mới | `0026` mục 8 |
+
+### Cách thử trên preview (gia đình thử, AI bật ở Cài đặt AI)
+1. Đăng nhập gia sư Nguyên → thẻ Nguyên (thử) → **Giáo trình** → Thêm giáo trình: "Destination C1 & C2", ghi chú cấp "C1–C2", chọn PDF trang mục lục → **Cho AI đọc mục lục**.
+2. Chờ 1–2 phút → màn duyệt: kỳ vọng 26 Unit đúng thứ tự, mục "Cần xem" ở trên, nút Duyệt tắt. Sửa / "Đã xem" / "Tạo nhãn riêng" (vd "Thì hiện tại" → nhóm "Thì") cho từng dòng → Duyệt.
+3. "Cập nhật trạng thái Unit": U1–U12 Đã học, U3 Bỏ qua, U13 Đang học → thẻ hiện "Đang học đến U13", "Đã học 11/25 Unit · 44 %".
+4. Ghi buổi học → chọn U14 → Lưu → bấm "Đặt U14 là “Đang học”".
+5. Đăng nhập phụ huynh → mở bảng nối: thấy chi phí AI, không có nút Duyệt; "Sửa mục lục / bảng nối" tạo bản 2.
+6. Đăng nhập Nguyên (thử): không có gì mới; `/learners/<id>/curricula` = 404.
+
+### Thử AI bằng dùng thật (spec §8)
+Lần đầu gia sư nạp mục lục thật = lần thử. Sau khi duyệt: `npm run report:curriculum-ai` → dán bảng vào đây. Phải sửa > 20 % dòng → **dừng**, chỉnh công thức (v2) và chạy `npm run golden:curriculum -- <pdf>` trước khi nạp quyển tiếp theo.
+
+| Giáo trình | Bản | Duyệt ngày | Lần gọi AI | Token vào / ra | Chi phí | Dòng AI | Phải sửa | Đánh giá | Kết luận |
+|---|---|---|---|---|---|---|---|---|---|
+| (chờ lần dùng thật) | | | | | | | | | |
+
+### Giả định chờ phụ huynh
+G1–G14 ở đầu `docs/superpowers/plans/2026-11-08-w2-curriculum.md`.
+
+### Tiêu chí đạt (spec §6 W2)
+- [ ] PDF mục lục Destination → AI ra 26 Unit đúng thứ tự (bộ đề chuẩn), gia sư duyệt
+- [ ] Nối Unit → nhãn chỉ trong danh sách đóng
+- [ ] "Đang học đến" đúng 3 ví dụ DOMAIN §5.1
+- [ ] Sửa sau duyệt tạo v2; bằng chứng cũ không đổi
+- [ ] Nhãn nghe chọn được trong ô chọn

@@ -163,3 +163,12 @@ Khóa mới trong `lib/copy/vi.ts` (người dạy luôn gọi bằng `tutorHono
 - `appFeedback` — trang `/feedback` và nút "Góp ý về app": 4 loại (Lỗi · Khó dùng · Đề xuất · Câu hỏi), trạng thái (Mới · Đang sửa · Đã sửa · Không làm), ô trả lời của phụ huynh.
 
 Học sinh không thấy gì ở W1. Không có chữ nào có dạng điểm.
+
+## W2 · Giáo trình (08/11/2026)
+
+Khóa mới trong `lib/copy/vi.ts` (người dạy luôn gọi bằng `tutorHonorific`, không viết cứng "cô"):
+
+- `curriculumCopy` — trang Giáo trình (thẻ: ghi chú cấp, "Đang học đến", độ phủ), Thêm giáo trình / Nạp mục lục, màn duyệt mục lục (Cần xem, thanh dưới "Còn n dòng cần xử lý · Duyệt", lý do sửa / bỏ, Tốt · Tạm · Phải sửa nhiều), bảng nối chỉ đọc, trạng thái Unit, "Unit đã dạy hôm nay" và đề xuất "Đang học" ở Ghi buổi.
+- `curriculumErrors` — thông báo lỗi theo mã (không quyền duyệt, nháp đã đổi, còn dòng cần xem, điểm ngoài danh sách, …).
+
+Luật: người dạy = `tutorHonorific`; "%" độ phủ chỉ ở màn người lớn; không chữ "TOMO". Học sinh không thấy gì ở W2.
