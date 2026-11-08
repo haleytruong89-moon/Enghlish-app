@@ -565,6 +565,17 @@ begin
   values (v_d.learner_id, v_d.tag_key, v_kind, v_cur.state, v_to, v_d.conditions, v_d.evidence_item_refs, case when p_action = 'lower' then p_evidence_key end,
           coalesce(english.eng_point_policy(), v_d.policy_version), p_by, 'tutor', v_reason, p_decision, p_client_id)
   returning id into v_id;
+  -- "Hạ mức" (same transaction): a proposal still open for this point (e.g. TRANSFERABLE from INDEPENDENT) can no longer be confirmed, so it is
+  -- answered as declined with an automatic reason; the engine may propose again later on new evidence. Append-only: a new row, nothing edited.
+  if p_action = 'lower' then
+    insert into english.point_decisions(learner_id, tag_key, kind, from_state, to_state, conditions, evidence_item_refs, evidence_key, policy_version,
+                                        decided_by_member, decided_role, reason, responds_to, client_id)
+    select o.learner_id, o.tag_key, 'REJECTED', v_to, v_to, o.conditions, o.evidence_item_refs, null, coalesce(english.eng_point_policy(), o.policy_version),
+           p_by, 'tutor', 'Đã hạ mức theo cờ ⚑', o.id, 'auto-' || pg_catalog.md5(p_client_id || ':' || o.id::text)
+    from english.point_decisions o
+    where o.learner_id = v_d.learner_id and o.tag_key = v_d.tag_key and o.kind = 'PROPOSED'
+      and not exists (select 1 from english.point_decisions a where a.responds_to = o.id);
+  end if;
   perform english.eng_project_point_state(v_d.learner_id, v_d.tag_key);
 
   insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)

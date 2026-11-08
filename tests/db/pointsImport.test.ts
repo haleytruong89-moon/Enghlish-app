@@ -504,6 +504,25 @@ describe("W3 points + import (migration 0027)", () => {
       expect(map.points.find((x) => x.tag_key === tag)!.answers).toHaveLength(4);
       await svc("select english.eng_reset_point_states($1,$2) as r", [L, M().parent]).catch((e: { message?: string }) => { throw e; });
     });
+    it("S4: lowering a ⚑ level also answers an open TRANSFERABLE proposal (REJECTED, automatic reason), so nothing unconfirmable stays in the inbox and the engine can propose again", async () => {
+      const L = await freshLearner("Em thử hạ và đề xuất");
+      const tag = "cum-dong-tu";
+      await apply([row(tag, { auto: "DEVELOPING", propose: "INDEPENDENT", propose_key: ek(7) })], L);
+      const p1 = (await q1<{ id: string }>("select id from english.point_decisions where learner_id=$1 and kind='PROPOSED'", [L]))[0]!.id;
+      await svc("select english.eng_decide_point($1,'confirm',null,$2,$3) as r", [p1, M().tutorNguyen, randomUUID()]);
+      await apply([row(tag, { propose: "TRANSFERABLE", propose_key: ek(9), raise_flag: true, flag_key: ek(6), evidence_key: ek(3) })], L);
+      expect(await q1("select kind from english.point_decisions where learner_id=$1 and kind in ('FLAG') or (learner_id=$1 and kind='PROPOSED' and to_state='TRANSFERABLE')", [L])).toHaveLength(2);
+      const flag = (await q1<{ id: string }>("select id from english.point_decisions where learner_id=$1 and kind='FLAG'", [L]))[0]!.id;
+      await svc("select english.eng_decide_point($1,'lower','Sai lại hai lần ở bài ôn',$2,$3,$4) as r", [flag, M().tutorNguyen, randomUUID(), ek(3)]);
+      const pt = (await q1<{ id: string }>("select id from english.point_decisions where learner_id=$1 and kind='PROPOSED' and to_state='TRANSFERABLE'", [L]))[0]!.id;
+      expect(await q1("select kind, reason, from_state, to_state, decided_role from english.point_decisions where responds_to=$1", [pt]))
+        .toEqual([{ kind: "REJECTED", reason: "Đã hạ mức theo cờ ⚑", from_state: "DEVELOPING", to_state: "DEVELOPING", decided_role: "tutor" }]);
+      expect((await q1<{ state: string; proposal_decision_id: string | null; flag_decision_id: string | null }>("select state, proposal_decision_id, flag_decision_id from english.point_state where learner_id=$1 and tag_key=$2", [L, tag]))[0])
+        .toEqual({ state: "DEVELOPING", proposal_decision_id: null, flag_decision_id: null });
+      const inbox = await svc<{ items: { learner_id: string }[] }>("select english.eng_point_inbox($1,false) as r", [M().tutorNguyen]);
+      expect(inbox.items.filter((i) => i.learner_id === L)).toEqual([]);
+      expect(await apply([row(tag, { propose: "INDEPENDENT", propose_key: ek(11) })], L)).toMatchObject({ proposed: 1 });
+    });
     it("S2: a superseded version's Unit→point link no longer counts (taught_unit, tags)", async () => {
       const L = await freshLearner("Em thử bản cũ");
       const tag = "cum-dong-tu";
