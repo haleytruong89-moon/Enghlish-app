@@ -201,3 +201,16 @@ export function buildTemplateViews(rows: readonly TemplateRow[]): TemplateView[]
       stepCount: r.steps.length,
     }));
 }
+
+/**
+ * Imported work (W3, template ids A-IM-/B-IM-nnnnnn, the only shape the database allows for kind 'imported') is a RECORD of paper work, never assigned
+ * work: it must not appear in "Bài đã giao", in step actions or in the offline form. Pure.
+ */
+export const isImportedTemplateId = (id: string): boolean => /^[AB]-IM-\d{6}$/.test(id);
+export function withoutImported(d: { instances: InstanceRow[]; activities: ActivityRow[]; events: EventRow[] }): { instances: InstanceRow[]; activities: ActivityRow[]; events: EventRow[] } {
+  const instances = d.instances.filter((i) => !isImportedTemplateId(i.template_id));
+  const keep = new Set(instances.map((i) => i.id));
+  const activities = d.activities.filter((a) => keep.has(a.inquiry_instance_id));
+  const acts = new Set(activities.map((a) => a.id));
+  return { instances, activities, events: d.events.filter((e) => acts.has(e.activity_instance_id)) };
+}

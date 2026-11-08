@@ -4,6 +4,7 @@
  * read; ONLY the child's tutor confirms the result (R8). The AI is asked only after the gate says yes; without AI nothing is created (the screen
  * says why). Stored file paths and AI cost never leave the server. The student never sees any of this.
  */
+import { createHash } from "node:crypto";
 import { AccessError, requireAccess, type AccessDeps, type AccessGrant, type AccessUser, type Action } from "@/lib/auth/requireAccess";
 import { parseGate, refusalStatus } from "@/lib/ai/cap";
 import type { CallOptions, ToolCall, ToolResult } from "@/lib/ai/request";
@@ -169,6 +170,10 @@ export async function handleCreateImport(deps: ImportDeps, learnerId: string, ra
     const bad = await verifyStoredFile(deps.storage, owner, kind, { id: f.id, mime: f.mime as AllowedMime, bytes: f.bytes });
     if (bad) return fail(400, bad);
   }
+  // The "same paper again?" fingerprint is what the browser computed. The file went straight to storage, so check it against the stored bytes:
+  // a wrong or forged hash would otherwise defeat (or abuse) the duplicate check.
+  const stored = await deps.storage.download(buildPath({ ...owner, fileId: b.work_file.id, mime: b.work_file.mime as AllowedMime })).catch(() => null);
+  if (!stored || createHash("sha256").update(stored).digest("hex") !== b.source_hash) return fail(400, "bad_hash");
   const manual = b.manual === true;
   // Without "Soạn tay" the AI is the only way to read the paper: no AI (off, no consent, cap) → nothing is created and the screen says why
   // (and offers "Soạn tay"). A manual import never calls the AI and never needs the gate.

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -179,11 +180,12 @@ function ideps(user: string | null, s: ImportStore = importStore()): ImportDeps 
     log: vi.fn(async () => {}),
   };
 }
+const HASH = createHash("sha256").update(new Uint8Array([1, 2, 3])).digest("hex"); // what the fake storage "holds"
 const png = { id: FILE_A, mime: "image/png", bytes: 2048 };
 const pdf = { id: FILE_B, mime: "application/pdf", bytes: 2048 };
 const create = (who: string, s = importStore(), body: Record<string, unknown> = {}) =>
   handleCreateImport(ideps(who, s), NGUYEN, {
-    title: "Progress Test 1-12", work_file: png, key_file: pdf, taken_on: "2026-10-23", support_level: "tu_lam_chua", source_hash: "a".repeat(64), client_id: "import-00001", ...body,
+    title: "Progress Test 1-12", work_file: png, key_file: pdf, taken_on: "2026-10-23", support_level: "tu_lam_chua", source_hash: HASH, client_id: "import-00001", ...body,
   });
 const rows = DRAFT.items.map((i) => ({
   n: i.n, part: i.part, student_answer: i.student_answer, key_answer: i.key_answer, tag: i.tag ?? "cum-dong-tu", out_of_app: i.out_of_app,
@@ -208,7 +210,7 @@ describe("import — create and the AI read", () => {
     const s = importStore();
     const d = ideps("parent", s);
     const r = await handleCreateImport(d, NGUYEN, {
-      title: "Progress Test 1-12", work_file: png, key_file: pdf, taken_on: "2026-10-23", support_level: "tu_lam_chua", source_hash: "a".repeat(64), client_id: "import-00001",
+      title: "Progress Test 1-12", work_file: png, key_file: pdf, taken_on: "2026-10-23", support_level: "tu_lam_chua", source_hash: HASH, client_id: "import-00001",
     });
     expect(r).toMatchObject({ status: 201, body: { import_id: BATCH, status: "reading" } });
     expect(d.jobs).toHaveLength(1);
@@ -232,7 +234,7 @@ describe("import — create and the AI read", () => {
     expect((await create("tutorNguyen", importStore(), { source_hash: "xyz" })).body).toMatchObject({ error: "invalid_body" });
     const d = ideps("tutorNguyen");
     (d.storage.stat as ReturnType<typeof vi.fn>).mockResolvedValue(null);
-    const r = await handleCreateImport(d, NGUYEN, { title: "T", work_file: png, key_file: pdf, taken_on: "2026-10-23", support_level: "tu_lam", source_hash: "b".repeat(64), client_id: "import-00002" });
+    const r = await handleCreateImport(d, NGUYEN, { title: "T", work_file: png, key_file: pdf, taken_on: "2026-10-23", support_level: "tu_lam", source_hash: HASH, client_id: "import-00002" });
     expect(r.body).toMatchObject({ error: "file_missing" });
   });
   it("a read that stays 'reading' too long is marked failed when it is opened", async () => {
@@ -299,7 +301,7 @@ describe("import — manual path, retry, renumbering, image size (after the Opus
   it("Soạn tay: no AI gate, no background job, the batch starts as a draft; also allowed while the AI is off", async () => {
     const off = importStore({ aiGate: vi.fn(async () => ({ ...GATE_ON, enabled: false, allowed: false, reason: "off" })), create: vi.fn(async () => ({ id: BATCH, status: "draft", replayed: false })) });
     const d = ideps("tutorNguyen", off);
-    const r = await handleCreateImport(d, NGUYEN, { title: "Tay", work_file: png, key_file: pdf, taken_on: "2026-10-23", support_level: "tu_lam", source_hash: "c".repeat(64), client_id: "import-00003", manual: true });
+    const r = await handleCreateImport(d, NGUYEN, { title: "Tay", work_file: png, key_file: pdf, taken_on: "2026-10-23", support_level: "tu_lam", source_hash: HASH, client_id: "import-00003", manual: true });
     expect(r).toMatchObject({ status: 201, body: { import_id: BATCH, status: "draft" } });
     expect(off.aiGate).not.toHaveBeenCalled();
     expect(off.create).toHaveBeenCalledWith(expect.objectContaining({ manual: true }));
@@ -334,6 +336,9 @@ describe("import — manual path, retry, renumbering, image size (after the Opus
     expect((await handleImportUploadUrl(ideps("tutorNguyen"), NGUYEN, { purpose: "import_key", mime: "image/png", bytes: 4_000_000 })).body).toMatchObject({ error: "image_too_big" });
     expect((await handleImportUploadUrl(ideps("tutorNguyen"), NGUYEN, { purpose: "import_work", mime: "image/jpeg", bytes: 3_600_000 })).status).toBe(201);
     expect((await handleImportUploadUrl(ideps("tutorNguyen"), NGUYEN, { purpose: "import_work", mime: "application/pdf", bytes: 12_000_000 })).status).toBe(201);
+  });
+  it("a wrong file fingerprint is refused (the server recomputes it from the stored file)", async () => {
+    expect((await create("tutorNguyen", importStore(), { source_hash: "f".repeat(64) })).body).toMatchObject({ error: "bad_hash" });
   });
   it("two parts that each restart at 1 give 20 rows (none dropped); the same (part, n) twice stays and both are 'Cần xem'", () => {
     const q = (part: string, n: number) => ({ n, part, student_answer: "a", key_answer: "a", tag: "cum-dong-tu", out_of_app: false, confidence: "high" as const });
