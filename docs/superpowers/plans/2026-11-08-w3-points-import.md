@@ -32,7 +32,7 @@
 
 ---
 
-## Assumptions (chờ phụ huынh)
+## Assumptions (**H1–H7 đã duyệt 08/11**)
 
 Những điểm **chưa** chốt trong spec/DOMAIN; builder dùng mặc định ghi dưới đây và nêu lại trong PR + `docs/PROGRESS.md`. Không chặn build.
 
