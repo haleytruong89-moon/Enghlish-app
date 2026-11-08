@@ -1261,7 +1261,7 @@ K8 (lịch buổi học thuộc lát nào: chưa có bảng lịch), và xem l�
 | **Nạp bài đã làm**: thầy/cô hoặc phụ huynh tải file bài con làm (ảnh/PDF) + file đáp án (PDF/ảnh/Word) + ngày làm thật + mức hỗ trợ → AI đọc (`prompts/read-answers.v1.md`, bỏ dấu chữa, câu không chắc = "Cần xem") → app **so đáp án bằng code** → thầy/cô xem, sửa, chọn nhãn trong danh sách đóng → **chỉ thầy/cô của em** xác nhận | `/learners/[id]/imports/new`, `/imports/[id]`, `lib/import/*` |
 | Bài đã nạp thành một mẫu `imported` + một lần làm `provenance='imported'` + kết quả từng câu. **Không** là "lần làm đầu" của bước nào đã giao (R2): bậc kỹ năng S7a không đổi (có test). Con không thấy bài nạp | `0027` mục 7–8 |
 | Chống nạp trùng: cùng mã băm file bài, hoặc cùng tên đề + ngày; muốn nạp lại phải đánh dấu "Đây là lần làm khác" | `eng_create_import` |
-| Xóa dữ liệu một em gồm các bảng mới (đối chiếu từng dòng) | `0027` mục 9 |
+| Xóa dữ liệu một em gồm các bảng mới (đối chiếu từng dòng) | `0027` mục 10 |
 
 ### Cách thử trên preview (gia đình thử; phụ huynh bật AI ở Cài đặt AI)
 1. Đăng nhập gia sư Nguyên (thử) → cột trái **Giao bài** → **Nạp bài đã làm**. Tên đề "Progress Test 1–12", chọn file bài (ảnh hoặc PDF) + file đáp án, ngày làm là một ngày đã qua, mức hỗ trợ "Tự làm rồi chữa cùng thầy/cô" → **Cho AI đọc**.
@@ -1280,10 +1280,26 @@ Lần nạp Progress Test thật đầu tiên = lần thử. Ghi lại: chi phí
 | (chờ lần dùng thật) | | | | | | |
 
 ### Quyết định kỹ thuật cần biết
-- **Chưa có đường "soạn tay" cho Nạp bài.** AI là cách duy nhất đọc bài; AI tắt / chưa đồng ý / hết trần thì **không tạo gì** và màn nói rõ lý do (khác Giáo trình, nơi vẫn soạn tay được).
+- **Có đường "Soạn tay" cho Nạp bài** (sau review Opus): AI tắt / chưa đồng ý / hết trần / đọc lỗi thì thầy/cô vẫn nạp được: bài vào thẳng bản nháp trống, tự gõ từng câu ở "Thêm câu"; app vẫn so đáp án bằng code và chỉ thầy/cô xác nhận.
 - AI đọc được **ảnh** (PNG/JPG/WebP) nhờ một loại tài liệu mới `image` trong `lib/ai/request.ts`; file đáp án Word được đổi thành chữ trên máy chủ như Studio.
 - Không gửi gì do người gõ cho AI (kể cả tên đề); chỉ gửi hai file + danh sách nhãn.
-- Làm cùng thầy/cô ("Làm cùng thầy/cô") chỉ nâng tối đa lên mức "Đang tiến bộ".
+- Làm cùng thầy/cô ("Làm cùng thầy/cô") chỉ nâng tối đa lên mức "Đang tiến bộ" (đọc từ `supportCapLevel` của chính sách).
+
+### Sau review Opus (08/11) — đã sửa trên cùng nhánh
+Migration `0027` / `0028` **chưa áp** trên Supabase thật nên sửa thẳng `0027` (vẫn idempotent; CI áp hai lần). **SQL cần phụ huynh áp vẫn là: `0027` rồi `0028`.**
+- **Lỗi chặn:** trang `/imports/<id>`, thăm dò trạng thái và hết giờ ("timeout") không còn lỗi 500 với bài đang đọc / đọc lỗi (giá trị mặc định của cột là `{"items": []}`, trước đây bị từ chối); chờ quá lâu tính từ lần đổi gần nhất, không từ lúc tạo. Test e2e đếm đúng thẻ đề xuất (`li[data-testid^="point-proposal-"]`).
+- **Mức điểm tự cập nhật sau việc thường ngày:** mọi chỗ chạy engine kỹ năng (nộp bài, duyệt, bài ôn, quyết định "Cần xem" ở Studio) giờ cũng tính lại điểm; cả khi ghi buổi học có Unit, đổi trạng thái Unit, duyệt giáo trình (fail-soft, không cần "Tính lại"). Mức 1 từ Unit cần **đã dạy ở một buổi** (có ghi chú buổi học gắn Unit đó), không chỉ "Đang học".
+- **Soạn tay:** `eng_create_import(..., p_manual)` → bản nháp trống; `eng_retry_import_read` (ai_failed → reading "Thử lại" trên **cùng** bài, không tạo bài trùng; hoặc → draft "Soạn tay"); nút Thử lại / Soạn tay / Bỏ bài này ở màn lỗi, "Bỏ bài này" cả khi đang chờ; "Thêm câu" ở màn xem. Bỏ bài (discard) giải phóng file để nạp lại; bài `ai_failed` chưa bỏ vẫn chặn trùng.
+- **Chờ duyệt của em** có dòng "Bài nạp" (đang đọc / nháp / đọc lỗi) chỉ là liên kết tới `/imports/<id>` (`eng_import_pending`); phụ huynh thấy "Chờ thầy/cô".
+- **Câu để trống = SAI** (đã có cơ hội làm), nhất quán với S7a và Studio; câu "Chỉ ở giấy" vẫn không tính. 10 trống + 4 đúng không còn là 100 %.
+- **Số câu theo phần:** câu nhận diện bằng (phần, số); đề có Phần I 1–10 và Phần II 1–10 giữ đủ 20 câu (số lưu là vị trí trên giấy, số gốc nằm trong tên câu); (phần, số) trùng không bị bỏ ngầm, cả hai hiện "Cần xem". Câu cùng ngày xếp theo **số**, không theo chữ.
+- **Ảnh có tên con: phương án A đã duyệt 08/11 (che/cắt trước khi tải; AI được dặn bỏ qua tên).** Chữ trên trang đổi từ "Không gửi tên…" thành lời nhắc che/cắt tên, lớp, trường trước khi tải; `read-answers.v1` dặn mô hình bỏ qua và không bao giờ xuất tên / lớp / trường. Không có công cụ cắt ảnh trong app. D-W7 giữ nguyên.
+- **Ảnh > 3,7 MB** bị từ chối ngay khi tải (có lời nhắc rõ); PDF giữ giới hạn cũ. Máy chủ **tính lại mã băm** file bài từ file đã lưu (khớp mã trình duyệt gửi, nếu không báo `bad_hash`).
+- **⚑ "giữ hoặc hạ":** thầy/cô của em có thêm nút **Hạ xuống "Đang tiến bộ"** (lý do bắt buộc) cạnh "Giữ mức": ghi một dòng MANUAL chỉ-thêm trả lời đúng ⚑ đó, engine không nâng lại trên cùng bằng chứng. Phụ huynh chỉ xem.
+- **Bài nạp không phải bài đã giao:** không còn hiện ở "Bài đã giao", thao tác bước, biểu mẫu ngoài app.
+- **Bằng chứng lưu trong sổ** giới hạn 400 câu gần nhất; một điểm lỗi không làm hỏng cả vòng ghi của em (hàm trả thêm `failed`).
+- Nhỏ: mức 4 cần ≥ 2 câu đúng **chính chúng** từ nguồn mới (H2); trần hỗ trợ đọc từ `supportCapLevel`; bỏ dấu "Chỉ ở giấy" trả lại kết quả trước đó; sửa chú thích 0027 về cổng AI.
+- **Chưa làm / lệch so với DOMAIN:** DOMAIN cho phép phụ huynh đánh dấu Đúng/Sai ở hàng "Cần xem"; hiện vẫn **chỉ thầy/cô** làm (R8, chặn ở máy chủ và cơ sở dữ liệu) — đổi cần đổi cả quyền ở SQL, để quyết định riêng.
 
 ### Tiêu chí đạt (spec §6 W3)
 - [ ] Nạp Progress Test: 60 câu, câu không chắc lên đầu, không xác nhận một cú bấm

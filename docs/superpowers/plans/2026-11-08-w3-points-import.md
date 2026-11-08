@@ -28,7 +28,7 @@
   Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
   Claude-Session: https://claude.ai/code/session_015ozhb22xjdX1tG2koXkZk1
   ```
-- Nhánh builder: `feature/w3-points-import` từ `origin/feature/w2-curriculum`; PR base = `feature/w2-curriculum` (W3 chồng trên W2; đổi base sang `main` khi W1/W2 đã gộp).
+- Nhánh builder: `feature/w3-points-import` từ `origin/feature/w2-curriculum`; PR base = `main` (W1, W2 và khung bàn làm việc đã gộp).
 
 ---
 
