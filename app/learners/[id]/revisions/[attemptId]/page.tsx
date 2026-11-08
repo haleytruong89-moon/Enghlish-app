@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AppHeader } from "@/components/AppHeader";
 import { RevisionReview } from "@/components/revision/RevisionReview";
-import { appFeedback, learnerWithTrack, revisionReviewCopy } from "@/lib/copy/vi";
+import { learnerWithTrack, revisionReviewCopy } from "@/lib/copy/vi";
 import { loadRevisionView } from "@/lib/revision/load";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
@@ -20,8 +19,7 @@ export default async function RevisionPairPage({ params }: { params: Promise<{ i
   const map = await loadPickerMap(learner.id).catch(() => null);
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.revisionOne} />
-      <main className="mx-auto max-w-5xl px-4 py-10" data-testid="revision-pair-page">
+      <div className="mx-auto max-w-5xl" data-testid="revision-pair-page">
         <Link href={`/learners/${learner.id}/revisions`} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {revisionReviewCopy.back}
         </Link>
@@ -35,7 +33,7 @@ export default async function RevisionPairPage({ params }: { params: Promise<{ i
         <div className="mt-6">
           <RevisionReview view={view} map={map} readOnly />
         </div>
-      </main>
+      </div>
     </>
   );
 }

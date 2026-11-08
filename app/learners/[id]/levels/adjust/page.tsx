@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { AppHeader } from "@/components/AppHeader";
 import { AdjustForm } from "@/components/levels/AdjustForm";
-import { appFeedback, learnerWithTrack, levelCopy, levelFormCopy } from "@/lib/copy/vi";
+import { learnerWithTrack, levelCopy, levelFormCopy } from "@/lib/copy/vi";
 import { loadLevelProfile } from "@/lib/levels/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
@@ -11,15 +10,14 @@ export const dynamic = "force-dynamic";
 export default async function AdjustPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ domain?: string }> }) {
   const { id } = await params;
   const { domain } = await searchParams;
-  const { member, learner } = await requireLearnerPage(id, "levels:decide");
+  const { learner } = await requireLearnerPage(id, "levels:decide");
   const profile = await loadLevelProfile(learner.id);
   const confirmed = profile.domains.filter((d) => d.status === "confirmed");
   const chosen = confirmed.find((d) => d.key === domain) ?? null;
   const link = "inline-flex min-h-11 items-center text-sm font-medium text-accent underline";
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.adjust} />
-      <main className="mx-auto max-w-2xl px-4 py-10" data-testid="adjust-page">
+      <div className="mx-auto max-w-2xl" data-testid="adjust-page">
         <Link href={`/learners/${learner.id}/levels`} className={link}>
           {levelFormCopy.back}
         </Link>
@@ -49,7 +47,7 @@ export default async function AdjustPage({ params, searchParams }: { params: Pro
             </ul>
           </nav>
         )}
-      </main>
+      </div>
     </>
   );
 }

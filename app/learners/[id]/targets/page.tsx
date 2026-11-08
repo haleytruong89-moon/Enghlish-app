@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AppHeader } from "@/components/AppHeader";
 import { RebuildButton } from "@/components/skills/RebuildButton";
 import { SkillRow } from "@/components/skills/SkillRow";
-import { app, appFeedback, learnerWithTrack, skillStateCopy, targetsPage } from "@/lib/copy/vi";
+import { app, learnerWithTrack, skillStateCopy, targetsPage } from "@/lib/copy/vi";
 import { loadSkillStatesSoft } from "@/lib/skills/load";
 import { createUserClient } from "@/lib/supabase/server";
 import { authorizeTargetsPage } from "@/lib/targets/access";
@@ -34,8 +33,7 @@ export default async function TargetsPage({ params }: { params: Promise<{ id: st
 
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.targets} />
-      <main className="mx-auto max-w-2xl px-4 py-10">
+      <div className="mx-auto max-w-2xl">
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {targetsPage.back}
         </Link>
@@ -102,7 +100,7 @@ export default async function TargetsPage({ params }: { params: Promise<{ id: st
             </details>
           </>
         )}
-      </main>
+      </div>
     </>
   );
 }

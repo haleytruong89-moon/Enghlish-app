@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { AppHeader } from "@/components/AppHeader";
 import { AddCurriculumForm } from "@/components/curriculum/AddCurriculumForm";
 import { CurriculumCard } from "@/components/curriculum/CurriculumCard";
 import { curriculumCopy, learnerWithTrack } from "@/lib/copy/vi";
@@ -12,12 +11,11 @@ export const dynamic = "force-dynamic";
 /** Giáo trình của một em (spec §3): one card per book + "Thêm giáo trình". The child's tutor or parent; others 404. */
 export default async function CurriculaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { member, learner } = await requireLearnerPage(id, "curriculum:read");
+  const { learner } = await requireLearnerPage(id, "curriculum:read");
   const [cards, gate] = await Promise.all([loadCurriculumCards(learner.id), loadStudioGate(learner.id)]);
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={curriculumCopy.screenLabel} />
-      <main className="mx-auto max-w-[1240px] px-4 py-8" data-testid="curricula-page">
+      <div className="mx-auto max-w-[1240px]" data-testid="curricula-page">
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {curriculumCopy.back}
         </Link>
@@ -35,7 +33,7 @@ export default async function CurriculaPage({ params }: { params: Promise<{ id: 
           <p className="mb-4 mt-1 text-xs text-muted">{curriculumCopy.oneChildNote}</p>
           <AddCurriculumForm learnerId={learner.id} aiAllowed={gate.allowed} aiReason={gate.reason} />
         </section>
-      </main>
+      </div>
     </>
   );
 }

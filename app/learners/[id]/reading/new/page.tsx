@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { AppHeader } from "@/components/AppHeader";
 import { ReadingReportForm } from "@/components/tutor/ReadingReportForm";
-import { appFeedback, learnerWithTrack, readingPage } from "@/lib/copy/vi";
+import { learnerWithTrack, readingPage } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { loadReadingReport, loadReadingTags } from "@/lib/reading/load";
 import { monthsBack } from "@/lib/reading/months";
@@ -14,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function ReadingNewPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ month?: string }> }) {
   const { id } = await params;
   const { month: m } = await searchParams;
-  const { member, learner } = await requireLearnerPage(id, "tutorwork:write");
+  const { learner } = await requireLearnerPage(id, "tutorwork:write");
   const thisMonth = todayVn().slice(0, 7);
   const earliest = monthsBack(thisMonth, READING_MONTHS_BACK); // the database accepts the last 24 months only
   const ym = m && /^\d{4}-(0[1-9]|1[0-2])$/.test(m) && m <= thisMonth && m >= earliest ? m : thisMonth;
@@ -23,8 +22,7 @@ export default async function ReadingNewPage({ params, searchParams }: { params:
 
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.reading} />
-      <main className="mx-auto max-w-3xl px-4 py-10" data-testid="reading-page">
+      <div className="mx-auto max-w-3xl" data-testid="reading-page">
         <Link href={`/learners/${learner.id}/weak`} className="inline-flex min-h-11 items-center text-sm text-accent underline">{readingPage.back}</Link>
         <h1 className="mt-2 text-2xl font-bold">{readingPage.title(learner.alias)}</h1>
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
@@ -37,7 +35,7 @@ export default async function ReadingNewPage({ params, searchParams }: { params:
           <button type="submit" className="min-h-11 rounded-lg border border-line bg-white px-4 text-sm">{readingPage.monthGo}</button>
         </form>
         <ReadingReportForm key={month} learnerId={learner.id} tags={tags} month={month} existing={existing} />
-      </main>
+      </div>
     </>
   );
 }

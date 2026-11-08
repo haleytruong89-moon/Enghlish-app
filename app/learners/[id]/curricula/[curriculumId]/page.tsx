@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AppHeader } from "@/components/AppHeader";
 import { CoverageBar } from "@/components/curriculum/CoverageBar";
 import { UnitStatusTable } from "@/components/curriculum/UnitStatusTable";
 import { curriculumCopy } from "@/lib/copy/vi";
@@ -13,14 +12,13 @@ export const dynamic = "force-dynamic";
 /** Trạng thái Unit of one curriculum (version in use) + the last changes. The child's tutor or parent. */
 export default async function CurriculumUnitsPage({ params }: { params: Promise<{ id: string; curriculumId: string }> }) {
   const { id, curriculumId } = await params;
-  const { member, learner } = await requireLearnerPage(id, "curriculum:read");
+  const { learner } = await requireLearnerPage(id, "curriculum:read");
   const card = (await loadCurriculumCards(learner.id)).find((c) => c.id === curriculumId);
   if (!card || !card.current || !card.progress) notFound();
   const recent = [...card.events].sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 10);
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={curriculumCopy.screenLabel} />
-      <main className="mx-auto max-w-[1240px] px-4 py-8" data-testid="curriculum-units-page">
+      <div className="mx-auto max-w-[1240px]" data-testid="curriculum-units-page">
         <Link href={`/learners/${learner.id}/curricula`} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {curriculumCopy.navLink}
         </Link>
@@ -44,7 +42,7 @@ export default async function CurriculumUnitsPage({ params }: { params: Promise<
             </ul>
           </aside>
         </div>
-      </main>
+      </div>
     </>
   );
 }
