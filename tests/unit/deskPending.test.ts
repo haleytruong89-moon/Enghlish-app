@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { pendingCopy, reviewPage, revisionReviewCopy } from "@/lib/copy/vi";
 import type { CurriculumCard } from "@/lib/curriculum/shape";
-import { buildPendingRows, countGroups, filterRows, parseGroup, type PendingInput } from "@/lib/desk/pending";
+import { buildPendingRows, countGroups, filterRows, parseGroup, pendingView, type PendingInput } from "@/lib/desk/pending";
 import type { InboxItem } from "@/lib/review/types";
 import type { SkillInboxItem } from "@/lib/skills/types";
 import type { DraftListItem, PendingAttempt } from "@/lib/studio/types";
@@ -71,5 +71,19 @@ describe("Chờ duyệt rows", () => {
     expect(parseGroup(["ai", "work"])).toBe("ai");
     expect(parseGroup("bogus")).toBe("all");
     expect(parseGroup(undefined)).toBe("all");
+  });
+});
+
+describe("pendingView: what a Chờ duyệt surface may claim", () => {
+  it("complete and healthy: exact count; empty text allowed when complete and healthy", () => {
+    expect(pendingView({ rows: [], failed: [], more: false })).toMatchObject({ count: "0", showEmpty: true, showMore: false, partial: false });
+    expect(pendingView({ rows: [1, 2], failed: [], more: false }).count).toBe("2");
+  });
+  it("page limit reached: '≥ n', never the empty text, shows the 'more' note", () => {
+    expect(pendingView({ rows: [], failed: [], more: true })).toMatchObject({ count: "≥ 0", showEmpty: false, showMore: true, partial: true });
+    expect(pendingView({ rows: [1], failed: [], more: true }).count).toBe("≥ 1");
+  });
+  it("a failed source: unknown count and never the empty text", () => {
+    expect(pendingView({ rows: [], failed: ["studio"], more: false })).toMatchObject({ count: null, showEmpty: false, partial: true });
   });
 });

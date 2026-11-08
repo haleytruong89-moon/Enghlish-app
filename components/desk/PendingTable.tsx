@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { pendingCopy, reviewPage } from "@/lib/copy/vi";
-import { PENDING_GROUPS, type PendingGroup, type PendingRow } from "@/lib/desk/pending";
+import { PENDING_GROUPS, pendingView, type PendingGroup, type PendingRow } from "@/lib/desk/pending";
 import { todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi } from "@/lib/inquiries/format";
 
@@ -8,7 +8,7 @@ const GRID = "md:grid-cols-[200px_minmax(0,1fr)_100px_180px_96px]";
 const pill = "inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold";
 
 /** Spec §5 rule 4: one line per item — Loại · Nội dung · Từ ngày · Cần làm · Mở; filter by type; oldest first; fixed-width action column. */
-export function PendingTable({ learnerId, rows, group, counts }: { learnerId: string; rows: PendingRow[]; group: PendingGroup; counts: Record<PendingGroup, number> }) {
+export function PendingTable({ learnerId, rows, group, counts, partial = false, showEmpty = true }: { learnerId: string; rows: PendingRow[]; group: PendingGroup; counts: Record<PendingGroup, number>; partial?: boolean; showEmpty?: boolean }) {
   const base = `/learners/${learnerId}/inbox`;
   const c = pendingCopy.cols;
   return (
@@ -17,7 +17,7 @@ export function PendingTable({ learnerId, rows, group, counts }: { learnerId: st
         {PENDING_GROUPS.map((g) => (
           <Link key={g} href={g === "all" ? base : `${base}?f=${g}`} aria-current={g === group ? "true" : undefined} data-testid={`pending-filter-${g}`}
             className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm no-underline ${g === group ? "border-accent bg-accent font-semibold text-white" : "border-line bg-white text-ink hover:border-accent"}`}>
-            {pendingCopy.groupCount(pendingCopy.groups[g], counts[g])}
+            {pendingCopy.groupCount(pendingCopy.groups[g], counts[g], partial)}
           </Link>
         ))}
       </nav>
@@ -26,7 +26,7 @@ export function PendingTable({ learnerId, rows, group, counts }: { learnerId: st
           <span>{c.kind}</span><span>{c.content}</span><span>{c.since}</span><span>{c.need}</span><span />
         </div>
         {rows.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-muted" data-testid="pending-empty">{group === "all" ? pendingCopy.empty : pendingCopy.emptyGroup}</p>
+          showEmpty ? <p className="px-4 py-4 text-sm text-muted" data-testid="pending-empty">{group === "all" ? pendingCopy.empty : pendingCopy.emptyGroup}</p> : null
         ) : (
           <ul>
             {rows.map((r) => (

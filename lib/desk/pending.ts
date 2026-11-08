@@ -24,8 +24,33 @@ export type PendingInput = {
   /** Curricula of THIS child (loadCurriculumCards is per child). */
   curricula: readonly CurriculumCard[];
 };
-/** How many S5 inbox rows are read for one child's list; more → "Còn bài khác" + link to the full inbox. */
-export const PENDING_LOAD_LIMIT = 200;
+/**
+ * The S5 inbox RPC has no learner filter and returns at most 100 rows (oldest first) across ALL the caller's children, so one
+ * child's work is found by following the cursor. Bounded: after PENDING_MAX_PAGES pages we stop and say "there may be more".
+ */
+export const PENDING_PAGE_SIZE = 100;
+export const PENDING_MAX_PAGES = 5;
+
+export type PendingView = {
+  /** "5", "≥ 5" or null (unknown: a source could not be read). */
+  count: string | null;
+  /** Only when nothing failed and the list is complete may the page say "nothing waiting". */
+  showEmpty: boolean;
+  /** True when old work may be missing (page limit reached). */
+  showMore: boolean;
+  partial: boolean;
+};
+
+/** What a "Chờ duyệt" surface may claim, given the rows and how complete they are. Pure. */
+export function pendingView(p: { rows: readonly unknown[]; failed: readonly unknown[]; more: boolean }): PendingView {
+  const failed = p.failed.length > 0;
+  return {
+    count: failed ? null : p.more ? `≥ ${p.rows.length}` : String(p.rows.length),
+    showEmpty: !failed && !p.more,
+    showMore: p.more,
+    partial: failed || p.more,
+  };
+}
 
 const GROUP_OF: Record<PendingKind, Exclude<PendingGroup, "all">> = { work: "work", studio_check: "check", studio_draft: "ai", curriculum_draft: "ai", skill: "skills", flag: "skills" };
 const WAITING = ["draft", "ai_failed"] as const;

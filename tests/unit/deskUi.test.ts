@@ -55,6 +55,19 @@ describe("Bàn làm việc", () => {
     expect(h).toContain(`href="/learners/${L}/inbox"`);
     expect(h.slice(h.indexOf('data-testid="desk-inbox"'), h.indexOf(`data-testid="attention-${L}"`))).not.toMatch(/<button\b/);
   });
+  it("Chờ duyệt box never says 'nothing waiting' when a source failed or the list may be incomplete", () => {
+    const failed = render("tutor", data({ pending: { rows: [], failed: ["studio"], more: false } }));
+    expect(failed).not.toContain(pendingCopy.empty);
+    expect(failed).toContain(pendingCopy.deskPartial);
+    expect(failed).not.toContain(pendingCopy.deskTitle(0));
+    const more = render("tutor", data({ pending: { rows: [], failed: [], more: true } }));
+    expect(more).not.toContain(pendingCopy.empty);
+    expect(more).toContain(pendingCopy.deskTitle("≥ 0"));
+    expect(more).toContain(pendingCopy.more);
+    expect(more).toContain(`href="/review?learner=${L}"`);
+    const ok = render("tutor", data({ pending: { rows: [], failed: [], more: false } }));
+    expect(ok).toContain(pendingCopy.empty);
+  });
   it("Buổi học box: last session without a raw tag key, last result, practice counts only (spec §5 rule 6), no schedule yet", () => {
     const h = render("tutor", data({ today: today({ practice: [asg({ id: "c1", dueOn: "2026-10-10" }), asg({ id: "c2", dueOn: "2026-10-30" })] }) }));
     expect(h).toContain(`data-testid="last-session-${L}"`);

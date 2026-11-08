@@ -5,13 +5,14 @@ import type { LearnerSummary } from "@/lib/home/visible";
 import { loadLevelProfile, loadRecentLevelChanges } from "@/lib/levels/load";
 import type { LevelProfile, RecentChange } from "@/lib/levels/types";
 import { loadInbox } from "@/lib/review/load";
+import type { InboxCursor, InboxItem } from "@/lib/review/types";
 import { loadSkillInbox } from "@/lib/skills/load";
 import type { ShellData } from "@/lib/shell/shell";
 import { loadAiSettings, loadDraftList, loadStudioPending } from "@/lib/studio/load";
 import type { AiSettingsView } from "@/lib/studio/types";
 import { loadToday, type TodayData } from "@/lib/tutorwork/load";
 import { loadIntake } from "@/lib/workdesk/load";
-import { buildPendingRows, PENDING_LOAD_LIMIT, type PendingRow } from "./pending";
+import { buildPendingRows, PENDING_MAX_PAGES, PENDING_PAGE_SIZE, type PendingRow } from "./pending";
 
 export type PendingSource = "work" | "studio" | "skills" | "drafts" | "curricula";
 export type PendingRowsResult = { rows: PendingRow[]; failed: PendingSource[]; more: boolean };
@@ -24,13 +25,26 @@ async function settle<T>(p: Promise<T | null>): Promise<T | null> {
   }
 }
 
+/** Follows the inbox cursor (the RPC cannot filter by child) for at most PENDING_MAX_PAGES pages; `more` = a page remained. */
+export async function loadWorkPages(): Promise<{ items: InboxItem[]; more: boolean }> {
+  const items: InboxItem[] = [];
+  let after: InboxCursor | null = null;
+  for (let page = 0; page < PENDING_MAX_PAGES; page += 1) {
+    const r = await loadInbox("todo", after, PENDING_PAGE_SIZE);
+    items.push(...r.items);
+    if (r.next === null) return { items, more: false };
+    after = r.next;
+  }
+  return { items, more: true };
+}
+
 /**
  * "Chờ duyệt" of one child. Call ONLY after the page gate of that child (loadDraftList uses the admin client). Never throws: a source
  * that cannot be read (error, or null before its migration) is listed in `failed` and the others still show.
  */
 export async function loadPendingRows(memberId: string, role: "tutor" | "parent", learnerId: string): Promise<PendingRowsResult> {
   const [work, studio, skills, drafts, curricula] = await Promise.all([
-    settle(loadInbox("todo", null, PENDING_LOAD_LIMIT)),
+    settle(loadWorkPages()),
     settle(loadStudioPending(memberId)),
     settle(loadSkillInbox(memberId)),
     settle(loadDraftList(learnerId)),
@@ -45,7 +59,7 @@ export async function loadPendingRows(memberId: string, role: "tutor" | "parent"
   return {
     rows: buildPendingRows({ learnerId, role, work: work?.items ?? [], studio: studio?.attempts ?? [], skills: skills?.items ?? [], drafts: drafts ?? [], curricula: curricula ?? [] }),
     failed,
-    more: (work?.next ?? null) !== null,
+    more: work?.more ?? false,
   };
 }
 

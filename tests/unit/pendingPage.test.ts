@@ -42,6 +42,11 @@ describe("Chờ duyệt page", () => {
     expect(html).toContain(pendingCopy.failed(pendingCopy.sources.studio));
     expect(html).toContain('data-testid="pending-more"');
     expect(html).toContain('href="/review?learner=L1"');
-    expect(html).toContain('data-testid="pending-empty"');
+    expect(html).not.toContain('data-testid="pending-empty"');
+    expect(html).toContain(pendingCopy.fullInbox);
+  });
+  it("healthy and complete and empty: the empty text shows", async () => {
+    loadPendingRows.mockResolvedValue({ rows: [], failed: [], more: false });
+    expect(await render()).toContain('data-testid="pending-empty"');
   });
 });

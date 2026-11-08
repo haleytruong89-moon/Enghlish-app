@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PendingTable } from "@/components/desk/PendingTable";
 import { pendingCopy } from "@/lib/copy/vi";
 import { loadPendingRows } from "@/lib/desk/load";
-import { countGroups, filterRows, parseGroup } from "@/lib/desk/pending";
+import { countGroups, filterRows, parseGroup, pendingView } from "@/lib/desk/pending";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,9 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
   const sp = await searchParams;
   const { member, learner } = await requireLearnerPage(id, "work:review");
   const group = parseGroup(sp.f);
-  const { rows, failed, more } = await loadPendingRows(member.id, member.role === "parent" ? "parent" : "tutor", learner.id);
+  const pending = await loadPendingRows(member.id, member.role === "parent" ? "parent" : "tutor", learner.id);
+  const { rows, failed, more } = pending;
+  const v = pendingView(pending);
   return (
     <div className="flex flex-col gap-4" data-testid="pending-page">
       <div>
@@ -25,10 +27,10 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
           {pendingCopy.failed(pendingCopy.sources[s])}
         </p>
       ))}
-      <PendingTable learnerId={learner.id} rows={filterRows(rows, group)} group={group} counts={countGroups(rows)} />
+      <PendingTable learnerId={learner.id} rows={filterRows(rows, group)} group={group} counts={countGroups(rows)} partial={v.partial} showEmpty={v.showEmpty} />
       {more ? (
         <Link href={`/review?learner=${learner.id}`} data-testid="pending-more" className="inline-flex min-h-11 items-center text-sm font-medium text-accent underline">
-          {pendingCopy.more}
+          {pendingCopy.more} {pendingCopy.fullInbox}
         </Link>
       ) : null}
     </div>
