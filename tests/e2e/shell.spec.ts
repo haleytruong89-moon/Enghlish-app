@@ -10,7 +10,8 @@ const allHrefs = (role: NavRole, id: string) => {
   return [...n.sections.flatMap((s) => [s.href, ...s.children.map((c) => c.href)]), ...n.parent.map((p) => p.href)].filter((h): h is string => h !== null);
 };
 const childScoped = (h: string) => h.startsWith("/learners/") || h.startsWith("/studio/new");
-async function status(page: Page, href: string) { return (await page.goto(href))?.status(); }
+// Many links per test: ask for the status without rendering/waiting for "load" (the cold server made two tests hit the 30 s limit).
+async function status(page: Page, href: string) { return (await page.request.get(href)).status(); }
 
 test.describe("workdesk shell", () => {
   test("the tutor lands on Bàn làm việc with the sidebar; Chờ duyệt is above the fold at 1366×768", async ({ page }) => {
@@ -29,6 +30,7 @@ test.describe("workdesk shell", () => {
 
   for (const t of [{ key: "tutorNguyen", own: NG, other: AN }, { key: "tutorAn", own: AN, other: NG }] as const) {
     test(`${t.key}: every sidebar link opens (200); the same links for the other child are 404; parent-only pages are 404`, async ({ page }) => {
+      test.setTimeout(120_000);
       await loginAs(page, t.key as AccountKey);
       for (const h of allHrefs("tutor", t.own)) expect(await status(page, h), h).toBe(200);
       for (const h of allHrefs("tutor", t.other).filter(childScoped)) expect(await status(page, h), h).toBe(404);
@@ -38,6 +40,7 @@ test.describe("workdesk shell", () => {
   }
 
   test("parent: every link of both children opens; the switcher keeps the open part", async ({ page }) => {
+    test.setTimeout(120_000);
     await loginAs(page, "parent");
     for (const id of [AN, NG]) for (const h of allHrefs("parent", id)) expect(await status(page, h), h).toBe(200);
     await page.goto(`/learners/${AN}/weak`);
