@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { account, app, auth, practiceStudent } from "@/lib/copy/vi";
+import { account, app, appFeedback, auth, practiceStudent } from "@/lib/copy/vi";
 
-export function AppHeader({ name, showTestBadge, studentNav }: { name?: string; showTestBadge?: boolean; studentNav?: "next" | "practice" }) {
+/** `feedbackScreen` (adult pages only): the label of this screen; when given, the "Góp ý về app" link is shown and carries it to /feedback. */
+export function AppHeader({ name, showTestBadge, studentNav, feedbackScreen }: { name?: string; showTestBadge?: boolean; studentNav?: "next" | "practice"; feedbackScreen?: string }) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line px-4 py-3 sm:px-6">
       {/* Wraps on a phone: the student nav drops to its own row instead of pushing the page sideways. */}
@@ -34,6 +35,11 @@ export function AppHeader({ name, showTestBadge, studentNav }: { name?: string; 
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
         {name ? <span className="hidden text-sm text-muted sm:inline">{name}</span> : null}
+        {feedbackScreen ? (
+          <Link href={`/feedback?screen=${encodeURIComponent(feedbackScreen)}`} data-testid="feedback-link" className="inline-flex min-h-11 items-center px-2 text-sm font-medium text-accent underline">
+            {appFeedback.link}
+          </Link>
+        ) : null}
         <Link
           href="/account/password"
           data-testid="change-password-link"

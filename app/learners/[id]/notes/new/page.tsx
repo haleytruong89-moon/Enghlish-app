@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { SessionNoteForm } from "@/components/tutor/SessionNoteForm";
-import { learnerWithTrack, sessionNotePage } from "@/lib/copy/vi";
+import { appFeedback, learnerWithTrack, sessionNotePage } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { loadTargetsView } from "@/lib/targets/loadTargets";
@@ -25,7 +25,7 @@ export default async function NewSessionNotePage({ params }: { params: Promise<{
 
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} />
+      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.notesNew} />
       <main className="mx-auto max-w-5xl px-4 py-10" data-testid="session-page">
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {sessionNotePage.back}

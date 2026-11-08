@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { AssignForm } from "@/components/practice/AssignForm";
 import { AssignmentTable } from "@/components/practice/AssignmentTable";
-import { assignPage, learnerWithTrack } from "@/lib/copy/vi";
+import { appFeedback, assignPage, learnerWithTrack } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { loadAssignments } from "@/lib/practice/load";
 import { loadPickerMap } from "@/lib/skillmap/load";
@@ -24,7 +24,7 @@ export default async function AssignPracticePage({ params }: { params: Promise<{
   const tagLabels = Object.fromEntries(tags.map((t) => [t.key, t.label]));
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} />
+      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.assign} />
       <main className="mx-auto max-w-4xl px-4 py-10" data-testid="assign-page">
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {assignPage.back}

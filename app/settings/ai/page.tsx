@@ -2,7 +2,7 @@
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { AiSettingsForm } from "@/components/settings/AiSettingsForm";
-import { aiSettingsCopy } from "@/lib/copy/vi";
+import { aiSettingsCopy, appFeedback } from "@/lib/copy/vi";
 import { authorizeStaffPage } from "@/lib/review/access";
 import { loadAiSettings } from "@/lib/studio/load";
 import { createUserClient } from "@/lib/supabase/server";
@@ -22,7 +22,7 @@ export default async function AiSettingsPage() {
   if (!settings) notFound();
   return (
     <>
-      <AppHeader name={access.member.displayName} />
+      <AppHeader name={access.member.displayName} feedbackScreen={appFeedback.screens.settingsAi} />
       <main className="mx-auto max-w-2xl px-4 py-10" data-testid="ai-settings">
         <h1 className="text-2xl font-bold">{aiSettingsCopy.title}</h1>
         <AiSettingsForm initial={settings} />

@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { DraftList } from "@/components/studio/DraftList";
 import { UploadForm } from "@/components/studio/UploadForm";
-import { learnerWithTrack, reviewPage, studioCopy } from "@/lib/copy/vi";
+import { appFeedback, learnerWithTrack, reviewPage, studioCopy } from "@/lib/copy/vi";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { loadDraftList, loadStudioGate } from "@/lib/studio/load";
 import { createUserClient } from "@/lib/supabase/server";
@@ -25,7 +25,7 @@ export default async function StudioNewPage({ searchParams }: { searchParams: Pr
   const [gate, drafts] = await Promise.all([loadStudioGate(l.id), loadDraftList(l.id)]);
   return (
     <>
-      <AppHeader name={access.grant.member.displayName} showTestBadge={l.isTest} />
+      <AppHeader name={access.grant.member.displayName} showTestBadge={l.isTest} feedbackScreen={appFeedback.screens.studioNew} />
       <main className="mx-auto max-w-2xl px-4 py-10" data-testid="studio-new">
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {reviewPage.back}

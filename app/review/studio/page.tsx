@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { ReviewTabs } from "@/components/review/ReviewTabs";
 import { StudioPendingCard } from "@/components/review/StudioPendingCard";
-import { reviewPage, studioInboxCopy } from "@/lib/copy/vi";
+import { appFeedback, reviewPage, studioInboxCopy } from "@/lib/copy/vi";
 import { authorizeStaffPage } from "@/lib/review/access";
 import { loadSkillInbox } from "@/lib/skills/load";
 import { skillTabCount } from "@/lib/skills/view";
@@ -25,7 +25,7 @@ export default async function ReviewStudioPage() {
   const [pending, skillInbox] = await Promise.all([loadStudioPending(access.member.id), loadSkillInbox(access.member.id).catch(() => null)]);
   return (
     <>
-      <AppHeader name={access.member.displayName} showTestBadge={pending?.attempts.some((a) => a.isTest) ?? false} />
+      <AppHeader name={access.member.displayName} showTestBadge={pending?.attempts.some((a) => a.isTest) ?? false} feedbackScreen={appFeedback.screens.reviewStudio} />
       <main className="mx-auto max-w-3xl px-4 py-10" data-testid="studio-inbox">
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {reviewPage.back}

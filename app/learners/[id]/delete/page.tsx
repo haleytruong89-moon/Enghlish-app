@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { PurgeForm } from "@/components/admin/PurgeForm";
-import { learnerWithTrack, purgePage } from "@/lib/copy/vi";
+import { appFeedback, learnerWithTrack, purgePage } from "@/lib/copy/vi";
 import { PurgeNeedsMigrationError } from "@/lib/purge/shape";
 import { loadPurgePreview } from "@/lib/purge/supabaseStore";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
@@ -22,7 +22,7 @@ export default async function DeleteLearnerPage({ params }: { params: Promise<{ 
 
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} />
+      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.delete} />
       <main className="mx-auto max-w-3xl px-4 py-10" data-testid="purge-page">
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {purgePage.back}

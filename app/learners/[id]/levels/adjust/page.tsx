@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
 import { AdjustForm } from "@/components/levels/AdjustForm";
-import { learnerWithTrack, levelCopy, levelFormCopy } from "@/lib/copy/vi";
+import { appFeedback, learnerWithTrack, levelCopy, levelFormCopy } from "@/lib/copy/vi";
 import { loadLevelProfile } from "@/lib/levels/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
@@ -18,7 +18,7 @@ export default async function AdjustPage({ params, searchParams }: { params: Pro
   const link = "inline-flex min-h-11 items-center text-sm font-medium text-accent underline";
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} />
+      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.adjust} />
       <main className="mx-auto max-w-2xl px-4 py-10" data-testid="adjust-page">
         <Link href={`/learners/${learner.id}/levels`} className={link}>
           {levelFormCopy.back}

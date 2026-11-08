@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { LessonNotes } from "@/components/review/LessonNotes";
-import { learnerWithTrack, notesPage } from "@/lib/copy/vi";
+import { appFeedback, learnerWithTrack, notesPage } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { loadNotesPage } from "@/lib/review/load";
@@ -29,7 +29,7 @@ export default async function NotesPage({ params }: { params: Promise<{ id: stri
 
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} />
+      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.notes} />
       <main className="mx-auto max-w-2xl px-4 py-10">
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {notesPage.back}

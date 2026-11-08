@@ -8,7 +8,7 @@ import { WorkPanel } from "@/components/review/WorkPanel";
 import { FeedbackPanel } from "@/components/revision/FeedbackPanel";
 import { RevisionReview } from "@/components/revision/RevisionReview";
 import { WritingTags } from "@/components/tutor/WritingTags";
-import { activityLabels, app, fallbackLabels, inquiriesPage, learnerWithTrack, modeLabels, provenanceLabels, purposeLabels, reviewPage, revisionReviewCopy, type Mode } from "@/lib/copy/vi";
+import { activityLabels, app, appFeedback, fallbackLabels, inquiriesPage, learnerWithTrack, modeLabels, provenanceLabels, purposeLabels, reviewPage, revisionReviewCopy, type Mode } from "@/lib/copy/vi";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { formatWhen, skillLabel } from "@/lib/review/format";
 import { findEpisodeLearner, loadEpisode, loadTransferMark } from "@/lib/review/load";
@@ -64,7 +64,7 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
 
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} />
+      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.reviewEpisode} />
       <main className="mx-auto max-w-5xl px-4 py-10" data-testid="review-page">
         <Link href="/review" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {reviewPage.backToInbox}

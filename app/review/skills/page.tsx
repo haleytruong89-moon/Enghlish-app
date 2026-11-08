@@ -5,7 +5,7 @@ import { ReviewTabs } from "@/components/review/ReviewTabs";
 import { loadStudioPending } from "@/lib/studio/load";
 import { ConfirmAllButton } from "@/components/skills/ConfirmAllButton";
 import { SkillProposalCard } from "@/components/skills/SkillProposalCard";
-import { reviewPage, skillStateCopy } from "@/lib/copy/vi";
+import { appFeedback, reviewPage, skillStateCopy } from "@/lib/copy/vi";
 import { authorizeStaffPage } from "@/lib/review/access";
 import { loadSkillInbox } from "@/lib/skills/load";
 import { groupInbox, skillTabCount } from "@/lib/skills/view";
@@ -29,7 +29,7 @@ export default async function ReviewSkillsPage() {
 
   return (
     <>
-      <AppHeader name={access.member.displayName} showTestBadge={groups.some((g) => g.isTest)} />
+      <AppHeader name={access.member.displayName} showTestBadge={groups.some((g) => g.isTest)} feedbackScreen={appFeedback.screens.reviewSkills} />
       <main className="mx-auto max-w-3xl px-4 py-10" data-testid="skills-inbox">
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {reviewPage.back}
