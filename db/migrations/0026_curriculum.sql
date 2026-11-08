@@ -327,4 +327,423 @@ begin
 end
 $$;
 
+-- 4. Ghi (service_role sau requireAccess; hàm kiểm lại người thao tác) ------------------------------------------------------------------
+
+-- Nội bộ: người lớn được làm việc giáo trình của em (gia sư còn quan hệ hoặc phụ huynh của gia đình). Trả member, không thì 42501.
+create or replace function english.eng_curriculum_actor(p_by uuid, p_learner uuid, p_fn text) returns english.members
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_m english.members%rowtype;
+begin
+  select * into v_m from english.members m where m.id = p_by;
+  if v_m.id is null or v_m.role not in ('tutor', 'parent') or not english.eng_actor_may_manage(p_by, p_learner) then
+    raise exception '%: this member may not change the curricula of this learner', p_fn using errcode = '42501';
+  end if;
+  return v_m;
+end
+$$;
+revoke execute on function english.eng_curriculum_actor(uuid, uuid, text) from public, anon, authenticated, service_role;
+
+-- 4a. Thêm giáo trình + phiên bản 1 (gia sư HOẶC phụ huynh của em). p_extract = true → 'extracting' (máy chủ đã qua cổng AI; cần file
+-- mục lục), false → nháp trống ("Soạn tay"). Gửi lại cùng client_id = cùng giáo trình.
+create or replace function english.eng_create_curriculum(
+  p_learner uuid, p_title text, p_level_note text, p_toc_file jsonb, p_extract boolean, p_by uuid, p_client_id text
+) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_m english.members%rowtype;
+  v_title text := pg_catalog.regexp_replace(pg_catalog.btrim(coalesce(p_title, '')), '\s+', ' ', 'g');
+  v_note text := nullif(pg_catalog.regexp_replace(pg_catalog.btrim(coalesce(p_level_note, '')), '\s+', ' ', 'g'), '');
+  v_prev english.curricula%rowtype;
+  v_file uuid;
+  v_cid uuid;
+  v_vid uuid;
+  v_status text;
+begin
+  if p_learner is null or p_extract is null or p_by is null then
+    raise exception 'eng_create_curriculum: learner, mode and actor are required' using errcode = '22004';
+  end if;
+  if p_client_id is null or pg_catalog.length(pg_catalog.btrim(p_client_id)) < 8 or pg_catalog.length(p_client_id) > 100 then
+    raise exception 'eng_create_curriculum: client_id must be 8..100 characters' using errcode = '22023';
+  end if;
+  if pg_catalog.length(v_title) not between 1 and 160 then
+    raise exception 'eng_create_curriculum: a title of 1..160 characters is required (bad_title)' using errcode = '22023';
+  end if;
+  if v_note is not null and pg_catalog.length(v_note) > 200 then
+    raise exception 'eng_create_curriculum: the level note is at most 200 characters (bad_level_note)' using errcode = '22023';
+  end if;
+  select * into v_l from english.learners l where l.id = p_learner for update;
+  if not found then
+    raise exception 'eng_create_curriculum: learner not found' using errcode = 'P0002';
+  end if;
+  v_m := english.eng_curriculum_actor(p_by, p_learner, 'eng_create_curriculum');
+  select * into v_prev from english.curricula c where c.learner_id = p_learner and c.client_id = p_client_id;
+  if found then
+    if v_prev.title <> v_title then
+      raise exception 'eng_create_curriculum: client_id was already used for another curriculum' using errcode = '23505';
+    end if;
+    select v.id, v.status into v_vid, v_status from english.curriculum_versions v where v.curriculum_id = v_prev.id and v.version = 1;
+    return pg_catalog.jsonb_build_object('curriculum_id', v_prev.id, 'version_id', v_vid, 'status', v_status, 'replayed', true);
+  end if;
+  if p_extract and p_toc_file is null then
+    raise exception 'eng_create_curriculum: AI needs the table of contents (toc_file_required)' using errcode = '22023';
+  end if;
+  if p_toc_file is not null then
+    v_file := english.eng_register_file(v_l.family_id, p_learner, 'curriculum_toc', p_toc_file, p_by);
+  end if;
+  insert into english.curricula(family_id, learner_id, track_id, title, level_note, created_by_member, client_id)
+  values (v_l.family_id, p_learner, v_l.track_id, v_title, v_note, p_by, p_client_id)
+  returning id into v_cid;
+  v_status := case when p_extract then 'extracting' else 'draft' end;
+  insert into english.curriculum_versions(curriculum_id, learner_id, version, source, status, toc_file_id, created_by_member, updated_by_member, client_id)
+  values (v_cid, p_learner, 1, case when p_extract then 'ai' else 'manual' end, v_status, v_file, p_by, p_by, p_client_id)
+  returning id into v_vid;
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_m.user_id, v_m.role, 'curriculum.created', v_l.family_id, p_learner,
+          pg_catalog.jsonb_build_object('curriculum', v_cid, 'version', v_vid, 'extract', p_extract));
+  return pg_catalog.jsonb_build_object('curriculum_id', v_cid, 'version_id', v_vid, 'status', v_status, 'replayed', false);
+end
+$$;
+
+-- 4b. "Nạp mục lục" cho giáo trình đã có (bản 1 đã bỏ, hoặc đọc lại cả mục lục): phiên bản mới vN+1 từ PDF (AI) hoặc trống (Soạn tay).
+-- Đã có nháp mở → trả nháp đó. Bản đang dùng (nếu có) vẫn dùng cho tới khi bản mới được duyệt.
+create or replace function english.eng_add_curriculum_version(p_curriculum uuid, p_toc_file jsonb, p_extract boolean, p_by uuid, p_client_id text) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_c english.curricula%rowtype;
+  v_prev english.curriculum_versions%rowtype;
+  v_open english.curriculum_versions%rowtype;
+  v_file uuid;
+  v_id uuid;
+  v_status text;
+begin
+  if p_curriculum is null or p_extract is null or p_by is null then
+    raise exception 'eng_add_curriculum_version: curriculum, mode and actor are required' using errcode = '22004';
+  end if;
+  if p_client_id is null or pg_catalog.length(pg_catalog.btrim(p_client_id)) < 8 or pg_catalog.length(p_client_id) > 100 then
+    raise exception 'eng_add_curriculum_version: client_id must be 8..100 characters' using errcode = '22023';
+  end if;
+  select * into v_c from english.curricula c where c.id = p_curriculum for update;
+  if not found then
+    raise exception 'eng_add_curriculum_version: curriculum not found' using errcode = 'P0002';
+  end if;
+  perform english.eng_curriculum_actor(p_by, v_c.learner_id, 'eng_add_curriculum_version');
+  select * into v_prev from english.curriculum_versions v where v.learner_id = v_c.learner_id and v.client_id = p_client_id;
+  if found then
+    if v_prev.curriculum_id <> p_curriculum then
+      raise exception 'eng_add_curriculum_version: client_id was already used for another curriculum' using errcode = '23505';
+    end if;
+    return pg_catalog.jsonb_build_object('version_id', v_prev.id, 'status', v_prev.status, 'replayed', true);
+  end if;
+  select * into v_open from english.curriculum_versions v where v.curriculum_id = p_curriculum and v.status in ('extracting', 'ai_failed', 'draft');
+  if found then
+    return pg_catalog.jsonb_build_object('version_id', v_open.id, 'status', v_open.status, 'replayed', true);
+  end if;
+  if p_extract and p_toc_file is null then
+    raise exception 'eng_add_curriculum_version: AI needs the table of contents (toc_file_required)' using errcode = '22023';
+  end if;
+  if p_toc_file is not null then
+    v_file := english.eng_register_file(v_c.family_id, v_c.learner_id, 'curriculum_toc', p_toc_file, p_by);
+  end if;
+  v_status := case when p_extract then 'extracting' else 'draft' end;
+  insert into english.curriculum_versions(curriculum_id, learner_id, version, source, status, toc_file_id, supersedes_version_id, created_by_member, updated_by_member, client_id)
+  values (p_curriculum, v_c.learner_id, (select pg_catalog.max(v.version) + 1 from english.curriculum_versions v where v.curriculum_id = p_curriculum),
+          case when p_extract then 'ai' else 'manual' end, v_status, v_file,
+          (select v.id from english.curriculum_versions v where v.curriculum_id = p_curriculum and v.status = 'approved'), p_by, p_by, p_client_id)
+  returning id into v_id;
+  return pg_catalog.jsonb_build_object('version_id', v_id, 'status', v_status, 'replayed', false);
+end
+$$;
+
+-- 4c. "Sửa mục lục / bảng nối" sau khi duyệt = nháp phiên bản mới, chép từ bản đang dùng (mã Unit giữ nguyên). Đã có nháp mở → trả nháp đó.
+create or replace function english.eng_edit_curriculum(p_curriculum uuid, p_by uuid, p_client_id text) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_c english.curricula%rowtype;
+  v_cur english.curriculum_versions%rowtype;
+  v_open uuid;
+  v_id uuid;
+  v_payload jsonb;
+begin
+  if p_curriculum is null or p_by is null or p_client_id is null or pg_catalog.length(pg_catalog.btrim(p_client_id)) not between 8 and 100 then
+    raise exception 'eng_edit_curriculum: curriculum, actor and client_id are required' using errcode = '22004';
+  end if;
+  select * into v_c from english.curricula c where c.id = p_curriculum for update;
+  if not found then
+    raise exception 'eng_edit_curriculum: curriculum not found' using errcode = 'P0002';
+  end if;
+  perform english.eng_curriculum_actor(p_by, v_c.learner_id, 'eng_edit_curriculum');
+  select v.id into v_open from english.curriculum_versions v
+  where v.curriculum_id = p_curriculum and v.status in ('extracting', 'ai_failed', 'draft');
+  if v_open is not null then
+    return pg_catalog.jsonb_build_object('id', v_open, 'replayed', true);
+  end if;
+  select * into v_cur from english.curriculum_versions v where v.curriculum_id = p_curriculum and v.status = 'approved';
+  if not found then
+    raise exception 'eng_edit_curriculum: there is no approved version to edit (not_approved)' using errcode = '23514';
+  end if;
+  v_payload := pg_catalog.jsonb_build_object(
+    'units', coalesce((
+      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+               'code', u.code, 'title', u.title, 'section', u.section, 'page', u.page, 'skipped', u.skipped,
+               'points', coalesce((select pg_catalog.jsonb_agg(p.tag_key order by p.ord) from english.curriculum_unit_points p
+                                   where p.version_id = u.version_id and p.code = u.code), '[]'::jsonb),
+               'missing_points', '[]'::jsonb, 'needs_review', false, 'review_reason', null, 'origin', 'kept', 'dropped', false, 'edit_reason', null)
+             order by u.ord)
+      from english.curriculum_units u where u.version_id = v_cur.id), '[]'::jsonb),
+    'ignored', '[]'::jsonb);
+  insert into english.curriculum_versions(curriculum_id, learner_id, version, source, status, payload, supersedes_version_id, created_by_member, updated_by_member, client_id)
+  values (p_curriculum, v_c.learner_id, (select pg_catalog.max(v.version) + 1 from english.curriculum_versions v where v.curriculum_id = p_curriculum),
+          'edit', 'draft', v_payload, v_cur.id, p_by, p_by, p_client_id)
+  returning id into v_id;
+  return pg_catalog.jsonb_build_object('id', v_id, 'replayed', false);
+end
+$$;
+
+-- 4d. Lưu nháp (nội dung đã được zod kiểm ở máy chủ). Khóa lạc quan theo updated_at (eng_same_instant của 0024).
+create or replace function english.eng_save_curriculum_draft(p_version uuid, p_payload jsonb, p_base text, p_by uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_v english.curriculum_versions%rowtype;
+  v_at timestamptz;
+begin
+  if p_version is null or p_payload is null or p_base is null or p_by is null then
+    raise exception 'eng_save_curriculum_draft: version, payload, base and actor are required' using errcode = '22004';
+  end if;
+  select * into v_v from english.curriculum_versions v where v.id = p_version for update;
+  if not found then
+    raise exception 'eng_save_curriculum_draft: version not found' using errcode = 'P0002';
+  end if;
+  perform english.eng_curriculum_actor(p_by, v_v.learner_id, 'eng_save_curriculum_draft');
+  if v_v.status not in ('draft', 'ai_failed') then
+    raise exception 'eng_save_curriculum_draft: this version cannot be edited now (not_editable)' using errcode = '23514';
+  end if;
+  if not english.eng_same_instant(v_v.updated_at, p_base) then
+    raise exception 'eng_save_curriculum_draft: the draft changed in the meantime (draft_changed)' using errcode = '23505';
+  end if;
+  update english.curriculum_versions set payload = p_payload, status = 'draft', error_code = null, updated_by_member = p_by
+  where id = p_version
+  returning updated_at into v_at;
+  return pg_catalog.jsonb_build_object('updated_at', v_at::text);
+end
+$$;
+
+-- 4e. Kết thúc phần AI (máy chủ, chạy nền). Chỉ đổi phiên bản còn 'extracting'. ai_payload = bản AI, giữ để đếm % dòng bị sửa.
+create or replace function english.eng_finish_curriculum_extraction(p_version uuid, p_payload jsonb, p_run uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_n int;
+begin
+  update english.curriculum_versions set payload = p_payload, ai_payload = p_payload, status = 'draft', ai_run_id = p_run, error_code = null
+  where id = p_version and status = 'extracting';
+  get diagnostics v_n = row_count;
+  return pg_catalog.jsonb_build_object('applied', v_n = 1);
+end
+$$;
+
+create or replace function english.eng_fail_curriculum_extraction(p_version uuid, p_error text, p_run uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_n int;
+begin
+  if p_error is null or p_error !~ '^[a-z0-9_]{1,40}$' then
+    raise exception 'eng_fail_curriculum_extraction: error code required' using errcode = '22023';
+  end if;
+  update english.curriculum_versions set status = 'ai_failed', error_code = p_error, ai_run_id = coalesce(p_run, ai_run_id)
+  where id = p_version and status = 'extracting';
+  get diagnostics v_n = row_count;
+  return pg_catalog.jsonb_build_object('applied', v_n = 1);
+end
+$$;
+
+-- 4f. Bỏ nháp: gia sư HOẶC phụ huynh (D-W8: phụ huynh không duyệt thay, chỉ được bỏ; gia sư đã nghỉ không bỏ được — §8).
+create or replace function english.eng_discard_curriculum_draft(p_version uuid, p_by uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_v english.curriculum_versions%rowtype;
+begin
+  select * into v_v from english.curriculum_versions v where v.id = p_version for update;
+  if not found then
+    raise exception 'eng_discard_curriculum_draft: version not found' using errcode = 'P0002';
+  end if;
+  perform english.eng_curriculum_actor(p_by, v_v.learner_id, 'eng_discard_curriculum_draft');
+  if v_v.status not in ('extracting', 'ai_failed', 'draft') then
+    raise exception 'eng_discard_curriculum_draft: this version is already final (not_editable)' using errcode = '23514';
+  end if;
+  update english.curriculum_versions set status = 'discarded', updated_by_member = p_by where id = p_version;
+  return pg_catalog.jsonb_build_object('id', p_version, 'status', 'discarded');
+end
+$$;
+
+-- 4g. DUYỆT (chỉ gia sư của em — D-W8). p_units = danh sách Unit cuối (máy chủ dựng từ nháp đã lưu, bỏ dòng "Bỏ"):
+-- [{code, title, section, page, skipped, points:[tag_key]}]. Kiểm lại ở đây: mã, thứ tự, nhãn trong danh sách đóng; nháp không còn dòng
+-- "cần xem". Sinh Unit + nối; bản đang dùng (nếu có) → 'superseded'.
+create or replace function english.eng_approve_curriculum_version(p_version uuid, p_base text, p_units jsonb, p_review jsonb, p_by uuid) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_v english.curriculum_versions%rowtype;
+  v_c english.curricula%rowtype;
+  v_m english.members%rowtype;
+  v_u jsonb;
+  v_o int;
+  v_key text;
+  v_n int;
+begin
+  if p_version is null or p_base is null or p_units is null or p_by is null then
+    raise exception 'eng_approve_curriculum_version: version, base, units and actor are required' using errcode = '22004';
+  end if;
+  select * into v_v from english.curriculum_versions v where v.id = p_version for update;
+  if not found then
+    raise exception 'eng_approve_curriculum_version: version not found' using errcode = 'P0002';
+  end if;
+  select * into v_c from english.curricula c where c.id = v_v.curriculum_id for update;
+  select * into v_m from english.members m where m.id = p_by;
+  if v_m.id is null or v_m.role <> 'tutor' or not english.eng_actor_may_manage(p_by, v_v.learner_id) then
+    raise exception 'eng_approve_curriculum_version: only a tutor of this learner approves a curriculum (tutor_only)' using errcode = '42501';
+  end if;
+  if v_v.status <> 'draft' then
+    raise exception 'eng_approve_curriculum_version: only a saved draft is approved (not_draft)' using errcode = '23514';
+  end if;
+  if not english.eng_same_instant(v_v.updated_at, p_base) then
+    raise exception 'eng_approve_curriculum_version: the draft changed in the meantime (draft_changed)' using errcode = '23505';
+  end if;
+  if exists (select 1 from pg_catalog.jsonb_array_elements(v_v.payload -> 'units') x
+             where coalesce((x ->> 'needs_review')::boolean, false) and not coalesce((x ->> 'dropped')::boolean, false)) then
+    raise exception 'eng_approve_curriculum_version: some rows still need a look (needs_review_left)' using errcode = '23514';
+  end if;
+  if pg_catalog.jsonb_typeof(p_units) <> 'array' or pg_catalog.jsonb_array_length(p_units) not between 1 and 300 then
+    raise exception 'eng_approve_curriculum_version: 1..300 units are required (bad_units)' using errcode = '22023';
+  end if;
+  if p_review is not null and (pg_catalog.jsonb_typeof(p_review) <> 'object' or pg_catalog.length(p_review::text) > 4000) then
+    raise exception 'eng_approve_curriculum_version: review must be a small object (bad_review)' using errcode = '22023';
+  end if;
+  for v_u, v_o in select x, o from pg_catalog.jsonb_array_elements(p_units) with ordinality as t(x, o) loop
+    if pg_catalog.jsonb_typeof(v_u) <> 'object'
+       or coalesce(v_u ->> 'code', '') !~ '^[A-Z0-9][A-Z0-9-]{0,19}$'
+       or pg_catalog.length(pg_catalog.btrim(coalesce(v_u ->> 'title', ''))) not between 1 and 160
+       or (v_u -> 'page' is not null and pg_catalog.jsonb_typeof(v_u -> 'page') <> 'null'
+           and (pg_catalog.jsonb_typeof(v_u -> 'page') <> 'number' or (v_u ->> 'page') !~ '^[0-9]{1,4}$'))
+       or pg_catalog.jsonb_typeof(v_u -> 'skipped') is distinct from 'boolean'
+       or pg_catalog.jsonb_typeof(v_u -> 'points') is distinct from 'array'
+       or pg_catalog.jsonb_array_length(v_u -> 'points') > 12 then
+      raise exception 'eng_approve_curriculum_version: unit % is not {code, title, section, page, skipped, points}', v_o using errcode = '22023';
+    end if;
+    if (select pg_catalog.count(distinct x) from pg_catalog.jsonb_array_elements_text(v_u -> 'points') x) <> pg_catalog.jsonb_array_length(v_u -> 'points') then
+      raise exception 'eng_approve_curriculum_version: a point appears twice in unit % (duplicate_point)', v_u ->> 'code' using errcode = '23514';
+    end if;
+    for v_key in select x from pg_catalog.jsonb_array_elements_text(v_u -> 'points') x loop
+      if not english.eng_tag_exists(v_c.track_id, v_c.family_id, v_key) then
+        raise exception 'eng_approve_curriculum_version: a point of unit % is not in the list (unknown_point)', v_u ->> 'code' using errcode = '23514';
+      end if;
+    end loop;
+  end loop;
+  if (select pg_catalog.count(distinct x ->> 'code') from pg_catalog.jsonb_array_elements(p_units) x) <> pg_catalog.jsonb_array_length(p_units) then
+    raise exception 'eng_approve_curriculum_version: unit codes must be unique (duplicate_code)' using errcode = '23514';
+  end if;
+
+  insert into english.curriculum_units(version_id, curriculum_id, learner_id, code, ord, title, section, page, skipped)
+  select p_version, v_v.curriculum_id, v_v.learner_id, x ->> 'code', o::int, pg_catalog.btrim(x ->> 'title'),
+         nullif(pg_catalog.btrim(coalesce(x ->> 'section', '')), ''), (x ->> 'page')::int, (x ->> 'skipped')::boolean
+  from pg_catalog.jsonb_array_elements(p_units) with ordinality as t(x, o);
+  insert into english.curriculum_unit_points(version_id, code, learner_id, tag_key, ord)
+  select p_version, x ->> 'code', v_v.learner_id, k, ko::int
+  from pg_catalog.jsonb_array_elements(p_units) as t(x)
+  cross join lateral pg_catalog.jsonb_array_elements_text(x -> 'points') with ordinality as p(k, ko);
+
+  update english.curriculum_versions set status = 'superseded', superseded_at = pg_catalog.clock_timestamp()
+  where curriculum_id = v_v.curriculum_id and status = 'approved';
+  update english.curriculum_versions
+  set status = 'approved', approved_by_member = p_by, approved_at = pg_catalog.clock_timestamp(), review = p_review, updated_by_member = p_by
+  where id = p_version;
+  select pg_catalog.jsonb_array_length(p_units) into v_n;
+  insert into english.audit_log(actor_user_id, actor_role, action, family_id, learner_id, payload)
+  values (v_m.user_id, v_m.role, 'curriculum.approved', v_c.family_id, v_v.learner_id,
+          pg_catalog.jsonb_build_object('curriculum', v_c.id, 'version', v_v.version, 'units', v_n));
+  return pg_catalog.jsonb_build_object('version_id', p_version, 'version', v_v.version, 'units', v_n);
+end
+$$;
+
+-- 4h. Đặt trạng thái một Unit (gia sư hoặc phụ huynh): một sự kiện mới, không xóa sự kiện cũ (§8 "sửa nhầm → đặt lại").
+-- Mã Unit phải có trong phiên bản đang dùng. p_lesson_note: buổi học đã đề xuất việc này (tùy chọn, phải của em).
+create or replace function english.eng_set_unit_status(
+  p_curriculum uuid, p_unit_code text, p_status text, p_lesson_note uuid, p_by uuid, p_client_id text
+) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_c english.curricula%rowtype;
+  v_m english.members%rowtype;
+  v_cur uuid;
+  v_prev english.curriculum_unit_events%rowtype;
+  v_id uuid;
+begin
+  if p_curriculum is null or p_unit_code is null or p_status is null or p_by is null then
+    raise exception 'eng_set_unit_status: curriculum, unit, status and actor are required' using errcode = '22004';
+  end if;
+  if p_client_id is null or pg_catalog.length(pg_catalog.btrim(p_client_id)) < 8 or pg_catalog.length(p_client_id) > 100 then
+    raise exception 'eng_set_unit_status: client_id must be 8..100 characters' using errcode = '22023';
+  end if;
+  if p_status not in ('not_started', 'in_progress', 'done', 'skipped') then
+    raise exception 'eng_set_unit_status: unknown status (bad_status)' using errcode = '22023';
+  end if;
+  select * into v_c from english.curricula c where c.id = p_curriculum;
+  if not found then
+    raise exception 'eng_set_unit_status: curriculum not found' using errcode = 'P0002';
+  end if;
+  v_m := english.eng_curriculum_actor(p_by, v_c.learner_id, 'eng_set_unit_status');
+  select * into v_prev from english.curriculum_unit_events e where e.learner_id = v_c.learner_id and e.client_id = p_client_id;
+  if found then
+    if v_prev.curriculum_id <> p_curriculum or v_prev.unit_code <> p_unit_code or v_prev.status <> p_status then
+      raise exception 'eng_set_unit_status: client_id was already used for another change' using errcode = '23505';
+    end if;
+    return pg_catalog.jsonb_build_object('id', v_prev.id, 'replayed', true);
+  end if;
+  select v.id into v_cur from english.curriculum_versions v where v.curriculum_id = p_curriculum and v.status = 'approved';
+  if v_cur is null then
+    raise exception 'eng_set_unit_status: the curriculum has no approved version yet (not_approved)' using errcode = '23514';
+  end if;
+  if not exists (select 1 from english.curriculum_units u where u.version_id = v_cur and u.code = p_unit_code) then
+    raise exception 'eng_set_unit_status: the unit is not in the current version (unknown_unit)' using errcode = '23514';
+  end if;
+  if p_lesson_note is not null and not exists (select 1 from english.lesson_notes n where n.id = p_lesson_note and n.learner_id = v_c.learner_id) then
+    raise exception 'eng_set_unit_status: lesson note not found' using errcode = 'P0002';
+  end if;
+  insert into english.curriculum_unit_events(curriculum_id, learner_id, unit_code, status, lesson_note_id, by_member, by_role, client_id)
+  values (p_curriculum, v_c.learner_id, p_unit_code, p_status, p_lesson_note, p_by, v_m.role, p_client_id)
+  returning id into v_id;
+  return pg_catalog.jsonb_build_object('id', v_id, 'replayed', false);
+end
+$$;
+
+do $$
+declare
+  f text;
+begin
+  foreach f in array array[
+    'eng_create_curriculum(uuid, text, text, jsonb, boolean, uuid, text)',
+    'eng_add_curriculum_version(uuid, jsonb, boolean, uuid, text)',
+    'eng_edit_curriculum(uuid, uuid, text)',
+    'eng_save_curriculum_draft(uuid, jsonb, text, uuid)',
+    'eng_finish_curriculum_extraction(uuid, jsonb, uuid)',
+    'eng_fail_curriculum_extraction(uuid, text, uuid)',
+    'eng_discard_curriculum_draft(uuid, uuid)',
+    'eng_approve_curriculum_version(uuid, text, jsonb, jsonb, uuid)',
+    'eng_set_unit_status(uuid, text, text, uuid, uuid, text)'
+  ] loop
+    execute format('revoke execute on function english.%s from public, anon, authenticated', f);
+    execute format('grant execute on function english.%s to service_role', f);
+  end loop;
+end
+$$;
+
 insert into english.schema_migrations(version) values ('0026') on conflict do nothing;
