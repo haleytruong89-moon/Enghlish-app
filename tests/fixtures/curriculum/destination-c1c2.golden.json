@@ -1,0 +1,32 @@
+{
+  "source": "Destination C1 & C2 Grammar and Vocabulary (Macmillan 2008), Contents pp. 4–5 (scan pages 6–7)",
+  "units": [
+    {"code": "U1", "title": "Present time", "section": "Grammar", "page": 6},
+    {"code": "U2", "title": "Thinking and learning", "section": "Vocabulary", "page": 12},
+    {"code": "U3", "title": "Past time", "section": "Grammar", "page": 22},
+    {"code": "U4", "title": "Change and technology", "section": "Vocabulary", "page": 28},
+    {"code": "U5", "title": "Future time", "section": "Grammar", "page": 38},
+    {"code": "U6", "title": "Time and work", "section": "Vocabulary", "page": 44},
+    {"code": "U7", "title": "Passives and causatives", "section": "Grammar", "page": 54},
+    {"code": "U8", "title": "Movement and transport", "section": "Vocabulary", "page": 60},
+    {"code": "U9", "title": "Modals and semi-modals", "section": "Grammar", "page": 70},
+    {"code": "U10", "title": "Communication and the media", "section": "Vocabulary", "page": 76},
+    {"code": "U11", "title": "Conditionals", "section": "Grammar", "page": 86},
+    {"code": "U12", "title": "Chance and nature", "section": "Vocabulary", "page": 92},
+    {"code": "U13", "title": "Unreal time", "section": "Grammar", "page": 106},
+    {"code": "U14", "title": "Quantity and money", "section": "Vocabulary", "page": 112},
+    {"code": "U15", "title": "Adjectives and adverbs", "section": "Grammar", "page": 122},
+    {"code": "U16", "title": "Materials and the built environment", "section": "Vocabulary", "page": 128},
+    {"code": "U17", "title": "Clauses", "section": "Grammar", "page": 138},
+    {"code": "U18", "title": "Reactions and health", "section": "Vocabulary", "page": 144},
+    {"code": "U19", "title": "Complex sentences", "section": "Grammar", "page": 154},
+    {"code": "U20", "title": "Power and social issues", "section": "Vocabulary", "page": 160},
+    {"code": "U21", "title": "Noun phrases", "section": "Grammar", "page": 170},
+    {"code": "U22", "title": "Quality and the arts", "section": "Vocabulary", "page": 176},
+    {"code": "U23", "title": "Verbal complements", "section": "Grammar", "page": 186},
+    {"code": "U24", "title": "Relationships and people", "section": "Vocabulary", "page": 192},
+    {"code": "U25", "title": "Reporting", "section": "Grammar", "page": 202},
+    {"code": "U26", "title": "Preference and leisure activities", "section": "Vocabulary", "page": 208}
+  ],
+  "ignored_count": 20
+}
