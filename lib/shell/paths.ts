@@ -56,7 +56,8 @@ export function switchHref(pathname: string, to: string): string {
   const a = activeFor(pathname);
   if (a.section === "feedback") return `/feedback${learnerQuery(to)}`;
   if (a.section === "aiSettings") return `/settings/ai${learnerQuery(to)}`;
-  if (a.section === "delete") return `/learners/${to}/delete`;
+  // Switching child must never land on another child's delete screen: go to that child's desk instead.
+  if (a.section === "delete") return `/${learnerQuery(to)}`;
   const def = SECTIONS.find((s) => s.key === a.section);
   if (!def || def.status !== "live") return `/${learnerQuery(to)}`;
   const child = a.child ? def.children(to, { revisionsReady: true }).find((c) => c.key === a.child) : undefined;

@@ -64,7 +64,7 @@ describe("switchHref keeps the part of the app that is open", () => {
     expect(switchHref("/", Y)).toBe(`/?learner=${Y}`);
     expect(switchHref("/feedback", Y)).toBe(`/feedback?learner=${Y}`);
     expect(switchHref("/settings/ai", Y)).toBe(`/settings/ai?learner=${Y}`);
-    expect(switchHref(`/learners/${X}/delete`, Y)).toBe(`/learners/${Y}/delete`);
+    expect(switchHref(`/learners/${X}/delete`, Y)).toBe(`/?learner=${Y}`);
   });
   it("a 'soon' section or an unknown page goes to the desk", () => {
     expect(switchHref(`/learners/${X}/knowledge`, Y)).toBe(`/?learner=${Y}`);
