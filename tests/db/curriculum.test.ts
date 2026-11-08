@@ -192,4 +192,33 @@ describe("W2 curriculum (migration 0026)", () => {
   });
 
 
+  describe("4. AI purpose and listening tags", () => {
+    it("reservation and release carry the purpose; old calls (no purpose) still mean studio_extract", async () => {
+      await q1("insert into english.ai_settings(family_id, enabled) values ($1, true) on conflict (family_id) do update set enabled = true", [s.familyId]);
+      await q1("insert into english.consents(learner_id, subject_member_id, notice_version, scope, granted, recorded_by) values ($1,$2,'ai-studio-v1','ai_text',true,$2)", [NG(), M().parent]);
+      const g = await svc<{ allowed: boolean; reservation_id: string }>("select english.eng_ai_gate($1, 0.2, true, null, 'claude-sonnet-5-5', $2, 'curriculum_toc') as r", [NG(), M().tutorNguyen]);
+      expect(g.allowed).toBe(true);
+      expect(await q1("select purpose from english.ai_runs where id = $1", [g.reservation_id])).toEqual([{ purpose: "curriculum_toc" }]);
+      await fail(svc("select english.eng_log_ai_run($1,null,'claude-sonnet-5-5','curriculum-toc.v1',10,10,0.01,'ok',null,$2,$3,'studio_extract') as r", [s.familyId, M().tutorNguyen, g.reservation_id]), "23514", /\(bad_release\)/);
+      const run = await svc<string>("select english.eng_log_ai_run($1,null,'claude-sonnet-5-5','curriculum-toc.v1',10,10,0.01,'ok',null,$2,$3,'curriculum_toc') as r", [s.familyId, M().tutorNguyen, g.reservation_id]);
+      expect(await q1("select purpose, prompt_version from english.ai_runs where id = $1", [run])).toEqual([{ purpose: "curriculum_toc", prompt_version: "curriculum-toc.v1" }]);
+      const old = await svc<{ reservation_id: string }>("select english.eng_ai_gate($1, 0.1, true, null, 'claude-sonnet-5-5', $2) as r", [NG(), M().tutorNguyen]);
+      expect(await q1("select purpose from english.ai_runs where id = $1", [old.reservation_id])).toEqual([{ purpose: "studio_extract" }]);
+      await fail(svc("select english.eng_ai_gate($1, 0, false, null, null, null, 'chat') as r", [NG()]), "22023", /\(bad_purpose\)/);
+    });
+    it("listening question-type tags exist for both tracks with a listening group, are placed in the map, and only they may carry a seed group", async () => {
+      expect(await q1("select track_id, count(*)::int as n from english.error_tags where group_vi = 'Kỹ năng nghe' group by track_id order by track_id")).toEqual([
+        { track_id: "A", n: 5 }, { track_id: "B", n: 8 },
+      ]);
+      expect(await q1("select count(*)::int as n from english.error_tags where group_vi = 'Kỹ năng nghe' and group_key not like 'li-%'")).toEqual([{ n: 0 }]);
+      const map = await svc<{ domains: { key: string; groups: { key: string; leaves: { ref_key: string; custom: boolean }[] }[] }[]; unassigned: { ref_key: string }[] }>(
+        "select english.eng_skill_map($1) as r", [NG()]);
+      const gist = map.domains.find((d) => d.key === "listening")!.groups.find((g) => g.key === "li-gist-detail")!;
+      expect(gist.leaves.filter((l) => l.ref_key.startsWith("nghe-")).map((l) => [l.ref_key, l.custom])).toEqual([["nghe-details", false], ["nghe-main-idea", false]]);
+      expect(map.unassigned.some((l) => l.ref_key.startsWith("nghe-"))).toBe(false);
+      await fail(q1("update english.error_tags set group_key = 'vo-word-form' where track_id = 'B' and key = 'dang-tu'"), "23514");
+    });
+  });
+
+
 });

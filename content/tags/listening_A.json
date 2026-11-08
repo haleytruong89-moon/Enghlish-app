@@ -1,0 +1,12 @@
+{
+  "track": "A",
+  "group_vi": "Kỹ năng nghe",
+  "note": "Listening question types for KET/A2 (R7, DOMAIN §14). Seed tags of migration 0026 with a skill-map group of the Nghe domain (SM-1 is published, so no leaf). 🕓 tutor to confirm.",
+  "tags": [
+    {"key": "nghe-main-idea", "label_vi": "Nghe · Main idea — Ý chính", "group_key": "li-gist-detail"},
+    {"key": "nghe-details", "label_vi": "Nghe · Details — Chi tiết", "group_key": "li-gist-detail"},
+    {"key": "nghe-numbers-spelling", "label_vi": "Nghe · Numbers & spelling — Số, tên, đánh vần", "group_key": "li-sound"},
+    {"key": "nghe-feelings", "label_vi": "Nghe · Feelings — Cảm xúc người nói", "group_key": "li-attitude"},
+    {"key": "nghe-sequence", "label_vi": "Nghe · Sequence — Trình tự", "group_key": "li-argument-notes"}
+  ]
+}

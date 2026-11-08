@@ -745,5 +745,232 @@ begin
   end loop;
 end
 $$;
+-- 5. AI: việc mới "đọc mục lục" ------------------------------------------------------------------------------------------------------
+alter table english.ai_runs drop constraint if exists ai_runs_purpose_check;
+alter table english.ai_runs add constraint ai_runs_purpose_check check (purpose in ('studio_extract', 'curriculum_toc'));
+
+-- Cổng AI = bản 0024 + p_purpose (cuối, mặc định 'studio_extract') cho dòng giữ chỗ. Chữ ký cũ bỏ để không còn hai bản trùng tên.
+drop function if exists english.eng_ai_gate(uuid, numeric, boolean, uuid, text, uuid);
+create or replace function english.eng_ai_gate(
+  p_learner uuid, p_estimate numeric default 0, p_reserve boolean default false, p_draft uuid default null, p_model text default null, p_by uuid default null,
+  p_purpose text default 'studio_extract'
+) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_s english.ai_settings%rowtype;
+  v_consent boolean;
+  v_spent numeric;
+  v_cap numeric;
+  v_soft numeric;
+  v_est numeric := coalesce(p_estimate, 0);
+  v_reason text;
+  v_run uuid;
+begin
+  if v_est < 0 then
+    raise exception 'eng_ai_gate: the estimate cannot be negative' using errcode = '22023';
+  end if;
+  if p_purpose is null or p_purpose not in ('studio_extract', 'curriculum_toc') then
+    raise exception 'eng_ai_gate: unknown purpose (bad_purpose)' using errcode = '22023';
+  end if;
+  select * into v_l from english.learners l where l.id = p_learner;
+  if not found then
+    raise exception 'eng_ai_gate: learner not found' using errcode = 'P0002';
+  end if;
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('eng_ai_gate:' || v_l.family_id::text, 0));
+  select * into v_s from english.ai_settings s where s.family_id = v_l.family_id;
+  select c.granted into v_consent from english.consents c
+  where c.learner_id = p_learner and c.scope = 'ai_text' order by c.at desc, c.id desc limit 1;
+  v_spent := english.eng_ai_month_spent(v_l.family_id);
+  v_cap := coalesce(v_s.monthly_cap_usd, 10);
+  v_soft := coalesce(v_s.soft_cap_usd, 8);
+  v_reason := case when not coalesce(v_s.enabled, false) then 'off'
+                   when not coalesce(v_consent, false) then 'no_consent'
+                   when v_spent + v_est >= v_cap then 'cap'
+                   else null end;
+  if v_reason is null and p_reserve then
+    insert into english.ai_runs(family_id, purpose, draft_id, model, input_tokens, output_tokens, cost_usd, status, error_code, by_member)
+    values (v_l.family_id, p_purpose, p_draft, p_model, 0, 0, v_est, 'reserved', 'reserved', p_by)
+    returning id into v_run;
+  end if;
+  return pg_catalog.jsonb_build_object(
+    'family_id', v_l.family_id,
+    'enabled', coalesce(v_s.enabled, false),
+    'consent', coalesce(v_consent, false),
+    'spent_usd', v_spent,
+    'monthly_cap_usd', v_cap,
+    'soft_cap_usd', v_soft,
+    'soft_reached', v_spent >= v_soft,
+    'allowed', v_reason is null,
+    'reason', v_reason,
+    'reservation_id', v_run);
+end
+$$;
+revoke execute on function english.eng_ai_gate(uuid, numeric, boolean, uuid, text, uuid, text) from public, anon, authenticated;
+grant execute on function english.eng_ai_gate(uuid, numeric, boolean, uuid, text, uuid, text) to service_role;
+
+-- Sổ chạy AI = bản 0024 + p_purpose (cuối). Dòng trả giữ chỗ phải cùng việc với dòng giữ chỗ.
+drop function if exists english.eng_log_ai_run(uuid, uuid, text, text, int, int, numeric, text, text, uuid, uuid);
+create or replace function english.eng_log_ai_run(
+  p_family uuid, p_draft uuid, p_model text, p_prompt_version text, p_input int, p_output int, p_cost numeric, p_status text, p_error text, p_by uuid,
+  p_release uuid default null, p_purpose text default 'studio_extract'
+) returns uuid
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_id uuid;
+begin
+  if p_family is null or p_status is null then
+    raise exception 'eng_log_ai_run: family and status are required' using errcode = '22004';
+  end if;
+  if p_purpose is null or p_purpose not in ('studio_extract', 'curriculum_toc') then
+    raise exception 'eng_log_ai_run: unknown purpose (bad_purpose)' using errcode = '22023';
+  end if;
+  if p_release is not null then
+    perform 1 from english.ai_runs r
+    where r.id = p_release and r.family_id = p_family and r.status = 'reserved' and r.purpose = p_purpose
+      and not exists (select 1 from english.ai_runs x where x.releases_run_id = r.id)
+    for update;
+    if not found then
+      raise exception 'eng_log_ai_run: p_release must be an unreleased reservation of this family (bad_release)' using errcode = '23514';
+    end if;
+  end if;
+  insert into english.ai_runs(family_id, purpose, draft_id, model, prompt_version, input_tokens, output_tokens, cost_usd, status, error_code, by_member, releases_run_id)
+  values (p_family, p_purpose, p_draft, p_model, p_prompt_version, coalesce(p_input, 0), coalesce(p_output, 0), coalesce(p_cost, 0), p_status, p_error, p_by, p_release)
+  returning id into v_id;
+  return v_id;
+end
+$$;
+revoke execute on function english.eng_log_ai_run(uuid, uuid, text, text, int, int, numeric, text, text, uuid, uuid, text) from public, anon, authenticated;
+grant execute on function english.eng_log_ai_run(uuid, uuid, text, text, int, int, numeric, text, text, uuid, uuid, text) to service_role;
+
+-- 6. Nhãn dạng câu nghe (R7) -----------------------------------------------------------------------------------------------------------
+-- Nới (chỉ rộng hơn): nhãn riêng như cũ; thêm nhãn CÓ SẴN có khóa 'nghe-…' (nhãn sau SM-1, không có lá trong bản đồ đã công bố).
+alter table english.error_tags drop constraint if exists error_tags_group_key_shape;
+alter table english.error_tags add constraint error_tags_group_key_shape check (
+  group_key is null
+  or (group_key ~ '^[a-z]{2}-[a-z-]{2,30}$'
+      and (origin = 'custom' or (origin = 'seed' and family_id is null and key ~ '^nghe-[a-z0-9-]+$'))));
+
+-- Nguồn: content/tags/listening_A.json, content/tags/listening_B.json (test đối chiếu từng dòng). Thứ tự = created_at cách nhau 1 ms.
+insert into english.error_tags(track_id, key, label_vi, group_vi, family_id, origin, group_key, created_at)
+select v.track_id, v.key, v.label_vi, 'Kỹ năng nghe', null, 'seed', v.group_key,
+  pg_catalog.clock_timestamp() + v.ord * interval '1 millisecond'
+from (values
+  ('A', 1, 'nghe-main-idea', 'Nghe · Main idea — Ý chính', 'li-gist-detail'),
+  ('A', 2, 'nghe-details', 'Nghe · Details — Chi tiết', 'li-gist-detail'),
+  ('A', 3, 'nghe-numbers-spelling', 'Nghe · Numbers & spelling — Số, tên, đánh vần', 'li-sound'),
+  ('A', 4, 'nghe-feelings', 'Nghe · Feelings — Cảm xúc người nói', 'li-attitude'),
+  ('A', 5, 'nghe-sequence', 'Nghe · Sequence — Trình tự', 'li-argument-notes'),
+  ('B', 1, 'nghe-main-idea', 'Nghe · Main idea — Ý chính', 'li-gist-detail'),
+  ('B', 2, 'nghe-details', 'Nghe · Details — Chi tiết, số liệu', 'li-gist-detail'),
+  ('B', 3, 'nghe-attitude', 'Nghe · Attitude & opinion — Thái độ, quan điểm', 'li-attitude'),
+  ('B', 4, 'nghe-inference', 'Nghe · Inference — Hàm ý, suy luận', 'li-attitude'),
+  ('B', 5, 'nghe-purpose', 'Nghe · Speaker''s purpose — Mục đích người nói', 'li-attitude'),
+  ('B', 6, 'nghe-signposts', 'Nghe · Signposts — Từ báo hiệu bố cục', 'li-argument-notes'),
+  ('B', 7, 'nghe-notetaking', 'Nghe · Note-taking — Ghi chép ý chính', 'li-argument-notes'),
+  ('B', 8, 'nghe-connected-speech', 'Nghe · Connected speech — Nối âm, nói nhanh', 'li-sound')
+) as v(track_id, ord, key, label_vi, group_key)
+on conflict (track_id, key) do nothing;
+
+-- Bản đồ cho một em = bản 0019 + nhãn có sẵn mang group_key (nhãn nghe) được đặt vào nhóm của nó (không còn ở "Chưa xếp mảng").
+create or replace function english.eng_skill_map(p_learner uuid) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_map english.skill_maps%rowtype;
+  v_set text[];
+begin
+  select * into v_l from english.learners l where l.id = p_learner;
+  if not found then
+    raise exception 'eng_skill_map: learner not found' using errcode = 'P0002';
+  end if;
+  select * into v_map from english.skill_maps m where m.published_at is not null order by m.published_at desc, m.id desc limit 1;
+  if not found then
+    raise exception 'eng_skill_map: no published skill map' using errcode = 'P0002';
+  end if;
+  select d.target_ids into v_set
+  from english.target_sets ts
+  join english.target_set_definitions d on d.id = ts.definition_id
+  where ts.learner_id = p_learner and ts.effective_from <= pg_catalog.now()
+  order by ts.effective_from desc, ts.seq desc
+  limit 1;
+  v_set := coalesce(v_set, '{}'::text[]);
+
+  return (
+    with leaves as (
+      -- nhãn có sẵn của track em (kể cả lá ẩn khỏi ô chọn và nhãn đã nghỉ dùng: dấu nhãn cũ vẫn cần tên và mảng)
+      select lf.group_key, 0 as o1, lf.ord as o2, t.label_vi as o3,
+             pg_catalog.jsonb_build_object(
+               'kind', 'tag', 'track_id', lf.track_id, 'ref_key', lf.ref_key, 'label_vi', t.label_vi,
+               'level_from', lf.level_from, 'level_to', lf.level_to, 'task_from', lf.task_from, 'task_to', lf.task_to,
+               'core', lf.core, 'hidden_in_picker', lf.hidden_in_picker, 'related', pg_catalog.to_jsonb(lf.related),
+               'custom', false, 'in_set', false) as leaf
+      from english.skill_leaves lf
+      join english.error_tags t on t.track_id = lf.track_id and t.key = lf.ref_key and t.family_id is null
+      where lf.map_id = v_map.id and lf.kind = 'tag' and lf.track_id = v_l.track_id
+      union all
+      -- nhãn có nhóm riêng (group_key): nhãn riêng của gia đình (kể cả đã nghỉ dùng; ô chọn tự bỏ nhãn đã nghỉ) và, từ 0026, nhãn có sẵn
+      -- ra đời sau SM-1 (nhãn nghe 'nghe-…'): nhãn có sẵn trước, theo thứ tự tạo
+      select t.group_key, 1, case when t.origin = 'seed' then 0 else 1 end, t.label_vi,
+             pg_catalog.jsonb_build_object(
+               'kind', 'tag', 'track_id', t.track_id, 'ref_key', t.key, 'label_vi', t.label_vi,
+               'level_from', null, 'level_to', null, 'task_from', null, 'task_to', null,
+               'core', false, 'hidden_in_picker', false, 'related', '[]'::jsonb, 'custom', t.origin = 'custom', 'in_set', false)
+      from english.error_tags t
+      where (t.family_id = v_l.family_id or (t.family_id is null and t.origin = 'seed')) and t.track_id = v_l.track_id and t.group_key is not null
+        and exists (select 1 from english.skill_groups g where g.map_id = v_map.id and g.key = t.group_key)
+      union all
+      -- mọi kỹ năng danh mục của bản đồ; "trong bộ" = trong bộ kỹ năng hiện tại của em
+      select lf.group_key, case when lf.ref_key = any (v_set) then 2 else 3 end, lf.ord, tg.title_vi,
+             pg_catalog.jsonb_build_object(
+               'kind', 'target', 'track_id', lf.track_id, 'ref_key', lf.ref_key, 'label_vi', tg.title_vi,
+               'level_from', lf.level_from, 'level_to', lf.level_to, 'task_from', lf.task_from, 'task_to', lf.task_to,
+               'core', lf.core, 'hidden_in_picker', lf.hidden_in_picker, 'related', pg_catalog.to_jsonb(lf.related),
+               'custom', false, 'in_set', lf.ref_key = any (v_set))
+      from english.skill_leaves lf
+      join english.targets tg on tg.id = lf.ref_key and tg.descriptor_version = v_map.catalogue_version
+      where lf.map_id = v_map.id and lf.kind = 'target'
+    ),
+    loose as (
+      -- nhãn đang dùng của track em (có sẵn hoặc của gia đình) chưa có nhóm trong bản đồ
+      select t.created_at, t.label_vi,
+             pg_catalog.jsonb_build_object(
+               'kind', 'tag', 'track_id', t.track_id, 'ref_key', t.key, 'label_vi', t.label_vi,
+               'level_from', null, 'level_to', null, 'task_from', null, 'task_to', null,
+               'core', false, 'hidden_in_picker', false, 'related', '[]'::jsonb, 'custom', t.origin = 'custom', 'in_set', false) as leaf
+      from english.error_tags t
+      where t.track_id = v_l.track_id and t.retired_at is null and (t.family_id is null or t.family_id = v_l.family_id)
+        and not exists (select 1 from english.skill_leaves lf
+                        where lf.map_id = v_map.id and lf.kind = 'tag' and lf.track_id = t.track_id and lf.ref_key = t.key)
+        and not (t.group_key is not null
+                 and exists (select 1 from english.skill_groups g where g.map_id = v_map.id and g.key = t.group_key))
+    )
+    select pg_catalog.jsonb_build_object(
+      'map_id', v_map.id,
+      'track_id', v_l.track_id,
+      'assumed', coalesce(v_map.assumed -> v_l.track_id, '{}'::jsonb),
+      'domains', (
+        select pg_catalog.jsonb_agg(
+          pg_catalog.jsonb_build_object(
+            'key', d.key, 'name_vi', d.name_vi, 'scale', d.scale,
+            'groups', (
+              select coalesce(pg_catalog.jsonb_agg(
+                pg_catalog.jsonb_build_object(
+                  'key', g.key, 'name_vi', g.name_vi, 'desc', g.descriptions,
+                  'leaves', (select coalesce(pg_catalog.jsonb_agg(x.leaf order by x.o1, x.o2, x.o3), '[]'::jsonb)
+                             from leaves x where x.group_key = g.key))
+                order by g.ord), '[]'::jsonb)
+              from english.skill_groups g where g.map_id = v_map.id and g.domain_key = d.key))
+          order by d.ord)
+        from english.skill_domains d where d.map_id = v_map.id),
+      'unassigned', (select coalesce(pg_catalog.jsonb_agg(u.leaf order by u.created_at, u.label_vi), '[]'::jsonb) from loose u))
+  );
+end
+$$;
+revoke execute on function english.eng_skill_map(uuid) from public, anon, authenticated;
+grant execute on function english.eng_skill_map(uuid) to service_role;
 
 insert into english.schema_migrations(version) values ('0026') on conflict do nothing;
