@@ -83,9 +83,10 @@ export function toPointApplyRow(r: PointEngineResult, computedAt: string): Point
   };
 }
 
-export type PointApplied = { auto: number; proposed: number; flagged: number; failed: number; policyVersion: string | null };
-const appliedRow = z.object({ auto: z.number().int(), proposed: z.number().int(), flagged: z.number().int(), failed: z.number().int().optional().default(0), policy_version: z.string().nullable() });
+export type PointFailedKey = { tagKey: string; sqlstate: string; message: string };
+export type PointApplied = { auto: number; proposed: number; flagged: number; failed: number; failedKeys: PointFailedKey[]; policyVersion: string | null };
+const appliedRow = z.object({ auto: z.number().int(), proposed: z.number().int(), flagged: z.number().int(), failed: z.number().int().optional().default(0), failed_keys: z.array(z.object({ tag_key: z.string(), sqlstate: z.string(), message: z.string() })).optional().default([]), policy_version: z.string().nullable() });
 export function parsePointApplied(raw: unknown): PointApplied {
   const a = appliedRow.parse(raw);
-  return { auto: a.auto, proposed: a.proposed, flagged: a.flagged, failed: a.failed, policyVersion: a.policy_version };
+  return { auto: a.auto, proposed: a.proposed, flagged: a.flagged, failed: a.failed, failedKeys: a.failed_keys.map((k) => ({ tagKey: k.tag_key, sqlstate: k.sqlstate, message: k.message })), policyVersion: a.policy_version };
 }

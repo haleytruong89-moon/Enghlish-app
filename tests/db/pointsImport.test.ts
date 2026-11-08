@@ -408,6 +408,7 @@ describe("W3 points + import (migration 0027)", () => {
       try {
         const out = await apply([row("boom-point", { auto: "DEVELOPING" }), row("thanh-ngu", { auto: "DEVELOPING" })], L);
         expect(out).toMatchObject({ auto: 1, failed: 1 });
+        expect((out as unknown as { failed_keys: { tag_key: string; sqlstate: string; message: string }[] }).failed_keys).toEqual([{ tag_key: "boom-point", sqlstate: "P0001", message: "boom" }]);
         expect((await q1("select state from english.point_state where learner_id=$1 and tag_key='thanh-ngu'", [L]))[0]).toEqual({ state: "DEVELOPING" });
         expect(await q1("select 1 from english.point_decisions where learner_id=$1 and tag_key='boom-point'", [L])).toEqual([]);
       } finally {

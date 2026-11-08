@@ -109,7 +109,7 @@ export async function handleDecidePoint(deps: PointDeps, decisionId: string, raw
     })) as { id: string; tag_key: string; replayed: boolean };
     if (!r.replayed) {
       try {
-        await recomputePoints(deps.engine, g.grant.learner.id, [r.tag_key]);
+        await recomputePoints(deps.engine, g.grant.learner.id, [r.tag_key], deps.log);
       } catch (err) {
         if (!isMissingFunction(err)) await deps.log?.(err);
       }

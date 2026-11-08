@@ -11,14 +11,24 @@ export interface PointEngineStore {
 }
 
 export type PointRecomputeSummary = { learnerId: string; results: PointEngineResult[]; applied: PointApplied };
-const NOTHING: PointApplied = { auto: 0, proposed: 0, flagged: 0, failed: 0, policyVersion: null };
+const NOTHING: PointApplied = { auto: 0, proposed: 0, flagged: 0, failed: 0, failedKeys: [], policyVersion: null };
 
 /** Recompute the points of one child (null = every point with evidence, taught or in the book) and write the outcome. */
-export async function recomputePoints(store: PointEngineStore, learnerId: string, tags: string[] | null = null): Promise<PointRecomputeSummary> {
+export async function recomputePoints(
+  store: PointEngineStore,
+  learnerId: string,
+  tags: string[] | null = null,
+  /** Called once when the database skipped some points (they are retried on the next write); the caller logs it. */
+  onFailed?: (error: Error) => Promise<void>,
+): Promise<PointRecomputeSummary> {
   const inputs = parsePointInputs(await store.loadInputs(learnerId, tags));
   if (inputs.policy === null || inputs.points.length === 0) return { learnerId, results: [], applied: NOTHING };
   const results = inputs.points.map((p) => computePointLevel(slicePoint(inputs, p.tag_key)));
   const applied = parsePointApplied(await store.applyResults(learnerId, results.map((r) => toPointApplyRow(r, inputs.now)), POINT_ENGINE_VERSION));
+  if (applied.failed > 0 && onFailed) {
+    const which = applied.failedKeys.map((k) => `${k.tagKey}:${k.sqlstate}:${k.message}`).join("; ");
+    await onFailed(new Error(`point_apply_failed ${applied.failed}${which ? ` (${which})` : ""}`));
+  }
   return { learnerId, results, applied };
 }
 
@@ -40,7 +50,7 @@ export type PointHook = (learnerId: string, tags: string[] | null) => Promise<vo
 export function makePointHook(store: () => PointEngineStore, log: (err: unknown) => Promise<void>, isMissing: (err: unknown) => boolean): PointHook {
   return async (learnerId, tags) => {
     try {
-      await recomputePoints(store(), learnerId, tags);
+      await recomputePoints(store(), learnerId, tags, log);
     } catch (err) {
       if (isMissing(err)) return;
       await log(err);

@@ -336,6 +336,7 @@ declare
   v_proposed int := 0;
   v_flagged int := 0;
   v_failed int := 0;
+  v_failed_keys jsonb := '[]'::jsonb;
   v_s_auto int;
   v_s_proposed int;
   v_s_flagged int;
@@ -428,10 +429,15 @@ begin
     exception when others then
       v_auto := v_s_auto; v_proposed := v_s_proposed; v_flagged := v_s_flagged;
       v_failed := v_failed + 1;
+      -- Which point failed and why, bounded (20 entries, 200 characters of message), so the server can log it.
+      if pg_catalog.jsonb_array_length(v_failed_keys) < 20 then
+        v_failed_keys := v_failed_keys || pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object(
+          'tag_key', v_key, 'sqlstate', sqlstate, 'message', pg_catalog.left(sqlerrm, 200)));
+      end if;
     end;
   end loop;
 
-  return pg_catalog.jsonb_build_object('auto', v_auto, 'proposed', v_proposed, 'flagged', v_flagged, 'failed', v_failed, 'policy_version', v_policy);
+  return pg_catalog.jsonb_build_object('auto', v_auto, 'proposed', v_proposed, 'flagged', v_flagged, 'failed', v_failed, 'failed_keys', v_failed_keys, 'policy_version', v_policy);
 end
 $$;
 
