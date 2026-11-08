@@ -67,6 +67,9 @@ export function ImportForm({ learnerId, aiAllowed, aiReason }: { learnerId: stri
       <p className="rounded-xl bg-[#FBF1DC] px-3.5 py-2 text-sm text-[#6B4600]" data-testid="import-cover-note">
         {importCopy.coverNote}
       </p>
+      <p className="text-sm text-muted" data-testid="import-photo-note">
+        {importCopy.photoNote}
+      </p>
       <label className="flex flex-col gap-1 text-sm font-semibold">
         {importCopy.workFile}
         <input type="file" accept="application/pdf,image/png,image/jpeg,image/webp,.pdf,.png,.jpg,.jpeg,.webp" data-testid="import-work" onChange={(e) => setWork(e.target.files?.[0] ?? null)} className="min-h-11 font-normal" />

@@ -623,7 +623,10 @@ begin
                             'ref', r.ref, 'item', pg_catalog.split_part(r.ref, ':', 2),
                             'title_vi', (select tp.title_vi from english.inquiry_templates tp where tp.id = pg_catalog.split_part(r.ref, ':', 1) order by tp.version desc limit 1),
                             'at', (select coalesce(pg_catalog.to_char(t.taken_on, 'YYYY-MM-DD'), pg_catalog.to_char(t.submitted_at at time zone 'Asia/Ho_Chi_Minh', 'YYYY-MM-DD'))
-                                   from english.attempts t where t.id::text = pg_catalog.split_part(r.ref, ':', 3)))
+                                   from english.attempts t
+                                   -- cast only a real uuid (a malformed ref in the book must not fail the inbox); compares on the primary key
+                                   where t.id = case when pg_catalog.split_part(r.ref, ':', 3) ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                                                     then pg_catalog.split_part(r.ref, ':', 3)::uuid end))
                           order by r.o)
                    from unnest(p.evidence_item_refs) with ordinality as r(ref, o)), '[]'::jsonb),
                  'created_at', p.created_at,

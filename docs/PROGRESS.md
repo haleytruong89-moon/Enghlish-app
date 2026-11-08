@@ -1301,6 +1301,15 @@ Migration `0027` / `0028` **chưa áp** trên Supabase thật nên sửa thẳng
 - Nhỏ: mức 4 cần ≥ 2 câu đúng **chính chúng** từ nguồn mới (H2); trần hỗ trợ đọc từ `supportCapLevel`; bỏ dấu "Chỉ ở giấy" trả lại kết quả trước đó; sửa chú thích 0027 về cổng AI.
 - **Chưa làm / lệch so với DOMAIN:** DOMAIN cho phép phụ huynh đánh dấu Đúng/Sai ở hàng "Cần xem"; hiện vẫn **chỉ thầy/cô** làm (R8, chặn ở máy chủ và cơ sở dữ liệu) — đổi cần đổi cả quyền ở SQL, để quyết định riêng.
 
+### Sau review lần 2 (08/11/2026) — `0027` sửa tại chỗ (vẫn CHƯA áp lên cơ sở dữ liệu thật)
+- Nhãn mảng dài như "2024-2025 Part 1-10" không còn làm tràn số nguyên (chỉ lấy 9 chữ số đầu, khớp với thứ tự trong code).
+- Chỉ **phiên bản giáo trình đã duyệt** mới cho "Unit đã dạy" và danh sách điểm; bản đã thay thế thì không.
+- `eng_apply_point_results` trả thêm `failed_keys` (nhãn, mã lỗi, lời lỗi, tối đa 20); máy chủ ghi vào `app_errors` khi có điểm bị bỏ qua.
+- **Hạ mức** ⚑ cũng trả lời "Chưa" (tự động, lý do "Đã hạ mức theo cờ ⚑") cho đề xuất đang mở của điểm đó, để không còn đề xuất không xác nhận được; engine đề xuất lại được khi có bằng chứng mới.
+- Câu để trống trong app được đếm là sai ở mọi nơi (tóm tắt màn xác nhận, `checked` của kiểm tra tự động, nhật ký).
+- Khóa giữ sau "Hạ mức" chỉ tính **câu đã được tính**: ghi chú buổi học hay bài có hỗ trợ không nâng lại mức; câu tự làm mới thì có.
+- Nhỏ: so sánh mã bài làm trong hộp duyệt chỉ ép kiểu khi đúng dạng uuid; thử lại đọc khi file đã mất thì đánh dấu lỗi AI (không để "đang đọc"); nút gửi của "Hạ mức" có nhãn riêng; trang nạp bài dặn cách xử lý ảnh lớn/HEIC (chụp màn hình hoặc xuất JPEG dưới 3,7 MB).
+
 ### Tiêu chí đạt (spec §6 W3)
 - [ ] Nạp Progress Test: 60 câu, câu không chắc lên đầu, không xác nhận một cú bấm
 - [ ] Thầy/cô xác nhận xong thì mức điểm tính lại, đề xuất 3–4 vào tab Kỹ năng

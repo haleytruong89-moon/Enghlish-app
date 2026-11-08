@@ -326,6 +326,13 @@ describe("import — manual path, retry, renumbering, image size (after the Opus
     expect((await handleRetryImport(ideps("tutorAn", failed()), BATCH, { mode: "retry" })).status).toBe(404);
     expect((await handleRetryImport(ideps("tutorNguyen", failed()), BATCH, { mode: "x" })).status).toBe(400);
   });
+  it("retry whose files are gone marks the batch ai_failed (file_missing) instead of leaving it reading", async () => {
+    const s = importStore({ batch: vi.fn(async () => batchRow({ status: "ai_failed", payload: { items: [] }, error_code: "timeout" })), files: vi.fn(async () => null) });
+    const d = ideps("tutorNguyen", s);
+    expect((await handleRetryImport(d, BATCH, { mode: "retry" })).status).toBe(404);
+    expect(s.fail).toHaveBeenCalledWith({ batchId: BATCH, errorCode: "file_missing", runId: null });
+    expect(d.jobs).toHaveLength(0);
+  });
   it("a reading batch left alone too long is failed when opened, then retry works (staleness counts from the last change, not from creation)", async () => {
     const s = importStore({ batch: vi.fn().mockResolvedValueOnce(batchRow({ status: "reading", payload: { items: [] }, touched_at: "2026-11-08T02:00:00Z", created_at: "2026-11-01T00:00:00Z" })).mockResolvedValue(batchRow({ status: "ai_failed", payload: { items: [] }, error_code: "timeout" })) });
     expect(await handleRetryImport(ideps("tutorNguyen", s), BATCH, { mode: "manual" })).toMatchObject({ status: 200 });

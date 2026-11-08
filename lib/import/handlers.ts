@@ -250,7 +250,11 @@ export async function handleRetryImport(deps: ImportDeps, batchId: string, raw: 
     const r = (await deps.store.retry({ batchId, to: p.data.mode === "retry" ? "reading" : "draft", byMemberId: member.id })) as { status: string; applied: boolean };
     if (r.applied && p.data.mode === "retry" && context) {
       const files = await deps.store.files(batchId);
-      if (!files) return fail(404, "not_found");
+      if (!files) {
+        // The batch is already "reading": do not leave it there for the stale timer; say that the files are missing.
+        await deps.store.fail({ batchId, errorCode: "file_missing", runId: null }).catch(() => {});
+        return fail(404, "not_found");
+      }
       startRead(deps, { batchId, familyId: learner.familyId, learnerId: learner.id, byMemberId: member.id, workFile: files.work, keyFile: files.key }, context, deps.getAi());
     }
     return { status: 200, body: { import_id: batchId, status: r.status } };

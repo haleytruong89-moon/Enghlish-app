@@ -91,7 +91,7 @@ export function PointProposalCard({ item }: { item: PointInboxItem }) {
           </label>
           <div className="flex flex-wrap gap-2">
             <button type="button" disabled={busy} onClick={() => send("lower")} data-testid="point-lower-send" className={`${button} bg-accent text-white`}>
-              {busy ? pointStateCopy.saving : pointStateCopy.rejectSend}
+              {busy ? pointStateCopy.saving : pointStateCopy.lowerSend}
             </button>
             <button type="button" onClick={() => setLowering(false)} className={`${button} border border-line`}>
               {pointStateCopy.cancel}
