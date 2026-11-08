@@ -28,18 +28,20 @@ import { buildSeedSql, type SeedInput, type SeedTargetSet } from "./configSql";
 export type ConfigPaths = { contentDir: string; migrationsDir: string };
 export const defaultPaths = (): ConfigPaths => ({ contentDir: CONTENT_DIR, migrationsDir: MIGRATIONS_DIR });
 
-type Kind = "catalogue" | "policy" | "targetSet" | "inquiryTemplate";
+type Kind = "catalogue" | "policy" | "targetSet" | "inquiryTemplate" | "pointPolicy";
 const KIND_LABEL: Record<Kind, string> = {
   catalogue: "catalogue",
   policy: "policy",
   targetSet: "target set",
   inquiryTemplate: "inquiry template",
+  pointPolicy: "point policy",
 };
 const LOCK_KEY = {
   catalogue: "catalogues",
   policy: "policies",
   targetSet: "targetSets",
   inquiryTemplate: "inquiryTemplates",
+  pointPolicy: "pointPolicies",
 } as const;
 
 export const changedMessage = (kind: Kind, id: string) =>
@@ -65,6 +67,7 @@ function seedInputFor(file: string, items: ContentItems, lock: ConfigLock): Seed
       .filter((t) => inFile(lock.targetSets[t.id]))
       .map((t): SeedTargetSet => ({ ...t, catalogue: lock.targetSets[t.id]?.catalogue ?? newestCatalogueId(items) })),
     inquiryTemplates: items.inquiryTemplates.filter((t) => inFile(lock.inquiryTemplates[t.id])),
+    pointPolicies: items.pointPolicies.filter((p) => inFile(lock.pointPolicies[p.id])),
   };
 }
 
@@ -76,10 +79,10 @@ export async function checkConfig(paths: ConfigPaths = defaultPaths()): Promise<
   const problems: string[] = [];
   const unlocked: string[] = [];
 
-  const all = [...items.catalogues, ...items.policies, ...items.targetSets, ...items.inquiryTemplates];
+  const all = [...items.catalogues, ...items.policies, ...items.targetSets, ...items.inquiryTemplates, ...items.pointPolicies];
   // A locked template whose file turned back into a draft is a changed version, not a missing one.
   const drafts = items.draftInquiryTemplates;
-  for (const kind of ["catalogue", "policy", "targetSet", "inquiryTemplate"] as const) {
+  for (const kind of ["catalogue", "policy", "targetSet", "inquiryTemplate", "pointPolicy"] as const) {
     const locked = lock[LOCK_KEY[kind]];
     const present = new Set([...all, ...drafts].filter((i) => i.kind === kind).map((i) => i.id));
     for (const id of Object.keys(locked)) {
@@ -128,6 +131,7 @@ export async function checkConfig(paths: ConfigPaths = defaultPaths()): Promise<
       ...Object.values(lock.policies),
       ...Object.values(lock.targetSets),
       ...Object.values(lock.inquiryTemplates),
+      ...Object.values(lock.pointPolicies),
     ].map((e) => e.migration),
   );
   for (const file of [...files].sort()) {
@@ -185,7 +189,7 @@ export async function generateNew(
   const lock = readLock(paths.contentDir);
 
   const changed: string[] = [];
-  for (const item of [...items.catalogues, ...items.policies, ...items.targetSets, ...items.inquiryTemplates]) {
+  for (const item of [...items.catalogues, ...items.policies, ...items.targetSets, ...items.inquiryTemplates, ...items.pointPolicies]) {
     const entry = lock[LOCK_KEY[item.kind]][item.id];
     if (entry && entry.sha256 !== item.hash) changed.push(changedMessage(item.kind, item.id));
   }
@@ -199,10 +203,11 @@ export async function generateNew(
   const newPolicies = items.policies.filter((p) => !lock.policies[p.id]);
   const newSets = items.targetSets.filter((t) => !lock.targetSets[t.id]);
   const newTemplates = items.inquiryTemplates.filter((t) => !lock.inquiryTemplates[t.id]);
-  if (!newCatalogues.length && !newPolicies.length && !newSets.length && !newTemplates.length) return null;
+  const newPointPolicies = items.pointPolicies.filter((p) => !lock.pointPolicies[p.id]);
+  if (!newCatalogues.length && !newPolicies.length && !newSets.length && !newTemplates.length && !newPointPolicies.length) return null;
 
   const bound = newestCatalogueId(items);
-  const ids = [...newCatalogues, ...newPolicies, ...newSets, ...newTemplates].map((i) => i.id);
+  const ids = [...newCatalogues, ...newPolicies, ...newSets, ...newTemplates, ...newPointPolicies].map((i) => i.id);
   const file = `${pickNumber(paths.migrationsDir)}_seed_${name ?? slugOf(ids)}.sql`;
   const target = path.join(paths.migrationsDir, file);
   if (existsSync(target)) throw new Error(`${file} already exists — refusing to overwrite a migration`);
@@ -214,6 +219,7 @@ export async function generateNew(
     policies: newPolicies,
     targetSets: newSets.map((t) => ({ ...t, catalogue: bound })),
     inquiryTemplates: newTemplates,
+    pointPolicies: newPointPolicies,
   });
 
   await writeFile(target, sql, { encoding: "utf8", flag: "wx" });
@@ -222,6 +228,7 @@ export async function generateNew(
   for (const p of newPolicies) lock.policies[p.id] = { sha256: p.hash, migration: file };
   for (const t of newSets) lock.targetSets[t.id] = { sha256: t.hash, migration: file, catalogue: bound };
   for (const t of newTemplates) lock.inquiryTemplates[t.id] = { sha256: t.hash, migration: file };
+  for (const p of newPointPolicies) lock.pointPolicies[p.id] = { sha256: p.hash, migration: file };
   await writeFile(path.join(paths.contentDir, LOCK_FILE), serializeLock(lock), "utf8");
   return { file, ids };
 }

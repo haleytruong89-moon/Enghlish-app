@@ -36,10 +36,11 @@ describe("activeFor: every existing page keeps the feedback screen it passed to 
     ["/settings/ai", "aiSettings", null, S.settingsAi],
     [`/learners/${X}/delete`, "delete", null, S.delete],
     ["/feedback", "feedback", null, S.feedback],
-    // reserved for later slices
-    [`/learners/${X}/knowledge`, "knowledge", null, shellCopy.sections.knowledge],
+    // W3 (knowledge map, import) is live; the roadmap is reserved for a later slice
+    [`/learners/${X}/knowledge`, "knowledge", null, S.knowledgeMap],
     [`/learners/${X}/roadmap`, "roadmap", null, shellCopy.sections.roadmap],
-    [`/learners/${X}/imports/new`, "assign", null, shellCopy.sections.assign],
+    [`/learners/${X}/imports/new`, "assign", "import", S.importNew],
+    ["/imports/b1", "assign", "import", S.importConfirm],
   ];
   for (const [path, section, child, screen] of table) {
     it(path, () => expect(activeFor(path)).toEqual({ section, child, screen }));
@@ -66,8 +67,10 @@ describe("switchHref keeps the part of the app that is open", () => {
     expect(switchHref("/settings/ai", Y)).toBe(`/settings/ai?learner=${Y}`);
     expect(switchHref(`/learners/${X}/delete`, Y)).toBe(`/?learner=${Y}`);
   });
-  it("a 'soon' section or an unknown page goes to the desk", () => {
-    expect(switchHref(`/learners/${X}/knowledge`, Y)).toBe(`/?learner=${Y}`);
+  it("the knowledge map keeps the part of the app that is open; a 'soon' section or an unknown page goes to the desk", () => {
+    expect(switchHref(`/learners/${X}/knowledge`, Y)).toBe(`/learners/${Y}/knowledge`);
+    expect(switchHref(`/learners/${X}/imports/new`, Y)).toBe(`/learners/${Y}/imports/new`);
+    expect(switchHref(`/learners/${X}/roadmap`, Y)).toBe(`/?learner=${Y}`);
     expect(switchHref("/somewhere", Y)).toBe(`/?learner=${Y}`);
   });
 });

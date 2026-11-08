@@ -140,6 +140,16 @@ describe("Duyệt (the child's tutor only — D-W8)", () => {
     expect(arg.units).toHaveLength(26);
     expect(arg.review).toMatchObject({ stats: { ai_rows: 26, kept: 26 }, quality: "good" });
   });
+  it("approving a version and changing a Unit status recompute the child's points (fail-soft hook)", async () => {
+    const points = vi.fn(async () => undefined);
+    const s = store({ version: vi.fn(async () => versionRow(resolved(AI_DRAFT))) });
+    const d = { ...deps("tutorNguyen", s), afterPoints: points };
+    await handleApproveVersion(d, VER, { base_updated_at: base, quality: "good", quality_note: null });
+    expect(points).toHaveBeenCalledWith(NGUYEN, null);
+    points.mockClear();
+    await handleSetUnitStatus(d, CUR, { unit_code: "U1", status: "done", lesson_note_id: null, client_id: "ev-00000002" });
+    expect(points).toHaveBeenCalledWith(NGUYEN, null);
+  });
   it("a stale base → 409; database tags map to codes", async () => {
     const s = store({ version: vi.fn(async () => versionRow(resolved(AI_DRAFT))) });
     expect((await handleApproveVersion(deps("tutorNguyen", s), VER, { base_updated_at: "2026-11-08 02:00:00+00", quality: null, quality_note: null })).status).toBe(409);

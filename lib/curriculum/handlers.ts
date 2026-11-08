@@ -7,6 +7,7 @@ import { AccessError, requireAccess, type AccessDeps, type AccessGrant, type Acc
 import { parseGate, refusalStatus } from "@/lib/ai/cap";
 import type { CallOptions, ToolCall, ToolResult } from "@/lib/ai/request";
 import { apiErrors } from "@/lib/copy/vi";
+import type { PointHook } from "@/lib/engine/points/runner";
 import { ReviewDbError, type HandlerResult } from "@/lib/review/handlers";
 import { buildPath, checkFile, type AllowedMime } from "@/lib/storage/rules";
 import type { FileDownloader, FileStorage } from "@/lib/storage/types";
@@ -54,6 +55,8 @@ export type CurriculumDeps = {
   /** The closed list of a learner (lib/curriculum/load.ts). */
   loadContext: (learnerId: string, trackId: string) => Promise<TocContext>;
   getAi: () => CurriculumAi;
+  /** After an approved version or a Unit status change: recompute the child's knowledge points (W3). Fail-soft. */
+  afterPoints?: PointHook;
   log?: (err: unknown) => Promise<void>;
   newId?: () => string;
 };
@@ -287,6 +290,7 @@ export async function handleApproveVersion(deps: CurriculumDeps, versionId: stri
   const review = { stats: editStats(view.aiPayload, view.payload), quality: p.data.quality, quality_note: p.data.quality_note || null };
   try {
     const r = (await deps.store.approve({ versionId, base: view.updatedAt, units: finalUnits(view.payload), review, byMemberId: g.grant.member.id })) as { version: number; units: number };
+    await deps.afterPoints?.(g.grant.learner.id, null);
     return { status: 200, body: { version: r.version, units: r.units } };
   } catch (err) {
     return fromCurriculumDbError(err);
@@ -313,6 +317,7 @@ export async function handleSetUnitStatus(deps: CurriculumDeps, curriculumId: st
     const r = (await deps.store.setUnitStatus({
       curriculumId, unitCode: p.data.unit_code, status: p.data.status, lessonNoteId: p.data.lesson_note_id, byMemberId: g.grant.member.id, clientId: p.data.client_id,
     })) as { id: string; replayed: boolean };
+    if (!r.replayed) await deps.afterPoints?.(g.grant.learner.id, null);
     return { status: r.replayed ? 200 : 201, body: { id: r.id } };
   } catch (err) {
     return fromCurriculumDbError(err);

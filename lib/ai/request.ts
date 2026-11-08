@@ -6,7 +6,12 @@
 export const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 export const ANTHROPIC_VERSION = "2023-06-01";
 
-export type AiDocument = { kind: "pdf"; title: string; base64: string } | { kind: "text"; title: string; text: string };
+export type ImageMediaType = "image/png" | "image/jpeg" | "image/webp";
+export type AiDocument =
+  | { kind: "pdf"; title: string; base64: string }
+  | { kind: "text"; title: string; text: string }
+  /** A photo or screenshot (W3 "Nạp bài đã làm"): sent as an image block, preceded by a text block carrying its title. */
+  | { kind: "image"; title: string; mediaType: ImageMediaType; base64: string };
 export type ToolSpec = { name: string; description: string; input_schema: Record<string, unknown> };
 export type ToolCall = { model: string; documents: AiDocument[]; instructions: string; tool: ToolSpec; maxTokens: number; toolChoice: "tool" | "auto" };
 export type Usage = { inputTokens: number; outputTokens: number };
@@ -34,10 +39,12 @@ export function buildRequestBody(c: ToolCall): Record<string, unknown> {
       {
         role: "user",
         content: [
-          ...c.documents.map((d) =>
+          ...c.documents.flatMap((d): Record<string, unknown>[] =>
             d.kind === "pdf"
-              ? { type: "document", title: d.title, source: { type: "base64", media_type: "application/pdf", data: d.base64 } }
-              : { type: "document", title: d.title, source: { type: "text", media_type: "text/plain", data: d.text } },
+              ? [{ type: "document", title: d.title, source: { type: "base64", media_type: "application/pdf", data: d.base64 } }]
+              : d.kind === "image"
+                ? [{ type: "text", text: d.title }, { type: "image", source: { type: "base64", media_type: d.mediaType, data: d.base64 } }]
+                : [{ type: "document", title: d.title, source: { type: "text", media_type: "text/plain", data: d.text } }],
           ),
           { type: "text", text: c.instructions },
         ],
@@ -83,6 +90,6 @@ export async function postToolCall(c: ToolCall, opts: { apiKey: string; fetchImp
  * Used to reserve the worst-case price before a call and to price a call that timed out without a usage report.
  */
 export function estimateInputTokens(c: ToolCall): number {
-  const chars = c.documents.reduce((n, d) => n + (d.kind === "pdf" ? Math.ceil(d.base64.length * 0.75) : d.text.length), 0) + c.instructions.length + JSON.stringify(c.tool).length;
+  const chars = c.documents.reduce((n, d) => n + (d.kind === "text" ? d.text.length : Math.ceil(d.base64.length * 0.75)), 0) + c.instructions.length + JSON.stringify(c.tool).length;
   return Math.min(200_000, Math.ceil(chars / 3));
 }

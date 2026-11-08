@@ -2,7 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createUserClient } from "@/lib/supabase/server";
 import { InquiryDbError, type InquiryStore } from "./handlers";
-import type { ActivityRow, EventRow, InstanceRow, TemplateRow } from "./view";
+import { withoutImported, type ActivityRow, type EventRow, type InstanceRow, type TemplateRow } from "./view";
 
 function dbError(what: string, err: { code?: string; message?: string }): never {
   throw new InquiryDbError(err.code ?? "unknown", `${what}: ${err.code ?? "error"}`);
@@ -51,12 +51,12 @@ export function createSupabaseInquiryStore(): InquiryStore {
       if (inst.error) dbError("inquiry_instances lookup", inst.error);
       if (acts.error) dbError("activity_instances lookup", acts.error);
       if (evs.error) dbError("activity_instance_events lookup", evs.error);
-      return {
+      return withoutImported({
         instances: inst.data ?? [],
         activities: acts.data ?? [],
         // bigint identity may arrive as a string in some drivers
         events: (evs.data ?? []).map((e) => ({ ...e, id: Number(e.id) })),
-      };
+      });
     },
 
     async assign(args) {

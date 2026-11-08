@@ -1,5 +1,5 @@
 import "server-only";
-import { engineHook } from "@/lib/engine/hook";
+import { writeHook } from "@/lib/engine/writeHook";
 import { NextResponse } from "next/server";
 import { logAppError } from "@/lib/ops/logAppError";
 import { apiErrors } from "@/lib/copy/vi";
@@ -19,7 +19,7 @@ export async function runWorkRoute(
       data: { user },
     } = await supabase.auth.getUser();
     userId = user?.id ?? null;
-    const result = await run({ user, store: createSupabaseWorkStore(), afterWrite: engineHook(routeName, userId) });
+    const result = await run({ user, store: createSupabaseWorkStore(), afterWrite: writeHook(routeName, userId) });
     return NextResponse.json(result.body, { status: result.status, headers: { "Cache-Control": "private, no-store" } });
   } catch (err) {
     await logAppError({ route: routeName, code: "internal", error: err, userId });

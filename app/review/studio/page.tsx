@@ -9,7 +9,8 @@ import { StudioPendingCard } from "@/components/review/StudioPendingCard";
 import { reviewPage, studioInboxCopy } from "@/lib/copy/vi";
 import { authorizeStaffPage } from "@/lib/review/access";
 import { loadSkillInbox } from "@/lib/skills/load";
-import { skillTabCount } from "@/lib/skills/view";
+import { loadPointInbox } from "@/lib/points/load";
+import { combinedTabCount } from "@/lib/points/view";
 import { loadStudioPending } from "@/lib/studio/load";
 import { createUserClient } from "@/lib/supabase/server";
 
@@ -25,7 +26,11 @@ export default async function ReviewStudioPage({ searchParams }: { searchParams:
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();
   const shell = await requireShell(firstParam((await searchParams).learner));
-  const [pending, skillInbox] = await Promise.all([loadStudioPending(access.member.id), loadSkillInbox(access.member.id).catch(() => null)]);
+  const [pending, skillInbox, pointInbox] = await Promise.all([
+    loadStudioPending(access.member.id),
+    loadSkillInbox(access.member.id).catch(() => null),
+    loadPointInbox(access.member.id).catch(() => null),
+  ]);
   return (
     <StaffShell shell={shell}>
       <div className="mx-auto max-w-3xl" data-testid="studio-inbox">
@@ -34,7 +39,7 @@ export default async function ReviewStudioPage({ searchParams }: { searchParams:
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{studioInboxCopy.title}</h1>
         <p className="mt-1 text-sm text-muted">{studioInboxCopy.intro}</p>
-        <ReviewTabs active="studio" skillsCount={skillTabCount(skillInbox, access.member.role)} studioCount={pending?.count ?? null} />
+        <ReviewTabs active="studio" skillsCount={combinedTabCount(skillInbox, pointInbox, access.member.role)} studioCount={pending?.count ?? null} />
         {pending === null ? (
           <p className="mt-6 rounded-xl border border-line bg-white px-5 py-4">{studioInboxCopy.notReady}</p>
         ) : pending.attempts.length === 0 ? (

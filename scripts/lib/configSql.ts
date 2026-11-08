@@ -6,7 +6,7 @@
  */
 import { createHash } from "node:crypto";
 import { toKeyRows, toSafeSteps, toSources, validateInquiryTemplate } from "../../lib/config/inquiries";
-import type { CatalogueItem, InquiryTemplateItem, PolicyItem, TargetSetItem } from "../../lib/config/versions";
+import type { CatalogueItem, InquiryTemplateItem, PointPolicyItem, PolicyItem, TargetSetItem } from "../../lib/config/versions";
 
 /** The first seed migration (catalogue 0.2.1-draft, AP-0.2-pilot, A-v1, B-v1). */
 export const SEED_MIGRATION_FILE = "0006_seed_config_v0_2_1.sql";
@@ -71,6 +71,8 @@ export type SeedInput = {
   targetSets: SeedTargetSet[];
   /** Published inquiry templates (sources, answer keys and tutor notes go with them). */
   inquiryTemplates?: InquiryTemplateItem[];
+  /** Knowledge-point level policies (W3): rows of english.point_policies. */
+  pointPolicies?: PointPolicyItem[];
   /** Every catalogue (also already-published ones): target sets look up their descriptor version here. */
   allCatalogues: CatalogueItem[];
 };
@@ -78,6 +80,7 @@ export type SeedInput = {
 export function buildSeedSql(input: SeedInput): string {
   const { file, catalogues, policies, targetSets, allCatalogues } = input;
   const inquiryTemplates = input.inquiryTemplates ?? [];
+  const pointPolicies = input.pointPolicies ?? [];
   const migrationVersion = /^(\d{4})_/.exec(file)?.[1];
   if (!migrationVersion) throw new Error(`bad migration file name ${file}`);
 
@@ -87,8 +90,9 @@ export function buildSeedSql(input: SeedInput): string {
     ...policies.map((p) => `policy ${p.id}`),
     ...targetSets.map((t) => `target set ${t.id}`),
     ...inquiryTemplates.map((t) => `inquiry template ${t.id}`),
+    ...pointPolicies.map((p) => `point policy ${p.id}`),
   ];
-  const hashLines = [...catalogues, ...policies, ...targetSets, ...inquiryTemplates].map(
+  const hashLines = [...catalogues, ...policies, ...targetSets, ...inquiryTemplates, ...pointPolicies].map(
     (i) => `-- sha256 ${KIND_IN_HEADER[i.kind]} ${i.id}=${i.hash}`,
   );
   parts.push(`-- ${file}
@@ -104,6 +108,14 @@ ${hashLines.join("\n")}
     parts.push(`-- Assessment policy ${p.id} (published immediately)
 insert into english.assessment_policies(version, config, source_hash, published_at)
 values (${quoteLiteral(p.id)}, ${jsonLiteral(p.data)}, ${quoteLiteral(p.hash)}, now())
+on conflict (version) do nothing;
+`);
+  }
+
+  for (const p of pointPolicies) {
+    parts.push(`-- Knowledge-point level policy ${p.id} (published immediately; needs 0027)
+insert into english.point_policies(version, config, source_hash, published_at)
+values (${quoteLiteral(p.id)}, ${jsonLiteral(p.data.config)}, ${quoteLiteral(p.hash)}, now())
 on conflict (version) do nothing;
 `);
   }
@@ -141,6 +153,7 @@ const KIND_IN_HEADER = {
   policy: "policy",
   targetSet: "target_set",
   inquiryTemplate: "inquiry_template",
+  pointPolicy: "point_policy",
 } as const;
 
 const sha256 = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");

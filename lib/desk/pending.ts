@@ -4,6 +4,9 @@
  */
 import { activityLabels, curriculumCopy, fallbackLabels, pendingCopy, reviewPage, revisionReviewCopy } from "@/lib/copy/vi";
 import type { CurriculumCard } from "@/lib/curriculum/shape";
+import type { ImportPendingItem } from "@/lib/import/pending";
+import type { PointInboxItem } from "@/lib/points/types";
+import { pointTitle } from "@/lib/points/view";
 import type { InboxItem } from "@/lib/review/types";
 import type { SkillInboxItem } from "@/lib/skills/types";
 import { proposalTitle } from "@/lib/skills/view";
@@ -11,7 +14,7 @@ import type { DraftListItem, PendingAttempt } from "@/lib/studio/types";
 
 export const PENDING_GROUPS = ["all", "work", "check", "ai", "skills"] as const;
 export type PendingGroup = (typeof PENDING_GROUPS)[number];
-export type PendingKind = "work" | "studio_check" | "studio_draft" | "curriculum_draft" | "skill" | "flag";
+export type PendingKind = "work" | "studio_check" | "studio_draft" | "curriculum_draft" | "skill" | "point" | "flag" | "import";
 export type PendingRow = { key: string; kind: PendingKind; group: Exclude<PendingGroup, "all">; label: string; title: string; since: string | null; need: string; href: string; waitingTutor: boolean };
 export type PendingInput = {
   learnerId: string;
@@ -19,10 +22,14 @@ export type PendingInput = {
   work: readonly InboxItem[];
   studio: readonly PendingAttempt[];
   skills: readonly SkillInboxItem[];
+  /** Knowledge-point proposals and ⚑ (W3); they only LINK to the "Kỹ năng" tab, where the child's tutor confirms one by one. */
+  points?: readonly PointInboxItem[];
   /** Drafts of THIS child (loadDraftList is per child). */
   drafts: readonly DraftListItem[];
   /** Curricula of THIS child (loadCurriculumCards is per child). */
   curricula: readonly CurriculumCard[];
+  /** Unfinished imports (W3): reading / draft / ai_failed. They only LINK to /imports/<id>; the child's tutor confirms there (R8). */
+  imports?: readonly ImportPendingItem[];
 };
 /**
  * The S5 inbox RPC has no learner filter and returns at most 100 rows (oldest first) across ALL the caller's children, so one
@@ -52,7 +59,7 @@ export function pendingView(p: { rows: readonly unknown[]; failed: readonly unkn
   };
 }
 
-const GROUP_OF: Record<PendingKind, Exclude<PendingGroup, "all">> = { work: "work", studio_check: "check", studio_draft: "ai", curriculum_draft: "ai", skill: "skills", flag: "skills" };
+const GROUP_OF: Record<PendingKind, Exclude<PendingGroup, "all">> = { work: "work", studio_check: "check", studio_draft: "ai", curriculum_draft: "ai", skill: "skills", point: "skills", flag: "skills", import: "check" };
 const WAITING = ["draft", "ai_failed"] as const;
 const isWaiting = (s: string) => (WAITING as readonly string[]).includes(s);
 
@@ -84,6 +91,11 @@ export function buildPendingRows(i: PendingInput): PendingRow[] {
     const flag = s.kind === "FLAG";
     push({ key: `skill-${s.id}`, kind: flag ? "flag" : "skill", label: flag ? pendingCopy.kinds.flag : pendingCopy.kinds.skill, title: proposalTitle(s), since: s.createdAt, need: flag ? pendingCopy.need.flag : pendingCopy.need.skill, href: `/review/skills#skill-${s.id}`, waitingTutor: !s.canDecide });
   }
+  for (const p of i.points ?? []) {
+    if (p.learnerId !== i.learnerId) continue;
+    const flag = p.kind === "FLAG";
+    push({ key: `point-${p.id}`, kind: flag ? "flag" : "point", label: flag ? pendingCopy.kinds.flag : pendingCopy.kinds.point, title: pointTitle(p), since: p.createdAt, need: flag ? pendingCopy.need.flag : pendingCopy.need.point, href: `/review/skills#point-${p.id}`, waitingTutor: !p.canDecide });
+  }
   for (const d of i.drafts) {
     if (d.superseded || !isWaiting(d.status)) continue;
     push({ key: `draft-${d.id}`, kind: "studio_draft", label: pendingCopy.kinds.studioDraft, title: d.title, since: d.updatedAt, need: d.status === "ai_failed" ? pendingCopy.need.aiFailed : pendingCopy.need.studioDraft, href: `/studio/drafts/${d.id}`, waitingTutor: false });
@@ -97,6 +109,14 @@ export function buildPendingRows(i: PendingInput): PendingRow[] {
       href: `/curricula/versions/${c.open.versionId}`,
       // Only the child's tutor approves a curriculum (D-W8); the parent may only discard a draft.
       waitingTutor: i.role !== "tutor" && c.open.status === "draft",
+    });
+  }
+  for (const m of i.imports ?? []) {
+    if (m.learnerId !== i.learnerId) continue;
+    push({
+      key: `import-${m.id}`, kind: "import", label: pendingCopy.kinds.import, title: m.title, since: m.updatedAt,
+      need: m.status === "reading" ? pendingCopy.need.importReading : m.status === "ai_failed" ? pendingCopy.need.importFailed : pendingCopy.need.import,
+      href: `/imports/${m.id}`, waitingTutor: i.role !== "tutor" && m.status === "draft",
     });
   }
   return rows.sort(byOldest);

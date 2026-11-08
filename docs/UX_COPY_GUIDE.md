@@ -183,3 +183,14 @@ Khóa mới trong `lib/copy/vi.ts` (người dạy luôn là `tutorHonorific`):
 - `appFeedback.screens.inbox` = "Chờ duyệt".
 
 Học sinh không thấy gì mới. "Quá hạn" chỉ ở màn người lớn.
+
+## W3 · Mức điểm kiến thức, Bản đồ kiến thức, Nạp bài đã làm (08/11/2026)
+
+Khóa mới trong `lib/copy/vi.ts` (người dạy luôn là `tutorHonorific`, không viết cứng "cô"):
+
+- `pointStateCopy` — đề xuất mức điểm trong tab "Kỹ năng": `Điểm “…”: Đang tiến bộ → Tự làm được`, "Xem điều kiện", Xác nhận · Chưa (lý do) · Giữ mức (⚑), "Chờ thầy/cô xác nhận", "Tính lại mức điểm từ đầu". Mức điểm gọi bằng chữ (Mới gặp · Đang tiến bộ · Tự làm được · Vận dụng được), không dùng "đạt".
+- `pointMapCopy` — trang Bản đồ kiến thức (mảng › nhóm › điểm), "App tự cập nhật" / "Thầy/cô đã xác nhận", "Bằng chứng từng câu" với Đúng · Sai · Có hỗ trợ. **Không** có điểm số hay % ở bất cứ chỗ nào của trang.
+- `importCopy` — Nạp bài đã làm (tên đề, file bài, file đáp án, ngày làm thật, mức hỗ trợ: Tự làm · Tự làm rồi chữa cùng thầy/cô · Làm cùng thầy/cô), màn "Xem và xác nhận bài nạp" (Cần xem, Đúng · Sai · Bỏ trống, Chỉ ở giấy, thanh dưới "Còn n câu cần xử lý · Xác nhận và tính mức"), lỗi theo mã (`importCopy.errors`) và lý do AI không đọc được (`importCopy.failReasons`).
+- `pendingCopy.kinds.point` / `need.point` — dòng "Đề xuất điểm kiến thức" trong Chờ duyệt. `appFeedback.screens.knowledgeMap` / `importNew` / `importConfirm` — tên màn khi gửi "Góp ý về app".
+
+Luật: mọi thứ AI soạn là nháp; con không thấy điểm kiến thức, bài nạp, nhãn hay mức; "%" chỉ ở màn người lớn (điều kiện đề xuất).

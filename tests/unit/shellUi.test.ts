@@ -40,9 +40,8 @@ describe("staff shell", () => {
   });
   it("'soon' sections are not links", () => {
     const html = render(shell(), "/");
-    expect(html).toMatch(/<span[^>]*data-testid="nav-knowledge"[^>]*aria-disabled="true"|<span[^>]*aria-disabled="true"[^>]*data-testid="nav-knowledge"/);
+    expect(html).toMatch(/<span[^>]*data-testid="nav-roadmap"[^>]*aria-disabled="true"|<span[^>]*aria-disabled="true"[^>]*data-testid="nav-roadmap"/);
     expect(html).toContain(shellCopy.soon);
-    expect(html).not.toContain("/knowledge");
     expect(html).not.toContain("/roadmap");
   });
   it("'Góp ý về app' is always in the sidebar and carries the screen and the child", () => {

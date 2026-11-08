@@ -2,6 +2,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { apiErrors } from "@/lib/copy/vi";
 import { logAppError } from "@/lib/ops/logAppError";
+import { pointHook } from "@/lib/engine/points/hook";
 import { createUserClient } from "@/lib/supabase/server";
 import type { HandlerResult } from "@/lib/review/handlers";
 import type { TutorWorkDeps } from "./handlers";
@@ -16,7 +17,7 @@ export async function runTutorWorkRoute(routeName: string, run: (deps: TutorWork
       data: { user },
     } = await supabase.auth.getUser();
     userId = user?.id ?? null;
-    const result = await run({ user, store: createSupabaseTutorWorkStore() });
+    const result = await run({ user, store: createSupabaseTutorWorkStore(), afterPoints: pointHook(routeName, userId) });
     return NextResponse.json(result.body, {
       status: result.status,
       headers: { "Cache-Control": "private, no-store" },

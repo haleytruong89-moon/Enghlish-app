@@ -6,7 +6,7 @@ import { LevelSummaryCard } from "@/components/levels/LevelSummaryCard";
 import { IntakeCard } from "@/components/workdesk/IntakeCard";
 import { TeachingNotesCard } from "@/components/workdesk/TeachingNotesCard";
 import { Milestones } from "@/components/levels/Milestones";
-import { learnerWithTrack, levelCopy, skillStateCopy, teachingNotes } from "@/lib/copy/vi";
+import { learnerWithTrack, levelCopy, pointStateCopy, skillStateCopy, teachingNotes } from "@/lib/copy/vi";
 import { loadLevelProfile } from "@/lib/levels/load";
 import { strongestWeakest } from "@/lib/levels/scale";
 import { groupWeakPoints } from "@/lib/skillmap/group";
@@ -50,6 +50,9 @@ export default async function LevelsPage({ params, searchParams }: { params: Pro
         <h1 className="mt-2 text-2xl font-bold">{levelCopy.title(learner.alias)}</h1>
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
         <p className="mt-3 text-muted">{levelCopy.intro}</p>
+        <Link href={`/learners/${learner.id}/knowledge`} data-testid="levels-knowledge-link" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-accent underline">
+          {pointStateCopy.seeMap}
+        </Link>
         {intake.available && notes.available ? (
           <>
             <IntakeCard learnerId={learner.id} view={intake.data} canEdit={canDecide} domains={profile.domains.map((d) => ({ key: d.key, name: d.name }))} />

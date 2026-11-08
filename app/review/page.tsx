@@ -11,7 +11,8 @@ import { formatWhen } from "@/lib/review/format";
 import { cursorToParam, FILTERS, parseCursor, parseFilter } from "@/lib/review/inbox";
 import { loadInbox } from "@/lib/review/load";
 import { loadSkillInbox } from "@/lib/skills/load";
-import { skillTabCount } from "@/lib/skills/view";
+import { loadPointInbox } from "@/lib/points/load";
+import { combinedTabCount } from "@/lib/points/view";
 import { createUserClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -31,9 +32,10 @@ export default async function ReviewInboxPage({ searchParams }: { searchParams: 
   const filter = parseFilter(sp.f);
   const after = parseCursor(sp.after);
   // The database filters, orders (oldest first) and pages; the counts on the filter chips come from it too.
-  const [{ items, next, counts }, skillInbox, studioPending] = await Promise.all([
+  const [{ items, next, counts }, skillInbox, pointInbox, studioPending] = await Promise.all([
     loadInbox(filter, after),
     loadSkillInbox(access.member.id).catch(() => null),
+    loadPointInbox(access.member.id).catch(() => null),
     loadStudioPending(access.member.id).catch(() => null),
   ]);
   const base = filter === "todo" ? "/review" : `/review?f=${filter}`;
@@ -46,7 +48,7 @@ export default async function ReviewInboxPage({ searchParams }: { searchParams: 
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{reviewPage.inboxTitle}</h1>
         <p className="mt-1 text-sm text-muted">{reviewPage.inboxIntro}</p>
-        <ReviewTabs active="work" skillsCount={skillTabCount(skillInbox, access.member.role)} studioCount={studioPending?.count ?? null} />
+        <ReviewTabs active="work" skillsCount={combinedTabCount(skillInbox, pointInbox, access.member.role)} studioCount={studioPending?.count ?? null} />
 
         <nav aria-label={reviewPage.filtersLabel} className="mt-6 flex flex-wrap gap-2">
           {FILTERS.map((f) => (

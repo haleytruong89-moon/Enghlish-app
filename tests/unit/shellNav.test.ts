@@ -14,15 +14,16 @@ describe("staff sidebar model", () => {
     for (const s of n.sections) expect(s.label).toBe(shellCopy.sections[s.key]);
   });
 
-  it("sections of later slices are 'soon': no link, no children (no dead link, no 404)", () => {
+  it("sections of later slices are 'soon' (Bản đồ kiến thức is live since W3): no link, no children (no dead link, no 404)", () => {
     const n = buildNav("tutor", NG, { revisionsReady: true });
-    for (const key of ["knowledge", "roadmap"] as const) {
+    for (const key of ["roadmap"] as const) {
       const s = n.sections.find((x) => x.key === key)!;
       expect(s.status).toBe("soon");
       expect(s.href).toBeNull();
       expect(s.children).toEqual([]);
     }
-    expect(n.sections.find((x) => x.key === "knowledge")!.lane).toBe("W3");
+    const k = n.sections.find((x) => x.key === "knowledge")!;
+    expect([k.status, k.href]).toEqual(["live", `/learners/${NG}/knowledge`]);
     expect(n.sections.find((x) => x.key === "roadmap")!.lane).toBe("W5");
   });
 

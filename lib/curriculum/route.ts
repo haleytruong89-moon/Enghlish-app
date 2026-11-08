@@ -5,6 +5,7 @@ import { createToolCaller } from "@/lib/ai/anthropic";
 import { studioModel, studioToolChoice } from "@/lib/ai/config";
 import { CURRICULUM_PROMPT, loadPrompt } from "@/lib/ai/prompts";
 import { apiErrors } from "@/lib/copy/vi";
+import { pointHook } from "@/lib/engine/points/hook";
 import { logAppError } from "@/lib/ops/logAppError";
 import type { HandlerResult } from "@/lib/review/handlers";
 import { createFileStorage } from "@/lib/storage/server";
@@ -30,6 +31,7 @@ export async function runCurriculumRoute(routeName: string, run: (deps: Curricul
       storage: createFileStorage(),
       schedule: (job) => after(job),
       loadContext: loadTocContext,
+      afterPoints: pointHook(routeName, userId),
       // Same model and tool-choice switch as Studio B1 (one priced model, lib/ai/pricing.ts).
       getAi: () => ({ call: createToolCaller(), model: studioModel(), toolChoice: studioToolChoice(), prompt: { text: loadPrompt(CURRICULUM_PROMPT.file), version: CURRICULUM_PROMPT.version } }),
       log: (error) => logAppError({ route: routeName, code: "curriculum_toc", error, userId }),
