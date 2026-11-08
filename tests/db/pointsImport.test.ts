@@ -162,7 +162,7 @@ describe("W3 points + import (migration 0027)", () => {
       const before = await svc<{ auto: unknown[]; episodes: unknown[] }>("select english.eng_engine_inputs($1) as r", [NG()]);
       const got = await importWork({ results: "cciib", tags: [t1!], day: "2026-10-22", support: "tu_lam_chua", title: "Task 8 import" });
       expect(got.template_id).toMatch(/^B-IM-\d{6}$/);
-      expect(got.counted).toBe(4);
+      expect(got.counted).toBe(5);
       const a = (await q1<{ provenance: string; taken_on: string; support_level: string; source_hash: string; declared_assistance: string[] }>(
         "select provenance, taken_on::text, support_level, source_hash, declared_assistance from english.attempts where id=$1", [got.attempt_id]))[0]!;
       expect(a).toMatchObject({ provenance: "imported", taken_on: "2026-10-22", support_level: "tu_lam_chua", declared_assistance: ["none"] });
@@ -522,6 +522,14 @@ describe("W3 points + import (migration 0027)", () => {
       const inbox = await svc<{ items: { learner_id: string }[] }>("select english.eng_point_inbox($1,false) as r", [M().tutorNguyen]);
       expect(inbox.items.filter((i) => i.learner_id === L)).toEqual([]);
       expect(await apply([row(tag, { propose: "INDEPENDENT", propose_key: ek(11) })], L)).toMatchObject({ proposed: 1 });
+    });
+    it("S5: the confirmed count includes blank in-app answers (same as the engine) and leaves paper-only rows out", async () => {
+      const L = await freshLearner("Em thử đếm trống");
+      const [tag] = await seedTags();
+      const w = await importWork({ results: "bbccpp", tags: [tag!], learner: L, title: "Count blanks" });
+      expect(w.counted).toBe(4);
+      expect((await q1<{ checked: number; correct: number }>("select (checks->>'checked')::int as checked, (checks->>'correct')::int as correct from english.attempt_auto_checks where attempt_id=$1", [w.attempt_id]))[0]).toEqual({ checked: 4, correct: 2 });
+      expect((await inputs(L, [tag!])).points[0]!.counted).toHaveLength(4);
     });
     it("S2: a superseded version's Unit→point link no longer counts (taught_unit, tags)", async () => {
       const L = await freshLearner("Em thử bản cũ");

@@ -46,9 +46,9 @@ export function sortForReview(rows: readonly ReviewRow[]): ReviewRow[] {
   return [...rows].sort((a, b) => Number(isOpen(b, rows)) - Number(isOpen(a, rows)) || (order.get(a.idx) ?? 0) - (order.get(b.idx) ?? 0));
 }
 
-/** Counted answers as the tutor has marked them: only kept in-app rows that are Đúng or Sai. */
+/** Counted answers as the tutor has marked them: kept in-app rows that are Đúng, Sai or left blank (a blank counts as wrong, like the engine). */
 export function summaryOf(rows: readonly ReviewRow[]): { correct: number; counted: number } {
-  const counted = rows.filter((r) => !r.dropped && !r.outOfApp && (r.result === "correct" || r.result === "incorrect"));
+  const counted = rows.filter((r) => !r.dropped && !r.outOfApp && (r.result === "correct" || r.result === "incorrect" || r.result === "blank"));
   return { correct: counted.filter((r) => r.result === "correct").length, counted: counted.length };
 }
 

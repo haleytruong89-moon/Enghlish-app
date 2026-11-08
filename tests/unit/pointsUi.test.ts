@@ -134,6 +134,9 @@ describe("ImportConfirm", () => {
     expect(sortForReview(rows).map((r) => r.n)).toEqual([2, 1, 3, 4]);
     expect(openCount(rows)).toBe(1);
     expect(summaryOf(rows)).toEqual({ correct: 1, counted: 2 });
+    // S5: a blank in-app answer counts (as wrong, like the engine); a paper-only row does not
+    const blanks = rows.map((r) => (r.n === 3 ? { ...r, result: "blank" as const, outOfApp: false } : r.n === 1 ? { ...r, result: "blank" as const, outOfApp: true } : r));
+    expect(summaryOf(blanks)).toEqual({ correct: 0, counted: 1 });
     const fixed = rows.map((r) => (r.n === 2 ? { ...r, result: "incorrect" as const, tag: "cum-dong-tu" } : r));
     expect(openCount(fixed)).toBe(0);
     expect(toConfirmRows(fixed).map((r) => [r.n, r.result, r.out_of_app])).toEqual([[1, "correct", false], [2, "incorrect", false], [3, "incorrect", false], [4, "blank", true]]);

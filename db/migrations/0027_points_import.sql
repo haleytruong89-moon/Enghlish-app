@@ -1241,7 +1241,8 @@ begin
   perform english.eng_record_attempt_effects(v_att, v_l.id, '{}'::text[], '{}'::text[], v_tid, 1, true, v_at, false);
 
   select pg_catalog.jsonb_object_agg(r ->> 'item_id', pg_catalog.jsonb_build_object('kind', 'short', 'result', r ->> 'result')),
-         pg_catalog.count(*) filter (where r ->> 'result' in ('correct', 'incorrect')),
+         -- A blank in-app answer counts as wrong, like the engine (the results hold in-app rows only; paper-only rows are not here).
+         pg_catalog.count(*) filter (where r ->> 'result' in ('correct', 'incorrect', 'blank')),
          pg_catalog.count(*) filter (where r ->> 'result' = 'correct')
   into v_checks, v_counted, v_correct
   from pg_catalog.jsonb_array_elements(v_results) as r;
