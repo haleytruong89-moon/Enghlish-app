@@ -223,7 +223,7 @@ describe("import — create and the AI read", () => {
     expect(r.body).toMatchObject({ error: "file_missing" });
   });
   it("a read that stays 'reading' too long is marked failed when it is opened", async () => {
-    const s = importStore({ batch: vi.fn().mockResolvedValueOnce(batchRow({ status: "reading", payload: null, created_at: "2026-11-08T02:00:00Z" })).mockResolvedValue(batchRow({ status: "ai_failed", payload: null, error_code: "timeout" })) });
+    const s = importStore({ batch: vi.fn().mockResolvedValueOnce(batchRow({ status: "reading", payload: { items: [] }, created_at: "2026-11-08T02:00:00Z" })).mockResolvedValue(batchRow({ status: "ai_failed", payload: { items: [] }, error_code: "timeout" })) });
     const r = await handleGetImport(ideps("tutorNguyen", s), BATCH, { view: "status" });
     expect(s.fail).toHaveBeenCalledWith({ batchId: BATCH, errorCode: "timeout", runId: null });
     expect(r.body).toEqual({ status: "ai_failed", error_code: "timeout" });
@@ -246,7 +246,7 @@ describe("import — confirm (the child's tutor only)", () => {
   it("a parent is refused (tutor_only); a stale base is 409; a draft that is not 'draft' is 400; unresolved or unknown rows are 400", async () => {
     expect((await handleConfirmImport(ideps("parent"), BATCH, goodBody)).body).toMatchObject({ error: "tutor_only" });
     expect((await handleConfirmImport(ideps("tutorNguyen"), BATCH, { ...goodBody, base_updated_at: "2026-11-08 03:00:01+00" })).status).toBe(409);
-    expect((await handleConfirmImport(ideps("tutorNguyen", importStore({ batch: vi.fn(async () => batchRow({ status: "reading", payload: null })) })), BATCH, goodBody)).body).toMatchObject({ error: "not_draft" });
+    expect((await handleConfirmImport(ideps("tutorNguyen", importStore({ batch: vi.fn(async () => batchRow({ status: "reading", payload: { items: [] } })) })), BATCH, goodBody)).body).toMatchObject({ error: "not_draft" });
     expect(confirmImportBodySchema.safeParse({ ...goodBody, rows: [{ ...rows[0], result: "needs_person" }] }).success).toBe(false);
     expect(confirmImportBodySchema.safeParse({ ...goodBody, rows: [{ ...rows[0], tag: "" }] }).success).toBe(false);
     expect((await handleConfirmImport(ideps("tutorNguyen"), BATCH, { ...goodBody, rows: [{ ...rows[0], tag: "khong-co" }] })).body).toMatchObject({ error: "unknown_tag" });

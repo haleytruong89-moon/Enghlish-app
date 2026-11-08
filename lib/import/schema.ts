@@ -33,6 +33,8 @@ export const readItemSchema = z.strictObject({
   result: z.enum(READ_RESULTS),
 });
 export const readPayloadSchema = z.strictObject({ items: z.array(readItemSchema).min(1).max(L.questions) });
+/** What import_batches.payload may hold in ANY state: the column default is {"items": []} (reading / ai_failed / a manual draft before rows are added). */
+export const batchPayloadSchema = z.strictObject({ items: z.array(readItemSchema).max(L.questions) });
 
 // ---- Request bodies (parsed AFTER requireAccess) -----------------------------------------------------------------------------------
 const clientId = z.string().min(8).max(100);

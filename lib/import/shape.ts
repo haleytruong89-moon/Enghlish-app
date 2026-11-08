@@ -1,6 +1,6 @@
 /** Parse eng_import_batch (migration 0027) into the view the screens and handlers use. Pure. */
 import { z } from "zod";
-import { readPayloadSchema } from "./schema";
+import { batchPayloadSchema } from "./schema";
 import { IMPORT_STATUSES, STALE_READING_MS, SUPPORT_LEVELS, type ImportStatus, type SupportLevel } from "./types";
 import type { ReadPayload } from "./types";
 
@@ -45,7 +45,7 @@ export function parseImport(raw: unknown, now: number = Date.now()): ImportView 
   const r = row.parse(raw);
   return {
     id: r.id, learnerId: r.learner_id, trackId: r.track_id, title: r.title, takenOn: r.taken_on, supportLevel: r.support_level, status: r.status,
-    payload: r.payload === null || r.payload === undefined ? null : readPayloadSchema.parse(r.payload),
+    payload: r.payload === null || r.payload === undefined ? null : batchPayloadSchema.parse(r.payload),
     errorCode: r.error_code, workFileId: r.work_file_id, keyFileId: r.key_file_id, templateId: r.template_id, updatedAt: r.updated_at,
     stale: r.status === "reading" && now - Date.parse(r.created_at) > STALE_READING_MS,
   };

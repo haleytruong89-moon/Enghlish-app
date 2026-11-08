@@ -90,7 +90,7 @@ test("a second occasion on another day gives the engine enough days: a point pro
   await page.goto("/review/skills");
   const group = page.getByTestId(`points-group-${NGUYEN}`);
   await expect(group).toBeVisible();
-  const cards = group.locator('[data-testid^="point-proposal-"]');
+  const cards = group.locator('li[data-testid^="point-proposal-"]');
   expect(await cards.count()).toBeGreaterThan(0);
   await expect(page.getByTestId("point-confirm-all")).toHaveCount(0); // one at a time (H5)
   const before = await cards.count();
