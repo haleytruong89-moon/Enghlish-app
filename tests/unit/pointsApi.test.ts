@@ -5,8 +5,9 @@ import type { AccessStore, Learner, Member, Relationship } from "@/lib/auth/requ
 import type { PointEngineStore } from "@/lib/engine/points/runner";
 import { buildImport } from "@/lib/import/build";
 import type { ReadContext } from "@/lib/import/context";
-import { handleConfirmImport, handleCreateImport, handleGetImport, handleImportUploadUrl, type ImportDeps, type ImportStore } from "@/lib/import/handlers";
+import { handleConfirmImport, handleCreateImport, handleGetImport, handleImportUploadUrl, handleRetryImport, type ImportDeps, type ImportStore } from "@/lib/import/handlers";
 import { normalizeRead } from "@/lib/import/normalize";
+import { isDuplicate, isOpen, manualRow, toReviewRows } from "@/lib/import/review";
 import { aiReadSchema, confirmImportBodySchema } from "@/lib/import/schema";
 import { handleDecidePoint, handlePointInbox, handleRebuildPoints, type PointDeps, type PointStore } from "@/lib/points/handlers";
 import { decidePointBodySchema } from "@/lib/points/schemas";
@@ -146,6 +147,8 @@ const importStore = (over: Partial<ImportStore> = {}): ImportStore => ({
   finish: vi.fn(async () => ({ applied: true })),
   fail: vi.fn(async () => ({ applied: true })),
   discard: vi.fn(async () => ({ id: BATCH, status: "discarded" })),
+  files: vi.fn(async () => ({ work: { path: "f/l/w.png", mime: "image/png" }, key: { path: "f/l/k.pdf", mime: "application/pdf" } })),
+  retry: vi.fn(async () => ({ id: BATCH, status: "reading", applied: true })),
   confirm: vi.fn(async () => ({ template_id: "B-IM-000001", attempt_id: "att-1", counted: 51, tags: ["cum-dong-tu"], replayed: false })),
   ...over,
 });
@@ -288,5 +291,74 @@ describe("buildImport", () => {
     ]);
     expect(buildImport([{ n: 1, part: "A", student_answer: null, key_answer: null, tag: "cum-dong-tu", out_of_app: true, result: "blank" }], CTX)).toEqual({ ok: false, error: "no_app_rows" });
     expect(buildImport([{ n: 1, part: "A", student_answer: null, key_answer: null, tag: "x", out_of_app: false, result: "blank" }], CTX)).toEqual({ ok: false, error: "unknown_tag" });
+  });
+});
+
+describe("import — manual path, retry, renumbering, image size (after the Opus review)", () => {
+  it("Soạn tay: no AI gate, no background job, the batch starts as a draft; also allowed while the AI is off", async () => {
+    const off = importStore({ aiGate: vi.fn(async () => ({ ...GATE_ON, enabled: false, allowed: false, reason: "off" })), create: vi.fn(async () => ({ id: BATCH, status: "draft", replayed: false })) });
+    const d = ideps("tutorNguyen", off);
+    const r = await handleCreateImport(d, NGUYEN, { title: "Tay", work_file: png, key_file: pdf, taken_on: "2026-10-23", support_level: "tu_lam", source_hash: "c".repeat(64), client_id: "import-00003", manual: true });
+    expect(r).toMatchObject({ status: 201, body: { import_id: BATCH, status: "draft" } });
+    expect(off.aiGate).not.toHaveBeenCalled();
+    expect(off.create).toHaveBeenCalledWith(expect.objectContaining({ manual: true }));
+    expect(d.jobs).toHaveLength(0);
+  });
+  it("retry after ai_failed: same batch, the AI is asked again (job scheduled); no AI → 409; a batch that is not failed → 409; manual opens a draft", async () => {
+    const failed = () => importStore({ batch: vi.fn(async () => batchRow({ status: "ai_failed", payload: { items: [] }, error_code: "timeout" })) });
+    const s = failed();
+    const d = ideps("tutorNguyen", s);
+    expect(await handleRetryImport(d, BATCH, { mode: "retry" })).toMatchObject({ status: 200, body: { import_id: BATCH, status: "reading" } });
+    expect(s.retry).toHaveBeenCalledWith({ batchId: BATCH, to: "reading", byMemberId: "m-tutorNguyen" });
+    expect(s.create).not.toHaveBeenCalled(); // never a second batch
+    expect(d.jobs).toHaveLength(1);
+    const off = importStore({ batch: failed().batch, aiGate: vi.fn(async () => ({ ...GATE_ON, enabled: false, allowed: false, reason: "cap" })) });
+    expect((await handleRetryImport(ideps("tutorNguyen", off), BATCH, { mode: "retry" })).body).toMatchObject({ error: "ai_cap" });
+    expect((await handleRetryImport(ideps("tutorNguyen"), BATCH, { mode: "retry" })).body).toMatchObject({ error: "not_failed" });
+    const m = failed();
+    const dm = ideps("parent", m);
+    expect(await handleRetryImport(dm, BATCH, { mode: "manual" })).toMatchObject({ status: 200 });
+    expect(m.retry).toHaveBeenCalledWith(expect.objectContaining({ to: "draft" }));
+    expect(dm.jobs).toHaveLength(0);
+    expect((await handleRetryImport(ideps("tutorAn", failed()), BATCH, { mode: "retry" })).status).toBe(404);
+    expect((await handleRetryImport(ideps("tutorNguyen", failed()), BATCH, { mode: "x" })).status).toBe(400);
+  });
+  it("a reading batch left alone too long is failed when opened, then retry works (staleness counts from the last change, not from creation)", async () => {
+    const s = importStore({ batch: vi.fn().mockResolvedValueOnce(batchRow({ status: "reading", payload: { items: [] }, touched_at: "2026-11-08T02:00:00Z", created_at: "2026-11-01T00:00:00Z" })).mockResolvedValue(batchRow({ status: "ai_failed", payload: { items: [] }, error_code: "timeout" })) });
+    expect(await handleRetryImport(ideps("tutorNguyen", s), BATCH, { mode: "manual" })).toMatchObject({ status: 200 });
+    expect(s.fail).toHaveBeenCalledWith({ batchId: BATCH, errorCode: "timeout", runId: null });
+  });
+  it("a photo over ~3.7 MB is refused at upload (clear code); a big PDF is still accepted", async () => {
+    expect((await handleImportUploadUrl(ideps("tutorNguyen"), NGUYEN, { purpose: "import_work", mime: "image/jpeg", bytes: 4_000_000 })).body).toMatchObject({ error: "image_too_big" });
+    expect((await handleImportUploadUrl(ideps("tutorNguyen"), NGUYEN, { purpose: "import_key", mime: "image/png", bytes: 4_000_000 })).body).toMatchObject({ error: "image_too_big" });
+    expect((await handleImportUploadUrl(ideps("tutorNguyen"), NGUYEN, { purpose: "import_work", mime: "image/jpeg", bytes: 3_600_000 })).status).toBe(201);
+    expect((await handleImportUploadUrl(ideps("tutorNguyen"), NGUYEN, { purpose: "import_work", mime: "application/pdf", bytes: 12_000_000 })).status).toBe(201);
+  });
+  it("two parts that each restart at 1 give 20 rows (none dropped); the same (part, n) twice stays and both are 'Cần xem'", () => {
+    const q = (part: string, n: number) => ({ n, part, student_answer: "a", key_answer: "a", tag: "cum-dong-tu", out_of_app: false, confidence: "high" as const });
+    const two = [...Array.from({ length: 10 }, (_, i) => q("Part II", i + 1)), ...Array.from({ length: 10 }, (_, i) => q("Part I", i + 1))];
+    const out = normalizeRead(aiReadSchema.parse({ questions: two }), CTX);
+    expect(out.items).toHaveLength(20);
+    expect(out.items.slice(0, 3).map((i) => [i.part, i.n])).toEqual([["Part I", 1], ["Part I", 2], ["Part I", 3]]);
+    expect(out.items.every((i) => i.result === "correct")).toBe(true);
+    const built = buildImport(out.items.map((i) => ({ n: i.n, part: i.part, student_answer: i.student_answer, key_answer: i.key_answer, tag: "cum-dong-tu", out_of_app: false, result: "correct" as const })), CTX);
+    expect(built.ok && built.build.meta.map((m) => m.n)).toEqual(Array.from({ length: 20 }, (_, i) => i + 1));
+    expect(built.ok && built.build.template.items[10]!.stem).toBe("Question 1 (Part II)");
+    const dup = normalizeRead(aiReadSchema.parse({ questions: [q("A", 3), q("A", 3), q("A", 4)] }), CTX);
+    expect(dup.items).toHaveLength(3);
+    expect(dup.items.map((i) => i.result)).toEqual(["needs_person", "needs_person", "correct"]);
+    const rows = toReviewRows(dup.items);
+    expect(rows.filter((r) => isOpen(r, rows)).map((r) => r.idx)).toEqual([0, 1]);
+    expect(buildImport(rows.map((r) => ({ n: r.n, part: r.part, student_answer: r.studentAnswer, key_answer: r.keyAnswer, tag: "cum-dong-tu", out_of_app: false, result: "correct" as const })), CTX)).toEqual({ ok: false, error: "duplicate_row" });
+    rows[1]!.dropped = true; // the tutor drops one: the other is no longer a duplicate, only its own verdict is left to give
+    expect(isDuplicate(rows[0]!, rows)).toBe(false);
+    expect(rows.filter((r) => isOpen(r, rows)).map((r) => r.idx)).toEqual([0]);
+  });
+  it("'Thêm câu' rows are compared in code; unticking 'Chỉ ở giấy' restores the previous result", () => {
+    const a = manualRow(5, { n: 7, part: "A", studentAnswer: "  Provided ", keyAnswer: "provided | providing", tag: "cum-dong-tu", outOfApp: false });
+    expect(a.result).toBe("correct");
+    expect(manualRow(6, { n: 8, part: "", studentAnswer: "", keyAnswer: "x", tag: "t", outOfApp: false }).result).toBe("blank");
+    expect(manualRow(7, { n: 9, part: "", studentAnswer: "x", keyAnswer: "", tag: "t", outOfApp: false }).result).toBe("needs_person");
+    expect(manualRow(8, { n: 9, part: "", studentAnswer: "x", keyAnswer: "y", tag: "t", outOfApp: true })).toMatchObject({ result: "blank", prevResult: "incorrect" });
   });
 });

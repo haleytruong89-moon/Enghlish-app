@@ -6,6 +6,7 @@ export const FILE_ERRORS = {
   type: "file_type",
   empty: "file_empty",
   too_big: "file_too_big",
+  image_too_big: "image_too_big",
   kind: "file_type",
 } as const;
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ImportConfirm } from "@/components/import/ImportConfirm";
+import { ImportFailed } from "@/components/import/ImportFailed";
 import { ImportWaiting } from "@/components/import/ImportWaiting";
 import { StaffShell } from "@/components/shell/StaffShell";
 import { importCopy } from "@/lib/copy/vi";
@@ -28,16 +29,8 @@ export default async function ImportPage({ params }: { params: Promise<{ id: str
           </Link>
         </div>
         <p className="mt-1 text-sm text-muted">{b.title}</p>
-        {b.status === "reading" ? <ImportWaiting importId={b.id} /> : null}
-        {b.status === "ai_failed" ? (
-          <section role="alert" data-testid="import-ai-failed" className="mt-4 rounded-2xl border border-[#E9C46A] bg-[#FBF1DC] p-4 text-[#6B4600]">
-            <p className="font-semibold">{importCopy.readFailed}</p>
-            {b.errorCode && importCopy.failReasons[b.errorCode] ? <p className="text-sm">{importCopy.readFailedWhy(importCopy.failReasons[b.errorCode]!)}</p> : null}
-            <Link href={`/learners/${learnerId}/imports/new`} className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline">
-              {importCopy.tryAgain}
-            </Link>
-          </section>
-        ) : null}
+        {b.status === "reading" ? <ImportWaiting importId={b.id} learnerId={learnerId} /> : null}
+        {b.status === "ai_failed" ? <ImportFailed importId={b.id} learnerId={learnerId} reason={b.errorCode} /> : null}
         {b.status === "draft" && b.payload ? <ImportConfirm data={r.data} learnerId={learnerId} /> : null}
         {b.status === "confirmed" ? (
           <p className="mt-4 font-semibold text-accent" data-testid="import-confirmed">

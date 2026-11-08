@@ -9,7 +9,7 @@ export { sendJson };
 
 export async function uploadImportFile(learnerId: string, purpose: "import_work" | "import_key", file: File) {
   const c = checkFile(purpose, file.type, file.size);
-  if (!c.ok) return { ok: false as const, error: c.reason === "too_big" ? "file_too_big" : c.reason === "empty" ? "file_empty" : "file_type" };
+  if (!c.ok) return { ok: false as const, error: c.reason === "too_big" ? "file_too_big" : c.reason === "image_too_big" ? "image_too_big" : c.reason === "empty" ? "file_empty" : "file_type" };
   const t = await sendJson<{ file_id: string; upload_url: string; mime: string }>(`/api/learners/${learnerId}/imports/files`, "POST", { purpose, mime: file.type, bytes: file.size });
   if (!t.ok) return { ok: false as const, error: t.error };
   if (!(await putToSignedUrl(t.body.upload_url, file))) return { ok: false as const, error: "file_missing" };

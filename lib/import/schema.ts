@@ -50,8 +50,11 @@ export const createImportBodySchema = z.strictObject({
   support_level: z.enum(SUPPORT_LEVELS),
   source_hash: z.string().regex(/^[0-9a-f]{64}$/),
   allow_other: z.boolean().optional(),
+  /** "Soạn tay": no AI; the tutor types the rows (AI off, no consent, over the cap, or after a failed read). */
+  manual: z.boolean().optional(),
   client_id: clientId,
 });
+export const retryImportBodySchema = z.strictObject({ mode: z.enum(["retry", "manual"]) });
 
 /** What the tutor confirms: the rows as seen on the review screen (a row with no tag, or still "Cần xem", cannot be confirmed). */
 export const confirmRowSchema = z.strictObject({

@@ -21,6 +21,8 @@ const row = z.object({
   attempt_id: z.string().nullable(),
   updated_at: z.string(),
   created_at: z.string(),
+  /** Last change (a retry puts the batch back to "reading": the clock restarts there, not at creation). */
+  touched_at: z.string().optional(),
 });
 
 export type ImportView = {
@@ -47,7 +49,7 @@ export function parseImport(raw: unknown, now: number = Date.now()): ImportView 
     id: r.id, learnerId: r.learner_id, trackId: r.track_id, title: r.title, takenOn: r.taken_on, supportLevel: r.support_level, status: r.status,
     payload: r.payload === null || r.payload === undefined ? null : batchPayloadSchema.parse(r.payload),
     errorCode: r.error_code, workFileId: r.work_file_id, keyFileId: r.key_file_id, templateId: r.template_id, updatedAt: r.updated_at,
-    stale: r.status === "reading" && now - Date.parse(r.created_at) > STALE_READING_MS,
+    stale: r.status === "reading" && now - Date.parse(r.touched_at ?? r.created_at) > STALE_READING_MS,
   };
 }
 

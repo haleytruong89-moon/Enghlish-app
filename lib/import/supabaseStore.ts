@@ -33,8 +33,21 @@ export function createSupabaseImportStore(): ImportStore {
     create: (a) =>
       call("eng_create_import", {
         p_learner: a.learnerId, p_title: a.title, p_work_file: a.workFile, p_key_file: a.keyFile, p_taken_on: a.takenOn, p_support: a.supportLevel,
-        p_source_hash: a.sourceHash, p_by: a.byMemberId, p_client_id: a.clientId, p_allow_other: a.allowOther,
+        p_source_hash: a.sourceHash, p_by: a.byMemberId, p_client_id: a.clientId, p_allow_other: a.allowOther, p_manual: a.manual,
       }),
+    async files(batchId) {
+      const db = createAdminClient();
+      const b = await db.from("import_batches").select("work_file_id, key_file_id").eq("id", batchId).maybeSingle<{ work_file_id: string; key_file_id: string }>();
+      if (b.error) throw new ReviewDbError(b.error.code ?? "unknown", `import_batches lookup: ${b.error.message ?? b.error.code ?? "error"}`);
+      if (!b.data) return null;
+      const f = await db.from("files").select("id, path, mime").in("id", [b.data.work_file_id, b.data.key_file_id]);
+      if (f.error) throw new ReviewDbError(f.error.code ?? "unknown", `files lookup: ${f.error.message ?? f.error.code ?? "error"}`);
+      const by = new Map((f.data as { id: string; path: string; mime: string }[]).map((x) => [x.id, x]));
+      const work = by.get(b.data.work_file_id);
+      const key = by.get(b.data.key_file_id);
+      return work && key ? { work: { path: work.path, mime: work.mime }, key: { path: key.path, mime: key.mime } } : null;
+    },
+    retry: (a) => call("eng_retry_import_read", { p_batch: a.batchId, p_by: a.byMemberId, p_to: a.to }),
     batch: (id) => call("eng_import_batch", { p_batch: id }),
     finish: (a) => call("eng_finish_import_read", { p_batch: a.batchId, p_payload: a.payload, p_run: a.runId }),
     fail: (a) => call("eng_fail_import_read", { p_batch: a.batchId, p_error: a.errorCode, p_run: a.runId }),

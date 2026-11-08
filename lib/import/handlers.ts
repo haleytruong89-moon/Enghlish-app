@@ -19,7 +19,7 @@ import { sameInstant } from "@/lib/studio/instant";
 import { buildImport } from "./build";
 import type { ReadContext } from "./context";
 import { runReadExtraction, type ReadExtractStore } from "./extract";
-import { confirmImportBodySchema, createImportBodySchema, importUploadBodySchema, type FileMeta } from "./schema";
+import { confirmImportBodySchema, createImportBodySchema, importUploadBodySchema, retryImportBodySchema, type FileMeta } from "./schema";
 import { parseImport, type ImportPageData } from "./shape";
 import type { ReadPayload } from "./types";
 
@@ -31,8 +31,12 @@ export interface ImportStore {
   logAiRun(r: RunLog): Promise<string>;
   create(a: {
     learnerId: string; title: string; workFile: FileMeta; keyFile: FileMeta; takenOn: string; supportLevel: string; sourceHash: string; allowOther: boolean;
-    byMemberId: string; clientId: string;
+    byMemberId: string; clientId: string; manual: boolean;
   }): Promise<unknown>;
+  /** The two stored files of a batch (server only: paths never leave the server). */
+  files(batchId: string): Promise<{ work: { path: string; mime: string }; key: { path: string; mime: string } } | null>;
+  /** english.eng_retry_import_read: ai_failed → reading (retry) or → draft (manual). */
+  retry(a: { batchId: string; to: "reading" | "draft"; byMemberId: string }): Promise<unknown>;
   /** english.eng_import_batch (one row as jsonb). */
   batch(batchId: string): Promise<unknown>;
   finish(a: { batchId: string; payload: ReadPayload; runId: string }): Promise<unknown>;
@@ -131,6 +135,25 @@ export async function handleImportUploadUrl(deps: ImportDeps, learnerId: string,
   return { status: 201, body: { file_id: fileId, upload_url: url, mime } };
 }
 
+type ReadJobInput = Parameters<typeof runReadExtraction>[1];
+/** Schedule the background AI read of one batch (shared by create and retry). Any crash marks the batch ai_failed. */
+function startRead(deps: ImportDeps, job: ReadJobInput, context: ReadContext, ai: ImportAi): void {
+  deps.schedule(async () => {
+    try {
+      await runReadExtraction(
+        {
+          store: extractStoreOf(deps.store), download: (path) => deps.storage.download(path), docxToText: deps.docxToText, context: async () => context,
+          call: ai.call, model: ai.model, toolChoice: ai.toolChoice, prompt: ai.prompt,
+        },
+        job,
+      );
+    } catch (err) {
+      await deps.log?.(err);
+      await deps.store.fail({ batchId: job.batchId, errorCode: "ai_failed", runId: null }).catch(() => undefined);
+    }
+  });
+}
+
 // ---- Create (+ the background read) ----------------------------------------------------------------------------------------------
 export async function handleCreateImport(deps: ImportDeps, learnerId: string, raw: unknown): Promise<HandlerResult> {
   const g = await guard(deps, learnerId, "import:upload");
@@ -144,46 +167,36 @@ export async function handleCreateImport(deps: ImportDeps, learnerId: string, ra
     const bad = await verifyStoredFile(deps.storage, owner, kind, { id: f.id, mime: f.mime as AllowedMime, bytes: f.bytes });
     if (bad) return fail(400, bad);
   }
-  // The AI is the only way to read the paper: no AI (off, no consent, cap) → nothing is created and the screen says why.
-  const gate = parseGate(await deps.store.aiGate(learner.id));
-  if (!gate.allowed && gate.reason) {
-    await deps.store.logAiRun({
-      familyId: learner.familyId, draftId: null, model: null, promptVersion: null, inputTokens: 0, outputTokens: 0, costUsd: 0,
-      status: refusalStatus(gate.reason), errorCode: gate.reason, byMemberId: member.id, releasesRunId: null,
-    });
-    return fail(409, `ai_${gate.reason}`);
+  const manual = b.manual === true;
+  // Without "Soạn tay" the AI is the only way to read the paper: no AI (off, no consent, cap) → nothing is created and the screen says why
+  // (and offers "Soạn tay"). A manual import never calls the AI and never needs the gate.
+  if (!manual) {
+    const gate = parseGate(await deps.store.aiGate(learner.id));
+    if (!gate.allowed && gate.reason) {
+      await deps.store.logAiRun({
+        familyId: learner.familyId, draftId: null, model: null, promptVersion: null, inputTokens: 0, outputTokens: 0, costUsd: 0,
+        status: refusalStatus(gate.reason), errorCode: gate.reason, byMemberId: member.id, releasesRunId: null,
+      });
+      return fail(409, `ai_${gate.reason}`);
+    }
   }
-  const context = await deps.loadContext(learner.id, learner.trackId); // read in the request: the background job has no session
+  const context = manual ? null : await deps.loadContext(learner.id, learner.trackId); // read in the request: the background job has no session
   let made: { id: string; status: string; replayed: boolean };
   try {
     made = (await deps.store.create({
       learnerId: learner.id, title: b.title, workFile: b.work_file, keyFile: b.key_file, takenOn: b.taken_on, supportLevel: b.support_level,
-      sourceHash: b.source_hash, allowOther: b.allow_other ?? false, byMemberId: member.id, clientId: b.client_id,
+      sourceHash: b.source_hash, allowOther: b.allow_other ?? false, byMemberId: member.id, clientId: b.client_id, manual,
     })) as { id: string; status: string; replayed: boolean };
   } catch (err) {
     return fromImportDbError(err);
   }
-  if (made.status === "reading" && !made.replayed) {
+  if (made.status === "reading" && !made.replayed && context) {
     const ai = deps.getAi();
-    const job = {
+    startRead(deps, {
       batchId: made.id, familyId: learner.familyId, learnerId: learner.id, byMemberId: member.id,
       workFile: { path: buildPath({ ...owner, fileId: b.work_file.id, mime: b.work_file.mime as AllowedMime }), mime: b.work_file.mime },
       keyFile: { path: buildPath({ ...owner, fileId: b.key_file.id, mime: b.key_file.mime as AllowedMime }), mime: b.key_file.mime },
-    };
-    deps.schedule(async () => {
-      try {
-        await runReadExtraction(
-          {
-            store: extractStoreOf(deps.store), download: (path) => deps.storage.download(path), docxToText: deps.docxToText, context: async () => context,
-            call: ai.call, model: ai.model, toolChoice: ai.toolChoice, prompt: ai.prompt,
-          },
-          job,
-        );
-      } catch (err) {
-        await deps.log?.(err);
-        await deps.store.fail({ batchId: made.id, errorCode: "ai_failed", runId: null }).catch(() => undefined);
-      }
-    });
+    }, context, ai);
   }
   return { status: made.replayed ? 200 : 201, body: { import_id: made.id, status: made.status } };
 }
@@ -205,6 +218,38 @@ export async function handleGetImport(deps: ImportDeps, batchId: string, opts: {
     is_tutor: g.grant.member.role === "tutor",
   };
   return { status: 200, body };
+}
+
+// ---- After a failed read: "Thử lại" (same batch, no duplicate) or "Soạn tay" (empty draft) ---------------------------------------------
+export async function handleRetryImport(deps: ImportDeps, batchId: string, raw: unknown): Promise<HandlerResult> {
+  const g = await guardImport(deps, batchId, "import:upload");
+  if (!g.ok) return g.result;
+  const p = retryImportBodySchema.safeParse(raw);
+  if (!p.success) return fail(400, "invalid_body");
+  let view = parseImport(await deps.store.batch(batchId));
+  if (view.stale) {
+    await deps.store.fail({ batchId, errorCode: "timeout", runId: null });
+    view = parseImport(await deps.store.batch(batchId));
+  }
+  if (view.status !== "ai_failed") return fail(409, "not_failed");
+  const { learner, member } = g.grant;
+  let context: ReadContext | null = null;
+  if (p.data.mode === "retry") {
+    const gate = parseGate(await deps.store.aiGate(learner.id));
+    if (!gate.allowed && gate.reason) return fail(409, `ai_${gate.reason}`);
+    context = await deps.loadContext(learner.id, learner.trackId);
+  }
+  try {
+    const r = (await deps.store.retry({ batchId, to: p.data.mode === "retry" ? "reading" : "draft", byMemberId: member.id })) as { status: string; applied: boolean };
+    if (r.applied && p.data.mode === "retry" && context) {
+      const files = await deps.store.files(batchId);
+      if (!files) return fail(404, "not_found");
+      startRead(deps, { batchId, familyId: learner.familyId, learnerId: learner.id, byMemberId: member.id, workFile: files.work, keyFile: files.key }, context, deps.getAi());
+    }
+    return { status: 200, body: { import_id: batchId, status: r.status } };
+  } catch (err) {
+    return fromImportDbError(err);
+  }
 }
 
 // ---- Confirm (the child's tutor only) --------------------------------------------------------------------------------------------

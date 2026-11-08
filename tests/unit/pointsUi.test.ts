@@ -130,7 +130,7 @@ describe("ImportConfirm", () => {
   });
   it("review state: open rows, summary of counted answers, and the confirmation body", () => {
     const rows = toReviewRows(payload.items);
-    expect(rows.filter(isOpen).map((r) => r.n)).toEqual([2]); // row 4 is paper-only: it needs no mark
+    expect(rows.filter((r) => isOpen(r, rows)).map((r) => r.n)).toEqual([2]); // row 4 is paper-only: it needs no mark
     expect(sortForReview(rows).map((r) => r.n)).toEqual([2, 1, 3, 4]);
     expect(openCount(rows)).toBe(1);
     expect(summaryOf(rows)).toEqual({ correct: 1, counted: 2 });

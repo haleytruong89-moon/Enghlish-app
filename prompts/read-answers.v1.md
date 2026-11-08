@@ -9,7 +9,8 @@ Rules:
 6. `out_of_app` = true when the question cannot be answered inside the app (listening, speaking, drawing, long writing). Otherwise false.
 7. `confidence` = "low" whenever the handwriting is hard to read, the answer is ambiguous (two marks, a smudge), the question number is unclear, or you are guessing; otherwise "high". Do not guess: it is better to say "low" than to put a doubtful answer under "high".
 8. Do not mark answers right or wrong. The app compares them in code.
-9. Call the tool `save_read_answers` EXACTLY ONCE with all questions.
+9. The paper may show a name, class or school at the top. IGNORE it completely: never copy, repeat or output any person's name, class or school anywhere in your answer (not in `part`, not in an answer, not in any note). Only the questions and answers matter.
+10. Call the tool `save_read_answers` EXACTLY ONCE with all questions.
 
 CLOSED LIST OF TAGS (key — name (area › group)):
 {{TAGS}}

@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import { importCopy } from "@/lib/copy/vi";
 import { importErrorText, sendJson } from "@/lib/import/client";
-import { isOpen, openCount, sortForReview, summaryOf, toConfirmRows, toReviewRows, type ReviewRow } from "@/lib/import/review";
+import { isDuplicate, isOpen, manualRow, openCount, rowTid, sortForReview, summaryOf, toConfirmRows, toReviewRows, type ReviewRow } from "@/lib/import/review";
 import type { ImportPageData } from "@/lib/import/shape";
-import type { ReadResult } from "@/lib/import/types";
+import { IMPORT_LIMITS, type ReadResult } from "@/lib/import/types";
 
 const markBtn = "min-h-11 min-w-16 rounded-lg border px-3 text-sm font-semibold";
 
@@ -28,7 +28,16 @@ export function ImportConfirm({ data, learnerId }: { data: ImportPageData; learn
   const ordered = useMemo(() => sortForReview(rows), [rows]);
   const canConfirm = data.is_tutor && !done;
 
-  const patch = (n: number, p: Partial<ReviewRow>) => setRows((rs) => rs.map((r) => (r.n === n ? { ...r, ...p } : r)));
+  const patch = (idx: number, p: Partial<ReviewRow>) => setRows((rs) => rs.map((r) => (r.idx === idx ? { ...r, ...p } : r)));
+  // "Thêm câu": a row typed in by the tutor (Soạn tay, or a question the AI missed).
+  const [add, setAdd] = useState({ n: "", part: "", student: "", key: "", tag: "", paper: false });
+  const addN = Number(add.n);
+  const canAdd = canConfirm && Number.isInteger(addN) && addN >= 1 && addN <= 999 && add.tag !== "" && rows.length < IMPORT_LIMITS.questions;
+  function addRow() {
+    if (!canAdd) return;
+    setRows((rs) => [...rs, manualRow(rs.reduce((m, r) => Math.max(m, r.idx + 1), 0), { n: addN, part: add.part.slice(0, IMPORT_LIMITS.part), studentAnswer: add.student, keyAnswer: add.key, tag: add.tag, outOfApp: add.paper })]);
+    setAdd((a) => ({ n: String(addN + 1), part: a.part, student: "", key: "", tag: a.tag, paper: false }));
+  }
 
   async function confirm() {
     if (left > 0 || busy) return;
@@ -69,10 +78,11 @@ export function ImportConfirm({ data, learnerId }: { data: ImportPageData; learn
           </thead>
           <tbody>
             {ordered.map((r) => (
-              <tr key={r.n} data-testid={`import-row-${r.n}`} data-open={isOpen(r) ? "true" : "false"} data-dropped={r.dropped ? "true" : "false"} className={`border-b border-line align-top ${r.dropped ? "opacity-50" : ""} ${isOpen(r) ? "bg-[#FBF1DC]" : ""}`}>
+              <tr key={r.idx} data-testid={`import-row-${rowTid(r, rows)}`} data-manual={r.manual ? "true" : "false"} data-open={isOpen(r, rows) ? "true" : "false"} data-dropped={r.dropped ? "true" : "false"} className={`border-b border-line align-top ${r.dropped ? "opacity-50" : ""} ${isOpen(r, rows) ? "bg-[#FBF1DC]" : ""}`}>
                 <td className="px-3 py-2 font-semibold">
                   {r.n}
                   {r.part ? <span className="ml-1 text-xs font-normal text-muted">{r.part}</span> : null}
+                  {isDuplicate(r, rows) ? <span className="ml-2 text-xs font-semibold text-[#6B4600]" data-testid={`import-dup-${rowTid(r, rows)}`}>{importCopy.duplicateRow}</span> : null}
                 </td>
                 <td className="px-3 py-2">
                   {r.studentAnswer ?? <span className="text-muted">{r.lowConfidence ? importCopy.unreadable : importCopy.blankAnswer}</span>}
@@ -91,8 +101,8 @@ export function ImportConfirm({ data, learnerId }: { data: ImportPageData; learn
                           type="button"
                           disabled={!canConfirm}
                           aria-pressed={r.result === v}
-                          data-testid={`import-mark-${r.n}-${v}`}
-                          onClick={() => patch(r.n, { result: v })}
+                          data-testid={`import-mark-${rowTid(r, rows)}-${v}`}
+                          onClick={() => patch(r.idx, { result: v })}
                           className={`${markBtn} ${r.result === v ? "border-accent bg-accent text-white" : "border-line bg-white"} disabled:opacity-60`}
                         >
                           {label}
@@ -108,8 +118,8 @@ export function ImportConfirm({ data, learnerId }: { data: ImportPageData; learn
                       <select
                         value={r.tag}
                         disabled={!canConfirm}
-                        data-testid={`import-tag-${r.n}`}
-                        onChange={(e) => patch(r.n, { tag: e.target.value })}
+                        data-testid={`import-tag-${rowTid(r, rows)}`}
+                        onChange={(e) => patch(r.idx, { tag: e.target.value })}
                         className="min-h-11 max-w-[16rem] rounded-lg border border-line bg-white px-2 text-sm text-ink"
                       >
                         <option value="">{importCopy.tagNone}</option>
@@ -130,12 +140,12 @@ export function ImportConfirm({ data, learnerId }: { data: ImportPageData; learn
                           type="checkbox"
                           checked={r.outOfApp}
                           disabled={r.dropped}
-                          data-testid={`import-paper-${r.n}`}
-                          onChange={(e) => patch(r.n, { outOfApp: e.target.checked, result: e.target.checked ? "blank" : r.result })}
+                          data-testid={`import-paper-${rowTid(r, rows)}`}
+                          onChange={(e) => patch(r.idx, e.target.checked ? { outOfApp: true, prevResult: r.result, result: "blank" } : { outOfApp: false, result: r.prevResult ?? r.result })}
                         />
                         {importCopy.outOfApp}
                       </label>
-                      <button type="button" data-testid={`import-drop-${r.n}`} onClick={() => patch(r.n, { dropped: !r.dropped })} className="min-h-11 text-left text-xs text-accent underline">
+                      <button type="button" data-testid={`import-drop-${rowTid(r, rows)}`} onClick={() => patch(r.idx, { dropped: !r.dropped })} className="min-h-11 text-left text-xs text-accent underline">
                         {r.dropped ? importCopy.restoreRow : importCopy.dropRow}
                       </button>
                     </div>
@@ -147,6 +157,48 @@ export function ImportConfirm({ data, learnerId }: { data: ImportPageData; learn
         </table>
       </div>
       <p className="mt-2 text-xs text-muted">{importCopy.outOfAppHint}</p>
+      {data.import.payload?.items.length === 0 && rows.length === 0 ? <p className="mt-3 text-sm" data-testid="import-manual-empty">{importCopy.manualEmpty}</p> : null}
+      {canConfirm ? (
+        <fieldset className="mt-4 rounded-2xl border border-line bg-white p-4" data-testid="import-add">
+          <legend className="px-1 text-sm font-semibold">{importCopy.addRow}</legend>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="flex flex-col gap-1 text-xs text-muted">
+              {importCopy.cols.n}
+              <input inputMode="numeric" value={add.n} onChange={(e) => setAdd({ ...add, n: e.target.value.replace(/\D/g, "").slice(0, 3) })} data-testid="import-add-n" className="min-h-11 w-20 rounded-lg border border-line px-2 text-sm text-ink" />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-muted">
+              {importCopy.addPart}
+              <input value={add.part} maxLength={IMPORT_LIMITS.part} onChange={(e) => setAdd({ ...add, part: e.target.value })} data-testid="import-add-part" className="min-h-11 w-28 rounded-lg border border-line px-2 text-sm text-ink" />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-muted">
+              {importCopy.cols.student}
+              <input value={add.student} maxLength={IMPORT_LIMITS.answer} onChange={(e) => setAdd({ ...add, student: e.target.value })} data-testid="import-add-student" className="min-h-11 w-44 rounded-lg border border-line px-2 text-sm text-ink" />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-muted">
+              {importCopy.cols.key}
+              <input value={add.key} maxLength={IMPORT_LIMITS.answer} onChange={(e) => setAdd({ ...add, key: e.target.value })} data-testid="import-add-key" className="min-h-11 w-44 rounded-lg border border-line px-2 text-sm text-ink" />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-muted">
+              {importCopy.tag}
+              <select value={add.tag} onChange={(e) => setAdd({ ...add, tag: e.target.value })} data-testid="import-add-tag" className="min-h-11 max-w-[14rem] rounded-lg border border-line bg-white px-2 text-sm text-ink">
+                <option value="">{importCopy.tagNone}</option>
+                {data.context.tags.map((t) => (
+                  <option key={t.key} value={t.key}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex min-h-11 items-center gap-2 text-xs">
+              <input type="checkbox" checked={add.paper} onChange={(e) => setAdd({ ...add, paper: e.target.checked })} data-testid="import-add-paper" />
+              {importCopy.outOfApp}
+            </label>
+            <button type="button" disabled={!canAdd} onClick={addRow} data-testid="import-add-btn" className="min-h-11 rounded-lg border border-accent px-4 text-sm font-semibold text-accent disabled:opacity-60">
+              {importCopy.addRowBtn}
+            </button>
+          </div>
+        </fieldset>
+      ) : null}
 
       <div className="sticky bottom-0 mt-4 flex flex-wrap items-center gap-3 border-t border-line bg-white/95 px-1 py-3" data-testid="import-bar">
         <p className="text-sm font-semibold" data-testid="import-left">

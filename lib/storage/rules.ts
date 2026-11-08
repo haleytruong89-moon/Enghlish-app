@@ -9,6 +9,8 @@
 export const BUCKET = "english-work";
 /** 15 MB: the same limit is on the bucket and in the files table. */
 export const MAX_FILE_BYTES = 15 * 1024 * 1024;
+/** A photo sent to the AI to be read (import work / key) is capped lower: the AI refuses an image over 5 MB once encoded (3.75 MB raw). PDFs keep MAX_FILE_BYTES. */
+export const MAX_AI_IMAGE_BYTES = 3.7 * 1000 * 1000;
 /** A signed download link lives 5 minutes; every view asks for a fresh one. */
 export const SIGNED_URL_TTL_SECONDS = 300;
 /** Photos and screenshots are shrunk in the browser so their longest side is at most this many pixels. */
@@ -49,7 +51,7 @@ export function extensionFor(mime: AllowedMime): string {
   return EXTENSION[mime];
 }
 
-export type FileCheck = { ok: true } | { ok: false; reason: "type" | "empty" | "too_big" | "kind" };
+export type FileCheck = { ok: true } | { ok: false; reason: "type" | "empty" | "too_big" | "image_too_big" | "kind" };
 
 /**
  * Is this (mime, size) acceptable for this purpose? An assignment sheet must be a PDF; a result screenshot must be an image; an answer
@@ -59,6 +61,7 @@ export function checkFile(kind: FileKind, mime: unknown, bytes: unknown): FileCh
   if (!isAllowedMime(mime)) return { ok: false, reason: "type" };
   if (typeof bytes !== "number" || !Number.isInteger(bytes) || bytes < 1) return { ok: false, reason: "empty" };
   if (bytes > MAX_FILE_BYTES) return { ok: false, reason: "too_big" };
+  if ((kind === "import_work" || kind === "import_key") && isImageMime(mime) && bytes > MAX_AI_IMAGE_BYTES) return { ok: false, reason: "image_too_big" };
   const studio = kind === "studio_test" || kind === "studio_key";
   if (mime === DOCX_MIME && !studio && kind !== "import_key") return { ok: false, reason: "kind" };
   if (studio && !(STUDIO_MIMES as readonly string[]).includes(mime)) return { ok: false, reason: "kind" };

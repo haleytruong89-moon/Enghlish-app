@@ -30,7 +30,7 @@ export function ImportForm({ learnerId, aiAllowed, aiReason }: { learnerId: stri
   const today = todayVn(new Date());
   const ready = title.trim().length > 0 && work !== null && key !== null && takenOn !== "" && support !== "";
 
-  async function start() {
+  async function start(manual: boolean) {
     if (!ready || !work || !key) return setProblem(importCopy.missing);
     if (takenOn > today) return setProblem(importCopy.dateFuture);
     setProblem(null);
@@ -46,7 +46,7 @@ export function ImportForm({ learnerId, aiAllowed, aiReason }: { learnerId: stri
     }
     setBusy("send");
     const r = await sendJson<{ import_id: string }>(`/api/learners/${learnerId}/imports`, "POST", {
-      title: title.trim(), work_file: w.file, key_file: k.file, taken_on: takenOn, support_level: support, source_hash: hash, allow_other: allowOther, client_id: clientId.current,
+      title: title.trim(), work_file: w.file, key_file: k.file, taken_on: takenOn, support_level: support, source_hash: hash, allow_other: allowOther, manual, client_id: clientId.current,
     });
     setBusy(null);
     if (!r.ok) {
@@ -64,6 +64,9 @@ export function ImportForm({ learnerId, aiAllowed, aiReason }: { learnerId: stri
         {importCopy.bookTitle}
         <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={IMPORT_LIMITS.title} placeholder={importCopy.bookTitleHint} data-testid="import-title" className={field} />
       </label>
+      <p className="rounded-xl bg-[#FBF1DC] px-3.5 py-2 text-sm text-[#6B4600]" data-testid="import-cover-note">
+        {importCopy.coverNote}
+      </p>
       <label className="flex flex-col gap-1 text-sm font-semibold">
         {importCopy.workFile}
         <input type="file" accept="application/pdf,image/png,image/jpeg,image/webp,.pdf,.png,.jpg,.jpeg,.webp" data-testid="import-work" onChange={(e) => setWork(e.target.files?.[0] ?? null)} className="min-h-11 font-normal" />
@@ -108,11 +111,15 @@ export function ImportForm({ learnerId, aiAllowed, aiReason }: { learnerId: stri
           {problem}
         </p>
       ) : null}
-      <div>
-        <button type="button" disabled={busy !== null || !aiAllowed || !ready} onClick={() => void start()} data-testid="import-start" className="min-h-12 rounded-xl bg-accent px-5 font-bold text-white disabled:opacity-60">
+      <div className="flex flex-wrap gap-3">
+        <button type="button" disabled={busy !== null || !aiAllowed || !ready} onClick={() => void start(false)} data-testid="import-start" className="min-h-12 rounded-xl bg-accent px-5 font-bold text-white disabled:opacity-60">
           {busy === "upload" ? importCopy.uploading : busy === "send" ? importCopy.starting : importCopy.create}
         </button>
+        <button type="button" disabled={busy !== null || !ready} onClick={() => void start(true)} data-testid="import-manual" className="min-h-12 rounded-xl border border-accent px-5 font-bold text-accent disabled:opacity-60">
+          {importCopy.manual}
+        </button>
       </div>
+      <p className="text-xs text-muted">{importCopy.manualHint}</p>
     </form>
   );
 }

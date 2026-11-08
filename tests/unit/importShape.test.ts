@@ -20,6 +20,10 @@ describe("parseImport with the default empty payload", () => {
     const v = parseImport(base, Date.parse("2026-11-08T11:00:00Z"));
     expect(v.stale).toBe(true);
   });
+  it("a retried batch (old created_at, recent touched_at) is not stale", () => {
+    const v = parseImport({ ...base, created_at: "2026-11-01T00:00:00Z", touched_at: "2026-11-08T10:00:00Z" }, Date.parse("2026-11-08T10:01:00Z"));
+    expect(v.stale).toBe(false);
+  });
   it("still rejects a malformed item", () => {
     expect(() => parseImport({ ...base, payload: { items: [{ n: 0 }] } })).toThrow();
   });
