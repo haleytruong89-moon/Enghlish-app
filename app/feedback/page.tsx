@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AppHeader } from "@/components/AppHeader";
+import { StaffShell } from "@/components/shell/StaffShell";
+import { requireShell } from "@/lib/shell/load";
+import { firstParam } from "@/lib/shell/shell";
 import { FeedbackForm } from "@/components/workdesk/FeedbackForm";
 import { FeedbackList } from "@/components/workdesk/FeedbackList";
 import { appFeedback, reviewPage } from "@/lib/copy/vi";
@@ -14,7 +16,7 @@ import { createSupabaseWorkdeskStore } from "@/lib/workdesk/supabaseStore";
 export const dynamic = "force-dynamic";
 
 /** "Góp ý về app": tutor and parent of the family (students and outsiders get a plain 404, like the other adult pages). */
-export default async function FeedbackPage({ searchParams }: { searchParams: Promise<{ screen?: string | string[] }> }) {
+export default async function FeedbackPage({ searchParams }: { searchParams: Promise<{ screen?: string | string[]; learner?: string | string[] }> }) {
   const supabase = await createUserClient();
   const {
     data: { user },
@@ -27,15 +29,15 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Pro
   if (!(await feedbackAllowedHere(allowRealLearners(), access.member.familyId, (f) => createSupabaseWorkdeskStore().familyHasRealLearner(f)))) notFound();
 
   const sp = await searchParams;
+  const shell = await requireShell(firstParam(sp.learner));
   const raw = Array.isArray(sp.screen) ? sp.screen[0] : sp.screen;
   const screen = raw && raw.trim() ? raw.trim().slice(0, 80) : appFeedback.screenDefault;
   const loaded = await loadAppFeedback();
   const role = access.member.role === "parent" ? "parent" : "tutor";
 
   return (
-    <>
-      <AppHeader name={access.member.displayName} />
-      <main className="mx-auto max-w-3xl px-4 py-10" data-testid="feedback-page">
+    <StaffShell shell={shell}>
+      <div className="mx-auto max-w-3xl" data-testid="feedback-page">
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {reviewPage.back}
         </Link>
@@ -52,7 +54,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Pro
             {appFeedback.unavailable}
           </p>
         )}
-      </main>
-    </>
+      </div>
+    </StaffShell>
   );
 }

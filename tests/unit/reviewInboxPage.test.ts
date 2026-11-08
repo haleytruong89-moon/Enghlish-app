@@ -5,10 +5,16 @@ import { reviewPage, revisionReviewCopy } from "@/lib/copy/vi";
 import type { InboxItem } from "@/lib/review/types";
 
 vi.mock("server-only", () => ({}));
-vi.mock("next/navigation", () => ({ notFound: vi.fn(), redirect: vi.fn() }));
+vi.mock("next/navigation", () => ({ notFound: vi.fn(), redirect: vi.fn(), usePathname: () => "/review" }));
 vi.mock("next/link", () => ({ default: (p: { href: string; children: React.ReactNode }) => createElement("a", { href: p.href }, p.children) }));
 vi.mock("@/lib/supabase/server", () => ({ createUserClient: async () => ({ auth: { getUser: async () => ({ data: { user: { id: "u1" } } }) } }) }));
 vi.mock("@/lib/review/access", () => ({ authorizeStaffPage: async () => ({ kind: "ok", member: { displayName: "Thầy/cô của An (thử)" } }) }));
+
+vi.mock("@/lib/shell/load", () => ({
+  requireShell: async () => ({ displayName: "Thầy/cô của An (thử)", role: "tutor", memberId: "m1", learners: [], current: null, revisionsReady: true }),
+}));
+vi.mock("@/lib/skills/load", () => ({ loadSkillInbox: async () => null }));
+vi.mock("@/lib/studio/load", () => ({ loadStudioPending: async () => null }));
 
 const item = (over: Partial<InboxItem>): InboxItem => ({
   episodeId: "e1", attemptId: "a1", learnerId: "l1", alias: "An (thử)", isTest: true, titleVi: "Núi lửa", stepNo: 7, activityType: "ACT-WRITE", mode: "PRACTICE",

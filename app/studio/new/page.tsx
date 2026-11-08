@@ -1,10 +1,11 @@
 // app/studio/new/page.tsx
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AppHeader } from "@/components/AppHeader";
+import { StaffShell } from "@/components/shell/StaffShell";
+import { requireShell } from "@/lib/shell/load";
 import { DraftList } from "@/components/studio/DraftList";
 import { UploadForm } from "@/components/studio/UploadForm";
-import { appFeedback, learnerWithTrack, reviewPage, studioCopy } from "@/lib/copy/vi";
+import { learnerWithTrack, reviewPage, studioCopy } from "@/lib/copy/vi";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { loadDraftList, loadStudioGate } from "@/lib/studio/load";
 import { createUserClient } from "@/lib/supabase/server";
@@ -22,11 +23,11 @@ export default async function StudioNewPage({ searchParams }: { searchParams: Pr
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();
   const l = access.grant.learner;
+  const shell = await requireShell(l.id);
   const [gate, drafts] = await Promise.all([loadStudioGate(l.id), loadDraftList(l.id)]);
   return (
-    <>
-      <AppHeader name={access.grant.member.displayName} showTestBadge={l.isTest} feedbackScreen={appFeedback.screens.studioNew} />
-      <main className="mx-auto max-w-2xl px-4 py-10" data-testid="studio-new">
+    <StaffShell shell={shell}>
+      <div className="mx-auto max-w-2xl" data-testid="studio-new">
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {reviewPage.back}
         </Link>
@@ -37,7 +38,7 @@ export default async function StudioNewPage({ searchParams }: { searchParams: Pr
         <p className="mt-3 text-[15px]">{studioCopy.newIntro}</p>
         <UploadForm learnerId={l.id} aiAllowed={gate.allowed} aiReason={gate.reason} />
         <DraftList drafts={drafts} />
-      </main>
-    </>
+      </div>
+    </StaffShell>
   );
 }

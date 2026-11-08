@@ -32,4 +32,21 @@ describe("workdesk shell wiring", () => {
     const files = [...pagesUnder("app/practice"), ...pagesUnder("app/activities"), ...filesUnder("components/student", (n) => /\.tsx?$/.test(n))];
     for (const f of files) expect(read(f), f).not.toMatch(/components\/shell/);
   });
+  it("staff pages outside /learners/[id] use the shell and no AppHeader", () => {
+    for (const f of [
+      "app/review/page.tsx", "app/review/[episodeId]/page.tsx", "app/review/skills/page.tsx", "app/review/studio/page.tsx",
+      "app/studio/new/page.tsx", "app/studio/drafts/[id]/page.tsx", "app/curricula/versions/[id]/page.tsx", "app/feedback/page.tsx", "app/settings/ai/page.tsx",
+    ]) {
+      const src = read(f);
+      expect(src, f).toMatch(/StaffShell/);
+      expect(src, f).toMatch(/requireShell\(/);
+      expect(src, f).not.toMatch(/AppHeader/);
+      expect(src, f).not.toMatch(/<main\b/);
+    }
+  });
+  it("the home page keeps its student branch (AppHeader with the student nav + StudentHome)", () => {
+    const src = read("app/page.tsx");
+    expect(src).toMatch(/studentNav="next"/);
+    expect(src).toMatch(/<StudentHome\b/);
+  });
 });
