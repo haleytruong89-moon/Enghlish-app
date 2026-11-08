@@ -8,6 +8,7 @@
  */
 import { AccessError, requireAccess, type AccessDeps, type AccessGrant, type AccessUser, type Action } from "@/lib/auth/requireAccess";
 import { apiErrors } from "@/lib/copy/vi";
+import type { PointHook } from "@/lib/engine/points/runner";
 import { fromDbError, ReviewDbError, type HandlerResult } from "@/lib/review/handlers";
 import { addTagBodySchema, resultBodySchema, sessionNoteBodySchema, setTagGroupBodySchema, tagItemsBodySchema, writingTagsBodySchema } from "./schemas";
 import { customTagKey } from "./frameScore";
@@ -61,6 +62,8 @@ export type TutorWorkDeps = {
   user: AccessUser;
   store: TutorWorkStore;
   access?: Partial<AccessDeps>;
+  /** After a lesson note that names Units: recompute the child's knowledge points (W3). Fail-soft; the note already succeeded. */
+  afterPoints?: PointHook;
 };
 
 const fail = (status: 400 | 401 | 403 | 404 | 409, error: string): HandlerResult => ({ status, body: { error, message: apiErrors[status] } });
@@ -232,6 +235,7 @@ export async function handleWriteSessionNote(deps: TutorWorkDeps, learnerId: str
       clientId: b.client_id,
       taughtUnits: b.taught_units,
     })) as { id: string; replayed: boolean };
+    if (!r.replayed && b.taught_units.length > 0) await deps.afterPoints?.(g.grant.learner.id, null);
     return {
       status: r.replayed ? 200 : 201,
       body: { id: r.id, replayed: r.replayed },

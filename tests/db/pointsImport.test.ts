@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { asCommit, createTestDb, migrate, seed, type Seeded, type TestDb } from "./helpers";
 import { pgPointStore } from "../../scripts/lib/pointEnginePg";
-import { pointEvidenceKeyFor, rebuildPoints, recomputePoints } from "../../lib/engine/points/runner";
+import { makePointHook, pointEvidenceKeyFor, rebuildPoints, recomputePoints } from "../../lib/engine/points/runner";
 import { projectPointDecisions } from "../../lib/engine/points/project";
 
 describe("W3 points + import (migration 0027)", () => {
@@ -429,6 +429,17 @@ describe("W3 points + import (migration 0027)", () => {
       expect((await inputs(L, [tag])).points.find((p) => p.tag_key === tag)!.taught_unit).toBe(true);
       const r = await recomputePoints(pgPointStore(db.client), L, [tag]);
       expect(r.results[0]!.evidenceState).toBe("SUPPORTED");
+    });
+    it("DOMAIN §5.2 example 2 through the HOOK that normal work runs (no 'Tính lại'): Progress Test, then homework 4/5 → a proposal for level 3; a taught Unit gives level 1", async () => {
+      const L = await freshLearner("Em thử hook");
+      const [tag] = await seedTags();
+      const hook = makePointHook(() => pgPointStore(db.client), async (e) => { throw e; }, () => false);
+      await importWork({ results: "ccccc", tags: [tag!], learner: L, day: "2026-10-23", title: "PT hook" });
+      await hook(L, null);
+      expect((await q1("select state from english.point_state where learner_id=$1 and tag_key=$2", [L, tag]))[0]).toEqual({ state: "DEVELOPING" });
+      await importWork({ results: "cccci", tags: [tag!], learner: L, day: "2026-11-05", support: "tu_lam", title: "Homework 05/11 hook" });
+      await hook(L, null);
+      expect(await q1("select to_state from english.point_decisions where learner_id=$1 and tag_key=$2 and kind='PROPOSED'", [L, tag])).toEqual([{ to_state: "INDEPENDENT" }]);
     });
     it("manual path: a manual import starts as an EMPTY draft (no AI); ai_failed → draft and ai_failed → reading (retry) work on the same batch; nothing else moves", async () => {
       const m = await svc<Cr>("select english.eng_create_import($1,$2,$3::jsonb,$4::jsonb,'2026-10-20','tu_lam',$5,$6,$7,false,true) as r", [NG(), `Manual ${randomUUID().slice(0, 6)}`, JSON.stringify(pdf()), JSON.stringify(pdf()), hash(), M().tutorNguyen, randomUUID()]);

@@ -186,6 +186,18 @@ describe("S5b-1 request bodies", () => {
     expect(r.status).toBe(201);
     expect(s.writeSessionNote).toHaveBeenCalledWith(expect.objectContaining({ practisedTargetIds: ["A-W-1"] }));
   });
+  it("points are recomputed after a lesson note that names Units, not after a plain note or a replay", async () => {
+    const points = vi.fn(async () => undefined);
+    const d = { ...deps("tutorAn", makeStore()), afterPoints: points };
+    await handleWriteSessionNote(d, AN, goodNote);
+    expect(points).not.toHaveBeenCalled();
+    await handleWriteSessionNote(d, AN, { ...goodNote, client_id: "client-0004", taught_units: [{ curriculum_id: "c0000000-0000-4000-8000-000000000001", unit_code: "U1" }] });
+    expect(points).toHaveBeenCalledWith(AN, null);
+    points.mockClear();
+    const replay = { ...deps("tutorAn", makeStore({ writeSessionNote: vi.fn(async () => ({ id: "n1", replayed: true })) })), afterPoints: points };
+    await handleWriteSessionNote(replay, AN, { ...goodNote, taught_units: [{ curriculum_id: "c0000000-0000-4000-8000-000000000001", unit_code: "U1" }] });
+    expect(points).not.toHaveBeenCalled();
+  });
   it("tags for writing: 1..3; tagging wrong items needs at least one", () => {
     expect(writingTagsBodySchema.safeParse({ tags: ["a", "b", "c"] }).success).toBe(true);
     expect(writingTagsBodySchema.safeParse({ tags: ["a", "b", "c", "d"] }).success).toBe(false);
