@@ -503,6 +503,26 @@ describe("W3 points + import (migration 0027)", () => {
       expect(map.points.find((x) => x.tag_key === tag)!.answers).toHaveLength(4);
       await svc("select english.eng_reset_point_states($1,$2) as r", [L, M().parent]).catch((e: { message?: string }) => { throw e; });
     });
+    it("S2: a superseded version's Unit→point link no longer counts (taught_unit, tags)", async () => {
+      const L = await freshLearner("Em thử bản cũ");
+      const tag = "cum-dong-tu";
+      const c = await svc<{ curriculum_id: string; version_id: string }>("select english.eng_create_curriculum($1,'Giáo trình cũ','x',null,false,$2,$3) as r", [L, M().tutorNguyen, randomUUID()]);
+      const unit = (points: string[]) => ({ code: "U1", title: "Unit 1", section: "Grammar", page: 6, skipped: false, points });
+      const draft = (u: ReturnType<typeof unit>) => ({ ...u, missing_points: [], needs_review: false, review_reason: null, origin: "ai", dropped: false, edit_reason: null });
+      const ver = async (id: string) => (await q1<{ t: string }>("select updated_at::text as t from english.curriculum_versions where id = $1", [id]))[0]!.t;
+      const approveV = async (id: string, u: ReturnType<typeof unit>) => {
+        await svc("select english.eng_save_curriculum_draft($1,$2::jsonb,$3,$4) as r", [id, JSON.stringify({ units: [draft(u)], ignored: [] }), await ver(id), M().tutorNguyen]);
+        await svc("select english.eng_approve_curriculum_version($1,$2,$3::jsonb,null,$4) as r", [id, await ver(id), JSON.stringify([u]), M().tutorNguyen]);
+      };
+      await approveV(c.version_id, unit([tag]));
+      const e = await svc<{ id: string }>("select english.eng_edit_curriculum($1,$2,$3) as r", [c.curriculum_id, M().tutorNguyen, randomUUID()]);
+      await approveV(e.id, unit([]));
+      await svc("select english.eng_write_lesson_note_v3($1, current_date, null, '{}', null, null, '[]'::jsonb, null, $2, $3, '{}', $4::jsonb) as r", [L, M().tutorNguyen, randomUUID(), JSON.stringify([{ curriculum_id: c.curriculum_id, unit_code: "U1" }])]);
+      expect((await inputs(L)).points.find((p) => p.tag_key === tag)).toBeUndefined();
+      const r = await recomputePoints(pgPointStore(db.client), L, [tag]);
+      expect(r.results.find((x) => x.tagKey === tag)?.evidenceState ?? "NOT_OBSERVED").not.toBe("SUPPORTED");
+      expect(await q1("select 1 from english.point_decisions where learner_id=$1 and tag_key=$2", [L, tag])).toEqual([]);
+    });
   });
 
   describe("11. the TypeScript point engine on the real database (DOMAIN §5.2 examples 1 and 2)", () => {

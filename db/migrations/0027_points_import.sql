@@ -259,7 +259,9 @@ begin
         select x.tag from (
           select m.tag from (select coalesce(sm.tag_key, sm.reading_skill_key) as tag from english.studio_item_meta sm where sm.learner_id = p_learner) m
           union
-          select up.tag_key from english.curriculum_unit_points up where up.learner_id = p_learner
+          select up.tag_key from english.curriculum_unit_points up
+          join english.curriculum_versions cv on cv.id = up.version_id and cv.status = 'approved'
+          where up.learner_id = p_learner
           union
           select d.tag_key from english.point_decisions d where d.learner_id = p_learner) x
         where p_tags is null or x.tag = any (p_tags)
@@ -274,6 +276,7 @@ begin
                   where et.track_id = v_l.track_id and et.key = g.tag and (et.family_id is null or et.family_id = v_l.family_id) limit 1)),
                'taught_unit', exists (
                  select 1 from english.curriculum_unit_points up
+                 join english.curriculum_versions cv on cv.id = up.version_id and cv.status = 'approved'
                  join english.curriculum_units u on u.version_id = up.version_id and u.code = up.code
                  where up.learner_id = p_learner and up.tag_key = g.tag
                    -- Mức 1 từ Unit cần "đã dạy ở một buổi" = có ghi chú buổi học gắn Unit đó (không chỉ đánh dấu "Đang học").
