@@ -1,3 +1,4 @@
+import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { AssignForm } from "@/components/practice/AssignForm";
 import { AssignmentTable } from "@/components/practice/AssignmentTable";
@@ -24,7 +25,7 @@ export default async function AssignPracticePage({ params }: { params: Promise<{
   return (
     <>
       <div className="mx-auto max-w-4xl" data-testid="assign-page">
-        <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
+        <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {assignPage.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{assignPage.title(learner.alias)}</h1>

@@ -1,3 +1,4 @@
+import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { AddCurriculumForm } from "@/components/curriculum/AddCurriculumForm";
 import { CurriculumCard } from "@/components/curriculum/CurriculumCard";
@@ -16,7 +17,7 @@ export default async function CurriculaPage({ params }: { params: Promise<{ id: 
   return (
     <>
       <div className="mx-auto max-w-[1240px]" data-testid="curricula-page">
-        <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
+        <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {curriculumCopy.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{curriculumCopy.title(learner.alias)}</h1>

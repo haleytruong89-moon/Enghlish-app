@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { appFeedback, curriculumCopy, shellCopy } from "@/lib/copy/vi";
-import { activeFor, feedbackHref, switchHref } from "@/lib/shell/paths";
+import { activeFor, feedbackHref, switchHref, deskHref } from "@/lib/shell/paths";
 
 const X = "a0000000-0000-4000-8000-000000000001";
 const Y = "b0000000-0000-4000-8000-000000000002";
@@ -69,6 +69,12 @@ describe("switchHref keeps the part of the app that is open", () => {
   it("a 'soon' section or an unknown page goes to the desk", () => {
     expect(switchHref(`/learners/${X}/knowledge`, Y)).toBe(`/?learner=${Y}`);
     expect(switchHref("/somewhere", Y)).toBe(`/?learner=${Y}`);
+  });
+});
+
+describe("deskHref goes to the desk of THAT child (a parent would otherwise land on the other child)", () => {
+  it("builds /?learner=<id>", () => {
+    expect(deskHref(X)).toBe(`/?learner=${X}`);
   });
 });
 

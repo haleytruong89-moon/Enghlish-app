@@ -1,3 +1,4 @@
+import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { RebuildButton } from "@/components/skills/RebuildButton";
@@ -34,7 +35,7 @@ export default async function TargetsPage({ params }: { params: Promise<{ id: st
   return (
     <>
       <div className="mx-auto max-w-2xl">
-        <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
+        <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {targetsPage.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{targetsPage.title(learner.alias)}</h1>

@@ -66,3 +66,6 @@ export function switchHref(pathname: string, to: string): string {
 export function feedbackHref(pathname: string, learnerId: string | null): string {
   return `/feedback?screen=${encodeURIComponent(activeFor(pathname).screen)}${learnerId ? `&learner=${learnerId}` : ""}`;
 }
+
+/** Link to the desk of one child. A bare "/" opens the parent's default child, so per-child pages must use this. */
+export const deskHref = (learnerId: string): string => `/${learnerQuery(learnerId)}`;

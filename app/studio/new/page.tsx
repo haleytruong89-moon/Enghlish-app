@@ -1,4 +1,5 @@
 // app/studio/new/page.tsx
+import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { StaffShell } from "@/components/shell/StaffShell";
@@ -28,7 +29,7 @@ export default async function StudioNewPage({ searchParams }: { searchParams: Pr
   return (
     <StaffShell shell={shell}>
       <div className="mx-auto max-w-2xl" data-testid="studio-new">
-        <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
+        <Link href={deskHref(l.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {reviewPage.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{studioCopy.newTitle}</h1>

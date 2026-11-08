@@ -1,3 +1,4 @@
+import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { PendingTags } from "@/components/tutor/PendingTags";
 import { ResultForm } from "@/components/tutor/ResultForm";
@@ -34,7 +35,7 @@ export default async function NewResultPage({ params, searchParams }: { params: 
   return (
     <>
       <div className="mx-auto max-w-4xl" data-testid="result-page">
-        <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
+        <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {resultPage.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{resultPage.title(learner.alias)}</h1>

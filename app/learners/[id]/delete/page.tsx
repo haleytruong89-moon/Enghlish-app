@@ -1,3 +1,4 @@
+import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { PurgeForm } from "@/components/admin/PurgeForm";
 import { learnerWithTrack, purgePage } from "@/lib/copy/vi";
@@ -22,7 +23,7 @@ export default async function DeleteLearnerPage({ params }: { params: Promise<{ 
   return (
     <>
       <div className="mx-auto max-w-3xl" data-testid="purge-page">
-        <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
+        <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {purgePage.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{purgePage.title(learner.alias)}</h1>

@@ -1,3 +1,4 @@
+import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { DomainDetail } from "@/components/levels/DomainDetail";
 import { LevelBars } from "@/components/levels/LevelBars";
@@ -43,7 +44,7 @@ export default async function LevelsPage({ params, searchParams }: { params: Pro
   return (
     <>
       <div className="mx-auto max-w-4xl" data-testid="levels-page">
-        <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
+        <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {levelCopy.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{levelCopy.title(learner.alias)}</h1>

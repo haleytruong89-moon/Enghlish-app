@@ -1,3 +1,4 @@
+import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { SessionNoteForm } from "@/components/tutor/SessionNoteForm";
 import { learnerWithTrack, sessionNotePage } from "@/lib/copy/vi";
@@ -27,7 +28,7 @@ export default async function NewSessionNotePage({ params }: { params: Promise<{
   return (
     <>
       <div className="mx-auto max-w-5xl" data-testid="session-page">
-        <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
+        <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {sessionNotePage.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{sessionNotePage.title(learner.alias)}</h1>

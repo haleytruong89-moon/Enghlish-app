@@ -1,3 +1,4 @@
+import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { LessonNotes } from "@/components/review/LessonNotes";
@@ -29,7 +30,7 @@ export default async function NotesPage({ params }: { params: Promise<{ id: stri
   return (
     <>
       <div className="mx-auto max-w-2xl">
-        <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
+        <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {notesPage.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{notesPage.title(learner.alias)}</h1>

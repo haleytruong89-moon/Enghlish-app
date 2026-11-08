@@ -1,3 +1,4 @@
+import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { DomainTiles } from "@/components/tutor/DomainTiles";
 import { ReadingSkillsTable } from "@/components/tutor/ReadingSkillsTable";
@@ -43,7 +44,7 @@ export default async function WeakPage({ params, searchParams }: { params: Promi
   return (
     <>
       <div className="mx-auto max-w-5xl" data-testid="weak-page">
-        <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
+        <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {weakPage.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{weakPage.title(learner.alias)}</h1>

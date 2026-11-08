@@ -1,3 +1,4 @@
+import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AssignForm } from "@/components/inquiries/AssignForm";
@@ -36,7 +37,7 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
   return (
     <>
       <div className="mx-auto max-w-2xl">
-        <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
+        <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {inquiriesPage.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{inquiriesPage.title(learner.alias)}</h1>
