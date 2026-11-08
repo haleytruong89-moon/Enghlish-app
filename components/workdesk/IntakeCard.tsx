@@ -78,7 +78,7 @@ export function IntakeCard({ learnerId, view, canEdit, domains }: { learnerId: s
   );
 
   return (
-    <section className="mt-6 rounded-xl border border-line bg-white p-5" data-testid="intake-card">
+    <section id="intake" className="mt-6 scroll-mt-4 rounded-xl border border-line bg-white p-5" data-testid="intake-card">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">{intakeCopy.title}</h2>
         {canEdit && !editing ? (

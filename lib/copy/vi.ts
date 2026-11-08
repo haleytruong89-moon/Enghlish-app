@@ -2123,6 +2123,40 @@ export const pendingCopy = {
   deskPartial: "Có phần chưa đọc được; mở Chờ duyệt để xem.",
 } as const;
 
+export const deskCopy = {
+  titlePrefix: "Bàn làm việc",
+  title: (alias: string) => `Bàn làm việc · ${alias}`,
+  titleEmpty: "Bàn làm việc",
+  subtitle: (learnerLine: string, todayLine: string) => `${learnerLine} · ${todayLine}`,
+  logToday: "Ghi buổi học hôm nay",
+  seeAll: "Xem đầy đủ",
+  alerts: {
+    missingBadge: "Chưa có",
+    flagBadge: "⚑",
+    intakeTitle: "Hồ sơ đầu vào",
+    intakeLineTutor: "App chưa biết em đang ở đâu nên chưa gợi ý được gì. Lập hồ sơ khoảng 15 phút.",
+    intakeLineParent: `Chờ ${tutorHonorific} lập hồ sơ đầu vào (mục tiêu, điểm mạnh và yếu ban đầu).`,
+    curriculaTitle: "Giáo trình",
+    curriculaLine: "Chưa có giáo trình nào. Thêm quyển đang dạy để app biết em đang học đến đâu.",
+    overdueTitle: (n: number) => `${n} bài luyện quá hạn`,
+    overdueLine: "Em chưa gửi và chưa ai ghi kết quả. Con không thấy chữ “quá hạn”.",
+    flagsTitle: (n: number) => `${n} kỹ năng cần xem lại`,
+    flagsLine: "Sai lặp lại sau khi đã lên bậc. App không tự hạ bậc.",
+  },
+  profileUnavailable: "Chưa đọc được hồ sơ cấp. Mở Hồ sơ học sinh để xem.",
+  attentionNone: "Chưa có điểm nào lặp lại.",
+  curriculaUnavailable: "Chưa đọc được giáo trình.",
+  curriculaEmpty: "Chưa có giáo trình.",
+  currentUnit: (code: string, title: string) => `Đang học đến ${code} · ${title}`,
+  noCurrentUnit: "Chưa chọn Unit đang học.",
+  draftWaiting: "Có bản mục lục chờ duyệt",
+  sessionsTitle: "Buổi học & bài giao",
+  sessionsUnavailable: "Chưa đọc được buổi học và bài giao.",
+  practiceCounts: (open: number, sent: number, late: number) => `Bài giao: ${open} đang mở · ${sent} em đã gửi${late > 0 ? ` · ${late} quá hạn` : ""}`,
+  seeAssignments: "Xem bài giao",
+  noSchedule: "Lịch buổi học chưa có trong app.",
+} as const;
+
 /** Error codes of the curriculum routes → text (unknown codes fall back to apiErrors). */
 export const curriculumErrors: Record<string, string> = {
   invalid_body: "Thiếu thông tin hoặc thông tin chưa đúng dạng.",
