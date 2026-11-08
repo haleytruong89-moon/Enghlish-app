@@ -1,9 +1,9 @@
+import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
-import { AppHeader } from "@/components/AppHeader";
 import { DomainTiles } from "@/components/tutor/DomainTiles";
 import { ReadingSkillsTable } from "@/components/tutor/ReadingSkillsTable";
 import { WeakTable } from "@/components/tutor/WeakTable";
-import { appFeedback, learnerWithTrack, resultPage, weakPage } from "@/lib/copy/vi";
+import { learnerWithTrack, resultPage, weakPage } from "@/lib/copy/vi";
 import { logAppError } from "@/lib/ops/logAppError";
 import { loadReadingSkills } from "@/lib/reading/load";
 import { loadSoft } from "@/lib/reading/soft";
@@ -43,9 +43,8 @@ export default async function WeakPage({ params, searchParams }: { params: Promi
 
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.weak} />
-      <main className="mx-auto max-w-5xl px-4 py-10" data-testid="weak-page">
-        <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
+      <div className="mx-auto max-w-5xl" data-testid="weak-page">
+        <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {weakPage.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{weakPage.title(learner.alias)}</h1>
@@ -90,7 +89,7 @@ export default async function WeakPage({ params, searchParams }: { params: Promi
             {pick === "reading" ? <ReadingSkillsTable view={reading} learnerId={learner.id} /> : null}
           </section>
         )}
-      </main>
+      </div>
     </>
   );
 }

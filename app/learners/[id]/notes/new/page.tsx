@@ -1,7 +1,7 @@
+import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
-import { AppHeader } from "@/components/AppHeader";
 import { SessionNoteForm } from "@/components/tutor/SessionNoteForm";
-import { appFeedback, learnerWithTrack, sessionNotePage } from "@/lib/copy/vi";
+import { learnerWithTrack, sessionNotePage } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { loadTargetsView } from "@/lib/targets/loadTargets";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 /** "Ghi buổi học" (v2) - tutor or parent. Tags that are due for a re-check are listed beside the form. */
 export default async function NewSessionNotePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { member, learner } = await requireLearnerPage(id, "tutorwork:write");
+  const { learner } = await requireLearnerPage(id, "tutorwork:write");
   const [tags, weak, previous, targets, map, taughtChoices] = await Promise.all([
     loadTags(learner.trackId),
     loadWeakPoints(learner.id, "all"),
@@ -27,9 +27,8 @@ export default async function NewSessionNotePage({ params }: { params: Promise<{
 
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.notesNew} />
-      <main className="mx-auto max-w-5xl px-4 py-10" data-testid="session-page">
-        <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
+      <div className="mx-auto max-w-5xl" data-testid="session-page">
+        <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {sessionNotePage.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{sessionNotePage.title(learner.alias)}</h1>
@@ -48,7 +47,7 @@ export default async function NewSessionNotePage({ params }: { params: Promise<{
             taughtChoices={taughtChoices}
           />
         </div>
-      </main>
+      </div>
     </>
   );
 }

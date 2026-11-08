@@ -1,7 +1,6 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { LearnerCard } from "@/components/LearnerCard";
 import { revisionReviewCopy } from "@/lib/copy/vi";
 
 vi.mock("server-only", () => ({}));
@@ -15,8 +14,6 @@ vi.mock("@/lib/revision/supabaseStore", () => ({ callRevisionRpc: (...a: unknown
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: () => ({}) }));
 
 import RevisionsPage from "@/app/learners/[id]/revisions/page";
-
-const learner = { id: "l1", alias: "An (thử)", trackId: "A", isTest: true, color: "#2f5d9e" } as never;
 
 describe("N7: 'Bài đã sửa' before migration 0021 is applied", () => {
   it("the page does not fail when the books cannot be read: it says so neutrally and shows no list", async () => {
@@ -33,13 +30,5 @@ describe("N7: 'Bài đã sửa' before migration 0021 is applied", () => {
     const html = renderToStaticMarkup(await RevisionsPage({ params: Promise.resolve({ id: "l1" }) }));
     expect(html).not.toContain("revisions-unavailable");
     expect(html).toContain(revisionReviewCopy.listEmpty);
-  });
-
-  it("the learner card leaves the link out until 0021 is applied, and shows it after", () => {
-    const off = renderToStaticMarkup(createElement(LearnerCard, { learner, today: null, role: "tutor", revisionsReady: false }));
-    expect(off).not.toContain("/revisions");
-    expect(off).not.toContain(revisionReviewCopy.link);
-    const on = renderToStaticMarkup(createElement(LearnerCard, { learner, today: null, role: "tutor" }));
-    expect(on).toContain('href="/learners/l1/revisions"');
   });
 });

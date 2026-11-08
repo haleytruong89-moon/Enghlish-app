@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AppHeader } from "@/components/AppHeader";
+import { StaffShell } from "@/components/shell/StaffShell";
+import { requireShell } from "@/lib/shell/load";
 import { ScoringPanel, type PanelTarget } from "@/components/review/ScoringPanel";
 import { SupportForm } from "@/components/review/SupportForm";
 import { TransferMark } from "@/components/review/TransferMark";
@@ -8,7 +9,7 @@ import { WorkPanel } from "@/components/review/WorkPanel";
 import { FeedbackPanel } from "@/components/revision/FeedbackPanel";
 import { RevisionReview } from "@/components/revision/RevisionReview";
 import { WritingTags } from "@/components/tutor/WritingTags";
-import { activityLabels, app, appFeedback, fallbackLabels, inquiriesPage, learnerWithTrack, modeLabels, provenanceLabels, purposeLabels, reviewPage, revisionReviewCopy, type Mode } from "@/lib/copy/vi";
+import { activityLabels, app, fallbackLabels, inquiriesPage, learnerWithTrack, modeLabels, provenanceLabels, purposeLabels, reviewPage, revisionReviewCopy, type Mode } from "@/lib/copy/vi";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { formatWhen, skillLabel } from "@/lib/review/format";
 import { findEpisodeLearner, loadEpisode, loadTransferMark } from "@/lib/review/load";
@@ -38,6 +39,7 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
   const access = await authorizeLearnerPage(user, learnerId, "work:review");
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();
+  const shell = await requireShell(learnerId);
 
   const view = await loadEpisode(episodeId);
   if (!view) notFound();
@@ -63,9 +65,8 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
   const revision = view.attempt.mode === "REVISION" ? await loadRevisionView(view.attempt.id, member.id).catch(() => null) : null;
 
   return (
-    <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.reviewEpisode} />
-      <main className="mx-auto max-w-5xl px-4 py-10" data-testid="review-page">
+    <StaffShell shell={shell}>
+      <div className="mx-auto max-w-5xl" data-testid="review-page">
         <Link href="/review" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {reviewPage.backToInbox}
         </Link>
@@ -135,7 +136,7 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
             {reviewPage.techInfoCodes}: {view.activity.activityType} · {view.targets.map((t) => t.key).join(", ")}
           </p>
         </details>
-      </main>
-    </>
+      </div>
+    </StaffShell>
   );
 }

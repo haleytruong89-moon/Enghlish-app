@@ -1203,3 +1203,41 @@ G1–G14 ở đầu `docs/superpowers/plans/2026-11-08-w2-curriculum.md`.
 - [ ] "Đang học đến" đúng 3 ví dụ DOMAIN §5.1
 - [ ] Sửa sau duyệt tạo v2; bằng chứng cũ không đổi
 - [ ] Nhãn nghe chọn được trong ô chọn
+
+## Khung bàn làm việc (08/11/2026)
+
+**Trạng thái:** code trên nhánh `feature/workdesk-shell` (**PR #27**, bản nháp; dựa trên `main` sau khi gộp W2 — PR #26). Đã sửa theo review Opus: Chờ duyệt đọc hộp duyệt theo con trỏ (≤ 5 trang × 100) và ghi "≥ n" + lời nhắc "Có thể còn bài cũ hơn" khi chưa đọc hết; không bao giờ ghi "Không có gì chờ duyệt" khi một phần không đọc được; "Về trang chủ" ở trang của một em về `/?learner=<id>` (`deskHref`). Chờ CI (job "E2E smoke" chạy `tests/e2e/shell.spec.ts`) + review Opus + phụ huynh duyệt PR.
+
+**SQL cần áp: không có.** Không migration, không route API mới, không AI.
+
+**K1–K16 đã duyệt 08/11** (plan `docs/superpowers/plans/2026-11-08-workdesk-shell.md`, mục Assumptions): tên "Bàn làm việc" (K1); mục W3/W5 hiện mờ "Sắp có", "Tổng hợp góp ý" ẩn (K2); 2 mục Buổi học + Giao bài (K3); chưa có lịch buổi học (K8); phụ huynh xem từng em, nút chọn em ở thanh trên (K4, K9); câu cuối cột đã sửa (K14); các mục còn lại theo đề xuất.
+
+### Đã làm
+| Việc | Ở đâu |
+|---|---|
+| Mô hình cột trái là dữ liệu thuần + bảng đường dẫn → mục đang mở / tên màn góp ý / đổi em | `lib/shell/{nav,paths,shell,load}.ts` |
+| Thanh trên + cột trái cố định 220 px (điện thoại: nút "Các phần" mở ngăn kéo), chọn An / Nguyên giữ nguyên phần đang mở | `components/shell/*` |
+| Một layout cho mọi trang `/learners/[id]/**` (học sinh / ngoài phạm vi = 404 trơn); 17 trang bỏ `AppHeader` và `<main>` | `app/learners/[id]/layout.tsx` |
+| 9 trang người lớn khác bọc khung: `/review*`, `/studio/new`, `/studio/drafts/[id]`, `/curricula/versions/[id]`, `/feedback`, `/settings/ai` | `app/**` |
+| Trang chủ người lớn = **Bàn làm việc** của một em: nút "Ghi buổi học hôm nay" → Chờ duyệt · n → Cần chú ý → 3 khung (Hồ sơ · Giáo trình · Buổi học & bài giao); thay `LearnerCard` | `app/page.tsx`, `components/desk/*`, `lib/desk/*` |
+| Trang **Chờ duyệt** của từng em: bảng gọn, lọc theo loại, cũ nhất trên cùng, chỉ có liên kết "Mở" (không duyệt một cú bấm) | `/learners/[id]/inbox` |
+| Màn của con không đổi (test canh file + e2e) | `tests/unit/shellPages.test.ts` |
+
+### Cách thử trên preview (tài khoản thử)
+1. Gia sư Nguyên (thử): thấy cột trái; "Bàn làm việc" sáng; "Chờ duyệt" ngay dưới tiêu đề, không phải cuộn (máy tính 1366×768).
+2. Bấm lần lượt từng mục cột trái; "Hồ sơ học sinh" hiện các trang con (Điểm cần chú ý, …). "Bản đồ kiến thức" và "Lộ trình" mờ, ghi "Sắp có".
+3. "Chờ duyệt": bấm các nút lọc; bấm "Mở" một dòng → sang đúng trang duyệt cũ.
+4. Phụ huynh: bấm "An" / "Nguyên" ở thanh trên khi đang ở "Điểm cần chú ý" → sang "Điểm cần chú ý" của em kia. Cột trái có nhóm "Phụ huynh" (Cài đặt AI, Xóa dữ liệu của em).
+5. Điện thoại: bấm "Các phần" mở cột trái; trang không bị kéo ngang.
+6. Đăng nhập em (thử): trang của con như cũ, không có cột trái.
+
+### Cần phụ huynh quyết sau khi thử
+K8 (lịch buổi học thuộc lát nào: chưa có bảng lịch), và xem lại K1/K2/K3/K9 trên preview. W3 trở đi: trang mới nằm trong layout, **không** dùng `AppHeader` / `<main>`.
+
+### Tiêu chí đạt
+- [ ] Gia sư và phụ huynh thấy bố cục giống bản bấm thử
+- [ ] Mỗi link cột trái mở được với đúng người; người khác 404
+- [ ] Chờ duyệt không có nút duyệt; "Mở" sang đúng trang
+- [ ] Điện thoại 390 px không cuộn ngang; ô bấm ≥ 44 px
+- [ ] Màn của con không đổi; link cũ vẫn chạy
+- [ ] CI xanh (typecheck, lint, unit, E2E smoke); review Opus xong

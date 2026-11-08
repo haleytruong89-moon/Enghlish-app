@@ -172,3 +172,14 @@ Khóa mới trong `lib/copy/vi.ts` (người dạy luôn gọi bằng `tutorHono
 - `curriculumErrors` — thông báo lỗi theo mã (không quyền duyệt, nháp đã đổi, còn dòng cần xem, điểm ngoài danh sách, …).
 
 Luật: người dạy = `tutorHonorific`; "%" độ phủ chỉ ở màn người lớn; không chữ "TOMO". Học sinh không thấy gì ở W2.
+
+## Khung bàn làm việc (08/11/2026)
+
+Khóa mới trong `lib/copy/vi.ts` (người dạy luôn là `tutorHonorific`):
+
+- `shellCopy` — cột trái theo bản bấm thử: Bàn làm việc · Hồ sơ học sinh · Bản đồ kiến thức · Lộ trình · Buổi học · Giao bài · Giáo trình · Chờ duyệt; nhãn "Sắp có" cho mục của lát sau (không bấm được); nhóm "Phụ huynh"; câu cuối cột "Mọi thứ AI soạn là nháp: chưa duyệt thì con chưa thấy."
+- `pendingCopy` — trang Chờ duyệt (bảng: Loại · Nội dung · Từ ngày · Cần làm · Mở; lọc Tất cả · Bài nộp · Cần xem câu · Nháp AI · Kỹ năng) và khung "Chờ duyệt · n" ở Bàn làm việc. Không có nút duyệt trong bảng.
+- `deskCopy` — Bàn làm việc: tiêu đề, nút "Ghi buổi học hôm nay", cảnh báo mới (hồ sơ đầu vào, giáo trình, bài quá hạn, ⚑), 3 khung (Hồ sơ · Giáo trình · Buổi học & bài giao).
+- `appFeedback.screens.inbox` = "Chờ duyệt".
+
+Học sinh không thấy gì mới. "Quá hạn" chỉ ở màn người lớn.

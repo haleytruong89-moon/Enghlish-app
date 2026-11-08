@@ -42,8 +42,10 @@ test.describe("parent: tracked skills of both learners", () => {
   ] as const) {
     test(`opens the page for ${alias} from the home card`, async ({ page }) => {
       await loginAs(page, "parent");
-      const card = page.getByRole("listitem").filter({ hasText: learnerWithTrack(alias, track) });
-      await card.getByRole("link", { name: targetsPage.link, exact: true }).click();
+      await page.goto(`/?learner=${LEARNER_IDS[who]}`);
+      await expect(page.getByTestId(`learner-option-${LEARNER_IDS[who]}`)).toContainText(learnerWithTrack(alias, track));
+      await page.getByTestId("nav-profile").click();
+      await page.getByTestId("nav-profile-targets").click();
       await expect(page).toHaveURL(new RegExp(`${targetsUrl(who)}$`));
       await expectTargetsPage(page, who);
     });

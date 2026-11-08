@@ -1,10 +1,12 @@
 // app/review/studio/page.tsx
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AppHeader } from "@/components/AppHeader";
+import { StaffShell } from "@/components/shell/StaffShell";
+import { requireShell } from "@/lib/shell/load";
+import { firstParam } from "@/lib/shell/shell";
 import { ReviewTabs } from "@/components/review/ReviewTabs";
 import { StudioPendingCard } from "@/components/review/StudioPendingCard";
-import { appFeedback, reviewPage, studioInboxCopy } from "@/lib/copy/vi";
+import { reviewPage, studioInboxCopy } from "@/lib/copy/vi";
 import { authorizeStaffPage } from "@/lib/review/access";
 import { loadSkillInbox } from "@/lib/skills/load";
 import { skillTabCount } from "@/lib/skills/view";
@@ -14,7 +16,7 @@ import { createUserClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 /** Hộp duyệt → "Cần thầy/cô xem" (board 21): Studio items the app could not check. The child's tutor or parent decides. Students: 404. */
-export default async function ReviewStudioPage() {
+export default async function ReviewStudioPage({ searchParams }: { searchParams: Promise<{ learner?: string | string[] }> }) {
   const supabase = await createUserClient();
   const {
     data: { user },
@@ -22,11 +24,11 @@ export default async function ReviewStudioPage() {
   const access = await authorizeStaffPage(user);
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();
+  const shell = await requireShell(firstParam((await searchParams).learner));
   const [pending, skillInbox] = await Promise.all([loadStudioPending(access.member.id), loadSkillInbox(access.member.id).catch(() => null)]);
   return (
-    <>
-      <AppHeader name={access.member.displayName} showTestBadge={pending?.attempts.some((a) => a.isTest) ?? false} feedbackScreen={appFeedback.screens.reviewStudio} />
-      <main className="mx-auto max-w-3xl px-4 py-10" data-testid="studio-inbox">
+    <StaffShell shell={shell}>
+      <div className="mx-auto max-w-3xl" data-testid="studio-inbox">
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {reviewPage.back}
         </Link>
@@ -44,7 +46,7 @@ export default async function ReviewStudioPage() {
             ))}
           </ul>
         )}
-      </main>
-    </>
+      </div>
+    </StaffShell>
   );
 }

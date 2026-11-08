@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AppHeader } from "@/components/AppHeader";
+import { StaffShell } from "@/components/shell/StaffShell";
+import { requireShell } from "@/lib/shell/load";
+import { firstParam } from "@/lib/shell/shell";
 import { ReviewTabs } from "@/components/review/ReviewTabs";
 import { loadStudioPending } from "@/lib/studio/load";
-import { activityLabels, appFeedback, fallbackLabels, modeLabels, provenanceLabels, reviewPage, revisionReviewCopy, type Mode } from "@/lib/copy/vi";
+import { activityLabels, fallbackLabels, modeLabels, provenanceLabels, reviewPage, revisionReviewCopy, type Mode } from "@/lib/copy/vi";
 import { authorizeStaffPage } from "@/lib/review/access";
 import { formatWhen } from "@/lib/review/format";
 import { cursorToParam, FILTERS, parseCursor, parseFilter } from "@/lib/review/inbox";
@@ -15,7 +17,7 @@ import { createUserClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 /** Inbox of submitted work — parent and tutor only (students and outsiders get a plain 404). */
-export default async function ReviewInboxPage({ searchParams }: { searchParams: Promise<{ f?: string | string[]; after?: string | string[] }> }) {
+export default async function ReviewInboxPage({ searchParams }: { searchParams: Promise<{ f?: string | string[]; after?: string | string[]; learner?: string | string[] }> }) {
   const supabase = await createUserClient();
   const {
     data: { user },
@@ -25,6 +27,7 @@ export default async function ReviewInboxPage({ searchParams }: { searchParams: 
   if (access.kind === "not-found") notFound();
 
   const sp = await searchParams;
+  const shell = await requireShell(firstParam(sp.learner));
   const filter = parseFilter(sp.f);
   const after = parseCursor(sp.after);
   // The database filters, orders (oldest first) and pages; the counts on the filter chips come from it too.
@@ -33,13 +36,11 @@ export default async function ReviewInboxPage({ searchParams }: { searchParams: 
     loadSkillInbox(access.member.id).catch(() => null),
     loadStudioPending(access.member.id).catch(() => null),
   ]);
-  const anyTest = items.some((i) => i.isTest);
   const base = filter === "todo" ? "/review" : `/review?f=${filter}`;
 
   return (
-    <>
-      <AppHeader name={access.member.displayName} showTestBadge={anyTest} feedbackScreen={appFeedback.screens.review} />
-      <main className="mx-auto max-w-3xl px-4 py-10">
+    <StaffShell shell={shell}>
+      <div className="mx-auto max-w-3xl">
         <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {reviewPage.back}
         </Link>
@@ -127,7 +128,7 @@ export default async function ReviewInboxPage({ searchParams }: { searchParams: 
             ) : null}
           </nav>
         ) : null}
-      </main>
-    </>
+      </div>
+    </StaffShell>
   );
 }

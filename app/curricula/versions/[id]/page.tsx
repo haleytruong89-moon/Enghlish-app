@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AppHeader } from "@/components/AppHeader";
+import { StaffShell } from "@/components/shell/StaffShell";
+import { requireShell } from "@/lib/shell/load";
 import { MapTable } from "@/components/curriculum/MapTable";
 import { TocWaiting } from "@/components/curriculum/TocWaiting";
 import { VersionReview } from "@/components/curriculum/VersionReview";
@@ -17,15 +18,15 @@ export default async function CurriculumVersionPage({ params }: { params: Promis
   const r = await loadVersionPage(id);
   if (r.kind === "login") redirect("/login");
   if (r.kind === "not-found") notFound();
+  const shell = await requireShell(r.data.version.learnerId);
   const { version: v, stats } = r.data;
   const back = `/learners/${v.learnerId}/curricula`;
   const editable = v.status === "draft" || v.status === "ai_failed";
   const [map, tags] = editable ? await Promise.all([loadPickerMap(v.learnerId), loadTags(r.data.track_id)]) : [null, null];
   const labelOf = Object.fromEntries(r.data.context.tags.map((t) => [t.key, t.label]));
   return (
-    <>
-      <AppHeader feedbackScreen={curriculumCopy.screenLabel} />
-      <main className="mx-auto max-w-[1240px] px-4 py-8" data-testid="curriculum-version" data-status={v.status}>
+    <StaffShell shell={shell}>
+      <div className="mx-auto max-w-[1240px]" data-testid="curriculum-version" data-status={v.status}>
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-bold">{editable || v.status === "extracting" ? curriculumCopy.reviewTitle(v.title, v.version) : curriculumCopy.mapTitle(v.title, v.version)}</h1>
           <Link href={back} data-testid="version-close" className="inline-flex min-h-11 items-center rounded-lg border border-line bg-white px-4 text-sm font-semibold">
@@ -58,7 +59,7 @@ export default async function CurriculumVersionPage({ params }: { params: Promis
           </>
         ) : null}
         {v.status === "discarded" ? <p className="mt-4 text-muted">{curriculumCopy.statusLabels.discarded}</p> : null}
-      </main>
-    </>
+      </div>
+    </StaffShell>
   );
 }

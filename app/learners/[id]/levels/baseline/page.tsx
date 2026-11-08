@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { AppHeader } from "@/components/AppHeader";
 import { BaselineForm } from "@/components/levels/BaselineForm";
-import { appFeedback, learnerWithTrack, levelFormCopy } from "@/lib/copy/vi";
+import { learnerWithTrack, levelFormCopy } from "@/lib/copy/vi";
 import { loadLevelProfile } from "@/lib/levels/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
@@ -10,13 +9,12 @@ export const dynamic = "force-dynamic";
 /** "Xác nhận cấp khởi điểm": the child's tutor only (levels:decide; a parent or a student gets 404). */
 export default async function BaselinePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { member, learner } = await requireLearnerPage(id, "levels:decide");
+  const { learner } = await requireLearnerPage(id, "levels:decide");
   const profile = await loadLevelProfile(learner.id);
   const rows = profile.domains.filter((d) => d.status === "assumed").map((d) => ({ key: d.key, name: d.name, scale: d.scale, assumed: d.assumed }));
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.baseline} />
-      <main className="mx-auto max-w-2xl px-4 py-10" data-testid="baseline-page">
+      <div className="mx-auto max-w-2xl" data-testid="baseline-page">
         <Link href={`/learners/${learner.id}/levels`} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {levelFormCopy.back}
         </Link>
@@ -32,7 +30,7 @@ export default async function BaselinePage({ params }: { params: Promise<{ id: s
             <BaselineForm learnerId={learner.id} rows={rows} />
           </>
         )}
-      </main>
+      </div>
     </>
   );
 }

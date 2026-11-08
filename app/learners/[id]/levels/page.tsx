@@ -1,12 +1,12 @@
+import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
-import { AppHeader } from "@/components/AppHeader";
 import { DomainDetail } from "@/components/levels/DomainDetail";
 import { LevelBars } from "@/components/levels/LevelBars";
 import { LevelSummaryCard } from "@/components/levels/LevelSummaryCard";
 import { IntakeCard } from "@/components/workdesk/IntakeCard";
 import { TeachingNotesCard } from "@/components/workdesk/TeachingNotesCard";
 import { Milestones } from "@/components/levels/Milestones";
-import { appFeedback, learnerWithTrack, levelCopy, skillStateCopy, teachingNotes } from "@/lib/copy/vi";
+import { learnerWithTrack, levelCopy, skillStateCopy, teachingNotes } from "@/lib/copy/vi";
 import { loadLevelProfile } from "@/lib/levels/load";
 import { strongestWeakest } from "@/lib/levels/scale";
 import { groupWeakPoints } from "@/lib/skillmap/group";
@@ -43,9 +43,8 @@ export default async function LevelsPage({ params, searchParams }: { params: Pro
 
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.levels} />
-      <main className="mx-auto max-w-4xl px-4 py-10" data-testid="levels-page">
-        <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
+      <div className="mx-auto max-w-4xl" data-testid="levels-page">
+        <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {levelCopy.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{levelCopy.title(learner.alias)}</h1>
@@ -70,7 +69,7 @@ export default async function LevelsPage({ params, searchParams }: { params: Pro
         <LevelBars profile={profile} learnerId={learner.id} active={active.key} solid={skills ? solidByDomain(skills.rows) : null} />
         <DomainDetail alias={learner.alias} domain={active} groups={groups} weak={tile?.points ?? []} learnerId={learner.id} canDecide={canDecide} skills={skills ? domainSkills(skills.rows, active.key) : null} />
         <Milestones profile={profile} learnerId={learner.id} />
-      </main>
+      </div>
     </>
   );
 }

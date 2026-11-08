@@ -2,13 +2,15 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { AppHeader } from "@/components/AppHeader";
-import { LearnerCard } from "@/components/LearnerCard";
+import { DeskAlerts } from "@/components/desk/DeskAlerts";
+import { SessionsBox } from "@/components/desk/SessionsBox";
 import { AssignmentTable } from "@/components/practice/AssignmentTable";
 import { SubmissionPreview } from "@/components/practice/SubmissionPreview";
 import { ResultForm } from "@/components/tutor/ResultForm";
 import { parseResultEdit } from "@/lib/tutorwork/shape";
 import { StudentPractice } from "@/components/student/StudentPractice";
-import { assignPage, practiceStudent, resultPage, sourceLabels, todayPage } from "@/lib/copy/vi";
+import { deskCopy, assignPage, practiceStudent, resultPage, sourceLabels, todayPage } from "@/lib/copy/vi";
+import { deskAlerts } from "@/lib/desk/alerts";
 import { isOverdue } from "@/lib/practice/overdue";
 import type { AssignmentView, ReviewPoints, StudentPracticeItem } from "@/lib/practice/types";
 import { fitWithin, outputMime } from "@/lib/storage/clientUpload";
@@ -131,32 +133,32 @@ describe("SubmissionPreview (staff)", () => {
   });
 });
 
-describe("Hôm nay: practice", () => {
-  const learner = { id: "a0000000-0000-4000-8000-000000000001", alias: "An", trackId: "A" as const, status: "active" as const, isTest: true, color: "#9a4a15" };
+describe("Bàn làm việc: practice", () => {
+  const learnerId = "a0000000-0000-4000-8000-000000000001";
   const today = (practice: AssignmentView[]): TodayData => ({
     weak: { policyDays: 14, since: null, today: "2026-10-17", tags: [] }, repeats: [], due: [], untagged: [], lastNote: null, recent: null, practice, tagLabels: {},
   });
+  const alertsHtml = (t: TodayData) =>
+    render(createElement(DeskAlerts, { learnerId, items: deskAlerts({ learnerId, role: "tutor", todayIso: "2026-10-17", today: t, intakeMissing: false, curriculaCount: 1, flagCount: 0 }) }));
 
-  it("has the third action 'Giao bài luyện' and lists the open practice", () => {
-    const html = render(createElement(LearnerCard, { learner, today: today([assignment()]), role: "tutor" }));
-    expect(html).toContain(`href="/learners/${learner.id}/assign"`);
-    expect(html).toContain(todayPage.assignAction);
-    expect(html).toContain(todayPage.practiceTitle);
-    expect(html).toContain(todayPage.practiceNotDone);
+  it("shows only the counts of open practice (the list lives on the assign page)", () => {
+    const html = render(createElement(SessionsBox, { learnerId, today: today([assignment()]), todayIso: "2026-10-17" }));
+    expect(html).toContain(`href="/learners/${learnerId}/assign"`);
+    expect(html).toContain(deskCopy.practiceCounts(1, 0, 0));
   });
 
   it("a submitted-but-unrecorded assignment becomes an attention row that opens the result form for it", () => {
     const a = assignment({
       submission: { id: "s1", createdAt: "2026-10-16T09:00:00Z", attempt: "first", usedHint: false, linkUrl: null, byRole: "student", files: [] },
     });
-    const html = render(createElement(LearnerCard, { learner, today: today([a]), role: "tutor" }));
-    expect(html).toContain(`href="/learners/${learner.id}/results/new?assignment=${a.id}"`);
+    const html = alertsHtml(today([a]));
+    expect(html).toContain(`href="/learners/${learnerId}/results/new?assignment=${a.id}"`);
     expect(html).toContain(todayPage.submittedBadge);
     expect(html).toContain("cần ghi kết quả");
   });
 
-  it("shows the empty line when nothing is open", () => {
-    expect(render(createElement(LearnerCard, { learner, today: today([]), role: "parent" }))).toContain(todayPage.practiceNone);
+  it("shows zero counts when nothing is open", () => {
+    expect(render(createElement(SessionsBox, { learnerId, today: today([]), todayIso: "2026-10-17" }))).toContain(deskCopy.practiceCounts(0, 0, 0));
   });
 });
 
@@ -265,13 +267,9 @@ describe("'Quá hạn' (D4): only a label for the tutor and the parent", () => {
     expect(table).not.toContain(`data-testid="overdue-${sent.id}"`);
     expect(table).toContain(assignPage.overdue);
 
-    const learner = { id: "a0000000-0000-4000-8000-000000000001", alias: "An", trackId: "A" as const, status: "active" as const, isTest: true, color: "#9a4a15" };
     const data: TodayData = { weak: { policyDays: 14, since: null, today: "2026-10-18", tags: [] }, repeats: [], due: [], untagged: [], lastNote: null, recent: null, practice: [late, fine], tagLabels: {} };
-    for (const role of ["tutor", "parent"] as const) {
-      const card = render(createElement(LearnerCard, { learner, today: data, role, todayIso: "2026-10-18" }));
-      expect(card, role).toContain(`data-testid="overdue-${late.id}"`);
-      expect(card, role).not.toContain(`data-testid="overdue-${fine.id}"`);
-    }
+    const box = render(createElement(SessionsBox, { learnerId: "a0000000-0000-4000-8000-000000000001", today: data, todayIso: "2026-10-18" }));
+    expect(box).toContain(deskCopy.practiceCounts(2, 0, 1));
   });
   it("the student's practice page never shows it, even for a late item", () => {
     const html = render(createElement(StudentPractice, { items: [{ ...link, dueOn: "2020-01-01" }], review }));

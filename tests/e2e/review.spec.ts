@@ -65,12 +65,9 @@ test.describe.serial("S5 review", () => {
 
   test("An's tutor: the inbox lists An's submitted work, and opening it shows the work next to the skills, without deciding", async ({ page }) => {
     await loginAs(page, "tutorAn");
-    const link = page.getByTestId("review-link");
-    await expect(link).toBeVisible();
-    await expect(link).toContainText(reviewPage.link);
-
-    await link.click();
-    await expect(page).toHaveURL(/\/review$/);
+    await page.getByTestId("nav-inbox").click();
+    await page.getByTestId("nav-inbox-work").click();
+    await expect(page).toHaveURL(/\/review(\?.*)?$/);
     await expect(page.getByRole("heading", { level: 1, name: reviewPage.inboxTitle })).toBeVisible();
     const items = page.getByTestId("inbox-list").locator('[data-testid^="inbox-item-"]');
     await expect(items.first()).toBeVisible();
@@ -382,6 +379,7 @@ test.describe.serial("S5 review", () => {
     test(`${key}: no inbox link, no review or note pages, API refuses, and the child's home shows no score`, async ({ page }) => {
       await loginAs(page, key);
       await expect(page.getByTestId("review-link")).toHaveCount(0);
+      await expect(page.getByTestId("staff-sidebar")).toHaveCount(0);
       await expect(page.getByRole("link", { name: reviewPage.link })).toHaveCount(0);
       await expect(page.getByRole("link", { name: notesPage.link })).toHaveCount(0);
 
@@ -555,7 +553,8 @@ test.describe.serial("S6 feedback and revision", () => {
 
   test("the parent reads the pair under 'Bài đã sửa' (no buttons); the child cannot open that page", async ({ page, browser }) => {
     await loginAs(page, "parent");
-    await page.getByTestId(`revisions-link-${LEARNER_IDS.an}`).click();
+    await page.goto(`/learners/${LEARNER_IDS.an}/inbox`);
+    await page.getByTestId("nav-inbox-revisions").click();
     const pair = page.getByTestId(`revision-pair-${revisionAttempt}`);
     await expect(pair).toContainText(revisionReviewCopy.stateDone);
     await pair.getByRole("link").click();

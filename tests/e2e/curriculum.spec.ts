@@ -32,7 +32,7 @@ test("AI is on for the test family (parent)", async ({ page }) => {
 
 test("Nguyên's tutor adds Destination, the AI draft has 26 units with 8 to look at, Duyệt is blocked until they are resolved", async ({ page }) => {
   await loginAs(page, "tutorNguyen");
-  await page.getByTestId(`curricula-link-${NGUYEN}`).click();
+  await page.getByTestId("nav-curricula").click();
   await page.getByTestId("add-curriculum-title").fill("Destination C1&C2 (e2e)");
   await page.getByTestId("add-curriculum-level").fill("C1–C2");
   await page.getByTestId("add-curriculum-file").setInputFiles({ name: "contents.pdf", mimeType: "application/pdf", buffer: PDF });

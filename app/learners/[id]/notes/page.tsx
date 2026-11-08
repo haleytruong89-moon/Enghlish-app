@@ -1,8 +1,8 @@
+import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AppHeader } from "@/components/AppHeader";
 import { LessonNotes } from "@/components/review/LessonNotes";
-import { appFeedback, learnerWithTrack, notesPage } from "@/lib/copy/vi";
+import { learnerWithTrack, notesPage } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { loadNotesPage } from "@/lib/review/load";
@@ -29,9 +29,8 @@ export default async function NotesPage({ params }: { params: Promise<{ id: stri
 
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.notes} />
-      <main className="mx-auto max-w-2xl px-4 py-10">
-        <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
+      <div className="mx-auto max-w-2xl">
+        <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {notesPage.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{notesPage.title(learner.alias)}</h1>
@@ -43,7 +42,7 @@ export default async function NotesPage({ params }: { params: Promise<{ id: stri
           </Link>
         ) : null}
         <LessonNotes learnerId={learner.id} notes={notes} targets={targets} canWrite={canWrite} memberId={member.id} today={today} minDate={addDays(today, -120)} tagLabels={tagLabels} />
-      </main>
+      </div>
     </>
   );
 }

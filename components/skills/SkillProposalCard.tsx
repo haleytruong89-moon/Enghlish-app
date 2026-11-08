@@ -41,7 +41,7 @@ export function SkillProposalCard({ item }: { item: SkillInboxItem }) {
   }
 
   return (
-    <li className="rounded-xl border border-line bg-white px-5 py-4" data-testid={`skill-proposal-${item.targetKey}`} data-kind={item.kind}>
+    <li id={`skill-${item.id}`} className="scroll-mt-4 rounded-xl border border-line bg-white px-5 py-4" data-testid={`skill-proposal-${item.targetKey}`} data-kind={item.kind}>
       <p className="font-semibold" data-testid="skill-proposal-title">
         {proposalTitle(item)}
       </p>

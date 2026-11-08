@@ -35,7 +35,7 @@ export function StudioPendingCard({ attempt }: { attempt: PendingAttempt }) {
     }
   }
   return (
-    <li data-testid={`studio-card-${attempt.attemptId}`} className="rounded-2xl border border-line bg-white p-5">
+    <li id={`studio-${attempt.attemptId}`} data-testid={`studio-card-${attempt.attemptId}`} className="scroll-mt-4 rounded-2xl border border-line bg-white p-5">
       <h2 className="text-lg font-semibold">{attempt.alias} · {attempt.title}</h2>
       <p className="text-sm text-muted">
         {studioInboxCopy.submitted(`${formatHm(attempt.submittedAt)} ${formatDay(attempt.submittedAt.slice(0, 10))}`)} · {studioInboxCopy.attempt(attempt.attemptNo)} ·{" "}

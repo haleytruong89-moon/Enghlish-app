@@ -1,8 +1,8 @@
+import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
-import { AppHeader } from "@/components/AppHeader";
 import { PendingTags } from "@/components/tutor/PendingTags";
 import { ResultForm } from "@/components/tutor/ResultForm";
-import { appFeedback, learnerWithTrack, resultPage } from "@/lib/copy/vi";
+import { learnerWithTrack, resultPage } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { loadAssignments } from "@/lib/practice/load";
 import { loadPickerMap } from "@/lib/skillmap/load";
@@ -34,9 +34,8 @@ export default async function NewResultPage({ params, searchParams }: { params: 
 
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.resultsNew} />
-      <main className="mx-auto max-w-4xl px-4 py-10" data-testid="result-page">
-        <Link href="/" className="inline-flex min-h-11 items-center text-sm text-accent underline">
+      <div className="mx-auto max-w-4xl" data-testid="result-page">
+        <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {resultPage.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{resultPage.title(learner.alias)}</h1>
@@ -58,7 +57,7 @@ export default async function NewResultPage({ params, searchParams }: { params: 
           />
           <PendingTags learnerId={learner.id} items={pending} tags={tags} map={map} isParent={role === "parent"} />
         </div>
-      </main>
+      </div>
     </>
   );
 }

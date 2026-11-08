@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { AppHeader } from "@/components/AppHeader";
 import { ExternalResultForm } from "@/components/levels/ExternalResultForm";
-import { appFeedback, externalCopy, learnerWithTrack } from "@/lib/copy/vi";
+import { externalCopy, learnerWithTrack } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { loadExternalResult, loadLevelProfile } from "@/lib/levels/load";
 import { EXAM_DAYS_BACK } from "@/lib/levels/types";
@@ -14,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function ExternalNewPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ edit?: string }> }) {
   const { id } = await params;
   const { edit } = await searchParams;
-  const { member, learner } = await requireLearnerPage(id, "tutorwork:write");
+  const { learner } = await requireLearnerPage(id, "tutorwork:write");
   const profile = await loadLevelProfile(learner.id);
   const today = todayVn();
   // A2: ?edit=<id> corrects a live entry (the form saves a new one that replaces it). An entry already corrected is not offered again.
@@ -24,8 +23,7 @@ export default async function ExternalNewPage({ params, searchParams }: { params
   const problem = lookup && lookup.state !== "live" ? (lookup.state === "superseded" ? externalCopy.alreadyCorrected : externalCopy.notFound) : null;
   return (
     <>
-      <AppHeader name={member.displayName} showTestBadge={learner.isTest} feedbackScreen={appFeedback.screens.external} />
-      <main className="mx-auto max-w-2xl px-4 py-10" data-testid="external-page">
+      <div className="mx-auto max-w-2xl" data-testid="external-page">
         <Link href={`/learners/${learner.id}/levels`} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {externalCopy.back}
         </Link>
@@ -47,7 +45,7 @@ export default async function ExternalNewPage({ params, searchParams }: { params
             />
           </>
         )}
-      </main>
+      </div>
     </>
   );
 }

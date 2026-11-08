@@ -1,13 +1,14 @@
 // app/studio/drafts/[id]/page.tsx
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { AppHeader } from "@/components/AppHeader";
+import { StaffShell } from "@/components/shell/StaffShell";
+import { requireShell } from "@/lib/shell/load";
 import { AssignStudioForm } from "@/components/studio/AssignStudioForm";
 import { DraftEditor } from "@/components/studio/DraftEditor";
 import { EditApprovedButton } from "@/components/studio/EditApprovedButton";
 import { ExtractWaiting } from "@/components/studio/ExtractWaiting";
 import { SidePanel } from "@/components/studio/SidePanel";
-import { appFeedback, studioCopy } from "@/lib/copy/vi";
+import { studioCopy } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { formatDay } from "@/lib/review/format";
 import { loadDraftPage } from "@/lib/studio/load";
@@ -21,11 +22,11 @@ export default async function DraftPage({ params }: { params: Promise<{ id: stri
   const r = await loadDraftPage(id);
   if (r.kind === "login") redirect("/login");
   if (r.kind === "not-found") notFound();
+  const shell = await requireShell(r.data.draft.learnerId);
   const { draft, summary, gate } = r.data;
   return (
-    <>
-      <AppHeader feedbackScreen={appFeedback.screens.studioDraft} />
-      <main className="mx-auto max-w-6xl px-4 py-8" data-testid="studio-draft" data-status={draft.status}>
+    <StaffShell shell={shell}>
+      <div className="mx-auto max-w-6xl" data-testid="studio-draft" data-status={draft.status}>
         <Link href={`/studio/new?learner=${draft.learnerId}`} className="inline-flex min-h-11 items-center text-sm text-accent underline">
           {studioCopy.newTitle}
         </Link>
@@ -55,7 +56,7 @@ export default async function DraftPage({ params }: { params: Promise<{ id: stri
           </div>
         ) : null}
         {draft.status === "discarded" ? <p className="mt-4 text-muted">{studioCopy.statusLabels.discarded}</p> : null}
-      </main>
-    </>
+      </div>
+    </StaffShell>
   );
 }
