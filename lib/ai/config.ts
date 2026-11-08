@@ -6,6 +6,7 @@ export const AI_FAKE_FIXTURE = "tests/fixtures/studio/fake-extract.json";
 export const AI_FAKE_FIXTURES: Record<string, string> = {
   save_exercise: AI_FAKE_FIXTURE,
   save_curriculum_toc: "tests/fixtures/curriculum/fake-toc.json",
+  save_read_answers: "tests/fixtures/import/fake-read-answers.json",
 };
 export const fakeFixtureFor = (toolName: string): string => AI_FAKE_FIXTURES[toolName] ?? AI_FAKE_FIXTURE;
 /** Version of the short consent text on /settings/ai (consents.notice_version). Change the text → new version. */
