@@ -1122,6 +1122,8 @@ Code trên nhánh `feature/w1-notes-feedback`, **chờ phụ huynh duyệt PR** 
 
 ### SQL cần phụ huynh áp
 
+✅ **ĐÃ ÁP 08/11/2026** (workflow "Apply database migrations" trên nhánh `feature/w1-notes-feedback`, run 42442716324; lần chạy thứ hai: không còn gì để áp). Từ đây **không sửa `0025`**; thay đổi = migration mới.
+
 **`db/migrations/0025_workdesk_w1.sql`** — áp **TRƯỚC khi thử preview hoặc gộp** (chỉ thêm; chạy lại an toàn; cần `0024` đã áp). Chưa áp thì trang Hồ sơ cấp và `/feedback` hiện một dòng báo "chưa dùng được vì cơ sở dữ liệu chưa cập nhật" thay vì lỗi. Migration kế tiếp sau này là **0026**.
 
 ### Cách thử trên preview (5 bước)
