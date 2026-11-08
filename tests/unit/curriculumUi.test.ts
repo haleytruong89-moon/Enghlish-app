@@ -6,6 +6,7 @@ vi.mock("next/link", () => ({ default: (p: { href: string; children: React.React
 import { CurriculumCard } from "@/components/curriculum/CurriculumCard";
 import { curriculumCopy } from "@/lib/copy/vi";
 import { buildCards } from "@/lib/curriculum/shape";
+import { MapTable } from "@/components/curriculum/MapTable";
 
 const L = "b0000000-0000-4000-8000-000000000001";
 const C = "c0000000-0000-4000-8000-0000000000c1";
@@ -29,5 +30,12 @@ describe("Giáo trình screens", () => {
     expect(html).toContain(`href="/curricula/versions/v1"`);
     expect(html).toContain(`href="/learners/${L}/curricula/${C}"`);
     expect(html).toContain(curriculumCopy.loadToc);
+  });
+  it("the map table lists points by name", () => {
+    const html = renderToStaticMarkup(createElement(MapTable, {
+      units: [{ code: "U7", title: "Passives and causatives", section: "Grammar", page: 54, skipped: false, points: ["bi-dong-nho-tuong-thuat"], missing_points: [], needs_review: false, review_reason: null, flags: [], origin: "ai", ai_index: 6, dropped: false, edit_reason: null }],
+      labelOf: { "bi-dong-nho-tuong-thuat": "Bị động, nhờ ai làm, tường thuật" },
+    }));
+    expect(html).toContain("Bị động, nhờ ai làm, tường thuật");
   });
 });
