@@ -1903,6 +1903,7 @@ export const appFeedback = {
     adjust: "Điều chỉnh cấp",
     external: "Kết quả thi ngoài",
     reading: "Kỹ năng đọc",
+    inbox: "Chờ duyệt",
     feedback: "Góp ý về app",
   },
   text: "Bạn gặp gì / muốn gì?",
@@ -2061,6 +2062,28 @@ export const curriculumCopy = {
   proposeHelp: `App chỉ đề xuất; ${tutorHonorific} bấm thì mới đổi.`,
   proposeButton: (code: string) => `Đặt ${code} là “Đang học”`,
   proposeDone: (code: string) => `${code} đang học.`,
+} as const;
+
+// ---------- Khung bàn làm việc (cột trái + thanh trên; lát "Khung bàn làm việc", 08/11/2026) ----------
+export const shellCopy = {
+  navLabel: "Các phần",
+  menu: "Các phần",
+  switcherLabel: "Chọn học sinh",
+  sections: {
+    desk: "Bàn làm việc",
+    profile: "Hồ sơ học sinh",
+    knowledge: "Bản đồ kiến thức",
+    roadmap: "Lộ trình",
+    sessions: "Buổi học",
+    assign: "Giao bài",
+    curricula: "Giáo trình",
+    inbox: "Chờ duyệt",
+  },
+  soon: "Sắp có",
+  parentGroup: "Phụ huynh",
+  inquiriesChild: "Bài chủ đề trong app",
+  inboxAll: "Tất cả việc chờ",
+  aiDraftNote: "Mọi thứ AI soạn là nháp: chưa duyệt thì con chưa thấy.",
 } as const;
 
 /** Error codes of the curriculum routes → text (unknown codes fall back to apiErrors). */
