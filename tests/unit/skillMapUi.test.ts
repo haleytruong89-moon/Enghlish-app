@@ -27,13 +27,13 @@ const tabs = (active: string) =>
   );
 
 describe("DomainTabs", () => {
-  it("7 domain tabs + 'Chưa xếp mảng', each with its count; the active one is selected", () => {
+  it("7 domain tabs + 'Chưa xếp mảng' with just the domain name (no count); the active one is selected", () => {
     const html = tabs("vocab");
     for (const k of ["grammar", "vocab", "reading", "listening", "writing", "speaking", "thinking", "unassigned"]) expect(html).toContain(`data-testid="tab-t-${k}"`);
     const tab = html.match(/<button[^>]*data-testid="tab-t-vocab"[^>]*>[\s\S]*?<\/button>/)?.[0] ?? "";
     expect(tab).toContain('aria-selected="true"');
     expect(tab).toContain("Từ vựng");
-    expect(tab).toMatch(/>2<\/span>/);
+    expect(tab).not.toMatch(/>2<\/span>/);
     expect(html).toContain(skillMapCopy.unassigned);
   });
 
