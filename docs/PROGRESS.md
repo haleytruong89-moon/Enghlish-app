@@ -1316,3 +1316,37 @@ Migration `0027` / `0028` **chưa áp** trên Supabase thật nên sửa thẳng
 - [ ] Phụ huynh không xác nhận được; con không thấy bài nạp, mức, nhãn
 - [ ] Bản đồ kiến thức đúng mức, bằng chứng từng câu Đúng/Sai
 - [ ] Nạp trùng bị chặn; bậc kỹ năng S7a không đổi sau khi nạp
+
+## UX vòng 1 (09/11/2026) — sau khi gia sư thử
+
+Nhánh `feature/ux-tutor-round1` (dựa trên `main` sau PR #28). **SQL cần áp: không có.** Không API mới, không AI mới. Màn của con không đổi.
+
+### Làm gì
+1. **Ô chọn file:** mọi ô chọn file của người lớn (Giáo trình, Tạo bài từ đề, Nạp bài đã làm, Giao bài PDF + đáp án, Phiếu điểm ngoài) là một nút "📎 Chọn file" (cao ≥ 44 px, viền màu chính), tên file đã chọn hiện bên cạnh, nút đổi thành "Đổi file". Một thành phần dùng chung `components/ui/FilePicker.tsx`; ô gốc vẫn có (ẩn bằng mắt, nằm trong nhãn) nên bàn phím, đọc màn hình và e2e `setInputFiles` vẫn chạy. Ô chọn ảnh của con không đổi.
+2. **Cấp:** đầu thẻ "Cấp đang học theo mảng" có nút "Xác nhận cấp 7 mảng" (còn mảng ước lượng, mở trang cấp khởi điểm) hoặc "Điều chỉnh cấp" — chỉ thầy/cô của em thấy. Thẻ Hồ sơ đầu vào có một dòng "Bước tiếp: xác nhận cấp 7 mảng →" khi còn mảng ước lượng. Bàn làm việc của thầy/cô có cảnh báo "Chưa xác nhận cấp khởi điểm". Phụ huynh không thấy gì thêm.
+3. **Thẻ kỹ năng** (trang Kỹ năng đang theo dõi và tab Kỹ năng của Hộp duyệt): hiện "Tự làm được ở kỹ năng này nghĩa là: …" (các tiêu chí `check_vi` của chính kỹ năng, lấy từ bảng `targets` — là bản seed của `catalogue_v0.2.json`) và "Còn thiếu: …" (các điều kiện bậc 3 chưa đủ, lấy từ điều kiện engine đã lưu cùng trạng thái, vốn đã tính theo chính sách AP-0.3; không số cứng trong code).
+4. **Thang điểm kiến thức** (Bản đồ kiến thức, đề xuất điểm): mức 1 đọc "Làm được khi có gợi ý" như kỹ năng; "Chưa thấy" cho chưa quan sát (không còn "Mới gặp").
+5. **Ô chọn nhãn:** bỏ số nhỏ cạnh tên mảng ("Ngữ pháp 4"…); chỉ còn tên mảng.
+6. **"Ghi kết quả bài" → "Ghi điểm nhanh (bài link)"** (thanh bên, tiêu đề, nút ở Bàn làm việc): ẩn chế độ "Đề có khung · bấm câu sai" khỏi màn này; nhập theo phần (tên phần không bắt buộc, số câu đúng, tổng số câu của phần, số các câu sai trong phần), "+ Thêm phần", app tự cộng "Tổng cộng: x/y". Thầy/cô không phải gõ tổng chung.
+
+### Lệch / giả định cần phụ huynh biết
+- **Lưu theo phần (mục 6):** bảng kết quả chỉ có một tổng, một số đúng, một danh sách câu sai và tên bài, nên **không đổi cơ sở dữ liệu**. App xếp các phần nối đuôi nhau (câu 1 của phần 2 = tổng phần 1 + 1) để lưu đúng dạng cũ; với bài nhiều phần, điểm từng phần được nối vào cuối **tên bài** ("Unit 3 — Nghe 9/10 · Đọc 14/15"). Muốn lưu riêng từng phần có cấu trúc thì cần thêm cột (migration mới) — chưa làm.
+- **"Số các câu sai" không thể bỏ trống** khi có câu sai: cơ sở dữ liệu bắt số câu sai = tổng − đúng (không đổi được nếu không có migration). Phần đúng hết thì để trống.
+- Đề có khung đã giao kèm bài, hoặc kết quả cũ ghi theo khung, vẫn mở bằng lưới khung khi sửa; liên kết cũ `?mode=frame` vẫn mở lưới (không còn nút nào dẫn tới).
+- Tiêu chí kỹ năng đọc từ bảng `targets` (bản seed của catalogue, CI đã kiểm khớp) thay vì đọc file `content/` lúc chạy, vì file không chắc có trên Vercel.
+
+### Cách thử trên preview (thầy/cô hoặc phụ huynh, gia đình THỬ)
+- Đăng nhập thầy/cô của Nguyên (thử) → Bàn làm việc: thấy cảnh báo "Chưa xác nhận cấp khởi điểm" → bấm → trang cấp khởi điểm. Hồ sơ cấp: nút "Xác nhận cấp 7 mảng" ở đầu thẻ cấp, dòng "Bước tiếp" ở Hồ sơ đầu vào. Đăng nhập phụ huynh: không có nút, không có dòng.
+- Giáo trình → Thêm giáo trình; Giao bài → Đề PDF; Tạo bài từ đề; Nạp bài đã làm: thấy nút "📎 Chọn file", chọn file → tên hiện bên cạnh, nút thành "Đổi file".
+- Kỹ năng đang theo dõi: mỗi thẻ có khung "Tự làm được ở kỹ năng này nghĩa là" và (nếu chưa đủ) "Còn thiếu". Hộp duyệt → tab Kỹ năng: cùng khung trên mỗi đề xuất.
+- Bản đồ kiến thức: thang bốn ô ghi "Làm được khi có gợi ý · Đang tiến bộ · Tự làm được · Vận dụng được".
+- Ghi buổi học / Giao bài: các tab mảng không còn số nhỏ.
+- Ghi điểm nhanh (bài link): không còn nút "Đề có khung"; điền Nghe 9/10 (sai câu 3) → "+ Thêm phần" → Đọc 14/15 (sai câu 2) → thấy "Tổng cộng: 23/25" → Lưu.
+
+### Tiêu chí đạt
+- [ ] Mọi ô chọn file người lớn là nút "📎 Chọn file", hiện tên file đã chọn, đổi được
+- [ ] Thầy/cô thấy nút cấp + cảnh báo đến khi xác nhận xong; phụ huynh và con không thấy
+- [ ] Thẻ kỹ năng nêu đúng tiêu chí của kỹ năng đó và điều còn thiếu, không có số ngưỡng cứng
+- [ ] Hai thang (kỹ năng, điểm) cùng gọi mức 1 là "Làm được khi có gợi ý"
+- [ ] Không còn số cạnh tên mảng ở ô chọn nhãn
+- [ ] Ghi điểm nhanh nhập được theo phần, tổng tự cộng, lưu được; con không thấy điểm
