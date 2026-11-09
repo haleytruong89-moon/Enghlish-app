@@ -1246,7 +1246,7 @@ K8 (lịch buổi học thuộc lát nào: chưa có bảng lịch), và xem l�
 
 **Trạng thái:** code trên nhánh `feature/w3-points-import` (dựa trên `main` sau khi gộp W1, W2 và khung bàn làm việc — PR #27), chờ CI + review Opus + phụ huynh duyệt PR.
 
-**SQL cần phụ huynh áp: `0027_points_import.sql` rồi `0028_seed_point_policy_pp_0_1.sql` — TRƯỚC khi thử preview** (workflow "Apply database migrations", hoặc SQL Editor theo thứ tự). `0025` và `0026` đã áp từ 08/11. Chỉ thêm, không sửa gì đã có; chưa áp thì Bản đồ kiến thức và Nạp bài báo nhẹ "chưa sẵn sàng", mọi màn cũ vẫn chạy (Chờ duyệt ghi "Chưa đọc được phần Điểm kiến thức").
+**SQL: `0027_points_import.sql` và `0028_seed_point_policy_pp_0_1.sql` ĐÃ ÁP 08/11** (workflow "Apply database migrations", run 42488755421: "applied 0027_points_import.sql", "applied 0028_seed_point_policy_pp_0_1.sql", lượt chạy thứ hai "applied 0 file(s)"). `0025` và `0026` đã áp từ 08/11. Chỉ thêm, không sửa gì đã có; không sửa `0027`/`0028` nữa.
 
 **H1–H7 đã duyệt 08/11** (plan `docs/superpowers/plans/2026-11-08-w3-points-import.md`, mục Assumptions): ngưỡng `PP-0.1` đúng §5.2 (H1); "nguồn khác" của mức 4 = mẫu đề khác (H2); Bản đồ kiến thức là trang riêng (H3); nhãn đọc/nghe cùng engine điểm (H4); mức 3–4 xác nhận từng điểm, không "xác nhận tất cả" (H5); bài nạp chỉ có câu đóng, câu tự luận chỉ ở khung giấy (H6); `provenance='imported'` là giá trị mới (H7).
 
@@ -1286,7 +1286,7 @@ Lần nạp Progress Test thật đầu tiên = lần thử. Ghi lại: chi phí
 - Làm cùng thầy/cô ("Làm cùng thầy/cô") chỉ nâng tối đa lên mức "Đang tiến bộ" (đọc từ `supportCapLevel` của chính sách).
 
 ### Sau review Opus (08/11) — đã sửa trên cùng nhánh
-Migration `0027` / `0028` **chưa áp** trên Supabase thật nên sửa thẳng `0027` (vẫn idempotent; CI áp hai lần). **SQL cần phụ huynh áp vẫn là: `0027` rồi `0028`.**
+Migration `0027` / `0028` lúc đó chưa áp nên sửa thẳng `0027` (vẫn idempotent; CI áp hai lần). **Cập nhật: đã áp 08/11, run 42488755421 — không sửa nữa.**
 - **Lỗi chặn:** trang `/imports/<id>`, thăm dò trạng thái và hết giờ ("timeout") không còn lỗi 500 với bài đang đọc / đọc lỗi (giá trị mặc định của cột là `{"items": []}`, trước đây bị từ chối); chờ quá lâu tính từ lần đổi gần nhất, không từ lúc tạo. Test e2e đếm đúng thẻ đề xuất (`li[data-testid^="point-proposal-"]`).
 - **Mức điểm tự cập nhật sau việc thường ngày:** mọi chỗ chạy engine kỹ năng (nộp bài, duyệt, bài ôn, quyết định "Cần xem" ở Studio) giờ cũng tính lại điểm; cả khi ghi buổi học có Unit, đổi trạng thái Unit, duyệt giáo trình (fail-soft, không cần "Tính lại"). Mức 1 từ Unit cần **đã dạy ở một buổi** (có ghi chú buổi học gắn Unit đó), không chỉ "Đang học".
 - **Soạn tay:** `eng_create_import(..., p_manual)` → bản nháp trống; `eng_retry_import_read` (ai_failed → reading "Thử lại" trên **cùng** bài, không tạo bài trùng; hoặc → draft "Soạn tay"); nút Thử lại / Soạn tay / Bỏ bài này ở màn lỗi, "Bỏ bài này" cả khi đang chờ; "Thêm câu" ở màn xem. Bỏ bài (discard) giải phóng file để nạp lại; bài `ai_failed` chưa bỏ vẫn chặn trùng.
@@ -1301,7 +1301,7 @@ Migration `0027` / `0028` **chưa áp** trên Supabase thật nên sửa thẳng
 - Nhỏ: mức 4 cần ≥ 2 câu đúng **chính chúng** từ nguồn mới (H2); trần hỗ trợ đọc từ `supportCapLevel`; bỏ dấu "Chỉ ở giấy" trả lại kết quả trước đó; sửa chú thích 0027 về cổng AI.
 - **Chưa làm / lệch so với DOMAIN:** DOMAIN cho phép phụ huynh đánh dấu Đúng/Sai ở hàng "Cần xem"; hiện vẫn **chỉ thầy/cô** làm (R8, chặn ở máy chủ và cơ sở dữ liệu) — đổi cần đổi cả quyền ở SQL, để quyết định riêng.
 
-### Sau review lần 2 (08/11/2026) — `0027` sửa tại chỗ (vẫn CHƯA áp lên cơ sở dữ liệu thật)
+### Sau review lần 2 (08/11/2026) — `0027` sửa tại chỗ (lúc đó chưa áp; đã áp 08/11, run 42488755421)
 - Nhãn mảng dài như "2024-2025 Part 1-10" không còn làm tràn số nguyên (chỉ lấy 9 chữ số đầu, khớp với thứ tự trong code).
 - Chỉ **phiên bản giáo trình đã duyệt** mới cho "Unit đã dạy" và danh sách điểm; bản đã thay thế thì không.
 - `eng_apply_point_results` trả thêm `failed_keys` (nhãn, mã lỗi, lời lỗi, tối đa 20); máy chủ ghi vào `app_errors` khi có điểm bị bỏ qua.
@@ -1324,7 +1324,7 @@ Nhánh `feature/ux-tutor-round1` (dựa trên `main` sau PR #28). **SQL cần á
 ### Làm gì
 1. **Ô chọn file:** mọi ô chọn file của người lớn (Giáo trình, Tạo bài từ đề, Nạp bài đã làm, Giao bài PDF + đáp án, Phiếu điểm ngoài) là một nút "📎 Chọn file" (cao ≥ 44 px, viền màu chính), tên file đã chọn hiện bên cạnh, nút đổi thành "Đổi file". Một thành phần dùng chung `components/ui/FilePicker.tsx`; ô gốc vẫn có (ẩn bằng mắt, nằm trong nhãn) nên bàn phím, đọc màn hình và e2e `setInputFiles` vẫn chạy. Ô chọn ảnh của con không đổi.
 2. **Cấp:** đầu thẻ "Cấp đang học theo mảng" có nút "Xác nhận cấp 7 mảng" (còn mảng ước lượng, mở trang cấp khởi điểm) hoặc "Điều chỉnh cấp" — chỉ thầy/cô của em thấy. Thẻ Hồ sơ đầu vào có một dòng "Bước tiếp: xác nhận cấp 7 mảng →" khi còn mảng ước lượng. Bàn làm việc của thầy/cô có cảnh báo "Chưa xác nhận cấp khởi điểm". Phụ huynh không thấy gì thêm.
-3. **Thẻ kỹ năng** (trang Kỹ năng đang theo dõi và tab Kỹ năng của Hộp duyệt): hiện "Tự làm được ở kỹ năng này nghĩa là: …" (các tiêu chí `check_vi` của chính kỹ năng, lấy từ bảng `targets` — là bản seed của `catalogue_v0.2.json`) và "Còn thiếu: …" (các điều kiện bậc 3 chưa đủ, lấy từ điều kiện engine đã lưu cùng trạng thái, vốn đã tính theo chính sách AP-0.3; không số cứng trong code).
+3. **Thẻ kỹ năng** (trang Kỹ năng đang theo dõi và tab Kỹ năng của Hộp duyệt): hiện "Một bài được tính là đạt khi: …" (các tiêu chí `check_vi` của chính kỹ năng, lấy từ bảng `targets` — là bản seed của `catalogue_v0.2.json`) và "Còn thiếu để lên Tự làm được: …" (các điều kiện bậc 3 chưa đủ, lấy từ điều kiện engine đã lưu cùng trạng thái, vốn đã tính theo chính sách AP-0.3; không số cứng trong code).
 4. **Thang điểm kiến thức** (Bản đồ kiến thức, đề xuất điểm): mức 1 đọc "Làm được khi có gợi ý" như kỹ năng; "Chưa thấy" cho chưa quan sát (không còn "Mới gặp").
 5. **Ô chọn nhãn:** bỏ số nhỏ cạnh tên mảng ("Ngữ pháp 4"…); chỉ còn tên mảng.
 6. **"Ghi kết quả bài" → "Ghi điểm nhanh (bài link)"** (thanh bên, tiêu đề, nút ở Bàn làm việc): ẩn chế độ "Đề có khung · bấm câu sai" khỏi màn này; nhập theo phần (tên phần không bắt buộc, số câu đúng, tổng số câu của phần, số các câu sai trong phần), "+ Thêm phần", app tự cộng "Tổng cộng: x/y". Thầy/cô không phải gõ tổng chung.
@@ -1338,7 +1338,7 @@ Nhánh `feature/ux-tutor-round1` (dựa trên `main` sau PR #28). **SQL cần á
 ### Cách thử trên preview (thầy/cô hoặc phụ huynh, gia đình THỬ)
 - Đăng nhập thầy/cô của Nguyên (thử) → Bàn làm việc: thấy cảnh báo "Chưa xác nhận cấp khởi điểm" → bấm → trang cấp khởi điểm. Hồ sơ cấp: nút "Xác nhận cấp 7 mảng" ở đầu thẻ cấp, dòng "Bước tiếp" ở Hồ sơ đầu vào. Đăng nhập phụ huynh: không có nút, không có dòng.
 - Giáo trình → Thêm giáo trình; Giao bài → Đề PDF; Tạo bài từ đề; Nạp bài đã làm: thấy nút "📎 Chọn file", chọn file → tên hiện bên cạnh, nút thành "Đổi file".
-- Kỹ năng đang theo dõi: mỗi thẻ có khung "Tự làm được ở kỹ năng này nghĩa là" và (nếu chưa đủ) "Còn thiếu". Hộp duyệt → tab Kỹ năng: cùng khung trên mỗi đề xuất.
+- Kỹ năng đang theo dõi: mỗi thẻ có khung "Một bài được tính là đạt khi" và (nếu chưa đủ) "Còn thiếu". Hộp duyệt → tab Kỹ năng: cùng khung trên mỗi đề xuất.
 - Bản đồ kiến thức: thang bốn ô ghi "Làm được khi có gợi ý · Đang tiến bộ · Tự làm được · Vận dụng được".
 - Ghi buổi học / Giao bài: các tab mảng không còn số nhỏ.
 - Ghi điểm nhanh (bài link): không còn nút "Đề có khung"; điền Nghe 9/10 (sai câu 3) → "+ Thêm phần" → Đọc 14/15 (sai câu 2) → thấy "Tổng cộng: 23/25" → Lưu.

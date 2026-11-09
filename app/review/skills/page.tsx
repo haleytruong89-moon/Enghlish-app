@@ -12,7 +12,7 @@ import { authorizeStaffPage } from "@/lib/review/access";
 import { PointProposalCard } from "@/components/points/PointProposalCard";
 import { loadPointInbox } from "@/lib/points/load";
 import { combinedTabCount, groupPointInbox, mergeInboxGroups } from "@/lib/points/view";
-import { loadCriteria } from "@/lib/skills/criteria";
+import { loadCriteriaForItems } from "@/lib/skills/criteria";
 import { loadSkillInbox } from "@/lib/skills/load";
 import { groupInbox } from "@/lib/skills/view";
 import { createUserClient } from "@/lib/supabase/server";
@@ -35,7 +35,7 @@ export default async function ReviewSkillsPage({ searchParams }: { searchParams:
     loadPointInbox(access.member.id).catch(() => null),
     loadStudioPending(access.member.id).catch(() => null),
   ]);
-  const criteria = inbox ? await loadCriteria(inbox.items.map((i) => i.targetKey)) : {};
+  const criteria = inbox ? await loadCriteriaForItems(inbox.items) : {};
   const groups = mergeInboxGroups(inbox ? groupInbox(inbox.items) : [], pointInbox ? groupPointInbox(pointInbox.items) : []);
 
   return (
@@ -74,7 +74,7 @@ export default async function ReviewSkillsPage({ searchParams }: { searchParams:
               {g.skills ? (
                 <ul className="mt-3 flex flex-col gap-3">
                   {g.skills.items.map((i) => (
-                    <SkillProposalCard key={i.id} item={i} checks={criteria[i.targetKey] ?? []} />
+                    <SkillProposalCard key={i.id} item={i} checks={criteria[`${i.learnerId}|${i.targetKey}`] ?? []} />
                   ))}
                 </ul>
               ) : null}

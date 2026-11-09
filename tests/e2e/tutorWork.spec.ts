@@ -66,7 +66,7 @@ test.describe.serial("S5b-1 tutor work", () => {
     await page.getByTestId("quick-wrong-2").fill("2");
     await expect(page.getByTestId("quick-overall")).toHaveText(resultPage.overall(23, 25));
     await page.getByTestId("result-save").click();
-    await expect(page.getByTestId("result-saved")).toContainText(resultPage.saved(0));
+    await expect(page.getByTestId("result-saved")).toContainText(resultPage.saved(2));
   });
 
   test("quick result: a tag for one wrong item, the other waits in 'Chờ gắn nhãn' and is tagged there", async ({ page }) => {

@@ -144,7 +144,7 @@ describe("SkillCriteria component", () => {
     const h = renderToStaticMarkup(createElement(SkillCriteria, { checks: ["Ít nhất 80% số câu đúng."], missing: ["Số ngày trải ra (lần đầu → lần cuối): 2/7"] }));
     expect(h).toContain(skillStateCopy.criteriaIntro);
     expect(h).toContain("Ít nhất 80% số câu đúng.");
-    expect(h).toContain("Còn thiếu: Số ngày trải ra");
+    expect(h).toContain("Còn thiếu để lên Tự làm được: Số ngày trải ra");
     expect(renderToStaticMarkup(createElement(SkillCriteria, { checks: [], missing: [] }))).toBe("");
   });
 });

@@ -30,7 +30,7 @@ export default async function TargetsPage({ params }: { params: Promise<{ id: st
 
   const { member, learner } = access.grant;
   const [view, { skills, failed }] = await Promise.all([loadTargetsView(learner.id), loadSkillStatesSoft(learner.id, "GET /learners/[id]/targets")]);
-  const criteria = view ? await loadCriteria(view.rows.map((r) => r.id)) : {};
+  const criteria = view ? await loadCriteria(view.rows.map((r) => r.id), view.descriptorVersion, "GET /learners/[id]/targets") : {};
   const stateOf = new Map((skills?.rows ?? []).map((r) => [r.targetKey, r]));
   const isTutor = member.role === "tutor";
 
