@@ -856,6 +856,7 @@ export const resultPage = {
   partError: (part: string, msg: string) => `${part}: ${msg}`,
   tooManyItems: "Tổng số câu của các phần không quá 500.",
   tagItemPart: (part: string, local: number) => `${part} · câu ${local}`,
+  breakdownDropped: "Tên bài khá dài nên điểm từng phần không được ghi kèm vào tên; tổng vẫn đúng.",
   quickWrongCount: (n: number, expected: number) => `Đã nhập ${n} câu sai · cần ${expected} (tổng trừ số câu đúng).`,
   tagEachTitle: "Gắn nhãn cho câu sai",
   tagEachHelp: "Để trống cũng được: câu chưa có nhãn sẽ hiện ở “Chờ gắn nhãn” để gắn sau.",
@@ -970,11 +971,11 @@ export const sessionNotePage = {
   recheckConflict: "Một điểm không thể vừa “cần củng cố” vừa “đã hỏi · ổn”. Bạn bỏ một trong hai nhé.",
   recheckNone: "Chưa có điểm nào đến hạn hỏi lại.",
   homeworkTitle: "Chấm bài làm trong buổi",
-  recordResult: "Ghi kết quả bài",
+  recordResult: "Ghi điểm nhanh",
   save: "Lưu buổi học",
   saving: "Đang lưu…",
   saved: "Đã lưu buổi học.",
-  savedNext: "Ghi thêm kết quả bài",
+  savedNext: "Ghi thêm điểm nhanh",
   empty: "Bạn ghi ít nhất một mục (học gì, kỹ năng đã luyện, nhãn cần củng cố, lời nhắn, ghi chú hoặc hỏi lại điểm yếu) nhé.",
   tooLong: "Có ô nhập dài quá giới hạn.",
   previousTitle: (dateLabel: string) => `Buổi trước · ${dateLabel}`,
@@ -1255,7 +1256,7 @@ export const levelCopy = {
   even: "Các mảng đang ngang nhau",
   boxLine: (names: string, level: string) => `${names} · ${level}`,
   barsTitle: "Cấp đang học theo mảng",
-  confirmAllAction: "Xác nhận cấp 7 mảng",
+  confirmAllAction: (assumed: number) => `Xác nhận cấp khởi điểm (${assumed} mảng)`,
   adjustAction: "Điều chỉnh cấp",
   scaleCefr: "Thang A1 → C2",
   scaleTask: "thang riêng bậc 1 → 4",
@@ -1329,14 +1330,15 @@ export const levelFormCopy = {
   saved: "Đã lưu.",
 } as const;
 
-/** SM-2: "Thêm kết quả thi ngoài" (phụ huynh, gia sư). Mốc ngoài chỉ để đối chiếu, không đổi cấp. */
 /** One shared "📎 Chọn file" control for adult file inputs (components/ui/FilePicker.tsx). */
 export const filePickerCopy = {
+  icon: "📎",
   choose: "Chọn file",
   change: "Đổi file",
   none: "Chưa chọn file",
 } as const;
 
+/** SM-2: "Thêm kết quả thi ngoài" (phụ huynh, gia sư). Mốc ngoài chỉ để đối chiếu, không đổi cấp. */
 export const externalCopy = {
   title: (alias: string) => `Thêm kết quả thi ngoài · ${alias}`,
   back: "Về Hồ sơ cấp",
@@ -1872,7 +1874,7 @@ export const teachingNotes = {
 
 export const intakeCopy = {
   title: "Hồ sơ đầu vào",
-  nextStepLevels: "Bước tiếp: xác nhận cấp 7 mảng →",
+  nextStepLevels: "Bước tiếp: xác nhận cấp khởi điểm →",
   goals: "Mục tiêu",
   goalTitle: "Mục tiêu",
   goalDue: "Mốc (tháng/năm)",
@@ -2168,7 +2170,7 @@ export const deskCopy = {
     missingBadge: "Chưa có",
     flagBadge: "⚑",
     levelsTitle: "Chưa xác nhận cấp khởi điểm",
-    levelsLine: "Cấp của các mảng mới là ước lượng theo track. Xác nhận cấp 7 mảng để app theo dõi đúng chỗ em đang đứng.",
+    levelsLine: "Cấp của các mảng mới là ước lượng theo track. Xác nhận cấp khởi điểm để app theo dõi đúng chỗ em đang đứng.",
     intakeTitle: "Hồ sơ đầu vào",
     intakeLineTutor: "App chưa biết em đang ở đâu nên chưa gợi ý được gì. Lập hồ sơ khoảng 15 phút.",
     intakeLineParent: `Chờ ${tutorHonorific} lập hồ sơ đầu vào (mục tiêu, điểm mạnh và yếu ban đầu).`,

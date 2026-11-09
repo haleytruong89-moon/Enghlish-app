@@ -194,3 +194,13 @@ Khóa mới trong `lib/copy/vi.ts` (người dạy luôn là `tutorHonorific`, k
 - `pendingCopy.kinds.point` / `need.point` — dòng "Đề xuất điểm kiến thức" trong Chờ duyệt. `appFeedback.screens.knowledgeMap` / `importNew` / `importConfirm` — tên màn khi gửi "Góp ý về app".
 
 Luật: mọi thứ AI soạn là nháp; con không thấy điểm kiến thức, bài nạp, nhãn hay mức; "%" chỉ ở màn người lớn (điều kiện đề xuất).
+
+## UX vòng 1 cho gia sư (09/11/2026)
+
+Khóa mới / đổi trong `lib/copy/vi.ts`:
+
+- `resultPage` — "Ghi điểm nhanh (bài link)" thay "Ghi kết quả": điểm theo phần (`partsTitle`, `partsHelp`, `partHeading`, `partName`, `partNameHint`, `partWrongHint`, `addPart`, `removePart`, `overall`, `overallEmpty`, `partError`, `tooManyItems`, `tagItemPart`, `breakdownDropped`). Ô "Tên phần" chỉ hiện khi bài có từ hai phần.
+- `sessionNotePage.recordResult` = "Ghi điểm nhanh", `savedNext` = "Ghi thêm điểm nhanh" (cùng tên với màn mới).
+- `filePickerCopy` (`icon`, `choose`, `change`, `none`) — nút chọn file dùng chung; chữ nhìn thấy nằm trong tên đọc cho trình đọc màn hình ("<tên ô>: Chọn file"), tên file đã chọn được đọc to.
+- `levelCopy.confirmAllAction(n)` = "Xác nhận cấp khởi điểm (n mảng)", n = số mảng còn là ước lượng; `intakeCopy.nextStepLevels` và cảnh báo "levelsLine" không còn nêu số mảng.
+- `skillStateCopy.criteriaIntro` = "Một bài được tính là đạt khi:" (tiêu chí của danh mục, không đồng nhất với bậc 3); `missingLine` = "Còn thiếu để lên Tự làm được: …".

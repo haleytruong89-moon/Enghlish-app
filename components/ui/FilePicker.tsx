@@ -29,9 +29,11 @@ export function FilePicker({
   return (
     <span className="flex flex-wrap items-center gap-3 font-normal">
       <label
-        className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent focus-within:ring-2 focus-within:ring-accent ${disabled ? "opacity-60" : ""}`}
+        className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent focus-within:ring-2 focus-within:ring-accent has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
       >
-        <span aria-hidden="true">📎</span>
+        <span aria-hidden="true">{filePickerCopy.icon}</span>
+        {/* The visible text is part of the accessible name (WCAG 2.5.3): "<field>: Chọn file". */}
+        <span className="sr-only">{ariaLabel}: </span>
         {name ? filePickerCopy.change : filePickerCopy.choose}
         <input
           type="file"
@@ -39,7 +41,6 @@ export function FilePicker({
           disabled={disabled}
           className="sr-only"
           data-testid={testId}
-          aria-label={ariaLabel}
           aria-describedby={ariaDescribedBy}
           onChange={(e) => {
             onPick(e.target.files?.[0]);
@@ -47,7 +48,7 @@ export function FilePicker({
           }}
         />
       </label>
-      <span className="break-all text-sm text-ink" data-testid={nameTestId ?? `${testId}-name`}>
+      <span role="status" aria-live="polite" className="break-all text-sm text-ink" data-testid={nameTestId ?? `${testId}-name`}>
         {name ?? <span className="text-muted">{filePickerCopy.none}</span>}
       </span>
     </span>

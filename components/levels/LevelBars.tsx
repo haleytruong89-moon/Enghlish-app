@@ -28,7 +28,7 @@ export function LevelBars({ profile, learnerId, active, solid, canDecide = false
           data-testid="levels-action"
           className="mt-3 inline-flex min-h-12 items-center rounded-xl bg-accent px-5 text-base font-semibold text-white no-underline"
         >
-          {levelsAction(profile.domains) === "confirm" ? levelCopy.confirmAllAction : levelCopy.adjustAction}
+          {levelsAction(profile.domains) === "confirm" ? levelCopy.confirmAllAction(profile.domains.filter((d) => d.status === "assumed").length) : levelCopy.adjustAction}
         </Link>
       ) : null}
       <ul className="mt-3 flex flex-col gap-2">

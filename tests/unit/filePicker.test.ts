@@ -14,7 +14,9 @@ describe("FilePicker", () => {
     expect(html).toContain(filePickerCopy.choose);
     expect(html).toContain(filePickerCopy.none);
     expect(html).toMatch(/<label[^>]*min-h-11[^>]*border-accent[\s\S]*<input[^>]*type="file"[^>]*sr-only[^>]*data-testid="x-file"/);
-    expect(html).toContain('aria-label="File đề"');
+    expect(html).not.toContain("aria-label=");
+    expect(html).toContain("File đề: </span>"); // the field name is read together with the visible "Chọn file"
+    expect(html).toContain('aria-live="polite"');
   });
   it("shows the chosen file name and offers to change it", () => {
     const html = render("de-thu.pdf");
