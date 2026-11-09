@@ -75,3 +75,16 @@ describe("desk alerts (was the attention part of the learner card)", () => {
     expect(deskAlerts(input({ intakeMissing: null, curriculaCount: null, today: null }))).toEqual([]);
   });
 });
+
+describe("level baseline alert", () => {
+  it("tutor sees 'Chưa xác nhận cấp khởi điểm' linking to the baseline page while any domain is assumed", () => {
+    const a = deskAlerts(input({ levelsAssumed: true })).find((x) => x.key === "levels");
+    expect(a?.title).toBe("Chưa xác nhận cấp khởi điểm");
+    expect(a?.href).toBe(`/learners/${L}/levels/baseline`);
+  });
+  it("no alert when confirmed, unknown, or for a parent", () => {
+    expect(deskAlerts(input({ levelsAssumed: false })).some((x) => x.key === "levels")).toBe(false);
+    expect(deskAlerts(input({ levelsAssumed: null })).some((x) => x.key === "levels")).toBe(false);
+    expect(deskAlerts(input({ role: "parent", levelsAssumed: true })).some((x) => x.key === "levels")).toBe(false);
+  });
+});

@@ -22,6 +22,7 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
   const alerts = deskAlerts({
     learnerId: id, role: shell.role, todayIso, today: data.today, intakeMissing: data.intakeMissing,
     curriculaCount: data.curricula === null ? null : data.curricula.length,
+    levelsAssumed: data.profile ? data.profile.domains.some((d) => d.status === "assumed") : null,
     flagCount: data.pending.rows.filter((r) => r.kind === "flag").length,
   });
   return (

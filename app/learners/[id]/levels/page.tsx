@@ -8,6 +8,7 @@ import { TeachingNotesCard } from "@/components/workdesk/TeachingNotesCard";
 import { Milestones } from "@/components/levels/Milestones";
 import { learnerWithTrack, levelCopy, pointStateCopy, skillStateCopy, teachingNotes } from "@/lib/copy/vi";
 import { loadLevelProfile } from "@/lib/levels/load";
+import { levelsAction } from "@/lib/levels/view";
 import { strongestWeakest } from "@/lib/levels/scale";
 import { groupWeakPoints } from "@/lib/skillmap/group";
 import { loadSkillMap } from "@/lib/skillmap/load";
@@ -55,7 +56,7 @@ export default async function LevelsPage({ params, searchParams }: { params: Pro
         </Link>
         {intake.available && notes.available ? (
           <>
-            <IntakeCard learnerId={learner.id} view={intake.data} canEdit={canDecide} domains={profile.domains.map((d) => ({ key: d.key, name: d.name }))} />
+            <IntakeCard learnerId={learner.id} view={intake.data} canEdit={canDecide} levelsAssumed={canDecide && levelsAction(profile.domains) === "confirm"} domains={profile.domains.map((d) => ({ key: d.key, name: d.name }))} />
             <TeachingNotesCard learnerId={learner.id} alias={learner.alias} view={notes.data} canEdit={canDecide} />
           </>
         ) : (
@@ -69,7 +70,7 @@ export default async function LevelsPage({ params, searchParams }: { params: Pro
             {skillStateCopy.statesUnavailable}
           </p>
         ) : null}
-        <LevelBars profile={profile} learnerId={learner.id} active={active.key} solid={skills ? solidByDomain(skills.rows) : null} />
+        <LevelBars profile={profile} learnerId={learner.id} canDecide={canDecide} active={active.key} solid={skills ? solidByDomain(skills.rows) : null} />
         <DomainDetail alias={learner.alias} domain={active} groups={groups} weak={tile?.points ?? []} learnerId={learner.id} canDecide={canDecide} skills={skills ? domainSkills(skills.rows, active.key) : null} />
         <Milestones profile={profile} learnerId={learner.id} />
       </div>

@@ -1242,6 +1242,8 @@ export const levelCopy = {
   even: "Các mảng đang ngang nhau",
   boxLine: (names: string, level: string) => `${names} · ${level}`,
   barsTitle: "Cấp đang học theo mảng",
+  confirmAllAction: "Xác nhận cấp 7 mảng",
+  adjustAction: "Điều chỉnh cấp",
   scaleCefr: "Thang A1 → C2",
   scaleTask: "thang riêng bậc 1 → 4",
   assumed: `Ước lượng — ${tutorHonorific} chưa xác nhận`,
@@ -1854,6 +1856,7 @@ export const teachingNotes = {
 
 export const intakeCopy = {
   title: "Hồ sơ đầu vào",
+  nextStepLevels: "Bước tiếp: xác nhận cấp 7 mảng →",
   goals: "Mục tiêu",
   goalTitle: "Mục tiêu",
   goalDue: "Mốc (tháng/năm)",
@@ -2148,6 +2151,8 @@ export const deskCopy = {
   alerts: {
     missingBadge: "Chưa có",
     flagBadge: "⚑",
+    levelsTitle: "Chưa xác nhận cấp khởi điểm",
+    levelsLine: "Cấp của các mảng mới là ước lượng theo track. Xác nhận cấp 7 mảng để app theo dõi đúng chỗ em đang đứng.",
     intakeTitle: "Hồ sơ đầu vào",
     intakeLineTutor: "App chưa biết em đang ở đâu nên chưa gợi ý được gì. Lập hồ sơ khoảng 15 phút.",
     intakeLineParent: `Chờ ${tutorHonorific} lập hồ sơ đầu vào (mục tiêu, điểm mạnh và yếu ban đầu).`,

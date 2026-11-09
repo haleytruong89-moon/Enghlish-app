@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { intakeCopy } from "@/lib/copy/vi";
@@ -12,7 +13,7 @@ type Dom = { key: DomainKey; name: string };
 type Goal = { title: string; due: string };
 
 /** "Hồ sơ đầu vào" (W1): goals + starting strengths / weaknesses by domain, written by the child's tutor; every save is a new row. */
-export function IntakeCard({ learnerId, view, canEdit, domains }: { learnerId: string; view: IntakeView | null; canEdit: boolean; domains: Dom[] }) {
+export function IntakeCard({ learnerId, view, canEdit, domains, levelsAssumed = false }: { learnerId: string; view: IntakeView | null; canEdit: boolean; domains: Dom[]; levelsAssumed?: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -87,6 +88,13 @@ export function IntakeCard({ learnerId, view, canEdit, domains }: { learnerId: s
           </button>
         ) : null}
       </div>
+      {canEdit && levelsAssumed ? (
+        <p className="mt-2">
+          <Link href={`/learners/${learnerId}/levels/baseline`} data-testid="intake-next-levels" className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline">
+            {intakeCopy.nextStepLevels}
+          </Link>
+        </p>
+      ) : null}
       {editing ? (
         <form onSubmit={save} className="mt-4 flex flex-col gap-5" data-testid="intake-form">
           <fieldset className="flex flex-col gap-2">
