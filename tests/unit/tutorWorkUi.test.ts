@@ -70,8 +70,8 @@ describe("S5b-1 'Điểm cần chú ý' table", () => {
 
 describe("S5b-1 'Ghi kết quả bài'", () => {
   const props = { learnerId: LEARNER, tags, map, today: "2026-10-17", minDate: "2026-06-19" };
-  it("framed mode: one button per item (60), every part with its score, the scale band, and 'in class' for a tutor", () => {
-    const html = render(createElement(ResultForm, { ...props, frames: [frame()], canClass: true }));
+  it("framed mode (only via ?mode=frame now): one button per item (60), every part with its score, the scale band, and 'in class' for a tutor", () => {
+    const html = render(createElement(ResultForm, { ...props, frames: [frame()], canClass: true, initialFramed: true }));
     expect((html.match(/data-testid="item-\d+"/g) ?? []).length).toBe(60);
     for (const p of ["A", "B", "C", "D", "E", "F", "G"]) expect(html).toContain(`data-testid="part-${p}"`);
     expect(html).toContain(`data-testid="part-score-A">${resultPage.scoreOf(12, 12)}`);
@@ -176,5 +176,28 @@ describe("S5b-1 'Chờ gắn nhãn' and 'Ghi buổi học' and writing tags", ()
     expect(html).toContain('data-testid="writing-tags"');
     expect(html).toContain('data-testid="writing-tags-save"');
     expect(html).toContain('data-testid="tag-chip-dang-tu"');
+  });
+});
+
+describe("UX round 1: 'Ghi điểm nhanh (bài link)' by part", () => {
+  const props = { learnerId: LEARNER, tags, map, today: "2026-10-17", minDate: "2026-06-19", canClass: true };
+  it("opens in quick entry even when the child has a frame, and does not offer the framed mode", () => {
+    const html = render(createElement(ResultForm, { ...props, frames: [frame()] }));
+    expect(html).toContain('data-testid="quick-entry"');
+    expect(html).not.toContain('data-testid="mode-frame"');
+    expect(html).not.toContain('data-testid="mode-quick"');
+    expect(html).not.toContain(resultPage.modeFrame);
+    expect(html).not.toContain('data-testid="frame-grid"');
+  });
+  it("one part row to start (same test ids as before), '+ Thêm phần', the overall line and the part name", () => {
+    const html = render(createElement(ResultForm, { ...props, frames: [] }));
+    for (const id of ["quick-correct", "quick-total", "quick-wrong", "quick-part-name", "quick-part-add", "quick-overall"]) expect(html).toContain(`data-testid="${id}"`);
+    expect(html).toContain(resultPage.addPart);
+    expect(html).toContain(resultPage.overallEmpty);
+    expect(html).not.toContain('data-testid="quick-correct-2"');
+  });
+  it("names: sidebar/desk/page say 'Ghi điểm nhanh (bài link)'", () => {
+    expect(resultPage.link).toBe("Ghi điểm nhanh (bài link)");
+    expect(resultPage.title("An")).toBe("Ghi điểm nhanh (bài link) · An");
   });
 });

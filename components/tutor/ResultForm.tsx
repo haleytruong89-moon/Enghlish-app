@@ -5,7 +5,8 @@ import { useMemo, useRef, useState } from "react";
 import type { SkillMapView } from "@/lib/skillmap/types";
 import { fallbackLabels, resultPage } from "@/lib/copy/vi";
 import { failText, postJson } from "@/lib/tutorwork/client";
-import { itemList, parseItemNumbers, scoreFrame } from "@/lib/tutorwork/frameScore";
+import { itemList, scoreFrame } from "@/lib/tutorwork/frameScore";
+import { combineParts, emptyPart, overall, rowFromStored, titleWithParts, type PartRow } from "@/lib/tutorwork/partScore";
 import { scaleBand } from "@/lib/frames/frame";
 import { SubmissionPreview } from "@/components/practice/SubmissionPreview";
 import type { AssignmentView } from "@/lib/practice/types";
@@ -32,13 +33,16 @@ type Props = {
   supersede?: ResultEdit | null;
   /** Record one more attempt of an assignment that already has a result (does not replace it): starts as "Làm lại". */
   initialRetry?: boolean;
+  /** ?mode=frame: open the framed grid. Not linked from the screen any more; kept for old links and the e2e of frames. */
+  initialFramed?: boolean;
 };
 
 /**
- * "Ghi kết quả bài": two ways in one screen. "Đề có khung" = click the wrong items on a grid (tags come from the frame);
- * "Nhập nhanh" = score + wrong numbers + a tag per wrong item. Only first attempts feed "Điểm cần chú ý"; the screen says so.
+ * "Ghi điểm nhanh (bài link)": score by part (name, right, total, wrong numbers) + a tag per wrong item; the overall is added up. The
+ * framed grid ("Đề có khung · bấm câu sai") is no longer offered here, but a result already recorded that way (or an assignment tied to a
+ * frame) still opens in it. Only first attempts feed "Điểm cần chú ý"; the screen says so.
  */
-export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass, today, minDate, assignments = [], initialAssignmentId = null, supersede = null, initialRetry = false }: Props) {
+export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass, today, minDate, assignments = [], initialAssignmentId = null, supersede = null, initialRetry = false, initialFramed = false }: Props) {
   const router = useRouter();
   const { tags, add } = useTags(learnerId, initialTags);
   const labelOf = useMemo(() => new Map(tags.map((t) => [t.key, t.label])), [tags]);
@@ -51,13 +55,11 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
   const edit = supersede;
   const editFrame = edit?.mode === "frame" ? edit.frameId : null;
 
-  const [mode, setMode] = useState<ResultMode>(edit ? edit.mode : initialFrame ? "frame" : initial ? "quick" : frames.length > 0 ? "frame" : "quick");
+  const [mode, setMode] = useState<ResultMode>(edit ? edit.mode : initialFrame || (initialFramed && frames.length > 0) ? "frame" : "quick");
   const [frameId, setFrameId] = useState<string>(editFrame ?? initialFrame ?? frames[0]?.id ?? "");
   const [wrong, setWrong] = useState<Set<number>>(new Set(edit?.mode === "frame" ? edit.wrongItems : []));
   const [title, setTitle] = useState(edit && edit.mode === "quick" ? edit.title : initial && !initialFrame ? initial.title : "");
-  const [total, setTotal] = useState(edit && edit.mode === "quick" ? String(edit.total) : "");
-  const [correct, setCorrect] = useState(edit && edit.mode === "quick" ? String(edit.correct) : "");
-  const [wrongText, setWrongText] = useState(edit && edit.mode === "quick" ? edit.wrongItems.join(", ") : "");
+  const [rows, setRows] = useState<PartRow[]>([edit && edit.mode === "quick" ? rowFromStored(edit.total, edit.correct, edit.wrongItems) : emptyPart()]);
   const [itemTags, setItemTags] = useState<Record<number, string | null>>(
     edit && edit.mode === "quick" ? Object.fromEntries(edit.itemTags.map((t) => [t.n, t.tagKey])) : {},
   );
@@ -76,11 +78,13 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
   const score = frame ? scoreFrame(frame, wrong) : null;
   const band = frame && score ? scaleBand(frame.scale, score.correct) : null;
 
-  const totalN = /^\d{1,3}$/.test(total) ? Number(total) : null;
-  const correctN = /^\d{1,3}$/.test(correct) ? Number(correct) : null;
-  const wrongParsed = totalN ? parseItemNumbers(wrongText, totalN) : ({ ok: true, items: [] } as const);
-  const quickWrong = wrongParsed.ok ? wrongParsed.items : [];
-  const expectedWrong = totalN !== null && correctN !== null ? totalN - correctN : null;
+  const sum = overall(rows);
+  const combined = combineParts(rows);
+  const multi = rows.length > 1;
+  const partName = (r: PartRow, i: number) => r.name.trim() || resultPage.partHeading(i + 1);
+  const setRow = (i: number, patch: Partial<PartRow>) => setRows((cur) => cur.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  /** The wrong items to tag, with the name shown for each (global numbers: that is what is stored). */
+  const wrongEntries = combined.ok ? combined.entries : [];
 
   /** Pick an assignment (or none): fill in what the student already told us; the tutor can still change every field. */
   function pickAssignment(id: string) {
@@ -106,9 +110,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
     setAssignmentId("");
     setWrong(new Set());
     setTitle("");
-    setTotal("");
-    setCorrect("");
-    setWrongText("");
+    setRows([emptyPart()]);
     setItemTags({});
     setAttempt("first");
     setUsedHint(false);
@@ -151,19 +153,19 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
       };
     } else {
       if (!title.trim()) return setError(resultPage.needTitle);
-      if (totalN === null || totalN < 1 || totalN > 500) return setError(resultPage.needTotal);
-      if (correctN === null || correctN > totalN) return setError(resultPage.needCorrect);
-      if (!wrongParsed.ok) return setError(resultPage.wrongInvalid);
-      if (quickWrong.length !== totalN - correctN) return setError(resultPage.wrongCountMismatch);
+      if (!combined.ok) {
+        const msg = { needTotal: resultPage.needTotal, needCorrect: resultPage.needCorrect, wrongInvalid: resultPage.wrongInvalid, wrongCountMismatch: resultPage.wrongCountMismatch, tooMany: resultPage.tooManyItems }[combined.error];
+        return setError(multi ? resultPage.partError(partName(rows[combined.row]!, combined.row), msg) : msg);
+      }
       payload = {
         ...common,
         mode: "quick",
         source,
-        title: title.trim(),
-        total_items: totalN,
-        correct: correctN,
-        wrong_items: quickWrong,
-        tags: quickWrong.flatMap((n) => {
+        title: titleWithParts(title, rows, resultPage.partHeading),
+        total_items: combined.total,
+        correct: combined.correct,
+        wrong_items: combined.wrong,
+        tags: combined.wrong.flatMap((n) => {
           const k = itemTags[n];
           return k ? [{ n, tag_key: k }] : [];
         }),
@@ -214,18 +216,6 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
             <p className="text-sm">{resultPage.paperOnly}</p>
           )}
           <p className="text-xs text-muted">{resultPage.paperNote}</p>
-        </section>
-
-        <section className="flex flex-col gap-3 rounded-xl border border-line bg-white p-4">
-          <h2 className="text-lg font-semibold">{resultPage.mode}</h2>
-          <div className="flex flex-wrap gap-2" role="group" aria-label={resultPage.mode}>
-            <button type="button" aria-pressed={mode === "frame"} data-testid="mode-frame" onClick={() => setMode("frame")} className={seg(mode === "frame")}>
-              {resultPage.modeFrame}
-            </button>
-            <button type="button" aria-pressed={mode === "quick"} data-testid="mode-quick" onClick={() => setMode("quick")} className={seg(mode === "quick")}>
-              {resultPage.modeQuick}
-            </button>
-          </div>
         </section>
 
         <div className={chosen?.submission ? "grid items-start gap-4 lg:grid-cols-2" : "flex flex-col gap-6"}>
@@ -353,47 +343,80 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
                 </button>
               </div>
             </fieldset>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="text-muted">{resultPage.quickCorrect}</span>
-                <input inputMode="numeric" value={correct} onChange={(e) => setCorrect(e.target.value.trim())} data-testid="quick-correct" className={field} />
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="text-muted">{resultPage.quickTotal}</span>
-                <input inputMode="numeric" value={total} onChange={(e) => setTotal(e.target.value.trim())} data-testid="quick-total" className={field} />
-              </label>
+            <div className="flex flex-col gap-3" data-testid="quick-parts">
+              <h2 className="text-lg font-semibold">{resultPage.partsTitle}</h2>
+              <p className="text-sm text-muted">{resultPage.partsHelp}</p>
+              {rows.map((r, i) => {
+                const sfx = i === 0 ? "" : `-${i + 1}`;
+                const t = /^\d{1,3}$/.test(r.total) ? Number(r.total) : null;
+                const c = /^\d{1,3}$/.test(r.correct) ? Number(r.correct) : null;
+                const expected = t !== null && c !== null && c <= t ? t - c : null;
+                const listed = r.wrong.split(/[\s,;]+/).filter(Boolean).length;
+                return (
+                  <div key={i} className="flex flex-col gap-3 rounded-lg border border-line p-3" data-testid={`quick-part${sfx}`}>
+                    <div className="flex flex-wrap items-end justify-between gap-2">
+                      {multi ? <b className="text-sm">{resultPage.partHeading(i + 1)}</b> : <span />}
+                      {multi ? (
+                        <button type="button" aria-label={resultPage.removePart(i + 1)} onClick={() => setRows((cur) => cur.filter((_, j) => j !== i))} className="min-h-11 rounded-lg border border-line bg-white px-3 text-sm" data-testid={`quick-part-remove${sfx}`}>
+                          ×
+                        </button>
+                      ) : null}
+                    </div>
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span className="text-muted">{resultPage.partName}</span>
+                      <input type="text" maxLength={40} value={r.name} placeholder={resultPage.partNameHint} onChange={(e) => setRow(i, { name: e.target.value })} data-testid={`quick-part-name${sfx}`} className={field} />
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-muted">{resultPage.quickCorrect}</span>
+                        <input inputMode="numeric" value={r.correct} onChange={(e) => setRow(i, { correct: e.target.value.trim() })} data-testid={`quick-correct${sfx}`} className={field} />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-muted">{resultPage.quickTotal}</span>
+                        <input inputMode="numeric" value={r.total} onChange={(e) => setRow(i, { total: e.target.value.trim() })} data-testid={`quick-total${sfx}`} className={field} />
+                      </label>
+                    </div>
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span className="text-muted">{resultPage.quickWrong}</span>
+                      <input
+                        type="text"
+                        value={r.wrong}
+                        placeholder={multi ? resultPage.partWrongHint : resultPage.quickWrongHint}
+                        onChange={(e) => setRow(i, { wrong: e.target.value })}
+                        data-testid={`quick-wrong${sfx}`}
+                        className={field}
+                      />
+                      {expected !== null ? (
+                        <span className="text-xs text-muted" aria-live="polite">
+                          {resultPage.quickWrongCount(listed, expected)}
+                        </span>
+                      ) : null}
+                    </label>
+                  </div>
+                );
+              })}
+              <button type="button" onClick={() => setRows((cur) => [...cur, emptyPart()])} className="min-h-11 self-start rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent" data-testid="quick-part-add">
+                {resultPage.addPart}
+              </button>
+              <p className="text-base font-bold" data-testid="quick-overall" aria-live="polite">
+                {sum.total > 0 ? resultPage.overall(sum.correct, sum.total) : resultPage.overallEmpty}
+              </p>
             </div>
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-muted">{resultPage.quickWrong}</span>
-              <input
-                type="text"
-                value={wrongText}
-                placeholder={resultPage.quickWrongHint}
-                onChange={(e) => setWrongText(e.target.value)}
-                data-testid="quick-wrong"
-                className={field}
-              />
-              {expectedWrong !== null && expectedWrong >= 0 ? (
-                <span className="text-xs text-muted" aria-live="polite">
-                  {resultPage.quickWrongCount(quickWrong.length, expectedWrong)}
-                </span>
-              ) : null}
-            </label>
 
-            {quickWrong.length > 0 ? (
+            {wrongEntries.length > 0 ? (
               <div className="flex flex-col gap-2" data-testid="quick-tags">
                 <h2 className="text-lg font-semibold">{resultPage.tagEachTitle}</h2>
                 <p className="text-sm text-muted">{resultPage.tagEachHelp}</p>
-                {quickWrong.map((n) => (
-                  <div key={n} className="grid grid-cols-[4.5rem_1fr] items-start gap-2">
-                    <span className="pt-2.5 text-sm font-medium">{resultPage.tagItem(n)}</span>
+                {wrongEntries.map(({ n, part, local }) => (
+                  <div key={n} className="grid grid-cols-[6.5rem_1fr] items-start gap-2">
+                    <span className="pt-2.5 text-sm font-medium">{multi ? resultPage.tagItemPart(partName(rows[part]!, part), local) : resultPage.tagItem(n)}</span>
                     <TagSelect
                       tags={tags}
                       map={map}
                       value={itemTags[n] ?? null}
                       onChange={(k) => setItemTags((cur) => ({ ...cur, [n]: k }))}
                       onAdd={add}
-                      label={`${resultPage.tagEachTitle}: ${resultPage.tagItem(n)}`}
+                      label={`${resultPage.tagEachTitle}: ${multi ? resultPage.tagItemPart(partName(rows[part]!, part), local) : resultPage.tagItem(n)}`}
                       testId={`quick-tag-${n}`}
                     />
                   </div>
