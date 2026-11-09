@@ -55,11 +55,11 @@ test.describe.serial("S5b-1 tutor work", () => {
     await loginAs(page, "tutorNguyen");
     await page.goto(`/learners/${NG}/results/new`);
     await page.getByTestId("quick-title").fill(title);
-    await page.getByTestId("quick-part-name").fill("Nghe");
     await page.getByTestId("quick-total").fill("10");
     await page.getByTestId("quick-correct").fill("9");
     await page.getByTestId("quick-wrong").fill("3");
     await page.getByTestId("quick-part-add").click();
+    await page.getByTestId("quick-part-name").fill("Nghe");
     await page.getByTestId("quick-part-name-2").fill("Đọc");
     await page.getByTestId("quick-total-2").fill("15");
     await page.getByTestId("quick-correct-2").fill("14");

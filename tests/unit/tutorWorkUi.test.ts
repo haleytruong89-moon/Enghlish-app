@@ -191,10 +191,12 @@ describe("UX round 1: 'Ghi điểm nhanh (bài link)' by part", () => {
   });
   it("one part row to start (same test ids as before), '+ Thêm phần', the overall line and the part name", () => {
     const html = render(createElement(ResultForm, { ...props, frames: [] }));
-    for (const id of ["quick-correct", "quick-total", "quick-wrong", "quick-part-name", "quick-part-add", "quick-overall"]) expect(html).toContain(`data-testid="${id}"`);
+    for (const id of ["quick-correct", "quick-total", "quick-wrong", "quick-part-add", "quick-overall"]) expect(html).toContain(`data-testid="${id}"`);
     expect(html).toContain(resultPage.addPart);
     expect(html).toContain(resultPage.overallEmpty);
     expect(html).not.toContain('data-testid="quick-correct-2"');
+    expect(html).not.toContain('data-testid="quick-part-name"'); // the name field only appears with two or more parts
+    expect(html).toContain("<legend");
   });
   it("names: sidebar/desk/page say 'Ghi điểm nhanh (bài link)'", () => {
     expect(resultPage.link).toBe("Ghi điểm nhanh (bài link)");

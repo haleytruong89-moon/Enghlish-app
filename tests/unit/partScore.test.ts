@@ -47,3 +47,66 @@ describe("rowFromStored", () => {
     expect(rowFromStored(10, 8, [4, 7])).toEqual({ name: "", correct: "8", total: "10", wrong: "4, 7" });
   });
 });
+
+import { dropPartTags, pruneTags, stripBreakdown, tagsForSave, titleWithPartsInfo, wrongTypedCount } from "@/lib/tutorwork/partScore";
+import { paperMode, startMode } from "@/lib/tutorwork/resultMode";
+
+describe("tags keyed by (part, item)", () => {
+  it("removing a part drops its tags and moves later parts up", () => {
+    const tags = { "0:3": "a", "1:2": "b", "2:5": "c" };
+    expect(dropPartTags(tags, 1)).toEqual({ "0:3": "a", "1:5": "c" });
+  });
+  it("changing a total prunes tags of items that no longer exist", () => {
+    const rows = [p("", "7", "10", "3, 9")];
+    expect(pruneTags({ "0:3": "a", "0:9": "b" }, rows)).toEqual({ "0:3": "a", "0:9": "b" });
+    expect(pruneTags({ "0:3": "a", "0:9": "b" }, [p("", "7", "5", "3, 9")])).toEqual({ "0:3": "a" });
+    expect(pruneTags({ "0:3": "a" }, [p("", "7", "10", "4")])).toEqual({});
+  });
+  it("derives global numbers only at save", () => {
+    const r = combineParts([p("", "9", "10", "3"), p("", "13", "15", "2, 7")]);
+    if (!r.ok) throw new Error("x");
+    expect(tagsForSave(r.entries, { "0:3": "a", "1:2": "b", "1:7": "c", "1:9": "stale" })).toEqual([{ n: 3, tag_key: "a" }, { n: 12, tag_key: "b" }, { n: 17, tag_key: "c" }]);
+  });
+});
+
+describe("title breakdown", () => {
+  it("strips a breakdown left by an earlier save, and never doubles it", () => {
+    expect(stripBreakdown("Unit 3 — Nghe 9/10 · Phần 2 13/15")).toBe("Unit 3");
+    expect(stripBreakdown("Unit 3 — Nghe 9/10")).toBe("Unit 3");
+    expect(stripBreakdown("Unit 3 — ôn tập")).toBe("Unit 3 — ôn tập");
+    const two = [p("Nghe", "9", "10"), p("Đọc", "13", "15")];
+    expect(titleWithParts("Unit 3 — Nghe 9/10 · Đọc 13/15", two, word)).toBe("Unit 3 — Nghe 9/10 · Đọc 13/15");
+  });
+  it("a single-part edit drops the stale breakdown", () => {
+    expect(titleWithParts("Unit 3 — Nghe 9/10 · Đọc 13/15", [p("", "22", "25")], word)).toBe("Unit 3");
+  });
+  it("says when the breakdown was left out for length", () => {
+    const long = Array.from({ length: 12 }, (_, i) => p(`Phần dài số ${i}`, "1", "2"));
+    expect(titleWithPartsInfo("T", long, word).dropped).toBe(true);
+    expect(titleWithPartsInfo("T", [p("a", "1", "2"), p("b", "1", "2")], word).dropped).toBe(false);
+  });
+});
+
+describe("wrongTypedCount", () => {
+  it("counts the same deduplicated, in-range items as the validator", () => {
+    expect(wrongTypedCount("3, 3, 12, 0, 4", 10)).toBe(2);
+    expect(wrongTypedCount("3 4", null)).toBe(0);
+  });
+});
+
+describe("startMode", () => {
+  const base = { editMode: null, hasAssignment: false, assignmentHasFrame: false, framedUrl: false, hasFrames: true } as const;
+  it("quick by default; ?mode=frame without an assignment opens the grid", () => {
+    expect(startMode(base)).toBe("quick");
+    expect(startMode({ ...base, framedUrl: true })).toBe("frame");
+  });
+  it("?mode=frame with a non-frame assignment stays quick; a frame assignment opens the grid", () => {
+    expect(startMode({ ...base, framedUrl: true, hasAssignment: true })).toBe("quick");
+    expect(startMode({ ...base, hasAssignment: true, assignmentHasFrame: true })).toBe("frame");
+  });
+  it("paper / 'Ghi bài khác' go back to quick unless the URL asked for the grid", () => {
+    expect(paperMode(false, true)).toBe("quick");
+    expect(paperMode(true, true)).toBe("frame");
+    expect(paperMode(true, false)).toBe("quick");
+  });
+});

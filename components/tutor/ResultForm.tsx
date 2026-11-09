@@ -6,7 +6,8 @@ import type { SkillMapView } from "@/lib/skillmap/types";
 import { fallbackLabels, resultPage } from "@/lib/copy/vi";
 import { failText, postJson } from "@/lib/tutorwork/client";
 import { itemList, scoreFrame } from "@/lib/tutorwork/frameScore";
-import { combineParts, emptyPart, overall, rowFromStored, titleWithParts, type PartRow } from "@/lib/tutorwork/partScore";
+import { combineParts, dropPartTags, emptyPart, overall, pruneTags, rowFromStored, stripBreakdown, tagId, tagsForSave, titleWithPartsInfo, wrongTypedCount, type ItemTags, type PartRow } from "@/lib/tutorwork/partScore";
+import { paperMode, startMode } from "@/lib/tutorwork/resultMode";
 import { scaleBand } from "@/lib/frames/frame";
 import { SubmissionPreview } from "@/components/practice/SubmissionPreview";
 import type { AssignmentView } from "@/lib/practice/types";
@@ -55,14 +56,15 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
   const edit = supersede;
   const editFrame = edit?.mode === "frame" ? edit.frameId : null;
 
-  const [mode, setMode] = useState<ResultMode>(edit ? edit.mode : initialFrame || (initialFramed && frames.length > 0) ? "frame" : "quick");
+  const [mode, setMode] = useState<ResultMode>(
+    startMode({ editMode: edit ? edit.mode : null, hasAssignment: initial !== null, assignmentHasFrame: initialFrame !== null, framedUrl: initialFramed, hasFrames: frames.length > 0 }),
+  );
   const [frameId, setFrameId] = useState<string>(editFrame ?? initialFrame ?? frames[0]?.id ?? "");
   const [wrong, setWrong] = useState<Set<number>>(new Set(edit?.mode === "frame" ? edit.wrongItems : []));
-  const [title, setTitle] = useState(edit && edit.mode === "quick" ? edit.title : initial && !initialFrame ? initial.title : "");
+  const [title, setTitle] = useState(edit && edit.mode === "quick" ? stripBreakdown(edit.title) : initial && !initialFrame ? initial.title : "");
   const [rows, setRows] = useState<PartRow[]>([edit && edit.mode === "quick" ? rowFromStored(edit.total, edit.correct, edit.wrongItems) : emptyPart()]);
-  const [itemTags, setItemTags] = useState<Record<number, string | null>>(
-    edit && edit.mode === "quick" ? Object.fromEntries(edit.itemTags.map((t) => [t.n, t.tagKey])) : {},
-  );
+  // Tags are kept by (part, item inside the part); a stored result opens as one part, so its global number is the item number.
+  const [itemTags, setItemTags] = useState<ItemTags>(edit && edit.mode === "quick" ? Object.fromEntries(edit.itemTags.map((t) => [tagId(0, t.n), t.tagKey])) : {});
   const [source, setSource] = useState<ResultSource>(edit?.source ?? "practice");
   const [attempt, setAttempt] = useState<ResultAttempt>(edit ? edit.attempt : initialRetry ? "retry" : (initial?.submission?.attempt ?? "first"));
   const [usedHint, setUsedHint] = useState(edit ? edit.usedHint : (initial?.submission?.usedHint ?? false));
@@ -82,7 +84,14 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
   const combined = combineParts(rows);
   const multi = rows.length > 1;
   const partName = (r: PartRow, i: number) => r.name.trim() || resultPage.partHeading(i + 1);
-  const setRow = (i: number, patch: Partial<PartRow>) => setRows((cur) => cur.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  /** Every change of the rows also drops the tags of items that no longer exist (a smaller total, a number no longer listed). */
+  const changeRows = (next: (cur: PartRow[]) => PartRow[], removed: number | null = null) => {
+    const after = next(rows);
+    setRows(after);
+    setItemTags((t) => pruneTags(removed === null ? t : dropPartTags(t, removed), after));
+  };
+  const setRow = (i: number, patch: Partial<PartRow>) => changeRows((cur) => cur.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  const titleInfo = titleWithPartsInfo(title, rows, resultPage.partHeading);
   /** The wrong items to tag, with the name shown for each (global numbers: that is what is stored). */
   const wrongEntries = combined.ok ? combined.entries : [];
 
@@ -90,7 +99,10 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
   function pickAssignment(id: string) {
     setAssignmentId(id);
     const a = assignments.find((x) => x.id === id) ?? null;
-    if (!a) return;
+    if (!a) {
+      setMode(paperMode(initialFramed, frames.length > 0));
+      return;
+    }
     if (a.submission) {
       setAttempt(a.submission.attempt);
       setUsedHint(a.submission.usedHint ?? false); // null = a PDF, no Hint question: stays "no" unless the grown-up says otherwise
@@ -108,6 +120,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
   function reset() {
     setSuperseding(null);
     setAssignmentId("");
+    setMode(paperMode(initialFramed, frames.length > 0));
     setWrong(new Set());
     setTitle("");
     setRows([emptyPart()]);
@@ -161,14 +174,11 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
         ...common,
         mode: "quick",
         source,
-        title: titleWithParts(title, rows, resultPage.partHeading),
+        title: titleInfo.title,
         total_items: combined.total,
         correct: combined.correct,
         wrong_items: combined.wrong,
-        tags: combined.wrong.flatMap((n) => {
-          const k = itemTags[n];
-          return k ? [{ n, tag_key: k }] : [];
-        }),
+        tags: tagsForSave(combined.entries, itemTags),
       };
     }
     setBusy(true);
@@ -351,21 +361,24 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
                 const t = /^\d{1,3}$/.test(r.total) ? Number(r.total) : null;
                 const c = /^\d{1,3}$/.test(r.correct) ? Number(r.correct) : null;
                 const expected = t !== null && c !== null && c <= t ? t - c : null;
-                const listed = r.wrong.split(/[\s,;]+/).filter(Boolean).length;
+                const listed = wrongTypedCount(r.wrong, t);
                 return (
-                  <div key={i} className="flex flex-col gap-3 rounded-lg border border-line p-3" data-testid={`quick-part${sfx}`}>
+                  <fieldset key={i} className="flex min-w-0 flex-col gap-3 rounded-lg border border-line p-3" data-testid={`quick-part${sfx}`}>
+                    <legend className={multi ? "px-1 text-sm font-bold" : "sr-only"}>{resultPage.partHeading(i + 1)}</legend>
                     <div className="flex flex-wrap items-end justify-between gap-2">
-                      {multi ? <b className="text-sm">{resultPage.partHeading(i + 1)}</b> : <span />}
+                      <span />
                       {multi ? (
-                        <button type="button" aria-label={resultPage.removePart(i + 1)} onClick={() => setRows((cur) => cur.filter((_, j) => j !== i))} className="min-h-11 rounded-lg border border-line bg-white px-3 text-sm" data-testid={`quick-part-remove${sfx}`}>
+                        <button type="button" aria-label={resultPage.removePart(i + 1)} onClick={() => changeRows((cur) => cur.filter((_, j) => j !== i), i)} className="min-h-11 rounded-lg border border-line bg-white px-3 text-sm" data-testid={`quick-part-remove${sfx}`}>
                           ×
                         </button>
                       ) : null}
                     </div>
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span className="text-muted">{resultPage.partName}</span>
-                      <input type="text" maxLength={40} value={r.name} placeholder={resultPage.partNameHint} onChange={(e) => setRow(i, { name: e.target.value })} data-testid={`quick-part-name${sfx}`} className={field} />
-                    </label>
+                    {multi ? (
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-muted">{resultPage.partName}</span>
+                        <input type="text" maxLength={40} value={r.name} placeholder={resultPage.partNameHint} onChange={(e) => setRow(i, { name: e.target.value })} data-testid={`quick-part-name${sfx}`} className={field} />
+                      </label>
+                    ) : null}
                     <div className="grid grid-cols-2 gap-3">
                       <label className="flex flex-col gap-1 text-sm">
                         <span className="text-muted">{resultPage.quickCorrect}</span>
@@ -392,15 +405,20 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
                         </span>
                       ) : null}
                     </label>
-                  </div>
+                  </fieldset>
                 );
               })}
-              <button type="button" onClick={() => setRows((cur) => [...cur, emptyPart()])} className="min-h-11 self-start rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent" data-testid="quick-part-add">
+              <button type="button" onClick={() => changeRows((cur) => [...cur, emptyPart()])} className="min-h-11 self-start rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent" data-testid="quick-part-add">
                 {resultPage.addPart}
               </button>
               <p className="text-base font-bold" data-testid="quick-overall" aria-live="polite">
                 {sum.total > 0 ? resultPage.overall(sum.correct, sum.total) : resultPage.overallEmpty}
               </p>
+              {titleInfo.dropped ? (
+                <p className="text-xs text-muted" role="status" data-testid="breakdown-dropped">
+                  {resultPage.breakdownDropped}
+                </p>
+              ) : null}
             </div>
 
             {wrongEntries.length > 0 ? (
@@ -413,8 +431,8 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
                     <TagSelect
                       tags={tags}
                       map={map}
-                      value={itemTags[n] ?? null}
-                      onChange={(k) => setItemTags((cur) => ({ ...cur, [n]: k }))}
+                      value={itemTags[tagId(part, local)] ?? null}
+                      onChange={(k) => setItemTags((cur) => ({ ...cur, [tagId(part, local)]: k }))}
                       onAdd={add}
                       label={`${resultPage.tagEachTitle}: ${multi ? resultPage.tagItemPart(partName(rows[part]!, part), local) : resultPage.tagItem(n)}`}
                       testId={`quick-tag-${n}`}
