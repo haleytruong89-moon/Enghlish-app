@@ -1,5 +1,6 @@
 "use client";
 
+import { FilePicker } from "@/components/ui/FilePicker";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import type { GateReason } from "@/lib/ai/cap";
@@ -66,11 +67,11 @@ export function AddCurriculumForm({
           </label>
         </div>
       )}
-      <label className="flex flex-col gap-1 text-sm font-semibold">
+      <div className="flex flex-col gap-1 text-sm font-semibold">
         {curriculumCopy.tocFile}
-        <input type="file" accept="application/pdf,.pdf" data-testid={`${tid}-file`} onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="min-h-11 font-normal" />
+        <FilePicker testId={`${tid}-file`} accept="application/pdf,.pdf" name={file?.name ?? null} onPick={(f) => setFile(f ?? null)} ariaLabel={curriculumCopy.tocFile} />
         <span className="text-xs font-normal text-muted">{curriculumCopy.tocHint}</span>
-      </label>
+      </div>
       {!aiAllowed && aiReason ? (
         <p role="status" data-testid={`${tid}-ai-unavailable`} className="rounded-xl bg-[#FBF1DC] px-3.5 py-3 text-sm text-[#6B4600]">
           {curriculumCopy.aiUnavailable[`ai_${aiReason}`]}

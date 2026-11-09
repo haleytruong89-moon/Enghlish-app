@@ -1,5 +1,6 @@
 "use client";
 
+import { FilePicker } from "@/components/ui/FilePicker";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { TagChips } from "@/components/tutor/TagChips";
@@ -47,8 +48,6 @@ export function AssignForm({
   const [busy, setBusy] = useState<"upload" | "save" | null>(null);
   const attempt = useRef<SendAttempt | null>(null);
   const uploaded = useRef<UploadCache>(new Map());
-  const pdfInput = useRef<HTMLInputElement>(null);
-  const answerInput = useRef<HTMLInputElement>(null);
 
   const source = kind === "link" && url.trim() ? detectLinkSource(url) : null;
 
@@ -161,50 +160,12 @@ export function AssignForm({
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5 text-sm font-medium">
               {assignPage.pdfLabel}
-              <span className="flex flex-wrap items-center gap-3">
-                <button type="button" onClick={() => pdfInput.current?.click()} className="min-h-11 rounded-lg border border-accent bg-white px-4 font-semibold text-accent">
-                  {assignPage.pdfChoose}
-                </button>
-                <span className="font-normal" data-testid="pdf-chosen">
-                  {pdf ? assignPage.pdfChosen(pdf.name) : ""}
-                </span>
-              </span>
-              <input
-                ref={pdfInput}
-                type="file"
-                accept="application/pdf"
-                className="sr-only"
-                tabIndex={-1}
-                data-testid="pdf-input"
-                onChange={(e) => {
-                  void pick(e.target.files?.[0], setPdf);
-                  e.target.value = "";
-                }}
-              />
+              <FilePicker testId="pdf-input" nameTestId="pdf-chosen" accept="application/pdf" name={pdf?.name ?? null} onPick={(f) => void pick(f, setPdf)} ariaLabel={assignPage.pdfLabel} />
               <span className="text-sm font-normal text-muted">{assignPage.pdfHelp}</span>
             </div>
             <div className="flex flex-col gap-1.5 text-sm font-medium">
               {assignPage.answerLabel}
-              <span className="flex flex-wrap items-center gap-3">
-                <button type="button" onClick={() => answerInput.current?.click()} className="min-h-11 rounded-lg border border-line bg-white px-4 text-ink">
-                  {assignPage.answerChoose}
-                </button>
-                <span className="font-normal" data-testid="answer-chosen">
-                  {answer ? assignPage.pdfChosen(answer.name) : ""}
-                </span>
-              </span>
-              <input
-                ref={answerInput}
-                type="file"
-                accept="application/pdf,image/png,image/jpeg,image/webp"
-                className="sr-only"
-                tabIndex={-1}
-                data-testid="answer-input"
-                onChange={(e) => {
-                  void pick(e.target.files?.[0], setAnswer);
-                  e.target.value = "";
-                }}
-              />
+              <FilePicker testId="answer-input" nameTestId="answer-chosen" accept="application/pdf,image/png,image/jpeg,image/webp" name={answer?.name ?? null} onPick={(f) => void pick(f, setAnswer)} ariaLabel={assignPage.answerLabel} />
               <span className="text-sm font-normal text-muted">{assignPage.answerHelp}</span>
             </div>
           </div>

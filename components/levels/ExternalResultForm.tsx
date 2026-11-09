@@ -1,5 +1,6 @@
 "use client";
 
+import { FilePicker } from "@/components/ui/FilePicker";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { externalCopy, fallbackLabels } from "@/lib/copy/vi";
@@ -140,22 +141,22 @@ export function ExternalResultForm({
         <span className="text-muted">{externalCopy.note}</span>
         <textarea value={note} maxLength={NOTE_MAX} rows={2} onChange={(e) => setNote(e.target.value)} data-testid="external-note" className="rounded-lg border border-line bg-white px-3 py-2" />
       </label>
-      <label className="flex flex-col gap-1 text-sm">
+      <div className="flex flex-col gap-1 text-sm">
         <span className="text-muted">{externalCopy.file}</span>
         {edit ? (
           <span id="external-file-hint" className="text-xs text-muted">
             {externalCopy.editFileHint}
           </span>
         ) : null}
-        <input
-          type="file"
+        <FilePicker
+          testId="external-file"
           accept="application/pdf,image/png,image/jpeg,image/webp"
-          onChange={(e) => void pick(e.target.files?.[0])}
-          data-testid="external-file"
-          aria-describedby={describedBy(edit && "external-file-hint", msg && "external-msg")}
-          className="min-h-11 text-sm"
+          name={file?.name ?? null}
+          onPick={(f) => void pick(f)}
+          ariaLabel={externalCopy.file}
+          ariaDescribedBy={describedBy(edit && "external-file-hint", msg && "external-msg")}
         />
-      </label>
+      </div>
       {msg ? (
         <p id="external-msg" role="alert" data-testid="external-msg" className="font-medium text-[#7a2a0c]">
           {msg}

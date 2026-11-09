@@ -1,5 +1,6 @@
 "use client";
 
+import { FilePicker } from "@/components/ui/FilePicker";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import type { GateReason } from "@/lib/ai/cap";
@@ -70,20 +71,20 @@ export function ImportForm({ learnerId, aiAllowed, aiReason }: { learnerId: stri
       <p className="text-sm text-muted" data-testid="import-photo-note">
         {importCopy.photoNote}
       </p>
-      <label className="flex flex-col gap-1 text-sm font-semibold">
+      <div className="flex flex-col gap-1 text-sm font-semibold">
         {importCopy.workFile}
-        <input type="file" accept="application/pdf,image/png,image/jpeg,image/webp,.pdf,.png,.jpg,.jpeg,.webp" data-testid="import-work" onChange={(e) => setWork(e.target.files?.[0] ?? null)} className="min-h-11 font-normal" />
-      </label>
-      <label className="flex flex-col gap-1 text-sm font-semibold">
+        <FilePicker testId="import-work" accept="application/pdf,image/png,image/jpeg,image/webp,.pdf,.png,.jpg,.jpeg,.webp" name={work?.name ?? null} onPick={(f) => setWork(f ?? null)} ariaLabel={importCopy.workFile} />
+      </div>
+      <div className="flex flex-col gap-1 text-sm font-semibold">
         {importCopy.keyFile}
-        <input
-          type="file"
+        <FilePicker
+          testId="import-key"
           accept="application/pdf,image/png,image/jpeg,image/webp,.pdf,.png,.jpg,.jpeg,.webp,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          data-testid="import-key"
-          onChange={(e) => setKey(e.target.files?.[0] ?? null)}
-          className="min-h-11 font-normal"
+          name={key?.name ?? null}
+          onPick={(f) => setKey(f ?? null)}
+          ariaLabel={importCopy.keyFile}
         />
-      </label>
+      </div>
       <label className="flex flex-col gap-1 text-sm font-semibold">
         {importCopy.takenOn}
         <input type="date" value={takenOn} max={today} onChange={(e) => setTakenOn(e.target.value)} data-testid="import-date" className={`${field} max-w-[14rem]`} />

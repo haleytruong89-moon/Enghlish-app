@@ -1,6 +1,7 @@
 // components/studio/UploadForm.tsx
 "use client";
 
+import { FilePicker } from "@/components/ui/FilePicker";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import type { GateReason } from "@/lib/ai/cap";
@@ -47,11 +48,17 @@ export function UploadForm({ learnerId, aiAllowed, aiReason }: { learnerId: stri
         <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} placeholder={studioCopy.titlePlaceholder} data-testid="studio-title" className="min-h-11 rounded-lg border border-line px-3 font-normal" />
       </label>
       {(["test", "key"] as const).map((which) => (
-        <label key={which} className="flex flex-col gap-1 text-sm font-semibold">
+        <div key={which} className="flex flex-col gap-1 text-sm font-semibold">
           {which === "test" ? studioCopy.testFile : studioCopy.keyFile}
-          <input type="file" accept={ACCEPT} data-testid={`studio-${which}-file`} onChange={(e) => (which === "test" ? setTest : setKey)(e.target.files?.[0] ?? null)} className="min-h-11 font-normal" />
+          <FilePicker
+            testId={`studio-${which}-file`}
+            accept={ACCEPT}
+            name={(which === "test" ? test : key)?.name ?? null}
+            onPick={(f) => (which === "test" ? setTest : setKey)(f ?? null)}
+            ariaLabel={which === "test" ? studioCopy.testFile : studioCopy.keyFile}
+          />
           <span className="text-xs font-normal text-muted">{studioCopy.fileHint}</span>
-        </label>
+        </div>
       ))}
       {!aiAllowed && aiReason ? (
         <p role="status" data-testid="ai-unavailable" className="rounded-xl bg-[#FBF1DC] px-3.5 py-3 text-sm text-[#6B4600]">

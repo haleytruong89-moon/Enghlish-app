@@ -1089,11 +1089,9 @@ export const assignPage = {
   sourceDetected: (label: string) => `Nguồn: ${label}`,
   linkInvalid: "Link cần bắt đầu bằng https:// và không có khoảng trắng.",
   pdfLabel: "Đề PDF",
-  pdfChoose: "Chọn file PDF",
   pdfHelp: "Tối đa 15 MB. Chỉ em này tải về được, không có link công khai. File tải lên chưa nằm trong bản sao lưu hằng tuần.",
   pdfChosen: (name: string) => `Đã chọn: ${name}`,
   answerLabel: "Đáp án (không bắt buộc)",
-  answerChoose: "Chọn file đáp án",
   answerHelp: "Chỉ người lớn xem được, em không bao giờ thấy file đáp án. Dùng để dựng khung đề sau này.",
   titleLabel: "Tên bài",
   titlePlaceholder: "Ví dụ: Unless, even if, provided… (trang 2)",
@@ -1317,6 +1315,13 @@ export const levelFormCopy = {
 } as const;
 
 /** SM-2: "Thêm kết quả thi ngoài" (phụ huynh, gia sư). Mốc ngoài chỉ để đối chiếu, không đổi cấp. */
+/** One shared "📎 Chọn file" control for adult file inputs (components/ui/FilePicker.tsx). */
+export const filePickerCopy = {
+  choose: "Chọn file",
+  change: "Đổi file",
+  none: "Chưa chọn file",
+} as const;
+
 export const externalCopy = {
   title: (alias: string) => `Thêm kết quả thi ngoài · ${alias}`,
   back: "Về Hồ sơ cấp",
