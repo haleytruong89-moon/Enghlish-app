@@ -97,13 +97,13 @@ Ngày = **ngày lịch Việt Nam (UTC+7)** cho mọi phép tính (như S7a).
 | Giáo trình lên v2, bỏ U20 (chưa học) và thêm U27 | Đang học đến không đổi (mã Unit ổn định); độ phủ tính lại trên v2 |
 
 ### 5.2 Mức từng điểm kiến thức (mới)
-Cùng 4 mức và cùng tinh thần với S7a để gia sư chỉ học một luật: **Mới gặp → Đang tiến bộ → Tự làm được → Vận dụng được**. Mức 1–2 app tự đặt; **mức 3–4 app đề xuất, gia sư xác nhận**. **Một hộp xác nhận duy nhất (R1):** đề xuất mức điểm kiến thức hiện trong **cùng tab "Kỹ năng" của Hộp duyệt** với đề xuất của S7a, cùng nút, cùng luật; một câu là bằng chứng cho đúng 1 nhãn **và** tối đa 1 kỹ năng — hai đường tính độc lập, không cộng dồn, không xác nhận hai lần cho một câu (xác nhận theo *điểm/kỹ năng*, không theo câu). **Không bao giờ tự hạ mức** (sai lặp lại → gắn ⚑ "cần xem", gia sư quyết). Ngưỡng nằm trong chính sách có phiên bản `PP-0.1`, không viết cứng.
+Cùng 4 mức và cùng tinh thần với S7a để gia sư chỉ học một luật: **Làm được khi có gợi ý → Đang tiến bộ → Tự làm được → Vận dụng được**. Mức 1–2 app tự đặt; **mức 3–4 app đề xuất, gia sư xác nhận**. **Một hộp xác nhận duy nhất (R1):** đề xuất mức điểm kiến thức hiện trong **cùng tab "Kỹ năng" của Hộp duyệt** với đề xuất của S7a, cùng nút, cùng luật; một câu là bằng chứng cho đúng 1 nhãn **và** tối đa 1 kỹ năng — hai đường tính độc lập, không cộng dồn, không xác nhận hai lần cho một câu (xác nhận theo *điểm/kỹ năng*, không theo câu). **Không bao giờ tự hạ mức** (sai lặp lại → gắn ⚑ "cần xem", gia sư quyết). Ngưỡng nằm trong chính sách có phiên bản `PP-0.1`, không viết cứng.
 
 "Câu được tính" = một câu có đáp án đóng, gắn đúng điểm đó, đã chấm (tự chấm hoặc gia sư phán), **lần làm đầu của em trên câu đó**, không hỗ trợ. "Dịp" = **một ngày lịch Việt Nam** (R5): hai bài cùng ngày là một dịp.
 
 | Mức | Điều kiện (`PP-0.1`, ✅ D-W3 08/11) |
 |---|---|
-| 1 · Mới gặp | Điểm có trong Unit đã dạy ở một buổi, **hoặc** có ≥ 1 câu đã làm (đúng hay sai) |
+| 1 · Làm được khi có gợi ý (mức 1) | Điểm có trong Unit đã dạy ở một buổi, **hoặc** có ≥ 1 câu đã làm (đúng hay sai) |
 | 2 · Đang tiến bộ | ≥ 1 câu được tính **đúng**, **hoặc** ≥ 1 câu đúng có hỗ trợ (bài làm cùng gia sư, bài nạp "có hỗ trợ") |
 | 3 · Tự làm được (đề xuất) | ≥ 4 câu được tính, ≥ 75 % đúng, ở **≥ 2 dịp khác ngày** |
 | 4 · Vận dụng được (đề xuất) | Đã ở mức 3, **và** ≥ 2 câu được tính đúng ở một dịp **≥ 14 ngày** sau dịp gần nhất trước đó, từ **nguồn khác** (giáo trình / đề khác) |

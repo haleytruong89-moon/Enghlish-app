@@ -157,3 +157,13 @@ describe("Chờ duyệt of one child lists point proposals as links only", () =>
     expect(rows[0]!.label).toBe(pendingCopy.kinds.point);
   });
 });
+
+describe("points ladder uses the same level-1 name as skills (UX round 1)", () => {
+  it("SUPPORTED reads 'Làm được khi có gợi ý' like the skill ladder; not observed is 'Chưa thấy'", async () => {
+    const { levelLabels, pointMapCopy } = await import("@/lib/copy/vi");
+    expect(pointMapCopy.levels.SUPPORTED).toBe(levelLabels.SUPPORTED.label);
+    expect(pointMapCopy.levels.SUPPORTED).toBe("Làm được khi có gợi ý");
+    expect(pointMapCopy.levels.NOT_OBSERVED).toBe("Chưa thấy");
+    expect(Object.values(pointMapCopy.levels)).not.toContain("Mới gặp");
+  });
+});
