@@ -73,3 +73,11 @@ export function mergeRecentChanges(per: (RecentChange[] | null)[]): RecentChange
   const baselines = [...groups.values()].map((g) => (g.length > 1 ? { ...g[0]!, collapsed: g.length } : g[0]!)).sort(newestFirst);
   return [...decisions, ...baselines].slice(0, RECENT_MAX);
 }
+
+/** The one button on top of "Cấp đang học theo mảng" (tutor only): confirm while any domain is still assumed, else adjust. */
+export function levelsAction(domains: { status: "assumed" | "confirmed" }[]): "confirm" | "adjust" {
+  return domains.some((d) => d.status === "assumed") ? "confirm" : "adjust";
+}
+
+export const levelsHref = (learnerId: string, action: "confirm" | "adjust") =>
+  action === "confirm" ? `/learners/${learnerId}/levels/baseline` : `/learners/${learnerId}/levels/adjust`;

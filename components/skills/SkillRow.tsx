@@ -2,13 +2,14 @@
 import { skillStateCopy, targetsPage } from "@/lib/copy/vi";
 import { dayLabel } from "@/lib/levels/view";
 import type { SkillStateRow } from "@/lib/skills/types";
-import { stateLabel } from "@/lib/skills/view";
+import { missingForIndependent, stateLabel } from "@/lib/skills/view";
+import { SkillCriteria } from "./SkillCriteria";
 import { ManualForm } from "./ManualForm";
 import { SkillScale } from "./SkillScale";
 
 /** One tracked skill: name, group, the 4-cell scale, ⚑, the waiting proposal, "App tự cập nhật", the day; the child's tutor can set 1–2 by hand. */
-export function SkillRow({ id, title, dimensionName, state, learnerId, canEdit, showCode }: {
-  id: string; title: string; dimensionName: string; state: SkillStateRow | null; learnerId: string; canEdit: boolean; showCode: boolean;
+export function SkillRow({ id, title, dimensionName, state, learnerId, canEdit, showCode, checks = [] }: {
+  id: string; title: string; dimensionName: string; state: SkillStateRow | null; learnerId: string; canEdit: boolean; showCode: boolean; checks?: readonly string[];
 }) {
   const current = state?.state ?? "NOT_OBSERVED";
   return (
@@ -18,6 +19,7 @@ export function SkillRow({ id, title, dimensionName, state, learnerId, canEdit, 
         {targetsPage.dimension}: {dimensionName}
       </p>
       <SkillScale state={current} />
+      <SkillCriteria checks={checks} missing={missingForIndependent({ state: current, conditions: state?.conditions ?? [] })} />
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
         {state?.flag ? (
           <span data-testid="skill-flag" className="rounded-full border border-[#B4690E] bg-[#FBF1DC] px-2 py-0.5 text-[#6B4600]">

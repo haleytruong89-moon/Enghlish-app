@@ -107,3 +107,16 @@ describe("FeedbackForm and the header link", () => {
     expect(h).toContain(`/feedback?screen=${encodeURIComponent("Hộp duyệt")}`);
   });
 });
+
+describe("IntakeCard next step to the levels", () => {
+  const h = (canEdit: boolean, levelsAssumed: boolean) => renderToStaticMarkup(createElement(IntakeCard, { learnerId: LEARNER, view: null, canEdit, domains: [...domains], levelsAssumed }));
+  it("tutor with assumed levels sees one link to the baseline page", () => {
+    const html = h(true, true);
+    expect(html).toContain(intakeCopy.nextStepLevels);
+    expect(html).toContain(`href="/learners/${LEARNER}/levels/baseline"`);
+  });
+  it("no link once confirmed, and none for the parent", () => {
+    expect(h(true, false)).not.toContain(intakeCopy.nextStepLevels);
+    expect(h(false, true)).not.toContain(intakeCopy.nextStepLevels);
+  });
+});

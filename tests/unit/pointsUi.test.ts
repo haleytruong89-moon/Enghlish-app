@@ -157,3 +157,15 @@ describe("Chờ duyệt of one child lists point proposals as links only", () =>
     expect(rows[0]!.label).toBe(pendingCopy.kinds.point);
   });
 });
+
+describe("points ladder level 1 is 'Đã gặp' (parent decision 12/11: it only records exposure, not ability)", () => {
+  it("SUPPORTED reads 'Đã gặp', differs from the skill ladder; levels 2-4 match skills; not observed is 'Chưa thấy'", async () => {
+    const { levelLabels, pointMapCopy } = await import("@/lib/copy/vi");
+    expect(pointMapCopy.levels.SUPPORTED).not.toBe(levelLabels.SUPPORTED.label);
+    expect(pointMapCopy.levels.DEVELOPING).toBe(levelLabels.DEVELOPING.label);
+    expect(pointMapCopy.levels.INDEPENDENT).toBe(levelLabels.INDEPENDENT.label);
+    expect(pointMapCopy.levels.SUPPORTED).toBe("Đã gặp");
+    expect(pointMapCopy.levels.NOT_OBSERVED).toBe("Chưa thấy");
+    expect(Object.values(pointMapCopy.levels)).not.toContain("Mới gặp");
+  });
+});

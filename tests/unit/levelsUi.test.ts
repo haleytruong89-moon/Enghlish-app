@@ -269,3 +269,23 @@ describe("DomainDetail with skill states (S7a, D20)", () => {
     expect(html).not.toContain('data-testid="level-solid-grammar"');
   });
 });
+
+describe("LevelBars top action (UX round 1)", () => {
+  const bars = (profile: ReturnType<typeof assumedProfile>, canDecide: boolean) => render(createElement(LevelBars, { profile, learnerId: L, active: "grammar", canDecide }));
+  it("tutor: 'Xác nhận cấp khởi điểm (n mảng)' to the baseline page while a domain is assumed", () => {
+    const html = bars(assumedProfile(), true);
+    const assumed = assumedProfile().domains.filter((d) => d.status === "assumed").length;
+    expect(html).toContain(levelCopy.confirmAllAction(assumed));
+    expect(html).toContain(`href="/learners/${L}/levels/baseline"`);
+  });
+  it("tutor: 'Điều chỉnh cấp' to the adjust page when everything is confirmed", () => {
+    const p = confirmedProfile();
+    const html = bars({ ...p, domains: p.domains.map((d) => ({ ...d, status: "confirmed" as const })) }, true);
+    expect(html).toContain(levelCopy.adjustAction);
+    expect(html).toContain(`href="/learners/${L}/levels/adjust"`);
+    expect(html).not.toContain("Xác nhận cấp khởi điểm (");
+  });
+  it("parent sees no button", () => {
+    expect(bars(assumedProfile(), false)).not.toContain('data-testid="levels-action"');
+  });
+});

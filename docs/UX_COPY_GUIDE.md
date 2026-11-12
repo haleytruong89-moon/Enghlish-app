@@ -188,9 +188,19 @@ Học sinh không thấy gì mới. "Quá hạn" chỉ ở màn người lớn.
 
 Khóa mới trong `lib/copy/vi.ts` (người dạy luôn là `tutorHonorific`, không viết cứng "cô"):
 
-- `pointStateCopy` — đề xuất mức điểm trong tab "Kỹ năng": `Điểm “…”: Đang tiến bộ → Tự làm được`, "Xem điều kiện", Xác nhận · Chưa (lý do) · Giữ mức (⚑), "Chờ thầy/cô xác nhận", "Tính lại mức điểm từ đầu". Mức điểm gọi bằng chữ (Mới gặp · Đang tiến bộ · Tự làm được · Vận dụng được), không dùng "đạt".
+- `pointStateCopy` — đề xuất mức điểm trong tab "Kỹ năng": `Điểm “…”: Đang tiến bộ → Tự làm được`, "Xem điều kiện", Xác nhận · Chưa (lý do) · Giữ mức (⚑), "Chờ thầy/cô xác nhận", "Tính lại mức điểm từ đầu". Mức điểm gọi bằng chữ (Đã gặp · Đang tiến bộ · Tự làm được · Vận dụng được), không dùng "đạt".
 - `pointMapCopy` — trang Bản đồ kiến thức (mảng › nhóm › điểm), "App tự cập nhật" / "Thầy/cô đã xác nhận", "Bằng chứng từng câu" với Đúng · Sai · Có hỗ trợ. **Không** có điểm số hay % ở bất cứ chỗ nào của trang.
 - `importCopy` — Nạp bài đã làm (tên đề, file bài, file đáp án, ngày làm thật, mức hỗ trợ: Tự làm · Tự làm rồi chữa cùng thầy/cô · Làm cùng thầy/cô), màn "Xem và xác nhận bài nạp" (Cần xem, Đúng · Sai · Bỏ trống, Chỉ ở giấy, thanh dưới "Còn n câu cần xử lý · Xác nhận và tính mức"), lỗi theo mã (`importCopy.errors`) và lý do AI không đọc được (`importCopy.failReasons`).
 - `pendingCopy.kinds.point` / `need.point` — dòng "Đề xuất điểm kiến thức" trong Chờ duyệt. `appFeedback.screens.knowledgeMap` / `importNew` / `importConfirm` — tên màn khi gửi "Góp ý về app".
 
 Luật: mọi thứ AI soạn là nháp; con không thấy điểm kiến thức, bài nạp, nhãn hay mức; "%" chỉ ở màn người lớn (điều kiện đề xuất).
+
+## UX vòng 1 cho gia sư (09/11/2026)
+
+Khóa mới / đổi trong `lib/copy/vi.ts`:
+
+- `resultPage` — "Ghi điểm nhanh (bài link)" thay "Ghi kết quả": điểm theo phần (`partsTitle`, `partsHelp`, `partHeading`, `partName`, `partNameHint`, `partWrongHint`, `addPart`, `removePart`, `overall`, `overallEmpty`, `partError`, `tooManyItems`, `tagItemPart`, `breakdownDropped`). Ô "Tên phần" chỉ hiện khi bài có từ hai phần.
+- `sessionNotePage.recordResult` = "Ghi điểm nhanh", `savedNext` = "Ghi thêm điểm nhanh" (cùng tên với màn mới).
+- `filePickerCopy` (`icon`, `choose`, `change`, `none`) — nút chọn file dùng chung; chữ nhìn thấy nằm trong tên đọc cho trình đọc màn hình ("<tên ô>: Chọn file"), tên file đã chọn được đọc to.
+- `levelCopy.confirmAllAction(n)` = "Xác nhận cấp khởi điểm (n mảng)", n = số mảng còn là ước lượng; `intakeCopy.nextStepLevels` và cảnh báo "levelsLine" không còn nêu số mảng.
+- `skillStateCopy.criteriaIntro` = "Một bài được tính là đạt khi:" (tiêu chí của danh mục, không đồng nhất với bậc 3); `missingLine` = "Còn thiếu để lên Tự làm được: …".

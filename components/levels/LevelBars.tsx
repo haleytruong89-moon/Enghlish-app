@@ -2,7 +2,7 @@ import Link from "next/link";
 import { levelCopy } from "@/lib/copy/vi";
 import { barFraction } from "@/lib/levels/scale";
 import type { LevelProfile } from "@/lib/levels/types";
-import { levelText } from "@/lib/levels/view";
+import { levelsAction, levelsHref, levelText } from "@/lib/levels/view";
 import { CEFR_LEVELS, type DomainKey } from "@/lib/skillmap/types";
 import { solidLine } from "@/lib/skills/view";
 
@@ -13,7 +13,7 @@ const STRIPES = "repeating-linear-gradient(45deg, #CFE0D8 0 6px, #F4F8F5 6px 12p
  * 7 horizontal bars (D5): the 6 CEFR domains on one A1 → C2 scale, the thinking domain on its own 1 → 4 scale with the same width.
  * Each bar opens the detail of its domain (?domain=). Staff only.
  */
-export function LevelBars({ profile, learnerId, active, solid }: { profile: LevelProfile; learnerId: string; active: string; solid?: Partial<Record<DomainKey, { n: number; total: number }>> | null }) {
+export function LevelBars({ profile, learnerId, active, solid, canDecide = false }: { profile: LevelProfile; learnerId: string; active: string; canDecide?: boolean; solid?: Partial<Record<DomainKey, { n: number; total: number }>> | null }) {
   return (
     <section aria-labelledby="level-bars-title" className="mt-6 rounded-xl border border-line bg-white p-5" data-testid="level-bars">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -22,6 +22,15 @@ export function LevelBars({ profile, learnerId, active, solid }: { profile: Leve
         </h2>
         <span className="text-xs text-muted">{levelCopy.scaleCefr}</span>
       </div>
+      {canDecide ? (
+        <Link
+          href={levelsHref(learnerId, levelsAction(profile.domains))}
+          data-testid="levels-action"
+          className="mt-3 inline-flex min-h-12 items-center rounded-xl bg-accent px-5 text-base font-semibold text-white no-underline"
+        >
+          {levelsAction(profile.domains) === "confirm" ? levelCopy.confirmAllAction(profile.domains.filter((d) => d.status === "assumed").length) : levelCopy.adjustAction}
+        </Link>
+      ) : null}
       <ul className="mt-3 flex flex-col gap-2">
         {profile.domains.map((d) => {
           const pct = Math.round(barFraction(d.scale, d.current) * 100);

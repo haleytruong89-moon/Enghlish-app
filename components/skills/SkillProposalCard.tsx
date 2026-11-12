@@ -8,8 +8,9 @@ import { fallbackLabels, skillStateCopy } from "@/lib/copy/vi";
 import { clientIdAfter, describedBy } from "@/lib/levels/form";
 import { dayLabel } from "@/lib/levels/view";
 import { REASON_MAX, REASON_MIN, type SkillInboxItem } from "@/lib/skills/types";
-import { conditionsFor, proposalTitle, routeLabel } from "@/lib/skills/view";
+import { conditionsFor, missingForIndependent, proposalTitle, routeLabel } from "@/lib/skills/view";
 import { failText, postJson } from "@/lib/tutorwork/client";
+import { SkillCriteria } from "./SkillCriteria";
 import { ConditionList } from "./ConditionList";
 
 const button = "min-h-11 rounded-lg px-4 text-sm font-semibold disabled:opacity-60";
@@ -18,7 +19,7 @@ const button = "min-h-11 rounded-lg px-4 text-sm font-semibold disabled:opacity-
  * One open proposal or ⚑ of the "Kỹ năng" tab (spec §5). The child's tutor: Xác nhận / Chưa (reason) for a level-up; Giữ bậc / Sửa bậc for a ⚑.
  * Everyone else (the parent) reads it with "Chờ thầy/cô xác nhận". The server and the database check the actor again.
  */
-export function SkillProposalCard({ item }: { item: SkillInboxItem }) {
+export function SkillProposalCard({ item, checks = [] }: { item: SkillInboxItem; checks?: readonly string[] }) {
   const router = useRouter();
   const [rejecting, setRejecting] = useState(false);
   const [reason, setReason] = useState("");
@@ -46,6 +47,7 @@ export function SkillProposalCard({ item }: { item: SkillInboxItem }) {
         {proposalTitle(item)}
       </p>
       <p className="mt-1 text-sm text-muted">{meta}</p>
+      <SkillCriteria checks={checks} missing={missingForIndependent({ state: item.currentState, conditions: item.conditions })} />
       <details className="mt-2" data-testid="skill-conditions">
         <summary className="min-h-11 cursor-pointer py-2 text-sm text-accent underline">{skillStateCopy.conditionsToggle}</summary>
         <ConditionList conditions={conditionsFor(item)} />

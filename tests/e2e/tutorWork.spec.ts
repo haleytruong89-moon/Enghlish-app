@@ -29,7 +29,9 @@ test.describe.serial("S5b-1 tutor work", () => {
 
   test("framed result: click wrong items, see the total and the band update, save", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
-    await page.goto(`/learners/${NG}/results/new`);
+    // The framed grid is no longer offered on the screen (UX round 1); the old link still opens it.
+    await page.goto(`/learners/${NG}/results/new?mode=frame`);
+    await expect(page.getByTestId("mode-frame")).toHaveCount(0);
     await expect(page.getByTestId("frame-grid")).toBeVisible();
     await expect(page.locator('[data-testid^="item-"]')).toHaveCount(60);
     await expect(page.getByTestId("frame-score")).toHaveText(resultPage.scoreOf(60, 60));
@@ -48,11 +50,31 @@ test.describe.serial("S5b-1 tutor work", () => {
     await expect(page.getByTestId("result-save")).toBeEnabled();
   });
 
+  test("quick result by part: two parts, the overall is added up, wrong items are numbered inside each part", async ({ page }) => {
+    const title = `Bài hai phần ${Date.now()}`;
+    await loginAs(page, "tutorNguyen");
+    await page.goto(`/learners/${NG}/results/new`);
+    await page.getByTestId("quick-title").fill(title);
+    await page.getByTestId("quick-total").fill("10");
+    await page.getByTestId("quick-correct").fill("9");
+    await page.getByTestId("quick-wrong").fill("3");
+    await page.getByTestId("quick-part-add").click();
+    await page.getByTestId("quick-part-name").fill("Nghe");
+    await page.getByTestId("quick-part-name-2").fill("Đọc");
+    await page.getByTestId("quick-total-2").fill("15");
+    await page.getByTestId("quick-correct-2").fill("14");
+    await page.getByTestId("quick-wrong-2").fill("2");
+    await expect(page.getByTestId("quick-overall")).toHaveText(resultPage.overall(23, 25));
+    await page.getByTestId("result-save").click();
+    await expect(page.getByTestId("result-saved")).toContainText(resultPage.saved(2));
+  });
+
   test("quick result: a tag for one wrong item, the other waits in 'Chờ gắn nhãn' and is tagged there", async ({ page }) => {
     const title = `Bài link thử ${Date.now()}`;
     await loginAs(page, "tutorNguyen");
     await page.goto(`/learners/${NG}/results/new`);
-    await page.getByTestId("mode-quick").click();
+    await expect(page.getByTestId("mode-frame")).toHaveCount(0);
+    await expect(page.getByTestId("quick-entry")).toBeVisible();
     await page.getByTestId("quick-title").fill(title);
     await page.getByTestId("quick-total").fill("10");
     await page.getByTestId("quick-correct").fill("8");

@@ -1,3 +1,4 @@
+import { loadCriteria } from "@/lib/skills/criteria";
 import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -29,6 +30,7 @@ export default async function TargetsPage({ params }: { params: Promise<{ id: st
 
   const { member, learner } = access.grant;
   const [view, { skills, failed }] = await Promise.all([loadTargetsView(learner.id), loadSkillStatesSoft(learner.id, "GET /learners/[id]/targets")]);
+  const criteria = view ? await loadCriteria(view.rows.map((r) => r.id), view.descriptorVersion, "GET /learners/[id]/targets") : {};
   const stateOf = new Map((skills?.rows ?? []).map((r) => [r.targetKey, r]));
   const isTutor = member.role === "tutor";
 
@@ -63,6 +65,7 @@ export default async function TargetsPage({ params }: { params: Promise<{ id: st
                   learnerId={learner.id}
                   canEdit={isTutor && skills !== null}
                   showCode={isTutor}
+                  checks={criteria[row.id] ?? []}
                 />
               ))}
             </ul>

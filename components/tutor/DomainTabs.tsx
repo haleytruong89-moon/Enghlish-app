@@ -118,7 +118,7 @@ export function DomainTabs<T>({
                   data-testid={`tab-${testId}-${b.key}`}
                   className={`min-h-11 rounded-lg border px-3 text-sm font-medium ${on ? "border-accent bg-accent text-white" : "border-line bg-white text-ink hover:border-accent"}`}
                 >
-                  {b.name} <span className="ml-1 text-xs opacity-80">{b.total}</span>
+                  {b.name}
                 </button>
               );
             })}

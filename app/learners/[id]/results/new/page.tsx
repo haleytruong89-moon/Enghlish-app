@@ -11,10 +11,10 @@ import { requireLearnerPage } from "@/lib/tutorwork/page";
 
 export const dynamic = "force-dynamic";
 
-/** "Ghi kết quả bài": tutor or parent. In-class results are tutor-only (the database refuses a parent as well). */
-export default async function NewResultPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ assignment?: string; again?: string }> }) {
+/** "Ghi điểm nhanh (bài link)": tutor or parent. In-class results are tutor-only (the database refuses a parent as well). */
+export default async function NewResultPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ assignment?: string; again?: string; mode?: string }> }) {
   const { id } = await params;
-  const { assignment, again } = await searchParams;
+  const { assignment, again, mode } = await searchParams;
   const { member, learner } = await requireLearnerPage(id, "tutorwork:write");
   const role = member.role === "tutor" ? "tutor" : "parent";
   const [frames, tags, pending, allAssignments, map] = await Promise.all([
@@ -53,6 +53,7 @@ export default async function NewResultPage({ params, searchParams }: { params: 
             assignments={assignments}
             initialAssignmentId={initialAssignmentId}
             supersede={supersede}
+            initialFramed={mode === "frame"}
             initialRetry={again === "1" && Boolean(picked?.resultId)}
           />
           <PendingTags learnerId={learner.id} items={pending} tags={tags} map={map} isParent={role === "parent"} />

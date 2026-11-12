@@ -1,9 +1,12 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { SkillCriteria } from "@/components/skills/SkillCriteria";
 import { levelCopy, levelLabels, skillNames, skillStateCopy, targetsPage, tutorHonorific } from "@/lib/copy/vi";
 import type { Condition } from "@/lib/engine/types";
 import type { SkillInboxItem, SkillStateRow } from "@/lib/skills/types";
 import {
-  conditionText, conditionsFor, domainSkills, groupInbox, isPractising, isSolid, nextNeed, proposalTitle, routeLabel, scaleCells, skillTabCount, skillTitle, solidByDomain,
+  conditionText, conditionsFor, domainSkills, groupInbox, isPractising, isSolid, missingForIndependent, missingText, nextNeed, pickCriteria, proposalTitle, routeLabel, scaleCells, skillTabCount, skillTitle, solidByDomain,
 } from "@/lib/skills/view";
 
 const c = (id: Condition["id"], level: Condition["level"], route: 1 | 2, have: number, need: number): Condition => ({ id, level, route, have, need, met: have >= need, evidence: [] });
@@ -103,5 +106,45 @@ describe("the tab", () => {
     expect(g.map((x) => [x.learnerId, x.items.map((i) => i.id), x.proposalIds, x.canDecide])).toEqual([["L1", ["a", "b"], ["a"], true], ["L2", ["c"], [], false]]);
     const inbox = { open: 3, decidable: 2, items };
     expect([skillTabCount(inbox, "tutor"), skillTabCount(inbox, "parent"), skillTabCount(null, "tutor")]).toEqual([2, 3, null]);
+  });
+});
+
+describe("missingForIndependent / criteria (UX round 1)", () => {
+  const r1 = [c("r1_first_attempts", 3, 1, 1, 3), c("r1_contexts", 3, 1, 2, 2), c("r1_span_days", 3, 1, 2, 7), c("r1_direct_checkpoint", 3, 1, 0, 1)];
+  it("lists only the unmet level-3 conditions with have/need from the stored (policy-measured) conditions", () => {
+    const m = missingForIndependent({ state: "DEVELOPING", conditions: [c("l1_evidence", 1, 1, 1, 1), ...r1] });
+    expect(m).toEqual([conditionText(r1[0]!), conditionText(r1[2]!), conditionText(r1[3]!)]);
+    expect(missingText(m)).toBe(skillStateCopy.missingLine(m.join(skillStateCopy.missingJoin)));
+    expect(missingText(m)).toContain("1/3");
+  });
+  it("takes the receptive route when it is closer (more met), ties go to route 1", () => {
+    const r2 = [c("r2_items", 3, 2, 12, 12), c("r2_activities", 3, 2, 3, 3), c("r2_accuracy", 3, 2, 70, 80), c("r2_review", 3, 2, 0, 1)];
+    const m = missingForIndependent({ state: "DEVELOPING", conditions: [...r1, ...r2] });
+    expect(m).toHaveLength(2);
+    expect(m[0]).toContain("70");
+  });
+  it("is empty at level 3+, with no stored conditions, or when all are met", () => {
+    expect(missingForIndependent({ state: "INDEPENDENT", conditions: r1 })).toEqual([]);
+    expect(missingForIndependent({ state: "NOT_OBSERVED", conditions: [] })).toEqual([]);
+    expect(missingForIndependent({ state: "DEVELOPING", conditions: [c("r1_contexts", 3, 1, 2, 2)] })).toEqual([]);
+    expect(missingText([])).toBeNull();
+  });
+  it("pickCriteria keeps the newest descriptor version and the Vietnamese checks", () => {
+    const out = pickCriteria([
+      { id: "T", descriptor_version: "0.2.0", success_criteria: [{ check_vi: "cũ" }] },
+      { id: "T", descriptor_version: "0.2.1-draft", success_criteria: [{ check_vi: "Ít nhất 80% số câu đúng." }, { check_vi: " " }] },
+      { id: "U", descriptor_version: "0.2.1-draft", success_criteria: null },
+    ]);
+    expect(out).toEqual({ T: ["Ít nhất 80% số câu đúng."], U: [] });
+  });
+});
+
+describe("SkillCriteria component", () => {
+  it("shows the skill's own checks under the intro line and 'Còn thiếu', nothing when empty", () => {
+    const h = renderToStaticMarkup(createElement(SkillCriteria, { checks: ["Ít nhất 80% số câu đúng."], missing: ["Số ngày trải ra (lần đầu → lần cuối): 2/7"] }));
+    expect(h).toContain(skillStateCopy.criteriaIntro);
+    expect(h).toContain("Ít nhất 80% số câu đúng.");
+    expect(h).toContain("Còn thiếu để lên Tự làm được: Số ngày trải ra");
+    expect(renderToStaticMarkup(createElement(SkillCriteria, { checks: [], missing: [] }))).toBe("");
   });
 });

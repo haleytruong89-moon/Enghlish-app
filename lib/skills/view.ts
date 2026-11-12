@@ -109,3 +109,35 @@ export function skillTabCount(inbox: SkillInbox | null, role: Role): number | nu
   if (inbox === null) return null;
   return role === "tutor" ? inbox.decidable : inbox.open;
 }
+
+/**
+ * "Còn thiếu" toward "Tự làm được" (level 3), from the conditions the engine stored with the skill state (already measured against the
+ * active assessment policy: no number is written here). Two routes (G2): the route with more conditions met (ties: route 1).
+ * Empty when the skill is already at level 3+, when no level-3 condition is stored yet, or when all are met.
+ */
+export function missingForIndependent(r: { state: SkillState; conditions: readonly Condition[] }): string[] {
+  if (STATE_LEVEL[r.state] >= 3) return [];
+  const pool3 = r.conditions.filter((c) => c.level === 3);
+  const routes = ([1, 2] as const).map((rt) => pool3.filter((c) => c.route === rt)).filter((cs) => cs.length > 0);
+  if (routes.length === 0) return [];
+  const metCount = (cs: Condition[]) => cs.filter((c) => c.met).length;
+  const best = routes.reduce((b, cs) => (metCount(cs) > metCount(b) ? cs : b), routes[0]!);
+  return best.filter((c) => !c.met).map(conditionText);
+}
+
+export const missingText = (items: readonly string[]): string | null => (items.length === 0 ? null : skillStateCopy.missingLine(items.join(skillStateCopy.missingJoin)));
+
+export type CriteriaRow = { id: string; descriptor_version: string; success_criteria: { check_vi?: string }[] | null };
+
+/** Pure: per skill, the Vietnamese checks of its newest descriptor version (the rows are the seeded content/catalogue_v0.2.json). */
+export function pickCriteria(rows: readonly CriteriaRow[]): Record<string, string[]> {
+  const newest = new Map<string, CriteriaRow>();
+  for (const r of rows) {
+    const cur = newest.get(r.id);
+    if (!cur || r.descriptor_version > cur.descriptor_version) newest.set(r.id, r);
+  }
+  const out: Record<string, string[]> = {};
+  for (const [id, r] of newest) out[id] = (r.success_criteria ?? []).map((c) => c.check_vi?.trim() ?? "").filter((t) => t.length > 0);
+  return out;
+}
+
