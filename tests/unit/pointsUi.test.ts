@@ -158,11 +158,13 @@ describe("Chờ duyệt of one child lists point proposals as links only", () =>
   });
 });
 
-describe("points ladder uses the same level-1 name as skills (UX round 1)", () => {
-  it("SUPPORTED reads 'Làm được khi có gợi ý' like the skill ladder; not observed is 'Chưa thấy'", async () => {
+describe("points ladder level 1 is 'Đã gặp' (parent decision 12/11: it only records exposure, not ability)", () => {
+  it("SUPPORTED reads 'Đã gặp', differs from the skill ladder; levels 2-4 match skills; not observed is 'Chưa thấy'", async () => {
     const { levelLabels, pointMapCopy } = await import("@/lib/copy/vi");
-    expect(pointMapCopy.levels.SUPPORTED).toBe(levelLabels.SUPPORTED.label);
-    expect(pointMapCopy.levels.SUPPORTED).toBe("Làm được khi có gợi ý");
+    expect(pointMapCopy.levels.SUPPORTED).not.toBe(levelLabels.SUPPORTED.label);
+    expect(pointMapCopy.levels.DEVELOPING).toBe(levelLabels.DEVELOPING.label);
+    expect(pointMapCopy.levels.INDEPENDENT).toBe(levelLabels.INDEPENDENT.label);
+    expect(pointMapCopy.levels.SUPPORTED).toBe("Đã gặp");
     expect(pointMapCopy.levels.NOT_OBSERVED).toBe("Chưa thấy");
     expect(Object.values(pointMapCopy.levels)).not.toContain("Mới gặp");
   });

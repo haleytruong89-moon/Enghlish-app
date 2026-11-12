@@ -1325,7 +1325,7 @@ Nhánh `feature/ux-tutor-round1` (dựa trên `main` sau PR #28). **SQL cần á
 1. **Ô chọn file:** mọi ô chọn file của người lớn (Giáo trình, Tạo bài từ đề, Nạp bài đã làm, Giao bài PDF + đáp án, Phiếu điểm ngoài) là một nút "📎 Chọn file" (cao ≥ 44 px, viền màu chính), tên file đã chọn hiện bên cạnh, nút đổi thành "Đổi file". Một thành phần dùng chung `components/ui/FilePicker.tsx`; ô gốc vẫn có (ẩn bằng mắt, nằm trong nhãn) nên bàn phím, đọc màn hình và e2e `setInputFiles` vẫn chạy. Ô chọn ảnh của con không đổi.
 2. **Cấp:** đầu thẻ "Cấp đang học theo mảng" có nút "Xác nhận cấp 7 mảng" (còn mảng ước lượng, mở trang cấp khởi điểm) hoặc "Điều chỉnh cấp" — chỉ thầy/cô của em thấy. Thẻ Hồ sơ đầu vào có một dòng "Bước tiếp: xác nhận cấp 7 mảng →" khi còn mảng ước lượng. Bàn làm việc của thầy/cô có cảnh báo "Chưa xác nhận cấp khởi điểm". Phụ huynh không thấy gì thêm.
 3. **Thẻ kỹ năng** (trang Kỹ năng đang theo dõi và tab Kỹ năng của Hộp duyệt): hiện "Một bài được tính là đạt khi: …" (các tiêu chí `check_vi` của chính kỹ năng, lấy từ bảng `targets` — là bản seed của `catalogue_v0.2.json`) và "Còn thiếu để lên Tự làm được: …" (các điều kiện bậc 3 chưa đủ, lấy từ điều kiện engine đã lưu cùng trạng thái, vốn đã tính theo chính sách AP-0.3; không số cứng trong code).
-4. **Thang điểm kiến thức** (Bản đồ kiến thức, đề xuất điểm): mức 1 đọc "Làm được khi có gợi ý" như kỹ năng; "Chưa thấy" cho chưa quan sát (không còn "Mới gặp").
+4. **Thang điểm kiến thức** (Bản đồ kiến thức, đề xuất điểm): mức 1 đọc **"Đã gặp"** (phụ huynh chốt 12/11: mức 1 chỉ ghi nhận điểm đã được dạy hoặc đã làm thử, đúng hay sai, nên không gọi là "Làm được khi có gợi ý" như kỹ năng); mức 2–4 cùng tên với kỹ năng; "Chưa thấy" cho chưa quan sát (không còn "Mới gặp"). Ghi điểm nhanh: giữ bắt buộc gõ số các câu sai (phụ huynh chốt 12/11).
 5. **Ô chọn nhãn:** bỏ số nhỏ cạnh tên mảng ("Ngữ pháp 4"…); chỉ còn tên mảng.
 6. **"Ghi kết quả bài" → "Ghi điểm nhanh (bài link)"** (thanh bên, tiêu đề, nút ở Bàn làm việc): ẩn chế độ "Đề có khung · bấm câu sai" khỏi màn này; nhập theo phần (tên phần không bắt buộc, số câu đúng, tổng số câu của phần, số các câu sai trong phần), "+ Thêm phần", app tự cộng "Tổng cộng: x/y". Thầy/cô không phải gõ tổng chung.
 
@@ -1339,7 +1339,7 @@ Nhánh `feature/ux-tutor-round1` (dựa trên `main` sau PR #28). **SQL cần á
 - Đăng nhập thầy/cô của Nguyên (thử) → Bàn làm việc: thấy cảnh báo "Chưa xác nhận cấp khởi điểm" → bấm → trang cấp khởi điểm. Hồ sơ cấp: nút "Xác nhận cấp 7 mảng" ở đầu thẻ cấp, dòng "Bước tiếp" ở Hồ sơ đầu vào. Đăng nhập phụ huynh: không có nút, không có dòng.
 - Giáo trình → Thêm giáo trình; Giao bài → Đề PDF; Tạo bài từ đề; Nạp bài đã làm: thấy nút "📎 Chọn file", chọn file → tên hiện bên cạnh, nút thành "Đổi file".
 - Kỹ năng đang theo dõi: mỗi thẻ có khung "Một bài được tính là đạt khi" và (nếu chưa đủ) "Còn thiếu". Hộp duyệt → tab Kỹ năng: cùng khung trên mỗi đề xuất.
-- Bản đồ kiến thức: thang bốn ô ghi "Làm được khi có gợi ý · Đang tiến bộ · Tự làm được · Vận dụng được".
+- Bản đồ kiến thức: thang bốn ô ghi "Đã gặp · Đang tiến bộ · Tự làm được · Vận dụng được".
 - Ghi buổi học / Giao bài: các tab mảng không còn số nhỏ.
 - Ghi điểm nhanh (bài link): không còn nút "Đề có khung"; điền Nghe 9/10 (sai câu 3) → "+ Thêm phần" → Đọc 14/15 (sai câu 2) → thấy "Tổng cộng: 23/25" → Lưu.
 
@@ -1347,6 +1347,6 @@ Nhánh `feature/ux-tutor-round1` (dựa trên `main` sau PR #28). **SQL cần á
 - [ ] Mọi ô chọn file người lớn là nút "📎 Chọn file", hiện tên file đã chọn, đổi được
 - [ ] Thầy/cô thấy nút cấp + cảnh báo đến khi xác nhận xong; phụ huynh và con không thấy
 - [ ] Thẻ kỹ năng nêu đúng tiêu chí của kỹ năng đó và điều còn thiếu, không có số ngưỡng cứng
-- [ ] Hai thang (kỹ năng, điểm) cùng gọi mức 1 là "Làm được khi có gợi ý"
+- [ ] Thang điểm gọi mức 1 là "Đã gặp"; thang kỹ năng giữ "Làm được khi có gợi ý"; mức 2–4 hai thang cùng tên
 - [ ] Không còn số cạnh tên mảng ở ô chọn nhãn
 - [ ] Ghi điểm nhanh nhập được theo phần, tổng tự cộng, lưu được; con không thấy điểm

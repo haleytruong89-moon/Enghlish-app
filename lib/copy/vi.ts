@@ -2273,7 +2273,7 @@ export const pointMapCopy = {
   back: "← Bàn làm việc",
   title: "Bản đồ kiến thức",
   intro: (name: string) => `Mức từng điểm kiến thức của ${name}, gom theo mảng và nhóm. Con không thấy trang này.`,
-  levels: { NOT_OBSERVED: "Chưa thấy", SUPPORTED: "Làm được khi có gợi ý", DEVELOPING: "Đang tiến bộ", INDEPENDENT: "Tự làm được", TRANSFERABLE: "Vận dụng được" } as const,
+  levels: { NOT_OBSERVED: "Chưa thấy", SUPPORTED: "Đã gặp", DEVELOPING: "Đang tiến bộ", INDEPENDENT: "Tự làm được", TRANSFERABLE: "Vận dụng được" } as const,
   levelStep: (n: number) => `${n}/4`,
   noDomain: "Chưa xếp mảng",
   noGroup: "Chưa xếp nhóm",
