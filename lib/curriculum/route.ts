@@ -1,4 +1,5 @@
 // lib/curriculum/route.ts
+import { deferHook } from "@/lib/engine/defer";
 import "server-only";
 import { after, NextResponse } from "next/server";
 import { createToolCaller } from "@/lib/ai/anthropic";
@@ -31,7 +32,7 @@ export async function runCurriculumRoute(routeName: string, run: (deps: Curricul
       storage: createFileStorage(),
       schedule: (job) => after(job),
       loadContext: loadTocContext,
-      afterPoints: pointHook(routeName, userId),
+      afterPoints: deferHook(pointHook(routeName, userId), { route: routeName, userId }),
       // Same model and tool-choice switch as Studio B1 (one priced model, lib/ai/pricing.ts).
       getAi: () => ({ call: createToolCaller(), model: studioModel(), toolChoice: studioToolChoice(), prompt: { text: loadPrompt(CURRICULUM_PROMPT.file), version: CURRICULUM_PROMPT.version } }),
       log: (error) => logAppError({ route: routeName, code: "curriculum_toc", error, userId }),

@@ -1782,7 +1782,7 @@ export const studioInboxCopy = {
   save: "Lưu",
   saving: "Đang lưu…",
   doneLine: (alias: string, correct: number, inApp: number) =>
-    `Đã xong bài này của ${alias}: đúng ${correct}/${inApp} câu làm trên app. Đã ghi Kết quả bài và nhãn câu sai vào Điểm cần chú ý; kỹ năng của em được tính lại.`,
+    `Đã xong bài này của ${alias}: đúng ${correct}/${inApp} câu làm trên app. Đã ghi Kết quả bài và nhãn câu sai vào Điểm cần chú ý; kỹ năng của em đang được tính lại (vài giây).`,
   partialLine: (n: number) => `Đã lưu. Còn ${n} câu chờ.`,
 };
 
@@ -2353,7 +2353,7 @@ export const importCopy = {
   left: (n: number) => (n === 0 ? "Đã xử lý hết" : `Còn ${n} câu cần xử lý`),
   confirm: "Xác nhận và tính mức",
   confirming: "Đang lưu…",
-  confirmed: "Đã xác nhận. App đang tính lại mức điểm.",
+  confirmed: "Đã xác nhận. App đang tính lại mức điểm (vài giây).",
   confirmedGo: "Mở Bản đồ kiến thức",
   confirmedPending: "Xem đề xuất đang chờ",
   tutorOnly: `Chỉ ${tutorHonorific} của em xác nhận kết quả.`,
