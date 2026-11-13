@@ -1,6 +1,6 @@
 "use client";
 
-import { FilePicker } from "@/components/ui/FilePicker";
+import { PageGuidance, PdfPagePicker, pagesBlock, type PdfPick } from "@/components/ui/PdfPagePicker";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import type { GateReason } from "@/lib/ai/cap";
@@ -19,8 +19,12 @@ const field = "min-h-11 rounded-lg border border-line px-3 font-normal";
 export function ImportForm({ learnerId, aiAllowed, aiReason }: { learnerId: string; aiAllowed: boolean; aiReason: GateReason | null }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
-  const [work, setWork] = useState<File | null>(null);
-  const [key, setKey] = useState<File | null>(null);
+  const [workPick, setWorkPick] = useState<PdfPick>({ file: null, pages: null, pending: false });
+  const [keyPick, setKeyPick] = useState<PdfPick>({ file: null, pages: null, pending: false });
+  const work = workPick.file;
+  const key = keyPick.file;
+  const pending = workPick.pending || keyPick.pending;
+  const tooLong = pagesBlock("import", workPick.pages, keyPick.pages, false);
   const [takenOn, setTakenOn] = useState("");
   const [support, setSupport] = useState<SupportLevel | "">("");
   const [allowOther, setAllowOther] = useState(false);
@@ -73,18 +77,20 @@ export function ImportForm({ learnerId, aiAllowed, aiReason }: { learnerId: stri
       </p>
       <div className="flex flex-col gap-1 text-sm font-semibold">
         {importCopy.workFile}
-        <FilePicker testId="import-work" accept="application/pdf,image/png,image/jpeg,image/webp,.pdf,.png,.jpg,.jpeg,.webp" name={work?.name ?? null} onPick={(f) => setWork(f ?? null)} ariaLabel={importCopy.workFile} />
+        <PdfPagePicker flow="import" role="main" testId="import-work" accept="application/pdf,image/png,image/jpeg,image/webp,.pdf,.png,.jpg,.jpeg,.webp" onChange={setWorkPick} ariaLabel={importCopy.workFile} />
       </div>
       <div className="flex flex-col gap-1 text-sm font-semibold">
         {importCopy.keyFile}
-        <FilePicker
+        <PdfPagePicker
+          flow="import"
+          role="other"
           testId="import-key"
           accept="application/pdf,image/png,image/jpeg,image/webp,.pdf,.png,.jpg,.jpeg,.webp,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          name={key?.name ?? null}
-          onPick={(f) => setKey(f ?? null)}
+          onChange={setKeyPick}
           ariaLabel={importCopy.keyFile}
         />
       </div>
+      <PageGuidance flow="import" main={workPick.pages} other={keyPick.pages} />
       <label className="flex flex-col gap-1 text-sm font-semibold">
         {importCopy.takenOn}
         <input type="date" value={takenOn} max={today} onChange={(e) => setTakenOn(e.target.value)} data-testid="import-date" className={`${field} max-w-[14rem]`} />
@@ -116,10 +122,10 @@ export function ImportForm({ learnerId, aiAllowed, aiReason }: { learnerId: stri
         </p>
       ) : null}
       <div className="flex flex-wrap gap-3">
-        <button type="button" disabled={busy !== null || !aiAllowed || !ready} onClick={() => void start(false)} data-testid="import-start" className="min-h-12 rounded-xl bg-accent px-5 font-bold text-white disabled:opacity-60">
+        <button type="button" disabled={busy !== null || !aiAllowed || !ready || pending || tooLong} onClick={() => void start(false)} data-testid="import-start" className="min-h-12 rounded-xl bg-accent px-5 font-bold text-white disabled:opacity-60">
           {busy === "upload" ? importCopy.uploading : busy === "send" ? importCopy.starting : importCopy.create}
         </button>
-        <button type="button" disabled={busy !== null || !ready} onClick={() => void start(true)} data-testid="import-manual" className="min-h-12 rounded-xl border border-accent px-5 font-bold text-accent disabled:opacity-60">
+        <button type="button" disabled={busy !== null || !ready || pending} onClick={() => void start(true)} data-testid="import-manual" className="min-h-12 rounded-xl border border-accent px-5 font-bold text-accent disabled:opacity-60">
           {importCopy.manual}
         </button>
       </div>

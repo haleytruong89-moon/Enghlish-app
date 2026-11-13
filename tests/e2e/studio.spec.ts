@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { Client } from "pg";
-import { aiSettingsCopy, levelLabels, studioInboxCopy, studioStudentCopy, work } from "@/lib/copy/vi";
+import { aiSettingsCopy, levelLabels, pdfPickCopy, studioInboxCopy, studioStudentCopy, work } from "@/lib/copy/vi";
 import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { makeDocx } from "../unit/fixtures/docx";
 import { LEARNER_IDS, loginAs } from "./helpers";
@@ -39,6 +39,7 @@ test("Nguyên's tutor uploads a PDF + a Word key, the AI draft is blocked by ite
   await page.getByTestId("nav-assign").click();
   await page.getByTestId("nav-assign-studio").click();
   await page.getByTestId("studio-title").fill("Destination B1 — Unit 5 (e2e)");
+  await expect(page.getByTestId("page-guidance")).toContainText(pdfPickCopy.guidance.studio);
   await page.getByTestId("studio-test-file").setInputFiles({ name: "de.pdf", mimeType: "application/pdf", buffer: PDF });
   await page.getByTestId("studio-key-file").setInputFiles({
     name: "dap-an.docx", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", buffer: makeDocx(["1B 2A 3A 4C 5B"]),

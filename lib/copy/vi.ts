@@ -2425,3 +2425,40 @@ export const saveStatusCopy = {
   error: "Chưa lưu được. Thay đổi vẫn còn trên màn hình, bạn bấm Lưu lại nhé.",
   leaveConfirm: "Còn thay đổi chưa lưu. Rời trang thì mất các thay đổi này. Vẫn rời?",
 } as const;
+
+/** UX vòng 2 · mục 5: chọn trang PDF ngay trên trình duyệt và lời nhắn giới hạn trước khi gửi AI. Số trang lấy từ lib/pdf/limits.ts. */
+export const pdfPickCopy = {
+  info: (n: number, mb: string) => `PDF có ${n} trang · ${mb} MB`,
+  pagesLabel: "Trang cần gửi",
+  pagesHint: "Ví dụ: 1–3, 7",
+  use: "Dùng các trang này",
+  cutting: "Đang cắt trang…",
+  willSend: (n: number, mb: string) => `Sẽ gửi ${n} trang · ${mb} MB`,
+  needPick: "Bạn chọn các trang cần gửi rồi bấm “Dùng các trang này” nhé.",
+  pendingChange: "Bạn đã đổi trang. Bấm “Dùng các trang này” để áp dụng.",
+  errors: {
+    empty: "Bạn gõ các trang cần gửi nhé.",
+    syntax: "Gõ số trang như 1–3, 7.",
+    range: (n: number) => `File chỉ có ${n} trang.`,
+    encrypted: "File PDF có mật khẩu. Mở bằng máy rồi in ra một file PDF mới nhé.",
+    unreadable: "Không đọc được file PDF này. App sẽ thử gửi nguyên file.",
+    cutFailed: "Không cắt được các trang này. Bạn thử chọn lại nhé.",
+  },
+  bigSource: "Máy có thể chậm khi mở file này.",
+  cutName: (base: string, pages: string) => `${base} (tr. ${pages}).pdf`,
+  guidance: {
+    studio: "Nên gửi đề 3–6 trang (khoảng tối đa 60 câu) và đáp án 1–3 trang, chỉ phần tương ứng.",
+    import: "Bài làm tối đa 8 trang (khoảng 100 câu), đáp án 1–3 trang.",
+    toc: "Chỉ các trang mục lục (1–4 trang).",
+  },
+  warn: {
+    studio: "Đề dài: AI có thể không đọc xong trong một lần (tối đa 4 phút) và vẫn tính tiền. Nên chia đề thành hai lần tạo bài.",
+    import: "Bài làm dài: AI có thể không đọc xong trong một lần (tối đa 4 phút) và vẫn tính tiền. Nên chia bài thành hai lần nạp.",
+    toc: "Nhiều trang hơn một mục lục: AI có thể đọc chậm và vẫn tính tiền. Chỉ gửi các trang mục lục.",
+  },
+  block: {
+    studio: "Đề quá dài để AI đọc trong một lần. Chọn ít trang hơn (đề tối đa 10 trang, tổng tối đa 12 trang) hoặc chia đề thành hai lần tạo bài.",
+    import: "Bài làm quá dài để AI đọc trong một lần. Chọn ít trang hơn (bài làm tối đa 12 trang, tổng tối đa 15 trang) hoặc chia bài thành hai lần nạp.",
+    toc: "Quá nhiều trang cho một mục lục (tối đa 8 trang). Chỉ chọn các trang mục lục.",
+  },
+} as const;

@@ -1,7 +1,7 @@
 // components/studio/UploadForm.tsx
 "use client";
 
-import { FilePicker } from "@/components/ui/FilePicker";
+import { PageGuidance, PdfPagePicker, pagesBlock, type PdfPick } from "@/components/ui/PdfPagePicker";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import type { GateReason } from "@/lib/ai/cap";
@@ -15,8 +15,12 @@ const ACCEPT = "application/pdf,.pdf,application/vnd.openxmlformats-officedocume
 export function UploadForm({ learnerId, aiAllowed, aiReason }: { learnerId: string; aiAllowed: boolean; aiReason: GateReason | null }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
-  const [test, setTest] = useState<File | null>(null);
-  const [key, setKey] = useState<File | null>(null);
+  const [testPick, setTestPick] = useState<PdfPick>({ file: null, pages: null, pending: false });
+  const [keyPick, setKeyPick] = useState<PdfPick>({ file: null, pages: null, pending: false });
+  const test = testPick.file;
+  const key = keyPick.file;
+  const pending = testPick.pending || keyPick.pending;
+  const tooLong = pagesBlock("studio", testPick.pages, keyPick.pages, false);
   const [busy, setBusy] = useState<"ai" | "manual" | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const clientId = useRef(crypto.randomUUID());
@@ -50,16 +54,18 @@ export function UploadForm({ learnerId, aiAllowed, aiReason }: { learnerId: stri
       {(["test", "key"] as const).map((which) => (
         <div key={which} className="flex flex-col gap-1 text-sm font-semibold">
           {which === "test" ? studioCopy.testFile : studioCopy.keyFile}
-          <FilePicker
+          <PdfPagePicker
+            flow="studio"
+            role={which === "test" ? "main" : "other"}
             testId={`studio-${which}-file`}
             accept={ACCEPT}
-            name={(which === "test" ? test : key)?.name ?? null}
-            onPick={(f) => (which === "test" ? setTest : setKey)(f ?? null)}
+            onChange={which === "test" ? setTestPick : setKeyPick}
             ariaLabel={which === "test" ? studioCopy.testFile : studioCopy.keyFile}
           />
           <span className="text-xs font-normal text-muted">{studioCopy.fileHint}</span>
         </div>
       ))}
+      <PageGuidance flow="studio" main={testPick.pages} other={keyPick.pages} />
       {!aiAllowed && aiReason ? (
         <p role="status" data-testid="ai-unavailable" className="rounded-xl bg-[#FBF1DC] px-3.5 py-3 text-sm text-[#6B4600]">
           {studioCopy.aiUnavailable[`ai_${aiReason}`]}
@@ -72,11 +78,11 @@ export function UploadForm({ learnerId, aiAllowed, aiReason }: { learnerId: stri
       ) : null}
       <div className="flex flex-wrap gap-3">
         {aiAllowed ? (
-          <button type="button" disabled={busy !== null} onClick={() => void start("ai")} data-testid="studio-start-ai" className="min-h-12 rounded-xl bg-accent px-5 font-bold text-white disabled:opacity-60">
+          <button type="button" disabled={busy !== null || pending || tooLong} onClick={() => void start("ai")} data-testid="studio-start-ai" className="min-h-12 rounded-xl bg-accent px-5 font-bold text-white disabled:opacity-60">
             {busy === "ai" ? studioCopy.uploading : studioCopy.startAi}
           </button>
         ) : null}
-        <button type="button" disabled={busy !== null} onClick={() => void start("manual")} data-testid="studio-manual" className="min-h-12 rounded-xl border border-line bg-white px-5 font-semibold disabled:opacity-60">
+        <button type="button" disabled={busy !== null || pending} onClick={() => void start("manual")} data-testid="studio-manual" className="min-h-12 rounded-xl border border-line bg-white px-5 font-semibold disabled:opacity-60">
           {busy === "manual" ? studioCopy.uploading : studioCopy.manual}
         </button>
       </div>

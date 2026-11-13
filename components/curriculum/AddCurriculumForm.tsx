@@ -1,6 +1,6 @@
 "use client";
 
-import { FilePicker } from "@/components/ui/FilePicker";
+import { PageGuidance, PdfPagePicker, pagesBlock, type PdfPick } from "@/components/ui/PdfPagePicker";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import type { GateReason } from "@/lib/ai/cap";
@@ -26,7 +26,9 @@ export function AddCurriculumForm({
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [levelNote, setLevelNote] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [pick, setPick] = useState<PdfPick>({ file: null, pages: null, pending: false });
+  const file = pick.file;
+  const tooLong = pagesBlock("toc", pick.pages, null, false);
   const [busy, setBusy] = useState<"ai" | "manual" | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const clientId = useRef(crypto.randomUUID());
@@ -69,7 +71,8 @@ export function AddCurriculumForm({
       )}
       <div className="flex flex-col gap-1 text-sm font-semibold">
         {curriculumCopy.tocFile}
-        <FilePicker testId={`${tid}-file`} accept="application/pdf,.pdf" name={file?.name ?? null} onPick={(f) => setFile(f ?? null)} ariaLabel={curriculumCopy.tocFile} />
+        <PdfPagePicker flow="toc" role="main" testId={`${tid}-file`} accept="application/pdf,.pdf" onChange={setPick} ariaLabel={curriculumCopy.tocFile} />
+        <PageGuidance flow="toc" main={pick.pages} other={null} testId={`${tid}-guidance`} />
         <span className="text-xs font-normal text-muted">{curriculumCopy.tocHint}</span>
       </div>
       {!aiAllowed && aiReason ? (
@@ -84,11 +87,11 @@ export function AddCurriculumForm({
       ) : null}
       <div className="flex flex-wrap gap-3">
         {aiAllowed ? (
-          <button type="button" disabled={busy !== null} onClick={() => void start("ai")} data-testid={`${tid}-ai`} className="min-h-12 rounded-xl bg-accent px-5 font-bold text-white disabled:opacity-60">
+          <button type="button" disabled={busy !== null || pick.pending || tooLong} onClick={() => void start("ai")} data-testid={`${tid}-ai`} className="min-h-12 rounded-xl bg-accent px-5 font-bold text-white disabled:opacity-60">
             {busy === "ai" ? curriculumCopy.uploading : curriculumCopy.startAi}
           </button>
         ) : null}
-        <button type="button" disabled={busy !== null} onClick={() => void start("manual")} data-testid={`${tid}-manual`} className="min-h-12 rounded-xl border border-line bg-white px-5 font-semibold disabled:opacity-60">
+        <button type="button" disabled={busy !== null || pick.pending} onClick={() => void start("manual")} data-testid={`${tid}-manual`} className="min-h-12 rounded-xl border border-line bg-white px-5 font-semibold disabled:opacity-60">
           {busy === "manual" ? curriculumCopy.uploading : curriculumCopy.manual}
         </button>
       </div>

@@ -3,7 +3,7 @@
 import { SaveStatus } from "@/components/ui/SaveStatus";
 import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { blockImplicitSubmit } from "@/lib/forms/enter";
-import { FilePicker } from "@/components/ui/FilePicker";
+import { PdfPagePicker, type PdfPick } from "@/components/ui/PdfPagePicker";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { TagChips } from "@/components/tutor/TagChips";
@@ -56,9 +56,11 @@ export function AssignForm({
 
   const source = kind === "link" && url.trim() ? detectLinkSource(url) : null;
 
-  async function pick(file: File | undefined, set: (p: Prepared | null) => void) {
+  const [pdfPending, setPdfPending] = useState(false);
+  async function pick(sel: PdfPick, set: (p: Prepared | null) => void) {
     setError(null);
-    if (!file) return;
+    const file = sel.file;
+    if (!file) return set(null);
     const r = await prepareFile(file);
     if (!r.ok) return setError(practiceErrorText(r.reason === "type" ? "file_type" : r.reason === "too_big" ? "file_too_big" : "unreadable", "staff"));
     set(r.file);
@@ -166,12 +168,12 @@ export function AssignForm({
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5 text-sm font-medium">
               {assignPage.pdfLabel}
-              <FilePicker testId="pdf-input" nameTestId="pdf-chosen" accept="application/pdf" name={pdf?.name ?? null} onPick={(f) => void pick(f, setPdf)} ariaLabel={assignPage.pdfLabel} />
+              <PdfPagePicker flow="assignment" role="main" testId="pdf-input" nameTestId="pdf-chosen" accept="application/pdf" resetKey={round} onChange={(s) => { setPdfPending(s.pending); void pick(s, setPdf); }} ariaLabel={assignPage.pdfLabel} />
               <span className="text-sm font-normal text-muted">{assignPage.pdfHelp}</span>
             </div>
             <div className="flex flex-col gap-1.5 text-sm font-medium">
               {assignPage.answerLabel}
-              <FilePicker testId="answer-input" nameTestId="answer-chosen" accept="application/pdf,image/png,image/jpeg,image/webp" name={answer?.name ?? null} onPick={(f) => void pick(f, setAnswer)} ariaLabel={assignPage.answerLabel} />
+              <PdfPagePicker flow="assignment" role="other" testId="answer-input" nameTestId="answer-chosen" accept="application/pdf,image/png,image/jpeg,image/webp" resetKey={round} onChange={(s) => void pick(s, setAnswer)} ariaLabel={assignPage.answerLabel} />
               <span className="text-sm font-normal text-muted">{assignPage.answerHelp}</span>
             </div>
           </div>
@@ -235,7 +237,7 @@ export function AssignForm({
         <SaveStatus state={saveState} />
         <button
           type="submit"
-          disabled={busy !== null || done}
+          disabled={busy !== null || done || pdfPending}
           data-testid="assign-submit"
           className="min-h-12 rounded-xl bg-accent px-6 text-base font-bold text-white disabled:opacity-60"
         >
