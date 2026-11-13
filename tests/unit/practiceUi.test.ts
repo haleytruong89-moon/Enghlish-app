@@ -94,7 +94,7 @@ describe("student navigation", () => {
 });
 
 const assignment = (over: Partial<AssignmentView> = {}): AssignmentView => ({
-  id: "c0000000-0000-4000-8000-000000000001", kind: "link", title: "Unless", url: "https://www.test-english.com/x", sourceKey: "test-english", tagKeys: [],
+  id: "c0000000-0000-4000-8000-000000000001", kind: "link", title: "Unless", url: "https://www.test-english.com/x", sourceKey: "test-english", tagKeys: [], units: [], unitItems: [],
   dueOn: null, frameId: null, createdAt: "2026-10-16T01:00:00Z", retractedAt: null, file: null, answerFile: null, submission: null, resultId: null, ...over,
 });
 

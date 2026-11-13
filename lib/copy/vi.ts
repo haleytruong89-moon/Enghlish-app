@@ -1143,6 +1143,8 @@ export const assignPage = {
     uploadFailed: "Chưa tải file lên được. Bạn kiểm tra mạng rồi thử lại nhé.",
     unreadable: "Không đọc được ảnh này. Bạn chọn ảnh khác nhé.",
     upload_limit: "Hôm nay đã tải lên quá nhiều file (tối đa 60 lần mỗi ngày cho mỗi em). Thử lại ngày mai.",
+    units_unavailable: "Phần Giao theo Unit chưa sẵn sàng (cần cập nhật cơ sở dữ liệu). Bạn bỏ chọn Unit để giao bài như thường.",
+    bad_units: "Có Unit không còn trong giáo trình đã duyệt của em. Bạn tải lại trang rồi chọn lại nhé.",
     generic: "Chưa lưu được. Bạn thử lại sau ít phút.",
   } as Record<string, string>,
   // bảng "Bài luyện đã giao"

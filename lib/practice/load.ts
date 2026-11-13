@@ -1,10 +1,11 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createUserClient } from "@/lib/supabase/server";
 import { getAuthUser } from "@/lib/auth/session";
 import { createFileStorage } from "@/lib/storage/server";
 import { handleStudentPractice } from "./handlers";
 import { createSupabasePracticeStore } from "./supabaseStore";
-import { parseAssignments } from "./shape";
+import { attachAssignmentUnits, parseAssignments } from "./shape";
 import type { AssignmentView, ReviewPoints, StudentPracticeItem } from "./types";
 
 /**
@@ -20,7 +21,30 @@ function fail(what: string, err: { code?: string; message?: string }): never {
 export async function loadAssignments(learnerId: string): Promise<AssignmentView[]> {
   const { data, error } = await createAdminClient().rpc("eng_assignment_overview", { p_learner: learnerId, p_assignment: null });
   if (error) fail("eng_assignment_overview", error);
-  return parseAssignments(data);
+  return withUnits(learnerId, parseAssignments(data));
+}
+
+/**
+ * The units of each assignment + the knowledge items derived from them (0029). Read as the signed-in adult (RLS: adults of that child).
+ * Before 0029 is applied the table is missing: the list simply has no units (assignments still show).
+ */
+async function withUnits(learnerId: string, list: AssignmentView[]): Promise<AssignmentView[]> {
+  if (list.length === 0) return list;
+  try {
+    const db = await createUserClient();
+    const { data: rows, error } = await db.from("assignment_units").select("assignment_id, curriculum_id, version_id, unit_code, ord").eq("learner_id", learnerId);
+    if (error || !rows || rows.length === 0) return list;
+    const versionIds = [...new Set(rows.map((r) => r.version_id as string))];
+    const curriculumIds = [...new Set(rows.map((r) => r.curriculum_id as string))];
+    const [cur, pts] = await Promise.all([
+      db.from("curricula").select("id, title").in("id", curriculumIds),
+      db.from("curriculum_unit_points").select("version_id, code, tag_key, ord").in("version_id", versionIds),
+    ]);
+    if (cur.error || pts.error) return list;
+    return attachAssignmentUnits(list, rows, cur.data, pts.data);
+  } catch {
+    return list;
+  }
 }
 
 export type StudentPracticeData =

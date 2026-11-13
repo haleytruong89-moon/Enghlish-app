@@ -25,7 +25,7 @@ const today = (over: Partial<TodayData> = {}): TodayData => {
 };
 const input = (over: Partial<DeskAlertInput> = {}): DeskAlertInput => ({ learnerId: L, role: "tutor", todayIso: "2026-10-18", today: today(), intakeMissing: false, curriculaCount: 1, flagCount: 0, ...over });
 const html = (i: DeskAlertInput) => renderToStaticMarkup(createElement(DeskAlerts, { learnerId: L, items: deskAlerts(i) }));
-const late = { id: "c1", kind: "link", title: "Bài 1", url: null, sourceKey: null, tagKeys: [], dueOn: "2026-10-10", frameId: null, createdAt: "2026-10-01T00:00:00Z", retractedAt: null, file: null, answerFile: null, submission: null, resultId: null } as AssignmentView;
+const late = { id: "c1", kind: "link", title: "Bài 1", url: null, sourceKey: null, tagKeys: [], units: [], unitItems: [], dueOn: "2026-10-10", frameId: null, createdAt: "2026-10-01T00:00:00Z", retractedAt: null, file: null, answerFile: null, submission: null, resultId: null } as AssignmentView;
 
 describe("desk alerts (was the attention part of the learner card)", () => {
   it("tutor: repeat, waiting for a tag, due for re-check — with the old wording and links", () => {
