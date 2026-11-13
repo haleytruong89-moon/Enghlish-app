@@ -944,6 +944,11 @@ export const unitPickerCopy = {
   derivedNone: "Các Unit đã chọn chưa gắn mục kiến thức nào.",
   titleFilled: "Tên bài tự điền theo Unit đã chọn. Bạn sửa được.",
   moreItems: "+ Thêm mục kiến thức khác",
+  sep: " · ",
+  titleJoin: " + ",
+  maxUnits: (max: number) => `Một bài giao tối đa ${max} Unit. Bỏ bớt một Unit để chọn Unit khác.`,
+  reviewPartial: (max: number) => `Dòng ôn này có nhiều Unit hơn mức còn lại (tối đa ${max}): app chỉ tick được một phần. Chọn thêm Unit bằng tay nếu cần.`,
+  reviewNoUnits: "Dòng này chưa gắn Unit nào. Hãy tick Unit bằng tay.",
   statuses: { not_started: "", in_progress: "Đang học", done: "Đã học", skipped: "" } as Record<string, string>,
 } as const;
 

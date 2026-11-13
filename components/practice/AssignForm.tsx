@@ -54,13 +54,13 @@ export function AssignForm({
   const [title, setTitle] = useState(prefill?.title ?? "");
   const [picked, setPicked] = useState<string[]>([]);
   const [units, setUnits] = useState<PickerState>(() => stateFromCodes(unitChoices, prefill?.units ?? []));
-  // Once the tutor edits the name by hand, ticking Units no longer rewrites it.
-  const [titleTouched, setTitleTouched] = useState(false);
+  // Once the tutor edits the name by hand (or it came prefilled from the book link), ticking Units no longer rewrites it.
+  const [titleTouched, setTitleTouched] = useState(Boolean(prefill?.title));
   const byUnit = unitChoices.length > 0;
   function changeUnits(next: PickerState) {
     setUnits(next);
-    const t = autoTitle(unitChoices, next);
-    if (!titleTouched && t) setTitle(t);
+    // Auto-filled name follows the ticks, including back to empty when everything is unticked; a typed or prefilled name is never touched.
+    if (!titleTouched) setTitle(autoTitle(unitChoices, next));
   }
   const [due, setDue] = useState("");
   const [frameId, setFrameId] = useState("");
@@ -204,16 +204,14 @@ export function AssignForm({
         {prefill && (prefill.pages || prefill.units.length > 0) ? (
           <p className="rounded-xl bg-[#eef3ef] px-3.5 py-2 text-sm" data-testid="assign-prefill">
             {prefillCopy.fromBook} {prefill.pages ? prefillCopy.pages(prefill.pages) : ""}
-            {prefill.pages && prefill.units.length > 0 ? " · " : ""}
+            {prefill.pages && prefill.units.length > 0 ? unitPickerCopy.sep : ""}
             {prefill.units.length > 0 ? prefillCopy.units(formatRange(prefill.units)) : ""}
           </p>
         ) : null}
-        {byUnit ? (
-          <div className="flex flex-col gap-1.5" data-testid="assign-by-unit">
-            <span className="text-sm font-medium">{unitPickerCopy.title}</span>
-            <UnitPicker learnerId={learnerId} choices={unitChoices} state={units} onChange={changeUnits} tagLabels={tagLabels} />
-          </div>
-        ) : null}
+        <div className="flex flex-col gap-1.5" data-testid="assign-by-unit">
+          <span className="text-sm font-medium">{unitPickerCopy.title}</span>
+          <UnitPicker learnerId={learnerId} choices={unitChoices} state={units} onChange={changeUnits} tagLabels={tagLabels} />
+        </div>
         <label className="flex flex-col gap-1.5 text-sm font-medium">
           {assignPage.titleLabel}
           <input

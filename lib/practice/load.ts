@@ -18,11 +18,14 @@ function fail(what: string, err: { code?: string; message?: string }): never {
 }
 
 /** Every assignment of one learner, newest first (including retracted ones; callers filter). */
-export async function loadAssignments(learnerId: string): Promise<AssignmentView[]> {
+export async function loadAssignments(learnerId: string, opts: { units?: boolean } = {}): Promise<AssignmentView[]> {
   const { data, error } = await createAdminClient().rpc("eng_assignment_overview", { p_learner: learnerId, p_assignment: null });
   if (error) fail("eng_assignment_overview", error);
-  return withUnits(learnerId, parseAssignments(data));
+  const list = parseAssignments(data);
+  return opts.units === false ? list : withUnits(learnerId, list);
 }
+
+const UNIT_CHUNK = 100;
 
 /**
  * The units of each assignment + the knowledge items derived from them (0029). Read as the signed-in adult (RLS: adults of that child).
@@ -32,8 +35,19 @@ async function withUnits(learnerId: string, list: AssignmentView[]): Promise<Ass
   if (list.length === 0) return list;
   try {
     const db = await createUserClient();
-    const { data: rows, error } = await db.from("assignment_units").select("assignment_id, curriculum_id, version_id, unit_code, ord").eq("learner_id", learnerId);
-    if (error || !rows || rows.length === 0) return list;
+    // Only the listed assignments (not "every row of the learner": the API caps a response at 1000 rows), in chunks to keep the URL short.
+    const ids = list.map((a) => a.id);
+    const rows: { assignment_id: string; curriculum_id: string; version_id: string; unit_code: string; ord: number }[] = [];
+    for (let i = 0; i < ids.length; i += UNIT_CHUNK) {
+      const { data, error } = await db
+        .from("assignment_units")
+        .select("assignment_id, curriculum_id, version_id, unit_code, ord")
+        .eq("learner_id", learnerId)
+        .in("assignment_id", ids.slice(i, i + UNIT_CHUNK));
+      if (error) return list;
+      rows.push(...(data ?? []));
+    }
+    if (rows.length === 0) return list;
     const versionIds = [...new Set(rows.map((r) => r.version_id as string))];
     const curriculumIds = [...new Set(rows.map((r) => r.curriculum_id as string))];
     const [cur, pts] = await Promise.all([

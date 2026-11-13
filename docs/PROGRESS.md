@@ -1409,18 +1409,18 @@ V1 Supabase Singapore (đã xác nhận) · V2 `vercel.json` `regions: ["sin1"]`
 
 ## UX vòng 2B — Giao theo Unit (13/11)
 
-Nhánh `feature/ux-round2b` (dựa trên `feature/ux-round2` = PR 2A; kế hoạch `docs/superpowers/plans/2026-11-13-ux-round2.md`, mục 4b / Task B1–B6). **SQL cần phụ huynh áp: `0029_assignment_units.sql` (sau khi gộp PR 2A và 2B)** — workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". Chỉ thêm, không sửa 0001–0028. Chưa áp `0029` thì Giao bài luyện vẫn chạy như cũ; tick Unit sẽ báo "Phần Giao theo Unit chưa sẵn sàng (cần cập nhật cơ sở dữ liệu)". Màn của con không đổi (con không thấy Unit hay mục kiến thức).
+Nhánh `feature/ux-round2b` (dựa trên `feature/ux-round2` = PR 2A; kế hoạch `docs/superpowers/plans/2026-11-13-ux-round2.md`, mục 4b / Task B1–B6). **SQL cần phụ huynh áp: `0029_assignment_units.sql` — áp 0029 ngay sau khi gộp 2A và 2B** — workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". Chỉ thêm, không sửa 0001–0028. Chưa áp `0029` thì Giao bài luyện vẫn chạy như cũ; tick Unit sẽ báo "Phần Giao theo Unit chưa sẵn sàng (cần cập nhật cơ sở dữ liệu)". Màn của con không đổi (con không thấy Unit hay mục kiến thức).
 
 ### Làm gì
-1. **Giao bài luyện → khối "Giao theo Unit"** (chỉ hiện khi em có giáo trình đã duyệt): tick Unit của giáo trình; tick một dòng Review / Kiểm tra tiến độ = tự tick các Unit nó ôn (bỏ tick một Unit của nó thì dòng Review tự bỏ tick); **tên bài tự điền** ("Destination C1 C2 · Unit 3–4" / "… · Review 2 (Unit 3–4)"), gia sư sửa tay thì không bị ghi đè nữa; dòng "Bài này luyện n mục kiến thức: …" cho thấy mục kiến thức app **suy ra** từ các Unit.
+1. **Giao bài luyện → khối "Giao theo Unit"** (em chưa có giáo trình đã duyệt thì khối hiện dòng gợi ý "Chưa có giáo trình đã duyệt — Mở Giáo trình"; tối đa 30 Unit một bài, có báo rõ khi chạm trần; tên bài tự điền được xóa/khôi phục khi bỏ tick hết, tên có sẵn từ "Giao bài này →" tính là đã sửa tay; mục kiến thức dẫn xuất theo thứ tự sách, giống thứ tự lưu): tick Unit của giáo trình; tick một dòng Review / Kiểm tra tiến độ = tự tick các Unit nó ôn (bỏ tick một Unit của nó thì dòng Review tự bỏ tick); **tên bài tự điền** ("Destination C1 C2 · Unit 3–4" / "… · Review 2 (Unit 3–4)"), gia sư sửa tay thì không bị ghi đè nữa; dòng "Bài này luyện n mục kiến thức: …" cho thấy mục kiến thức app **suy ra** từ các Unit.
 2. **Mục kiến thức thêm tay** (tối đa 3, như cũ) nằm gọn trong "+ Thêm mục kiến thức khác" (đóng sẵn). Trần 3 chỉ áp cho mục thêm tay, không áp cho Unit.
 3. **Bảng "Bài luyện đã giao"**, cột "Luyện mục kiến thức": "Unit 3–4 (8 mục) · + 2 mục thêm tay".
-4. **Tạo bài từ đề / Nạp bài đã làm:** ô chọn Unit dạng gọn (đóng sẵn) **chỉ điền sẵn tên bài**; không lưu Unit vào nháp, không gửi gì cho AI (có test canh `buildReadCall` không nhận tên).
+4. **Tạo bài từ đề / Nạp bài đã làm:** ô chọn Unit dạng gọn (đóng sẵn) **chỉ điền sẵn tên bài**; không lưu Unit vào nháp, không gửi gì cho AI (test canh: đưa vào đầu vào một tên có "Destination C1 · Unit 3" và khẳng định nó không có trong yêu cầu gửi AI, cho cả Nạp bài `buildReadCall` và Studio `buildExtractCall`).
 5. **"Giao bài này →"** (Giáo trình, bản đã duyệt) tick sẵn các Unit liên quan trong Giao bài luyện.
 
 ### SQL `0029_assignment_units.sql`
 - Bảng chỉ thêm `assignment_units` (bài giao · giáo trình · phiên bản đã duyệt · mã Unit · thứ tự), gắn `eng_forbid_mutation('learner_id')` + chặn truncate; RLS chỉ thầy/cô của em và phụ huynh đọc, học sinh không đọc; không ai (kể cả `service_role`) ghi trực tiếp.
-- `eng_create_assignment_v2` bọc `eng_create_assignment` (0016, không đổi) như `eng_write_lesson_note_v3` bọc v2: kiểm Unit thuộc giáo trình của **đúng em này**, phiên bản **đang dùng (đã duyệt)**, Unit không bị bỏ qua, không trùng, ≤ 30; sai → `22023 (bad_units)` và không tạo bài. Phát lại cùng `client_id` phải cùng Unit (khác → `23505`).
+- `eng_create_assignment_v2` bọc `eng_create_assignment` (0016, không đổi) như `eng_write_lesson_note_v3` bọc v2: kiểm Unit thuộc giáo trình của **đúng em này**, phiên bản **đang dùng (đã duyệt)**, Unit không bị bỏ qua, không trùng, ≤ 30; sai → `22023 (bad_units)` và không tạo bài. Quyền (như v1) được kiểm **trước** Unit (không quyền → `42501`). Phát lại cùng `client_id` so Unit yêu cầu với Unit **đã lưu** (không so với phiên bản đang dùng, nên vẫn phát lại được sau khi giáo trình đổi bản); khác → `23505`; chỉ bài mới mới kiểm theo phiên bản đang dùng. Chưa ghi Unit vào `audit_log` (bản v1 đã ghi sự kiện tạo bài).
 - Mục kiến thức của bài **dẫn xuất lúc đọc** từ `curriculum_unit_points` của đúng phiên bản đã lưu kèm, không chép vào `assignments.tag_keys`.
 - Xóa dữ liệu một em: `eng_purge_learner` / `eng_purge_preview` = bản 0027 + `assignment_units` (biên nhận có khóa mới). **Lệch nhỏ so với kế hoạch:** dòng xóa `assignment_units` đặt **trước giáo trình** (không chỉ trước `assignments`), vì bảng trỏ tới `curriculum_units` / `curricula`.
 
@@ -1431,7 +1431,7 @@ Nhánh `feature/ux-round2b` (dựa trên `feature/ux-round2` = PR 2A; kế hoạ
 ### Cách thử (sau khi áp 0029; gia đình THỬ, thầy/cô của Nguyên (thử), em đã có giáo trình đã duyệt)
 - Giao bài → thấy khối "Giao theo Unit" ở trên; tick U3, U4 → tên bài tự điền; sửa tên tay rồi tick thêm → tên không đổi. Tick "Review 2" → U3, U4 tự tick; bỏ U4 → Review 2 tự bỏ tick, U3 còn.
 - Mở "+ Thêm mục kiến thức khác" → chọn tối đa 3 mục thêm tay. Giao → bảng hiện "Unit 3–4 (n mục) · + k mục thêm tay".
-- Giao bài không tick Unit → như cũ. Em chưa có giáo trình đã duyệt → form như cũ (không có khối Unit).
+- Giao bài không tick Unit → như cũ. Em chưa có giáo trình đã duyệt → form như cũ, chỉ thêm dòng gợi ý "Mở Giáo trình".
 - Giáo trình (đã duyệt) → "Giao bài này →" → "Giao bài luyện": Unit đã tick sẵn.
 - Tạo bài từ đề / Nạp bài đã làm → mở "Chọn Unit để điền tên bài" → tick → tên bài được điền, không có dòng mục kiến thức.
 - Xóa dữ liệu em thử (đã có bài giao theo Unit): biên nhận có "Unit của bài luyện đã giao".

@@ -5,7 +5,11 @@
  * (it has no code to point at): ticking it ticks the Units it revises (V10) and puts its name in the title; unticking one of those Units
  * unticks the Review row again. Only Units are saved with the assignment. Knowledge items are DERIVED from the ticked Units.
  */
+import { unitPickerCopy } from "@/lib/copy/vi";
 import { formatRange } from "@/lib/prefill";
+
+/** The database accepts at most 30 Units per assignment. */
+export const MAX_UNITS = 30;
 
 export type UnitRow = { kind: "unit"; code: string; title: string; status: string; points: string[] };
 export type ReviewRow = { kind: "review"; id: string; label: string; progressTest: boolean; related: string[] };
@@ -25,7 +29,7 @@ export function isReviewTicked(s: PickerState, curriculumId: string, id: string)
 }
 
 export function toggleUnit(s: PickerState, choices: UnitChoice[], curriculumId: string, code: string): PickerState {
-  if (!isUnitTicked(s, curriculumId, code)) return { ...s, units: [...s.units, { curriculumId, code }] };
+  if (!isUnitTicked(s, curriculumId, code)) return s.units.length >= MAX_UNITS ? s : { ...s, units: [...s.units, { curriculumId, code }] };
   const c = choiceOf(choices, curriculumId);
   const stillCovered = (id: string) => c?.reviews.find((r) => r.id === id)?.related.includes(code) !== true;
   return {
@@ -34,12 +38,13 @@ export function toggleUnit(s: PickerState, choices: UnitChoice[], curriculumId: 
   };
 }
 
-/** Ticking a Review row ticks its Units (those not ticked yet, in book order); unticking it leaves the Units alone. */
+/** Ticking a Review row ticks its Units (those not ticked yet, in book order, up to MAX_UNITS in all); unticking it leaves the Units alone. */
 export function toggleReview(s: PickerState, choices: UnitChoice[], curriculumId: string, id: string): PickerState {
   if (isReviewTicked(s, curriculumId, id)) return { ...s, reviews: s.reviews.filter((r) => !(r.curriculumId === curriculumId && r.id === id)) };
   const row = choiceOf(choices, curriculumId)?.reviews.find((r) => r.id === id);
   if (!row) return s;
-  const add = row.related.filter((code) => !isUnitTicked(s, curriculumId, code)).map((code) => ({ curriculumId, code }));
+  const room = Math.max(0, MAX_UNITS - s.units.length);
+  const add = row.related.filter((code) => !isUnitTicked(s, curriculumId, code)).slice(0, room).map((code) => ({ curriculumId, code }));
   return { units: [...s.units, ...add], reviews: [...s.reviews, { curriculumId, id }] };
 }
 
@@ -62,17 +67,26 @@ export function autoTitle(choices: UnitChoice[], s: PickerState): string {
     if (codes.length === 0 && labels.length === 0) continue;
     const range = codes.length > 0 ? `Unit ${formatRange(codes)}` : "";
     const seg = labels.length > 0 ? `${labels.join(", ")}${range ? ` (${range})` : ""}` : range;
-    parts.push(`${c.title} · ${seg}`);
+    parts.push(`${c.title}${unitPickerCopy.sep}${seg}`);
   }
-  return parts.join(" + ").slice(0, 200);
+  return parts.join(unitPickerCopy.titleJoin).slice(0, 200);
 }
 
-/** The knowledge items of the ticked Units, in tick order, each once. */
+/** A ticked Review row that could not tick all its Units (the 30-Unit cap): some of its Units are not ticked. */
+export function reviewIsPartial(choices: UnitChoice[], s: PickerState, curriculumId: string, id: string): boolean {
+  if (!isReviewTicked(s, curriculumId, id)) return false;
+  const row = choiceOf(choices, curriculumId)?.reviews.find((r) => r.id === id);
+  return !!row && row.related.some((code) => !isUnitTicked(s, curriculumId, code));
+}
+
+/** The knowledge items of the ticked Units, in the same book order that is stored (see selectedUnits), each once. */
 export function derivedItems(choices: UnitChoice[], s: PickerState): string[] {
   const out: string[] = [];
-  for (const t of s.units) {
-    const u = choiceOf(choices, t.curriculumId)?.units.find((x) => x.code === t.code);
-    for (const p of u?.points ?? []) if (!out.includes(p)) out.push(p);
+  for (const c of choices) {
+    for (const u of c.units) {
+      if (!isUnitTicked(s, c.curriculumId, u.code)) continue;
+      for (const p of u.points) if (!out.includes(p)) out.push(p);
+    }
   }
   return out;
 }

@@ -29,7 +29,7 @@ export function UnitTitlePicker({ learnerId, choices, initialCodes = [], onTitle
         onChange={(next) => {
           setState(next);
           const t = autoTitle(choices, next).slice(0, maxLength);
-          if (t) onTitle(t);
+          onTitle(t); // empty when everything is unticked: the parent clears an auto-filled name (it ignores this once the name is typed)
         }}
       />
     </details>

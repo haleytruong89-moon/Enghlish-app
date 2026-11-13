@@ -38,7 +38,11 @@ describe("read-answers.v1 (prompt, tool, fake)", () => {
     expect(estimateInputTokens(call)).toBeGreaterThan(0);
   });
   it("the name of the test (even one filled in from a Unit) never reaches the AI: buildReadCall takes no title, and the document labels are fixed", () => {
-    const call = buildReadCall({ model: "m", toolChoice: "tool", prompt: "{{TAGS}}", ctx: CTX, docs: [{ kind: "pdf", title: "BÀI LÀM", base64: "JVBERg==" }] } as Parameters<typeof buildReadCall>[0] & { title: string });
+    // The input DOES carry a title (extra property, as a careless caller could pass it): it must never reach the request.
+    const input = { model: "m", toolChoice: "tool", prompt: "{{TAGS}}", ctx: CTX, docs: [{ kind: "pdf", title: "BÀI LÀM", base64: "JVBERg==" }], title: "Destination C1 · Unit 3" };
+    const call = buildReadCall(input as Parameters<typeof buildReadCall>[0]);
+    expect(JSON.stringify(input)).toContain("Destination C1 · Unit 3"); // the guard can fail: the title is really in the input
+    expect(JSON.stringify(buildRequestBody(call))).not.toMatch(/Destination|Unit 3/);
     expect(JSON.stringify(call)).not.toMatch(/Destination|Unit \d/);
     expect(Object.keys(call).sort()).toEqual(["documents", "instructions", "maxTokens", "model", "tool", "toolChoice"]);
   });

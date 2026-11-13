@@ -14,7 +14,7 @@ export type SubmissionView = {
   files: StoredFile[];
 };
 
-/** The units one assignment was given for, grouped by curriculum (0029). `codes` keep the order the tutor ticked them. */
+/** The units one assignment was given for, grouped by curriculum (0029). `codes` are in book order (the order the form sends them). */
 export type AssignmentUnitGroup = { curriculumId: string; title: string; codes: string[] };
 
 /** One assignment as the tutor / parent sees it (from english.eng_assignment_overview). */

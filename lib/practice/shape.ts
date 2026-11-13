@@ -163,7 +163,7 @@ const unitPointSchema = z.object({ version_id: text, code: text, tag_key: text, 
 
 /**
  * Attach the units of each assignment and the knowledge items DERIVED from them. The items are never stored on the assignment: they come
- * from the curriculum_unit_points of the exact version the unit was ticked in, in the order the units were ticked, without duplicates.
+ * from the curriculum_unit_points of the exact version the unit was ticked in, in the stored order of the units (book order of each curriculum), without duplicates.
  * Rows of an assignment that is not in the list are ignored.
  */
 export function attachAssignmentUnits(assignments: AssignmentView[], rawUnits: unknown, rawCurricula: unknown, rawPoints: unknown): AssignmentView[] {

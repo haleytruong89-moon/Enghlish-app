@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  autoTitle, derivedItems, emptyPicker, isReviewTicked, isUnitTicked, selectedUnits, stateFromCodes, toggleReview, toggleUnit, type UnitChoice,
+  autoTitle, derivedItems, MAX_UNITS, reviewIsPartial, emptyPicker, isReviewTicked, isUnitTicked, selectedUnits, stateFromCodes, toggleReview, toggleUnit, type UnitChoice,
 } from "@/lib/curriculum/unitPicker";
 
 const u = (n: number, points: string[] = []) => ({ kind: "unit" as const, code: `U${n}`, title: `Unit ${n}`, status: "not_started", points });
@@ -50,14 +50,32 @@ describe("unit picker (V10)", () => {
     const both = toggleUnit(toggleUnit(emptyPicker, two, "c2", "U1"), two, "c1", "U2");
     expect(autoTitle(two, both)).toBe("Destination C1 C2 · Unit 2 + Reading 3 · Unit 1");
   });
-  it("derivedItems: ticked order, no duplicates; selectedUnits in book order", () => {
+  it("derivedItems and selectedUnits both follow book order (as stored), no duplicate items", () => {
     const s = toggleUnit(toggleUnit(emptyPicker, C, "c1", "U4"), C, "c1", "U3");
-    expect(derivedItems(C, s)).toEqual(["d", "e", "c"]);
+    expect(derivedItems(C, s)).toEqual(["c", "d", "e"]);
     expect(selectedUnits(C, s).map((x) => x.unit_code)).toEqual(["U3", "U4"]);
   });
   it("stateFromCodes ticks the known codes in the curriculum that has most of them", () => {
     const two: UnitChoice[] = [{ ...DEST, curriculumId: "c2", units: [u(1)] }, DEST];
     expect(stateFromCodes(two, ["U3", "U4", "U9"]).units).toEqual([{ curriculumId: "c1", code: "U3" }, { curriculumId: "c1", code: "U4" }]);
     expect(stateFromCodes(C, ["U9"])).toEqual(emptyPicker);
+  });
+});
+
+describe("30-Unit cap", () => {
+  const big: UnitChoice = {
+    curriculumId: "b", title: "Big", units: Array.from({ length: 40 }, (_, i) => u(i + 1)),
+    reviews: [{ kind: "review", id: "pt", label: "Progress Test", progressTest: true, related: Array.from({ length: 40 }, (_, i) => `U${i + 1}`) }],
+  };
+  it("a Progress Test over 40 Units ticks only 30 and is reported as partial", () => {
+    const s = toggleReview(emptyPicker, [big], "b", "pt");
+    expect(s.units.length).toBe(MAX_UNITS);
+    expect(reviewIsPartial([big], s, "b", "pt")).toBe(true);
+  });
+  it("no further Unit can be ticked at the cap, but one can be unticked", () => {
+    let s = toggleReview(emptyPicker, [big], "b", "pt");
+    expect(toggleUnit(s, [big], "b", "U31")).toBe(s);
+    s = toggleUnit(s, [big], "b", "U1");
+    expect(s.units.length).toBe(29);
   });
 });

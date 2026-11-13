@@ -5,7 +5,7 @@ import { PageGuidance, PdfPagePicker, pagesBlock, type PdfPick } from "@/compone
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import type { GateReason } from "@/lib/ai/cap";
-import { prefillCopy, studioCopy } from "@/lib/copy/vi";
+import { prefillCopy, studioCopy, unitPickerCopy } from "@/lib/copy/vi";
 import { UnitTitlePicker } from "@/components/curriculum/UnitTitlePicker";
 import type { UnitChoice } from "@/lib/curriculum/unitPicker";
 import { formatRange, type Prefill } from "@/lib/prefill";
@@ -18,7 +18,8 @@ const ACCEPT = "application/pdf,.pdf,application/vnd.openxmlformats-officedocume
 export function UploadForm({ learnerId, aiAllowed, aiReason, prefill, unitChoices = [] }: { learnerId: string; aiAllowed: boolean; aiReason: GateReason | null; prefill?: Prefill; unitChoices?: UnitChoice[] }) {
   const router = useRouter();
   const [title, setTitle] = useState(prefill?.title ?? "");
-  const [titleTouched, setTitleTouched] = useState(false);
+  // A name that came with the link ("Giao bài này →") counts as typed: ticking Units never overwrites it.
+  const [titleTouched, setTitleTouched] = useState(Boolean(prefill?.title));
   const [testPick, setTestPick] = useState<PdfPick>({ file: null, pages: null, pending: false });
   const [keyPick, setKeyPick] = useState<PdfPick>({ file: null, pages: null, pending: false });
   const test = testPick.file;
@@ -54,7 +55,7 @@ export function UploadForm({ learnerId, aiAllowed, aiReason, prefill, unitChoice
       {prefill && (prefill.pages || prefill.units.length > 0) ? (
         <p className="rounded-xl bg-[#eef3ef] px-3.5 py-2 text-sm" data-testid="studio-prefill">
           {prefillCopy.fromBook} {prefill.pages ? prefillCopy.pages(prefill.pages) : ""}
-          {prefill.pages && prefill.units.length > 0 ? " · " : ""}
+          {prefill.pages && prefill.units.length > 0 ? unitPickerCopy.sep : ""}
           {prefill.units.length > 0 ? prefillCopy.units(formatRange(prefill.units)) : ""}
         </p>
       ) : null}

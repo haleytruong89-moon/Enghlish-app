@@ -4,7 +4,7 @@ import Link from "next/link";
 import { fallbackLabels, unitPickerCopy } from "@/lib/copy/vi";
 import { formatRange } from "@/lib/prefill";
 import {
-  derivedItems, isReviewTicked, isUnitTicked, toggleReview, toggleUnit, type PickerState, type UnitChoice,
+  derivedItems, isReviewTicked, MAX_UNITS, reviewIsPartial, isUnitTicked, toggleReview, toggleUnit, type PickerState, type UnitChoice,
 } from "@/lib/curriculum/unitPicker";
 
 const SHOWN_ITEMS = 6;
@@ -47,9 +47,11 @@ export function UnitPicker({
   const body = (
     <div className="flex flex-col gap-3" data-testid={testId}>
       <p className="text-sm text-muted">{compact ? unitPickerCopy.helpTitleOnly : unitPickerCopy.help}</p>
-      {choices.map((c) => (
-        <details key={c.curriculumId} open={compact ? undefined : true} className="rounded-xl border border-line px-3 py-2" data-testid={`${testId}-${c.curriculumId}`}>
-          <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">{c.title}</summary>
+      {choices.map((c) => {
+        const Wrap = compact ? "section" : "details";
+        return (
+        <Wrap key={c.curriculumId} {...(compact ? {} : { open: true })} className="rounded-xl border border-line px-3 py-2" data-testid={`${testId}-${c.curriculumId}`}>
+          {compact ? <h4 className="py-2 text-sm font-semibold">{c.title}</h4> : <summary className="min-h-11 cursor-pointer py-2 text-sm font-semibold">{c.title}</summary>}
           <ul className="flex flex-col gap-1 pb-2">
             {c.units.map((u) => {
               const on = isUnitTicked(state, c.curriculumId, u.code);
@@ -67,13 +69,19 @@ export function UnitPicker({
                 <label className="flex min-h-11 items-center gap-2 text-sm italic">
                   <input type="checkbox" checked={isReviewTicked(state, c.curriculumId, r.id)} disabled={disabled} onChange={() => onChange(toggleReview(state, choices, c.curriculumId, r.id))} data-testid={`review-${c.curriculumId}-${r.id}`} className="h-5 w-5" />
                   {r.label}
-                  {r.related.length > 0 ? <span className="not-italic text-muted"> · {unitPickerCopy.reviewHint(formatRange(r.related))}</span> : null}
+                  {r.related.length > 0 ? <span className="not-italic text-muted">{unitPickerCopy.sep}{unitPickerCopy.reviewHint(formatRange(r.related))}</span> : <span className="not-italic text-muted">{unitPickerCopy.sep}{unitPickerCopy.reviewNoUnits}</span>}
                 </label>
               </li>
             ))}
           </ul>
-        </details>
-      ))}
+        </Wrap>
+        );
+      })}
+      {state.units.length >= MAX_UNITS || state.reviews.some((r) => reviewIsPartial(choices, state, r.curriculumId, r.id)) ? (
+        <p role="status" className="rounded-xl bg-[#FBF1DC] px-3.5 py-2 text-sm text-[#6B4600]" data-testid={`${testId}-max`}>
+          {state.reviews.some((r) => reviewIsPartial(choices, state, r.curriculumId, r.id)) ? unitPickerCopy.reviewPartial(MAX_UNITS) : unitPickerCopy.maxUnits(MAX_UNITS)}
+        </p>
+      ) : null}
       {!compact && state.units.length > 0 ? (
         <p className="rounded-xl bg-[#eef3ef] px-3.5 py-2 text-sm" aria-live="polite" data-testid={`${testId}-derived`}>
           {items.length > 0 ? unitPickerCopy.derived(items.length, shown.join(", "), items.length - shown.length) : unitPickerCopy.derivedNone}
