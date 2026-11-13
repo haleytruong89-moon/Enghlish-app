@@ -33,13 +33,16 @@ export const AI_BASIS = {
   assumedTokensPerSec: [60, 90],
 } as const;
 
-/** Size limit of a file kept in storage (MAX_FILE_BYTES in lib/storage) - checked on the CUT file. */
-export const MAX_CUT_BYTES = 15 * 1024 * 1024;
+/** Answer keys: 1–3 pages recommended (the same figure in the picker and in the guidance text). */
+export const KEY_RECOMMEND = 3;
 /** Above this a browser may struggle to open a PDF at all: only a hint is shown. */
 export const BIG_SOURCE_BYTES = 150 * 1024 * 1024;
 
-export function checkPages(flow: PdfFlow, main: number, other: number): { level: "ok" | "warn" | "block"; messageKey: string } {
+export function checkPages(flow: PdfFlow, main: number | null, other: number | null): { level: "ok" | "warn" | "block"; messageKey: string } {
   const l = PAGE_LIMITS[flow];
+  // A Word file or a picture has no page count, but an answer key that is a PDF still counts toward the total.
+  main = main ?? 0;
+  other = other ?? 0;
   const total = main + other;
   if (main > l.blockMain || total > l.blockTotal) return { level: "block", messageKey: `${flow}_block` };
   if (main > l.warnMain || total > l.warnTotal) return { level: "warn", messageKey: `${flow}_warn` };

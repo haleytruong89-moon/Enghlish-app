@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { Client } from "pg";
 import { importCopy, pdfPickCopy } from "@/lib/copy/vi";
+import { KEY_RECOMMEND, PAGE_LIMITS } from "@/lib/pdf/limits";
 import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { LEARNER_IDS, loginAs } from "./helpers";
 
@@ -28,7 +29,7 @@ async function q<R extends Record<string, unknown>>(sql: string, params: unknown
 async function startImport(page: Page, o: { title: string; day: string; tag: string }) {
   await page.goto(`/learners/${NGUYEN}/imports/new`);
   await page.getByTestId("import-title").fill(o.title);
-  await expect(page.getByTestId("page-guidance")).toContainText(pdfPickCopy.guidance.import);
+  await expect(page.getByTestId("page-guidance")).toContainText(pdfPickCopy.guidance.import(PAGE_LIMITS.import, KEY_RECOMMEND));
   await page.getByTestId("import-work").setInputFiles({ name: "bai-lam.pdf", mimeType: "application/pdf", buffer: pdf(`work ${o.tag}`) });
   await page.getByTestId("import-key").setInputFiles({ name: "dap-an.pdf", mimeType: "application/pdf", buffer: pdf(`key ${o.tag}`) });
   await page.getByTestId("import-date").fill(o.day);

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { PageGuidance, PdfPagePicker, pagesBlock, type PdfPick } from "@/components/ui/PdfPagePicker";
 import { pdfPickCopy } from "@/lib/copy/vi";
+import { KEY_RECOMMEND, PAGE_LIMITS } from "@/lib/pdf/limits";
 
 const pdfInfo = vi.fn();
 const cutPdf = vi.fn();
@@ -41,7 +42,7 @@ describe("PdfPagePicker", () => {
   it("a 40-page PDF in Studio: the page box is empty, the send button is off and the guidance is shown", async () => {
     pdfInfo.mockResolvedValue({ ok: true, pageCount: 40 });
     render(<Form />);
-    expect(screen.getByTestId("page-guidance").textContent).toContain(pdfPickCopy.guidance.studio);
+    expect(screen.getByTestId("page-guidance").textContent).toContain(pdfPickCopy.guidance.studio(PAGE_LIMITS.studio, KEY_RECOMMEND));
     await choose("main", pdf("sach.pdf", 3 * 1024 * 1024));
     await waitFor(() => expect(screen.getByTestId("main-info").textContent).toBe(pdfPickCopy.info(40, "3.0")));
     expect((screen.getByTestId("main-pages") as HTMLInputElement).value).toBe("");
@@ -75,7 +76,7 @@ describe("PdfPagePicker", () => {
     fireEvent.change(screen.getByTestId("main-pages"), { target: { value: "1-12" } });
     fireEvent.click(screen.getByTestId("main-use"));
     await screen.findByTestId("main-ready");
-    expect(screen.getByTestId("page-guidance-block").textContent).toBe(pdfPickCopy.block.studio);
+    expect(screen.getByTestId("page-guidance-block").textContent).toBe(pdfPickCopy.block.studio(PAGE_LIMITS.studio));
     expect(sendOff()).toBe(true);
   });
 
@@ -115,12 +116,22 @@ describe("PdfPagePicker", () => {
     await waitFor(() => expect(screen.getByTestId("main-error").textContent).toBe(pdfPickCopy.errors.range(40)));
   });
 
-  it("a password-protected PDF is explained and nothing is sent", async () => {
+  it("a locked PDF (owner password / no editing) is sent whole with a warning that it cannot be cut", async () => {
     pdfInfo.mockResolvedValue({ ok: false, reason: "encrypted" });
     render(<Form />);
-    await choose("main", pdf());
+    await choose("main", pdf("khoa.pdf"));
     expect((await screen.findByTestId("main-error")).textContent).toBe(pdfPickCopy.errors.encrypted);
-    expect(sendOff()).toBe(true);
+    await waitFor(() => expect(sendOff()).toBe(false));
+    expect(screen.getByTestId("sent-name").textContent).toBe("khoa.pdf");
+  });
+
+  it("an answer key of 14 pages next to a Word file still counts against the total", async () => {
+    pdfInfo.mockResolvedValue({ ok: true, pageCount: 14 });
+    render(<Form />);
+    await choose("other", pdf("dap-an.pdf"));
+    fireEvent.change(await screen.findByTestId("other-pages"), { target: { value: "1-13" } });
+    fireEvent.click(screen.getByTestId("other-use"));
+    await waitFor(() => expect(screen.getByTestId("page-guidance").getAttribute("data-level")).toBe("block"));
   });
 
   it("a PDF the browser cannot open still goes through whole (the server judges it, as before)", async () => {

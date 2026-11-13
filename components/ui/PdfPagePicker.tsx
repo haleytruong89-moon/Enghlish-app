@@ -4,13 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { FilePicker } from "@/components/ui/FilePicker";
 import { pdfPickCopy } from "@/lib/copy/vi";
 import { cutPdf, pdfInfo } from "@/lib/pdf/cut";
-import { BIG_SOURCE_BYTES, checkPages, type PdfFlow } from "@/lib/pdf/limits";
+import { BIG_SOURCE_BYTES, checkPages, KEY_RECOMMEND, PAGE_LIMITS, type PdfFlow } from "@/lib/pdf/limits";
 import { formatPages, parsePages } from "@/lib/pdf/pages";
 
 /** What the form needs to know: the file to send (null until a long PDF has its pages chosen), how many pages it has, and whether a choice is still due. */
 export type PdfPick = { file: File | null; pages: number | null; pending: boolean };
 
-const OTHER_RECOMMEND = 3; // answer keys: 1–3 pages
 const mb = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1);
 const isPdf = (f: File) => f.type === "application/pdf" || /\.pdf$/i.test(f.name);
 
@@ -58,6 +57,7 @@ export function PdfPagePicker({
     setApplied(null);
     setPlain(null);
     setError(null);
+    setBusy(false);
   }
   // A reset also cancels any read or cut still running.
   useEffect(() => {
@@ -86,18 +86,15 @@ export function PdfPagePicker({
     if (mine !== token.current) return;
     setBusy(false);
     if (!info.ok) {
-      if (info.reason === "encrypted") {
-        setError(pdfPickCopy.errors.encrypted);
-        return report({ file: null, pages: null, pending: false });
-      }
-      // Not a PDF this browser can open: let the server judge the whole file, as before.
-      setError(pdfPickCopy.errors.unreadable);
+      // A PDF this browser cannot open or cut (damaged, or locked so that it cannot be edited): send the whole file, say it cannot be cut,
+      // and let the server count the pages and judge it.
+      setError(info.reason === "encrypted" ? pdfPickCopy.errors.encrypted : pdfPickCopy.errors.unreadable);
       setPlain(f);
       return report({ file: f, pages: null, pending: false });
     }
     setSrc(f);
     setCount(info.pageCount);
-    const whole = flow === "assignment" || (role === "main" ? checkPages(flow, info.pageCount, 0).level === "ok" : info.pageCount <= OTHER_RECOMMEND);
+    const whole = flow === "assignment" || (role === "main" ? checkPages(flow, info.pageCount, 0).level === "ok" : info.pageCount <= KEY_RECOMMEND);
     if (whole) {
       const all = formatPages(Array.from({ length: info.pageCount }, (_, i) => i));
       setText(all);
@@ -198,12 +195,17 @@ export function PdfPagePicker({
   );
 }
 
+function guidanceText(flow: Exclude<PdfFlow, "assignment">): string {
+  const l = PAGE_LIMITS[flow];
+  return flow === "toc" ? pdfPickCopy.guidance.toc(l) : pdfPickCopy.guidance[flow](l, KEY_RECOMMEND);
+}
+
 /** Guidance under the file pickers of an AI flow: always visible; turns amber when long, red (button must be off) when too long. */
 export function PageGuidance({ flow, main, other, testId = "page-guidance" }: { flow: Exclude<PdfFlow, "assignment">; main: number | null; other: number | null; testId?: string }) {
-  const check = main === null ? { level: "ok" as const } : checkPages(flow, main, other ?? 0);
+  const check = main === null && other === null ? { level: "ok" as const } : checkPages(flow, main, other);
   return (
     <div className="flex flex-col gap-2" data-testid={testId} data-level={check.level}>
-      <p className="text-xs text-muted">{pdfPickCopy.guidance[flow]}</p>
+      <p className="text-xs text-muted">{guidanceText(flow)}</p>
       {check.level === "warn" ? (
         <p role="status" data-testid={`${testId}-warn`} className="rounded-xl bg-[#FBF1DC] px-3.5 py-2 text-sm text-[#6B4600]">
           {pdfPickCopy.warn[flow]}
@@ -211,7 +213,7 @@ export function PageGuidance({ flow, main, other, testId = "page-guidance" }: { 
       ) : null}
       {check.level === "block" ? (
         <p role="alert" data-testid={`${testId}-block`} className="rounded-xl border border-[#E9C46A] bg-[#FBF1DC] px-3.5 py-2 text-sm font-semibold text-[#8A1C12]">
-          {pdfPickCopy.block[flow]}
+          {pdfPickCopy.block[flow](PAGE_LIMITS[flow])}
         </p>
       ) : null}
     </div>
@@ -220,5 +222,5 @@ export function PageGuidance({ flow, main, other, testId = "page-guidance" }: { 
 
 /** True when the form must not send: a long PDF still waits for its pages, or the chosen pages are too many. */
 export function pagesBlock(flow: Exclude<PdfFlow, "assignment">, main: number | null, other: number | null, pending: boolean): boolean {
-  return pending || (main !== null && checkPages(flow, main, other ?? 0).level === "block");
+  return pending || ((main !== null || other !== null) && checkPages(flow, main, other).level === "block");
 }

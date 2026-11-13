@@ -2447,16 +2447,17 @@ export const pdfPickCopy = {
     empty: "Bạn gõ các trang cần gửi nhé.",
     syntax: "Gõ số trang như 1–3, 7.",
     range: (n: number) => `File chỉ có ${n} trang.`,
-    encrypted: "File PDF có mật khẩu. Mở bằng máy rồi in ra một file PDF mới nhé.",
+    encrypted: "File PDF này bị khóa nên không cắt được trang. App sẽ gửi nguyên file; nếu file dài, AI có thể không đọc xong.",
     unreadable: "Không đọc được file PDF này. App sẽ thử gửi nguyên file.",
     cutFailed: "Không cắt được các trang này. Bạn thử chọn lại nhé.",
   },
   bigSource: "Máy có thể chậm khi mở file này.",
   cutName: (base: string, pages: string) => `${base} (tr. ${pages}).pdf`,
+  /** Page numbers come from lib/pdf/limits.ts (PAGE_LIMITS, KEY_RECOMMEND) so the words and the rule cannot drift apart. */
   guidance: {
-    studio: "Nên gửi đề 3–6 trang (khoảng tối đa 60 câu) và đáp án 1–3 trang, chỉ phần tương ứng.",
-    import: "Bài làm tối đa 8 trang (khoảng 100 câu), đáp án 1–3 trang.",
-    toc: "Chỉ các trang mục lục (1–4 trang).",
+    studio: (l: { recommend: string }, keyMax: number) => `Nên gửi đề ${l.recommend} trang (khoảng tối đa 60 câu) và đáp án 1–${keyMax} trang, chỉ phần tương ứng.`,
+    import: (l: { recommend: string }, keyMax: number) => `Bài làm ${l.recommend.replace("≤ ", "tối đa ")} trang (khoảng 100 câu), đáp án 1–${keyMax} trang.`,
+    toc: (l: { recommend: string }) => `Chỉ các trang mục lục (${l.recommend} trang).`,
   },
   warn: {
     studio: "Đề dài: AI có thể không đọc xong trong một lần (tối đa 4 phút) và vẫn tính tiền. Nên chia đề thành hai lần tạo bài.",
@@ -2464,10 +2465,13 @@ export const pdfPickCopy = {
     toc: "Nhiều trang hơn một mục lục: AI có thể đọc chậm và vẫn tính tiền. Chỉ gửi các trang mục lục.",
   },
   block: {
-    studio: "Đề quá dài để AI đọc trong một lần. Chọn ít trang hơn (đề tối đa 10 trang, tổng tối đa 12 trang) hoặc chia đề thành hai lần tạo bài.",
-    import: "Bài làm quá dài để AI đọc trong một lần. Chọn ít trang hơn (bài làm tối đa 12 trang, tổng tối đa 15 trang) hoặc chia bài thành hai lần nạp.",
-    toc: "Quá nhiều trang cho một mục lục (tối đa 8 trang). Chỉ chọn các trang mục lục.",
+    studio: (l: { blockMain: number; blockTotal: number }) => `Đề quá dài để AI đọc trong một lần. Chọn ít trang hơn (đề tối đa ${l.blockMain} trang, tổng tối đa ${l.blockTotal} trang) hoặc chia đề thành hai lần tạo bài.`,
+    import: (l: { blockMain: number; blockTotal: number }) => `Bài làm quá dài để AI đọc trong một lần. Chọn ít trang hơn (bài làm tối đa ${l.blockMain} trang, tổng tối đa ${l.blockTotal} trang) hoặc chia bài thành hai lần nạp.`,
+    toc: (l: { blockMain: number }) => `Quá nhiều trang cho một mục lục (tối đa ${l.blockMain} trang). Chỉ chọn các trang mục lục.`,
   },
+  /** Server-side check (the browser check can be bypassed): the same limits, said when a file is already too long on arrival. */
+  serverTooLong: (pages: number, max: number) => `File có ${pages} trang, nhiều hơn mức AI đọc được trong một lần (tối đa ${max} trang). Chọn ít trang hơn hoặc chia làm hai lần.`,
+  serverTooLongTotal: (pages: number, max: number) => `Tổng cộng ${pages} trang (đề và đáp án), nhiều hơn mức AI đọc được trong một lần (tối đa ${max} trang). Chọn ít trang hơn hoặc chia làm hai lần.`,
 } as const;
 
 /** UX vòng 2 · mục 6: danh sách "Không phải Unit" của giáo trình (Review, Progress Test, phần tra cứu). Chỉ đổi ở bản nháp. */
