@@ -121,6 +121,29 @@ describe("assignment_units + eng_create_assignment_v2 (migration 0029)", () => {
     await fail(make({ units: [], clientId }), "23505");
   });
 
+  it("a replay compares with the STORED units: it still works after the curriculum moved to a newer version that dropped the unit", async () => {
+    const c = await approved(NG(), M().tutorNguyen, [unitRow(1), unitRow(2)]);
+    const clientId = `cl-${randomUUID()}`;
+    const u = [{ curriculum_id: c.curriculum_id, unit_code: "U2" }];
+    const a = await make({ units: u, clientId });
+    const v2 = await svc<{ version_id: string }>("select english.eng_add_curriculum_version($1,null,false,$2,$3) as r", [c.curriculum_id, M().tutorNguyen, randomUUID()]);
+    await svc("select english.eng_save_curriculum_draft($1,$2::jsonb,$3,$4) as r",
+      [v2.version_id, JSON.stringify({ units: [unitRow(1)], ignored: [] }), await updatedAt(v2.version_id), M().tutorNguyen]);
+    await svc("select english.eng_approve_curriculum_version($1,$2,$3::jsonb,null,$4) as r", [v2.version_id, await updatedAt(v2.version_id),
+      JSON.stringify([{ code: "U1", title: "Unit 1", section: "Grammar", page: 6, skipped: false, points: [] }]), M().tutorNguyen]);
+    // a NEW assignment with U2 is refused now, the replay of the old one is not
+    await fail(make({ units: u }), "22023", /bad_units/);
+    expect(await make({ units: u, clientId })).toMatchObject({ id: a.id, replayed: true });
+    await fail(make({ units: [{ curriculum_id: c.curriculum_id, unit_code: "U1" }], clientId }), "23505");
+  });
+
+  it("permissions are checked before the units: a caller without rights gets 42501 even with invalid units", async () => {
+    const bad = [{ curriculum_id: cur.curriculum_id, unit_code: "U99" }];
+    await fail(make({ units: bad, by: M().studentNguyen }), "42501");
+    await fail(make({ units: bad, by: M().tutorAn }), "42501");
+    await fail(make({ units: "nope" as unknown as unknown[], by: M().tutorAn }), "42501");
+  });
+
   it("students and a tutor outside the relationship are refused by the v1 permission check", async () => {
     const u = [{ curriculum_id: cur.curriculum_id, unit_code: "U1" }];
     await fail(make({ units: u, by: M().studentNguyen }), "42501");

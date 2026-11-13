@@ -50,10 +50,32 @@ declare
   v_r jsonb;
   v_id uuid;
 begin
+  if p_learner is null or p_by is null then
+    raise exception 'eng_create_assignment_v2: learner and actor are required' using errcode = '22004';
+  end if;
+  -- Quyền TRƯỚC mọi kiểm Unit (người không có quyền luôn nhận 42501, không lộ Unit nào hợp lệ).
+  if not exists (select 1 from english.members m where m.id = p_by and m.role in ('tutor', 'parent'))
+     or not english.eng_actor_may_manage(p_by, p_learner) then
+    raise exception 'eng_create_assignment_v2: this member may not give work to this learner' using errcode = '42501';
+  end if;
   if p_units is null or pg_catalog.jsonb_typeof(p_units) <> 'array' or pg_catalog.jsonb_array_length(p_units) > 30 then
     raise exception 'eng_create_assignment_v2: units must be an array of at most 30 (bad_units)' using errcode = '22023';
   end if;
-  -- Mỗi Unit: giáo trình của ĐÚNG em này, phiên bản ĐANG DÙNG = đã duyệt (status 'approved'), Unit có trong phiên bản và không bị bỏ qua.
+
+  -- Gửi lại (cùng em + client_id): so Unit yêu cầu với Unit ĐÃ LƯU, không với phiên bản đang dùng (giáo trình có thể đã đổi bản).
+  select a.id into v_id from english.assignments a where a.learner_id = p_learner and a.client_id = p_client_id;
+  if found then
+    if (select coalesce(pg_catalog.jsonb_agg(a.curriculum_id::text || '/' || a.unit_code order by a.curriculum_id, a.unit_code), '[]'::jsonb)
+          from english.assignment_units a where a.assignment_id = v_id)
+       <> (select coalesce(pg_catalog.jsonb_agg((r ->> 'curriculum_id')::uuid::text || '/' || (r ->> 'unit_code')
+                 order by (r ->> 'curriculum_id')::uuid, r ->> 'unit_code'), '[]'::jsonb)
+             from pg_catalog.jsonb_array_elements(p_units) r) then
+      raise exception 'eng_create_assignment_v2: client_id was already used for an assignment with other units' using errcode = '23505';
+    end if;
+    return english.eng_create_assignment(p_learner, p_kind, p_url, p_title, p_tag_keys, p_due_on, p_frame, p_files, p_by, p_client_id);
+  end if;
+
+  -- Bài mới. Mỗi Unit: giáo trình của ĐÚNG em này, phiên bản ĐANG DÙNG = đã duyệt (status 'approved'), Unit có trong phiên bản và không bị bỏ qua.
   select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
            'curriculum_id', c.id, 'version_id', v.id, 'unit_code', u.code, 'ord', x.ord) order by x.ord), '[]'::jsonb)
     into v_rows
@@ -72,16 +94,6 @@ begin
   -- v1 kiểm người thao tác, quyền, file, tag_keys (<= 3), client_id; không đổi.
   v_r := english.eng_create_assignment(p_learner, p_kind, p_url, p_title, p_tag_keys, p_due_on, p_frame, p_files, p_by, p_client_id);
   v_id := (v_r ->> 'id')::uuid;
-  if coalesce((v_r ->> 'replayed')::boolean, false) then
-    if (select coalesce(pg_catalog.jsonb_agg(a.curriculum_id::text || '/' || a.unit_code order by a.curriculum_id, a.unit_code), '[]'::jsonb)
-          from english.assignment_units a where a.assignment_id = v_id)
-       <> (select coalesce(pg_catalog.jsonb_agg((r ->> 'curriculum_id') || '/' || (r ->> 'unit_code')
-                 order by (r ->> 'curriculum_id')::uuid, r ->> 'unit_code'), '[]'::jsonb)
-             from pg_catalog.jsonb_array_elements(v_rows) r) then
-      raise exception 'eng_create_assignment_v2: client_id was already used for an assignment with other units' using errcode = '23505';
-    end if;
-    return v_r;
-  end if;
   insert into english.assignment_units(assignment_id, learner_id, curriculum_id, version_id, unit_code, ord)
   select v_id, p_learner, (r ->> 'curriculum_id')::uuid, (r ->> 'version_id')::uuid, r ->> 'unit_code', (r ->> 'ord')::smallint
   from pg_catalog.jsonb_array_elements(v_rows) r;
