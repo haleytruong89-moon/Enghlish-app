@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { teachingNotes } from "@/lib/copy/vi";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { failText, postJson } from "@/lib/tutorwork/client";
@@ -13,6 +15,8 @@ export function TeachingNotesCard({ learnerId, alias, view, canEdit }: { learner
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [session, setSession] = useState(0);
+  const { state: saveState, run } = useSaveStatus(editing ? draft : null, { resetKey: editing ? session : "closed" });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   // One client id per field, made when editing starts and reused on a retry (a repeated request is a replay, never a second row). If the text of a
@@ -26,6 +30,7 @@ export function TeachingNotesCard({ learnerId, alias, view, canEdit }: { learner
     ids.current = Object.fromEntries(NOTE_FIELDS.map((f) => [f, { id: crypto.randomUUID(), text: text[f] ?? "" }]));
     savedFields.current = new Set();
     setMsg(null);
+    setSession((n) => n + 1);
     setEditing(true);
   };
 
@@ -41,23 +46,28 @@ export function TeachingNotesCard({ learnerId, alias, view, canEdit }: { learner
     if (todo.length === 0) return setMsg({ ok: false, text: savedFields.current.size > 0 ? teachingNotes.saved : teachingNotes.nothingChanged });
     setBusy(true);
     setMsg(null);
-    for (const f of todo) {
-      const text = draft[f] ?? "";
-      const cur = ids.current[f];
-      if (!cur || cur.text !== text) ids.current[f] = { id: crypto.randomUUID(), text };
-      const r = await postJson(`/api/learners/${learnerId}/teaching-notes`, { field: f, text, client_id: ids.current[f]!.id });
-      if (!r.ok) {
-        setBusy(false);
-        const done = NOTE_FIELDS.filter((x) => savedFields.current.has(x));
-        const failed = todo.filter((x) => !savedFields.current.has(x));
-        if (done.length > 0) {
-          router.refresh();
-          return setMsg({ ok: false, text: `${teachingNotes.partial(done.map((x) => teachingNotes.fields[x]).join(", "), failed.map((x) => teachingNotes.fields[x]).join(", "))} ${failText(r)}` });
+    const ok = await run(async () => {
+      for (const f of todo) {
+        const text = draft[f] ?? "";
+        const cur = ids.current[f];
+        if (!cur || cur.text !== text) ids.current[f] = { id: crypto.randomUUID(), text };
+        const r = await postJson(`/api/learners/${learnerId}/teaching-notes`, { field: f, text, client_id: ids.current[f]!.id });
+        if (!r.ok) {
+          const done = NOTE_FIELDS.filter((x) => savedFields.current.has(x));
+          const failed = todo.filter((x) => !savedFields.current.has(x));
+          if (done.length > 0) {
+            router.refresh();
+            setMsg({ ok: false, text: `${teachingNotes.partial(done.map((x) => teachingNotes.fields[x]).join(", "), failed.map((x) => teachingNotes.fields[x]).join(", "))} ${failText(r)}` });
+          } else {
+            setMsg({ ok: false, text: failText(r) });
+          }
+          return { ok: false };
         }
-        return setMsg({ ok: false, text: failText(r) });
+        savedFields.current.add(f);
       }
-      savedFields.current.add(f);
-    }
+      return { ok: true };
+    });
+    if (!ok) return setBusy(false);
     setBusy(false);
     setEditing(false);
     setMsg({ ok: true, text: teachingNotes.saved });
@@ -116,6 +126,7 @@ export function TeachingNotesCard({ learnerId, alias, view, canEdit }: { learner
         </dl>
       )}
       {!canEdit ? <p className="mt-3 text-xs text-muted">{teachingNotes.readOnly}</p> : null}
+      <SaveStatus state={saveState} className="mt-2" />
       {msg ? (
         <p role={msg.ok ? "status" : "alert"} data-testid="notes-msg" className={`mt-3 text-sm font-medium ${msg.ok ? "text-accent" : "text-[#7a2a0c]"}`}>
           {msg.text}
