@@ -143,8 +143,11 @@ test.describe.serial("S5 review", () => {
 
   test("S7a: right after the review, An's tutor sees the skill A-L3-CAUSE-W at level 1 or more (the app updated it after the save)", async ({ page }) => {
     await loginAs(page, "tutorAn");
-    await page.goto(`/learners/${LEARNER_IDS.an}/targets`);
-    await expect(page.getByTestId("skill-row-A-L3-CAUSE-W").getByTestId("skill-scale")).toHaveAttribute("data-level", /^[1-4]$/);
+    // The skill is recomputed after the response (after()): poll with a reload instead of reading once.
+    await expect(async () => {
+      await page.goto(`/learners/${LEARNER_IDS.an}/targets`);
+      await expect(page.getByTestId("skill-row-A-L3-CAUSE-W").getByTestId("skill-scale")).toHaveAttribute("data-level", /^[1-4]$/, { timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
   });
 
   test("An's tutor: records a live speaking attempt from the learner's page (text only) and can open it to score", async ({ page }) => {

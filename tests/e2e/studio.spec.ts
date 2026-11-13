@@ -108,8 +108,11 @@ test("the tutor decides the two waiting items; the result, the tag marks and the
   const label = (await q<{ label_vi: string }>("select label_vi from english.error_tags where key = 'dang-tu' and track_id = 'B'"))[0]!.label_vi;
   await page.goto(`/learners/${NGUYEN}/weak`);
   await expect(page.locator("main")).toContainText(label);
-  await page.goto(`/learners/${NGUYEN}/targets`);
-  await expect(page.getByTestId("skill-row-B-L2-CLOZE")).toContainText(new RegExp(`${levelLabels.SUPPORTED.label}|${levelLabels.DEVELOPING.label}`));
+  // The skill levels are recomputed after the response (after()): poll with a reload instead of reading once.
+  await expect(async () => {
+    await page.goto(`/learners/${NGUYEN}/targets`);
+    await expect(page.getByTestId("skill-row-B-L2-CLOZE")).toContainText(new RegExp(`${levelLabels.SUPPORTED.label}|${levelLabels.DEVELOPING.label}`), { timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
 });
 
 test("after the verdicts the child sees no waiting box; the parent sees the AI cost on the approved test", async ({ page, browser }) => {
