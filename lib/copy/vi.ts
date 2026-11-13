@@ -2462,3 +2462,18 @@ export const pdfPickCopy = {
     toc: "Quá nhiều trang cho một mục lục (tối đa 8 trang). Chỉ chọn các trang mục lục.",
   },
 } as const;
+
+/** UX vòng 2 · mục 6: danh sách "Không phải Unit" của giáo trình (Review, Progress Test, phần tra cứu). Chỉ đổi ở bản nháp. */
+export const nonUnitCopy = {
+  notUnit: "Không phải Unit",
+  notUnitPick: "Không phải Unit…",
+  toUnit: "Đưa về Unit",
+  progressBadge: "Kiểm tra tiến độ",
+  line: (reason: string, label: string, page: number | null) => `${reason} · ${label}${page !== null ? ` · tr. ${page}` : ""}`,
+  related: (units: string) => `Ôn: Unit ${units}`,
+  studioLink: "Tạo bài từ đề →",
+  assignLink: "Giao bài luyện →",
+  assignHeading: "Giao bài từ các dòng này",
+  assignHelp: "Review và Kiểm tra tiến độ không phải Unit nên không có trong độ phủ; bài giao xong chỉ điền sẵn tên bài.",
+  approvedOnly: "Muốn đổi dòng nào là Unit hay không: dùng “Sửa mục lục / bảng nối” (tạo bản mới).",
+} as const;

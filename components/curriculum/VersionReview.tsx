@@ -3,18 +3,20 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { NonUnitList } from "@/components/curriculum/NonUnitList";
 import { AddTag } from "@/components/tutor/AddTag";
 import { TagSelect } from "@/components/tutor/TagSelect";
 import { useTags } from "@/components/tutor/useTags";
 import { SaveStatus } from "@/components/ui/SaveStatus";
 import { useSaveStatus } from "@/components/ui/useSaveStatus";
-import { curriculumCopy } from "@/lib/copy/vi";
+import { curriculumCopy, nonUnitCopy } from "@/lib/copy/vi";
 import { curriculumErrorText, sendJson } from "@/lib/curriculum/client";
 import { buildTocContext } from "@/lib/curriculum/context";
 import { editStats, tooManyEdits } from "@/lib/curriculum/editStats";
 import type { CurriculumPayload, UnitDraft } from "@/lib/curriculum/schema";
 import type { VersionPageData } from "@/lib/curriculum/shape";
-import { EDIT_REASONS, QUALITY, UNIT_CODE_RE, type EditReason, type Quality } from "@/lib/curriculum/types";
+import { EDIT_REASONS, IGNORED_REASONS, QUALITY, UNIT_CODE_RE, type EditReason, type IgnoredReason, type Quality } from "@/lib/curriculum/types";
+import { moveToNonUnit, moveToUnit, relatedUnits } from "@/lib/curriculum/rows";
 import { rowsToResolve, validateCurriculum, type CurriculumIssue } from "@/lib/curriculum/validate";
 import type { SkillMapView } from "@/lib/skillmap/types";
 import type { TagInfo } from "@/lib/tutorwork/types";
@@ -52,6 +54,8 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
   function update(i: number, patch: Partial<UnitDraft>) {
     setPayload((p) => ({ ...p, units: p.units.map((u, k) => (k === i ? { ...u, ...patch } : u)) }));
   }
+  const notAUnit = (i: number, reason: IgnoredReason) => setPayload((p) => moveToNonUnit(p, i, reason));
+  const backToUnit = (k: number) => setPayload((p) => moveToUnit(p, k));
   function addUnit() {
     setPayload((p) => {
       const used = new Set(p.units.map((u) => u.code));
@@ -111,6 +115,7 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
       tags={tags}
       labelOf={labelOf}
       onChange={(patch) => update(i, patch)}
+      onNotUnit={(reason) => notAUnit(i, reason)}
       onAdd={add}
     />
   );
@@ -161,21 +166,7 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
         </details>
       ) : null}
 
-      {payload.ignored.length > 0 ? (
-        <details className="mt-4 rounded-xl border border-line bg-white p-3" data-testid="review-ignored">
-          <summary className="min-h-11 cursor-pointer text-sm font-semibold">
-            {curriculumCopy.ignoredTitle} ({payload.ignored.length})
-          </summary>
-          <ul className="mt-2 text-sm text-muted">
-            {payload.ignored.map((r, k) => (
-              <li key={k}>
-                {curriculumCopy.ignoredReasons[r.reason]} · {r.label}
-                {r.page ? ` · ${r.page}` : ""}
-              </li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
+      <NonUnitList rows={payload.ignored} mode="draft" onToUnit={backToUnit} related={(k) => relatedUnits(payload, k)} />
 
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-white/95 backdrop-blur" data-testid="review-bar">
         <div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-3 px-4 py-3">
@@ -223,7 +214,7 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
 }
 
 function UnitRow({
-  u, issues, map, tags, labelOf, onChange, onAdd,
+  u, issues, map, tags, labelOf, onChange, onNotUnit, onAdd,
 }: {
   u: UnitDraft;
   issues: CurriculumIssue[];
@@ -231,6 +222,7 @@ function UnitRow({
   tags: TagInfo[];
   labelOf: Map<string, string>;
   onChange: (patch: Partial<UnitDraft>) => void;
+  onNotUnit: (reason: IgnoredReason) => void;
   onAdd: ReturnType<typeof useTags>["add"];
 }) {
   const [making, setMaking] = useState<string | null>(null);
@@ -306,6 +298,20 @@ function UnitRow({
         <button type="button" className={small} onClick={() => onChange({ dropped: true })} data-testid={`${id}-drop`}>
           {curriculumCopy.drop}
         </button>
+        <select
+          value=""
+          aria-label={nonUnitCopy.notUnit}
+          onChange={(e) => e.target.value && onNotUnit(e.target.value as IgnoredReason)}
+          className="min-h-11 rounded-lg border border-line bg-white px-2 text-sm"
+          data-testid={`${id}-notunit`}
+        >
+          <option value="">{nonUnitCopy.notUnitPick}</option>
+          {IGNORED_REASONS.map((r) => (
+            <option key={r} value={r}>
+              {curriculumCopy.ignoredReasons[r]}
+            </option>
+          ))}
+        </select>
         {u.origin === "ai" ? (
           <label className="flex items-center gap-2 text-xs text-muted">
             {curriculumCopy.reasonLabel}
