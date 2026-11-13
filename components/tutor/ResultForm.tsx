@@ -1,5 +1,6 @@
 "use client";
 
+import { blockImplicitSubmit } from "@/lib/forms/enter";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import type { SkillMapView } from "@/lib/skillmap/types";
@@ -194,7 +195,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
     `min-h-11 rounded-lg border px-4 text-sm font-medium ${on ? "border-accent bg-accent text-white" : "border-line bg-white text-ink hover:border-accent"}`;
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-6" data-testid="result-form">
+    <form onSubmit={submit} onKeyDown={blockImplicitSubmit} className="flex flex-col gap-6" data-testid="result-form">
       {/* Once saved, the form is read-only until "Ghi bài khác": editing and saving again would record a second result. */}
       <fieldset disabled={saved !== null} className="m-0 flex min-w-0 flex-col gap-6 border-0 p-0">
         <section className="flex flex-col gap-2 rounded-xl border border-line bg-white p-4">

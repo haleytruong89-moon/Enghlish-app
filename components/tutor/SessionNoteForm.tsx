@@ -1,5 +1,6 @@
 "use client";
 
+import { blockImplicitSubmit } from "@/lib/forms/enter";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
@@ -129,7 +130,7 @@ export function SessionNoteForm({
     `min-h-11 rounded-lg border px-3 text-sm font-medium ${on ? "border-accent bg-accent text-white" : "border-line bg-white text-ink hover:border-accent"}`;
 
   return (
-    <form onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]" data-testid="session-form">
+    <form onSubmit={submit} onKeyDown={blockImplicitSubmit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]" data-testid="session-form">
       <fieldset disabled={saved} className="m-0 flex min-w-0 flex-col gap-5 rounded-xl border border-line bg-white p-4">
         {canAddFromPrevious || sameNoteText ? (
           <div className="flex flex-col gap-1">

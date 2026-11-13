@@ -917,7 +917,7 @@ export const tagPicker = {
   added: (label: string) => `Đã thêm nhãn “${label}”.`,
   noMatch: "Không có nhãn nào khớp.",
   selected: (n: number, max: number) => `Đã chọn ${n}/${max}`,
-  maxReached: (max: number) => `Chọn tối đa ${max} nhãn.`,
+  maxReached: (max: number) => `Đã chọn ${max}/${max} (đủ). Bỏ một mục để chọn mục khác.`,
   customTag: "nhãn riêng",
   remove: (label: string) => `Bỏ nhãn ${label}`,
 } as const;

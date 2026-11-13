@@ -1,5 +1,6 @@
 "use client";
 
+import { blockImplicitSubmit } from "@/lib/forms/enter";
 import { FilePicker } from "@/components/ui/FilePicker";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -124,7 +125,7 @@ export function AssignForm({
     `min-h-11 px-4 text-sm ${on ? "bg-accent font-semibold text-white" : "bg-white text-ink"}`;
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-5 rounded-2xl border border-line bg-white p-5" data-testid="assign-form">
+    <form onSubmit={submit} onKeyDown={blockImplicitSubmit} className="flex flex-col gap-5 rounded-2xl border border-line bg-white p-5" data-testid="assign-form">
       <fieldset disabled={done} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
         <div role="group" aria-label={assignPage.kind} className="flex flex-col gap-1.5 text-sm font-medium">
           {assignPage.kind}
