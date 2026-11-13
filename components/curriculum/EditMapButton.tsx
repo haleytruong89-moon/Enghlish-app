@@ -1,5 +1,7 @@
 "use client";
 
+import { BusyButton } from "@/components/ui/BusyButton";
+import { busyCopy } from "@/lib/copy/vi";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { curriculumCopy } from "@/lib/copy/vi";
@@ -20,9 +22,9 @@ export function EditMapButton({ curriculumId }: { curriculumId: string }) {
   }
   return (
     <span className="inline-flex flex-col">
-      <button type="button" disabled={busy} onClick={() => void go()} title={curriculumCopy.editHint} data-testid={`curriculum-edit-${curriculumId}`} className="inline-flex min-h-11 items-center text-sm font-medium text-accent underline disabled:opacity-60">
+      <BusyButton busy={busy} busyLabel={busyCopy.saving} type="button"  onClick={() => void go()} title={curriculumCopy.editHint} data-testid={`curriculum-edit-${curriculumId}`} className="inline-flex min-h-11 items-center text-sm font-medium text-accent underline disabled:opacity-60">
         {curriculumCopy.editMap}
-      </button>
+      </BusyButton>
       {problem ? <span role="alert" className="text-xs text-[#8A1C12]">{problem}</span> : null}
     </span>
   );

@@ -2403,3 +2403,16 @@ export const importCopy = {
     ai_cap: "Đã hết hạn mức AI tháng này.",
   } as Record<string, string>,
 } as const;
+
+/** UX vòng 2: màn đang tải và chữ trên nút khi đang làm việc (người lớn). */
+export const loadingCopy = {
+  page: "Đang tải…",
+} as const;
+
+export const busyCopy = {
+  saving: "Đang lưu…",
+  sending: "Đang gửi…",
+  approving: "Đang duyệt…",
+  uploading: "Đang tải file lên…",
+  confirming: "Đang xác nhận…",
+} as const;

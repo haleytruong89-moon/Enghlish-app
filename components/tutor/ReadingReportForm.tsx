@@ -1,5 +1,7 @@
 "use client";
-import { useRouter } from "next/navigation";
+
+import { BusyButton } from "@/components/ui/BusyButton";
+import { busyCopy } from "@/lib/copy/vi";import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { readingPage } from "@/lib/copy/vi";
 import { buildReadingRows, type ReadingCell } from "@/lib/reading/rows";
@@ -83,9 +85,9 @@ export function ReadingReportForm({ learnerId, tags, month, existing }: {
         <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} rows={2} className="rounded-lg border border-line px-3 py-2" data-testid="reading-note" />
       </label>
       {msg ? <p role="status" className={msg.ok ? "text-accent" : "text-[#8a3b12]"} data-testid="reading-msg">{msg.text}</p> : null}
-      <button type="submit" disabled={busy} className="min-h-11 self-start rounded-lg bg-accent px-5 font-semibold text-white disabled:opacity-60" data-testid="reading-save">
+      <BusyButton busy={busy} busyLabel={busyCopy.saving} type="submit"  className="min-h-11 self-start rounded-lg bg-accent px-5 font-semibold text-white disabled:opacity-60" data-testid="reading-save">
         {existing ? readingPage.saveCorrection : readingPage.save}
-      </button>
+      </BusyButton>
     </form>
   );
 }

@@ -1,6 +1,8 @@
 // components/studio/AssignStudioForm.tsx
 "use client";
 
+import { BusyButton } from "@/components/ui/BusyButton";
+import { busyCopy } from "@/lib/copy/vi";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { studioCopy } from "@/lib/copy/vi";
@@ -36,7 +38,7 @@ export function AssignStudioForm({ draftId, today }: { draftId: string; today: s
         {studioCopy.dueOn}
         <input type="date" data-testid="assign-due" value={due} onChange={(e) => setDue(e.target.value)} className="min-h-11 rounded-lg border border-line px-3" />
       </label>
-      <button type="submit" disabled={busy} data-testid="assign-submit" className="min-h-12 rounded-xl bg-accent px-5 font-bold text-white">{studioCopy.assign}</button>
+      <BusyButton busy={busy} busyLabel={busyCopy.saving} type="submit"  data-testid="assign-submit" className="min-h-12 rounded-xl bg-accent px-5 font-bold text-white">{studioCopy.assign}</BusyButton>
       {msg ? <p role="alert" className="w-full text-sm text-[#8A1C12]">{msg}</p> : null}
     </form>
   );
