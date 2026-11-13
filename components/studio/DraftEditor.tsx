@@ -3,6 +3,8 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { studioCopy, studioIssueText } from "@/lib/copy/vi";
 import { sendJson } from "@/lib/studio/client";
 import type { DraftPageData } from "@/lib/studio/types";
@@ -20,7 +22,7 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
   const [title, setTitle] = useState(initial.draft.title);
   const [d, setD] = useState<StudioDraft>(initial.draft.payload);
   const [base, setBase] = useState(initial.draft.updatedAt);
-  const [dirty, setDirty] = useState(false);
+  const { state: saveState, dirty, run } = useSaveStatus({ title, d }, { savedAt: initial.draft.updatedAt });
   const [onlyFlagged, setOnlyFlagged] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -31,7 +33,6 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
 
   const change = (next: StudioDraft) => {
     setD(next);
-    setDirty(true);
   };
   const upd = (n: number, patch: Partial<StudioItem>) => change({ ...d, items: d.items.map((i) => (i.n === n ? { ...i, ...patch } : i)) });
   const partSkill = (part: string, target: string | null) =>
@@ -51,16 +52,20 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
   async function save(): Promise<string | null> {
     setBusy(true);
     setMsg(null);
-    const r = await sendJson<{ updated_at: string }>(`/api/studio/drafts/${initial.draft.id}`, "PUT", { title, payload: d, base_updated_at: base });
+    let at: string | null = null;
+    const ok = await run(async () => {
+      const r = await sendJson<{ updated_at: string }>(`/api/studio/drafts/${initial.draft.id}`, "PUT", { title, payload: d, base_updated_at: base });
+      if (!r.ok) {
+        setMsg(studioErrorText(r.error));
+        return { ok: false };
+      }
+      at = r.body.updated_at;
+      return { ok: true, savedAt: r.body.updated_at };
+    });
     setBusy(false);
-    if (!r.ok) {
-      setMsg(studioErrorText(r.error));
-      return null;
-    }
-    setBase(r.body.updated_at);
-    setDirty(false);
-    setMsg(studioCopy.saved(new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })));
-    return r.body.updated_at;
+    if (!ok || at === null) return null;
+    setBase(at);
+    return at;
   }
   async function approve() {
     const at = dirty ? await save() : base;
@@ -83,7 +88,7 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
       <div className="flex flex-col gap-5">
         <label className="flex flex-col gap-1 text-sm font-semibold">
           {studioCopy.titleLabel}
-          <input value={title} maxLength={160} onChange={(e) => { setTitle(e.target.value); setDirty(true); }} className="min-h-11 rounded-lg border border-line px-3 font-normal" />
+          <input value={title} maxLength={160} onChange={(e) => setTitle(e.target.value)} className="min-h-11 rounded-lg border border-line px-3 font-normal" />
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" data-testid="only-flagged" checked={onlyFlagged} onChange={(e) => setOnlyFlagged(e.target.checked)} className="h-5 w-5" />
@@ -133,6 +138,7 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
           <button type="button" onClick={() => change({ ...d, passages: [...d.passages, { ref: `P${d.passages.length + 1}`, title: `P${d.passages.length + 1}`, text: " " }] })} className="self-start text-sm text-accent underline">{studioCopy.addPassage}</button>
         </section>
         {msg ? <p role="status" data-testid="studio-msg" className="text-sm">{msg}</p> : null}
+        <SaveStatus state={saveState} />
         <div className="flex flex-wrap gap-3">
           <button type="button" disabled={busy} onClick={() => void save()} data-testid="studio-save" className="min-h-12 rounded-xl border border-line bg-white px-5 font-semibold">{busy ? studioCopy.saving : studioCopy.save}</button>
           <button type="button" disabled={busy || blocking.length > 0} onClick={() => void approve()} data-testid="studio-approve" className="min-h-12 rounded-xl bg-accent px-5 font-bold text-white disabled:opacity-50">{studioCopy.approve}</button>

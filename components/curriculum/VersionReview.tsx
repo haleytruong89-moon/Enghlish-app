@@ -6,6 +6,8 @@ import { useMemo, useState } from "react";
 import { AddTag } from "@/components/tutor/AddTag";
 import { TagSelect } from "@/components/tutor/TagSelect";
 import { useTags } from "@/components/tutor/useTags";
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { curriculumCopy } from "@/lib/copy/vi";
 import { curriculumErrorText, sendJson } from "@/lib/curriculum/client";
 import { buildTocContext } from "@/lib/curriculum/context";
@@ -31,10 +33,9 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
   const { tags, add } = useTags(learnerId, initialTags);
   const [payload, setPayload] = useState<CurriculumPayload>(v.payload);
   const [base, setBase] = useState(v.updatedAt);
-  const [dirty, setDirty] = useState(false);
+  const { state: saveState, dirty, run } = useSaveStatus(payload, { savedAt: v.updatedAt });
   const [busy, setBusy] = useState<"save" | "approve" | "discard" | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
   const [quality, setQuality] = useState<Quality | null>(null);
   const [qualityNote, setQualityNote] = useState("");
   const ctx = useMemo(() => buildTocContext(map, tags), [map, tags]);
@@ -50,8 +51,6 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
 
   function update(i: number, patch: Partial<UnitDraft>) {
     setPayload((p) => ({ ...p, units: p.units.map((u, k) => (k === i ? { ...u, ...patch } : u)) }));
-    setDirty(true);
-    setNote(null);
   }
   function addUnit() {
     setPayload((p) => {
@@ -64,22 +63,25 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
       };
       return { ...p, units: [...p.units, unit] };
     });
-    setDirty(true);
   }
   /** Returns the new lock value, or null when the save failed. */
   async function save(): Promise<string | null> {
     setBusy("save");
     setProblem(null);
-    const r = await sendJson<{ updated_at: string }>(`/api/curricula/versions/${v.id}`, "PUT", { payload, base_updated_at: base });
+    let lock: string | null = null;
+    const ok = await run(async () => {
+      const r = await sendJson<{ updated_at: string }>(`/api/curricula/versions/${v.id}`, "PUT", { payload, base_updated_at: base });
+      if (!r.ok) {
+        setProblem(curriculumErrorText(r.error));
+        return { ok: false };
+      }
+      lock = r.body.updated_at;
+      return { ok: true, savedAt: r.body.updated_at };
+    });
     setBusy(null);
-    if (!r.ok) {
-      setProblem(curriculumErrorText(r.error));
-      return null;
-    }
-    setBase(r.body.updated_at);
-    setDirty(false);
-    setNote(curriculumCopy.saved);
-    return r.body.updated_at;
+    if (!ok || lock === null) return null;
+    setBase(lock);
+    return lock;
   }
   async function approve() {
     // Unsaved changes are saved first; the approval then uses the NEW lock value (state updates are not visible in this closure).
@@ -194,7 +196,7 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
             </fieldset>
           ) : null}
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            {note ? <span role="status" className="text-sm text-accent">{note}</span> : null}
+            <SaveStatus state={saveState} />
             {problem ? <span role="alert" className="text-sm text-[#8A1C12]" data-testid="review-problem">{problem}</span> : null}
             <button type="button" disabled={busy !== null} onClick={() => void discard()} data-testid="review-discard" className={small}>
               {curriculumCopy.discard}

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { importCopy } from "@/lib/copy/vi";
 import { importErrorText, sendJson } from "@/lib/import/client";
 import { isDuplicate, isOpen, manualRow, openCount, rowTid, sortForReview, summaryOf, toConfirmRows, toReviewRows, type ReviewRow } from "@/lib/import/review";
@@ -22,6 +24,8 @@ export function ImportConfirm({ data, learnerId }: { data: ImportPageData; learn
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  // The rows live only in this browser until the tutor confirms: leaving the page loses them, so the pattern guards them.
+  const { state: saveState, run } = useSaveStatus(rows);
   const clientId = useRef(crypto.randomUUID());
   const left = openCount(rows);
   const sum = summaryOf(rows);
@@ -43,11 +47,19 @@ export function ImportConfirm({ data, learnerId }: { data: ImportPageData; learn
     if (left > 0 || busy) return;
     setBusy(true);
     setProblem(null);
-    const r = await sendJson<{ template_id: string }>(`/api/imports/${data.import.id}/confirm`, "POST", {
-      base_updated_at: data.import.updatedAt, rows: toConfirmRows(rows), client_id: clientId.current,
+    let failed: string | null = null;
+    const ok = await run(async () => {
+      const r = await sendJson<{ template_id: string }>(`/api/imports/${data.import.id}/confirm`, "POST", {
+        base_updated_at: data.import.updatedAt, rows: toConfirmRows(rows), client_id: clientId.current,
+      });
+      if (!r.ok) {
+        failed = importErrorText(r.error);
+        return { ok: false };
+      }
+      return { ok: true };
     });
     setBusy(false);
-    if (!r.ok) return setProblem(importErrorText(r.error));
+    if (!ok) return setProblem(failed);
     setDone(true);
     router.refresh();
   }
@@ -215,6 +227,7 @@ export function ImportConfirm({ data, learnerId }: { data: ImportPageData; learn
             {importCopy.confirmed}
           </p>
         ) : null}
+        <SaveStatus state={saveState} />
         <div className="ml-auto flex flex-wrap gap-2">
           {done ? (
             <>
