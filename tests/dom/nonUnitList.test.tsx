@@ -70,8 +70,8 @@ describe("NonUnitList in an approved version", () => {
       <NonUnitList
         rows={payload.ignored}
         mode="approved"
-        related={(i) => relatedUnits(payload, i)}
-        hrefs={(i) => ({ studio: `/studio/new?learner=${L}&i=${i}`, assign: `/learners/${L}/assign?i=${i}` })}
+        related={payload.ignored.map((_, i) => relatedUnits(payload, i))}
+        links={payload.ignored.map((_, i) => ({ studio: `/studio/new?learner=${L}&i=${i}`, assign: `/learners/${L}/assign?i=${i}` }))}
       />,
     );
     const row = screen.getByTestId("ignored-row-1");

@@ -16,14 +16,15 @@ export function NonUnitList({
   mode,
   onToUnit,
   related,
-  hrefs,
+  links,
 }: {
   rows: IgnoredRow[];
   mode: "draft" | "approved";
   onToUnit?: (index: number) => void;
   /** Codes of the Units the row revises (draft and approved). */
-  related?: (index: number) => string[];
-  hrefs?: (index: number) => { studio: string; assign: string };
+  related?: string[][];
+  /** Prepared links (a server page cannot hand functions to this client component). */
+  links?: { studio: string; assign: string }[];
 }) {
   if (rows.length === 0) return null;
   const hasTest = rows.some(isProgressTest);
@@ -34,8 +35,8 @@ export function NonUnitList({
       </summary>
       <ul className="mt-2 flex flex-col gap-2 text-sm">
         {rows.map((r, i) => {
-          const units = related?.(i) ?? [];
-          const link = mode === "approved" ? hrefs?.(i) : undefined;
+          const units = related?.[i] ?? [];
+          const link = mode === "approved" ? links?.[i] : undefined;
           return (
             <li key={i} className="flex flex-wrap items-center gap-x-3 gap-y-1" data-testid={`ignored-row-${i}`}>
               <span className="text-muted">{nonUnitCopy.line(curriculumCopy.ignoredReasons[r.reason], r.label, r.page)}</span>

@@ -166,7 +166,7 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
         </details>
       ) : null}
 
-      <NonUnitList rows={payload.ignored} mode="draft" onToUnit={backToUnit} related={(k) => relatedUnits(payload, k)} />
+      <NonUnitList rows={payload.ignored} mode="draft" onToUnit={backToUnit} related={payload.ignored.map((_, k) => relatedUnits(payload, k))} />
 
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-white/95 backdrop-blur" data-testid="review-bar">
         <div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-3 px-4 py-3">

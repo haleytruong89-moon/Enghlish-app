@@ -2477,3 +2477,10 @@ export const nonUnitCopy = {
   assignHelp: "Review và Kiểm tra tiến độ không phải Unit nên không có trong độ phủ; bài giao xong chỉ điền sẵn tên bài.",
   approvedOnly: "Muốn đổi dòng nào là Unit hay không: dùng “Sửa mục lục / bảng nối” (tạo bản mới).",
 } as const;
+
+/** UX vòng 2 · mục 6: điền sẵn từ một dòng Review / Kiểm tra tiến độ của giáo trình. */
+export const prefillCopy = {
+  pages: (p: string) => `Trang trong sách: ${p}`,
+  units: (range: string) => `Unit liên quan: ${range}`,
+  fromBook: "Điền sẵn từ giáo trình. Bạn sửa được tên bài.",
+} as const;

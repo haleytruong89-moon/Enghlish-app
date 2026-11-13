@@ -5,16 +5,17 @@ import { PageGuidance, PdfPagePicker, pagesBlock, type PdfPick } from "@/compone
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import type { GateReason } from "@/lib/ai/cap";
-import { studioCopy } from "@/lib/copy/vi";
+import { prefillCopy, studioCopy } from "@/lib/copy/vi";
+import { formatRange, type Prefill } from "@/lib/prefill";
 import { sendJson, uploadStudioFile } from "@/lib/studio/client";
 import { studioErrorText } from "@/lib/studio/view";
 
 const ACCEPT = "application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx";
 
 /** Title + test file + answer file → "Cho AI đọc đề" (when the gate allows) or "Soạn tay". Files go straight to storage. */
-export function UploadForm({ learnerId, aiAllowed, aiReason }: { learnerId: string; aiAllowed: boolean; aiReason: GateReason | null }) {
+export function UploadForm({ learnerId, aiAllowed, aiReason, prefill }: { learnerId: string; aiAllowed: boolean; aiReason: GateReason | null; prefill?: Prefill }) {
   const router = useRouter();
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(prefill?.title ?? "");
   const [testPick, setTestPick] = useState<PdfPick>({ file: null, pages: null, pending: false });
   const [keyPick, setKeyPick] = useState<PdfPick>({ file: null, pages: null, pending: false });
   const test = testPick.file;
@@ -47,6 +48,13 @@ export function UploadForm({ learnerId, aiAllowed, aiReason }: { learnerId: stri
 
   return (
     <form className="mt-5 flex flex-col gap-4 rounded-2xl border border-line bg-white p-5" onSubmit={(e) => e.preventDefault()} noValidate>
+      {prefill && (prefill.pages || prefill.units.length > 0) ? (
+        <p className="rounded-xl bg-[#eef3ef] px-3.5 py-2 text-sm" data-testid="studio-prefill">
+          {prefillCopy.fromBook} {prefill.pages ? prefillCopy.pages(prefill.pages) : ""}
+          {prefill.pages && prefill.units.length > 0 ? " · " : ""}
+          {prefill.units.length > 0 ? prefillCopy.units(formatRange(prefill.units)) : ""}
+        </p>
+      ) : null}
       <label className="flex flex-col gap-1 text-sm font-semibold">
         {studioCopy.titleLabel}
         <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={160} placeholder={studioCopy.titlePlaceholder} data-testid="studio-title" className="min-h-11 rounded-lg border border-line px-3 font-normal" />

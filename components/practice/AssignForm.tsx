@@ -8,7 +8,8 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { TagChips } from "@/components/tutor/TagChips";
 import { useTags } from "@/components/tutor/useTags";
-import { assignPage, sourceLabels } from "@/lib/copy/vi";
+import { assignPage, prefillCopy, sourceLabels } from "@/lib/copy/vi";
+import { formatRange, type Prefill } from "@/lib/prefill";
 import { codeOf, nextAttempt, practiceErrorText, uploadAll, type SendAttempt, type UploadCache } from "@/lib/practice/client";
 import { detectLinkSource } from "@/lib/practice/link";
 import { addDays } from "@/lib/inquiries/dates";
@@ -28,6 +29,7 @@ export function AssignForm({
   frames,
   today,
   map,
+  prefill,
 }: {
   learnerId: string;
   alias: string;
@@ -35,6 +37,8 @@ export function AssignForm({
   frames: FrameView[];
   today: string;
   map: SkillMapView;
+  /** From a Review / Progress Test row of the curriculum: the name of the bài, the pages in the book, the Units it revises. */
+  prefill?: Prefill;
 }) {
   const router = useRouter();
   const { tags, add, setGroup } = useTags(learnerId, initialTags);
@@ -42,7 +46,7 @@ export function AssignForm({
   const [url, setUrl] = useState("");
   const [pdf, setPdf] = useState<Prepared | null>(null);
   const [answer, setAnswer] = useState<Prepared | null>(null);
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(prefill?.title ?? "");
   const [picked, setPicked] = useState<string[]>([]);
   const [due, setDue] = useState("");
   const [frameId, setFrameId] = useState("");
@@ -179,6 +183,13 @@ export function AssignForm({
           </div>
         )}
 
+        {prefill && (prefill.pages || prefill.units.length > 0) ? (
+          <p className="rounded-xl bg-[#eef3ef] px-3.5 py-2 text-sm" data-testid="assign-prefill">
+            {prefillCopy.fromBook} {prefill.pages ? prefillCopy.pages(prefill.pages) : ""}
+            {prefill.pages && prefill.units.length > 0 ? " · " : ""}
+            {prefill.units.length > 0 ? prefillCopy.units(formatRange(prefill.units)) : ""}
+          </p>
+        ) : null}
         <label className="flex flex-col gap-1.5 text-sm font-medium">
           {assignPage.titleLabel}
           <input
