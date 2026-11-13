@@ -40,6 +40,14 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
         <h1 className="mt-2 text-2xl font-bold">{inquiriesPage.title(learner.alias)}</h1>
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
 
+        <p className="mt-4 rounded-xl border border-line bg-white px-5 py-3 text-sm" data-testid="inquiries-intro">
+          {inquiriesPage.intro.before}
+          <Link href={inquiriesPage.introHref(learner.id)} className="text-accent underline">
+            {inquiriesPage.intro.link}
+          </Link>
+          {inquiriesPage.intro.after}
+        </p>
+
         <h2 className="mt-8 text-lg font-semibold">{inquiriesPage.availableTitle}</h2>
         {templates.length === 0 ? (
           <p className="mt-3 rounded-xl border border-line bg-white px-5 py-4">{inquiriesPage.availableEmpty}</p>

@@ -183,6 +183,13 @@ export const inquiriesPage = {
   title: (alias: string) => `Giao bài · ${alias}`,
   back: "Về trang chủ",
   availableTitle: "Bài có thể giao",
+  // Note on "Bài chủ đề": the middle part is a link to the feedback form (kind = Đề xuất).
+  intro: {
+    before: `Bài chủ đề do gia đình/phụ huynh soạn (không theo sách), để phát triển hiểu biết và kỹ năng xã hội. ${tutorHonorificCap} giao xen với bài theo giáo trình khi phù hợp. Hết bài, ${tutorHonorific} có thể đề xuất chủ đề mới qua `,
+    link: "Góp ý về app",
+    after: " (loại Đề xuất) hoặc tự bổ sung bài (sắp có).",
+  },
+  introHref: (learnerId: string) => `/feedback?learner=${learnerId}&screen=inquiries&kind=suggestion`,
   availableEmpty: "Chưa có bài nào để giao cho em này.",
   weekRange: (week: number, from: string, to: string) => (week === 0 ? `Bài đầu vào · ${from} – ${to}` : `Tuần ${week} · ${from} – ${to}`),
   stepCount: (n: number) => `${n} bước`,

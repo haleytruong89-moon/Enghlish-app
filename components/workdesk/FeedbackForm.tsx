@@ -9,9 +9,9 @@ import { failText, postJson } from "@/lib/tutorwork/client";
 import { FEEDBACK_KINDS, FEEDBACK_SCREEN_MAX, FEEDBACK_TEXT_MAX, type FeedbackKind } from "@/lib/workdesk/types";
 
 /** "Góp ý về app": pick a kind, say where, say what. Goes to the parent (who built the app). */
-export function FeedbackForm({ defaultScreen }: { defaultScreen: string }) {
+export function FeedbackForm({ defaultScreen, initialKind }: { defaultScreen: string; initialKind?: FeedbackKind }) {
   const router = useRouter();
-  const [kind, setKind] = useState<FeedbackKind>("hard_to_use");
+  const [kind, setKind] = useState<FeedbackKind>(initialKind ?? "hard_to_use");
   const [screen, setScreen] = useState(defaultScreen);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
