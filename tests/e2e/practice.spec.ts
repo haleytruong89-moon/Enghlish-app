@@ -85,7 +85,7 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     await page.getByTestId("tab-assign-tags-vocab").click();
     await page.getByTestId("tag-chip-dang-tu").click();
     await expect(page.getByTestId("assign-tags")).toContainText(tagPicker.maxReached(3));
-    await expect(page.getByTestId("assign-tags-chosen")).toContainText("thanh");
+    await expect(page.getByTestId("assign-tags-chosen")).toContainText("Thành ngữ");
   });
 
   test("the child downloads the PDF through the app, sends a picture, and sees no score", async ({ page }) => {
