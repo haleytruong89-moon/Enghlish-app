@@ -1356,7 +1356,7 @@ Nhánh `feature/ux-tutor-round1` (dựa trên `main` sau PR #28). **SQL cần á
 Nhánh `feature/ux-round2` (dựa trên `main`; kế hoạch `docs/superpowers/plans/2026-11-13-ux-round2.md`). **SQL cần áp: không có** (PR 2A không có migration, không API mới, không AI mới, không đổi công thức AI). Màn của con không đổi. PR 2B (giao bài theo Unit, SQL `0029`) và 2C (chia đề dài) làm sau.
 
 ### Làm gì
-1. **Tốc độ.** Ghim vùng chạy `sin1` trong `vercel.json` (Supabase ở Singapore, phụ huynh xác nhận 13/11). Mỗi yêu cầu chỉ gọi `getUser` và đọc thành viên **một lần** (`cache()`), đọc em ∥ quan hệ gia sư; trang chi tiết dựng khung song song với việc đọc của chính nó (`withShell`); hook tính lại kỹ năng và mức mục kiến thức chạy sau khi đã trả lời (`after()`, vẫn không làm hỏng lần lưu nếu lỗi, ghi `app_errors` loại `engine_deferred`).
+1. **Tốc độ.** Ghim vùng chạy `sin1` trong `vercel.json` (Supabase ở Singapore, phụ huynh xác nhận 13/11). Mỗi yêu cầu chỉ gọi `getUser` và đọc thành viên **một lần** (`cache()`), đọc em ∥ quan hệ gia sư; trang chi tiết dựng khung song song với việc đọc của chính nó (`withShell`); hook tính lại kỹ năng và mức mục kiến thức chạy sau khi đã trả lời (`after()`, xếp hàng theo từng em trong tiến trình để lần chạy cũ không áp sau lần chạy mới; vẫn không làm hỏng lần lưu nếu lỗi, ghi `app_errors` loại `engine_deferred`).
 2. **Báo đang tải / đang lưu.** Không dùng khung chờ cấp tuyến (`loading.tsx`) vì nó biến 404/chuyển hướng của trang thành 200 và hiện khung nhân viên cho học sinh; chờ thể hiện bằng nút "Đang…"; nút lưu nào chưa có chữ "Đang…" thì thêm (`BusyButton`); một mẫu báo lưu chung: "Đang lưu…" / "✓ Đã lưu lúc hh:mm" (giờ Việt Nam) / "Có thay đổi chưa lưu". Rời trang khi còn thay đổi chưa lưu: đóng tab hoặc tải lại hỏi lại (`beforeunload`); các liên kết của khung (cột trái, thanh trên, "Đóng", "← Bàn làm việc") cũng hỏi.
 3. **Lỗi chọn mục kiến thức (Giao bài).** Nguyên nhân: Enter trong ô tìm gửi cả form. Sửa: Enter ở ô một dòng không gửi form (1 kết quả duy nhất thì tick nó); các mục đã chọn luôn hiện dạng chip kể cả khi đang tìm; đủ 3 thì ghi "Đã chọn 3/3 (đủ). Bỏ một mục để chọn mục khác." Có test DOM bấm thật.
 4. **Đổi chữ.** "điểm" (kiến thức) → "mục kiến thức"; trong ô chọn: "Tìm mục kiến thức", "+ Mục kiến thức khác"; "n/N điểm đã vững" → "kỹ năng". Giữ nguyên các chữ điểm số (V7). Có test canh chữ.
@@ -1383,7 +1383,9 @@ Số "sau" là cận trên theo thiết kế; **TTFB thật chưa đo** (cần D
 | Tạo bài từ đề | đề 3–6 trang, đáp án 1–3 trang | đề > 6, hoặc đề + đáp án > 9 | đề > 10, hoặc tổng > 12 |
 | Nạp bài đã làm | bài ≤ 8 trang, đáp án 1–3 | bài > 8, hoặc tổng > 10 | bài > 12, hoặc tổng > 15 |
 | Đọc mục lục | 1–4 trang | > 4 | > 8 |
-| Giao bài PDF (không AI) | cắt đúng trang cần | file sau cắt > 10 MB | > 15 MB |
+| Giao bài PDF (không AI) | cắt đúng trang cần | (không cảnh báo riêng) | file sau cắt > 15 MB (giới hạn lưu trữ, máy chủ từ chối) |
+
+Giới hạn trang cũng được **máy chủ kiểm lại** (Tạo bài từ đề, Nạp bài đã làm, Đọc mục lục; đếm bằng `pdf-lib` với `ignoreEncryption`; file không đếm được thì cho qua và ghi nhật ký). File đáp án PDF luôn được tính kể cả khi đề là Word hoặc ảnh. PDF bị khóa (không cắt được) gửi nguyên file kèm cảnh báo.
 
 Lý do: một lần gọi AI tối đa 240 s, cả việc 280 s; chạy hết 240 s thì không còn thời gian thử lại (tốn tiền mà hỏng). Ước một lần Tạo bài từ đề (6 + 3 trang) ≈ $0,40; cả quyển 200 trang vượt 100 trang/lượt của API.
 
@@ -1392,7 +1394,7 @@ V1 Supabase Singapore (đã xác nhận) · V2 `vercel.json` `regions: ["sin1"]`
 
 ### Lệch so với kế hoạch (cần biết)
 - **Bàn làm việc (A4 bước 3):** trang `/` giữ nguyên, chưa song song hóa cổng quyền với dựng khung (đã có `cache()` nên không đọc thừa).
-- **Nút "Đang…" (A2):** chỉ 3 nút chưa có chữ chờ được đổi sang `BusyButton`; các nút còn lại đã có chữ chờ riêng nên không đổi.
+- **Nút "Đang…" (A6):** chỉ 3 nút chưa có chữ chờ được đổi sang `BusyButton`; các nút còn lại đã có chữ chờ riêng nên không đổi.
 - **Báo lưu (A8):** test "dùng đúng mẫu" bằng bấm thật chỉ cho 4 form; Duyệt mục lục / Duyệt đề (DraftEditor) được canh bằng test tệp (có dùng `useSaveStatus` + `SaveStatus`). Nhóm form một lần làm trong một commit thay vì ba.
 - Bảng tốc độ chưa có số đo thật (xem trên).
 
@@ -1402,7 +1404,7 @@ V1 Supabase Singapore (đã xác nhận) · V2 `vercel.json` `regions: ["sin1"]`
 - Giáo trình → Thêm giáo trình → chọn PDF nhiều trang: nhập "1–3" → thấy số trang đã chọn và cảnh báo nếu vượt giới hạn; tương tự ở Tạo bài từ đề, Nạp bài đã làm, Giao bài (Đề PDF).
 - Duyệt mục lục (bản nháp): đưa một dòng ra "Không phải Unit" rồi đưa về; bản đã duyệt: nút "Giao bài này →".
 - Giao bài → đầu trang có lời giới thiệu Bài chủ đề; bấm "Góp ý về app" → trang Góp ý đã chọn sẵn "Đề xuất".
-- Các trang người lớn: chuyển trang thấy khung chờ, trang mở nhanh hơn. Màn của con không đổi.
+- Các trang người lớn mở nhanh hơn; nút lưu/gửi hiện "Đang…" khi chờ. Màn của con chỉ đổi một dòng chữ (xem trên).
 
 ### Tiêu chí đạt
-`npm run typecheck && npm run lint && npm test && npm run gen:config` xanh; `npx playwright test --list` liệt kê đủ; thầy/cô xác nhận lỗi chọn mục kiến thức không còn; phụ huynh đo TTFB 5 trang trên preview. **Chưa đạt/chưa làm:** số đo TTFB thật; giao theo Unit (PR 2B); chia đề dài (PR 2C).
+`npm run typecheck && npm run lint && npm test && npm run gen:config` xanh; **e2e (job "E2E smoke") xanh trên CI**; `npx playwright test --list` liệt kê đủ; thầy/cô xác nhận lỗi chọn mục kiến thức không còn; phụ huynh đo TTFB 5 trang trên preview. **Chưa đạt/chưa làm:** số đo TTFB thật; giao theo Unit (PR 2B); chia đề dài (PR 2C).

@@ -1,10 +1,9 @@
 "use client";
 
 import { BusyButton } from "@/components/ui/BusyButton";
-import { busyCopy } from "@/lib/copy/vi";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { curriculumCopy } from "@/lib/copy/vi";
+import { busyCopy, curriculumCopy } from "@/lib/copy/vi";
 import { curriculumErrorText, sendJson } from "@/lib/curriculum/client";
 
 /** "Sửa mục lục / bảng nối": makes (or reopens) the draft of the next version, copied from the version in use. */

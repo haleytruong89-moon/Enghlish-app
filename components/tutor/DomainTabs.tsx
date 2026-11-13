@@ -87,7 +87,7 @@ export function DomainTabs<T>({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key !== "Enter") return;
+          if (e.key !== "Enter" || e.nativeEvent.isComposing) return; // Enter that confirms a Vietnamese IME word is not a search
           e.preventDefault();
           if (hits.length === 1) onEnterSingle?.(hits[0]!.it);
         }}

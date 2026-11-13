@@ -14,7 +14,7 @@ import { paperMode, startMode } from "@/lib/tutorwork/resultMode";
 import { scaleBand } from "@/lib/frames/frame";
 import { SubmissionPreview } from "@/components/practice/SubmissionPreview";
 import type { AssignmentView } from "@/lib/practice/types";
-import Link from "next/link";
+import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import type { FrameView, ResultAttempt, ResultContext, ResultEdit, ResultMode, ResultSource, TagInfo } from "@/lib/tutorwork/types";
 import { TagSelect } from "./TagSelect";
 import { useTags } from "./useTags";

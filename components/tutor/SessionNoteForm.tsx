@@ -3,7 +3,7 @@
 import { SaveStatus } from "@/components/ui/SaveStatus";
 import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { blockImplicitSubmit } from "@/lib/forms/enter";
-import Link from "next/link";
+import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import { curriculumCopy, fallbackLabels, sessionNotePage } from "@/lib/copy/vi";
