@@ -9,6 +9,8 @@ import { buildTocContext, type TocContext } from "./context";
 import { handleGetVersion, type CurriculumDeps } from "./handlers";
 import { buildCards, taughtChoices, type CurriculumCard, type TaughtChoice, type VersionPageData } from "./shape";
 import { createSupabaseCurriculumStore } from "./supabaseStore";
+import { buildUnitChoices } from "./unitChoices";
+import type { UnitChoice } from "./unitPicker";
 
 /** The closed list of one child (call only after requireAccess / requireLearnerPage). */
 export async function loadTocContext(learnerId: string, trackId: string): Promise<TocContext> {
@@ -38,6 +40,23 @@ export async function loadCurriculumCards(learnerId: string): Promise<Curriculum
 export async function loadTaughtChoices(learnerId: string): Promise<TaughtChoice[]> {
   try {
     return taughtChoices(await loadCurriculumCards(learnerId));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * "Giao theo Unit": curricula with an approved version, their Units and Review rows (the stored payload of the version in use gives the
+ * Review rows and which Units each one revises). [] when 0026 is missing or nothing is approved (the form then shows the old picker).
+ */
+export async function loadUnitChoices(learnerId: string): Promise<UnitChoice[]> {
+  try {
+    const cards = await loadCurriculumCards(learnerId);
+    const ids = cards.flatMap((c) => (c.current ? [c.current.versionId] : []));
+    if (ids.length === 0) return [];
+    const { data, error } = await (await createUserClient()).from("curriculum_versions").select("id, payload").in("id", ids);
+    if (error) return buildUnitChoices(cards, {});
+    return buildUnitChoices(cards, Object.fromEntries((data ?? []).map((v) => [v.id as string, v.payload])));
   } catch {
     return [];
   }
