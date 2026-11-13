@@ -169,10 +169,12 @@ export async function inScope(
   learner: Learner,
   store: AccessStore,
   now: Date,
+  /** Relationships already read (a tutor's are read in parallel with the learner); read here when not given. */
+  known?: Relationship[],
 ): Promise<boolean> {
   if (member.role === "student") return learner.memberId === member.id;
   if (member.role === "parent" && learner.familyId === member.familyId) return true;
-  const rels = await store.getRelationships(member.id, learner.id);
+  const rels = known ?? (await store.getRelationships(member.id, learner.id));
   return rels.some((r) => r.memberId === member.id && r.learnerId === learner.id && isActiveRelationship(r, now));
 }
 
@@ -198,10 +200,14 @@ export async function requireAccess(
   const member = await store.getMemberByUserId(user.id);
   if (!member) throw notFound();
 
-  const learner = await store.getLearner(learnerId);
+  // The learner and a tutor's relationships do not depend on each other: read them together (one round trip less).
+  const [learner, rels] = await Promise.all([
+    store.getLearner(learnerId),
+    member.role === "tutor" ? store.getRelationships(member.id, learnerId) : Promise.resolve(undefined),
+  ]);
   if (!learner) throw notFound();
   if (!allowReal && !learner.isTest) throw notFound();
-  if (!(await inScope(member, learner, store, now))) throw notFound();
+  if (!(await inScope(member, learner, store, now, rels))) throw notFound();
 
   if (!ACTIONS_BY_ROLE[member.role].includes(action)) throw new AccessError(403, "forbidden");
 

@@ -12,16 +12,13 @@ import { loadSkillInbox } from "@/lib/skills/load";
 import { loadPointInbox } from "@/lib/points/load";
 import { combinedTabCount } from "@/lib/points/view";
 import { loadStudioPending } from "@/lib/studio/load";
-import { createUserClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 /** Hộp duyệt → "Cần thầy/cô xem" (board 21): Studio items the app could not check. The child's tutor or parent decides. Students: 404. */
 export default async function ReviewStudioPage({ searchParams }: { searchParams: Promise<{ learner?: string | string[] }> }) {
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   const access = await authorizeStaffPage(user);
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();

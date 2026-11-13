@@ -1,5 +1,5 @@
 import "server-only";
-import { createUserClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
 import type { MyActivityNote, MyFeedbackItem, MyRevisionView } from "@/lib/revision/types";
 import { handleStudentActivity, handleStudentActivityNote, handleStudentHome, handleStudentRevision, handleStudentStudioReview } from "./handlers";
 import { createSupabaseWorkStore } from "./supabaseStore";
@@ -15,10 +15,7 @@ export type StudentHomeData =
 export type ActivityPageData = { kind: "ok"; activity: ActivityView; note: MyActivityNote | null } | { kind: "login" } | { kind: "not-found" };
 
 async function currentUser() {
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   return user;
 }
 

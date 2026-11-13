@@ -9,17 +9,14 @@ import { UploadForm } from "@/components/studio/UploadForm";
 import { learnerWithTrack, reviewPage, studioCopy } from "@/lib/copy/vi";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { loadDraftList, loadStudioGate } from "@/lib/studio/load";
-import { createUserClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 /** Tạo bài từ đề (spec §3 step 1): the child's tutor or parent. ?learner=<id>. Students / outsiders: 404. */
 export default async function StudioNewPage({ searchParams }: { searchParams: Promise<{ learner?: string }> }) {
   const { learner } = await searchParams;
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   const access = await authorizeLearnerPage(user, learner ?? "", "studio:write");
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();

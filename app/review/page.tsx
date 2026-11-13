@@ -13,16 +13,13 @@ import { loadInbox } from "@/lib/review/load";
 import { loadSkillInbox } from "@/lib/skills/load";
 import { loadPointInbox } from "@/lib/points/load";
 import { combinedTabCount } from "@/lib/points/view";
-import { createUserClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 /** Inbox of submitted work — parent and tutor only (students and outsiders get a plain 404). */
 export default async function ReviewInboxPage({ searchParams }: { searchParams: Promise<{ f?: string | string[]; after?: string | string[]; learner?: string | string[] }> }) {
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   const access = await authorizeStaffPage(user);
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();

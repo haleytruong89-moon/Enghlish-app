@@ -7,7 +7,7 @@ import { FeedbackForm } from "@/components/workdesk/FeedbackForm";
 import { FeedbackList } from "@/components/workdesk/FeedbackList";
 import { appFeedback, reviewPage } from "@/lib/copy/vi";
 import { authorizeStaffPage } from "@/lib/review/access";
-import { createUserClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
 import { allowRealLearners } from "@/lib/env";
 import { feedbackAllowedHere } from "@/lib/workdesk/guard";
 import { loadAppFeedback } from "@/lib/workdesk/load";
@@ -17,10 +17,7 @@ export const dynamic = "force-dynamic";
 
 /** "Góp ý về app": tutor and parent of the family (students and outsiders get a plain 404, like the other adult pages). */
 export default async function FeedbackPage({ searchParams }: { searchParams: Promise<{ screen?: string | string[]; learner?: string | string[] }> }) {
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   const access = await authorizeStaffPage(user);
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();

@@ -5,7 +5,7 @@ import { allowRealLearners } from "@/lib/env";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { createFileStorage } from "@/lib/storage/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createUserClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
 import { loadTags } from "@/lib/tutorwork/load";
 import { buildStudioContext, type StudioContext } from "./context";
 import { docxToText } from "./docx";
@@ -52,10 +52,7 @@ export async function loadDraftList(learnerId: string): Promise<DraftListItem[]>
 
 /** The page calls the same handler as GET /api/studio/drafts/:id (one access path). No AI and no background job from a page. */
 export async function loadDraftPage(draftId: string): Promise<{ kind: "ok"; data: DraftPageData; isParent: boolean } | { kind: "login" } | { kind: "not-found" }> {
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   const deps: StudioDeps = {
     user,
     store: createSupabaseStudioStore(),

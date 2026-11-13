@@ -15,16 +15,13 @@ import { combinedTabCount, groupPointInbox, mergeInboxGroups } from "@/lib/point
 import { loadCriteriaForItems } from "@/lib/skills/criteria";
 import { loadSkillInbox } from "@/lib/skills/load";
 import { groupInbox } from "@/lib/skills/view";
-import { createUserClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 /** Hộp duyệt → tab "Kỹ năng" (spec §5): open proposals and ⚑ per child. The child's tutor decides; the parent reads. Students: 404. */
 export default async function ReviewSkillsPage({ searchParams }: { searchParams: Promise<{ learner?: string | string[] }> }) {
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   const access = await authorizeStaffPage(user);
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();

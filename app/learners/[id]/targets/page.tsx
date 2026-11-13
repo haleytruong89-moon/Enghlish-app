@@ -6,7 +6,7 @@ import { RebuildButton } from "@/components/skills/RebuildButton";
 import { SkillRow } from "@/components/skills/SkillRow";
 import { app, learnerWithTrack, skillStateCopy, targetsPage } from "@/lib/copy/vi";
 import { loadSkillStatesSoft } from "@/lib/skills/load";
-import { createUserClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
 import { authorizeTargetsPage } from "@/lib/targets/access";
 import { loadTargetsView } from "@/lib/targets/loadTargets";
 
@@ -19,10 +19,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function TargetsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   const access = await authorizeTargetsPage(user, id);
   if (access.kind === "login") redirect("/login");

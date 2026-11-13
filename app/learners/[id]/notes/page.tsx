@@ -6,17 +6,14 @@ import { learnerWithTrack, notesPage } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { loadNotesPage } from "@/lib/review/load";
-import { createUserClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 /** Lesson notes of one child. Tutor: write and edit; parent: the notes the tutor shared. Students and outsiders: plain 404. */
 export default async function NotesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   const access = await authorizeLearnerPage(user, id, "notes:read");
   if (access.kind === "login") redirect("/login");

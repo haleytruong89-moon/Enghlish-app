@@ -1,6 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createUserClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
 import { createFileStorage } from "@/lib/storage/server";
 import { handleStudentPractice } from "./handlers";
 import { createSupabasePracticeStore } from "./supabaseStore";
@@ -29,10 +29,7 @@ export type StudentPracticeData =
   | { kind: "not-found" };
 
 export async function loadStudentPractice(): Promise<StudentPracticeData> {
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   const res = await handleStudentPractice({ user, store: createSupabasePracticeStore(), storage: createFileStorage() });
   if (res.status === 401) return { kind: "login" };
   if (res.status !== 200) return { kind: "not-found" };

@@ -9,7 +9,7 @@ import { authorizeInquiriesPage } from "@/lib/inquiries/access";
 import { addDays, dateWindow, defaultDueOn, todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi, safeExternalUrl } from "@/lib/inquiries/format";
 import { loadInquiriesPage } from "@/lib/inquiries/load";
-import { createUserClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +19,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function InquiriesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   const access = await authorizeInquiriesPage(user, id);
   if (access.kind === "login") redirect("/login");
