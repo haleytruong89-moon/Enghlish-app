@@ -20,12 +20,11 @@ export const dynamic = "force-dynamic";
 /** Inbox of submitted work — parent and tutor only (students and outsiders get a plain 404). */
 export default async function ReviewInboxPage({ searchParams }: { searchParams: Promise<{ f?: string | string[]; after?: string | string[]; learner?: string | string[] }> }) {
   const user = await getAuthUser();
-  const access = await authorizeStaffPage(user);
+  const sp = await searchParams;
+  const [access, shell] = await Promise.all([authorizeStaffPage(user), requireShell(firstParam(sp.learner))]);
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();
 
-  const sp = await searchParams;
-  const shell = await requireShell(firstParam(sp.learner));
   const filter = parseFilter(sp.f);
   const after = parseCursor(sp.after);
   // The database filters, orders (oldest first) and pages; the counts on the filter chips come from it too.

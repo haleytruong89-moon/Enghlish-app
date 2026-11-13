@@ -17,11 +17,11 @@ export const dynamic = "force-dynamic";
 export default async function StudioNewPage({ searchParams }: { searchParams: Promise<{ learner?: string }> }) {
   const { learner } = await searchParams;
   const user = await getAuthUser();
-  const access = await authorizeLearnerPage(user, learner ?? "", "studio:write");
+  // The gate and the shell read in parallel (both use the per-request cached user and member).
+  const [access, shell] = await Promise.all([authorizeLearnerPage(user, learner ?? "", "studio:write"), requireShell(learner ?? null)]);
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();
   const l = access.grant.learner;
-  const shell = await requireShell(l.id);
   const [gate, drafts] = await Promise.all([loadStudioGate(l.id), loadDraftList(l.id)]);
   return (
     <StaffShell shell={shell}>

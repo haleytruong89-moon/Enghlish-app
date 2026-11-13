@@ -6,17 +6,16 @@ import { ImportWaiting } from "@/components/import/ImportWaiting";
 import { StaffShell } from "@/components/shell/StaffShell";
 import { importCopy } from "@/lib/copy/vi";
 import { loadImportPage } from "@/lib/import/load";
-import { requireShell } from "@/lib/shell/load";
+import { withShell } from "@/lib/shell/parallel";
 
 export const dynamic = "force-dynamic";
 
 /** Xem và xác nhận bài nạp (W3): waiting while the AI reads, the review table, or the end state. The child's tutor or parent; others 404. Wide page. */
 export default async function ImportPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const r = await loadImportPage(id);
+  const { data: r, shell } = await withShell(loadImportPage(id), (x) => (x.kind === "ok" ? x.data.import.learnerId : null));
   if (r.kind === "login") redirect("/login");
-  if (r.kind === "not-found") notFound();
-  const shell = await requireShell(r.data.import.learnerId);
+  if (r.kind === "not-found" || !shell) notFound();
   const { import: b } = r.data;
   const learnerId = b.learnerId;
   return (

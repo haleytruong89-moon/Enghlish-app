@@ -39,7 +39,7 @@ describe("workdesk shell wiring", () => {
     ]) {
       const src = read(f);
       expect(src, f).toMatch(/StaffShell/);
-      expect(src, f).toMatch(/requireShell\(/);
+      expect(src, f).toMatch(/requireShell\(|withShell\(/);
       expect(src, f).not.toMatch(/AppHeader/);
       expect(src, f).not.toMatch(/<main\b/);
     }
@@ -48,5 +48,20 @@ describe("workdesk shell wiring", () => {
     const src = read("app/page.tsx");
     expect(src).toMatch(/studentNav="next"/);
     expect(src).toMatch(/<StudentHome\b/);
+  });
+});
+
+describe("detail pages read the shell in parallel with their own record", () => {
+  it("never wait for the record and then call requireShell after it", () => {
+    for (const f of ["app/curricula/versions/[id]/page.tsx", "app/studio/drafts/[id]/page.tsx", "app/imports/[id]/page.tsx"]) {
+      const src = read(f);
+      expect(src, f).toMatch(/withShell\(/);
+      expect(src, f).not.toMatch(/await requireShell\(/);
+    }
+  });
+  it("the gate and the shell of the other staff pages start together (Promise.all)", () => {
+    for (const f of ["app/review/page.tsx", "app/review/skills/page.tsx", "app/review/studio/page.tsx", "app/studio/new/page.tsx"]) {
+      expect(read(f), f).toMatch(/Promise\.all\(\[authorize\w+\([^\n]*requireShell\(/);
+    }
   });
 });

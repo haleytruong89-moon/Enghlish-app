@@ -22,10 +22,10 @@ export const dynamic = "force-dynamic";
 /** Hộp duyệt → tab "Kỹ năng" (spec §5): open proposals and ⚑ per child. The child's tutor decides; the parent reads. Students: 404. */
 export default async function ReviewSkillsPage({ searchParams }: { searchParams: Promise<{ learner?: string | string[] }> }) {
   const user = await getAuthUser();
-  const access = await authorizeStaffPage(user);
+  const sp = await searchParams;
+  const [access, shell] = await Promise.all([authorizeStaffPage(user), requireShell(firstParam(sp.learner))]);
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();
-  const shell = await requireShell(firstParam((await searchParams).learner));
 
   const [inbox, pointInbox, studioPending] = await Promise.all([
     loadSkillInbox(access.member.id),

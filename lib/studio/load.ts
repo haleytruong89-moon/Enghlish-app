@@ -5,7 +5,7 @@ import { allowRealLearners } from "@/lib/env";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { createFileStorage } from "@/lib/storage/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAuthUser } from "@/lib/auth/session";
+import { getAuthUser, getMemberByUserId } from "@/lib/auth/session";
 import { loadTags } from "@/lib/tutorwork/load";
 import { buildStudioContext, type StudioContext } from "./context";
 import { docxToText } from "./docx";
@@ -53,6 +53,8 @@ export async function loadDraftList(learnerId: string): Promise<DraftListItem[]>
 /** The page calls the same handler as GET /api/studio/drafts/:id (one access path). No AI and no background job from a page. */
 export async function loadDraftPage(draftId: string): Promise<{ kind: "ok"; data: DraftPageData; isParent: boolean } | { kind: "login" } | { kind: "not-found" }> {
   const user = await getAuthUser();
+  // Warm the per-request member cache while the guard looks up the record's child; requireAccess then reuses the same read.
+  if (user) void getMemberByUserId(user.id).catch(() => undefined);
   const deps: StudioDeps = {
     user,
     store: createSupabaseStudioStore(),

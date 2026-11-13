@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { StaffShell } from "@/components/shell/StaffShell";
-import { requireShell } from "@/lib/shell/load";
+import { withShell } from "@/lib/shell/parallel";
 import { MapTable } from "@/components/curriculum/MapTable";
 import { TocWaiting } from "@/components/curriculum/TocWaiting";
 import { VersionReview } from "@/components/curriculum/VersionReview";
@@ -15,10 +15,9 @@ export const dynamic = "force-dynamic";
 /** Duyệt mục lục (draft) or the read-only Bảng nối (approved / superseded). The child's tutor or parent; others 404. Wide page (spec §5.1). */
 export default async function CurriculumVersionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const r = await loadVersionPage(id);
+  const { data: r, shell } = await withShell(loadVersionPage(id), (x) => (x.kind === "ok" ? x.data.version.learnerId : null));
   if (r.kind === "login") redirect("/login");
-  if (r.kind === "not-found") notFound();
-  const shell = await requireShell(r.data.version.learnerId);
+  if (r.kind === "not-found" || !shell) notFound();
   const { version: v, stats } = r.data;
   const back = `/learners/${v.learnerId}/curricula`;
   const editable = v.status === "draft" || v.status === "ai_failed";
