@@ -1,5 +1,7 @@
 "use client";
 
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { notesPage } from "@/lib/copy/vi";
@@ -34,6 +36,8 @@ export function LessonNoteForm({
   const [published, setPublished] = useState(editing?.published ?? false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [round, setRound] = useState(0);
+  const { state: saveState, track } = useSaveStatus({ date, goals, observed, level, actions, practised, published }, { resetKey: round });
   const [saved, setSaved] = useState(false);
   const clientId = useRef<string>(crypto.randomUUID());
   const locked = new Set(editing?.practisedTargetIds ?? []);
@@ -46,7 +50,7 @@ export function LessonNoteForm({
     setError(null);
     setSaved(false);
     try {
-      const res = await fetch(`/api/learners/${learnerId}/lesson-notes`, {
+      const res = await track(() => fetch(`/api/learners/${learnerId}/lesson-notes`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -60,7 +64,7 @@ export function LessonNoteForm({
           published,
           ...(editing ? { supersedes_id: editing.id } : {}),
         }),
-      });
+      }));
       if (!res.ok) throw new Error(String(res.status));
       clientId.current = crypto.randomUUID();
       setSaved(true);
@@ -70,6 +74,7 @@ export function LessonNoteForm({
         setActions(["", "", ""]);
         setPracticed([]);
         setPublished(false);
+        setRound((n) => n + 1);
       }
       router.refresh();
       onDone();
@@ -170,6 +175,7 @@ export function LessonNoteForm({
         </p>
       ) : null}
       <div className="flex gap-2">
+        <SaveStatus state={saveState} />
         <button type="submit" disabled={busy} data-testid="note-save" className="min-h-12 rounded-xl bg-accent px-6 text-base font-bold text-white disabled:opacity-60">
           {busy ? notesPage.saving : notesPage.save}
         </button>

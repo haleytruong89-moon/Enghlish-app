@@ -1,5 +1,7 @@
 "use client";
 
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { FilePicker } from "@/components/ui/FilePicker";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -37,6 +39,7 @@ export function ExternalResultForm({
   const [note, setNote] = useState(edit?.note ?? "");
   const [file, setFile] = useState<Prepared | null>(null);
   const [busy, setBusy] = useState<null | "upload" | "save">(null);
+  const { state: saveState, track } = useSaveStatus({ exam, takenOn, score, picked, note, file: file?.name ?? null });
   const [msg, setMsg] = useState<string | null>(null);
   const [clientId, setClientId] = useState(() => crypto.randomUUID());
   const [cache] = useState<UploadCache>(() => new Map());
@@ -68,7 +71,7 @@ export function ExternalResultForm({
       sheet = up.files[0] ?? null;
     }
     setBusy("save");
-    const r = await postJson(`/api/learners/${learnerId}/external-results`, {
+    const r = await track(() => postJson(`/api/learners/${learnerId}/external-results`, {
       client_id: clientId,
       exam,
       taken_on: takenOn,
@@ -77,7 +80,7 @@ export function ExternalResultForm({
       ...(note.trim() ? { note: note.trim() } : {}),
       ...(sheet ? { file: sheet } : {}),
       ...(edit ? { supersedes_id: edit.id } : {}),
-    });
+    }));
     setBusy(null);
     // After a 409 (already corrected, client id reused…) the next try must be a new save, not the same client id again.
     setClientId(clientIdAfter(r, clientId));
@@ -162,6 +165,7 @@ export function ExternalResultForm({
           {msg}
         </p>
       ) : null}
+      <SaveStatus state={saveState} />
       <button type="submit" disabled={busy !== null} data-testid="external-save" aria-describedby={describedBy(msg && "external-msg")} className="min-h-12 rounded-xl bg-accent px-5 text-base font-semibold text-white disabled:opacity-60">
         {busy === "upload" ? externalCopy.uploading : busy === "save" ? externalCopy.saving : externalCopy.save}
       </button>

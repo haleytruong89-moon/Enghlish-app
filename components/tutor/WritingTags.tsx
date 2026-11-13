@@ -1,5 +1,7 @@
 "use client";
 
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { writingTags } from "@/lib/copy/vi";
@@ -16,6 +18,7 @@ export function WritingTags({ learnerId, episodeId, tags: initialTags, saved, ma
   const [selected, setSelected] = useState<string[]>(saved);
   const [alreadySaved, setAlreadySaved] = useState<string[]>(saved);
   const [busy, setBusy] = useState(false);
+  const { state: saveState, track } = useSaveStatus({ selected });
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const fresh = selected.filter((k) => !alreadySaved.includes(k));
@@ -25,7 +28,7 @@ export function WritingTags({ learnerId, episodeId, tags: initialTags, saved, ma
     setBusy(true);
     setError(null);
     setDone(false);
-    const r = await postJson(`/api/review/episodes/${episodeId}/tags`, { tags: selected });
+    const r = await track(() => postJson(`/api/review/episodes/${episodeId}/tags`, { tags: selected }));
     setBusy(false);
     if (!r.ok) return setError(r.status === 400 ? writingTags.tooMany(MAX_WRITING_TAGS) : failText(r));
     setAlreadySaved(selected);
@@ -49,6 +52,7 @@ export function WritingTags({ learnerId, episodeId, tags: initialTags, saved, ma
           {writingTags.saved}
         </p>
       ) : null}
+      <SaveStatus state={saveState} />
       <button
         type="button"
         onClick={() => void save()}

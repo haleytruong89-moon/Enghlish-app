@@ -1,5 +1,7 @@
 "use client";
 
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { blockImplicitSubmit } from "@/lib/forms/enter";
 import { FilePicker } from "@/components/ui/FilePicker";
 import { useRouter } from "next/navigation";
@@ -47,6 +49,8 @@ export function AssignForm({
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState<"upload" | "save" | null>(null);
+  const [round, setRound] = useState(0);
+  const { state: saveState, track } = useSaveStatus({ kind, url, title, picked, due, frameId, pdf: pdf?.name ?? null, answer: answer?.name ?? null }, { resetKey: round });
   const attempt = useRef<SendAttempt | null>(null);
   const uploaded = useRef<UploadCache>(new Map());
 
@@ -61,6 +65,7 @@ export function AssignForm({
   }
 
   function reset() {
+    setRound((n) => n + 1);
     setUrl("");
     setPdf(null);
     setAnswer(null);
@@ -113,7 +118,7 @@ export function AssignForm({
     attempt.current = nextAttempt(attempt.current, JSON.stringify(body));
     body.client_id = attempt.current.id;
     setBusy("save");
-    const r = await postJson(`/api/learners/${learnerId}/assignments`, body);
+    const r = await track(() => postJson(`/api/learners/${learnerId}/assignments`, body));
     setBusy(null);
     if (!r.ok) return setError(practiceErrorText(codeOf(r), "staff"));
     setDone(true);
@@ -227,6 +232,7 @@ export function AssignForm({
         </div>
       ) : null}
       <div>
+        <SaveStatus state={saveState} />
         <button
           type="submit"
           disabled={busy !== null || done}

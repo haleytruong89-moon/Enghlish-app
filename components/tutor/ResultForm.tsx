@@ -1,5 +1,7 @@
 "use client";
 
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { blockImplicitSubmit } from "@/lib/forms/enter";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
@@ -75,6 +77,8 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [round, setRound] = useState(0);
+  const { state: saveState, track } = useSaveStatus({ assignmentId, mode, frameId, wrong: [...wrong].sort(), title, rows, itemTags, source, attempt, usedHint, context, date }, { resetKey: round });
   const clientId = useRef<string>(crypto.randomUUID());
 
   const frame = frames.find((f) => f.id === frameId) ?? null;
@@ -119,6 +123,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
   }
 
   function reset() {
+    setRound((n) => n + 1);
     setSuperseding(null);
     setAssignmentId("");
     setMode(paperMode(initialFramed, frames.length > 0));
@@ -183,7 +188,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
       };
     }
     setBusy(true);
-    const r = await postJson<{ id: string; untagged: number }>(`/api/learners/${learnerId}/results`, payload);
+    const r = await track(() => postJson<{ id: string; untagged: number }>(`/api/learners/${learnerId}/results`, payload));
     setBusy(false);
     if (!r.ok) return setError(failText(r));
     setSaved(resultPage.saved(r.body.untagged));
@@ -541,7 +546,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
           </button>
         </div>
       ) : null}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           type="submit"
           disabled={busy || saved !== null}
@@ -550,6 +555,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
         >
           {busy ? resultPage.saving : resultPage.save}
         </button>
+        <SaveStatus state={saveState} />
       </div>
     </form>
   );

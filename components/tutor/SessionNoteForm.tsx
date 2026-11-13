@@ -1,5 +1,7 @@
 "use client";
 
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { blockImplicitSubmit } from "@/lib/forms/enter";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -77,6 +79,7 @@ export function SessionNoteForm({
   const [savedId, setSavedId] = useState<string | null>(null);
   const [sameNote, setSameNote] = useState<{ practised: string; weak: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const { state: saveState, track } = useSaveStatus({ date, studied, weak, practised, message, parentNote, rechecks, taught });
   const clientId = useRef<string>(crypto.randomUUID());
   const labelOf = new Map(tags.map((t) => [t.key, t.label]));
 
@@ -107,7 +110,7 @@ export function SessionNoteForm({
     if (!studied.trim() && weak.length === 0 && practised.length === 0 && !message.trim() && !parentNote.trim() && answered.length === 0 && taught.length === 0) return setError(sessionNotePage.empty);
     if (answered.some((a) => a.result === "ok" && weak.includes(a.tag_key))) return setError(sessionNotePage.recheckConflict);
     setBusy(true);
-    const r = await postJson<{ id: string }>(`/api/learners/${learnerId}/session-notes`, {
+    const r = await track(() => postJson<{ id: string }>(`/api/learners/${learnerId}/session-notes`, {
       client_id: clientId.current,
       session_date: date,
       ...(studied.trim() ? { studied: studied.trim() } : {}),
@@ -117,7 +120,7 @@ export function SessionNoteForm({
       ...(parentNote.trim() ? { note_for_parent: parentNote.trim() } : {}),
       rechecks: answered,
       ...(taught.length > 0 ? { taught_units: taught } : {}),
-    });
+    }));
     setBusy(false);
     if (!r.ok) return setError(failText(r));
     setSavedId(r.body.id);
@@ -272,7 +275,7 @@ export function SessionNoteForm({
             {error}
           </p>
         ) : null}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="submit"
             disabled={busy || saved}
@@ -281,6 +284,7 @@ export function SessionNoteForm({
           >
             {busy ? sessionNotePage.saving : sessionNotePage.save}
           </button>
+          <SaveStatus state={saveState} />
         </div>
       </fieldset>
 

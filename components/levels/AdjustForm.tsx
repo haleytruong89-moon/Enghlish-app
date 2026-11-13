@@ -1,5 +1,7 @@
 "use client";
 
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { levelCopy, levelFormCopy } from "@/lib/copy/vi";
@@ -15,6 +17,7 @@ export function AdjustForm({ learnerId, domain }: { learnerId: string; domain: {
   const [level, setLevel] = useState(domain.current);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const { state: saveState, track } = useSaveStatus({ level, reason });
   const [msg, setMsg] = useState<string | null>(null);
   const [clientId, setClientId] = useState(() => crypto.randomUUID());
 
@@ -24,7 +27,7 @@ export function AdjustForm({ learnerId, domain }: { learnerId: string; domain: {
     if (level === domain.current) return setMsg(levelFormCopy.sameLevel);
     if (!reason.trim()) return setMsg(levelFormCopy.reasonRequired);
     setBusy(true);
-    const r = await postJson(`/api/learners/${learnerId}/levels`, { client_id: clientId, kind: "adjust", levels: { [domain.key]: level }, reason: reason.trim() });
+    const r = await track(() => postJson(`/api/learners/${learnerId}/levels`, { client_id: clientId, kind: "adjust", levels: { [domain.key]: level }, reason: reason.trim() }));
     setBusy(false);
     // After a 409 the next try must be a new save, not the same client id again.
     setClientId(clientIdAfter(r, clientId));
@@ -76,6 +79,7 @@ export function AdjustForm({ learnerId, domain }: { learnerId: string; domain: {
           {msg}
         </p>
       ) : null}
+      <SaveStatus state={saveState} />
       <button type="submit" disabled={busy} data-testid="adjust-save" aria-describedby={describedBy(msg && "adjust-msg")} className="min-h-12 rounded-xl bg-accent px-5 text-base font-semibold text-white disabled:opacity-60">
         {busy ? levelFormCopy.saving : levelFormCopy.saveAdjust}
       </button>

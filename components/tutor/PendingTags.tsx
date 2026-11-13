@@ -1,5 +1,7 @@
 "use client";
 
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { resultPage } from "@/lib/copy/vi";
@@ -26,6 +28,7 @@ function PendingResult({
   const [picked, setPicked] = useState<Record<number, string | null>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { state: saveState, track } = useSaveStatus({ picked });
 
   // Only the items that are still waiting (the list comes from the server again after every save) and have a tag chosen are sent,
   // so a partial save leaves the rest to be saved later.
@@ -37,7 +40,7 @@ function PendingResult({
     if (items.length === 0) return setError(resultPage.pendingNeed);
     setBusy(true);
     setError(null);
-    const r = await postJson(`/api/results/${item.resultId}/tags`, { items });
+    const r = await track(() => postJson(`/api/results/${item.resultId}/tags`, { items }));
     setBusy(false);
     if (!r.ok) return setError(failText(r));
     setPicked({});
@@ -69,6 +72,7 @@ function PendingResult({
           {error}
         </p>
       ) : null}
+      <SaveStatus state={saveState} />
       <button
         type="button"
         onClick={() => void save()}
