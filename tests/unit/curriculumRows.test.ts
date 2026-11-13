@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { editStats } from "@/lib/curriculum/editStats";
 import { normalizeToc } from "@/lib/curriculum/normalize";
-import { isProgressTest, moveToNonUnit, moveToUnit, relatedUnits } from "@/lib/curriculum/rows";
+import { isProgressTest, moveToNonUnit, moveToUnit, relatedUnits, restoreUnit } from "@/lib/curriculum/rows";
 import { aiTocSchema, curriculumPayloadSchema, type CurriculumPayload } from "@/lib/curriculum/schema";
 import { validateCurriculum } from "@/lib/curriculum/validate";
 
@@ -104,5 +104,30 @@ describe("relatedUnits", () => {
     expect(relatedUnits(q, ign(q, "Review 1"))).toEqual(["U1"]);
     const noPage = { ...p, units: p.units.map((u) => (u.code === "U2" ? { ...u, page: null } : u)) };
     expect(relatedUnits(noPage, ign(noPage, "Review 1"))).toEqual(["U1", "U2"]);
+  });
+});
+
+describe("restoreUnit and identity matching", () => {
+  it("'Lấy lại dòng' removes the twin in 'Không phải Unit' and clears edit_reason", () => {
+    const p = base();
+    const i = idx(p, "U5");
+    const q = moveToNonUnit(p, i, "review");
+    expect(q.ignored.at(-1)!.from_ai_index).toBe(p.units[i]!.ai_index);
+    const r = restoreUnit(q, i);
+    expect(r).toEqual(p);
+  });
+  it("a title edited after the move still comes back by identity (and a long title is not a mismatch)", () => {
+    const p = base();
+    const i = idx(p, "U5");
+    const q = moveToNonUnit(p, i, "reference");
+    const edited = { ...q, units: q.units.map((u, k) => (k === i ? { ...u, title: u.title + " x".repeat(100) } : u)) };
+    const back = moveToUnit(edited, edited.ignored.length - 1);
+    expect(back.units).toHaveLength(26);
+    expect(back.units[i]).toMatchObject({ dropped: false, edit_reason: null });
+  });
+  it("a full 'Không phải Unit' list refuses the move instead of dropping the row", () => {
+    const p = base();
+    const full = { ...p, ignored: Array.from({ length: 100 }, (_, k) => ({ label: `r${k}`, page: null, reason: "other" as const })) };
+    expect(moveToNonUnit(full, 0, "other")).toBe(full);
   });
 });

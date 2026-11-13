@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { Client } from "pg";
 import { aiSettingsCopy, levelLabels, pdfPickCopy, studioInboxCopy, studioStudentCopy, work } from "@/lib/copy/vi";
+import { KEY_RECOMMEND, PAGE_LIMITS } from "@/lib/pdf/limits";
 import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { makeDocx } from "../unit/fixtures/docx";
 import { LEARNER_IDS, loginAs } from "./helpers";
@@ -39,7 +40,7 @@ test("Nguyên's tutor uploads a PDF + a Word key, the AI draft is blocked by ite
   await page.getByTestId("nav-assign").click();
   await page.getByTestId("nav-assign-studio").click();
   await page.getByTestId("studio-title").fill("Destination B1 — Unit 5 (e2e)");
-  await expect(page.getByTestId("page-guidance")).toContainText(pdfPickCopy.guidance.studio);
+  await expect(page.getByTestId("page-guidance")).toContainText(pdfPickCopy.guidance.studio(PAGE_LIMITS.studio, KEY_RECOMMEND));
   await page.getByTestId("studio-test-file").setInputFiles({ name: "de.pdf", mimeType: "application/pdf", buffer: PDF });
   await page.getByTestId("studio-key-file").setInputFiles({
     name: "dap-an.docx", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", buffer: makeDocx(["1B 2A 3A 4C 5B"]),
@@ -107,8 +108,11 @@ test("the tutor decides the two waiting items; the result, the tag marks and the
   const label = (await q<{ label_vi: string }>("select label_vi from english.error_tags where key = 'dang-tu' and track_id = 'B'"))[0]!.label_vi;
   await page.goto(`/learners/${NGUYEN}/weak`);
   await expect(page.locator("main")).toContainText(label);
-  await page.goto(`/learners/${NGUYEN}/targets`);
-  await expect(page.getByTestId("skill-row-B-L2-CLOZE")).toContainText(new RegExp(`${levelLabels.SUPPORTED.label}|${levelLabels.DEVELOPING.label}`));
+  // The skill levels are recomputed after the response (after()): poll with a reload instead of reading once.
+  await expect(async () => {
+    await page.goto(`/learners/${NGUYEN}/targets`);
+    await expect(page.getByTestId("skill-row-B-L2-CLOZE")).toContainText(new RegExp(`${levelLabels.SUPPORTED.label}|${levelLabels.DEVELOPING.label}`), { timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
 });
 
 test("after the verdicts the child sees no waiting box; the parent sees the AI cost on the approved test", async ({ page, browser }) => {

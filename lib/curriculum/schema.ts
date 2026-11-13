@@ -34,6 +34,8 @@ export const ignoredRowSchema = z.strictObject({
   label: trimmed(L.ignoredLabel),
   page: z.number().int().min(1).max(L.page).nullable(),
   reason: z.enum(IGNORED_REASONS),
+  /** Set when the tutor moved an AI row here: its position in ai_payload.units, so "Đưa về Unit" / "Lấy lại dòng" find the same row. */
+  from_ai_index: z.number().int().min(0).max(L.units).optional(),
 });
 export type IgnoredRow = z.infer<typeof ignoredRowSchema>;
 

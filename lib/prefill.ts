@@ -4,7 +4,7 @@
  */
 import { UNIT_CODE_RE } from "@/lib/curriculum/types";
 
-export const PREFILL_TITLE_MAX = 200;
+export const PREFILL_TITLE_MAX = 160; // the shortest title box it fills (Studio: 160; the assign form allows 200);
 export const PREFILL_UNITS_MAX = 12;
 
 export type Prefill = { title: string | null; pages: string | null; units: string[] };

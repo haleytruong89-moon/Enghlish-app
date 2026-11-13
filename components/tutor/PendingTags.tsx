@@ -28,7 +28,9 @@ function PendingResult({
   const [picked, setPicked] = useState<Record<number, string | null>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const { state: saveState, track } = useSaveStatus({ picked });
+  // After a save the picked tags are cleared; resetKey makes the cleared form the new "saved" baseline (no false "unsaved changes").
+  const [saves, setSaves] = useState(0);
+  const { state: saveState, track } = useSaveStatus({ picked }, { resetKey: saves });
 
   // Only the items that are still waiting (the list comes from the server again after every save) and have a tag chosen are sent,
   // so a partial save leaves the rest to be saved later.
@@ -44,6 +46,7 @@ function PendingResult({
     setBusy(false);
     if (!r.ok) return setError(failText(r));
     setPicked({});
+    setSaves((n) => n + 1);
     onSaved();
   }
 

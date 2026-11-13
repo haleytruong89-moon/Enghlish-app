@@ -16,7 +16,7 @@ import { editStats, tooManyEdits } from "@/lib/curriculum/editStats";
 import type { CurriculumPayload, UnitDraft } from "@/lib/curriculum/schema";
 import type { VersionPageData } from "@/lib/curriculum/shape";
 import { EDIT_REASONS, IGNORED_REASONS, QUALITY, UNIT_CODE_RE, type EditReason, type IgnoredReason, type Quality } from "@/lib/curriculum/types";
-import { moveToNonUnit, moveToUnit, relatedUnits } from "@/lib/curriculum/rows";
+import { moveToNonUnit, moveToUnit, nonUnitFull, relatedUnits, restoreUnit, unitsFull } from "@/lib/curriculum/rows";
 import { rowsToResolve, validateCurriculum, type CurriculumIssue } from "@/lib/curriculum/validate";
 import type { SkillMapView } from "@/lib/skillmap/types";
 import type { TagInfo } from "@/lib/tutorwork/types";
@@ -54,8 +54,16 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
   function update(i: number, patch: Partial<UnitDraft>) {
     setPayload((p) => ({ ...p, units: p.units.map((u, k) => (k === i ? { ...u, ...patch } : u)) }));
   }
-  const notAUnit = (i: number, reason: IgnoredReason) => setPayload((p) => moveToNonUnit(p, i, reason));
-  const backToUnit = (k: number) => setPayload((p) => moveToUnit(p, k));
+  const notAUnit = (i: number, reason: IgnoredReason) => {
+    if (nonUnitFull(payload)) return setProblem(nonUnitCopy.listFull);
+    setProblem(null);
+    setPayload((p) => moveToNonUnit(p, i, reason));
+  };
+  const backToUnit = (k: number) => {
+    if (unitsFull(payload)) return setProblem(nonUnitCopy.unitsFull);
+    setProblem(null);
+    setPayload((p) => moveToUnit(p, k));
+  };
   function addUnit() {
     setPayload((p) => {
       const used = new Set(p.units.map((u) => u.code));
@@ -158,7 +166,7 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
               <span className="text-muted line-through">
                 {u.code} · {u.title}
               </span>
-              <button type="button" className={small} onClick={() => update(i, { dropped: false })} data-testid={`row-undrop-${i}`}>
+              <button type="button" className={small} onClick={() => setPayload((p) => restoreUnit(p, i))} data-testid={`row-undrop-${i}`}>
                 {curriculumCopy.undrop}
               </button>
             </p>

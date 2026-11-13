@@ -14,6 +14,7 @@ import type { PointHook } from "@/lib/engine/points/runner";
 import { ReviewDbError, type HandlerResult } from "@/lib/review/handlers";
 import { buildPath, checkFile, type AllowedMime } from "@/lib/storage/rules";
 import type { FileDownloader, FileStorage } from "@/lib/storage/types";
+import { overPageLimit } from "@/lib/storage/serverPages";
 import { FILE_ERRORS, verifyStoredFile } from "@/lib/storage/verify";
 import type { RunLog } from "@/lib/studio/extract";
 import { sameInstant } from "@/lib/studio/instant";
@@ -175,6 +176,7 @@ export async function handleCreateImport(deps: ImportDeps, learnerId: string, ra
   const stored = await deps.storage.download(buildPath({ ...owner, fileId: b.work_file.id, mime: b.work_file.mime as AllowedMime })).catch(() => null);
   if (!stored || createHash("sha256").update(stored).digest("hex") !== b.source_hash) return fail(400, "bad_hash");
   const manual = b.manual === true;
+  if (!manual && (await overPageLimit(deps, owner, "import", b.work_file, b.key_file))) return fail(400, "pages_too_long");
   // Without "Soạn tay" the AI is the only way to read the paper: no AI (off, no consent, cap) → nothing is created and the screen says why
   // (and offers "Soạn tay"). A manual import never calls the AI and never needs the gate.
   if (!manual) {

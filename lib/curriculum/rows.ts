@@ -16,12 +16,18 @@ export function isProgressTest(r: Pick<IgnoredRow, "label" | "reason">): boolean
 
 const clip = (s: string, max: number) => s.replace(/\s+/g, " ").trim().slice(0, max).trim();
 
-/** A Unit row the tutor says is not a Unit (a Review, a test, a reference page). */
+/** True when "Không phải Unit" already holds the most rows the version may keep: the move is refused (never silently cut). */
+export const nonUnitFull = (p: CurriculumPayload): boolean => p.ignored.length >= L.ignored;
+/** True when the Units table is full: "Đưa về Unit" is refused. */
+export const unitsFull = (p: CurriculumPayload): boolean => p.units.length >= L.units;
+
+/** A Unit row the tutor says is not a Unit (a Review, a test, a reference page). Refused (payload unchanged) when the list is full: see nonUnitFull. */
 export function moveToNonUnit(p: CurriculumPayload, unitIndex: number, reason: IgnoredReason): CurriculumPayload {
   const u = p.units[unitIndex];
-  if (!u || u.dropped) return p;
+  if (!u || u.dropped || nonUnitFull(p)) return p;
   const label = clip(u.title, L.ignoredLabel) || u.code;
-  const ignored: IgnoredRow[] = [...p.ignored, { label, page: u.page, reason }].slice(0, L.ignored);
+  // from_ai_index links the row to the AI row that stays in the draft (dropped), so it can come back by identity, not by title.
+  const ignored: IgnoredRow[] = [...p.ignored, { label, page: u.page, reason, ...(u.ai_index !== null ? { from_ai_index: u.ai_index } : {}) }];
   const units =
     u.ai_index !== null
       ? // An AI row stays (marked dropped) so the edit count stays honest.
@@ -46,8 +52,10 @@ export function moveToUnit(p: CurriculumPayload, ignoredIndex: number): Curricul
   const r = p.ignored[ignoredIndex];
   if (!r) return p;
   const ignored = p.ignored.filter((_, i) => i !== ignoredIndex);
-  const back = p.units.findIndex((u) => u.dropped && u.edit_reason === "not_a_unit" && u.title === r.label && u.page === r.page);
+  const back =
+    r.from_ai_index === undefined ? -1 : p.units.findIndex((u) => u.dropped && u.edit_reason === "not_a_unit" && u.ai_index === r.from_ai_index);
   if (back >= 0) return { units: p.units.map((u, i) => (i === back ? { ...u, dropped: false, edit_reason: null } : u)), ignored };
+  if (unitsFull(p)) return p;
   const unit: UnitDraft = {
     code: freeCode(p, r.label),
     title: clip(r.label, L.unitTitle),
@@ -66,7 +74,21 @@ export function moveToUnit(p: CurriculumPayload, ignoredIndex: number): Curricul
   };
   const at = r.page === null ? -1 : p.units.findIndex((u) => !u.dropped && u.page !== null && u.page > (r.page as number));
   const units = at < 0 ? [...p.units, unit] : [...p.units.slice(0, at), unit, ...p.units.slice(at)];
-  return { units: units.slice(0, L.units), ignored };
+  return { units, ignored };
+}
+
+/**
+ * "Lấy lại dòng" on a row that was moved to "Không phải Unit": the row comes back and its twin in "Không phải Unit" is removed,
+ * so it is never in both lists. Any other dropped row just comes back. edit_reason is cleared in both cases.
+ */
+export function restoreUnit(p: CurriculumPayload, unitIndex: number): CurriculumPayload {
+  const u = p.units[unitIndex];
+  if (!u || !u.dropped) return p;
+  const twin = u.edit_reason === "not_a_unit" && u.ai_index !== null ? p.ignored.findIndex((r) => r.from_ai_index === u.ai_index) : -1;
+  return {
+    units: p.units.map((x, i) => (i === unitIndex ? { ...x, dropped: false, edit_reason: null } : x)),
+    ignored: twin >= 0 ? p.ignored.filter((_, i) => i !== twin) : p.ignored,
+  };
 }
 
 /**
