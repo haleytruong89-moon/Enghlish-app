@@ -14,6 +14,7 @@ import { allowRealLearners } from "@/lib/env";
 import { ReviewDbError, type HandlerResult } from "@/lib/review/handlers";
 import { buildPath, checkFile, type AllowedMime, type FileKind } from "@/lib/storage/rules";
 import type { FileDownloader, FileStorage } from "@/lib/storage/types";
+import { overPageLimit } from "@/lib/storage/serverPages";
 import { FILE_ERRORS, verifyStoredFile } from "@/lib/storage/verify";
 import { buildStudioBuild } from "./buildTemplate";
 import type { StudioContext } from "./context";
@@ -170,6 +171,7 @@ export async function handleCreateDraft(deps: StudioDeps, learnerId: string, raw
     const bad = await verifyStoredFile(deps.storage, owner, kind, { id: f.id, mime: f.mime as AllowedMime, bytes: f.bytes });
     if (bad) return fail(400, bad);
   }
+  if (b.mode === "ai" && (await overPageLimit(deps, owner, "studio", b.test_file, b.key_file))) return fail(400, "pages_too_long");
   let ctx: StudioContext | null = null;
   if (b.mode === "ai") {
     const gate = parseGate(await deps.store.aiGate(learner.id));

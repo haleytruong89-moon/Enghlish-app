@@ -3,6 +3,7 @@
  * Không viết chữ giao diện rải rác trong component; thêm nhãn mới vào đây.
  * Học sinh: xưng "bạn", câu ngắn, không điểm, không mã (D28).
  */
+import { PAGE_LIMITS } from "@/lib/pdf/limits";
 
 // ---------- Cách gọi gia sư ---------------------------------------------------------
 /**
@@ -1821,6 +1822,7 @@ export const aiSettingsCopy = {
 export const studioErrors: Record<string, string> = {
   file_type: "Chỉ nhận PDF hoặc Word .docx (không nhận .doc hay ảnh).",
   file_too_big: "File lớn hơn 15 MB.",
+  pages_too_long: `Đề và đáp án quá dài để AI đọc trong một lần (đề tối đa ${PAGE_LIMITS.studio.blockMain} trang, tổng tối đa ${PAGE_LIMITS.studio.blockTotal} trang). Chọn ít trang hơn hoặc chia làm hai lần.`,
   file_empty: "File trống.",
   file_missing: "File chưa tải lên xong. Thử lại.",
   file_mismatch: "File tải lên không khớp. Thử lại.",
@@ -2209,6 +2211,7 @@ export const curriculumErrors: Record<string, string> = {
   file_type: "Mục lục phải là file PDF.",
   file_empty: "File trống.",
   file_too_big: "File lớn hơn 15 MB. Chỉ cần các trang mục lục.",
+  pages_too_long: `Quá nhiều trang cho một mục lục (tối đa ${PAGE_LIMITS.toc.blockMain} trang). Chỉ gửi các trang mục lục.`,
   file_missing: "File chưa tải lên xong. Thử lại.",
   file_mismatch: "File trong kho không khớp. Thử tải lại.",
   upload_limit: "Đã tải quá nhiều file trong 24 giờ. Thử lại sau.",
@@ -2383,6 +2386,7 @@ export const importCopy = {
     bad_title: "Tên đề cần 1–160 ký tự.",
     bad_support: "Chọn mức hỗ trợ.",
     bad_hash: "Không đọc được file. Thử chọn lại.",
+    pages_too_long: `Bài làm và đáp án quá dài để AI đọc trong một lần (bài làm tối đa ${PAGE_LIMITS.import.blockMain} trang, tổng tối đa ${PAGE_LIMITS.import.blockTotal} trang). Chọn ít trang hơn hoặc chia làm hai lần.`,
     draft_changed: "Bài nạp vừa thay đổi ở nơi khác. Tải lại trang.",
     not_draft: "Bài nạp này không còn ở bước xem và xác nhận.",
     unknown_tag: "Có nhãn không còn trong danh sách. Chọn lại nhãn.",
@@ -2469,9 +2473,6 @@ export const pdfPickCopy = {
     import: (l: { blockMain: number; blockTotal: number }) => `Bài làm quá dài để AI đọc trong một lần. Chọn ít trang hơn (bài làm tối đa ${l.blockMain} trang, tổng tối đa ${l.blockTotal} trang) hoặc chia bài thành hai lần nạp.`,
     toc: (l: { blockMain: number }) => `Quá nhiều trang cho một mục lục (tối đa ${l.blockMain} trang). Chỉ chọn các trang mục lục.`,
   },
-  /** Server-side check (the browser check can be bypassed): the same limits, said when a file is already too long on arrival. */
-  serverTooLong: (pages: number, max: number) => `File có ${pages} trang, nhiều hơn mức AI đọc được trong một lần (tối đa ${max} trang). Chọn ít trang hơn hoặc chia làm hai lần.`,
-  serverTooLongTotal: (pages: number, max: number) => `Tổng cộng ${pages} trang (đề và đáp án), nhiều hơn mức AI đọc được trong một lần (tối đa ${max} trang). Chọn ít trang hơn hoặc chia làm hai lần.`,
 } as const;
 
 /** UX vòng 2 · mục 6: danh sách "Không phải Unit" của giáo trình (Review, Progress Test, phần tra cứu). Chỉ đổi ở bản nháp. */
