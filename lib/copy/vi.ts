@@ -729,6 +729,7 @@ export const purgePage = {
     curriculum_unit_points: "Bảng nối Unit → mục kiến thức",
     curriculum_unit_events: "Lần đặt trạng thái Unit",
     lesson_note_units: "Unit đã dạy trong buổi học",
+    assignment_units: "Unit của bài luyện đã giao",
     login_names: "Tên đăng nhập ngắn",
     learners: "Hồ sơ của em",
     members: "Tài khoản của em trong app",
