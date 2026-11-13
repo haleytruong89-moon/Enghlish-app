@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { unitPickerCopy } from "@/lib/copy/vi";
+import { fallbackLabels, unitPickerCopy } from "@/lib/copy/vi";
 import { formatRange } from "@/lib/prefill";
 import {
   derivedItems, isReviewTicked, isUnitTicked, toggleReview, toggleUnit, type PickerState, type UnitChoice,
@@ -43,7 +43,7 @@ export function UnitPicker({
     );
   }
   const items = derivedItems(choices, state);
-  const shown = items.slice(0, SHOWN_ITEMS).map((k) => tagLabels[k] ?? k);
+  const shown = items.slice(0, SHOWN_ITEMS).map((k) => tagLabels[k] ?? fallbackLabels.tag);
   const body = (
     <div className="flex flex-col gap-3" data-testid={testId}>
       <p className="text-sm text-muted">{compact ? unitPickerCopy.helpTitleOnly : unitPickerCopy.help}</p>
