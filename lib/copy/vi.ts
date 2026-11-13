@@ -2475,6 +2475,8 @@ export const nonUnitCopy = {
   notUnit: "Không phải Unit",
   notUnitPick: "Không phải Unit…",
   toUnit: "Đưa về Unit",
+  listFull: "Danh sách “Không phải Unit” đã đầy (tối đa 100 dòng), chưa chuyển thêm được.",
+  unitsFull: "Bảng Unit đã đầy, chưa đưa thêm dòng về được.",
   progressBadge: "Kiểm tra tiến độ",
   line: (reason: string, label: string, page: number | null) => `${reason} · ${label}${page !== null ? ` · tr. ${page}` : ""}`,
   related: (units: string) => `Ôn: Unit ${units}`,
