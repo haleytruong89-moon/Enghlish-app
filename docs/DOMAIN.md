@@ -1,4 +1,4 @@
-# Luật và dữ liệu nghiệp vụ · Bàn làm việc gia sư (bản 0.3 · 08/11/2026)
+# Luật và dữ liệu nghiệp vụ · Bàn làm việc gia sư (bản 0.3.1 · đổi chữ 13/11/2026)
 
 Trạng thái: **0.3 — phụ huynh duyệt 08/11** (D-W1…D-W8 + 8 điểm rà soát R1–R8, mục 14). Đổi sau này = bản 0.4 có ghi lý do. Viết trước spec `docs/superpowers/specs/2026-11-08-tutor-workdesk-design.md` để chốt phần khó đổi về sau (dữ liệu, phiên bản, cách tính, trạng thái, quyền) trước khi code.
 Nguồn: bản bấm thử + trang luồng (07/11), `TUTOR_WORKDESK_REVIEW_2026-11-07.md`, `AI_QUALITY_PLAN_2026-11-07.md`, câu trả lời thay gia sư của phụ huynh (08/11, mục 12), hiện trạng code đến migration `0024`.
@@ -38,6 +38,8 @@ Ký hiệu: ✅ đã chốt (ghi ngày) · ❓ cần phụ huynh quyết · 🕓
 - **Góp ý của phụ huynh cho gia sư vẫn qua Zalo** ✅ 08/11. App không làm kênh nhắn phụ huynh → gia sư. Ô "Phụ huynh góp ý" trong "Chờ duyệt" của bản bấm thử **bỏ**.
 
 ## 3. Dữ liệu nền: 3 tầng
+
+> **Chữ trên giao diện (13/11):** "điểm kiến thức" gọi là **"mục kiến thức"** ("Điểm cần chú ý" → "Mục cần chú ý"). Chỉ đổi chữ hiển thị, không đổi luật, dữ liệu hay tên trong code. "Điểm" nghĩa điểm số giữ nguyên. Bản 0.3.1 · đổi chữ.
 
 ### Tầng A · Khung chung (đã có, khóa phiên bản)
 Bản đồ kỹ năng SM-1 (7 mảng · 40 nhóm), danh mục kỹ năng 0.2.1, chính sách ngưỡng AP-0.3, thang cấp (SM-2). Không đổi trong việc này.
@@ -96,7 +98,7 @@ Ngày = **ngày lịch Việt Nam (UTC+7)** cho mọi phép tính (như S7a).
 | Reading Explorer 3: chưa đánh dấu Unit nào | "Chưa bắt đầu"; độ phủ 0 % |
 | Giáo trình lên v2, bỏ U20 (chưa học) và thêm U27 | Đang học đến không đổi (mã Unit ổn định); độ phủ tính lại trên v2 |
 
-### 5.2 Mức từng điểm kiến thức (mới)
+### 5.2 Mức từng điểm kiến thức (mới) — trên giao diện gọi là "mức từng mục kiến thức" (13/11)
 Cùng tinh thần với S7a; mức 2–4 cùng tên với kỹ năng, riêng mức 1 gọi là **"Đã gặp"** vì nó chỉ ghi nhận điểm đã được dạy hoặc đã làm thử, chưa nói con làm được (phụ huynh chốt 12/11): **Đã gặp → Đang tiến bộ → Tự làm được → Vận dụng được**. Mức 1–2 app tự đặt; **mức 3–4 app đề xuất, gia sư xác nhận**. **Một hộp xác nhận duy nhất (R1):** đề xuất mức điểm kiến thức hiện trong **cùng tab "Kỹ năng" của Hộp duyệt** với đề xuất của S7a, cùng nút, cùng luật; một câu là bằng chứng cho đúng 1 nhãn **và** tối đa 1 kỹ năng — hai đường tính độc lập, không cộng dồn, không xác nhận hai lần cho một câu (xác nhận theo *điểm/kỹ năng*, không theo câu). **Không bao giờ tự hạ mức** (sai lặp lại → gắn ⚑ "cần xem", gia sư quyết). Ngưỡng nằm trong chính sách có phiên bản `PP-0.1`, không viết cứng.
 
 "Câu được tính" = một câu có đáp án đóng, gắn đúng điểm đó, đã chấm (tự chấm hoặc gia sư phán), **lần làm đầu của em trên câu đó**, không hỗ trợ. "Dịp" = **một ngày lịch Việt Nam** (R5): hai bài cùng ngày là một dịp.

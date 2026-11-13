@@ -225,7 +225,7 @@ test.describe.serial("S7a skill states", () => {
       await expect(row(page, k).getByTestId("skill-auto")).toHaveCount(0); // level 3 came from a person, not the app
     }
     await page.goto(`/learners/${t.learnerId}/levels?domain=writing`);
-    await expect(page.getByTestId("level-solid-writing")).toHaveText(/^2\/\d+ điểm đã vững$/);
-    await expect(page.getByTestId("level-solid")).toContainText(/2\/\d+ điểm đã vững/);
+    await expect(page.getByTestId("level-solid-writing")).toHaveText(/^2\/\d+ kỹ năng đã vững$/);
+    await expect(page.getByTestId("level-solid")).toContainText(/2\/\d+ kỹ năng đã vững/);
   });
 });

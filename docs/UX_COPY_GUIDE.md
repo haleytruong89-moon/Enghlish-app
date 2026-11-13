@@ -184,16 +184,16 @@ Khóa mới trong `lib/copy/vi.ts` (người dạy luôn là `tutorHonorific`):
 
 Học sinh không thấy gì mới. "Quá hạn" chỉ ở màn người lớn.
 
-## W3 · Mức điểm kiến thức, Bản đồ kiến thức, Nạp bài đã làm (08/11/2026)
+## W3 · Mức mục kiến thức, Bản đồ kiến thức, Nạp bài đã làm (08/11/2026; đổi chữ 13/11)
 
 Khóa mới trong `lib/copy/vi.ts` (người dạy luôn là `tutorHonorific`, không viết cứng "cô"):
 
-- `pointStateCopy` — đề xuất mức điểm trong tab "Kỹ năng": `Điểm “…”: Đang tiến bộ → Tự làm được`, "Xem điều kiện", Xác nhận · Chưa (lý do) · Giữ mức (⚑), "Chờ thầy/cô xác nhận", "Tính lại mức điểm từ đầu". Mức điểm gọi bằng chữ (Đã gặp · Đang tiến bộ · Tự làm được · Vận dụng được), không dùng "đạt".
-- `pointMapCopy` — trang Bản đồ kiến thức (mảng › nhóm › điểm), "App tự cập nhật" / "Thầy/cô đã xác nhận", "Bằng chứng từng câu" với Đúng · Sai · Có hỗ trợ. **Không** có điểm số hay % ở bất cứ chỗ nào của trang.
+- `pointStateCopy` — đề xuất mức mục kiến thức trong tab "Kỹ năng": `Mục “…”: Đang tiến bộ → Tự làm được`, "Xem điều kiện", Xác nhận · Chưa (lý do) · Giữ mức (⚑), "Chờ thầy/cô xác nhận", "Tính lại mức các mục kiến thức từ đầu". Mức gọi bằng chữ (Đã gặp · Đang tiến bộ · Tự làm được · Vận dụng được), không dùng "đạt".
+- `pointMapCopy` — trang Bản đồ kiến thức (mảng › nhóm › mục kiến thức), "App tự cập nhật" / "Thầy/cô đã xác nhận", "Bằng chứng từng câu" với Đúng · Sai · Có hỗ trợ. **Không** có điểm số hay % ở bất cứ chỗ nào của trang.
 - `importCopy` — Nạp bài đã làm (tên đề, file bài, file đáp án, ngày làm thật, mức hỗ trợ: Tự làm · Tự làm rồi chữa cùng thầy/cô · Làm cùng thầy/cô), màn "Xem và xác nhận bài nạp" (Cần xem, Đúng · Sai · Bỏ trống, Chỉ ở giấy, thanh dưới "Còn n câu cần xử lý · Xác nhận và tính mức"), lỗi theo mã (`importCopy.errors`) và lý do AI không đọc được (`importCopy.failReasons`).
-- `pendingCopy.kinds.point` / `need.point` — dòng "Đề xuất điểm kiến thức" trong Chờ duyệt. `appFeedback.screens.knowledgeMap` / `importNew` / `importConfirm` — tên màn khi gửi "Góp ý về app".
+- `pendingCopy.kinds.point` / `need.point` — dòng "Đề xuất mức mục kiến thức" trong Chờ duyệt. `appFeedback.screens.knowledgeMap` / `importNew` / `importConfirm` — tên màn khi gửi "Góp ý về app".
 
-Luật: mọi thứ AI soạn là nháp; con không thấy điểm kiến thức, bài nạp, nhãn hay mức; "%" chỉ ở màn người lớn (điều kiện đề xuất).
+Luật: mọi thứ AI soạn là nháp; con không thấy mục kiến thức, bài nạp, nhãn hay mức; "%" chỉ ở màn người lớn (điều kiện đề xuất).
 
 ## UX vòng 1 cho gia sư (09/11/2026)
 
@@ -204,3 +204,18 @@ Khóa mới / đổi trong `lib/copy/vi.ts`:
 - `filePickerCopy` (`icon`, `choose`, `change`, `none`) — nút chọn file dùng chung; chữ nhìn thấy nằm trong tên đọc cho trình đọc màn hình ("<tên ô>: Chọn file"), tên file đã chọn được đọc to.
 - `levelCopy.confirmAllAction(n)` = "Xác nhận cấp khởi điểm (n mảng)", n = số mảng còn là ước lượng; `intakeCopy.nextStepLevels` và cảnh báo "levelsLine" không còn nêu số mảng.
 - `skillStateCopy.criteriaIntro` = "Một bài được tính là đạt khi:" (tiêu chí của danh mục, không đồng nhất với bậc 3); `missingLine` = "Còn thiếu để lên Tự làm được: …".
+
+## Mục kiến thức (13/11/2026)
+
+Phụ huynh duyệt 13/11 sau buổi gia sư thử: chữ "điểm" khi nghĩa là **điểm kiến thức** (một ngữ pháp / từ vựng / dạng câu nhỏ) đổi thành **"mục kiến thức"** (gọn: "mục"). Luật dùng chữ:
+
+- **điểm** = điểm số (3/4, thang điểm, phiếu điểm, "Ghi điểm nhanh (bài link)", "Điểm theo phần", "không ghi điểm", "Điểm do người chấm", "Điểm đề thử tháng"), cấp **khởi điểm**, **điểm mạnh / điểm yếu** ban đầu của hồ sơ đầu vào. Không đổi.
+- **mục kiến thức** = nhãn / điểm kiến thức. "Điểm cần chú ý" thành **"Mục cần chú ý"**; "hỏi lại điểm yếu" thành "hỏi lại mục còn yếu"; "Bảng nối Unit → mục kiến thức"; cột Giáo trình: "Unit này dạy mục kiến thức nào?".
+- Trong ô chọn mục kiến thức (Giao bài, Ghi buổi, Chờ gắn nhãn…): "Tìm mục kiến thức", "+ Mục kiến thức khác", "Mục riêng", "— Chọn mục kiến thức —", "Đã chọn 3/3 (đủ). Bỏ một mục để chọn mục khác." "Nhãn" ở chỗ khác ("Chờ gắn nhãn", nhãn câu sai trong Hộp duyệt) giữ nguyên ở vòng này.
+- Bộ đếm kỹ năng ở Hồ sơ cấp ("n/N **kỹ năng** đã vững") đếm kỹ năng, không phải mục kiến thức.
+- Học sinh: chỉ một dòng đổi, `studentReviewCopy.intro` = "Ôn lại mấy mục này nhé." (câu ngắn, không số).
+- Mã code không đổi tên (`tag_marks`, `point_*`, `weakPage`…). Test `tests/unit/copyKnowledgeItem.test.ts` canh: các khối chữ về mục kiến thức không còn chữ "điểm" ngoài các cụm điểm số ở trên.
+
+## Mẫu báo lưu (13/11/2026)
+
+Mọi ô sửa của người lớn dùng một mẫu: **"Đang lưu…"** → **"✓ Đã lưu lúc hh:mm"** (giờ Việt Nam, giữ nguyên tới lần sửa tiếp) → **"● Có thay đổi chưa lưu"**; lỗi: "Chưa lưu được. Thay đổi vẫn còn trên màn hình, bạn bấm Lưu lại nhé." Còn thay đổi chưa lưu thì đóng tab / tải lại hỏi lại, và bấm liên kết của khung (cột trái, thanh trên, "Đóng") hiện "Còn thay đổi chưa lưu. Rời trang thì mất các thay đổi này. Vẫn rời?". Khóa: `saveStatusCopy`, `busyCopy`, `loadingCopy` trong `lib/copy/vi.ts`. Chữ ký hiệu (● ✓) đi kèm chữ, không chỉ màu.

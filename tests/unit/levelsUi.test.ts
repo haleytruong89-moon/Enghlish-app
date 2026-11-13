@@ -254,7 +254,7 @@ describe("DomainDetail with skill states (S7a, D20)", () => {
     const html = render(createElement(DomainDetail, { alias: "Nguyên", domain: reading, groups: readingGroups, weak: [], learnerId: L, canDecide: true, skills: domainSkills(rows, "reading") }));
     const [exam, arg, assume, cloze] = rows.map((x) => skillTitle(x)) as [string, string, string, string];
     expect(html).not.toContain(levelCopy.notYet);
-    expect(html).toMatch(new RegExp(`data-testid="level-solid"[\\s\\S]*?1/3 điểm đã vững[\\s\\S]*?${reText(exam)}`));
+    expect(html).toMatch(new RegExp(`data-testid="level-solid"[\\s\\S]*?1/3 kỹ năng đã vững[\\s\\S]*?${reText(exam)}`));
     expect(html).toMatch(new RegExp(`data-testid="level-practising"[\\s\\S]*?⚑ ${reText(arg)}`));
     expect(html).toContain(htmlText(levelCopy.pendingLine(assume)));
     expect(html).not.toContain(htmlText(cloze));
@@ -263,9 +263,9 @@ describe("DomainDetail with skill states (S7a, D20)", () => {
     expect(none).toContain(levelCopy.noSkillsInDomain);
   });
 
-  it("LevelBars shows 'n/N điểm đã vững' on the bars of domains the set covers", () => {
+  it("LevelBars shows 'n/N kỹ năng đã vững' on the bars of domains the set covers", () => {
     const html = render(createElement(LevelBars, { profile: confirmedProfile(), learnerId: L, active: "reading", solid: { reading: { n: 1, total: 3 } } }));
-    expect(html).toMatch(/data-testid="level-solid-reading"[^>]*>1\/3 điểm đã vững/);
+    expect(html).toMatch(/data-testid="level-solid-reading"[^>]*>1\/3 kỹ năng đã vững/);
     expect(html).not.toContain('data-testid="level-solid-grammar"');
   });
 });
