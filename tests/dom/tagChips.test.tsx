@@ -13,7 +13,7 @@ const tag = (key: string): TagInfo => ({ key, label: key, group: null, custom: f
 const TAGS = ["cau-dieu-kien-dao-ngu", "dang-tu", "thanh-ngu", "phat-am", "tu-noi-lap-luan"].map(tag);
 const map = levelledMap();
 
-function Harness({ onSubmit = vi.fn() }: { onSubmit?: () => void }) {
+function Harness({ onSubmit = vi.fn() }: { onSubmit?: (e: React.FormEvent) => void }) {
   const [sel, setSel] = useState<string[]>([]);
   return (
     <form onSubmit={onSubmit}>
