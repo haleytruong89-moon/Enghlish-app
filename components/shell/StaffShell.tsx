@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import { account, app, auth, learnerWithTrack } from "@/lib/copy/vi";
 import { buildNav } from "@/lib/shell/nav";
 import type { ShellData } from "@/lib/shell/shell";

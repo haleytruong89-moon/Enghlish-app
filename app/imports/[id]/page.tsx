@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import { notFound, redirect } from "next/navigation";
 import { ImportConfirm } from "@/components/import/ImportConfirm";
 import { ImportFailed } from "@/components/import/ImportFailed";

@@ -2416,3 +2416,12 @@ export const busyCopy = {
   uploading: "Đang tải file lên…",
   confirming: "Đang xác nhận…",
 } as const;
+
+/** UX vòng 2 · mục 2: một mẫu báo lưu cho mọi ô sửa của người lớn. Giờ Việt Nam. */
+export const saveStatusCopy = {
+  saving: "Đang lưu…",
+  savedAt: (hm: string) => `✓ Đã lưu lúc ${hm}`,
+  dirty: "● Có thay đổi chưa lưu",
+  error: "Chưa lưu được. Thay đổi vẫn còn trên màn hình, bạn bấm Lưu lại nhé.",
+  leaveConfirm: "Còn thay đổi chưa lưu. Rời trang thì mất các thay đổi này. Vẫn rời?",
+} as const;
