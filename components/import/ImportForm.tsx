@@ -3,7 +3,9 @@
 import { PageGuidance, PdfPagePicker, pagesBlock, type PdfPick } from "@/components/ui/PdfPagePicker";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { UnitTitlePicker } from "@/components/curriculum/UnitTitlePicker";
 import type { GateReason } from "@/lib/ai/cap";
+import type { UnitChoice } from "@/lib/curriculum/unitPicker";
 import { importCopy } from "@/lib/copy/vi";
 import { importErrorText, sendJson, sha256Hex, uploadImportFile } from "@/lib/import/client";
 import { SUPPORT_LEVELS, IMPORT_LIMITS, type SupportLevel } from "@/lib/import/types";
@@ -16,9 +18,10 @@ const field = "min-h-11 rounded-lg border border-line px-3 font-normal";
  * storage; the server checks them again. Nothing is created when the AI cannot be used (the AI is the only reader). On success the tutor goes to the
  * review screen, which waits for the AI.
  */
-export function ImportForm({ learnerId, aiAllowed, aiReason }: { learnerId: string; aiAllowed: boolean; aiReason: GateReason | null }) {
+export function ImportForm({ learnerId, aiAllowed, aiReason, unitChoices = [] }: { learnerId: string; aiAllowed: boolean; aiReason: GateReason | null; unitChoices?: UnitChoice[] }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
+  const [titleTouched, setTitleTouched] = useState(false);
   const [workPick, setWorkPick] = useState<PdfPick>({ file: null, pages: null, pending: false });
   const [keyPick, setKeyPick] = useState<PdfPick>({ file: null, pages: null, pending: false });
   const work = workPick.file;
@@ -67,8 +70,9 @@ export function ImportForm({ learnerId, aiAllowed, aiReason }: { learnerId: stri
     <form className="flex flex-col gap-4" onSubmit={(e) => e.preventDefault()} noValidate data-testid="import-form">
       <label className="flex flex-col gap-1 text-sm font-semibold">
         {importCopy.bookTitle}
-        <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={IMPORT_LIMITS.title} placeholder={importCopy.bookTitleHint} data-testid="import-title" className={field} />
+        <input value={title} onChange={(e) => { setTitle(e.target.value); setTitleTouched(true); }} maxLength={IMPORT_LIMITS.title} placeholder={importCopy.bookTitleHint} data-testid="import-title" className={field} />
       </label>
+      <UnitTitlePicker learnerId={learnerId} choices={unitChoices} maxLength={IMPORT_LIMITS.title} onTitle={(t) => { if (!titleTouched) setTitle(t); }} />
       <p className="rounded-xl bg-[#FBF1DC] px-3.5 py-2 text-sm text-[#6B4600]" data-testid="import-cover-note">
         {importCopy.coverNote}
       </p>

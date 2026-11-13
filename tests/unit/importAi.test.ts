@@ -37,6 +37,11 @@ describe("read-answers.v1 (prompt, tool, fake)", () => {
     expect(content).toEqual(["text", "image", "document", "text"]);
     expect(estimateInputTokens(call)).toBeGreaterThan(0);
   });
+  it("the name of the test (even one filled in from a Unit) never reaches the AI: buildReadCall takes no title, and the document labels are fixed", () => {
+    const call = buildReadCall({ model: "m", toolChoice: "tool", prompt: "{{TAGS}}", ctx: CTX, docs: [{ kind: "pdf", title: "BÀI LÀM", base64: "JVBERg==" }] } as Parameters<typeof buildReadCall>[0] & { title: string });
+    expect(JSON.stringify(call)).not.toMatch(/Destination|Unit \d/);
+    expect(Object.keys(call).sort()).toEqual(["documents", "instructions", "maxTokens", "model", "tool", "toolChoice"]);
+  });
   it("AI_FAKE answers the tool with the 60-question Progress Test fixture", async () => {
     expect(fakeFixtureFor(READ_TOOL_NAME)).toBe(FIXTURE);
     const call = createToolCaller({ AI_FAKE: "1", NODE_ENV: "test" });
