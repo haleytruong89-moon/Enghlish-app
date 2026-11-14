@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 
 let pathname = "/";
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
+import { BadgeSeed } from "@/components/shell/BadgeSeed";
 import { InboxBadge, resetInboxBadge, seedInboxBadge } from "@/components/shell/InboxBadge";
 
 const reply = (count: string | null) => vi.fn(async () => ({ ok: true, json: async () => ({ count }) }));
@@ -55,14 +56,14 @@ describe("InboxBadge", () => {
   it("a number seeded by the page is shown without asking the route; the memory is per child", async () => {
     const f = reply("9");
     vi.stubGlobal("fetch", f);
-    seedInboxBadge("A", "3");
-    render(<InboxBadge learnerId="A" />);
+    render(<><InboxBadge learnerId="A" /><BadgeSeed learnerId="A" count="3" /></>);
     expect((await screen.findByTestId("inbox-badge")).textContent).toBe("3");
     expect(f).not.toHaveBeenCalled();
     cleanup();
     render(<InboxBadge learnerId="B" />);
     await waitFor(() => expect(f).toHaveBeenCalledTimes(1));
     cleanup();
+    seedInboxBadge("A", "3");
     render(<InboxBadge learnerId="A" />);
     expect((await screen.findByTestId("inbox-badge")).textContent).toBe("3");
     expect(f).toHaveBeenCalledTimes(1);

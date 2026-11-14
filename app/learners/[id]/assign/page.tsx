@@ -45,7 +45,7 @@ export default async function AssignPracticePage({ params, searchParams }: { par
     </>
   );
   const list = (
-    <section className="flex flex-col gap-3" aria-label={assignWaysCopy.listTitle} data-testid="assigned-list">
+    <section className="flex flex-col gap-3" aria-label={assignWaysCopy.listTitle} id="assigned-list" data-testid="assigned-list">
       <h2 className="text-lg font-semibold">{assignWaysCopy.listTitle}</h2>
       <AssignmentTable learnerId={learner.id} assignments={assignments} tagLabels={tagLabels} today={todayVn()} />
     </section>

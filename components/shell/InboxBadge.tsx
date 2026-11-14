@@ -1,18 +1,25 @@
 "use client";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { shellCopy } from "@/lib/copy/vi";
 import { type BadgeMemo, shouldFetch } from "@/lib/shell/badgeMemo";
 
 type Memo = BadgeMemo & { count: string | null };
 /** One remembered number per child (this tab). */
 const memos = new Map<string, Memo>();
+const listeners = new Set<() => void>();
 let lastPath: string | null = null;
+const notify = () => listeners.forEach((l) => l());
+const subscribe = (l: () => void) => {
+  listeners.add(l);
+  return () => void listeners.delete(l);
+};
 
 /** Test hook: forget what this tab remembered. */
 export function resetInboxBadge(): void {
   memos.clear();
   lastPath = null;
+  notify();
 }
 
 /** A page that already counted the waiting items (the desk, the inbox) tells the badge so it need not ask the route again. Browser only. */
@@ -20,6 +27,8 @@ export function seedInboxBadge(learnerId: string, count: string | null): void {
   if (typeof window === "undefined") return;
   memos.set(learnerId, { learnerId, at: Date.now(), count });
 }
+/** Wakes the badges after a seed (called from an effect, never while rendering). */
+export const announceInboxBadge = notify;
 
 /**
  * The number of things waiting, beside "Chờ duyệt". Read AFTER the page shows (the page never waits for it). Hidden when 0, unknown or
@@ -27,29 +36,24 @@ export function seedInboxBadge(learnerId: string, count: string | null): void {
  */
 export function InboxBadge({ learnerId }: { learnerId: string }) {
   const pathname = usePathname() ?? "/";
-  const first = memos.get(learnerId);
-  const [got, setGot] = useState<{ learnerId: string; count: string | null } | null>(first ? { learnerId, count: first.count } : null);
-  const count = got && got.learnerId === learnerId ? got.count : null;
+  const count = useSyncExternalStore(subscribe, () => memos.get(learnerId)?.count ?? null, () => null);
   useEffect(() => {
     const left = lastPath;
     lastPath = pathname;
-    const known = memos.get(learnerId) ?? null;
-    if (!shouldFetch(known, learnerId, Date.now(), left)) {
-      // The remembered (or page-seeded) number is the one to show.
-      if (known) setGot({ learnerId, count: known.count });
-      return;
-    }
+    if (!shouldFetch(memos.get(learnerId) ?? null, learnerId, Date.now(), left)) return; // the remembered (or page-seeded) number is on screen
     const ctl = new AbortController();
     (async () => {
       try {
         const res = await fetch(`/api/learners/${learnerId}/pending-count`, { signal: ctl.signal, cache: "no-store" });
         if (!res.ok) throw new Error(String(res.status));
         const body = (await res.json()) as { count?: string | null };
-        const c = typeof body.count === "string" ? body.count : null;
-        memos.set(learnerId, { learnerId, at: Date.now(), count: c });
-        setGot({ learnerId, count: c });
+        memos.set(learnerId, { learnerId, at: Date.now(), count: typeof body.count === "string" ? body.count : null });
+        notify();
       } catch {
-        if (!ctl.signal.aborted) setGot({ learnerId, count: null });
+        if (!ctl.signal.aborted) {
+          memos.delete(learnerId);
+          notify();
+        }
       }
     })();
     return () => ctl.abort();

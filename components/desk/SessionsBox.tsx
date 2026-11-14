@@ -51,7 +51,7 @@ export function SessionsBox({ learnerId, today, todayIso, sessions = null }: { l
             <p className="text-sm" data-testid="desk-practice-counts">
               {deskCopy.practiceCounts(today.practice.length, today.practice.filter((a) => a.submission !== null).length, today.practice.filter((a) => isOverdue(a, todayIso)).length)}
             </p>
-            <Link href={`/learners/${learnerId}/assign`} className={BOX_LINK}>{deskCopy.seeAssignments}</Link>
+            <Link href={`/learners/${learnerId}/assign#assigned-list`} className={BOX_LINK}>{deskCopy.seeAssignments}</Link>
           </div>
         </>
       )}

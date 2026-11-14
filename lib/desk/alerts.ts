@@ -36,7 +36,7 @@ export function deskAlerts(i: DeskAlertInput): DeskAlert[] {
   const t = i.today;
   if (t) {
     const late = t.practice.filter((a) => isOverdue(a, i.todayIso)).length;
-    if (late > 0) out.push({ key: "overdue", tone: "warn", badge: todayPage.practiceOverdue, title: A.overdueTitle(late), line: A.overdueLine, href: `${base}/assign` });
+    if (late > 0) out.push({ key: "overdue", tone: "warn", badge: todayPage.practiceOverdue, title: A.overdueTitle(late), line: A.overdueLine, href: `${base}/assign#assigned-list` });
     const label = (key: string) => t.tagLabels[key] ?? fallbackLabels.tag;
     for (const a of t.practice.filter((x) => x.submission !== null).slice(0, 3)) {
       const when = a.submission ? `${formatDateVi(todayVn(new Date(a.submission.createdAt)))} ${formatHm(a.submission.createdAt)}` : "";
