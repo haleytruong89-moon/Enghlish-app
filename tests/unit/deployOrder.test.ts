@@ -117,3 +117,26 @@ describe("assignments before 0029 is applied", () => {
     await expect(createSupabasePracticeStore().createAssignment({ ...base, units })).rejects.toMatchObject({ code: "units_unavailable" });
   });
 });
+
+describe("session notes and absences before 0030 is applied", () => {
+  const args = { ...noteArgs([]), taughtUnits: [] as never[] };
+  it("a regular note still calls v2 (so it works before 0030); with units v3", async () => {
+    await createSupabaseTutorWorkStore().writeSessionNote({ ...args, sessionKind: "regular" });
+    expect(rpc.mock.calls[0]?.[0]).toBe("eng_write_lesson_note_v2");
+    expect(Object.keys(rpc.mock.calls[0]?.[1] as object)).not.toContain("p_session_kind");
+  });
+  it("a makeup note calls v4 with the kind and the absence; a missing v4 becomes sessions_unavailable", async () => {
+    await createSupabaseTutorWorkStore().writeSessionNote({ ...args, sessionKind: "makeup", makeupFor: "abs-1" });
+    expect(rpc.mock.calls[0]?.[0]).toBe("eng_write_lesson_note_v4");
+    expect(rpc.mock.calls[0]?.[1]).toMatchObject({ p_session_kind: "makeup", p_makeup_for: "abs-1" });
+    rpc.mockResolvedValue({ data: null, error: { code: "PGRST202", message: "none" } });
+    await expect(createSupabaseTutorWorkStore().writeSessionNote({ ...args, sessionKind: "makeup" })).rejects.toMatchObject({ code: "sessions_unavailable" });
+  });
+  it("absence functions that are missing answer sessions_unavailable, not a 500", async () => {
+    const { createSupabaseSessionsStore } = await import("@/lib/sessions/supabaseStore");
+    rpc.mockResolvedValue({ data: null, error: { code: "PGRST202", message: "none" } });
+    const store = createSupabaseSessionsStore();
+    await expect(store.recordAbsence({ learnerId: "L", absentOn: "2026-11-19", requestedBy: "student", billable: false, note: null, byMemberId: "M", clientId: "client-0001" })).rejects.toMatchObject({ code: "sessions_unavailable" });
+    await expect(store.markSession({ noteId: "N", kind: "regular", makeupFor: null, reason: null, byMemberId: "M", clientId: "client-0001" })).rejects.toMatchObject({ code: "sessions_unavailable" });
+  });
+});

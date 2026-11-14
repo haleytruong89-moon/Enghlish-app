@@ -175,6 +175,61 @@ test.describe.serial("S5b-1 tutor work", () => {
     await check();
   });
 
+  test("UX vòng 3B: a billable absence adds a billable session; a makeup note for it shows 'học bù'; 'Không tính' takes a note out; the child sees nothing", async ({ page }) => {
+    // Two days of one month in the past (the 10th and 11th, two months back): same month for both, inside the 120-day window, never today.
+    const vn = new Date(Date.now() + 7 * 3_600_000);
+    const back = new Date(Date.UTC(vn.getUTCFullYear(), vn.getUTCMonth() - 2, 10));
+    const absentOn = back.toISOString().slice(0, 10);
+    const makeupOn = new Date(back.getTime() + 86_400_000).toISOString().slice(0, 10);
+    const billableOf = async (day: string) => {
+      await page.goto(`/learners/${NG}/notes/month/${day.slice(0, 7)}`);
+      return Number((await page.getByTestId("month-billable").textContent())?.match(/\d+/)?.[0] ?? "NaN");
+    };
+    await loginAs(page, "tutorNguyen");
+    const before = await billableOf(absentOn);
+    await page.goto(`/learners/${NG}/notes`);
+    await page.getByTestId("absence-date").fill(absentOn);
+    await page.getByTestId("absence-by-student").click();
+    await page.getByTestId("absence-billable-yes").click();
+    await page.getByTestId("absence-save").click();
+    await expect(page.getByTestId("absence-list")).toContainText(`${absentOn.slice(8, 10)}/${absentOn.slice(5, 7)}`);
+    expect(await billableOf(absentOn)).toBe(before + 1);
+    await expect(page.getByTestId("month-absence-list")).toContainText(`${absentOn.slice(8, 10)}/${absentOn.slice(5, 7)}`);
+
+    // a makeup note that points to the absence
+    await page.goto(`/learners/${NG}/notes/new`);
+    await page.getByTestId("session-date").fill(makeupOn);
+    await page.getByTestId("session-studied").fill(`Học bù ${makeupOn}`);
+    await page.getByTestId("session-kind-makeup").click();
+    await page.getByTestId("session-makeup-for").selectOption({ label: `${absentOn.slice(8, 10)}/${absentOn.slice(5, 7)} · con, có tính phí` });
+    await page.getByTestId("session-save").click();
+    await expect(page.getByTestId("session-saved")).toBeVisible();
+    await page.goto(`/learners/${NG}/notes/month/${makeupOn.slice(0, 7)}`);
+    await expect(page.getByTestId(`sheet-row-${makeupOn}`)).toContainText("học bù");
+
+    // "Không tính": the note leaves the count
+    await page.goto(`/learners/${NG}/notes`);
+    const li = page.locator('[data-testid^="note-"]').filter({ hasText: `Học bù ${makeupOn}` }).first();
+    await li.getByRole("button", { name: /Đánh dấu/ }).click();
+    await page.getByTestId("note-mark-kind-not_counted").click();
+    await page.getByTestId("note-mark-reason").fill("ghi nhầm em");
+    await page.getByTestId("note-mark-save").click();
+    await expect(page.locator('[data-testid^="note-not-counted-"]').first()).toBeVisible();
+    await page.goto(`/learners/${NG}/notes/month/${makeupOn.slice(0, 7)}`);
+    await expect(page.getByTestId(`sheet-row-${makeupOn}`)).toHaveCount(0);
+
+    // the parent sees the same page; the child cannot write
+    await page.context().clearCookies();
+    await loginAs(page, "parent");
+    await page.goto(`/learners/${NG}/notes/month/${absentOn.slice(0, 7)}`);
+    await expect(page.getByTestId("month-absence-list")).toBeVisible();
+    await page.context().clearCookies();
+    await loginAs(page, "studentNguyen");
+    const res = await page.request.post(`/api/learners/${NG}/sessions/absences`, { data: { client_id: "client-e2e-0001", absent_on: absentOn, requested_by: "student", billable: true } });
+    expect(res.status()).toBe(403);
+    expect((await page.goto(`/learners/${NG}/notes`))?.status()).toBe(404);
+  });
+
   test("Điểm cần chú ý: the table for the child, with windows; the parent sees it too", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
     await page.goto(`/learners/${NG}/weak?weeks=all`);

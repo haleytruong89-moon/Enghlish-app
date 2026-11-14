@@ -78,3 +78,57 @@ describe("SessionStats", () => {
     expect(screen.getByTestId("cell-2026-11-12").getAttribute("aria-label")).toBe("Thứ Năm 12/11/2026: có buổi học");
   });
 });
+
+// ---- 3B ----
+import { MonthTable } from "@/components/sessions/MonthTable";
+import { months as monthsOf } from "@/lib/sessions/count";
+import type { AbsenceRow, MarkRow } from "@/lib/sessions/types";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
+const ab = (id: string, on: string, o: Partial<AbsenceRow> = {}): AbsenceRow => ({ id, absentOn: on, requestedBy: "student", billable: false, cancelsId: null, note: null, createdAt: on, ...o });
+const mark = (noteId: string, kind: MarkRow["kind"], o: Partial<MarkRow> = {}): MarkRow => ({ id: `m-${noteId}`, noteId, kind, makeupFor: null, reason: null, createdAt: "2026-11-20T10:00:00Z", ...o });
+
+describe("3B on the sessions page", () => {
+  const nov = [note("2026-11-03", { id: "r1" }), note("2026-11-10", { id: "r2" }), note("2026-11-12", { id: "mu" })];
+  const nd = sessionDays(nov, [], () => null, [mark("mu", "makeup", { makeupFor: "a1" })]);
+  const absences = [ab("a1", "2026-11-05", { billable: true }), ab("a2", "2026-11-07", { requestedBy: "tutor" })];
+  it("the calendar marks makeup days with B and absence days with N (text, not only colour), both in the aria-label", () => {
+    render(<SessionStats learnerId={L} days={nd} today={TODAY} cards={[]} absences={absences} billing />);
+    expect(screen.getByTestId("cell-makeup-2026-11-12").textContent).toBe("B");
+    expect(screen.getByTestId("cell-absence-2026-11-05").textContent).toBe("N");
+    expect(screen.getByTestId("cell-2026-11-12").getAttribute("aria-label")).toContain("học bù");
+    expect(screen.getByTestId("cell-2026-11-05").getAttribute("aria-label")).toContain("nghỉ (con, có tính phí)");
+    expect(screen.getByTestId("cell-2026-11-07").getAttribute("aria-label")).toContain("nghỉ (thầy/cô, không tính phí)");
+    fireEvent.click(screen.getByTestId("cell-2026-11-05"));
+    expect(screen.getByTestId("week-detail").textContent).toContain("05/11 · con, có tính phí");
+  });
+  it("the month table gets Học bù · Nghỉ (con / thầy/cô / khác) · Buổi tính phí; billable = 3 held + 1 billable absence - 1 linked makeup", () => {
+    render(<SessionStats learnerId={L} days={nd} today={TODAY} cards={[]} absences={absences} billing />);
+    expect(screen.getByTestId("month-makeups-2026-11").textContent).toBe("1");
+    expect(screen.getByTestId("month-absences-2026-11").textContent).toBe("1 / 1 / 0");
+    expect(screen.getByTestId("month-billable-2026-11").textContent).toBe("3");
+    expect(screen.getByText(sessionStatsCopy.monthTable.billable)).toBeTruthy();
+  });
+  it("the absence form and the rule are on the page", () => {
+    render(<SessionStats learnerId={L} days={nd} today={TODAY} cards={[]} absences={absences} billing />);
+    expect(screen.getByTestId("absence-form")).toBeTruthy();
+    expect(screen.getByTestId("billing-rule")).toBeTruthy();
+  });
+  it("before 0030: the 3A block as it was, plus one line saying the part is not ready; no 3B columns, no form", () => {
+    render(<SessionStats learnerId={L} days={nd} today={TODAY} cards={[]} />);
+    expect(screen.getByTestId("billing-unavailable").textContent).toContain("chưa sẵn sàng");
+    expect(screen.queryByTestId("absence-form")).toBeNull();
+    expect(screen.queryByTestId("month-billable-2026-11")).toBeNull();
+    expect(screen.getByTestId("sessions-rule")).toBeTruthy();
+  });
+  it("a month with only an absence still has a row", () => {
+    const m = monthsOf([], TODAY, [ab("a1", "2026-11-05")]);
+    render(<MonthTable learnerId={L} months={m} billing />);
+    expect(screen.getByTestId("month-absences-2026-11").textContent).toBe("1 / 0 / 0");
+    expect(screen.getByTestId("month-billable-2026-11").textContent).toBe("0");
+  });
+  it("no money anywhere on the page", () => {
+    const { container } = render(<SessionStats learnerId={L} days={nd} today={TODAY} cards={[]} absences={absences} billing />);
+    expect(container.textContent).not.toMatch(/₫|đồng|VND|học phí|giá/i);
+  });
+});

@@ -29,11 +29,16 @@ describe("loadSessionFacts", () => {
     result = {
       lesson_notes: { data: [{ id: "n1", session_date: "2026-11-03", supersedes_id: null, author_role: "tutor", published: false, created_at: "2026-11-03T10:00:00Z" }], error: null },
       lesson_note_units: { data: [{ lesson_note_id: "n1", curriculum_id: "c1", unit_code: "U13" }], error: null },
+      session_marks: { data: [], error: null },
+      session_absences: { data: [], error: null },
     };
     const r = await loadSessionFacts("L1");
     expect(r).toEqual({
       notes: [{ id: "n1", sessionDate: "2026-11-03", supersedesId: null, authorRole: "tutor", published: false, createdAt: "2026-11-03T10:00:00Z" }],
       taught: [{ noteId: "n1", curriculumId: "c1", unitCode: "U13" }],
+      marks: [],
+      absences: [],
+      billing: true,
     });
     const cols = calls.find((c) => c.table === "lesson_notes")!;
     expect(cols.cols).toBe("id, session_date, supersedes_id, author_role, published, created_at");
@@ -48,7 +53,28 @@ describe("loadSessionFacts", () => {
   });
   it("a failure on the Units only drops the Units", async () => {
     result = { lesson_notes: { data: [], error: null }, lesson_note_units: { data: null, error: { message: "x" } } };
-    expect(await loadSessionFacts("L1")).toEqual({ notes: [], taught: [] });
+    expect(await loadSessionFacts("L1")).toEqual({ notes: [], taught: [], marks: [], absences: [], billing: false });
+  });
+  it("reads the 3B tables by structural columns, in a stable order, and keeps them apart from the notes", async () => {
+    result = {
+      lesson_notes: { data: [], error: null },
+      lesson_note_units: { data: [], error: null },
+      session_marks: { data: [{ id: "m1", lesson_note_id: "n1", kind: "makeup", makeup_for: "a1", reason: null, created_at: "t" }], error: null },
+      session_absences: { data: [{ id: "a1", absent_on: "2026-11-19", requested_by: "student", billable: false, cancels_id: null, note: "ốm", created_at: "t" }], error: null },
+    };
+    const r = await loadSessionFacts("L1");
+    expect(r!.billing).toBe(true);
+    expect(r!.marks).toEqual([{ id: "m1", noteId: "n1", kind: "makeup", makeupFor: "a1", reason: null, createdAt: "t" }]);
+    expect(r!.absences).toEqual([{ id: "a1", absentOn: "2026-11-19", requestedBy: "student", billable: false, cancelsId: null, note: "ốm", createdAt: "t" }]);
+    expect(calls.find((c) => c.table === "session_marks")!.orders).toEqual(["created_at", "id"]);
+    expect(calls.find((c) => c.table === "session_absences")!.eq).toEqual(["learner_id", "L1"]);
+  });
+  it("tables of 0030 not there yet: the 3A facts survive and billing is false", async () => {
+    result = {
+      lesson_notes: { data: [], error: null }, lesson_note_units: { data: [], error: null },
+      session_marks: { data: null, error: { code: "42P01" } }, session_absences: { data: null, error: { code: "42P01" } },
+    };
+    expect(await loadSessionFacts("L1")).toMatchObject({ billing: false, marks: [], absences: [] });
   });
   it("pages through more than one page of notes in a stable order", async () => {
     const row = (i: number) => ({ id: `n${i}`, session_date: "2026-11-03", supersedes_id: null, author_role: "tutor", published: true, created_at: "x" });

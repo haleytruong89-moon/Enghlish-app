@@ -244,3 +244,22 @@ Khóa mới trong `lib/copy/vi.ts` (chữ đã duyệt theo kế hoạch 14/11; 
 
 Bỏ khóa `loadingCopy` (không dùng). Cột "Người ghi" dùng `todayPage.roleLabel` (Gia sư / Phụ huynh). Không có số tiền ở bất cứ chữ nào về buổi học.
 
+## UX vòng 3B (14/11/2026) — buổi nghỉ, học bù, buổi tính phí
+
+Khóa mới trong `lib/copy/vi.ts` (chữ theo bảng kế hoạch 14/11, phụ huynh đã duyệt hướng; chữ lỗi và gợi ý đi kèm là chữ nối, xem lại ở bản thử):
+
+| Khóa | Chữ |
+|---|---|
+| `sessionKindCopy.label` · `regular` · `makeup` · `notCounted` · `mark` | Loại buổi · Thường · Học bù · Không tính · Đánh dấu |
+| `sessionKindCopy.reason` · `makeupFor` | Lý do (bắt buộc khi Không tính) · Bù cho buổi nghỉ ngày |
+| `sessionKindCopy.makeupForNone` · `save` · `cancel` · `strike` · `reasonNeeded` · `parentNoteHint` | Không chọn · Lưu dấu · Thôi · Không tính (trước lý do, ghi chú gạch ngang) · Cần ghi lý do (ít nhất 5 ký tự). · Ghi chú của phụ huynh không tạo ra buổi học dù đánh dấu gì. |
+| `absenceCopy.add` · `listTitle` · `date` · `by` | Ghi buổi nghỉ · Buổi nghỉ · Ngày nghỉ · Bên báo nghỉ |
+| `absenceCopy.byStudent` · `byTutor` · `byOther` | Con · {Thầy/cô} · Khác (lễ, thời tiết…) |
+| `absenceCopy.billable` · `billableYes` · `billableNo` · `billableChoose` | Có tính phí buổi này không? · Có tính phí · Không tính phí · Bạn chọn buổi nghỉ này có tính phí hay không. |
+| `absenceCopy.note` · `cancel` · `cancelReason` · `cancelConfirm` · `dismiss` · `none` · `dateHint` | Ghi chú · Bỏ ghi nghỉ · Lý do bỏ · Bỏ ghi nghỉ này · Thôi · Chưa ghi buổi nghỉ nào. · Chọn trong khoảng từ 120 ngày trước đến 60 ngày tới. |
+| `absenceCopy.errors.*` | câu cho từng mã lỗi của SQL (`bad_date`, `reason_required`, `already_cancelled`, `bad_absence`, `not_current`, `kind_on_edit`, `client_id_reused`, `sessions_unavailable`…) |
+| `sessionStatsCopy.monthTable.makeups` · `absences` · `billable` | Học bù · Nghỉ (con / {thầy/cô} / khác) · Buổi tính phí |
+| `sessionBillingCopy.*` | `rule`: "Buổi tính phí = buổi đã học (thường + bù) + buổi nghỉ có tính phí − buổi bù cho một buổi nghỉ đã tính phí." · `unavailable`: "Phần buổi nghỉ / học bù chưa sẵn sàng (cần cập nhật cơ sở dữ liệu)." · `absenceDays`: Ngày nghỉ · chữ N / B của lịch · câu sao chép "· học bù n · nghỉ n (con, không tính phí) · tính phí n buổi" |
+| `purgePage.countLabels.session_marks` · `session_absences` | Đánh dấu loại buổi học · Buổi nghỉ |
+
+Không có chữ về số tiền, đơn giá hay chốt tháng.

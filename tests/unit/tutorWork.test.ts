@@ -420,7 +420,7 @@ describe("S5b-1 handlers: writes", () => {
       expect(r.status).toBe(201);
       expect(s.writeSessionNote).toHaveBeenCalledWith({
         learnerId: AN, sessionDate: "2026-10-16", studied: "Unit 7", weakTags: ["dang-tu"], message: "Ôn dạng từ", noteForParent: "Em tiến bộ",
-        rechecks: [{ tag_key: "cum-dong-tu", result: "ok" }], practisedTargetIds: [], supersedes: null, byMemberId: `m-${who}`, clientId: "client-0003", taughtUnits: [],
+        rechecks: [{ tag_key: "cum-dong-tu", result: "ok" }], practisedTargetIds: [], supersedes: null, byMemberId: `m-${who}`, clientId: "client-0003", taughtUnits: [], sessionKind: "regular", makeupFor: null,
       });
     }
   });

@@ -64,7 +64,7 @@ Bản đồ kỹ năng SM-1 (7 mảng · 40 nhóm), danh mục kỹ năng 0.2.1,
 | **Ghi chú dạy học**: 4 ô *Đang tập trung vào · Cách giải thích hợp với con · Lỗi hay lặp lại · Cần tránh* | **Mới**, chỉ thêm (mỗi lần sửa = dòng mới) ✅ 07/11 |
 | "Đang học đến" của từng giáo trình | **Mới**, dẫn xuất từ sự kiện (mục 5.1) |
 | Lộ trình (nhiều dòng song song) | **Mới**, có phiên bản (mục 4) |
-| Buổi học | Có (`lesson_notes`); thêm nối với Unit đã dạy. **Thống kê buổi học** (số buổi, trung bình/tuần, lịch, bảng tháng): **dẫn xuất** từ ghi chú hiện hành (mục 5.6), không lưu số |
+| Buổi học | Có (`lesson_notes`); thêm nối với Unit đã dạy. **Thống kê buổi học** (số buổi, trung bình/tuần, lịch, bảng tháng, buổi tính phí): **dẫn xuất** từ ghi chú hiện hành, buổi nghỉ và dấu loại buổi (mục 5.6), không lưu số. **Buổi nghỉ · dấu loại buổi** (`session_absences`, `session_marks`, 3B): mới, chỉ thêm |
 | Bài giao (4 cách), bài làm, câu tự chấm, Đúng/Sai | Có (`inquiry_instances`, `attempts`, `results`, Studio); thêm cách ②③ và nạp bài đã làm |
 | Mức từng kỹ năng | Có (S7a, `competency_state`) |
 | Mức từng điểm kiến thức | **Mới**, dẫn xuất (mục 5.2) |
@@ -158,15 +158,15 @@ Hạn là một **ngày lịch Việt Nam**; nộp trước 24:00 ngày đó là
 | Nộp 28/11 00:01 | Nộp muộn |
 | Máy của con chạy sai giờ | Server ghi giờ nộp; giờ máy bỏ qua |
 
-### 5.6 Đếm buổi học (bản 0.4, 14/11/2026) — ❓ phụ huynh xem lại trên bản thử
+### 5.6 Đếm buổi học (bản 0.4, 14/11/2026) — ✅ phụ huynh đã xác nhận luật đếm 14/11 (chỉ đếm buổi do thầy/cô ghi)
 Dùng để đối chiếu số buổi cuối tháng và theo dõi sự đều đặn. **Không có số tiền** trong app: học phí thỏa thuận ngoài app, app chỉ cho số buổi.
 
 1. **Ghi chú hiện hành** = ghi chú không bị dòng nào khác trỏ `supersedes_id` tới. Bản đã bị thay không tính.
-2. **Một buổi = một ngày lịch Việt Nam (`session_date`) có ít nhất một ghi chú hiện hành do thầy/cô ghi** (có chia sẻ với phụ huynh hay không đều tính). ❓ **Chờ phụ huynh xác nhận: chỉ đếm buổi do thầy/cô ghi** (an toàn khi đối chiếu học phí). Ngày chỉ có ghi chú của phụ huynh vẫn hiện trong lịch và danh sách tháng với dấu riêng "Phụ huynh ghi", nhưng **không** vào tổng, trung bình, số buổi tháng, "buổi gần nhất", chữ Zalo/bản in. Hai ghi chú cùng ngày = **1 buổi**, kèm dấu "⚠ 2 ghi chú cùng ngày" ở bảng tháng.
+2. **Một buổi = một ngày lịch Việt Nam (`session_date`) có ít nhất một ghi chú hiện hành do thầy/cô ghi** (có chia sẻ với phụ huynh hay không đều tính). ✅ **Phụ huynh đã xác nhận 14/11: chỉ đếm buổi do thầy/cô ghi** (an toàn khi đối chiếu học phí). Ngày chỉ có ghi chú của phụ huynh vẫn hiện trong lịch và danh sách tháng với dấu riêng "Phụ huynh ghi", nhưng **không** vào tổng, trung bình, số buổi tháng, "buổi gần nhất", chữ Zalo/bản in. Hai ghi chú cùng ngày = **1 buổi**, kèm dấu "⚠ 2 ghi chú cùng ngày" ở bảng tháng.
 3. Số buổi tháng M = số ngày có buổi trong M (theo `session_date`, không theo giờ ghi). Tổng = mọi tháng. "Buổi gần nhất" = ngày có buổi lớn nhất không quá hôm nay.
 4. **Trung bình/tuần** = số buổi trong **8 tuần trọn gần nhất** (T2–CN, không tính tuần đang chạy) ÷ 8; nếu buổi đầu tiên mới hơn 8 tuần thì chia cho số tuần trọn kể từ tuần của buổi đầu (tối thiểu 1); một chữ số thập phân ("1,5"); chưa có tuần trọn nào (buổi đầu nằm trong tuần đang chạy) hoặc chưa có buổi → "—".
 5. **Thầy/cô và phụ huynh thấy cùng một số.** Số đếm đọc bằng quyền máy chủ **sau cổng** `notes:read` (trang Buổi học) hoặc `tutorwork:read` (Bàn làm việc; cùng hai vai thầy/cô và phụ huynh, học sinh không qua), chỉ các cột cấu trúc (ngày, chuỗi sửa, vai người ghi, cờ chia sẻ, giờ ghi) và Unit đã dạy. Với ghi chú riêng tư (không chia sẻ), phụ huynh chỉ thấy **ngày**, không thấy nội dung và không thấy Unit.
-6. Học sinh không thấy gì về buổi học; không có bảng mới ở bản này (3A không SQL).
+6. Học sinh không thấy gì về buổi học. (3A không có bảng mới; 3B thêm hai bảng chỉ thêm, xem phần "3B" dưới đây.)
 
 | Ví dụ | Kết quả |
 |---|---|
@@ -178,7 +178,31 @@ Dùng để đối chiếu số buổi cuối tháng và theo dõi sự đều �
 | 12 buổi trong 8 tuần trọn gần nhất | Trung bình 1,5 buổi/tuần |
 | Buổi đầu tiên nằm trong tuần đang chạy | Trung bình "—" |
 
-**Để dành cho 3B (chưa làm, cần SQL):** buổi nghỉ (ngày, bên báo nghỉ, có tính phí), học bù / "không tính" (dấu trên ghi chú), buổi tính phí = đã học + nghỉ có tính phí − bù cho buổi nghỉ đã tính phí (cùng ngày: buổi thường và buổi bù = 2 buổi). **Không có chốt tháng** (phụ huynh quyết 14/11).
+#### 3B (14/11/2026, migration `0030_session_billing.sql`) — buổi nghỉ, học bù, buổi tính phí
+Phụ huynh duyệt 14/11: U16 (buổi nghỉ), U17 (dấu loại buổi), U18 (cùng ngày), U19 (công thức), U20 (ai ghi), U22 (cùng một hàm thuần ở máy chủ và trình duyệt). **Không có chốt tháng** (bảng `session_month_closes` và U21 không làm). Không có số tiền.
+
+1. **Buổi nghỉ** (`session_absences`, chỉ thêm): ngày nghỉ (từ 120 ngày trước đến 60 ngày tới, báo nghỉ trước được), **bên báo nghỉ** (Con / Thầy/cô / Khác: lễ, thời tiết…), **có tính phí hay không do người ghi chọn tay cho từng buổi nghỉ** (không có luật tự động kiểu "báo trước 24 giờ"), ghi chú ≤ 300 ký tự. Ghi nhầm → "Bỏ ghi nghỉ" = một dòng mới trỏ về dòng cũ (`cancels_id`) kèm lý do 5–300 ký tự; không xóa gì. Buổi nghỉ hiệu lực = dòng không phải dòng "bỏ" và chưa bị dòng "bỏ" nào trỏ tới.
+2. **Dấu loại buổi** (`session_marks`, chỉ thêm): **Thường · Học bù · Không tính** trên một ghi chú buổi học. Dấu áp cho **cả chuỗi sửa** của ghi chú (bản cũ có dấu thì bản mới thừa hưởng); **dấu mới nhất thắng** (theo giờ ghi, rồi `id`); không có dấu = Thường. Học bù có thể chỉ rõ "bù cho buổi nghỉ ngày …" (một buổi nghỉ còn hiệu lực của đúng em). **Không tính** bắt buộc lý do ≥ 5 ký tự: ghi chú bị bỏ khỏi mọi phép đếm nhưng vẫn hiện trên danh sách (gạch ngang, có lý do). Dấu chỉ đặt được trên ghi chú **hiện hành**. "Ghi buổi" có ô "Loại buổi" (Thường / Học bù): bản mới đi qua `eng_write_lesson_note_v4` (ghi chú + dấu cùng một giao dịch; buổi nghỉ sai thì lùi cả ghi chú); sửa ghi chú không đổi loại, dùng nút "Đánh dấu".
+3. **Quy tắc đếm không đổi:** chỉ ghi chú **do thầy/cô ghi** tạo ra buổi. **Dấu Học bù trên ghi chú chỉ có phụ huynh ghi không tạo buổi** (ngày đó vẫn hiện "Phụ huynh ghi", không tính).
+4. **Cùng một ngày (U18):** buổi thường + buổi bù = **2 buổi**; hai ghi chú thường = 1 buổi (⚠); hai ghi chú bù = 1 buổi bù (⚠).
+5. **Buổi tính phí tháng M (U19)** = buổi đã học trong M (thường + bù) + buổi nghỉ "có tính phí" trong M − buổi bù trong M **trỏ tới** một buổi nghỉ "có tính phí" còn hiệu lực (không cộng hai lần một buổi). Một buổi bù không trỏ buổi nghỉ nào, hoặc trỏ buổi nghỉ không tính phí / đã bỏ, được tính như một buổi học thêm.
+6. **Ai ghi (U20):** thầy/cô của em hoặc phụ huynh của gia đình (kiểm trong SQL: `eng_actor_may_manage`). Học sinh không đọc, không ghi. Hai bảng: thầy/cô của em và phụ huynh đọc (RLS), không ai ghi trực tiếp, kể cả `service_role`.
+7. **Một buổi nghỉ chỉ bù một lần (14/11, sau review):** hai ghi chú (hai chuỗi sửa khác nhau) không cùng trỏ một buổi nghỉ — SQL từ chối (`absence_already_made_up`), danh sách chọn ẩn buổi nghỉ đã dùng. "Đã dùng" chỉ tính chuỗi có dấu mới nhất là Học bù **và** ghi chú hiện hành do thầy/cô ghi; dấu Học bù chỉ trên ghi chú của phụ huynh (không tạo buổi) và ghi chú đã "Không tính" **không** làm hết buổi nghỉ. Sửa ghi chú đã là Học bù giữ nguyên buổi nghỉ của nó. Khi dữ liệu xấu vẫn có hai buổi bù cùng một buổi nghỉ, hàm đếm chỉ trừ buổi nghỉ đó **một lần** (ở buổi bù sớm nhất), mỗi ngày bù trừ tối đa một buổi nghỉ.
+8. **Tháng khác nhau:** buổi bù trừ **ở tháng của buổi bù** (nghỉ 27/11 "có tính phí", bù 02/12: tháng 11 vẫn tính phí buổi nghỉ, tháng 12 trừ đi một).
+9. **Một ngày một buổi nghỉ:** mỗi em tối đa một buổi nghỉ còn hiệu lực mỗi ngày (`absence_exists`; muốn ghi lại thì bỏ ghi nghỉ cũ). Buổi nghỉ trùng ngày có buổi học được đánh dấu ⚠ ở lịch, bảng tháng và trang tháng để thầy/cô hoặc phụ huynh bỏ một trong hai. Trang tháng mở được tới tháng hiện tại + 2.
+10. **Một hàm thuần (U22):** `lib/sessions/count.ts` (`sessionDays`, `monthBilling`, `months`, `weekGrid`, `monthText`) là nơi duy nhất có luật; trình duyệt không gửi con số nào lên máy chủ.
+
+| Ví dụ (tháng 11) | Kết quả |
+|---|---|
+| 8 buổi thường; con nghỉ 19/11 báo trước "không tính phí"; học bù 21/11 (bù cho 19/11) | Đã học **9** · Nghỉ 1 (con) · Tính phí **9** |
+| 8 buổi thường; con nghỉ 19/11 không báo, "có tính phí"; không học bù | Đã học 8 · Nghỉ 1 · Tính phí **9** |
+| 8 buổi thường (không có 12/11); thầy/cô nghỉ 12/11 "không tính phí"; bù 14/11 cùng ngày với một buổi thường 14/11 | 14/11 = **2 buổi**; Đã học 9 · Nghỉ 1 (thầy/cô) · Tính phí 9 |
+| Con nghỉ 19/11 "có tính phí", rồi vẫn học bù 26/11 trỏ tới 19/11 | Đã học 9 · Tính phí **9** (không cộng hai lần) |
+| Ghi chú 07/11 ghi nhầm → "Không tính · ghi nhầm em" | 07/11 không còn buổi; tổng −1 |
+| Ghi nghỉ 19/11 nhầm → "Bỏ ghi nghỉ" | Không còn buổi nghỉ 19/11; buổi bù trỏ tới nó tính như bù thường |
+| Ghi chú chỉ do phụ huynh ghi, đánh dấu Học bù | Vẫn **không** thành buổi (hiện "Phụ huynh ghi") |
+
+Chưa áp `0030`: trang Buổi học vẫn có phần 3A; Ghi buổi "Thường" chạy như cũ; nút buổi nghỉ / đánh dấu / Học bù báo "chưa sẵn sàng (cần cập nhật cơ sở dữ liệu)".
 
 ## 6. Trạng thái
 
@@ -212,7 +236,8 @@ Cách ③ chỉ ghi **điểm theo phần** nếu trang kết quả không ghi c
 8. Góp ý cho AI, góp ý về app, Ghi chú dạy học, nhận xét tháng, sự kiện Unit, phiên bản lộ trình: **chỉ thêm** (`eng_forbid_mutation`).
 9. Mọi bảng mới có `learner_id` nằm trong `eng_purge_learner` / `eng_purge_preview` (kèm test).
 10. Không có gì ghi vào schema `public`.
-11. **Số buổi học là dẫn xuất** (mục 5.6): tính lại từ ghi chú hiện hành, không lưu; thầy/cô và phụ huynh thấy cùng số; học sinh không thấy.
+11. **Số buổi học là dẫn xuất** (mục 5.6): tính lại từ ghi chú hiện hành, buổi nghỉ và dấu loại buổi, không lưu; thầy/cô và phụ huynh thấy cùng số; học sinh không thấy.
+12. **Buổi nghỉ và dấu loại buổi chỉ thêm** (3B, §5.6): `session_absences` và `session_marks` có `eng_forbid_mutation` + chặn TRUNCATE; sửa = dòng mới ("Bỏ ghi nghỉ", dấu mới nhất thắng); chỉ thầy/cô của em hoặc phụ huynh ghi (hàm SQL tự kiểm lại); học sinh không đọc; không có số tiền trong bất cứ bảng nào.
 
 ## 8. Ca biên bắt buộc xét
 - Giáo trình dùng cho cả 2 em (vd sách ngữ pháp chung) → tạo riêng cho từng em (khác track, nhãn khác); không chia sẻ trạng thái.

@@ -217,3 +217,12 @@ describe("Studio B1: studio actions", () => {
     }
   });
 });
+
+describe("sessions:mark (UX 3B)", () => {
+  it("the child's tutor and the parent have it; a student never", async () => {
+    const { ACTIONS_BY_ROLE } = await import("@/lib/auth/requireAccess");
+    expect(ACTIONS_BY_ROLE.tutor).toContain("sessions:mark");
+    expect(ACTIONS_BY_ROLE.parent).toContain("sessions:mark");
+    expect(ACTIONS_BY_ROLE.student).not.toContain("sessions:mark");
+  });
+});

@@ -4,9 +4,9 @@
  * listed (parentOnly) but is not a session: it is out of every total, average, month count and the Zalo text. Two notes the same day =
  * one session, flagged. No money here (U11). Output carries no ids (it crosses to client components).
  */
-import { sessionMonthCopy } from "@/lib/copy/vi";
+import { sessionBillingCopy, sessionMonthCopy } from "@/lib/copy/vi";
 import { addDays } from "@/lib/inquiries/dates";
-import type { DayUnit, MonthSummary, NoteRow, SessionDay, SessionStats, TaughtRow, WeekRow } from "./types";
+import type { AbsenceRow, DayUnit, MarkRow, MonthBilling, MonthSummary, NoteRow, SessionDay, SessionStats, TaughtRow, WeekRow } from "./types";
 
 /** Notes that no other note replaces. A broken supersedes loop only drops its members (never loops forever). */
 export function currentNotes(rows: NoteRow[]): NoteRow[] {
@@ -14,9 +14,46 @@ export function currentNotes(rows: NoteRow[]): NoteRow[] {
   return rows.filter((r) => !replaced.has(r.id));
 }
 
-export function sessionDays(rows: NoteRow[], taught: TaughtRow[], titleOf: (curriculumId: string, code: string) => string | null): SessionDay[] {
+/**
+ * The mark that applies to each CURRENT note (3B, U17): the newest mark (by created_at, then id) on ANY note of its chain, or null (= "Thường").
+ * A broken supersedes loop cannot hang the walk.
+ */
+export function effectiveKinds(notes: NoteRow[], marks: MarkRow[]): Map<string, MarkRow | null> {
+  const byId = new Map(notes.map((n) => [n.id, n]));
+  const marksOf = new Map<string, MarkRow[]>();
+  for (const m of marks) marksOf.set(m.noteId, [...(marksOf.get(m.noteId) ?? []), m]);
+  const out = new Map<string, MarkRow | null>();
+  for (const cur of currentNotes(notes)) {
+    const seen = new Set<string>();
+    let best: MarkRow | null = null;
+    for (let id: string | null = cur.id; id && !seen.has(id); id = byId.get(id)?.supersedesId ?? null) {
+      seen.add(id);
+      for (const m of marksOf.get(id) ?? []) {
+        if (!best || m.createdAt > best.createdAt || (m.createdAt === best.createdAt && m.id > best.id)) best = m;
+      }
+    }
+    out.set(cur.id, best);
+  }
+  return out;
+}
+
+/** Absences that are neither a "bỏ" row nor cancelled by one; date ascending. */
+export function liveAbsences(rows: AbsenceRow[]): AbsenceRow[] {
+  const cancelled = new Set(rows.map((r) => r.cancelsId).filter((x): x is string => x !== null));
+  return rows
+    .filter((r) => r.cancelsId === null && !cancelled.has(r.id))
+    .sort((a, b) => (a.absentOn < b.absentOn ? -1 : a.absentOn > b.absentOn ? 1 : a.createdAt < b.createdAt ? -1 : 1));
+}
+
+/**
+ * One entry per day that has a counted current note. A note marked "Không tính" is out (a day with only such notes is not listed).
+ * Per day (U18): a regular tutor note = 1 session, a makeup tutor note = 1 more. A parent's note never makes a session, whatever its mark.
+ */
+export function sessionDays(rows: NoteRow[], taught: TaughtRow[], titleOf: (curriculumId: string, code: string) => string | null, marks: MarkRow[] = []): SessionDay[] {
+  const kinds = effectiveKinds(rows, marks);
+  const kindOf = (n: NoteRow): "regular" | "makeup" | "not_counted" => kinds.get(n.id)?.kind ?? "regular";
   const byDate = new Map<string, NoteRow[]>();
-  for (const n of currentNotes(rows)) byDate.set(n.sessionDate, [...(byDate.get(n.sessionDate) ?? []), n]);
+  for (const n of currentNotes(rows)) if (kindOf(n) !== "not_counted") byDate.set(n.sessionDate, [...(byDate.get(n.sessionDate) ?? []), n]);
   const taughtBy = new Map<string, TaughtRow[]>();
   for (const t of taught) taughtBy.set(t.noteId, [...(taughtBy.get(t.noteId) ?? []), t]);
   return [...byDate.entries()]
@@ -33,12 +70,18 @@ export function sessionDays(rows: NoteRow[], taught: TaughtRow[], titleOf: (curr
           units.push({ code: t.unitCode, title: titleOf(t.curriculumId, t.unitCode) });
         }
       }
-      const byTutor = notes.some((n) => n.authorRole === "tutor");
+      const tutor = notes.filter((n) => n.authorRole === "tutor");
+      const regular = tutor.some((n) => kindOf(n) === "regular");
+      const makeup = tutor.some((n) => kindOf(n) === "makeup");
+      const sameKind = (k: "regular" | "makeup") => notes.filter((n) => kindOf(n) === k).length > 1;
       return {
         date,
-        sessions: byTutor ? 1 : 0,
-        parentOnly: !byTutor,
-        sameDay: notes.length > 1,
+        sessions: (regular ? 1 : 0) + (makeup ? 1 : 0),
+        regular,
+        makeup,
+        makeupFor: [...new Set(tutor.filter((n) => kindOf(n) === "makeup").map((n) => kinds.get(n.id)?.makeupFor).filter((x): x is string => !!x))],
+        parentOnly: tutor.length === 0,
+        sameDay: sameKind("regular") || sameKind("makeup"),
         units,
         authors: [...new Set(notes.map((n) => n.authorRole))],
         privateOnly: shared.length === 0,
@@ -52,16 +95,65 @@ function nextMonth(m: string): string {
   return mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, "0")}`;
 }
 
-/** Newest first, from the month of the first session to the current one; months without a session are listed with 0. */
-export function months(days: SessionDay[], todayIso: string): MonthSummary[] {
-  if (days.length === 0) return [];
-  const first = monthOf(days[0]!.date);
-  const lastDay = monthOf(days[days.length - 1]!.date);
+/**
+ * Billable absences that are subtracted because a makeup points to them, per month of the MAKEUP (cross-month rule, DOMAIN §5.6): walking the
+ * makeup days from the oldest, each makeup day subtracts at most ONE live billable absence that no earlier makeup day already took, so even bad
+ * data (two makeups on one absence) can never subtract twice. Returns month → distinct absence ids.
+ */
+function subtractedByMonth(days: SessionDay[], liveById: Map<string, AbsenceRow>): Map<string, Set<string>> {
+  const taken = new Set<string>();
+  const out = new Map<string, Set<string>>();
+  for (const d of [...days].filter((x) => x.makeup && x.sessions > 0).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))) {
+    const id = d.makeupFor.find((x) => liveById.get(x)?.billable && !taken.has(x));
+    if (!id) continue;
+    taken.add(id);
+    const m = monthOf(d.date);
+    out.set(m, (out.get(m) ?? new Set()).add(id));
+  }
+  return out;
+}
+
+/** Days (ISO) where a live absence falls on a day that also has a counted session: the tutor or parent should cancel one of them. */
+export function absenceClashDates(days: SessionDay[], absences: AbsenceRow[]): string[] {
+  const held = new Set(days.filter((d) => d.sessions > 0).map((d) => d.date));
+  return [...new Set(liveAbsences(absences).map((a) => a.absentOn).filter((d) => held.has(d)))].sort();
+}
+
+/** Billable sessions of one month (rule S-1, U19): sessions + billable absences - makeups that point to a billable live absence (each absence once). */
+export function monthBilling(month: string, days: SessionDay[], absences: AbsenceRow[]): MonthBilling {
+  const live = liveAbsences(absences);
+  const liveById = new Map(live.map((a) => [a.id, a]));
+  const ds = days.filter((d) => monthOf(d.date) === month && d.sessions > 0);
+  const abs = live.filter((a) => monthOf(a.absentOn) === month);
+  const makeups = ds.filter((d) => d.makeup).length;
+  const linked = subtractedByMonth(days, liveById).get(month)?.size ?? 0;
+  const sessions = ds.reduce((a, d) => a + d.sessions, 0);
+  const count = (who: AbsenceRow["requestedBy"]) => abs.filter((a) => a.requestedBy === who).length;
+  const clash = new Set(absenceClashDates(days, absences));
+  return {
+    sessions,
+    makeups,
+    absences: { student: count("student"), tutor: count("tutor"), other: count("other") },
+    absenceTotal: abs.length,
+    billable: sessions + abs.filter((a) => a.billable).length - linked,
+    dates: ds.map((d) => d.date),
+    absenceDates: abs.map((a) => ({ date: a.absentOn, requestedBy: a.requestedBy, billable: a.billable })),
+    clashDates: [...clash].filter((d) => monthOf(d) === month),
+  };
+}
+
+/** Newest first, from the month of the first session (or absence) to the current one; months without anything are listed with 0. */
+export function months(days: SessionDay[], todayIso: string, absences: AbsenceRow[] = []): MonthSummary[] {
+  const live = liveAbsences(absences);
+  const all = [...days.map((d) => d.date), ...live.map((a) => a.absentOn)].sort();
+  if (all.length === 0) return [];
+  const first = monthOf(all[0]!);
+  const lastDay = monthOf(all[all.length - 1]!);
   const end = lastDay > monthOf(todayIso) ? lastDay : monthOf(todayIso);
   const out: MonthSummary[] = [];
   for (let m = first; m <= end; m = nextMonth(m)) {
     const ds = days.filter((d) => monthOf(d.date) === m);
-    out.push({ month: m, sessions: ds.reduce((a, d) => a + d.sessions, 0), days: ds });
+    out.push({ month: m, sessions: ds.reduce((a, d) => a + d.sessions, 0), days: ds, billing: monthBilling(m, days, absences) });
   }
   return out.reverse();
 }
@@ -97,8 +189,11 @@ export function stats(allDays: SessionDay[], todayIso: string): SessionStats {
 }
 
 /** `weeks` rows (12 by default), Monday first; the last row holds today; later days are `future`. */
-export function weekGrid(days: SessionDay[], todayIso: string, weeks = 12): WeekRow[] {
+export function weekGrid(days: SessionDay[], todayIso: string, weeks = 12, absences: AbsenceRow[] = []): WeekRow[] {
   const byDate = new Map(days.map((d) => [d.date, d]));
+  const absentOn = new Map<string, { requestedBy: AbsenceRow["requestedBy"]; billable: boolean }>();
+  for (const a of liveAbsences(absences)) if (!absentOn.has(a.absentOn)) absentOn.set(a.absentOn, { requestedBy: a.requestedBy, billable: a.billable });
+  const clash = new Set(absenceClashDates(days, absences));
   const first = addDays(weekStart(todayIso), -7 * (weeks - 1));
   return Array.from({ length: weeks }, (_, w) => {
     const ws = addDays(first, 7 * w);
@@ -106,7 +201,7 @@ export function weekGrid(days: SessionDay[], todayIso: string, weeks = 12): Week
       weekStart: ws,
       cells: Array.from({ length: 7 }, (_, i) => {
         const date = addDays(ws, i);
-        return { date, future: date > todayIso, day: byDate.get(date) ?? null };
+        return { date, future: date > todayIso, day: byDate.get(date) ?? null, absence: absentOn.get(date) ?? null, clash: clash.has(date) };
       }),
     };
   });
@@ -117,7 +212,17 @@ export const dayMonth = (iso: string): string => `${iso.slice(8, 10)}/${iso.slic
 /** "2026-11" → "11/2026". */
 export const monthLabel = (m: string): string => `${m.slice(5, 7)}/${m.slice(0, 4)}`;
 
-/** The text to paste into Zalo (U25), with the child's alias. */
+/** The text to paste into Zalo (U25), with the child's alias. With absences or makeups it adds them and the billable count (3B); no money. */
 export function monthText(alias: string, m: MonthSummary): string {
-  return sessionMonthCopy.text(alias, monthLabel(m.month), m.sessions, m.days.filter((d) => d.sessions > 0).map((d) => dayMonth(d.date)).join(", "));
+  const dates = m.days.filter((d) => d.sessions > 0).map((d) => `${dayMonth(d.date)}${d.sessions > 1 ? sessionBillingCopy.twoSessions : ""}`).join(", ");
+  const base = sessionMonthCopy.text(alias, monthLabel(m.month), m.sessions, dates);
+  const b = m.billing;
+  if (b.absenceTotal === 0 && b.makeups === 0) return base;
+  const parts = [base.replace(/\.$/, "")];
+  if (b.makeups > 0) parts.push(sessionBillingCopy.textMakeups(b.makeups));
+  if (b.absenceTotal > 0) {
+    parts.push(sessionBillingCopy.textAbsences(b.absenceTotal, b.absenceDates.map((a) => `${dayMonth(a.date)} ${sessionBillingCopy.partyShort[a.requestedBy]}, ${a.billable ? sessionBillingCopy.billable : sessionBillingCopy.notBillable}`)));
+  }
+  parts.push(sessionBillingCopy.textBillable(b.billable));
+  return `${parts.join(" · ")}.`;
 }

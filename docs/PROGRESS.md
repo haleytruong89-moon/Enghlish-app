@@ -1449,7 +1449,7 @@ Nhánh `feature/ux-round3a` (dựa trên `feature/ux-round2` = main + 2A + 2B; P
 1. **Cột trái (A1, A2):** 9 mục; **Giao bài** là một mục không trang con; nhóm mới **Ghi kết quả** (Nạp bài đã làm · Ghi điểm nhanh). Cấp 1 chữ vừa (500, đang mở 600), trang con thụt vào, nhỏ và nhạt hơn. Nút đổi em giữ đúng trang (Studio, Bài chủ đề, nháp Studio → trang chọn của em kia).
 2. **Số trên "Chờ duyệt" (A3, A4):** route `GET /api/learners/[id]/pending-count` (chỉ đọc, dùng lại `loadPendingRows` + `pendingView`, chỉ trả con số); cột trái đọc **sau khi trang hiện**, nhớ 30 giây, đọc lại khi rời trang duyệt / đổi em; ẩn khi 0, không rõ hoặc lỗi (không bao giờ hiện số sai). Trên điện thoại số nằm trong ngăn kéo "Các phần".
 3. **Một trang "Giao bài" (A5–A7):** `/learners/[id]/assign` = chọn 1 trong 4 cách (Studio "Nên dùng" ở đầu); `?way=link|pdf` = form hiện có với loại cố định; `?way=studio|topic` chuyển sang trang đích; dải "Cách giao" ở đầu 4 trang; thứ tự ô: Unit → tên → link/file → mục thêm tay → hạn; "Giao bài này →" ở Giáo trình là **một** liên kết tới trang chọn có điền sẵn.
-4. **Thống kê buổi học (A8–A11):** một buổi = một ngày (giờ VN) có ít nhất một ghi chú buổi học hiện hành **do thầy/cô ghi** (DOMAIN §5.6, bản 0.4; **chờ phụ huynh xác nhận: chỉ đếm buổi do thầy/cô ghi**; ngày chỉ có ghi chú của phụ huynh hiện với dấu "Phụ huynh ghi" nhưng không vào tổng, trung bình, số buổi tháng, chữ Zalo/in). Trang Buổi học: 4 thẻ (Tổng · Tháng này · Trung bình/tuần · Đang học đến), lịch 12 tuần (ô có buổi có "●"), bảng tháng; trang tháng `/learners/[id]/notes/month/YYYY-MM` để in và sao chép câu gửi Zalo; Bàn làm việc có một dòng "Tháng 11: 5 buổi · buổi gần nhất 12/11". Thầy/cô và phụ huynh thấy cùng một số; ghi chú riêng tư chỉ lộ **ngày**. Không có số tiền.
+4. **Thống kê buổi học (A8–A11):** một buổi = một ngày (giờ VN) có ít nhất một ghi chú buổi học hiện hành **do thầy/cô ghi** (DOMAIN §5.6, bản 0.4; **phụ huynh đã xác nhận 14/11: chỉ đếm buổi do thầy/cô ghi**; ngày chỉ có ghi chú của phụ huynh hiện với dấu "Phụ huynh ghi" nhưng không vào tổng, trung bình, số buổi tháng, chữ Zalo/in). Trang Buổi học: 4 thẻ (Tổng · Tháng này · Trung bình/tuần · Đang học đến), lịch 12 tuần (ô có buổi có "●"), bảng tháng; trang tháng `/learners/[id]/notes/month/YYYY-MM` để in và sao chép câu gửi Zalo; Bàn làm việc có một dòng "Tháng 11: 5 buổi · buổi gần nhất 12/11". Thầy/cô và phụ huynh thấy cùng một số; ghi chú riêng tư chỉ lộ **ngày**. Không có số tiền.
 5. **Dọn (A12):** bỏ `loadingCopy`.
 
 ### Lệch nhỏ so với kế hoạch (ghi để Opus / phụ huynh biết)
@@ -1468,4 +1468,45 @@ Nhánh `feature/ux-round3a` (dựa trên `feature/ux-round2` = main + 2A + 2B; P
 - Màn của con không đổi.
 
 ### Tiêu chí đạt
-`npm run typecheck && npm run lint && npm test && npm run gen:config` xanh; `npx playwright test --list` liệt kê test mới; **e2e xanh trong CI** (chưa chạy ở máy dev — tiêu chí chưa đạt cho tới khi CI chạy); Opus `reviewer` xem toàn bộ diff (trọng tâm: route đếm chỉ trả con số và chạy sau cổng; `loadSessionFacts` không đọc cột chữ; phụ huynh không thấy nội dung / Unit ghi chú riêng tư; liên kết cũ còn chạy; màn của con không đổi; không lồng `<a>`). **Chưa đạt:** phụ huynh xem lại luật đếm buổi (§5.6) trên bản thử.
+`npm run typecheck && npm run lint && npm test && npm run gen:config` xanh; `npx playwright test --list` liệt kê test mới; **e2e xanh trong CI** (chưa chạy ở máy dev — tiêu chí chưa đạt cho tới khi CI chạy); Opus `reviewer` xem toàn bộ diff (trọng tâm: route đếm chỉ trả con số và chạy sau cổng; `loadSessionFacts` không đọc cột chữ; phụ huynh không thấy nội dung / Unit ghi chú riêng tư; liên kết cũ còn chạy; màn của con không đổi; không lồng `<a>`). Luật đếm buổi (§5.6): phụ huynh đã xác nhận 14/11.
+
+
+## UX vòng 3B — Buổi nghỉ, học bù, buổi tính phí (14/11)
+
+Nhánh `feature/ux-round3b` (từ `main` đã gộp 2A, 2B, 3A). Kế hoạch `docs/superpowers/plans/2026-11-14-ux-round3.md` (Task B0–B5, B7; **không có B6 "chốt tháng"** và không có bảng `session_month_closes`: phụ huynh quyết 14/11). Phụ huynh duyệt 14/11: buổi nghỉ như U16 (ngày, bên báo nghỉ Con / Thầy-cô / Khác, **có tính phí chọn tay từng buổi nghỉ**, cửa sổ −120…+60 ngày), dấu loại buổi U17 (Thường / Học bù / Không tính, theo chuỗi sửa, dấu mới nhất thắng), cùng ngày U18, công thức buổi tính phí U19, người ghi U20 (thầy/cô của em hoặc phụ huynh), U22 (một hàm thuần ở máy chủ và trình duyệt). Luật đếm buổi do thầy/cô ghi: **phụ huynh đã xác nhận 14/11**. Không có số tiền ở đâu; học sinh không thấy gì.
+
+**SQL cần phụ huynh áp: `0030_session_billing.sql` (sau khi gộp).** Chỉ thêm, idempotent, cần 0026 + 0029 đã áp (0029 đã áp 14/11, workflow "Apply database migrations" run 43590186183). Áp bằng workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". Chưa áp: trang Buổi học vẫn có phần 3A, Ghi buổi "Thường" chạy như cũ (v2/v3), và nút buổi nghỉ / đánh dấu / Học bù báo "chưa sẵn sàng (cần cập nhật cơ sở dữ liệu)". Số migration kế tiếp sau 0030: **0031** (mục 7 "Destination" lấy số sau).
+
+### Làm gì
+1. **Migration `0030`:** bảng chỉ thêm `session_absences` (dòng "bỏ" = `cancels_id` + lý do) và `session_marks` (kind, `makeup_for`, lý do, `client_id`); RLS đọc cho thầy/cô của em + phụ huynh, học sinh không, không ai ghi trực tiếp (kể cả `service_role`); hàm `eng_record_absence`, `eng_cancel_absence`, `eng_mark_session`, `eng_write_lesson_note_v4` (= v3 + loại buổi cùng giao dịch); `eng_purge_learner` / `eng_purge_preview` chép nguyên bản 0029 + hai bảng (marks → absences, trước `lesson_notes`).
+2. **API ghi:** `POST /api/learners/[id]/sessions/absences`, `…/absences/[absenceId]/cancel`, `…/marks` (hành động mới `sessions:mark` cho thầy/cô + phụ huynh; zod; chưa áp 0030 → 409 `sessions_unavailable` có chữ; `no-store`). Trình duyệt chỉ gửi sự kiện, không gửi con số.
+3. **Luật đếm mở rộng** (`lib/sessions/count.ts`): `effectiveKinds`, `liveAbsences`, `monthBilling`; ngày có buổi thường + buổi bù = 2 buổi; dấu Học bù trên ghi chú của phụ huynh không tạo buổi; không dấu / không buổi nghỉ → kết quả giống hệt 3A.
+4. **Ghi buổi:** ô "Loại buổi" (Thường · Học bù, chọn "Bù cho buổi nghỉ ngày …"); Thường vẫn gọi v2/v3 nên chạy được trước khi áp 0030.
+5. **Trang Buổi học:** khối "Buổi nghỉ" (ghi / Bỏ ghi nghỉ có lý do), nút "Đánh dấu" trên từng ghi chú (Không tính gạch ngang + lý do), lịch có chữ N (nghỉ) và B (bù) kèm `aria-label`, bảng tháng thêm cột Học bù · Nghỉ (con / thầy-cô / khác) · Buổi tính phí; trang tháng in có các số đó + danh sách ngày nghỉ; câu sao chép Zalo thêm "· học bù 1 · nghỉ 1 (con, không tính phí) · tính phí 9 buổi".
+6. **Xóa dữ liệu một em:** biên nhận gồm "Đánh dấu loại buổi học" và "Buổi nghỉ".
+
+### Cách thử trên bản thử (sau khi áp 0030; gia đình THỬ, đăng nhập thầy/cô của Nguyên (thử))
+- Buổi học → "Buổi nghỉ": ngày 19/11, Bên báo nghỉ **Con**, **Không tính phí** → Lưu. Ghi buổi mới: Loại buổi **Học bù**, "Bù cho buổi nghỉ ngày 19/11", ngày 21/11 → Lưu. Trang tháng 11: Học bù 1 · Nghỉ 1 / 0 / 0 · Buổi tính phí = số buổi đã học (không tăng thêm); lịch có N ở 19/11 và B ở 21/11.
+- Ghi nghỉ 24/11 **Có tính phí** → Buổi tính phí +1. "Bỏ ghi nghỉ" (lý do) → trở lại.
+- Một ghi chú → "Đánh dấu" → **Không tính**, lý do "ghi nhầm em" → ghi chú gạch ngang, số buổi giảm 1; đánh dấu lại **Thường** → tính lại.
+- Đăng nhập phụ huynh: thấy cùng số, làm được các thao tác trên. Đăng nhập em (thử): trang Buổi học 404, API ghi trả 403.
+- Xóa dữ liệu em thử (màn "Xóa dữ liệu"): biên nhận có hai mục mới.
+- Trước khi áp 0030 (nếu muốn thử): trang Buổi học có dòng "Phần buổi nghỉ / học bù chưa sẵn sàng (cần cập nhật cơ sở dữ liệu)", Ghi buổi Thường vẫn lưu được, Học bù báo lỗi có chữ và giữ nội dung.
+
+### Tiêu chí đạt
+`npm run typecheck && npm run lint && npm test && npm run gen:config` xanh; `npx playwright test --list` có test mới (`UX vòng 3B` trong `tutorWork.spec.ts`); **e2e xanh trong CI** (chưa chạy được ở máy dev không có Docker: tiêu chí này chưa đạt cho tới khi CI chạy); `0030` áp được hai lần ("applied 0" lần hai); Opus `reviewer` xem file SQL và diff (trọng tâm: quyền kiểm trước mọi thứ khác; trình duyệt không gửi số; v4 lùi cả giao dịch khi sai; purge đủ và đúng thứ tự; phụ huynh không thấy chữ ghi chú riêng tư). Opus `reviewer` đã chạy (14/11), các phát hiện đã sửa (mục dưới). **Chưa đạt:** e2e chưa chạy ở máy dev (chỉ CI).
+
+### Sửa sau Opus review (14/11) — `0030` chưa áp nên sửa thẳng trong file (vẫn idempotent)
+- **Một buổi nghỉ chỉ bù MỘT lần:** SQL từ chối `absence_already_made_up` (hàm `eng_absence_made_up`; chuỗi ghi chú khác, dấu mới nhất của chuỗi là Học bù trỏ tới buổi nghỉ đó, ghi chú hiện hành do thầy/cô ghi); `count.ts` mỗi buổi nghỉ chỉ bị trừ một lần (mỗi ngày bù trừ tối đa một buổi nghỉ, toàn bộ các tháng), nên dữ liệu xấu cũng không trừ hai lần.
+- Sửa ghi chú đã là Học bù: ô "Bù cho buổi nghỉ ngày" chọn sẵn buổi nghỉ hiện tại (và vẫn nằm trong danh sách); lưu không đổi gì = không ghi dấu mới.
+- **Một ngày chỉ một buổi nghỉ còn hiệu lực** (`absence_exists`); nghỉ trùng ngày có buổi học = dấu ⚠ ở lịch, bảng tháng, trang tháng (chọn bỏ ghi nghỉ hoặc bỏ ghi chú).
+- Trang tháng mở được tới tháng hiện tại + 2 (khớp cửa sổ +60 ngày). Chữ Zalo ghi ngày nghỉ + bên báo + tính phí và "(2 buổi)" cho ngày có 2 buổi.
+- Dấu Học bù chỉ trên ghi chú của phụ huynh không "tiêu" buổi nghỉ (danh sách chọn và SQL cùng luật); thầy/cô gắn lại được.
+- Kiểm quyền đứng đầu ở `eng_record_absence` / `eng_mark_session`; replay của dấu trả lời trước khi kiểm buổi nghỉ; đổi loại buổi hoặc buổi nghỉ ở form thì có `client_id` mới.
+- Bỏ 4 khóa chữ không dùng; e2e chọn buổi nghỉ theo nhãn ngày và dùng ngày 10–11 của tháng cách đây 2 tháng.
+
+### Giả định / ghi chú
+- Ngày nghỉ báo trước tối đa 60 ngày, tính lùi 120 ngày (U16); sửa ngày = bỏ ghi nghỉ rồi ghi lại.
+- Buổi bù tính theo tháng của ngày học bù; buổi nghỉ theo tháng của ngày nghỉ (nghỉ và bù khác tháng thì trừ ở tháng của buổi bù).
+- Ghi chú đã có bản mới hơn không đánh dấu được (đánh dấu bản mới nhất); dấu vẫn áp cho cả chuỗi.
+- Đọc `session_marks` / `session_absences` bằng quyền máy chủ sau cổng của trang (cùng cách 3A); lỗi đọc 2 bảng chỉ tắt phần 3B, số buổi 3A vẫn đúng.
