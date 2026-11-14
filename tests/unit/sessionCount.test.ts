@@ -142,3 +142,118 @@ describe("only tutor notes count as a buổi (billing safety, parent to confirm)
     expect(json).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/);
   });
 });
+
+// ---- 3B: marks, absences, billable sessions (rule S-1) ----
+import { effectiveKinds, liveAbsences, monthBilling } from "@/lib/sessions/count";
+import type { AbsenceRow, MarkRow } from "@/lib/sessions/types";
+
+let mseq = 0;
+const mk = (noteId: string, kind: MarkRow["kind"], o: Partial<MarkRow> = {}): MarkRow => ({ id: o.id ?? `m${++mseq}`.padStart(4, "0"), noteId, kind, makeupFor: null, reason: kind === "not_counted" ? "ghi nhầm" : null, createdAt: `2026-11-20T10:00:0${mseq % 10}Z`, ...o });
+const ab = (id: string, on: string, o: Partial<AbsenceRow> = {}): AbsenceRow => ({ id, absentOn: on, requestedBy: "student", billable: false, cancelsId: null, note: null, createdAt: `${on}T08:00:00Z`, ...o });
+const daysM = (rows: NoteRow[], marks: MarkRow[] = []) => sessionDays(rows, [], () => null, marks);
+const eight = () => ["2026-11-02", "2026-11-04", "2026-11-06", "2026-11-09", "2026-11-11", "2026-11-13", "2026-11-16", "2026-11-18"].map((d) => note(d));
+const bill = (rows: NoteRow[], absences: AbsenceRow[], marks: MarkRow[] = []) => monthBilling("2026-11", daysM(rows, marks), absences);
+
+describe("3B billable sessions (Phân tích 4)", () => {
+  it("8 regular + child absent 19/11 not billable + makeup 21/11 for 19/11: 9 held, 1 absence, 9 billable", () => {
+    const mu = note("2026-11-21", { id: "mu" });
+    const b = bill([...eight(), mu], [ab("a1", "2026-11-19")], [mk("mu", "makeup", { makeupFor: "a1" })]);
+    expect(b).toMatchObject({ sessions: 9, makeups: 1, absences: { student: 1, tutor: 0, other: 0 }, billable: 9 });
+  });
+  it("8 regular + child absent 19/11 billable, no makeup: 8 held, 9 billable", () => {
+    expect(bill(eight(), [ab("a1", "2026-11-19", { billable: true })])).toMatchObject({ sessions: 8, billable: 9 });
+  });
+  it("tutor absent 12/11 not billable; makeup 14/11 the same day as a regular note = 2 sessions that day", () => {
+    const rows = [...eight().filter((n) => n.sessionDate !== "2026-11-11"), note("2026-11-14", { id: "r14" }), note("2026-11-14", { id: "mu14" })];
+    const marks = [mk("mu14", "makeup", { makeupFor: "a1" })];
+    const d = daysM(rows, marks);
+    expect(d.find((x) => x.date === "2026-11-14")).toMatchObject({ sessions: 2, regular: true, makeup: true, sameDay: false });
+    const b = monthBilling("2026-11", d, [ab("a1", "2026-11-12", { requestedBy: "tutor" })]);
+    expect(b).toMatchObject({ sessions: 9, makeups: 1, absences: { tutor: 1 }, billable: 9 });
+  });
+  it("billable absence 19/11 then a makeup 26/11 for it: the makeup does not count twice", () => {
+    const b = bill([...eight(), note("2026-11-26", { id: "mu" })], [ab("a1", "2026-11-19", { billable: true })], [mk("mu", "makeup", { makeupFor: "a1" })]);
+    expect(b).toMatchObject({ sessions: 9, billable: 9 });
+  });
+  it("a makeup with no link counts as a plain extra session", () => {
+    const b = bill([...eight(), note("2026-11-26", { id: "mu" })], [], [mk("mu", "makeup")]);
+    expect(b).toMatchObject({ sessions: 9, makeups: 1, billable: 9 });
+  });
+  it("'Không tính' removes the note: 07/11 mistaken note, total -1", () => {
+    const rows = [...eight(), note("2026-11-07", { id: "bad" })];
+    expect(bill(rows, [], [mk("bad", "not_counted")]).sessions).toBe(8);
+    expect(daysM(rows, [mk("bad", "not_counted")]).some((d) => d.date === "2026-11-07")).toBe(false);
+  });
+  it("a cancelled absence disappears; the makeup that pointed to it counts like a plain makeup", () => {
+    const abs = [ab("a1", "2026-11-19", { billable: true }), ab("c1", "2026-11-19", { cancelsId: "a1", note: "ghi nhầm" })];
+    expect(liveAbsences(abs)).toEqual([]);
+    const b = bill([...eight(), note("2026-11-21", { id: "mu" })], abs, [mk("mu", "makeup", { makeupFor: "a1" })]);
+    expect(b).toMatchObject({ sessions: 9, absenceTotal: 0, billable: 9 });
+  });
+  it("absences are counted in their own month and by who asked", () => {
+    const abs = [ab("a1", "2026-10-30", { requestedBy: "other", billable: true }), ab("a2", "2026-11-03", { requestedBy: "other" }), ab("a3", "2026-11-05", { requestedBy: "tutor", billable: true })];
+    const b = monthBilling("2026-11", daysM(eight()), abs);
+    expect(b.absences).toEqual({ student: 0, tutor: 1, other: 1 });
+    expect(b.billable).toBe(9);
+    expect(b.absenceDates.map((a) => a.date)).toEqual(["2026-11-03", "2026-11-05"]);
+  });
+});
+
+describe("3B marks follow the chain; the newest mark wins", () => {
+  it("a mark on an old version still applies to the new version", () => {
+    const rows = [note("2026-11-02", { id: "a" }), note("2026-11-02", { id: "b", supersedesId: "a" })];
+    expect(effectiveKinds(rows, [mk("a", "makeup")]).get("b")?.kind).toBe("makeup");
+    expect(daysM(rows, [mk("a", "makeup")])[0]).toMatchObject({ makeup: true, regular: false, sessions: 1 });
+  });
+  it("two marks: the latest; 'Không tính' then 'Thường' counts again", () => {
+    const rows = [note("2026-11-02", { id: "a" })];
+    const m1 = mk("a", "not_counted", { id: "0001", createdAt: "2026-11-05T10:00:00Z" });
+    const m2 = mk("a", "regular", { id: "0002", createdAt: "2026-11-06T10:00:00Z" });
+    expect(daysM(rows, [m1])).toEqual([]);
+    expect(daysM(rows, [m1, m2]).map((d) => d.sessions)).toEqual([1]);
+    expect(daysM(rows, [m2, m1]).map((d) => d.sessions)).toEqual([1]);
+  });
+  it("a supersedes loop does not hang the walk", () => {
+    const rows = [note("2026-11-02", { id: "x", supersedesId: "y" }), note("2026-11-02", { id: "y", supersedesId: "x" }), note("2026-11-03", { id: "z", supersedesId: "x" })];
+    expect(() => effectiveKinds(rows, [mk("x", "makeup")])).not.toThrow();
+  });
+  it("a makeup mark on a parent-only note does not create a counted session", () => {
+    const rows = [note("2026-11-02", { id: "p", authorRole: "parent" })];
+    const d = daysM(rows, [mk("p", "makeup")]);
+    expect(d[0]).toMatchObject({ sessions: 0, parentOnly: true });
+    expect(bill(rows, [], [mk("p", "makeup")])).toMatchObject({ sessions: 0, makeups: 0, billable: 0 });
+  });
+  it("two regular notes = 1 session flagged; two makeup notes = 1 makeup flagged; regular + makeup = 2, not flagged", () => {
+    const two = daysM([note("2026-11-02", { id: "a" }), note("2026-11-02", { id: "b" })]);
+    expect(two[0]).toMatchObject({ sessions: 1, sameDay: true });
+    const mm = daysM([note("2026-11-02", { id: "a" }), note("2026-11-02", { id: "b" })], [mk("a", "makeup"), mk("b", "makeup")]);
+    expect(mm[0]).toMatchObject({ sessions: 1, makeup: true, sameDay: true });
+    const rm = daysM([note("2026-11-02", { id: "a" }), note("2026-11-02", { id: "b" })], [mk("b", "makeup")]);
+    expect(rm[0]).toMatchObject({ sessions: 2, sameDay: false });
+  });
+});
+
+describe("3B leaves the 3A numbers alone when there is nothing new", () => {
+  it("no marks and no absences: same days, same months, same text as 3A", () => {
+    const rows = [note("2026-11-03"), note("2026-11-05"), note("2026-11-05", { authorRole: "parent" }), note("2026-10-31"), note("2026-11-12", { published: false })];
+    const plain = sessionDays(rows, [], () => null);
+    const withEmpty = sessionDays(rows, [], () => null, []);
+    expect(withEmpty).toEqual(plain);
+    const m = months(plain, TODAY);
+    expect(months(plain, TODAY, [])).toEqual(m);
+    expect(m[0]!.sessions).toBe(3);
+    expect(monthText("Nguyên", m[0]!)).toBe("Nguyên · Tháng 11/2026: 3 buổi — 03/11, 05/11, 12/11.");
+    expect(m[0]!.billing).toMatchObject({ sessions: 3, billable: 3, absenceTotal: 0 });
+  });
+  it("months lists a month that has only an absence; the Zalo text carries absences and the billable count", () => {
+    const abs = [ab("a1", "2026-11-19", { billable: false })];
+    const mm = months(daysM([note("2026-11-03")]), TODAY, abs)[0]!;
+    expect(monthText("Nguyên", mm)).toBe("Nguyên · Tháng 11/2026: 1 buổi — 03/11 · nghỉ 1 (con, không tính phí) · tính phí 1 buổi.");
+    expect(months([], TODAY, abs).map((x) => x.month)).toEqual(["2026-11"]);
+  });
+  it("weekGrid marks the live absence day", () => {
+    const g = weekGrid([], TODAY, 12, [ab("a1", "2026-11-12", { billable: true, requestedBy: "tutor" })]);
+    const cell = g.flatMap((r) => r.cells).find((c) => c.date === "2026-11-12")!;
+    expect(cell.absence).toEqual({ requestedBy: "tutor", billable: true });
+  });
+});

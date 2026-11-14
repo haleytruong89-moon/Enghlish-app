@@ -52,7 +52,7 @@ describe("MonthSheet", () => {
     expect(screen.getByTestId("month-copy").className).toContain("print:hidden");
   });
   it("an empty month", () => {
-    render(<MonthSheet alias="Nguyên" month={{ month: "2026-10", sessions: 0, days: [] }} />);
+    render(<MonthSheet alias="Nguyên" month={{ month: "2026-10", sessions: 0, days: [], billing: { sessions: 0, makeups: 0, absences: { student: 0, tutor: 0, other: 0 }, absenceTotal: 0, billable: 0, dates: [], absenceDates: [] } }} />);
     expect(screen.getByTestId("month-empty")).toBeTruthy();
   });
 });

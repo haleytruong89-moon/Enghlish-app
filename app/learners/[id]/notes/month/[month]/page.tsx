@@ -6,7 +6,7 @@ import { sessionMonthCopy } from "@/lib/copy/vi";
 import { loadCurriculumCards } from "@/lib/curriculum/load";
 import { todayVn } from "@/lib/inquiries/dates";
 import { authorizeLearnerPage } from "@/lib/review/access";
-import { months, sessionDays } from "@/lib/sessions/count";
+import { monthBilling, months, sessionDays } from "@/lib/sessions/count";
 import { loadSessionFacts } from "@/lib/sessions/load";
 import { parseMonth, unitTitleOf } from "@/lib/sessions/view";
 
@@ -25,7 +25,7 @@ export default async function SessionMonthPage({ params }: { params: Promise<{ i
   const [facts, cards] = await Promise.all([loadSessionFacts(learner.id).catch(() => null), loadCurriculumCards(learner.id).catch(() => [])]);
   if (!facts) notFound();
   const days = sessionDays(facts.notes, facts.taught, unitTitleOf(cards));
-  const summary = months(days, today).find((x) => x.month === m) ?? { month: m, sessions: 0, days: [] };
+  const summary = months(days, today).find((x) => x.month === m) ?? { month: m, sessions: 0, days: [], billing: monthBilling(m, [], []) };
   return (
     <div className="mx-auto max-w-3xl" data-testid="month-page">
       <Link href={`/learners/${learner.id}/notes`} className="inline-flex min-h-11 items-center text-sm text-accent underline print:hidden">
