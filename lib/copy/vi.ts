@@ -2616,6 +2616,7 @@ export const sessionKindCopy = {
   cancel: "Thôi",
   strike: "Không tính",
   markedAs: (kind: string) => `Đã đánh dấu: ${kind}`,
+  reasonNeeded: "Cần ghi lý do (ít nhất 5 ký tự).",
   parentNoteHint: "Ghi chú của phụ huynh không tạo ra buổi học dù đánh dấu gì.",
 } as const;
 export const absenceCopy = {
@@ -2633,6 +2634,8 @@ export const absenceCopy = {
   cancel: "Bỏ ghi nghỉ",
   cancelReason: "Lý do bỏ",
   cancelConfirm: "Bỏ ghi nghỉ này",
+  dismiss: "Thôi",
+  billableChoose: "Bạn chọn buổi nghỉ này có tính phí hay không.",
   listTitle: "Buổi nghỉ",
   none: "Chưa ghi buổi nghỉ nào.",
   cancelled: "đã bỏ",

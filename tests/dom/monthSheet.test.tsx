@@ -64,3 +64,25 @@ describe("parseMonth (the page answers 404 for null)", () => {
     for (const bad of ["2026-13", "2026-00", "abc", "2026-12", "2027-01", "2026-1", "2026-11-01"]) expect(parseMonth(bad, "2026-11-14"), bad).toBeNull();
   });
 });
+
+describe("MonthSheet 3B", () => {
+  const nov = [note("2026-11-03", { id: "r1" }), note("2026-11-10", { id: "r2" }), note("2026-11-12", { id: "mu" })];
+  const d = sessionDays(nov, [], () => null, [{ id: "m1", noteId: "mu", kind: "makeup", makeupFor: "a1", reason: null, createdAt: "t" }]);
+  const abs = [{ id: "a1", absentOn: "2026-11-05", requestedBy: "tutor" as const, billable: true, cancelsId: null, note: null, createdAt: "t" }];
+  const m = months(d, "2026-11-14", abs)[0]!;
+  it("shows makeups, absences by who, billable sessions, the absence days and the rule", () => {
+    render(<MonthSheet alias="Nguyên" month={m} billing />);
+    expect(screen.getByTestId("month-makeups").textContent).toContain("1");
+    expect(screen.getByTestId("month-absences").textContent).toContain("0 / 1 / 0");
+    expect(screen.getByTestId("month-billable").textContent).toContain("3");
+    expect(screen.getByTestId("month-absence-list").textContent).toContain("05/11 · thầy/cô, có tính phí");
+    expect(screen.getByTestId("sheet-row-2026-11-12").textContent).toContain("học bù");
+  });
+  it("the copied text adds the makeups, the absences and the billable count", () => {
+    expect(monthText("Nguyên", m)).toBe("Nguyên · Tháng 11/2026: 3 buổi — 03/11, 10/11, 12/11 · học bù 1 · nghỉ 1 (thầy/cô, tính phí) · tính phí 3 buổi.");
+  });
+  it("without billing the sheet has no 3B block", () => {
+    render(<MonthSheet alias="Nguyên" month={m} />);
+    expect(screen.queryByTestId("month-billing")).toBeNull();
+  });
+});

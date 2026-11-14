@@ -97,5 +97,5 @@ export async function loadDesk(shell: ShellData, learner: LearnerSummary): Promi
     parent ? settle(loadAiSettings(shell.memberId)) : Promise.resolve(null),
     settle(loadSessionFacts(learner.id)),
   ]);
-  return { today, pending, intakeMissing: intake && intake.available ? intake.data === null : null, curricula, profile, recent, aiSettings, sessions: facts ? sessionDays(facts.notes, [], () => null) : null };
+  return { today, pending, intakeMissing: intake && intake.available ? intake.data === null : null, curricula, profile, recent, aiSettings, sessions: facts ? sessionDays(facts.notes, [], () => null, facts.marks) : null };
 }

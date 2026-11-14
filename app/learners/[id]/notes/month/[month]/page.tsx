@@ -24,14 +24,14 @@ export default async function SessionMonthPage({ params }: { params: Promise<{ i
   const { learner } = access.grant;
   const [facts, cards] = await Promise.all([loadSessionFacts(learner.id).catch(() => null), loadCurriculumCards(learner.id).catch(() => [])]);
   if (!facts) notFound();
-  const days = sessionDays(facts.notes, facts.taught, unitTitleOf(cards));
-  const summary = months(days, today).find((x) => x.month === m) ?? { month: m, sessions: 0, days: [], billing: monthBilling(m, [], []) };
+  const days = sessionDays(facts.notes, facts.taught, unitTitleOf(cards), facts.marks);
+  const summary = months(days, today, facts.absences).find((x) => x.month === m) ?? { month: m, sessions: 0, days: [], billing: monthBilling(m, [], facts.absences) };
   return (
     <div className="mx-auto max-w-3xl" data-testid="month-page">
       <Link href={`/learners/${learner.id}/notes`} className="inline-flex min-h-11 items-center text-sm text-accent underline print:hidden">
         {sessionMonthCopy.back}
       </Link>
-      <MonthSheet alias={learner.alias} month={summary} />
+      <MonthSheet alias={learner.alias} month={summary} billing={facts.billing} />
     </div>
   );
 }

@@ -1,4 +1,7 @@
-import { sessionStatsCopy } from "@/lib/copy/vi";
+import { sessionBillingCopy, sessionStatsCopy } from "@/lib/copy/vi";
+import type { AbsenceRow } from "@/lib/sessions/types";
+import { AbsenceForm } from "./AbsenceForm";
+import { addDays } from "@/lib/inquiries/dates";
 import { months as monthsOf, stats as statsOf, weekGrid } from "@/lib/sessions/count";
 import type { SessionDay } from "@/lib/sessions/types";
 import { currentUnitLines, perWeekText } from "@/lib/sessions/view";
@@ -10,7 +13,7 @@ type Cards = Parameters<typeof currentUnitLines>[0];
 const card = "flex flex-col gap-1 rounded-2xl border border-line bg-white p-4";
 
 /** "Tổng quan buổi học": four number cards, the 12-week calendar and the monthly table. The same for tutor and parent (U9). */
-export function SessionStats({ learnerId, days, today, cards }: { learnerId: string; days: SessionDay[]; today: string; cards: Cards }) {
+export function SessionStats({ learnerId, days, today, cards, absences = [], billing = false }: { learnerId: string; days: SessionDay[]; today: string; cards: Cards; absences?: AbsenceRow[]; billing?: boolean }) {
   const s = statsOf(days, today);
   const unit = currentUnitLines(cards);
   return (
@@ -44,21 +47,27 @@ export function SessionStats({ learnerId, days, today, cards }: { learnerId: str
           )}
         </div>
       </div>
-      {days.length === 0 ? (
+      {days.length === 0 && (!billing || absences.length === 0) ? (
         <p className="rounded-xl border border-line bg-white px-5 py-4" data-testid="sessions-none">{sessionStatsCopy.none}</p>
       ) : (
         <>
           <div className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-4">
             <h3 className="text-sm font-semibold">{sessionStatsCopy.calendarTitle}</h3>
-            <WeekGrid rows={weekGrid(days, today)} />
+            <WeekGrid rows={weekGrid(days, today, 12, absences)} />
           </div>
           <div className="rounded-2xl border border-line bg-white p-4">
             <h3 className="text-sm font-semibold">{sessionStatsCopy.monthTable.title}</h3>
-            <MonthTable learnerId={learnerId} months={monthsOf(days, today)} />
+            <MonthTable learnerId={learnerId} months={monthsOf(days, today, absences)} billing={billing} />
           </div>
         </>
       )}
+      {billing ? (
+        <AbsenceForm learnerId={learnerId} absences={absences} today={today} minDate={addDays(today, -120)} maxDate={addDays(today, 60)} />
+      ) : (
+        <p className="rounded-xl border border-line bg-white px-5 py-4 text-sm text-muted" data-testid="billing-unavailable">{sessionBillingCopy.unavailable}</p>
+      )}
       <p className="text-xs text-muted" data-testid="sessions-rule">{sessionStatsCopy.rule}</p>
+      {billing ? <p className="text-xs text-muted" data-testid="billing-rule">{sessionBillingCopy.rule}</p> : null}
     </section>
   );
 }

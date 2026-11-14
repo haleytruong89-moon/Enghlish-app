@@ -9,9 +9,9 @@ import { authorizeLearnerPage } from "@/lib/review/access";
 import { loadNotesPage } from "@/lib/review/load";
 import { getAuthUser } from "@/lib/auth/session";
 import { loadCurriculumCards } from "@/lib/curriculum/load";
-import { sessionDays } from "@/lib/sessions/count";
+import { effectiveKinds, sessionDays } from "@/lib/sessions/count";
 import { loadSessionFacts } from "@/lib/sessions/load";
-import { unitTitleOf } from "@/lib/sessions/view";
+import { makeupChoices, unitTitleOf } from "@/lib/sessions/view";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +33,10 @@ export default async function NotesPage({ params }: { params: Promise<{ id: stri
     loadCurriculumCards(learner.id).catch(() => []),
   ]);
   const today = todayVn();
+  // 3B: the kind of each current note (notes of this page only), when the tables of 0030 can be read.
+  const marks = facts?.billing
+    ? Object.fromEntries([...effectiveKinds(facts.notes, facts.marks)].map(([id, m]) => [id, { kind: m?.kind ?? "regular", reason: m?.reason ?? null }]))
+    : undefined;
 
   return (
     <>
@@ -49,12 +53,12 @@ export default async function NotesPage({ params }: { params: Promise<{ id: stri
           </Link>
         ) : null}
         {facts ? (
-          <SessionStats learnerId={learner.id} days={sessionDays(facts.notes, facts.taught, unitTitleOf(cards))} today={today} cards={cards} />
+          <SessionStats learnerId={learner.id} days={sessionDays(facts.notes, facts.taught, unitTitleOf(cards), facts.marks)} today={today} cards={cards} absences={facts.absences} billing={facts.billing} />
         ) : (
           <p className="mt-6 rounded-xl border border-line bg-white px-5 py-4 text-sm text-muted" data-testid="sessions-unreadable">{sessionStatsCopy.unreadable}</p>
         )}
         <h2 className="mt-8 text-lg font-semibold">{notesPage.link}</h2>
-        <LessonNotes learnerId={learner.id} notes={notes} targets={targets} canWrite={canWrite} memberId={member.id} today={today} minDate={addDays(today, -120)} tagLabels={tagLabels} />
+        <LessonNotes learnerId={learner.id} notes={notes} targets={targets} canWrite={canWrite} memberId={member.id} today={today} minDate={addDays(today, -120)} tagLabels={tagLabels} marks={marks} makeupChoices={facts?.billing ? makeupChoices(facts.notes, facts.marks, facts.absences) : []} />
       </div>
     </>
   );

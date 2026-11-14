@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { fallbackLabels, notesPage } from "@/lib/copy/vi";
+import { fallbackLabels, notesPage, sessionKindCopy } from "@/lib/copy/vi";
+import { NoteMarkMenu } from "@/components/sessions/NoteMarkMenu";
 import { formatDateVi } from "@/lib/inquiries/format";
 import type { LessonNoteView } from "@/lib/review/types";
 import { LessonNoteForm } from "./LessonNoteForm";
@@ -16,6 +17,8 @@ export function LessonNotes({
   today,
   minDate,
   tagLabels = {},
+  marks,
+  makeupChoices = [],
 }: {
   learnerId: string;
   notes: LessonNoteView[];
@@ -27,6 +30,9 @@ export function LessonNotes({
   minDate: string;
   /** Tag key → label, for the "Điểm cần củng cố" of notes written with "Ghi buổi học" (v2). */
   tagLabels?: Record<string, string>;
+  /** 3B: the kind that applies to each current note (note id → kind and reason). Absent = the mark menu is off (0030 not applied yet). */
+  marks?: Record<string, { kind: "regular" | "makeup" | "not_counted"; reason: string | null }>;
+  makeupChoices?: { id: string; label: string }[];
 }) {
   const [editing, setEditing] = useState<LessonNoteView | null>(null);
   const titleOf = new Map(targets.map((t) => [t.id, t.title]));
@@ -47,10 +53,16 @@ export function LessonNotes({
         <ul className="flex flex-col gap-3" data-testid="notes-list">
           {current.map((n) => (
             <li key={n.id} className="rounded-xl border border-line bg-white px-5 py-4" data-testid={`note-${n.id}`}>
-              <p className="font-semibold">
+              {marks?.[n.id]?.kind === "not_counted" ? (
+                <p className="mb-1 text-sm font-semibold text-[#6B4600]" data-testid={`note-not-counted-${n.id}`}>
+                  {sessionKindCopy.strike}: {marks[n.id]!.reason}
+                </p>
+              ) : null}
+              <p className={`font-semibold ${marks?.[n.id]?.kind === "not_counted" ? "line-through" : ""}`}>
                 {formatDateVi(n.sessionDate)}
                 {n.supportLevel ? ` · ${notesPage.supportLevels[n.supportLevel]}` : ""}
                 <span className="ml-2 rounded-full border border-line px-2 py-0.5 text-xs font-normal">{n.published ? notesPage.sharedTag : notesPage.privateTag}</span>
+                {marks?.[n.id]?.kind === "makeup" ? <span className="ml-2 rounded-full border border-accent px-2 py-0.5 text-xs font-normal text-accent" data-testid={`note-makeup-${n.id}`}>{sessionKindCopy.makeup}</span> : null}
               </p>
               {n.goals ? <p className="mt-2 text-sm">{n.goals}</p> : null}
               {n.weakTagKeys.length > 0 ? (
@@ -84,6 +96,7 @@ export function LessonNotes({
                   {notesPage.practisedTitle}: {n.practisedTargetIds.map((k) => titleOf.get(k) ?? fallbackLabels.skill).join("; ")}
                 </p>
               ) : null}
+              {marks ? <NoteMarkMenu learnerId={learnerId} noteId={n.id} current={marks[n.id]?.kind ?? "regular"} makeupChoices={makeupChoices} parentNote={n.authorRole === "parent"} /> : null}
               {canWrite && n.tutorMemberId === memberId && n.supportLevel !== null ? (
                 <button type="button" data-testid={`note-edit-${n.id}`} onClick={() => setEditing(n)} className="mt-2 min-h-11 rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent">
                   {notesPage.edit}
