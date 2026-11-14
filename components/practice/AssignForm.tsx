@@ -50,7 +50,9 @@ export function AssignForm({
 }) {
   const router = useRouter();
   const { tags, add, setGroup } = useTags(learnerId, initialTags);
-  const [kind, setKind] = useState<"link" | "pdf">(fixedKind ?? "link");
+  const [pickedKind, setKind] = useState<"link" | "pdf">("link");
+  // A fixed kind always wins, even when the page soft-navigates between ways and this component is reused.
+  const kind = fixedKind ?? pickedKind;
   const [url, setUrl] = useState("");
   const [pdf, setPdf] = useState<Prepared | null>(null);
   const [answer, setAnswer] = useState<Prepared | null>(null);

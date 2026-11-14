@@ -66,6 +66,28 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     expect((await res.body()).subarray(0, 5).toString()).toBe("%PDF-");
   });
 
+  test("switching from the link way to the PDF way through the strip gives a PDF assignment (no stale kind)", async ({ page }) => {
+    await loginAs(page, "tutorNguyen");
+    await page.goto(`/learners/${NG}/assign?way=link`);
+    await expect(page.getByTestId("assign-url")).toBeVisible();
+    await page.getByTestId("strip-pdf").click();
+    await expect(page).toHaveURL(/way=pdf/);
+    await expect(page.getByTestId("pdf-input")).toBeVisible();
+    await expect(page.getByTestId("assign-url")).toHaveCount(0);
+    const t = `Đề đổi cách ${Date.now()}`;
+    await page.getByTestId("pdf-input").setInputFiles({ name: "doi-cach.pdf", mimeType: "application/pdf", buffer: PDF });
+    await page.getByTestId("assign-title").fill(t);
+    await openExtraItems(page);
+    await page.getByTestId("tab-assign-tags-vocab").click();
+    await page.getByTestId("tag-chip-thanh-ngu").click();
+    await page.getByTestId("assign-due").fill(todayVn());
+    await page.getByTestId("assign-submit").click();
+    await expect(page.getByTestId("assign-done")).toContainText(assignPage.done);
+    const id = await assignmentIdOf(page, t);
+    // A PDF assignment has a file to open; a link one would not.
+    await expect(page.getByTestId(`assignment-${id}`).locator('a[href^="/api/files/"]').first()).toBeVisible();
+  });
+
   test("a link is recognised by its source and a non-https link is refused", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
     await page.goto(`/learners/${NG}/assign?way=link`);

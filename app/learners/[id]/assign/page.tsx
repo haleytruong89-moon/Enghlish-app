@@ -58,7 +58,7 @@ export default async function AssignPracticePage({ params, searchParams }: { par
           <WaysStrip learnerId={learner.id} current={kind} prefill={prefill} />
           <p className="mt-3 text-muted">{assignPage.intro}</p>
           <div className="mt-6 flex flex-col gap-8">
-            <AssignForm learnerId={learner.id} alias={learner.alias} tags={tags} frames={frames} today={todayVn()} map={map} prefill={prefill} unitChoices={unitChoices} fixedKind={kind} />
+            <AssignForm key={kind} learnerId={learner.id} alias={learner.alias} tags={tags} frames={frames} today={todayVn()} map={map} prefill={prefill} unitChoices={unitChoices} fixedKind={kind} />
             {list}
           </div>
         </>

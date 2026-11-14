@@ -190,6 +190,14 @@ describe("fixedKind and the order of the fields (U8)", () => {
     mount();
     expect(screen.getByTestId("kind-pdf")).toBeTruthy();
   });
+  it("the page reuses the form when the way changes (soft navigation): the kind follows fixedKind", () => {
+    const el = (k: "link" | "pdf") => <AssignForm learnerId="l1" alias="An" tags={TAGS} frames={[]} today="2026-11-13" map={levelledMap()} fixedKind={k} />;
+    const { rerender } = render(el("link"));
+    expect(screen.getByTestId("assign-url")).toBeTruthy();
+    rerender(el("pdf"));
+    expect(screen.getByTestId("pdf-input")).toBeTruthy();
+    expect(screen.queryByTestId("assign-url")).toBeNull();
+  });
   it("order: Unit block, then the name, then the link, then the due date", () => {
     mount();
     const pos = (id: string) => {
