@@ -8,6 +8,9 @@ import { loadInbox } from "@/lib/review/load";
 import type { InboxCursor, InboxItem } from "@/lib/review/types";
 import { loadImportPending } from "@/lib/import/load";
 import { loadPointInbox } from "@/lib/points/load";
+import { sessionDays } from "@/lib/sessions/count";
+import { loadSessionFacts } from "@/lib/sessions/load";
+import type { SessionDay } from "@/lib/sessions/types";
 import { loadSkillInbox } from "@/lib/skills/load";
 import type { ShellData } from "@/lib/shell/shell";
 import { loadAiSettings, loadDraftList, loadStudioPending } from "@/lib/studio/load";
@@ -77,12 +80,14 @@ export type DeskData = {
   profile: LevelProfile | null;
   recent: RecentChange[] | null;
   aiSettings: AiSettingsView | null;
+  /** Counted session days (U9/U10) for the one-line summary; null when the notes could not be read. */
+  sessions: SessionDay[] | null;
 };
 
 /** Everything the desk of one child needs. Call ONLY after the page gate of that child (admin-client loaders). Never throws. */
 export async function loadDesk(shell: ShellData, learner: LearnerSummary): Promise<DeskData> {
   const parent = shell.role === "parent";
-  const [today, pending, intake, curricula, profile, recent, aiSettings] = await Promise.all([
+  const [today, pending, intake, curricula, profile, recent, aiSettings, facts] = await Promise.all([
     settle(loadToday(learner.id, learner.trackId, { role: shell.role, memberId: shell.memberId })),
     loadPendingRows(shell.memberId, shell.role, learner.id),
     settle(loadIntake(learner.id)),
@@ -90,6 +95,7 @@ export async function loadDesk(shell: ShellData, learner: LearnerSummary): Promi
     settle(loadLevelProfile(learner.id)),
     parent ? settle(loadRecentLevelChanges(shell.learners)) : Promise.resolve(null),
     parent ? settle(loadAiSettings(shell.memberId)) : Promise.resolve(null),
+    settle(loadSessionFacts(learner.id)),
   ]);
-  return { today, pending, intakeMissing: intake && intake.available ? intake.data === null : null, curricula, profile, recent, aiSettings };
+  return { today, pending, intakeMissing: intake && intake.available ? intake.data === null : null, curricula, profile, recent, aiSettings, sessions: facts ? sessionDays(facts.notes, [], () => null) : null };
 }

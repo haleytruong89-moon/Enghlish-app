@@ -2,14 +2,31 @@ import Link from "next/link";
 import { deskCopy, fallbackLabels, todayPage, tutorHonorific } from "@/lib/copy/vi";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { isOverdue } from "@/lib/practice/overdue";
+import { stats } from "@/lib/sessions/count";
+import type { SessionDay } from "@/lib/sessions/types";
+import { lastText } from "@/lib/sessions/view";
 import type { TodayData } from "@/lib/tutorwork/load";
 import { BOX, BOX_LINK } from "./ProfileBox";
 
-export function SessionsBox({ learnerId, today, todayIso }: { learnerId: string; today: TodayData | null; todayIso: string }) {
+/** "Tháng 11: 5 buổi · buổi gần nhất 12/11" (one line; nothing when there is no session or the notes could not be read). */
+function monthLine(days: SessionDay[] | null, todayIso: string): string | null {
+  if (!days || days.length === 0) return null;
+  const s = stats(days, todayIso);
+  const month = Number(todayIso.slice(5, 7));
+  return s.thisMonth > 0 ? deskCopy.monthLine(month, s.thisMonth, lastText(s.last)) : deskCopy.monthLineNone(month, lastText(s.last));
+}
+
+export function SessionsBox({ learnerId, today, todayIso, sessions = null }: { learnerId: string; today: TodayData | null; todayIso: string; sessions?: SessionDay[] | null }) {
   const note = today?.lastNote ?? null;
+  const line = monthLine(sessions, todayIso);
   return (
     <section data-testid="desk-sessions" className={BOX}>
       <h2 className="text-lg font-semibold">{deskCopy.sessionsTitle}</h2>
+      {line ? (
+        <Link href={`/learners/${learnerId}/notes`} data-testid="desk-month-line" className="inline-flex min-h-11 items-center text-sm font-medium text-accent underline">
+          {line}
+        </Link>
+      ) : null}
       {today === null ? (
         <p className="text-sm text-muted">{deskCopy.sessionsUnavailable}</p>
       ) : (

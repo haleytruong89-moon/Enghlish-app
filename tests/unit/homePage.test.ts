@@ -19,7 +19,7 @@ import HomePage from "@/app/page";
 
 const an = { id: "a0000000-0000-4000-8000-000000000001", alias: "An (thử)", trackId: "A", status: "active", isTest: true, color: null };
 const ng = { id: "b0000000-0000-4000-8000-000000000002", alias: "Nguyên (thử)", trackId: "B", status: "active", isTest: true, color: null };
-const desk = { today: null, pending: { rows: [], failed: [], more: false }, intakeMissing: null, curricula: null, profile: null, recent: null, aiSettings: null };
+const desk = { today: null, pending: { rows: [], failed: [], more: false }, intakeMissing: null, curricula: null, profile: null, recent: null, aiSettings: null, sessions: null };
 const render = async (sp: Record<string, string> = {}) => renderToStaticMarkup(await HomePage({ searchParams: Promise.resolve(sp) }));
 
 beforeEach(() => { loadDesk.mockResolvedValue(desk); requireLearnerPage.mockClear(); });
