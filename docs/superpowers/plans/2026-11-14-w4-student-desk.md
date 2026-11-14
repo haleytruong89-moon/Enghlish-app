@@ -60,7 +60,10 @@ Số migration lấy theo thứ tự gộp; **nếu một PR khác chen vào th�
 
 ---
 
-## 2. Câu hỏi cho phụ huynh (spec thiếu / mâu thuẫn — chưa tự quyết)
+## 2. Câu hỏi cho phụ huynh — **ĐÃ TRẢ LỜI 14/11 (22:26)**
+
+> **Phụ huynh: "ok đề xuất"** — mọi câu Q1–Q22 theo cột "Đề xuất", **trừ Q5: chọn (i) chỉ đếm bài đã nộp** (không ghi phút làm bài, không bảng `work_minutes`, không mục tiêu phút, không văn bản đồng ý mới). Ghi thành quyết định **D34–D37** trong PRD ở đúng PR dùng tới. Không còn câu nào chặn PR.
+
 
 Mỗi câu có **đề xuất**; kế hoạch dưới đây viết theo đề xuất, đổi nếu phụ huynh chọn khác. "Chặn PR" = PR đó không bắt đầu code khi chưa có câu trả lời.
 
@@ -156,21 +159,19 @@ Ngày / tuần = **lịch Việt Nam** (`Asia/Ho_Chi_Minh`, UTC+7, không giờ 
 | Thầy/cô bấm "Bỏ đề xuất" Progress Test 2 (lý do "không làm đề này") | Ghi mốc v1 `removed`; đề xuất không hiện lại |
 
 ### 3.5 Mục tiêu tuần — `lib/student/goal.ts`
-- Sổ chỉ thêm `weekly_goals`: con **đề xuất** (số bài/tuần trong khoảng gợi ý của track + phút tùy chọn), thầy/cô **đồng ý** (giữ nguyên) hoặc **điều chỉnh** (số khác), con **rút lại** khi còn chờ. Mỗi lúc tối đa một đề xuất đang chờ (`(pending_exists)`).
+- Sổ chỉ thêm `weekly_goals`: con **đề xuất** (số bài/tuần trong khoảng gợi ý của track; không có mục tiêu phút — Q5-i), thầy/cô **đồng ý** (giữ nguyên) hoặc **điều chỉnh** (số khác), con **rút lại** khi còn chờ. Mỗi lúc tối đa một đề xuất đang chờ (`(pending_exists)`).
 - Quyết định (đồng ý / điều chỉnh) lúc `t` áp dụng từ `weekStart(t) + 7 ngày` (thứ Hai tuần sau, S-6). **Mục tiêu của tuần W** = quyết định mới nhất có `applies_from ≤ W`. Chưa có → tuần "chưa có mục tiêu".
 - **Gợi ý** (chữ dưới các nút): "Mấy tuần gần đây bạn làm a–b bài mỗi tuần" — a, b = nhỏ nhất / lớn nhất của 4 tuần trọn gần nhất (mục 3.6); chưa có tuần trọn → không câu gợi ý.
 
 ### 3.6 "Bài tính vào mục tiêu" (việc làm thật) và chuỗi tuần mềm — `lib/student/streak.ts`
-- **Một bài tính** trong tuần W = **một việc** (bước bài trên app / bài giao / bước sửa) mà trong W có: (a) **≥ 1 lần nộp** của con (`attempts.submitted_at`, hoặc `submissions.created_at` — gồm "nộp thay" ảnh bài giấy theo Q6), **hoặc** (b) **≥ 15 phút làm thật** trên chính việc đó (Q5-ii: số dòng `work_minutes` của việc đó trong W). Mỗi việc tính **tối đa 1 lần mỗi tuần**; cùng việc ở tuần sau đủ điều kiện thì tính lại cho tuần sau.
-- **Không tính:** mở app, mở link, xem góp ý, tự lưu dưới 15 phút, "Thử lại câu này", gửi lại cùng bài trong cùng tuần (vẫn 1), bài ghi trong buổi, bài nạp.
-- **Phút trong tuần** = số phút (dòng `work_minutes`, mỗi phút của con tối đa 1 dòng dù mở 2 tab) trong W.
-- **Đạt tuần W** = có mục tiêu ∧ số bài tính ≥ mục tiêu bài ∧ (không đặt phút ∨ phút ≥ mục tiêu phút).
+- **Một bài tính** trong tuần W = **một việc** (bước bài trên app / bài giao / bước sửa) mà trong W có: **≥ 1 lần nộp** của con (`attempts.submitted_at`, hoặc `submissions.created_at` — gồm "nộp thay" ảnh bài giấy theo Q6). **Q5 = (i): không đếm phút làm bài.** Mỗi việc tính **tối đa 1 lần mỗi tuần**; cùng việc ở tuần sau đủ điều kiện thì tính lại cho tuần sau.
+- **Không tính:** mở app, mở link, xem góp ý, tự lưu (chưa nộp), "Thử lại câu này", gửi lại cùng bài trong cùng tuần (vẫn 1), bài ghi trong buổi, bài nạp.
+- **Đạt tuần W** = có mục tiêu ∧ số bài tính ≥ mục tiêu bài.
 - **Chuỗi** (hiện lúc này, tuần đang chạy C): `k` = số tuần **đạt liên tiếp** kết thúc ở C − 1; nếu C đã đạt thì chuỗi = `k + 1`, chưa đạt thì chuỗi = `k` (**tuần đang chạy chưa bao giờ làm đứt chuỗi**). Một tuần đã kết thúc mà không đạt (kể cả tuần chưa có mục tiêu) → chuỗi về 0, tuần sau đếm lại. Xét tối đa 52 tuần.
-- **Phút làm thật** (`work_minutes`, Q5-ii): trang bài (làm bài trên app, bài sửa, bài chủ đề) gửi "nhịp" mỗi 60 giây khi trang **đang hiện** (`visibilityState = visible`) **và** có thao tác (gõ, chạm, cuộn) trong 60 giây qua; máy chủ ghi `date_trunc('minute', now())`, duy nhất theo (em, phút); tối đa 300 phút / ngày; việc phải là của con và còn mở. Bài link / giấy làm ngoài app: không đo phút (chỉ tính khi nộp).
 
-| Ví dụ (mục tiêu 4 bài, không đặt phút) | Kết quả |
+| Ví dụ (mục tiêu 4 bài) | Kết quả |
 |---|---|
-| Tuần 9–15/11: nộp Studio (T2), nộp ảnh bài PDF (T4), nộp lại ảnh bài PDF đó (T4), viết đoạn 20 phút chưa nộp (T6), nộp link (CN 23:50) | 4 bài (PDF tính 1; đoạn viết ≥ 15 phút tính) → **đạt** |
+| Tuần 9–15/11: nộp Studio (T2), nộp ảnh bài PDF (T4), nộp lại ảnh bài PDF đó (T4), viết đoạn 20 phút chưa nộp (T6), nộp link (CN 23:50), nộp Studio thứ hai (CN 21:00) | 4 bài (PDF tính 1; đoạn viết chưa nộp không tính) → **đạt** |
 | Tuần 16–22/11: 3 bài; tuần 23–29/11 đang chạy: 1 bài | Chuỗi trước 16/11 là 5 → 16–22 không đạt → hôm nay chuỗi **0** (tuần đang chạy chưa đạt, chưa tính đứt thêm) |
 | Thầy/cô đồng ý "5 bài" lúc Chủ nhật 15/11 21:00 | Áp từ **thứ Hai 16/11**; tuần 9–15/11 vẫn xét theo mục tiêu cũ |
 | Con mở link test-english 3 lần, chưa nộp ảnh | 0 bài |
@@ -239,7 +240,7 @@ Mọi hàm: `language sql|plpgsql stable security definer set search_path = ''`,
 | Cấp theo mảng | `level_decisions`, `eng_level_profile` (người lớn) | `eng_my_levels` + đổi luật P2-d → **W4e** |
 | Điều đã làm được | `competency_state`, `mastery_decisions`, `point_state`, `point_decisions` | `eng_my_cando` → **W4e** |
 | Ngày ấy – bây giờ | `artifact_versions` (chữ bài viết) | Bảng `then_now_picks` + thẻ chọn của thầy/cô + `eng_my_then_now` → **W4e** |
-| Mục tiêu tuần, chuỗi, thành tích | — | `weekly_goals`, `work_minutes`, `eng_my_week`, luật TS → **W4d** |
+| Mục tiêu tuần, chuỗi, thành tích | — | `weekly_goals`, `eng_my_week`, luật TS → **W4d** |
 | Làm bài trên app | `WorkForm`, `eng_save_draft`, `eng_submit_attempt`, `eng_my_activity` | Màn từng câu + ô "Hỏi gia sư · Sắp có" → **W4c2** |
 | Sau khi nộp (S-10) | `attempt_auto_checks`, `item_decisions`, `eng_my_studio_review` (có đáp án — bỏ) | `eng_my_result_view`, `item_retries`, cờ bài kiểm tra → **W4c2** |
 | Nộp bài giấy | `SubmitPanel`, `ImagePicker`, `eng_submit_practice`, vé tải lên | camera, xếp / xoay / xóa, ≤ 12 trang, câu "gợi ý?" cho PDF → **W4c1** |
@@ -370,23 +371,22 @@ Mọi hàm: `language sql|plpgsql stable security definer set search_path = ''`,
 
 ## PR W4d · Mục tiêu tuần + chuỗi tuần mềm + thành tích — `feature/w4d-weekly-goal`
 
-**Mục tiêu:** con **Đặt mục tiêu tuần** (bài/tuần trong khoảng gợi ý + phút tùy chọn) → thầy/cô đồng ý / điều chỉnh → áp từ tuần sau; Hôm nay có chip "🔥 {n} tuần liền" + dòng "Mục tiêu tuần {khoảng ngày} · {a}/{b} bài · {phút}"; Hành trình có thẻ "Mục tiêu tuần" + "Bộ sưu tập thành tích". **Đổi luật** "không streak" → "chuỗi tuần mềm; không bảng xếp hạng, không so sánh hai em". Chờ Q2(a), Q5, Q6, Q7, Q8, Q19, Q20.
+**Mục tiêu:** con **Đặt mục tiêu tuần** (bài/tuần trong khoảng gợi ý) → thầy/cô đồng ý / điều chỉnh → áp từ tuần sau; Hôm nay có chip "🔥 {n} tuần liền" + dòng "Mục tiêu tuần {khoảng ngày} · {a}/{b} bài"; Hành trình có thẻ "Mục tiêu tuần" + "Bộ sưu tập thành tích". **Đổi luật** "không streak" → "chuỗi tuần mềm; không bảng xếp hạng, không so sánh hai em". Chờ Q2(a), Q5, Q6, Q7, Q8, Q19, Q20.
 
 **SQL `0036_weekly_goals.sql`:**
-1. `english.weekly_goals` (chỉ thêm): `id`, `learner_id`, `kind in ('propose','accept','adjust','withdraw')`, `pieces int check (1..14)` (NULL khi withdraw), `minutes int check (null or 30..600 and minutes % 15 = 0)`, `applies_from date` (thứ Hai; chỉ accept / adjust; **hàm đặt** = `weekStart(now VN) + 7`), `responds_to uuid → weekly_goals(id)` (accept / adjust / withdraw trỏ đề xuất; unique — một trả lời mỗi đề xuất), `by_member`, `by_role in ('student','tutor')`, `client_id`, `created_at`; CHECK hình theo `kind`.
-2. `english.work_minutes` (chỉ thêm, nếu Q5-ii): `learner_id`, `minute timestamptz` (đầu phút, máy chủ đặt), `ref_kind in ('activity','assignment')`, `ref_id uuid`, `created_at`; `primary key (learner_id, minute)`; không nội dung.
+1. `english.weekly_goals` (chỉ thêm): `id`, `learner_id`, `kind in ('propose','accept','adjust','withdraw')`, `pieces int check (1..14)` (NULL khi withdraw), `applies_from date` (thứ Hai; chỉ accept / adjust; **hàm đặt** = `weekStart(now VN) + 7`), `responds_to uuid → weekly_goals(id)` (accept / adjust / withdraw trỏ đề xuất; unique — một trả lời mỗi đề xuất), `by_member`, `by_role in ('student','tutor')`, `client_id`, `created_at`; CHECK hình theo `kind`.
 3. `track_settings` thêm `weekly_goal_range` (Q8).
-4. Ghi: `eng_my_propose_goal(p_pieces, p_minutes, p_client_id)` / `eng_my_withdraw_goal(p_goal, p_client_id)` / `eng_my_work_tick(p_ref_kind, p_ref_id)` (authenticated; khoảng gợi ý `(out_of_range)`, `(pending_exists)`, việc của con + còn mở `(bad_ref)`, trần 300 phút / ngày `(daily_cap)`, phút đã có → không lỗi, trả `false`); `eng_decide_goal(p_goal, p_action accept|adjust, p_pieces, p_minutes, p_by, p_client_id)` (service_role sau `"goals:decide"`; **chỉ thầy/cô của em**, Q19).
-5. Đọc: `eng_my_week()` (authenticated) và `eng_week_facts(p_learner)` (service_role, người lớn) cùng hình: mục tiêu hiện hành / đang chờ / tuần sau, khoảng gợi ý, **dữ kiện** 26 tuần (mỗi việc: tuần, có lần nộp không, số phút) + dữ kiện thành tích (giờ nộp đầu bước viết, bài chủ đề xong, bài sửa đầu, sự kiện Unit giáo trình chính). Luật chuỗi / đạt / thành tích **chỉ ở TS** (U22).
-6. Purge: chép thân gần nhất + `weekly_goals`, `work_minutes`.
+4. Ghi: `eng_my_propose_goal(p_pieces, p_client_id)` / `eng_my_withdraw_goal(p_goal, p_client_id)` (authenticated; khoảng gợi ý `(out_of_range)`, `(pending_exists)`, việc của con + còn mở `(bad_ref)`); `eng_decide_goal(p_goal, p_action accept|adjust, p_pieces, p_by, p_client_id)` (service_role sau `"goals:decide"`; **chỉ thầy/cô của em**, Q19).
+5. Đọc: `eng_my_week()` (authenticated) và `eng_week_facts(p_learner)` (service_role, người lớn) cùng hình: mục tiêu hiện hành / đang chờ / tuần sau, khoảng gợi ý, **dữ kiện** 26 tuần (mỗi việc: tuần, có lần nộp không) + dữ kiện thành tích (giờ nộp đầu bước viết, bài chủ đề xong, bài sửa đầu, sự kiện Unit giáo trình chính). Luật chuỗi / đạt / thành tích **chỉ ở TS** (U22).
+6. Purge: chép thân gần nhất + `weekly_goals`.
 
-**Files:** `db/migrations/0036_weekly_goals.sql`; `lib/student/{week,goal,streak,achievements}.ts` (thuần); `lib/student/useWorkClock.ts` (client: nhịp 60 giây, `visibilitychange`, thao tác gần nhất); `components/student/goal/{GoalChip,WeekCard,GoalPicker,AchievementsCard}.tsx`; `app/goal/page.tsx` (Đặt mục tiêu tuần); người lớn: `scripts/seed-dev.ts` (cờ `--goal-history`, chỉ em `is_test`); `components/desk/GoalBox.tsx` (Bàn làm việc: "Mục tiêu tuần · {a}/{b} · chuỗi {n} tuần" + đề xuất chờ: Đồng ý · Điều chỉnh), `lib/desk/pending.ts` (loại `goal`), `app/api/learners/[id]/goals/[gid]/route.ts`, `app/api/student/goal/route.ts`, `app/api/student/tick/route.ts` (hoặc gọi RPC thẳng từ client bằng phiên của con — chọn route để giữ một đường ghi; `no-store`); `lib/auth/requireAccess.ts` (+ `goals:decide`); `lib/copy/vi.ts` (`weeklyGoalCopy`, `streakCopy`, `achievementsCopy`, `pendingCopy.kinds.goal`).
-**Docs (đổi luật, Q2a):** `CLAUDE.md` mục "Warnings" — thay "Không thêm streak, bảng xếp hạng, …" bằng "Không thêm bảng xếp hạng, so sánh hai em, chat mở với AI, …; **chuỗi tuần mềm** (tuần liền đạt mục tiêu tuần, tính trên việc làm thật) là được phép (D34)"; PRD thêm **D34** + §10 không đổi; DOMAIN bản 0.5 §1 (dòng streak → "Chuỗi tuần mềm: **Có** (D34)", dòng nhật ký hành vi → ngoại lệ phút làm bài nếu Q5-ii), §11; `docs/CONSENT_pilot-2026-11.md` (bản mới, nếu Q5-ii: thêm "số phút con làm bài trên app (không nội dung)" — **phụ huynh duyệt chữ**, không sửa bản cũ); UX "W4d"; DESIGN §19.24.
+**Files:** `db/migrations/0036_weekly_goals.sql`; `lib/student/{week,goal,streak,achievements}.ts` (thuần); `components/student/goal/{GoalChip,WeekCard,GoalPicker,AchievementsCard}.tsx`; `app/goal/page.tsx` (Đặt mục tiêu tuần); người lớn: `scripts/seed-dev.ts` (cờ `--goal-history`, chỉ em `is_test`); `components/desk/GoalBox.tsx` (Bàn làm việc: "Mục tiêu tuần · {a}/{b} · chuỗi {n} tuần" + đề xuất chờ: Đồng ý · Điều chỉnh), `lib/desk/pending.ts` (loại `goal`), `app/api/learners/[id]/goals/[gid]/route.ts`, `app/api/student/goal/route.ts` (hoặc gọi RPC thẳng từ client bằng phiên của con — chọn route để giữ một đường ghi; `no-store`); `lib/auth/requireAccess.ts` (+ `goals:decide`); `lib/copy/vi.ts` (`weeklyGoalCopy`, `streakCopy`, `achievementsCopy`, `pendingCopy.kinds.goal`).
+**Docs (đổi luật, Q2a):** `CLAUDE.md` mục "Warnings" — thay "Không thêm streak, bảng xếp hạng, …" bằng "Không thêm bảng xếp hạng, so sánh hai em, chat mở với AI, …; **chuỗi tuần mềm** (tuần liền đạt mục tiêu tuần, tính trên việc làm thật) là được phép (D34)"; PRD thêm **D34** + §10 không đổi; DOMAIN bản 0.5 §1 (dòng streak → "Chuỗi tuần mềm: **Có** (D34)"), §11; UX "W4d"; DESIGN §19.24.
 
 **Tasks:**
 - [ ] E1 Test thuần (viết trước): `tests/unit/week.test.ts` (ranh giới thứ Hai 00:00 VN = Chủ nhật 17:00 UTC; Chủ nhật 23:59 VN; năm mới), `tests/unit/streak.test.ts` (mọi ví dụ 3.6 + tuần chưa có mục tiêu + 52 tuần), `tests/unit/goalEffective.test.ts` (đồng ý Chủ nhật 21:00 → thứ Hai), `tests/unit/achievements.test.ts` (mỗi dòng 3.7: đạt / chưa / ngày đạt; Unit bị đặt lại "chưa học" → mất đạt, ngày đạt theo đợt mới).
-- [ ] E2 `0036` → Opus review SQL → `tests/db/weeklyGoals.test.ts`: con chỉ đề xuất cho mình, khoảng gợi ý theo `track_settings`, một đề xuất chờ, chỉ thầy/cô của em quyết (phụ huynh 42501), `applies_from` do hàm đặt (client không gửi được), nhịp phút: duy nhất theo phút, trần ngày, việc của em kia `bad_ref`, chỉ thêm, purge; `eng_my_week` không có dữ liệu em kia.
-- [ ] E3 Màn Đặt mục tiêu tuần (lựa chọn từ khoảng, câu gợi ý từ 4 tuần, trạng thái "Chờ {thầy/cô} đồng ý" + "Rút lại", "Đã đồng ý · từ tuần sau"); chip + thẻ tuần; hook phút trên Player / bài sửa / bài viết.
+- [ ] E2 `0036` → Opus review SQL → `tests/db/weeklyGoals.test.ts`: con chỉ đề xuất cho mình, khoảng gợi ý theo `track_settings`, một đề xuất chờ, chỉ thầy/cô của em quyết (phụ huynh 42501), `applies_from` do hàm đặt (client không gửi được), việc của em kia `bad_ref`, chỉ thêm, purge; `eng_my_week` không có dữ liệu em kia.
+- [ ] E3 Màn Đặt mục tiêu tuần (lựa chọn từ khoảng, câu gợi ý từ 4 tuần, trạng thái "Chờ {thầy/cô} đồng ý" + "Rút lại", "Đã đồng ý · từ tuần sau"); chip + thẻ tuần.
 - [ ] E4 Người lớn: hộp mục tiêu ở Bàn làm việc + Chờ duyệt.
 - [ ] E5 Thành tích (Hành trình): đã đạt + 3 gần đạt, "Chỉ có cột mốc thật — không có xu, không có điểm thưởng."
 - [ ] E6 DOM + e2e (`goal.spec.ts`: đề xuất → thầy/cô điều chỉnh → con thấy "từ tuần sau"; chip chuỗi có chữ + `aria-label`); test canh chữ: không "xếp hạng", không tên em kia trên trang của con.
@@ -394,7 +394,7 @@ Mọi hàm: `language sql|plpgsql stable security definer set search_path = ''`,
 
 **Thử trên preview:** An (thử) → Hành trình → "Đổi mục tiêu" → 4 bài/tuần → Gửi → "Chờ thầy/cô đồng ý". Thầy/cô của An (thử) → Bàn làm việc → "Đồng ý" → An thấy "Đã đồng ý · từ tuần sau (thứ Hai …)". Để thử chuỗi nhanh: script seed `npm run db:seed-dev` có thêm cờ `--goal-history` tạo 5 tuần dữ kiện thử cho học sinh thử (chỉ `is_test`) → chip "🔥 5 tuần liền".
 
-**Đạt khi:** ví dụ 3.5 / 3.6 / 3.7 là test xanh; mở app / mở link không tăng số bài; đổi giờ máy không đổi tuần; tài liệu đổi luật đã được phụ huynh duyệt trong PR. **Rủi ro:** iPad Safari tạm dừng tab nền → mất nhịp (đúng ý: không tính khi không làm); con mở 2 tab → cùng phút chỉ 1 dòng; tính mục tiêu "bài" khi việc to (bài kiểm tra 60 câu) = 1 bài như bài 10 câu (ghi rõ trong chữ hướng dẫn).
+**Đạt khi:** ví dụ 3.5 / 3.6 / 3.7 là test xanh; mở app / mở link không tăng số bài; đổi giờ máy không đổi tuần; tài liệu đổi luật đã được phụ huynh duyệt trong PR. **Rủi ro:** tính mục tiêu "bài" khi việc to (bài kiểm tra 60 câu) = 1 bài như bài 10 câu (ghi rõ trong chữ hướng dẫn).
 
 ---
 
@@ -429,12 +429,11 @@ Mọi hàm: `language sql|plpgsql stable security definer set search_path = ''`,
 |---|---|---|
 | `docs/superpowers/specs/2026-11-08-tutor-workdesk-design.md` | đổi tên W4→W5, W5→W6, W6→W7 (Q1); thêm dòng "W4 · Bàn học của con" | W4a |
 | `lib/shell/nav.ts` | `roadmap` hết "soon", `lane` mới | W4a |
-| `docs/DOMAIN.md` → bản 0.5 | §1 (chuỗi tuần mềm; ngoại lệ phút làm bài), §2 (con thấy gì mới), §4 / §6 (Lộ trình = mốc, mục 3.4), §7.6, §11, R6 (`CAM-WS-1` sang W5 mới) | W4a, W4b, W4d, W4e |
+| `docs/DOMAIN.md` → bản 0.5 | §1 (chuỗi tuần mềm), §2 (con thấy gì mới), §4 / §6 (Lộ trình = mốc, mục 3.4), §7.6, §11, R6 (`CAM-WS-1` sang W5 mới) | W4a, W4b, W4d, W4e |
 | `docs/PRD_FAMILY_EDITION.md` | D34 (chuỗi tuần mềm), D35 (số đếm của con), D36 (S-10 + con thấy cấp / điều đã làm được), D37 (Launcher, Q14), §6.2 | W4b–W4e |
 | `CLAUDE.md` | dòng "Warnings" về streak (Q2a); "Current status" mỗi PR | W4d (+ mỗi PR) |
 | `docs/UX_COPY_GUIDE.md` | §3.2, §3.5, mục mới "W4a"…"W4e" (bảng chữ) | mọi PR |
 | `docs/DESIGN.md` | §19.20–§19.25 | mọi PR |
-| `docs/CONSENT_pilot-2026-11.md` (mới, nếu Q5-ii) | câu về phút làm bài — phụ huynh duyệt; bản cũ không sửa | W4d |
 | `docs/PROGRESS.md` | mỗi PR một mục: làm gì · SQL cần áp · cách thử · tiêu chí · giả định | mọi PR |
 
 ## 7. Việc không xác minh được khi viết kế hoạch
