@@ -1535,7 +1535,8 @@ Nhánh `feature/w4a-roadmap` (từ `main` + các commit kế hoạch W4). Kế h
 `npm run typecheck && npm run lint && npm test` xanh; `npx playwright test --list` có `roadmap.spec.ts`; **e2e chưa chạy ở máy dev (không Docker), chỉ CI**; `0031` áp được hai lần; Opus `reviewer` (SQL + diff) **chưa chạy** trong lượt này (cần bên điều phối).
 
 ### Giả định và lệch so với kế hoạch
-- Phát lại `client_id` được kiểm trước `stale_version`; thêm chốt `already_removed` (không sửa mốc đã bỏ).
+- Phát lại `client_id` được tra TRƯỚC mọi thứ khác (kể cả khi không gửi trường); thêm chốt `already_removed` (không sửa mốc đã bỏ).
+- Sau review Opus (14/11): `eng_roadmap` trả thêm `used_keys` và `visible_ids` (không bị cắt 20 dòng); "Chờ duyệt" chỉ đếm mốc nháp, đề xuất của app hiện ở trang Lộ trình + một dòng nhẹ ở Bàn làm việc; mã `client_id` giữ khi lỗi mạng / 5xx, đổi khi thành công, 4xx rõ ràng hoặc nội dung đổi; có đỉnh rồi thì app đề xuất mục tiêu là "sau đỉnh"; trang Lộ trình có dải "Đường lên đỉnh" (chỉ xem).
 - Q2(d) = PRD **D38**; luật số đếm của con (Q2e) = PRD **D35**, đưa vào W4a (DOMAIN §2, §7 mục 6, test DOM + e2e).
 - Khóa đề xuất "Không phải Unit" theo tên chuẩn hóa: đổi tên dòng ở bản mới ⇒ đề xuất mới hiện lại (chấp nhận).
 
