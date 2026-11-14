@@ -218,4 +218,4 @@ Phụ huynh duyệt 13/11 sau buổi gia sư thử: chữ "điểm" khi nghĩa l
 
 ## Mẫu báo lưu (13/11/2026)
 
-Mọi ô sửa của người lớn dùng một mẫu: **"Đang lưu…"** → **"✓ Đã lưu lúc hh:mm"** (giờ Việt Nam, giữ nguyên tới lần sửa tiếp) → **"● Có thay đổi chưa lưu"**; lỗi: "Chưa lưu được. Thay đổi vẫn còn trên màn hình, bạn bấm Lưu lại nhé." Còn thay đổi chưa lưu thì đóng tab / tải lại hỏi lại, và bấm liên kết của khung (cột trái, thanh trên, "Đóng") hiện "Còn thay đổi chưa lưu. Rời trang thì mất các thay đổi này. Vẫn rời?". Khóa: `saveStatusCopy`, `busyCopy`, `loadingCopy` trong `lib/copy/vi.ts`. Chữ ký hiệu (● ✓) đi kèm chữ, không chỉ màu.
+Mọi ô sửa của người lớn dùng một mẫu: **"Đang lưu…"** → **"✓ Đã lưu lúc hh:mm"** (giờ Việt Nam, giữ nguyên tới lần sửa tiếp) → **"● Có thay đổi chưa lưu"**; lỗi: "Chưa lưu được. Thay đổi vẫn còn trên màn hình, bạn bấm Lưu lại nhé." Còn thay đổi chưa lưu thì đóng tab / tải lại hỏi lại, và bấm liên kết của khung (cột trái, thanh trên, "Đóng") hiện "Còn thay đổi chưa lưu. Rời trang thì mất các thay đổi này. Vẫn rời?". Khóa: `saveStatusCopy`, `busyCopy` trong `lib/copy/vi.ts`. Chữ ký hiệu (● ✓) đi kèm chữ, không chỉ màu.

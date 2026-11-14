@@ -2448,11 +2448,7 @@ export const importCopy = {
   } as Record<string, string>,
 } as const;
 
-/** UX vòng 2: màn đang tải và chữ trên nút khi đang làm việc (người lớn). */
-export const loadingCopy = {
-  page: "Đang tải…",
-} as const;
-
+/** UX vòng 2: chữ trên nút khi đang làm việc (người lớn). */
 export const busyCopy = {
   saving: "Đang lưu…",
   sending: "Đang gửi…",
