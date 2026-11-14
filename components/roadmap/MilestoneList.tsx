@@ -7,7 +7,7 @@ import { roadmapCopy } from "@/lib/copy/vi";
 import { roadmapFailText } from "@/lib/roadmap/client";
 import { clientIdBook } from "@/lib/roadmap/clientId";
 import type { RoadmapCurriculum } from "@/lib/roadmap/shape";
-import type { MilestoneCard } from "@/lib/roadmap/types";
+import { ROADMAP_LIMITS, type MilestoneCard } from "@/lib/roadmap/types";
 import { dateOf, placeLine, valuesOf } from "@/lib/roadmap/view";
 import { postJson } from "@/lib/tutorwork/client";
 import { MilestoneForm } from "./MilestoneForm";
@@ -90,6 +90,8 @@ function MilestoneRow({
 
   async function write(status: "confirmed" | "removed") {
     setError(null);
+    // The reason rule is checked here too, so the tutor gets the specific message instead of the generic 400 text.
+    if (status === "removed" && reason.trim().length < ROADMAP_LIMITS.reasonMin) return setError(roadmapCopy.errors.reason_required ?? null);
     const body = { milestone_id: v.milestoneId, base_version: v.version, status, ...(status === "removed" ? { reason: reason.trim() } : {}) };
     const r = await track(() => postJson(`/api/learners/${learnerId}/roadmap/milestones`, { client_id: book.current.idFor(body), ...body }));
     book.current.settle(r);

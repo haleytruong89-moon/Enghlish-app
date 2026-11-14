@@ -53,13 +53,16 @@ describe("Lộ trình · milestones", () => {
     expect(bodyOf(f)).toMatchObject({ milestone_id: "m1", base_version: 1, status: "removed", reason: "lịch thi đổi" });
     await waitFor(() => expect(refresh).toHaveBeenCalled());
   });
-  it("a server answer 'reason_required' is shown in words", async () => {
-    fetchMock(400, { error: "reason_required" });
+  it("a missing or too-short reason is refused in words before anything is sent", async () => {
+    const f = fetchMock(400, { error: "reason_required" });
     list([ver({})]);
     fireEvent.click(screen.getByTestId("ms-remove-m1"));
+    fireEvent.click(screen.getByTestId("ms-remove-go-m1"));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(roadmapCopy.errors.reason_required));
     fireEvent.change(screen.getByTestId("ms-remove-reason-m1"), { target: { value: "x" } });
     fireEvent.click(screen.getByTestId("ms-remove-go-m1"));
     await waitFor(() => expect(screen.getByRole("alert").textContent).toBe(roadmapCopy.errors.reason_required));
+    expect(f).not.toHaveBeenCalled();
   });
   it("adding a summit: 'Đã có đỉnh' names the existing summit", async () => {
     fetchMock(400, { error: "summit_exists" });

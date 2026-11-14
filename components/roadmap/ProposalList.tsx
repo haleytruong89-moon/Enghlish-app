@@ -7,7 +7,7 @@ import { roadmapCopy } from "@/lib/copy/vi";
 import { roadmapFailText } from "@/lib/roadmap/client";
 import { clientIdBook } from "@/lib/roadmap/clientId";
 import type { RoadmapCurriculum } from "@/lib/roadmap/shape";
-import type { Proposal } from "@/lib/roadmap/types";
+import { ROADMAP_LIMITS, type Proposal } from "@/lib/roadmap/types";
 import { fieldsOf, placeLine, valuesOf } from "@/lib/roadmap/view";
 import { postJson } from "@/lib/tutorwork/client";
 import { MilestoneForm } from "./MilestoneForm";
@@ -42,6 +42,7 @@ function ProposalRow({ learnerId, p, curricula, mainId, canWrite, summitTitle, o
 
   async function write(status: "confirmed" | "removed") {
     setError(null);
+    if (status === "removed" && reason.trim().length < ROADMAP_LIMITS.reasonMin) return setError(roadmapCopy.errors.reason_required ?? null);
     const fields = fieldsOf(valuesOf(p));
     const body = { status, fields, proposal_key: p.key, ...(status === "removed" ? { reason: reason.trim() } : {}) };
     const r = await track(() => postJson(`/api/learners/${learnerId}/roadmap/milestones`, { client_id: book.current.idFor(body), ...body }));
