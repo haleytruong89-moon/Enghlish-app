@@ -19,9 +19,10 @@ describe("session_absences + session_marks + eng_write_lesson_note_v4 (migration
   };
   const day = async (delta: number) => (await q1<{ d: string }>("select (english.eng_today_vn() + $1::int)::text as d", [delta]))[0]!.d;
   type R = { id: string; replayed?: boolean; kind?: string };
+  let nextDay = -110;                                   // every default absence gets its own day (one live absence per day)
   const absence = async (o: { on?: number; by?: string; party?: string; billable?: boolean; note?: string | null; learner?: string; clientId?: string } = {}) =>
     svc<R>("select english.eng_record_absence($1,$2::date,$3,$4,$5,$6,$7) as r", [
-      o.learner ?? NG(), await day(o.on ?? -3), o.party ?? "student", o.billable ?? false, o.note ?? null, o.by ?? M().tutorNguyen, o.clientId ?? randomUUID(),
+      o.learner ?? NG(), await day(o.on ?? nextDay++), o.party ?? "student", o.billable ?? false, o.note ?? null, o.by ?? M().tutorNguyen, o.clientId ?? randomUUID(),
     ]);
   const note = (o: { by?: string; learner?: string; supersedes?: string | null; clientId?: string; date?: number } = {}) =>
     day(o.date ?? 0).then((d) => svc<R>("select english.eng_write_lesson_note_v2($1, $2::date, 'Ôn bài', '{}', null, null, '[]'::jsonb, $3, $4, $5) as r", [
@@ -85,6 +86,8 @@ describe("session_absences + session_marks + eng_write_lesson_note_v4 (migration
     await fail(absence({ by: M().studentNguyen }), "42501");
     // permissions come before every other check
     await fail(absence({ by: M().tutorAn, on: -999, party: "x" }), "42501");
+    await fail(absence({ by: M().tutorAn, clientId: "short" }), "42501");
+    await fail(absence({ by: M().studentNguyen, clientId: "short" }), "42501");
     const cid = randomUUID();
     const first = await absence({ clientId: cid, note: "x y", on: -2 });
     expect((await absence({ clientId: cid, note: "x y", on: -2 })).replayed).toBe(true);
@@ -132,6 +135,73 @@ describe("session_absences + session_marks + eng_write_lesson_note_v4 (migration
     await fail(mark(n2.id, "regular", { clientId: cid }), "23505");
     expect((await mark(n2.id, "not_counted", { reason: "ghi nhầm em", by: M().parent })).replayed).toBe(false);
     await fail(mark(randomUUID(), "regular"), "P0002");
+    // permissions come before the client_id / kind checks
+    await fail(mark(n2.id, "weird", { by: M().tutorAn }), "42501");
+    await fail(mark(n2.id, "regular", { by: M().tutorAn, clientId: "short" }), "42501");
+  });
+
+  it("a replay of a makeup mark answers even after its absence was cancelled (replay before the absence check)", async () => {
+    const a = await absence();
+    const n = await note({ date: -20 });
+    const cid = randomUUID();
+    const first = await mark(n.id, "makeup", { makeupFor: a.id, clientId: cid });
+    await svc("select english.eng_cancel_absence($1,'ghi nhầm ngày',$2,$3) as r", [a.id, M().tutorNguyen, randomUUID()]);
+    const again = await mark(n.id, "makeup", { makeupFor: a.id, clientId: cid });
+    expect(again).toMatchObject({ id: first.id, replayed: true });
+    await fail(mark(n.id, "makeup", { makeupFor: a.id }), "23514", /bad_absence/);
+  });
+
+  it("one live absence per child per day: a second is refused until the first is cancelled; replay and other children are fine", async () => {
+    const cid = randomUUID();
+    const first = await absence({ on: -40, clientId: cid });
+    await fail(absence({ on: -40 }), "23505", /absence_exists/);
+    expect((await absence({ on: -40, clientId: cid })).replayed).toBe(true);
+    await absence({ on: -40, learner: s.learners.an, by: M().tutorAn });
+    await svc("select english.eng_cancel_absence($1,'ghi nhầm ngày',$2,$3) as r", [first.id, M().tutorNguyen, randomUUID()]);
+    expect((await absence({ on: -40 })).replayed).toBe(false);
+    await fail(absence({ on: -40, by: M().parent }), "23505", /absence_exists/);
+  });
+
+  it("one absence is made up at most once; the same chain may keep or change its link; parent-only and Không tính chains do not use it up", async () => {
+    const a = await absence();
+    const b = await absence();
+    const n1 = await note({ date: -30 });
+    const n2 = await note({ date: -29 });
+    await mark(n1.id, "makeup", { makeupFor: a.id });
+    await fail(mark(n2.id, "makeup", { makeupFor: a.id }), "23505", /absence_already_made_up/);
+    expect(await count("session_marks", "lesson_note_id = $1", [n2.id])).toBe(0);
+    // the same note again (keep the link) and its new version (edit chain) are fine
+    await mark(n1.id, "makeup", { makeupFor: a.id });
+    const n1b = await note({ date: -30, supersedes: n1.id });
+    await mark(n1b.id, "makeup", { makeupFor: a.id });
+    await fail(mark(n2.id, "makeup", { makeupFor: a.id }), "23505", /absence_already_made_up/);
+    // another absence is free
+    await mark(n2.id, "makeup", { makeupFor: b.id });
+    // Không tính on the first chain releases it
+    await mark(n1b.id, "not_counted", { reason: "ghi nhầm em" });
+    const n3 = await note({ date: -28 });
+    await mark(n3.id, "makeup", { makeupFor: a.id });
+    // re-pointing a chain to another absence releases the old one
+    const c = await absence();
+    await mark(n3.id, "makeup", { makeupFor: c.id });
+    const n4 = await note({ date: -27 });
+    await mark(n4.id, "makeup", { makeupFor: a.id });
+    // a chain whose current note is the parent's does not use the absence up
+    const pn = await note({ date: -26, by: M().parent });
+    const d = await absence();
+    await mark(pn.id, "makeup", { makeupFor: d.id, by: M().parent });
+    const n5 = await note({ date: -25 });
+    await mark(n5.id, "makeup", { makeupFor: d.id });
+  });
+
+  it("v4: a makeup note for an absence that is already made up rolls the whole note back", async () => {
+    const a = await absence();
+    await v4({ kind: "makeup", makeupFor: a.id, date: -35 });
+    const before = await count("lesson_notes", "learner_id = $1", [NG()]);
+    const bad = randomUUID();
+    await fail(v4({ kind: "makeup", makeupFor: a.id, clientId: bad, date: -34 }), "23505", /absence_already_made_up/);
+    expect(await count("lesson_notes", "learner_id = $1", [NG()])).toBe(before);
+    expect(await count("lesson_notes", "client_id = $1", [bad])).toBe(0);
   });
 
   it("v4: a makeup note writes the note and the mark together; a bad absence rolls the whole note back", async () => {

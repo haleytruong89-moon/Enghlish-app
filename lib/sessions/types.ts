@@ -38,8 +38,10 @@ export type MonthBilling = {
   /** Session days (dd) and absence days of the month, ISO dates. */
   dates: string[];
   absenceDates: { date: string; requestedBy: "student" | "tutor" | "other"; billable: boolean }[];
+  /** Days of the month with a live absence AND a counted session (one of the two is probably a mistake). */
+  clashDates: string[];
 };
 export type MonthSummary = { month: string; sessions: number; days: SessionDay[]; billing: MonthBilling };
 export type SessionStats = { total: number; thisMonth: number; perWeek: number | null; last: string | null };
-export type WeekCell = { date: string; future: boolean; day: SessionDay | null; absence: { requestedBy: "student" | "tutor" | "other"; billable: boolean } | null };
+export type WeekCell = { date: string; future: boolean; day: SessionDay | null; absence: { requestedBy: "student" | "tutor" | "other"; billable: boolean } | null; clash: boolean };
 export type WeekRow = { weekStart: string; cells: WeekCell[] };

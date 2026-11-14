@@ -38,9 +38,11 @@ export const perWeekText = (v: number | null): string => (v === null ? sessionSt
 export const lastText = (last: string | null): string => (last ? dayMonth(last) : "");
 export type { SessionDay };
 
-/** "2026-11" → itself when it is a real month that is not after today's month; otherwise null (the page answers 404). */
+/** "2026-11" → itself when it is a real month that is at most 2 months after today's month (the +60-day window of absences); otherwise null (404). */
 export function parseMonth(v: string, todayIso: string): string | null {
-  return /^\d{4}-(0[1-9]|1[0-2])$/.test(v) && v <= todayIso.slice(0, 7) ? v : null;
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(v)) return null;
+  const idx = (m: string) => Number(m.slice(0, 4)) * 12 + Number(m.slice(5, 7)) - 1;
+  return idx(v) <= idx(todayIso.slice(0, 7)) + 2 ? v : null;
 }
 
 /** "19/11 · con, không tính phí" (the words that name an absence in a list). */
@@ -48,8 +50,17 @@ export function absenceLine(a: Pick<AbsenceRow, "absentOn" | "requestedBy" | "bi
   return `${dayMonth(a.absentOn)} · ${absenceCopy.who[a.requestedBy]}, ${a.billable ? absenceCopy.billableYes.toLowerCase() : absenceCopy.billableNo.toLowerCase()}`;
 }
 
-/** Live absences that no current "Học bù" note points to yet: the choices of "Bù cho buổi nghỉ ngày …". */
-export function makeupChoices(notes: NoteRow[], marks: MarkRow[], absences: AbsenceRow[]): { id: string; label: string }[] {
-  const used = new Set([...effectiveKinds(notes, marks).values()].map((m) => (m?.kind === "makeup" ? m.makeupFor : null)).filter((x): x is string => !!x));
+/**
+ * Live absences that no COUNTED current "Học bù" note points to yet (a tutor-written note whose newest mark is Học bù): the choices of
+ * "Bù cho buổi nghỉ ngày …". A parent-only makeup mark does not use up an absence (same rule as eng_absence_made_up in 0030). When
+ * `forNoteId` is given (editing a note that is already a makeup), the absence that note points to stays in the list.
+ */
+export function makeupChoices(notes: NoteRow[], marks: MarkRow[], absences: AbsenceRow[], forNoteId?: string): { id: string; label: string }[] {
+  const kinds = effectiveKinds(notes, marks);
+  const used = new Set<string>();
+  for (const n of notes) {
+    const m = kinds.get(n.id);
+    if (m?.kind === "makeup" && m.makeupFor && n.authorRole === "tutor" && n.id !== forNoteId) used.add(m.makeupFor);
+  }
   return liveAbsences(absences).filter((a) => !used.has(a.id)).map((a) => ({ id: a.id, label: absenceLine(a) }));
 }

@@ -83,6 +83,45 @@ end
 $$;
 revoke execute on function english.eng_session_actor(uuid, uuid, text) from public, anon, authenticated, service_role;
 
+-- 3b. Buổi nghỉ đã được bù chưa: một buổi nghỉ chỉ được bù MỘT lần. "Đã bù" = có chuỗi ghi chú (khác chuỗi của p_except_note) mà
+--     dấu mới nhất của cả chuỗi là Học bù trỏ tới buổi nghỉ này VÀ ghi chú hiện hành của chuỗi do thầy/cô ghi (khớp luật đếm: dấu Học bù
+--     trên ghi chú chỉ của phụ huynh không tạo buổi nên không "tiêu" buổi nghỉ; thầy/cô vẫn gắn được). Cùng luật ở lib/sessions/view.ts.
+create or replace function english.eng_absence_made_up(p_absence uuid, p_except_note uuid) returns boolean
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  r record;
+  v_best uuid;
+begin
+  for r in select s.id, s.lesson_note_id from english.session_marks s where s.makeup_for = p_absence and s.kind = 'makeup' loop
+    with recursive up(id) as (
+      select r.lesson_note_id
+      union
+      select n.supersedes_id from english.lesson_notes n join up on n.id = up.id where n.supersedes_id is not null
+    ), down(id) as (
+      select r.lesson_note_id
+      union
+      select n.id from english.lesson_notes n join down d on n.supersedes_id = d.id
+    ), chain(id) as (
+      select id from up union select id from down
+    )
+    select s2.id into v_best from english.session_marks s2
+    where s2.lesson_note_id in (select id from chain)
+    order by s2.created_at desc, s2.id desc limit 1;
+    if v_best = r.id and exists (
+      select 1 from english.lesson_notes t
+      where t.author_role = 'tutor' and t.id is distinct from p_except_note
+        and t.id in (with recursive d2(id) as (select r.lesson_note_id union select n.id from english.lesson_notes n join d2 on n.supersedes_id = d2.id) select id from d2)
+        and not exists (select 1 from english.lesson_notes x where x.supersedes_id = t.id)
+    ) then
+      return true;
+    end if;
+  end loop;
+  return false;
+end
+$$;
+revoke execute on function english.eng_absence_made_up(uuid, uuid) from public, anon, authenticated, service_role;
+
 -- 4a. Ghi buổi nghỉ ----------------------------------------------------------------------------------------------------------
 create or replace function english.eng_record_absence(
   p_learner uuid, p_absent_on date, p_requested_by text, p_billable boolean, p_note text, p_by uuid, p_client_id text
@@ -96,15 +135,18 @@ declare
   v_prev english.session_absences%rowtype;
   v_id uuid;
 begin
-  if p_learner is null or p_absent_on is null or p_requested_by is null or p_billable is null or p_by is null then
-    raise exception 'eng_record_absence: learner, date, party, billable and actor are required' using errcode = '22004';
-  end if;
-  if p_client_id is null or pg_catalog.length(pg_catalog.btrim(p_client_id)) < 8 or pg_catalog.length(p_client_id) > 100 then
-    raise exception 'eng_record_absence: client_id must be 8..100 characters' using errcode = '22023';
+  if p_learner is null or p_by is null then
+    raise exception 'eng_record_absence: learner and actor are required' using errcode = '22004';
   end if;
   select * into v_l from english.learners l where l.id = p_learner;
   if not found then raise exception 'eng_record_absence: learner not found' using errcode = 'P0002'; end if;
   v_m := english.eng_session_actor(p_by, p_learner, 'eng_record_absence');          -- permissions first (2B lesson)
+  if p_absent_on is null or p_requested_by is null or p_billable is null then
+    raise exception 'eng_record_absence: date, party and billable are required' using errcode = '22004';
+  end if;
+  if p_client_id is null or pg_catalog.length(pg_catalog.btrim(p_client_id)) < 8 or pg_catalog.length(p_client_id) > 100 then
+    raise exception 'eng_record_absence: client_id must be 8..100 characters' using errcode = '22023';
+  end if;
   if p_requested_by not in ('student', 'tutor', 'other') then
     raise exception 'eng_record_absence: unknown party (bad_party)' using errcode = '22023';
   end if;
@@ -121,6 +163,12 @@ begin
       raise exception 'eng_record_absence: client_id was already used for another record (client_id_reused)' using errcode = '23505';
     end if;
     return pg_catalog.jsonb_build_object('id', v_prev.id, 'replayed', true);
+  end if;
+  -- One live absence per child per day (a second one would be subtracted / billed twice). Cancel the first, then record again.
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('absence:' || p_learner::text || p_absent_on::text, 0));
+  if exists (select 1 from english.session_absences a where a.learner_id = p_learner and a.absent_on = p_absent_on and a.cancels_id is null
+             and not exists (select 1 from english.session_absences c where c.cancels_id = a.id)) then
+    raise exception 'eng_record_absence: there is already a live absence on this day (absence_exists)' using errcode = '23505';
   end if;
   insert into english.session_absences(learner_id, absent_on, requested_by, billable, note, by_member, by_role, client_id)
   values (p_learner, p_absent_on, p_requested_by, p_billable, v_note, p_by, v_m.role, p_client_id)
@@ -193,16 +241,19 @@ declare
   v_prev english.session_marks%rowtype;
   v_id uuid;
 begin
-  if p_note is null or p_kind is null or p_by is null then
-    raise exception 'eng_mark_session: note, kind and actor are required' using errcode = '22004';
-  end if;
-  if p_client_id is null or pg_catalog.length(pg_catalog.btrim(p_client_id)) < 8 or pg_catalog.length(p_client_id) > 110 then
-    raise exception 'eng_mark_session: client_id must be 8..110 characters' using errcode = '22023';
+  if p_note is null or p_by is null then
+    raise exception 'eng_mark_session: note and actor are required' using errcode = '22004';
   end if;
   select * into v_n from english.lesson_notes n where n.id = p_note;
   if not found then raise exception 'eng_mark_session: lesson note not found' using errcode = 'P0002'; end if;
   select * into v_l from english.learners l where l.id = v_n.learner_id;
-  v_m := english.eng_session_actor(p_by, v_n.learner_id, 'eng_mark_session');
+  v_m := english.eng_session_actor(p_by, v_n.learner_id, 'eng_mark_session');          -- permissions first
+  if p_kind is null then
+    raise exception 'eng_mark_session: kind is required' using errcode = '22004';
+  end if;
+  if p_client_id is null or pg_catalog.length(pg_catalog.btrim(p_client_id)) < 8 or pg_catalog.length(p_client_id) > 110 then
+    raise exception 'eng_mark_session: client_id must be 8..110 characters' using errcode = '22023';
+  end if;
   if p_kind not in ('regular', 'makeup', 'not_counted') then
     raise exception 'eng_mark_session: unknown kind (bad_kind)' using errcode = '22023';
   end if;
@@ -212,12 +263,7 @@ begin
   if v_reason is not null and pg_catalog.length(v_reason) > 300 then
     raise exception 'eng_mark_session: the reason is too long (too_long)' using errcode = '22023';
   end if;
-  if p_makeup_for is not null and (p_kind <> 'makeup' or not exists (
-       select 1 from english.session_absences a
-       where a.id = p_makeup_for and a.learner_id = v_n.learner_id and a.cancels_id is null
-         and not exists (select 1 from english.session_absences c where c.cancels_id = a.id))) then
-    raise exception 'eng_mark_session: the absence is not a live absence of this learner (bad_absence)' using errcode = '23514';
-  end if;
+  -- A replay answers before any check of the absence (it may have been cancelled or made up since).
   select * into v_prev from english.session_marks s where s.learner_id = v_n.learner_id and s.client_id = p_client_id;
   if found then
     if v_prev.lesson_note_id <> p_note or v_prev.kind <> p_kind or v_prev.makeup_for is distinct from p_makeup_for
@@ -226,8 +272,21 @@ begin
     end if;
     return pg_catalog.jsonb_build_object('id', v_prev.id, 'replayed', true);
   end if;
+  if p_makeup_for is not null and (p_kind <> 'makeup' or not exists (
+       select 1 from english.session_absences a
+       where a.id = p_makeup_for and a.learner_id = v_n.learner_id and a.cancels_id is null
+         and not exists (select 1 from english.session_absences c where c.cancels_id = a.id))) then
+    raise exception 'eng_mark_session: the absence is not a live absence of this learner (bad_absence)' using errcode = '23514';
+  end if;
   if exists (select 1 from english.lesson_notes n2 where n2.supersedes_id = p_note) then
     raise exception 'eng_mark_session: mark the newest version of the note (not_current)' using errcode = '23514';
+  end if;
+  if p_makeup_for is not null then
+    -- One absence is made up at most once (another note chain written by the tutor already points to it).
+    perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('makeup:' || p_makeup_for::text, 0));
+    if english.eng_absence_made_up(p_makeup_for, p_note) then
+      raise exception 'eng_mark_session: this absence is already made up by another note (absence_already_made_up)' using errcode = '23505';
+    end if;
   end if;
   insert into english.session_marks(learner_id, lesson_note_id, kind, makeup_for, reason, by_member, by_role, client_id)
   values (v_n.learner_id, p_note, p_kind, p_makeup_for, v_reason, p_by, v_m.role, p_client_id)

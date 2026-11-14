@@ -144,7 +144,7 @@ describe("only tutor notes count as a buổi (billing safety, parent to confirm)
 });
 
 // ---- 3B: marks, absences, billable sessions (rule S-1) ----
-import { effectiveKinds, liveAbsences, monthBilling } from "@/lib/sessions/count";
+import { absenceClashDates, effectiveKinds, liveAbsences, monthBilling } from "@/lib/sessions/count";
 import type { AbsenceRow, MarkRow } from "@/lib/sessions/types";
 
 let mseq = 0;
@@ -248,12 +248,76 @@ describe("3B leaves the 3A numbers alone when there is nothing new", () => {
   it("months lists a month that has only an absence; the Zalo text carries absences and the billable count", () => {
     const abs = [ab("a1", "2026-11-19", { billable: false })];
     const mm = months(daysM([note("2026-11-03")]), TODAY, abs)[0]!;
-    expect(monthText("Nguyên", mm)).toBe("Nguyên · Tháng 11/2026: 1 buổi — 03/11 · nghỉ 1 (con, không tính phí) · tính phí 1 buổi.");
+    expect(monthText("Nguyên", mm)).toBe("Nguyên · Tháng 11/2026: 1 buổi — 03/11 · nghỉ 1 (19/11 con, không tính phí) · tính phí 1 buổi.");
     expect(months([], TODAY, abs).map((x) => x.month)).toEqual(["2026-11"]);
   });
   it("weekGrid marks the live absence day", () => {
     const g = weekGrid([], TODAY, 12, [ab("a1", "2026-11-12", { billable: true, requestedBy: "tutor" })]);
     const cell = g.flatMap((r) => r.cells).find((c) => c.date === "2026-11-12")!;
     expect(cell.absence).toEqual({ requestedBy: "tutor", billable: true });
+    expect(cell.clash).toBe(false);
+  });
+});
+
+describe("3B review fixes", () => {
+  it("one absence linked by two makeup days is subtracted once (never twice, even across months)", () => {
+    const rows = [...eight(), note("2026-11-21", { id: "m1" }), note("2026-11-25", { id: "m2" }), note("2026-12-02", { id: "m3" })];
+    const marks = [mk("m1", "makeup", { makeupFor: "a1" }), mk("m2", "makeup", { makeupFor: "a1" }), mk("m3", "makeup", { makeupFor: "a1" })];
+    const d = daysM(rows, marks);
+    const abs = [ab("a1", "2026-11-19", { billable: true })];
+    expect(monthBilling("2026-11", d, abs)).toMatchObject({ sessions: 10, makeups: 2, billable: 10 + 1 - 1 });
+    expect(monthBilling("2026-12", d, abs)).toMatchObject({ sessions: 1, makeups: 1, billable: 1 });
+  });
+  it("a makeup day subtracts at most one absence, and the same absence cannot be subtracted by a second month", () => {
+    const rows = [note("2026-11-21", { id: "m1" }), note("2026-11-21", { id: "m2" })];
+    const marks = [mk("m1", "makeup", { makeupFor: "a1" }), mk("m2", "makeup", { makeupFor: "a2" })];
+    const abs = [ab("a1", "2026-11-05", { billable: true }), ab("a2", "2026-11-06", { billable: true })];
+    expect(monthBilling("2026-11", daysM(rows, marks), abs)).toMatchObject({ sessions: 1, billable: 1 + 2 - 1 });
+  });
+  it("a cross-month makeup is subtracted in the month of the makeup", () => {
+    const d = daysM([note("2026-12-02", { id: "m1" })], [mk("m1", "makeup", { makeupFor: "a1" })]);
+    const abs = [ab("a1", "2026-11-27", { billable: true })];
+    expect(monthBilling("2026-11", d, abs).billable).toBe(1);
+    expect(monthBilling("2026-12", d, abs).billable).toBe(0);
+  });
+  it("a live absence on a day with a counted session is flagged in the month and the calendar (counts agree)", () => {
+    const d = daysM([note("2026-11-12"), note("2026-11-13", { authorRole: "parent" })]);
+    const abs = [ab("a1", "2026-11-12", { billable: true }), ab("a2", "2026-11-13")];
+    const m = months(d, TODAY, abs)[0]!;
+    expect(m.billing.clashDates).toEqual(["2026-11-12"]);
+    expect(absenceClashDates(d, abs)).toEqual(["2026-11-12"]);
+    const cells = weekGrid(d, TODAY, 12, abs).flatMap((r) => r.cells);
+    expect(cells.filter((c) => c.clash).map((c) => c.date)).toEqual(["2026-11-12"]);
+    expect(cells.filter((c) => c.absence).length).toBe(m.billing.absenceTotal);
+    // a cancelled absence is no clash
+    expect(absenceClashDates(d, [...abs, ab("c1", "2026-11-12", { cancelsId: "a1", note: "ghi nhầm" })])).toEqual([]);
+  });
+  it("monthText lists the absence dates with who and billable, and marks a two-session day", () => {
+    const d = daysM([note("2026-11-12", { id: "r" }), note("2026-11-12", { id: "m" }), note("2026-11-03")], [mk("m", "makeup", { makeupFor: "a1" })]);
+    const abs = [ab("a1", "2026-11-05", { requestedBy: "tutor", billable: true }), ab("a2", "2026-11-19", { requestedBy: "other" })];
+    const t = monthText("Nguyên", months(d, TODAY, abs)[0]!);
+    expect(t).toContain("03/11, 12/11 (2 buổi)");
+    expect(t).toContain("nghỉ 2 (05/11 ");
+    expect(t).toMatch(/19\/11 khác, không tính phí/);
+  });
+});
+
+import { makeupChoices, parseMonth } from "@/lib/sessions/view";
+describe("makeupChoices (3B review)", () => {
+  const abs = [ab("a1", "2026-11-05"), ab("a2", "2026-11-06")];
+  it("an absence linked by a counted (tutor) makeup note is used up; the note's own link stays when editing it", () => {
+    const notes = [note("2026-11-10", { id: "m1" })];
+    const marks = [mk("m1", "makeup", { makeupFor: "a1" })];
+    expect(makeupChoices(notes, marks, abs).map((c) => c.id)).toEqual(["a2"]);
+    expect(makeupChoices(notes, marks, abs, "m1").map((c) => c.id)).toEqual(["a1", "a2"]);
+  });
+  it("a parent-only makeup mark does not use the absence up; a Không tính note neither", () => {
+    const notes = [note("2026-11-10", { id: "p", authorRole: "parent" }), note("2026-11-11", { id: "x" })];
+    const marks = [mk("p", "makeup", { makeupFor: "a1" }), mk("x", "makeup", { makeupFor: "a2" }), mk("x", "not_counted", { createdAt: "2026-11-21T10:00:00Z" })];
+    expect(makeupChoices(notes, marks, abs).map((c) => c.id)).toEqual(["a1", "a2"]);
+  });
+  it("parseMonth stays in step with the +60-day window", () => {
+    expect(parseMonth("2027-01", "2026-11-30")).toBe("2027-01");
+    expect(parseMonth("2027-02", "2026-11-30")).toBeNull();
   });
 });
