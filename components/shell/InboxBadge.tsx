@@ -20,14 +20,12 @@ export function resetInboxBadge(): void {
  */
 export function InboxBadge({ learnerId }: { learnerId: string }) {
   const pathname = usePathname() ?? "/";
-  const [count, setCount] = useState<string | null>(memo && memo.learnerId === learnerId ? memo.count : null);
+  const [got, setGot] = useState<{ learnerId: string; count: string | null } | null>(memo ? { learnerId: memo.learnerId, count: memo.count } : null);
+  const count = got && got.learnerId === learnerId ? got.count : null;
   useEffect(() => {
     const left = lastPath;
     lastPath = pathname;
-    if (!shouldFetch(memo, learnerId, Date.now(), left)) {
-      setCount(memo?.count ?? null);
-      return;
-    }
+    if (!shouldFetch(memo, learnerId, Date.now(), left)) return; // the number already on screen is the remembered one
     const ctl = new AbortController();
     (async () => {
       try {
@@ -36,9 +34,9 @@ export function InboxBadge({ learnerId }: { learnerId: string }) {
         const body = (await res.json()) as { count?: string | null };
         const c = typeof body.count === "string" ? body.count : null;
         memo = { learnerId, at: Date.now(), count: c };
-        setCount(c);
+        setGot({ learnerId, count: c });
       } catch {
-        if (!ctl.signal.aborted) setCount(null);
+        if (!ctl.signal.aborted) setGot({ learnerId, count: null });
       }
     })();
     return () => ctl.abort();

@@ -38,7 +38,7 @@ test("the parent turns AI on (one ai_text consent per child)", async ({ page }) 
 test("Nguyên's tutor uploads a PDF + a Word key, the AI draft is blocked by item 8, fixing it allows Duyệt, then Giao", async ({ page }) => {
   await loginAs(page, "tutorNguyen");
   await page.getByTestId("nav-assign").click();
-  await page.getByTestId("nav-assign-studio").click();
+  await page.getByTestId("way-choose-studio").click();
   await page.getByTestId("studio-title").fill("Destination B1 — Unit 5 (e2e)");
   await expect(page.getByTestId("page-guidance")).toContainText(pdfPickCopy.guidance.studio(PAGE_LIMITS.studio, KEY_RECOMMEND));
   await page.getByTestId("studio-test-file").setInputFiles({ name: "de.pdf", mimeType: "application/pdf", buffer: PDF });

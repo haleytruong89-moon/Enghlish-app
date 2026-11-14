@@ -2529,3 +2529,35 @@ export const prefillCopy = {
   units: (range: string) => `Unit liên quan: ${range}`,
   fromBook: "Điền sẵn từ giáo trình. Bạn sửa được tên bài.",
 } as const;
+
+/** UX vòng 3A · một trang "Giao bài": chọn 1 trong 4 cách + dải "Cách giao" (kế hoạch 14/11, U5–U8). */
+export const assignWaysCopy = {
+  title: (alias: string) => `Giao bài · ${alias}`,
+  intro: "Chọn một cách giao. Cách nào cũng chọn được Unit của giáo trình (trừ Bài chủ đề).",
+  stripLabel: "Cách giao",
+  recommended: "Nên dùng",
+  ways: {
+    studio: {
+      title: "Đề + đáp án → bài trên app",
+      desc: `Tải đề và đáp án (PDF hoặc Word). AI soạn nháp, ${tutorHonorific} duyệt; con làm ngay trên app, app tự chấm và ghi mục kiến thức của từng câu.`,
+      note: "Hạn nộp chọn sau khi duyệt nháp.",
+    },
+    link: {
+      title: "Giao bằng link",
+      desc: "Bài trên test-english, NotebookLM, Gemini… Con làm ở đó rồi nộp ảnh trang kết quả.",
+    },
+    pdf: {
+      title: "PDF để con tải về",
+      desc: "Con tải đề về làm trên giấy rồi nộp ảnh hoặc file bài làm.",
+    },
+    topic: {
+      title: "Bài chủ đề trong app",
+      note: "Không dùng Unit.",
+    },
+  },
+  choose: "Chọn cách này →",
+  fromBook: (label: string) => `Từ giáo trình: ${label} — chọn cách giao bên dưới.`,
+  seeStudio: "Bài đã tạo từ đề →",
+  seeTopic: "Bài chủ đề đã giao →",
+  listTitle: "Bài link / PDF đã giao",
+} as const;

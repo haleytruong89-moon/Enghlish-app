@@ -42,9 +42,8 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
 
   test("the tutor gives a PDF (uploaded straight to the private bucket) and can open it", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
-    await page.goto(`/learners/${NG}/assign`);
+    await page.goto(`/learners/${NG}/assign?way=pdf`);
     await expect(page.getByTestId("assign-page")).toBeVisible();
-    await page.getByTestId("kind-pdf").click();
     await page.getByTestId("pdf-input").setInputFiles({ name: "de-thu.pdf", mimeType: "application/pdf", buffer: PDF });
     await expect(page.getByTestId("pdf-chosen")).toContainText("de-thu.pdf");
     await page.getByTestId("assign-title").fill(title);
@@ -69,7 +68,7 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
 
   test("a link is recognised by its source and a non-https link is refused", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
-    await page.goto(`/learners/${NG}/assign`);
+    await page.goto(`/learners/${NG}/assign?way=link`);
     await page.getByTestId("assign-url").fill("https://notebooklm.google.com/notebook/abc");
     await expect(page.getByTestId("assign-source")).toContainText(assignPage.sourceDetected("NotebookLM"));
     await page.getByTestId("assign-url").fill("http://example.com/x");
@@ -81,7 +80,7 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
 
   test("the tutor picks three knowledge items across tabs and through the search box (Enter never gives the assignment)", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
-    await page.goto(`/learners/${NG}/assign`);
+    await page.goto(`/learners/${NG}/assign?way=link`);
     await page.getByTestId("assign-title").fill(`Ba mục thử ${Date.now()}`);
     await page.getByTestId("assign-url").fill("https://notebooklm.google.com/notebook/abc");
     await openExtraItems(page);
@@ -228,7 +227,7 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
   test("a retracted assignment disappears for the child and cannot be sent to", async ({ page }) => {
     const gone = `Bài rút thử ${Date.now()}`;
     await loginAs(page, "parent");
-    await page.goto(`/learners/${AN}/assign`);
+    await page.goto(`/learners/${AN}/assign?way=link`);
     await page.getByTestId("assign-url").fill("https://www.test-english.com/grammar-points/a2/x");
     await page.getByTestId("assign-title").fill(gone);
     await page.getByTestId("assign-submit").click();
@@ -269,9 +268,8 @@ test.describe("no sideways scrolling on a phone", () => {
 
   test("the tutor's 'Giao bài luyện' page", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
-    await page.goto(`/learners/${NG}/assign`);
+    await page.goto(`/learners/${NG}/assign?way=pdf`);
     await expect(page.getByTestId("assign-page")).toBeVisible();
-    await page.getByTestId("kind-pdf").click();
     expect(await fits(page)).toBe(true);
   });
 });
@@ -296,7 +294,7 @@ test("the tutor gives an assignment by Unit: the title fills itself, the row sho
     await db.end();
   }
   await loginAs(page, "tutorNguyen");
-  await page.goto(`/learners/${NG}/assign`);
+  await page.goto(`/learners/${NG}/assign?way=link`);
   await expect(page.getByTestId("assign-by-unit")).toBeVisible();
   await expect(page.getByTestId("assign-extra-items")).toBeVisible();
   const list = page.getByTestId("unit-picker").locator("details", { hasText: bookTitle });

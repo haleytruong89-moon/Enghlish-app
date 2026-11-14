@@ -33,6 +33,7 @@ export function AssignForm({
   map,
   prefill,
   unitChoices = [],
+  fixedKind,
 }: {
   learnerId: string;
   alias: string;
@@ -44,10 +45,12 @@ export function AssignForm({
   prefill?: Prefill;
   /** Units of the approved curricula (none = the form keeps its old shape: only the manual items). */
   unitChoices?: UnitChoice[];
+  /** "Giao bằng link" / "PDF để con tải về" pages fix the kind (no switch button). Without it the form keeps its two-button switch. */
+  fixedKind?: "link" | "pdf";
 }) {
   const router = useRouter();
   const { tags, add, setGroup } = useTags(learnerId, initialTags);
-  const [kind, setKind] = useState<"link" | "pdf">("link");
+  const [kind, setKind] = useState<"link" | "pdf">(fixedKind ?? "link");
   const [url, setUrl] = useState("");
   const [pdf, setPdf] = useState<Prepared | null>(null);
   const [answer, setAnswer] = useState<Prepared | null>(null);
@@ -156,6 +159,7 @@ export function AssignForm({
   return (
     <form onSubmit={submit} onKeyDown={blockImplicitSubmit} className="flex flex-col gap-5 rounded-2xl border border-line bg-white p-5" data-testid="assign-form">
       <fieldset disabled={done} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
+        {fixedKind ? null : (
         <div role="group" aria-label={assignPage.kind} className="flex flex-col gap-1.5 text-sm font-medium">
           {assignPage.kind}
           <span className="flex self-start overflow-hidden rounded-xl border border-line">
@@ -167,6 +171,30 @@ export function AssignForm({
             </button>
           </span>
         </div>
+        )}
+        {prefill && (prefill.pages || prefill.units.length > 0) ? (
+          <p className="rounded-xl bg-[#eef3ef] px-3.5 py-2 text-sm" data-testid="assign-prefill">
+            {prefillCopy.fromBook} {prefill.pages ? prefillCopy.pages(prefill.pages) : ""}
+            {prefill.pages && prefill.units.length > 0 ? unitPickerCopy.sep : ""}
+            {prefill.units.length > 0 ? prefillCopy.units(formatRange(prefill.units)) : ""}
+          </p>
+        ) : null}
+        <div className="flex flex-col gap-1.5" data-testid="assign-by-unit">
+          <span className="text-sm font-medium">{unitPickerCopy.title}</span>
+          <UnitPicker learnerId={learnerId} choices={unitChoices} state={units} onChange={changeUnits} tagLabels={tagLabels} />
+        </div>
+        <label className="flex flex-col gap-1.5 text-sm font-medium">
+          {assignPage.titleLabel}
+          <input
+            type="text"
+            maxLength={200}
+            value={title}
+            onChange={(e) => { setTitle(e.target.value); setTitleTouched(true); }}
+            placeholder={assignPage.titlePlaceholder}
+            data-testid="assign-title"
+            className={`${field} text-base font-normal`}
+          />
+        </label>
 
         {kind === "link" ? (
           <div className="flex flex-col gap-1.5">
@@ -200,30 +228,6 @@ export function AssignForm({
             </div>
           </div>
         )}
-
-        {prefill && (prefill.pages || prefill.units.length > 0) ? (
-          <p className="rounded-xl bg-[#eef3ef] px-3.5 py-2 text-sm" data-testid="assign-prefill">
-            {prefillCopy.fromBook} {prefill.pages ? prefillCopy.pages(prefill.pages) : ""}
-            {prefill.pages && prefill.units.length > 0 ? unitPickerCopy.sep : ""}
-            {prefill.units.length > 0 ? prefillCopy.units(formatRange(prefill.units)) : ""}
-          </p>
-        ) : null}
-        <div className="flex flex-col gap-1.5" data-testid="assign-by-unit">
-          <span className="text-sm font-medium">{unitPickerCopy.title}</span>
-          <UnitPicker learnerId={learnerId} choices={unitChoices} state={units} onChange={changeUnits} tagLabels={tagLabels} />
-        </div>
-        <label className="flex flex-col gap-1.5 text-sm font-medium">
-          {assignPage.titleLabel}
-          <input
-            type="text"
-            maxLength={200}
-            value={title}
-            onChange={(e) => { setTitle(e.target.value); setTitleTouched(true); }}
-            placeholder={assignPage.titlePlaceholder}
-            data-testid="assign-title"
-            className={`${field} text-base font-normal`}
-          />
-        </label>
 
         {byUnit ? (
           <details className="rounded-xl border border-line px-3 py-2" data-testid="assign-extra-items">

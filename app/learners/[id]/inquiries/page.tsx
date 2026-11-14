@@ -1,6 +1,7 @@
 import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { WaysStrip } from "@/components/assign/WaysStrip";
 import { AssignForm } from "@/components/inquiries/AssignForm";
 import { StepActions } from "@/components/inquiries/StepActions";
 import { OfflineForm } from "@/components/review/OfflineForm";
@@ -39,6 +40,7 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{inquiriesPage.title(learner.alias)}</h1>
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
+        <WaysStrip learnerId={learner.id} current="topic" />
 
         <p className="mt-4 rounded-xl border border-line bg-white px-5 py-3 text-sm" data-testid="inquiries-intro">
           {inquiriesPage.intro.before}
@@ -74,7 +76,7 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
           </ul>
         )}
 
-        <h2 className="mt-10 text-lg font-semibold">{inquiriesPage.assignedTitle}</h2>
+        <h2 id="assigned" className="mt-10 text-lg font-semibold">{inquiriesPage.assignedTitle}</h2>
         {inquiries.length === 0 ? (
           <p className="mt-3 rounded-xl border border-line bg-white px-5 py-4">{inquiriesPage.assignedEmpty}</p>
         ) : (
