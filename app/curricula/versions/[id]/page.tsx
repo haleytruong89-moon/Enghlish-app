@@ -29,8 +29,7 @@ export default async function CurriculumVersionPage({ params }: { params: Promis
   const rel = v.payload.ignored.map((_, k) => relatedUnits(v.payload, k));
   const links = v.payload.ignored.map((r, k) => {
     const sp = buildPrefill({ title: prefillTitle(v.title, r.label, rel[k]!), pages: r.page !== null ? String(r.page) : null, units: rel[k] });
-    const q = sp.toString();
-    return { studio: `/studio/new?learner=${v.learnerId}${q ? `&${q}` : ""}`, assign: `/learners/${v.learnerId}/assign${q ? `?${q}` : ""}` };
+    return `/learners/${v.learnerId}/assign${sp.toString() ? `?${sp.toString()}` : ""}`;
   });
   const labelOf = Object.fromEntries(r.data.context.tags.map((t) => [t.key, t.label]));
   return (

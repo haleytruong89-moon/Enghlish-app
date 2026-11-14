@@ -310,3 +310,18 @@ test("the tutor gives an assignment by Unit: the title fills itself, the row sho
   await expect(item).toContainText("Unit 2–3");
   await expect(item).toContainText("2 mục");
 });
+
+
+// UX vòng 3A · one 'Giao bài' page: the chooser carries the prefill from the curriculum into the way that is chosen.
+test("the chooser carries the 'from the book' prefill into the link way", async ({ page }) => {
+  await loginAs(page, "tutorNguyen");
+  await page.goto(`/learners/${NG}/assign?title=${encodeURIComponent("Sách thử · Review 2")}&pages=34`);
+  await expect(page.getByTestId("way-cards")).toBeVisible();
+  await expect(page.getByTestId("ways-from-book")).toContainText("Sách thử · Review 2");
+  await expect(page.getByTestId("way-studio")).toHaveAttribute("data-recommended", "true");
+  await page.getByTestId("way-choose-link").click();
+  await expect(page).toHaveURL(/way=link/);
+  await expect(page.getByTestId("assign-title")).toHaveValue("Sách thử · Review 2");
+  await expect(page.getByTestId("kind-pdf")).toHaveCount(0);
+  await expect(page.getByTestId("ways-strip")).toBeVisible();
+});

@@ -23,8 +23,8 @@ export function NonUnitList({
   onToUnit?: (index: number) => void;
   /** Codes of the Units the row revises (draft and approved). */
   related?: string[][];
-  /** Prepared links (a server page cannot hand functions to this client component). */
-  links?: { studio: string; assign: string }[];
+  /** Prepared links to the "Giao bài" chooser, prefilled (a server page cannot hand functions to this client component). */
+  links?: string[];
 }) {
   if (rows.length === 0) return null;
   const hasTest = rows.some(isProgressTest);
@@ -52,14 +52,9 @@ export function NonUnitList({
                 </button>
               ) : null}
               {link ? (
-                <>
-                  <Link href={link.studio} data-testid={`ignored-studio-${i}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline">
-                    {nonUnitCopy.studioLink}
-                  </Link>
-                  <Link href={link.assign} data-testid={`ignored-assign-${i}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline">
-                    {nonUnitCopy.assignLink}
-                  </Link>
-                </>
+                <Link href={link} data-testid={`ignored-give-${i}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline">
+                  {nonUnitCopy.giveLink}
+                </Link>
               ) : null}
             </li>
           );
