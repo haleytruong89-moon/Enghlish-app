@@ -5,6 +5,7 @@ import { AssignmentTable } from "@/components/practice/AssignmentTable";
 import { readPrefill } from "@/lib/prefill";
 import { assignPage, learnerWithTrack } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
+import { loadUnitChoices } from "@/lib/curriculum/load";
 import { loadAssignments } from "@/lib/practice/load";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { loadFrames, loadTags } from "@/lib/tutorwork/load";
@@ -17,11 +18,12 @@ export default async function AssignPracticePage({ params, searchParams }: { par
   const { id } = await params;
   const prefill = readPrefill(await searchParams);
   const { learner } = await requireLearnerPage(id, "practice:write");
-  const [tags, frames, assignments, map] = await Promise.all([
+  const [tags, frames, assignments, map, unitChoices] = await Promise.all([
     loadTags(learner.trackId),
     loadFrames(learner.trackId, learner.id),
     loadAssignments(learner.id),
     loadPickerMap(learner.id),
+    loadUnitChoices(learner.id),
   ]);
   const tagLabels = Object.fromEntries(tags.map((t) => [t.key, t.label]));
   return (
@@ -34,7 +36,7 @@ export default async function AssignPracticePage({ params, searchParams }: { par
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
         <p className="mt-3 text-muted">{assignPage.intro}</p>
         <div className="mt-6 flex flex-col gap-8">
-          <AssignForm learnerId={learner.id} alias={learner.alias} tags={tags} frames={frames} today={todayVn()} map={map} prefill={prefill} />
+          <AssignForm learnerId={learner.id} alias={learner.alias} tags={tags} frames={frames} today={todayVn()} map={map} prefill={prefill} unitChoices={unitChoices} />
           <section className="flex flex-col gap-3" aria-label={assignPage.listTitle}>
             <h2 className="text-lg font-semibold">{assignPage.listTitle}</h2>
             <AssignmentTable learnerId={learner.id} assignments={assignments} tagLabels={tagLabels} today={todayVn()} />

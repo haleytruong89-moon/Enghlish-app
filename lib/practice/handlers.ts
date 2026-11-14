@@ -40,7 +40,7 @@ export interface PracticeStore {
   /** english.eng_assignment_overview (service role; call only after requireAccess). */
   overview(learnerId: string, assignmentId: string | null): Promise<unknown>;
   createAssignment(args: {
-    learnerId: string; kind: "link" | "pdf"; url: string | null; title: string; tags: string[]; dueOn: string | null; frameId: string | null;
+    learnerId: string; kind: "link" | "pdf"; url: string | null; title: string; tags: string[]; units: { curriculum_id: string; unit_code: string }[]; dueOn: string | null; frameId: string | null;
     files: { main: FileMeta; answer: FileMeta | null } | null; byMemberId: string; clientId: string;
   }): Promise<unknown>;
   retractAssignment(args: { assignmentId: string; reason: string | null; byMemberId: string }): Promise<unknown>;
@@ -213,6 +213,7 @@ export async function handleCreateAssignment(deps: PracticeDeps, learnerId: stri
       url,
       title: b.title,
       tags: b.tags,
+      units: b.units,
       dueOn: b.due_on ?? null,
       frameId: b.frame_id ?? null,
       files,
@@ -221,6 +222,9 @@ export async function handleCreateAssignment(deps: PracticeDeps, learnerId: stri
     })) as { id: string; replayed: boolean };
     return { status: r.replayed ? 200 : 201, body: { id: r.id, replayed: r.replayed } };
   } catch (err) {
+    // Units sent before migration 0029 is applied: say so instead of failing with a 500 (assignments without units keep working).
+    if (err instanceof ReviewDbError && err.code === "units_unavailable") return fail(409, "units_unavailable");
+    if (err instanceof ReviewDbError && err.code === "22023" && /\(bad_units\)/.test(err.detail)) return fail(400, "bad_units");
     return fromDbError(err);
   }
 }

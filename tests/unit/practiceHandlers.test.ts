@@ -147,6 +147,26 @@ describe("give an assignment", () => {
     expect(s.createAssignment).toHaveBeenCalledWith(expect.objectContaining({ learnerId: AN, kind: "link", files: null, byMemberId: "m-tutorAn" }));
   });
 
+  it("units: passed to the store, default to none, a unit twice or more than 30 is a 400, and a missing 0029 is a clear 409", async () => {
+    const CUR = "c0000000-0000-4000-8000-0000000000c1";
+    const s = makeStore();
+    const d = deps("tutorAn", s, makeStorage());
+    expect((await handleCreateAssignment(d, AN, link)).status).toBe(201);
+    expect(s.createAssignment).toHaveBeenLastCalledWith(expect.objectContaining({ units: [] }));
+    const units = [{ curriculum_id: CUR, unit_code: "U3" }, { curriculum_id: CUR, unit_code: "U4" }];
+    expect((await handleCreateAssignment(d, AN, { ...link, units })).status).toBe(201);
+    expect(s.createAssignment).toHaveBeenLastCalledWith(expect.objectContaining({ units }));
+    expect((await handleCreateAssignment(d, AN, { ...link, units: [units[0], units[0]] })).body).toMatchObject({ error: "invalid_body" });
+    const many = Array.from({ length: 31 }, (_, i) => ({ curriculum_id: CUR, unit_code: `U${i + 1}` }));
+    expect((await handleCreateAssignment(d, AN, { ...link, units: many })).status).toBe(400);
+    const old = makeStore({ createAssignment: vi.fn(async () => { throw new ReviewDbError("units_unavailable", "x"); }) });
+    const r = await handleCreateAssignment(deps("tutorAn", old, makeStorage()), AN, { ...link, units });
+    expect(r.status).toBe(409);
+    expect(r.body).toMatchObject({ error: "units_unavailable" });
+    const bad = makeStore({ createAssignment: vi.fn(async () => { throw new ReviewDbError("22023", "x (bad_units)"); }) });
+    expect((await handleCreateAssignment(deps("tutorAn", bad, makeStorage()), AN, { ...link, units })).body).toMatchObject({ error: "bad_units" });
+  });
+
   it("a PDF is accepted only when storage really holds that file with that type and size", async () => {
     const pdf = { id: FILE_OTHER, mime: "application/pdf", bytes: 100 };
     const body = { client_id: "client-0002", kind: "pdf", title: "Đề 3", file: pdf };

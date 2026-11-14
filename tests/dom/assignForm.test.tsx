@@ -2,7 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AssignForm } from "@/components/practice/AssignForm";
 import { blockImplicitSubmit } from "@/lib/forms/enter";
-import { tagPicker } from "@/lib/copy/vi";
+import { tagPicker, unitPickerCopy } from "@/lib/copy/vi";
+import type { UnitChoice } from "@/lib/curriculum/unitPicker";
 import type { TagInfo } from "@/lib/tutorwork/types";
 import { levelledMap } from "../unit/fixtures/skillMap";
 
@@ -68,5 +69,107 @@ describe("AssignForm (4a)", () => {
     fireEvent.click(screen.getByTestId("assign-another"));
     expect(screen.getByText(tagPicker.selected(0, 3))).toBeTruthy();
     expect((screen.getByTestId("tag-chip-cau-dieu-kien-dao-ngu") as HTMLButtonElement).disabled).toBe(false);
+  });
+});
+
+describe("AssignForm · Giao theo Unit (4b)", () => {
+  const u = (n: number, points: string[] = []) => ({ kind: "unit" as const, code: `U${n}`, title: `Unit ${n}`, status: "not_started", points });
+  const CHOICES: UnitChoice[] = [{
+    curriculumId: "c1", title: "Destination C1 C2", units: [u(1, ["dang-tu"]), u(2), u(3, ["phat-am", "dang-tu"]), u(4), u(5, ["cau-dieu-kien-dao-ngu"])],
+    reviews: [{ kind: "review", id: "r2", label: "Review 2", progressTest: false, related: ["U3", "U4"] }],
+  }];
+  const mountUnits = (prefill?: { title: string | null; pages: string | null; units: string[] }) =>
+    render(<AssignForm learnerId="l1" alias="An" tags={TAGS} frames={[]} today="2026-11-13" map={levelledMap()} unitChoices={CHOICES} prefill={prefill} />);
+  const okFetch = () => {
+    const f = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify({ id: "a1", replayed: false }), { status: 201, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", f);
+    return f;
+  };
+  const sentBody = (f: ReturnType<typeof okFetch>) => JSON.parse(f.mock.calls[0]![1]!.body as string) as Record<string, unknown>;
+
+  it("without an approved curriculum the form shows the hint 'Mở Giáo trình' and keeps the old shape (no folded items)", () => {
+    mount();
+    expect(screen.getByTestId("unit-picker-none").textContent).toContain(unitPickerCopy.none);
+    expect(screen.getByText(unitPickerCopy.noneLink).getAttribute("href")).toBe("/learners/l1/curricula");
+    expect(screen.queryByTestId("assign-extra-items")).toBeNull();
+  });
+
+  it("the Unit block comes first and the manual items are folded (closed) under '+ Thêm mục kiến thức khác'", () => {
+    mountUnits();
+    const unitBlock = screen.getByTestId("assign-by-unit");
+    const extra = screen.getByTestId("assign-extra-items") as HTMLDetailsElement;
+    expect(extra.open).toBe(false);
+    expect(extra.textContent).toContain(unitPickerCopy.moreItems);
+    expect(extra.contains(screen.getByTestId("assign-tags"))).toBe(true);
+    expect(unitBlock.compareDocumentPosition(extra) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("ticking U3–U4 fills the name; a hand-edited name is no longer overwritten; the body carries the units", async () => {
+    const f = okFetch();
+    mountUnits();
+    fireEvent.click(screen.getByTestId("unit-c1-U3"));
+    fireEvent.click(screen.getByTestId("unit-c1-U4"));
+    const title = screen.getByTestId("assign-title") as HTMLInputElement;
+    expect(title.value).toBe("Destination C1 C2 · Unit 3–4");
+    fireEvent.change(title, { target: { value: "Bài ôn của tôi" } });
+    fireEvent.click(screen.getByTestId("unit-c1-U1"));
+    expect(title.value).toBe("Bài ôn của tôi");
+    fireEvent.change(screen.getByTestId("assign-url"), { target: { value: "https://www.khanacademy.org/x" } });
+    fireEvent.click(screen.getByTestId("assign-submit"));
+    await waitFor(() => expect(screen.getByTestId("assign-done")).toBeTruthy());
+    expect(sentBody(f)).toMatchObject({
+      title: "Bài ôn của tôi", tags: [],
+      units: [{ curriculum_id: "c1", unit_code: "U1" }, { curriculum_id: "c1", unit_code: "U3" }, { curriculum_id: "c1", unit_code: "U4" }],
+    });
+  });
+
+  it("3 real tags and 5 Units are sent side by side; the 3-item cap is for manual items only", async () => {
+    const f = okFetch();
+    mountUnits();
+    for (const code of ["U1", "U2", "U3", "U4", "U5"]) fireEvent.click(screen.getByTestId(`unit-c1-${code}`));
+    fireEvent.click(screen.getByTestId("tag-chip-cau-dieu-kien-dao-ngu"));
+    fireEvent.click(screen.getByTestId("tab-assign-tags-vocab"));
+    fireEvent.click(screen.getByTestId("tag-chip-dang-tu"));
+    fireEvent.click(screen.getByTestId("tab-assign-tags-speaking"));
+    fireEvent.click(screen.getByTestId("tag-chip-phat-am"));
+    fireEvent.change(screen.getByTestId("assign-url"), { target: { value: "https://www.khanacademy.org/x" } });
+    fireEvent.click(screen.getByTestId("assign-submit"));
+    await waitFor(() => expect(screen.getByTestId("assign-done")).toBeTruthy());
+    const b = sentBody(f);
+    expect(b.tags).toEqual(["cau-dieu-kien-dao-ngu", "dang-tu", "phat-am"]);
+    expect((b.units as unknown[]).length).toBe(5);
+  });
+
+  it("unticking every Unit clears an auto-filled name", () => {
+    mountUnits();
+    fireEvent.click(screen.getByTestId("unit-c1-U3"));
+    const title = screen.getByTestId("assign-title") as HTMLInputElement;
+    expect(title.value).toBe("Destination C1 C2 · Unit 3");
+    fireEvent.click(screen.getByTestId("unit-c1-U3"));
+    expect(title.value).toBe("");
+  });
+
+  it("a name that came prefilled counts as typed: the first tick does not overwrite it, and unticking does not clear it", () => {
+    mountUnits({ title: "Tên có sẵn", pages: null, units: [] });
+    fireEvent.click(screen.getByTestId("unit-c1-U2"));
+    const title = screen.getByTestId("assign-title") as HTMLInputElement;
+    expect(title.value).toBe("Tên có sẵn");
+    fireEvent.click(screen.getByTestId("unit-c1-U2"));
+    expect(title.value).toBe("Tên có sẵn");
+  });
+
+  it("at most 30 Units: the 31st tick is refused with a message", () => {
+    const many: UnitChoice[] = [{ curriculumId: "c9", title: "Big", units: Array.from({ length: 32 }, (_, i) => u(i + 1)), reviews: [] }];
+    render(<AssignForm learnerId="l1" alias="An" tags={TAGS} frames={[]} today="2026-11-13" map={levelledMap()} unitChoices={many} />);
+    for (let i = 1; i <= 31; i++) fireEvent.click(screen.getByTestId(`unit-c9-U${i}`));
+    expect(screen.getAllByRole("checkbox").filter((c) => (c as HTMLInputElement).checked).length).toBe(30);
+    expect(screen.getByTestId("unit-picker-max").textContent).toBe(unitPickerCopy.maxUnits(30));
+  });
+
+  it("the Units named by 'Giao bài này →' (prefill) are ticked and the given name is kept", () => {
+    mountUnits({ title: "Destination C1 C2 · Review 2 (Unit 3–4)", pages: "30–38", units: ["U3", "U4"] });
+    expect((screen.getByTestId("unit-c1-U3") as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByTestId("unit-c1-U4") as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByTestId("assign-title") as HTMLInputElement).value).toBe("Destination C1 C2 · Review 2 (Unit 3–4)");
   });
 });

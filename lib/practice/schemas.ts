@@ -1,6 +1,7 @@
 /** Request bodies of the S5b-1 PR B routes (zod). Parsed AFTER requireAccess, so outsiders always get 404. */
 import { z } from "zod";
 import { ALLOWED_MIMES, MAX_FILES_PER_SUBMISSION } from "@/lib/storage/rules";
+import { taughtUnitSchema } from "@/lib/curriculum/schema";
 import { MAX_URL_LENGTH } from "./link";
 
 export const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
@@ -13,6 +14,7 @@ export const isoDate = z
     const d = new Date(`${s}T00:00:00Z`);
     return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
   }, "not a calendar date");
+export const MAX_ASSIGN_UNITS = 30;
 const httpsUrl = z.string().trim().max(MAX_URL_LENGTH);
 
 /** What the browser says about a file it uploaded; the server checks it against what storage recorded. */
@@ -46,7 +48,14 @@ export const createAssignmentBodySchema = z
     kind: z.enum(["link", "pdf"]),
     title: z.string().trim().min(1).max(200),
     url: httpsUrl.optional(),
+    /** Manually added knowledge items only (<= 3); the items of a unit are derived on read, never copied here. */
     tags: z.array(tagKey).max(3).default([]),
+    /** "Giao theo Unit": units of the learner's approved curricula (0029). */
+    units: z
+      .array(taughtUnitSchema)
+      .max(MAX_ASSIGN_UNITS)
+      .default([])
+      .refine((xs) => new Set(xs.map((x) => `${x.curriculum_id}/${x.unit_code}`)).size === xs.length, { message: "each unit once" }),
     due_on: isoDate.nullable().optional(),
     frame_id: uuid.nullable().optional(),
     file: fileMetaSchema.optional(),

@@ -99,3 +99,21 @@ describe("the delete screen before 0017 is applied", () => {
     await expect(DeleteLearnerPage({ params: Promise.resolve({ id: "L1" }) })).rejects.toThrow(/eng_purge_preview failed/);
   });
 });
+
+describe("assignments before 0029 is applied", () => {
+  const base = { learnerId: "L", kind: "link" as const, url: "https://x.example", title: "T", tags: [], dueOn: null, frameId: null, files: null, byMemberId: "M", clientId: "client-0001" };
+  it("without units the unchanged v1 function is called", async () => {
+    const { createSupabasePracticeStore } = await import("@/lib/practice/supabaseStore");
+    await createSupabasePracticeStore().createAssignment({ ...base, units: [] });
+    expect(rpc.mock.calls[0]?.[0]).toBe("eng_create_assignment");
+  });
+  it("with units v2 is called; a missing v2 becomes units_unavailable", async () => {
+    const { createSupabasePracticeStore } = await import("@/lib/practice/supabaseStore");
+    const units = [{ curriculum_id: "c", unit_code: "U1" }];
+    await createSupabasePracticeStore().createAssignment({ ...base, units });
+    expect(rpc.mock.calls[0]?.[0]).toBe("eng_create_assignment_v2");
+    expect(rpc.mock.calls[0]?.[1]).toMatchObject({ p_units: units });
+    rpc.mockResolvedValue({ data: null, error: { code: "PGRST202", message: "none" } });
+    await expect(createSupabasePracticeStore().createAssignment({ ...base, units })).rejects.toMatchObject({ code: "units_unavailable" });
+  });
+});

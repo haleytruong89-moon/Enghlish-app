@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { assignPage, fallbackLabels, sourceLabels } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
+import { formatRange } from "@/lib/prefill";
 import { formatDateVi, safeExternalUrl } from "@/lib/inquiries/format";
 import { postJson } from "@/lib/tutorwork/client";
 import { codeOf, practiceErrorText } from "@/lib/practice/client";
@@ -18,6 +19,15 @@ export function statusOf(a: AssignmentView): "retracted" | "recorded" | "sent" |
   if (a.resultId) return "recorded";
   if (a.submission) return "sent";
   return "notDone";
+}
+
+/** "Unit 3–4 (8 mục) · + 2 mục thêm tay": the Units come first, the items typed by hand follow (they are not the Units' items). */
+export function itemsText(a: AssignmentView, tagLabels: Record<string, string>): string {
+  const hand = a.tagKeys.map((k) => tagLabels[k] ?? fallbackLabels.tag);
+  if (a.units.length === 0) return hand.length > 0 ? hand.join("; ") : assignPage.nothingSent;
+  const groups = a.units.map((g) => assignPage.unitGroup(a.units.length > 1 ? g.title : null, formatRange(g.codes))).join("; ");
+  const line = assignPage.unitsLine(groups, a.unitItems.length);
+  return hand.length > 0 ? `${line} · ${assignPage.extraItemsLine(hand.length)}` : line;
 }
 
 /** "Bài luyện đã giao": what was given, what the student sent back, and the actions (record the result, submit for the student, retract). */
@@ -95,7 +105,7 @@ export function AssignmentTable({
               </div>
               <dl className="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-1 text-sm">
                 <dt className="text-muted">{assignPage.colTags}</dt>
-                <dd>{a.tagKeys.length > 0 ? a.tagKeys.map((k) => tagLabels[k] ?? fallbackLabels.tag).join("; ") : assignPage.nothingSent}</dd>
+                <dd data-testid={`assignment-items-${a.id}`}>{itemsText(a, tagLabels)}</dd>
                 <dt className="text-muted">{assignPage.colDue}</dt>
                 <dd>{a.dueOn ? formatDateVi(a.dueOn) : assignPage.nothingSent}</dd>
                 <dt className="text-muted">{assignPage.colSent}</dt>

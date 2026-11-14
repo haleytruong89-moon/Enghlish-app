@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { AppHeader } from "@/components/AppHeader";
 import { DeskAlerts } from "@/components/desk/DeskAlerts";
 import { SessionsBox } from "@/components/desk/SessionsBox";
-import { AssignmentTable } from "@/components/practice/AssignmentTable";
+import { AssignmentTable, itemsText } from "@/components/practice/AssignmentTable";
 import { SubmissionPreview } from "@/components/practice/SubmissionPreview";
 import { ResultForm } from "@/components/tutor/ResultForm";
 import { parseResultEdit } from "@/lib/tutorwork/shape";
@@ -94,7 +94,7 @@ describe("student navigation", () => {
 });
 
 const assignment = (over: Partial<AssignmentView> = {}): AssignmentView => ({
-  id: "c0000000-0000-4000-8000-000000000001", kind: "link", title: "Unless", url: "https://www.test-english.com/x", sourceKey: "test-english", tagKeys: [],
+  id: "c0000000-0000-4000-8000-000000000001", kind: "link", title: "Unless", url: "https://www.test-english.com/x", sourceKey: "test-english", tagKeys: [], units: [], unitItems: [],
   dueOn: null, frameId: null, createdAt: "2026-10-16T01:00:00Z", retractedAt: null, file: null, answerFile: null, submission: null, resultId: null, ...over,
 });
 
@@ -276,5 +276,19 @@ describe("'Quá hạn' (D4): only a label for the tutor and the parent", () => {
     expect(html).not.toContain(assignPage.overdue);
     expect(html).not.toContain(todayPage.practiceOverdue);
     expect(html).not.toMatch(/quá hạn|trễ|muộn/i);
+  });
+});
+
+describe("the 'Luyện mục kiến thức' column with units (0029)", () => {
+  const tl = { a: "Câu điều kiện", b: "Thành ngữ" };
+  it("no units: the manual items as before; nothing: a dash", () => {
+    expect(itemsText(assignment({ tagKeys: ["a", "b"] }), tl)).toBe("Câu điều kiện; Thành ngữ");
+    expect(itemsText(assignment(), tl)).toBe(assignPage.nothingSent);
+  });
+  it("units first with the number of derived items, then '+ n mục thêm tay'", () => {
+    const a = assignment({ units: [{ curriculumId: "c1", title: "Destination", codes: ["U3", "U4"] }], unitItems: ["x", "y", "z"], tagKeys: ["a"] });
+    expect(itemsText(a, tl)).toBe("Unit 3–4 (3 mục) · + 1 mục thêm tay");
+    expect(itemsText({ ...a, tagKeys: [] }, tl)).toBe("Unit 3–4 (3 mục)");
+    expect(itemsText({ ...a, units: [...a.units, { curriculumId: "c2", title: "Reading", codes: ["U1"] }], tagKeys: [] }, tl)).toBe("Destination · Unit 3–4; Reading · Unit 1 (3 mục)");
   });
 });

@@ -43,6 +43,18 @@ export function createSupabasePracticeStore(): PracticeStore {
     },
 
     async createAssignment(a) {
+      // Units -> v2 (0029). Without units the v1 call is unchanged, so the code also runs before 0029 is applied.
+      if (a.units.length > 0) {
+        const { data, error } = await db().rpc("eng_create_assignment_v2", {
+          p_learner: a.learnerId, p_kind: a.kind, p_url: a.url, p_title: a.title, p_tag_keys: a.tags, p_due_on: a.dueOn, p_frame: a.frameId,
+          p_files: a.files ? { main: a.files.main, answer: a.files.answer } : null, p_by: a.byMemberId, p_client_id: a.clientId, p_units: a.units,
+        });
+        if (error) {
+          if (error.code === "PGRST202" || error.code === "42883") throw new ReviewDbError("units_unavailable", "eng_create_assignment_v2 is missing: apply migration 0029");
+          dbError("eng_create_assignment_v2", error);
+        }
+        return data;
+      }
       const { data, error } = await db().rpc("eng_create_assignment", {
         p_learner: a.learnerId,
         p_kind: a.kind,

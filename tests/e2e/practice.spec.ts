@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
+import { Client } from "pg";
 import { expect, test, type Page } from "@playwright/test";
-import { assignPage, practiceStudent, resultPage, tagPicker } from "@/lib/copy/vi";
+import { assignPage, practiceStudent, resultPage, tagPicker, unitPickerCopy } from "@/lib/copy/vi";
+import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { todayVn } from "@/lib/inquiries/dates";
 import { LEARNER_IDS, loginAs } from "./helpers";
 
@@ -17,6 +19,12 @@ const SCORE_PATTERN = /(?<![\d/])\d{1,3}\s*\/\s*\d{1,3}(?![\d/])|điểm|đúng|
 // A minimal, valid one-page PDF and a valid 2x2 PNG (so the browser can really decode it).
 const PDF = Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n");
 const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGP4//8/AxBAKAAy2wX7iosRtAAAAABJRU5ErkJggg==", "base64");
+
+/** Other specs may have approved a curriculum for the child (the form then keeps the manual items under "+ Thêm mục kiến thức khác"): open it. */
+async function openExtraItems(page: Page) {
+  const extra = page.getByTestId("assign-extra-items");
+  if ((await extra.count()) > 0) await extra.locator("summary").click();
+}
 
 /** The id of the assignment row with this title on the Giao bài page. */
 async function assignmentIdOf(page: Page, title: string): Promise<string> {
@@ -40,6 +48,7 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     await page.getByTestId("pdf-input").setInputFiles({ name: "de-thu.pdf", mimeType: "application/pdf", buffer: PDF });
     await expect(page.getByTestId("pdf-chosen")).toContainText("de-thu.pdf");
     await page.getByTestId("assign-title").fill(title);
+    await openExtraItems(page);
     await page.getByTestId("tab-assign-tags-vocab").click();
     await page.getByTestId("tag-chip-thanh-ngu").click();
     await page.getByTestId("assign-due").fill(todayVn());
@@ -75,6 +84,7 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     await page.goto(`/learners/${NG}/assign`);
     await page.getByTestId("assign-title").fill(`Ba mục thử ${Date.now()}`);
     await page.getByTestId("assign-url").fill("https://notebooklm.google.com/notebook/abc");
+    await openExtraItems(page);
     await page.getByTestId("tab-assign-tags-vocab").click();
     await page.getByTestId("tag-chip-thanh-ngu").click();
     await page.getByTestId("search-assign-tags").fill("phat am");
@@ -264,4 +274,41 @@ test.describe("no sideways scrolling on a phone", () => {
     await page.getByTestId("kind-pdf").click();
     expect(await fits(page)).toBe(true);
   });
+});
+
+// 2B · Giao theo Unit: needs its own approved curriculum (built with the SQL functions as the table owner, like the DB tests), so it does not
+// depend on the order of the other specs.
+test("the tutor gives an assignment by Unit: the title fills itself, the row shows the Units and the derived items", async ({ page }) => {
+  test.skip(!process.env.DATABASE_URL, "needs DATABASE_URL to prepare an approved curriculum");
+  const db = new Client(pgConfigFromUrl(process.env.DATABASE_URL as string));
+  await db.connect();
+  const bookTitle = `Giáo trình Unit thử ${Date.now()}`;
+  try {
+    const tutor = (await db.query<{ id: string }>("select member_id as id from english.relationships where learner_id = $1 and relation = 'tutor' limit 1", [NG])).rows[0]!.id;
+    const unit = (n: number, points: string[]) => ({ code: `U${n}`, title: `Unit ${n}`, section: "Grammar", page: 6 * n, skipped: false, points, missing_points: [], needs_review: false, review_reason: null, origin: "ai", dropped: false, edit_reason: null });
+    const units = [unit(1, []), unit(2, ["cum-dong-tu"]), unit(3, ["cum-dong-tu", "thanh-ngu"])];
+    const c = (await db.query<{ r: { version_id: string } }>("select english.eng_create_curriculum($1,$2,null,null,false,$3,$4) as r", [NG, bookTitle, tutor, randomUUID()])).rows[0]!.r;
+    const stamp = async () => (await db.query<{ t: string }>("select updated_at::text as t from english.curriculum_versions where id = $1", [c.version_id])).rows[0]!.t;
+    await db.query("select english.eng_save_curriculum_draft($1,$2::jsonb,$3,$4)", [c.version_id, JSON.stringify({ units, ignored: [] }), await stamp(), tutor]);
+    await db.query("select english.eng_approve_curriculum_version($1,$2,$3::jsonb,null,$4)", [c.version_id, await stamp(),
+      JSON.stringify(units.map((u) => ({ code: u.code, title: u.title, section: u.section, page: u.page, skipped: false, points: u.points }))), tutor]);
+  } finally {
+    await db.end();
+  }
+  await loginAs(page, "tutorNguyen");
+  await page.goto(`/learners/${NG}/assign`);
+  await expect(page.getByTestId("assign-by-unit")).toBeVisible();
+  await expect(page.getByTestId("assign-extra-items")).toBeVisible();
+  const list = page.getByTestId("unit-picker").locator("details", { hasText: bookTitle });
+  const row2 = list.getByTestId(/^unit-.*-U2$/);
+  await row2.check();
+  await list.getByTestId(/^unit-.*-U3$/).check();
+  await expect(page.getByTestId("assign-title")).toHaveValue(`${bookTitle} · Unit 2–3`);
+  await expect(page.getByTestId("unit-picker-derived")).toContainText(unitPickerCopy.derived(2, "", 0).slice(0, 18));
+  await page.getByTestId("assign-url").fill("https://notebooklm.google.com/notebook/units");
+  await page.getByTestId("assign-submit").click();
+  await expect(page.getByTestId("assign-done")).toContainText(assignPage.done);
+  const item = page.locator('li[data-testid^="assignment-"]', { hasText: bookTitle }).first();
+  await expect(item).toContainText("Unit 2–3");
+  await expect(item).toContainText("2 mục");
 });

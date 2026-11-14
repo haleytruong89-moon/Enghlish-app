@@ -8,6 +8,7 @@ import { DraftList } from "@/components/studio/DraftList";
 import { UploadForm } from "@/components/studio/UploadForm";
 import { learnerWithTrack, reviewPage, studioCopy } from "@/lib/copy/vi";
 import { authorizeLearnerPage } from "@/lib/review/access";
+import { loadUnitChoices } from "@/lib/curriculum/load";
 import { loadDraftList, loadStudioGate } from "@/lib/studio/load";
 import { readPrefill } from "@/lib/prefill";
 import { getAuthUser } from "@/lib/auth/session";
@@ -25,7 +26,7 @@ export default async function StudioNewPage({ searchParams }: { searchParams: Pr
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();
   const l = access.grant.learner;
-  const [gate, drafts] = await Promise.all([loadStudioGate(l.id), loadDraftList(l.id)]);
+  const [gate, drafts, unitChoices] = await Promise.all([loadStudioGate(l.id), loadDraftList(l.id), loadUnitChoices(l.id)]);
   return (
     <StaffShell shell={shell}>
       <div className="mx-auto max-w-2xl" data-testid="studio-new">
@@ -37,7 +38,7 @@ export default async function StudioNewPage({ searchParams }: { searchParams: Pr
           {studioCopy.learnerLabel} {learnerWithTrack(l.alias, l.trackId)}
         </p>
         <p className="mt-3 text-[15px]">{studioCopy.newIntro}</p>
-        <UploadForm learnerId={l.id} aiAllowed={gate.allowed} aiReason={gate.reason} prefill={prefill} />
+        <UploadForm learnerId={l.id} aiAllowed={gate.allowed} aiReason={gate.reason} prefill={prefill} unitChoices={unitChoices} />
         <DraftList drafts={drafts} />
       </div>
     </StaffShell>
