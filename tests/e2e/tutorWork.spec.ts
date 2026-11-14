@@ -176,9 +176,11 @@ test.describe.serial("S5b-1 tutor work", () => {
   });
 
   test("UX vòng 3B: a billable absence adds a billable session; a makeup note for it shows 'học bù'; 'Không tính' takes a note out; the child sees nothing", async ({ page }) => {
-    const vnDaysAgo = (n: number) => new Date(Date.now() + 7 * 3_600_000 - n * 86_400_000).toISOString().slice(0, 10);
-    const absentOn = vnDaysAgo(60);
-    const makeupOn = vnDaysAgo(59);
+    // Two days of one month in the past (the 10th and 11th, two months back): same month for both, inside the 120-day window, never today.
+    const vn = new Date(Date.now() + 7 * 3_600_000);
+    const back = new Date(Date.UTC(vn.getUTCFullYear(), vn.getUTCMonth() - 2, 10));
+    const absentOn = back.toISOString().slice(0, 10);
+    const makeupOn = new Date(back.getTime() + 86_400_000).toISOString().slice(0, 10);
     const billableOf = async (day: string) => {
       await page.goto(`/learners/${NG}/notes/month/${day.slice(0, 7)}`);
       return Number((await page.getByTestId("month-billable").textContent())?.match(/\d+/)?.[0] ?? "NaN");
@@ -199,7 +201,7 @@ test.describe.serial("S5b-1 tutor work", () => {
     await page.getByTestId("session-date").fill(makeupOn);
     await page.getByTestId("session-studied").fill(`Học bù ${makeupOn}`);
     await page.getByTestId("session-kind-makeup").click();
-    await page.getByTestId("session-makeup-for").selectOption({ index: 1 });
+    await page.getByTestId("session-makeup-for").selectOption({ label: `${absentOn.slice(8, 10)}/${absentOn.slice(5, 7)} · con, có tính phí` });
     await page.getByTestId("session-save").click();
     await expect(page.getByTestId("session-saved")).toBeVisible();
     await page.goto(`/learners/${NG}/notes/month/${makeupOn.slice(0, 7)}`);

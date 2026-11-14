@@ -187,7 +187,10 @@ Phụ huynh duyệt 14/11: U16 (buổi nghỉ), U17 (dấu loại buổi), U18 (
 4. **Cùng một ngày (U18):** buổi thường + buổi bù = **2 buổi**; hai ghi chú thường = 1 buổi (⚠); hai ghi chú bù = 1 buổi bù (⚠).
 5. **Buổi tính phí tháng M (U19)** = buổi đã học trong M (thường + bù) + buổi nghỉ "có tính phí" trong M − buổi bù trong M **trỏ tới** một buổi nghỉ "có tính phí" còn hiệu lực (không cộng hai lần một buổi). Một buổi bù không trỏ buổi nghỉ nào, hoặc trỏ buổi nghỉ không tính phí / đã bỏ, được tính như một buổi học thêm.
 6. **Ai ghi (U20):** thầy/cô của em hoặc phụ huynh của gia đình (kiểm trong SQL: `eng_actor_may_manage`). Học sinh không đọc, không ghi. Hai bảng: thầy/cô của em và phụ huynh đọc (RLS), không ai ghi trực tiếp, kể cả `service_role`.
-7. **Một hàm thuần (U22):** `lib/sessions/count.ts` (`sessionDays`, `monthBilling`, `months`, `weekGrid`, `monthText`) là nơi duy nhất có luật; trình duyệt không gửi con số nào lên máy chủ.
+7. **Một buổi nghỉ chỉ bù một lần (14/11, sau review):** hai ghi chú (hai chuỗi sửa khác nhau) không cùng trỏ một buổi nghỉ — SQL từ chối (`absence_already_made_up`), danh sách chọn ẩn buổi nghỉ đã dùng. "Đã dùng" chỉ tính chuỗi có dấu mới nhất là Học bù **và** ghi chú hiện hành do thầy/cô ghi; dấu Học bù chỉ trên ghi chú của phụ huynh (không tạo buổi) và ghi chú đã "Không tính" **không** làm hết buổi nghỉ. Sửa ghi chú đã là Học bù giữ nguyên buổi nghỉ của nó. Khi dữ liệu xấu vẫn có hai buổi bù cùng một buổi nghỉ, hàm đếm chỉ trừ buổi nghỉ đó **một lần** (ở buổi bù sớm nhất), mỗi ngày bù trừ tối đa một buổi nghỉ.
+8. **Tháng khác nhau:** buổi bù trừ **ở tháng của buổi bù** (nghỉ 27/11 "có tính phí", bù 02/12: tháng 11 vẫn tính phí buổi nghỉ, tháng 12 trừ đi một).
+9. **Một ngày một buổi nghỉ:** mỗi em tối đa một buổi nghỉ còn hiệu lực mỗi ngày (`absence_exists`; muốn ghi lại thì bỏ ghi nghỉ cũ). Buổi nghỉ trùng ngày có buổi học được đánh dấu ⚠ ở lịch, bảng tháng và trang tháng để thầy/cô hoặc phụ huynh bỏ một trong hai. Trang tháng mở được tới tháng hiện tại + 2.
+10. **Một hàm thuần (U22):** `lib/sessions/count.ts` (`sessionDays`, `monthBilling`, `months`, `weekGrid`, `monthText`) là nơi duy nhất có luật; trình duyệt không gửi con số nào lên máy chủ.
 
 | Ví dụ (tháng 11) | Kết quả |
 |---|---|

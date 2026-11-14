@@ -1494,7 +1494,16 @@ Nhánh `feature/ux-round3b` (từ `main` đã gộp 2A, 2B, 3A). Kế hoạch `d
 - Trước khi áp 0030 (nếu muốn thử): trang Buổi học có dòng "Phần buổi nghỉ / học bù chưa sẵn sàng (cần cập nhật cơ sở dữ liệu)", Ghi buổi Thường vẫn lưu được, Học bù báo lỗi có chữ và giữ nội dung.
 
 ### Tiêu chí đạt
-`npm run typecheck && npm run lint && npm test && npm run gen:config` xanh; `npx playwright test --list` có test mới (`UX vòng 3B` trong `tutorWork.spec.ts`); **e2e xanh trong CI** (chưa chạy được ở máy dev không có Docker: tiêu chí này chưa đạt cho tới khi CI chạy); `0030` áp được hai lần ("applied 0" lần hai); Opus `reviewer` xem file SQL và diff (trọng tâm: quyền kiểm trước mọi thứ khác; trình duyệt không gửi số; v4 lùi cả giao dịch khi sai; purge đủ và đúng thứ tự; phụ huynh không thấy chữ ghi chú riêng tư). **Chưa đạt:** Opus review chưa chạy trong lần làm này; e2e chưa chạy.
+`npm run typecheck && npm run lint && npm test && npm run gen:config` xanh; `npx playwright test --list` có test mới (`UX vòng 3B` trong `tutorWork.spec.ts`); **e2e xanh trong CI** (chưa chạy được ở máy dev không có Docker: tiêu chí này chưa đạt cho tới khi CI chạy); `0030` áp được hai lần ("applied 0" lần hai); Opus `reviewer` xem file SQL và diff (trọng tâm: quyền kiểm trước mọi thứ khác; trình duyệt không gửi số; v4 lùi cả giao dịch khi sai; purge đủ và đúng thứ tự; phụ huynh không thấy chữ ghi chú riêng tư). Opus `reviewer` đã chạy (14/11), các phát hiện đã sửa (mục dưới). **Chưa đạt:** e2e chưa chạy ở máy dev (chỉ CI).
+
+### Sửa sau Opus review (14/11) — `0030` chưa áp nên sửa thẳng trong file (vẫn idempotent)
+- **Một buổi nghỉ chỉ bù MỘT lần:** SQL từ chối `absence_already_made_up` (hàm `eng_absence_made_up`; chuỗi ghi chú khác, dấu mới nhất của chuỗi là Học bù trỏ tới buổi nghỉ đó, ghi chú hiện hành do thầy/cô ghi); `count.ts` mỗi buổi nghỉ chỉ bị trừ một lần (mỗi ngày bù trừ tối đa một buổi nghỉ, toàn bộ các tháng), nên dữ liệu xấu cũng không trừ hai lần.
+- Sửa ghi chú đã là Học bù: ô "Bù cho buổi nghỉ ngày" chọn sẵn buổi nghỉ hiện tại (và vẫn nằm trong danh sách); lưu không đổi gì = không ghi dấu mới.
+- **Một ngày chỉ một buổi nghỉ còn hiệu lực** (`absence_exists`); nghỉ trùng ngày có buổi học = dấu ⚠ ở lịch, bảng tháng, trang tháng (chọn bỏ ghi nghỉ hoặc bỏ ghi chú).
+- Trang tháng mở được tới tháng hiện tại + 2 (khớp cửa sổ +60 ngày). Chữ Zalo ghi ngày nghỉ + bên báo + tính phí và "(2 buổi)" cho ngày có 2 buổi.
+- Dấu Học bù chỉ trên ghi chú của phụ huynh không "tiêu" buổi nghỉ (danh sách chọn và SQL cùng luật); thầy/cô gắn lại được.
+- Kiểm quyền đứng đầu ở `eng_record_absence` / `eng_mark_session`; replay của dấu trả lời trước khi kiểm buổi nghỉ; đổi loại buổi hoặc buổi nghỉ ở form thì có `client_id` mới.
+- Bỏ 4 khóa chữ không dùng; e2e chọn buổi nghỉ theo nhãn ngày và dùng ngày 10–11 của tháng cách đây 2 tháng.
 
 ### Giả định / ghi chú
 - Ngày nghỉ báo trước tối đa 60 ngày, tính lùi 120 ngày (U16); sửa ngày = bỏ ghi nghỉ rồi ghi lại.
