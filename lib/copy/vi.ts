@@ -2232,6 +2232,8 @@ export const deskCopy = {
   sessionsUnavailable: "Chưa đọc được buổi học và bài giao.",
   practiceCounts: (open: number, sent: number, late: number) => `Bài giao: ${open} đang mở · ${sent} em đã gửi${late > 0 ? ` · ${late} quá hạn` : ""}`,
   seeAssignments: "Xem bài giao",
+  monthLine: (month: number, n: number, last: string) => `Tháng ${month}: ${n} buổi · buổi gần nhất ${last}`,
+  monthLineNone: (month: number, last: string) => `Tháng ${month}: chưa có buổi · buổi gần nhất ${last}`,
   noSchedule: "Lịch buổi học chưa có trong app.",
 } as const;
 
@@ -2559,4 +2561,42 @@ export const assignWaysCopy = {
   seeStudio: "Bài đã tạo từ đề →",
   seeTopic: "Bài chủ đề đã giao →",
   listTitle: "Bài link / PDF đã giao",
+} as const;
+
+/** UX vòng 3A · thống kê buổi học (kế hoạch 14/11, U9–U14, U25). Một buổi = một ngày có ghi chú buổi học hiện hành; không có số tiền. */
+export const sessionStatsCopy = {
+  title: "Tổng quan buổi học",
+  cards: { total: "Tổng số buổi", thisMonth: "Buổi tháng này", perWeek: "Trung bình / tuần", unit: "Đang học đến" },
+  perWeekHint: "8 tuần trọn gần nhất",
+  perWeekNone: "—",
+  unitNone: "Chưa bắt đầu",
+  unitMore: (k: number) => `+${k}`,
+  calendarTitle: "12 tuần gần đây",
+  weekdays: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
+  weekdaysLong: ["Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ nhật"],
+  cellHas: (day: string, units: string) => `${day}: có buổi học${units ? ` · ${units}` : ""}`,
+  cellNone: (day: string) => `${day}: không có buổi`,
+  cellFuture: (day: string) => `${day}: chưa tới`,
+  detailHint: "Chạm vào một ô có chấm để xem ngày đó.",
+  monthTable: { title: "Theo tháng", month: "Tháng", count: "Số buổi", dates: "Các ngày", open: "Sao chép / In" },
+  sameDay: "⚠ 2 ghi chú cùng ngày",
+  rule: "Một buổi = một ngày có ghi chú buổi học. Bản đã sửa chỉ tính bản mới nhất.",
+  none: "Chưa ghi buổi học nào.",
+  unreadable: "Chưa đọc được thống kê buổi học.",
+} as const;
+
+/** Trang tháng để in / sao chép. */
+export const sessionMonthCopy = {
+  title: (alias: string, month: string) => `Buổi học tháng ${month} · ${alias}`,
+  back: "Về Buổi học",
+  total: (n: number) => `${n} buổi`,
+  copy: "Sao chép danh sách",
+  copied: "✓ Đã chép",
+  copyManual: "Chưa chép tự động được. Bạn chọn đoạn chữ dưới đây rồi chép tay nhé.",
+  print: "In",
+  text: (alias: string, month: string, n: number, dates: string) => (n > 0 ? `${alias} · Tháng ${month}: ${n} buổi — ${dates}.` : `${alias} · Tháng ${month}: chưa có buổi.`),
+  cols: { date: "Ngày", weekday: "Thứ", units: "Unit đã dạy", by: "Người ghi" },
+  privateNote: `(ghi chú riêng của ${tutorHonorific})`,
+  noUnits: "—",
+  empty: "Tháng này chưa có buổi.",
 } as const;
