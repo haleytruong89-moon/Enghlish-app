@@ -238,7 +238,7 @@ Khóa mới trong `lib/copy/vi.ts` (chữ đã duyệt theo kế hoạch 14/11; 
 | `sessionStatsCopy.title` · `cards.*` | Tổng quan buổi học · Tổng số buổi / Buổi tháng này / Trung bình / tuần / Đang học đến |
 | `sessionStatsCopy.perWeekHint` · `unitNone` · `perWeekNone` | 8 tuần trọn gần nhất · Chưa bắt đầu · — |
 | `sessionStatsCopy.calendarTitle` · `weekdays` · `cellHas/cellNone/cellFuture` | 12 tuần gần đây · T2…CN · "{Thứ Năm 12/11/2026}: có buổi học · {U13 Unreal time}" / "…: không có buổi" / "…: chưa tới" |
-| `sessionStatsCopy.monthTable.*` · `sameDay` · `rule` · `none` · `unreadable` | Theo tháng / Tháng / Số buổi / Các ngày / Sao chép / In · ⚠ 2 ghi chú cùng ngày · Một buổi = một ngày có ghi chú buổi học. Bản đã sửa chỉ tính bản mới nhất. · Chưa ghi buổi học nào. · Chưa đọc được thống kê buổi học. |
+| `sessionStatsCopy.monthTable.*` · `sameDay` · `rule` · `none` · `unreadable` | Theo tháng / Tháng / Số buổi / Các ngày / Sao chép / In · ⚠ 2 ghi chú cùng ngày · Một buổi = một ngày có ghi chú buổi học do thầy/cô ghi (ngày chỉ phụ huynh ghi hiện dấu "Phụ huynh ghi", không tính). Bản đã sửa chỉ tính bản mới nhất. · Chưa ghi buổi học nào. · Chưa đọc được thống kê buổi học. |
 | `sessionMonthCopy.*` | Buổi học tháng {11/2026} · {alias} · {n} buổi · Sao chép danh sách / ✓ Đã chép / In · Ngày, Thứ, Unit đã dạy, Người ghi · (ghi chú riêng của {thầy/cô}) · câu Zalo: "{Nguyên} · Tháng {11/2026}: {5} buổi — {03/11, 05/11, …}." (tháng trống: "… chưa có buổi.") |
 | `deskCopy.monthLine` · `monthLineNone` | Tháng {11}: {5} buổi · buổi gần nhất {12/11} · Tháng {11}: chưa có buổi · buổi gần nhất {28/10} |
 

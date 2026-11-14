@@ -3,7 +3,7 @@ import { useState } from "react";
 import { sessionMonthCopy, todayPage } from "@/lib/copy/vi";
 import { dayMonth, monthLabel, monthText } from "@/lib/sessions/count";
 import type { MonthSummary } from "@/lib/sessions/types";
-import { longDay, unitsText } from "@/lib/sessions/view";
+import { unitsText, weekdayLong } from "@/lib/sessions/view";
 
 /** One month of sessions, to print or to paste into Zalo. No money, no note text; a private note shows only its day. */
 export function MonthSheet({ alias, month }: { alias: string; month: MonthSummary }) {
@@ -36,7 +36,7 @@ export function MonthSheet({ alias, month }: { alias: string; month: MonthSummar
       {manual ? (
         <div className="flex flex-col gap-1 print:hidden" role="status">
           <p className="text-sm text-muted">{sessionMonthCopy.copyManual}</p>
-          <textarea readOnly rows={3} value={text} data-testid="month-manual" onFocus={(e) => e.currentTarget.select()} ref={(el) => el?.select()} className="rounded-lg border border-line p-2 text-sm" />
+          <textarea readOnly rows={3} value={text} data-testid="month-manual" onFocus={(e) => e.currentTarget.select()} className="rounded-lg border border-line p-2 text-sm" />
         </div>
       ) : null}
       {month.days.length === 0 ? (
@@ -55,8 +55,8 @@ export function MonthSheet({ alias, month }: { alias: string; month: MonthSummar
             {month.days.map((d) => (
               <tr key={d.date} data-testid={`sheet-row-${d.date}`} className="border-b border-line align-top">
                 <td className="py-2 pr-3">{dayMonth(d.date)}</td>
-                <td className="py-2 pr-3">{longDay(d.date).split(" ").slice(0, -1).join(" ")}</td>
-                <td className="py-2 pr-3">{d.privateOnly ? sessionMonthCopy.privateNote : unitsText(d.units) || sessionMonthCopy.noUnits}</td>
+                <td className="py-2 pr-3">{weekdayLong(d.date)}</td>
+                <td className="py-2 pr-3">{d.parentOnly ? sessionMonthCopy.parentOnly : d.privateOnly ? sessionMonthCopy.privateNote : unitsText(d.units) || sessionMonthCopy.noUnits}</td>
                 <td className="py-2">{d.authors.map((a) => todayPage.roleLabel[a]).join(", ")}</td>
               </tr>
             ))}

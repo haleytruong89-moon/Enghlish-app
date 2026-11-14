@@ -2576,7 +2576,10 @@ export const sessionStatsCopy = {
   detailHint: "Chạm vào một ô có chấm để xem ngày đó.",
   monthTable: { title: "Theo tháng", month: "Tháng", count: "Số buổi", dates: "Các ngày", open: "Sao chép / In" },
   sameDay: "⚠ 2 ghi chú cùng ngày",
-  rule: "Một buổi = một ngày có ghi chú buổi học. Bản đã sửa chỉ tính bản mới nhất.",
+  sameDayMark: " ⚠",
+  parentOnly: "Phụ huynh ghi",
+  cellParent: (day: string) => `${day}: phụ huynh ghi, chưa tính là buổi`,
+  rule: "Một buổi = một ngày có ghi chú buổi học do thầy/cô ghi. Ngày chỉ có ghi chú của phụ huynh được hiện nhưng không tính vào số buổi. Bản đã sửa chỉ tính bản mới nhất.",
   none: "Chưa ghi buổi học nào.",
   unreadable: "Chưa đọc được thống kê buổi học.",
 } as const;
@@ -2595,4 +2598,5 @@ export const sessionMonthCopy = {
   privateNote: `(ghi chú riêng của ${tutorHonorific})`,
   noUnits: "—",
   empty: "Tháng này chưa có buổi.",
+  parentOnly: "Phụ huynh ghi (không tính)",
 } as const;

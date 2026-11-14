@@ -41,7 +41,7 @@ describe("one session = one VN day with a current note (DOMAIN §5.6)", () => {
     const rows = [note("2026-11-12", { id: "s" }), note("2026-11-12", { id: "p", published: false })];
     const d = days(rows, [{ noteId: "s", curriculumId: "c1", unitCode: "U13" }, { noteId: "p", curriculumId: "c1", unitCode: "U14" }, { noteId: "s", curriculumId: "c1", unitCode: "U13" }]);
     expect(d[0]!.privateOnly).toBe(false);
-    expect(d[0]!.units).toEqual([{ curriculumId: "c1", code: "U13", title: "Unreal time" }]);
+    expect(d[0]!.units).toEqual([{ code: "U13", title: "Unreal time" }]);
   });
   it("month boundary: 31/10 and 01/11 are in different months", () => {
     const m = months(days([note("2026-10-31"), note("2026-11-01")]), TODAY);
@@ -112,5 +112,33 @@ describe("monthText (U25)", () => {
   it("an empty month", () => {
     const m = months(days([note("2026-10-03")]), TODAY)[0]!;
     expect(monthText("Nguyên", m)).toBe("Nguyên · Tháng 11/2026: chưa có buổi.");
+  });
+});
+
+describe("only tutor notes count as a buổi (billing safety, parent to confirm)", () => {
+  const rows = [note("2026-11-03"), note("2026-11-05", { authorRole: "parent" }), note("2026-11-10"), note("2026-11-12", { authorRole: "parent" }), note("2026-11-12")];
+  it("a parent-only day is listed (parentOnly) but is out of totals, month counts, average and last", () => {
+    const d = days(rows);
+    expect(d.map((x) => [x.date, x.sessions, x.parentOnly])).toEqual([["2026-11-03", 1, false], ["2026-11-05", 0, true], ["2026-11-10", 1, false], ["2026-11-12", 1, false]]);
+    const m = months(d, TODAY)[0]!;
+    expect(m.sessions).toBe(3);
+    expect(m.days).toHaveLength(4);
+    const s = stats(d, TODAY);
+    expect(s.total).toBe(3);
+    expect(s.thisMonth).toBe(3);
+    expect(s.last).toBe("2026-11-12");
+  });
+  it("the Zalo text lists only counted days", () => {
+    expect(monthText("Nguyên", months(days(rows), TODAY)[0]!)).toBe("Nguyên · Tháng 11/2026: 3 buổi — 03/11, 10/11, 12/11.");
+  });
+  it("only parent notes: zero sessions, no last, no average", () => {
+    const d = days([note("2026-10-01", { authorRole: "parent" })]);
+    expect(stats(d, TODAY)).toEqual({ total: 0, thisMonth: 0, perWeek: null, last: null });
+    expect(monthText("Nguyên", months(d, TODAY)[0]!)).toBe("Nguyên · Tháng 11/2026: chưa có buổi.");
+  });
+  it("the days that go to client components carry no note or curriculum ids", () => {
+    const d = days([note("2026-11-03", { id: "11111111-2222-3333-4444-555555555555" })], [{ noteId: "11111111-2222-3333-4444-555555555555", curriculumId: "99999999-2222-3333-4444-555555555555", unitCode: "U13" }]);
+    const json = JSON.stringify({ d, grid: weekGrid(d, TODAY), months: months(d, TODAY) });
+    expect(json).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/);
   });
 });

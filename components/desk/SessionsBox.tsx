@@ -10,7 +10,7 @@ import { BOX, BOX_LINK } from "./ProfileBox";
 
 /** "Tháng 11: 5 buổi · buổi gần nhất 12/11" (one line; nothing when there is no session or the notes could not be read). */
 function monthLine(days: SessionDay[] | null, todayIso: string): string | null {
-  if (!days || days.length === 0) return null;
+  if (!days || !days.some((d) => d.sessions > 0)) return null;
   const s = stats(days, todayIso);
   const month = Number(todayIso.slice(5, 7));
   return s.thisMonth > 0 ? deskCopy.monthLine(month, s.thisMonth, lastText(s.last)) : deskCopy.monthLineNone(month, lastText(s.last));

@@ -22,10 +22,14 @@ export function currentUnitLines(cards: readonly CardLike[]): { lines: string[];
   return { lines: all.slice(0, 2), more: Math.max(0, all.length - 2) };
 }
 
-/** "Thứ Tư 12/11/2026" (the weekday of an ISO date). */
-export function longDay(iso: string): string {
+/** "Thứ Tư" (the weekday of an ISO date). */
+export function weekdayLong(iso: string): string {
   const i = (new Date(`${iso}T00:00:00Z`).getUTCDay() + 6) % 7;
-  return `${sessionStatsCopy.weekdaysLong[i]} ${dayMonth(iso)}/${iso.slice(0, 4)}`;
+  return sessionStatsCopy.weekdaysLong[i]!;
+}
+/** "Thứ Tư 12/11/2026". */
+export function longDay(iso: string): string {
+  return `${weekdayLong(iso)} ${dayMonth(iso)}/${iso.slice(0, 4)}`;
 }
 
 /** "1,5" (Vietnamese decimal comma) or the dash. */

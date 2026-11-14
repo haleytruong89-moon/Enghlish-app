@@ -17,11 +17,11 @@ const month = months(sessionDays(rows, taught, () => "Unreal time"), "2026-11-14
 describe("MonthSheet", () => {
   it("total, table columns, roles, the private day without Units", () => {
     render(<MonthSheet alias="Nguyên" month={month} />);
-    expect(screen.getByTestId("month-total").textContent).toBe("5 buổi");
+    expect(screen.getByTestId("month-total").textContent).toBe("4 buổi");
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(sessionMonthCopy.title("Nguyên", "11/2026"));
     for (const c of Object.values(sessionMonthCopy.cols)) expect(screen.getByText(c)).toBeTruthy();
     expect(screen.getByTestId("sheet-row-2026-11-03").textContent).toContain("U13 Unreal time");
-    expect(screen.getByTestId("sheet-row-2026-11-05").textContent).toContain("Phụ huynh");
+    expect(screen.getByTestId("sheet-row-2026-11-05").textContent).toContain(sessionMonthCopy.parentOnly);
     const p = screen.getByTestId("sheet-row-2026-11-10").textContent!;
     expect(p).toContain(sessionMonthCopy.privateNote);
     expect(p).not.toContain("U99");
@@ -33,7 +33,7 @@ describe("MonthSheet", () => {
     fireEvent.click(screen.getByTestId("month-copy"));
     await waitFor(() => expect(screen.getByTestId("month-copy").textContent).toBe(sessionMonthCopy.copied));
     expect(writeText).toHaveBeenCalledWith(monthText("Nguyên", month));
-    expect(monthText("Nguyên", month)).toBe("Nguyên · Tháng 11/2026: 5 buổi — 03/11, 05/11, 10/11, 12/11, 14/11.");
+    expect(monthText("Nguyên", month)).toBe("Nguyên · Tháng 11/2026: 4 buổi — 03/11, 10/11, 12/11, 14/11.");
   });
   it("without a clipboard the text is shown selected to copy by hand", async () => {
     vi.stubGlobal("navigator", {});

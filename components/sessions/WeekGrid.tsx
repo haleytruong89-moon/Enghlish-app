@@ -38,11 +38,11 @@ export function WeekGrid({ rows }: { rows: WeekRow[] }) {
               }
               const units = unitsText(c.day.units);
               return (
-                <button key={c.date} type="button" role="gridcell" data-testid={`cell-${c.date}`} aria-label={sessionStatsCopy.cellHas(label, units)} aria-selected={picked === c.date}
+                <button key={c.date} type="button" role="gridcell" data-testid={`cell-${c.date}`} aria-label={c.day.parentOnly ? sessionStatsCopy.cellParent(label) : sessionStatsCopy.cellHas(label, units)} aria-selected={picked === c.date}
                   onClick={() => setPicked(c.date)}
-                  className="flex min-h-9 items-center justify-center gap-0.5 rounded-md border border-accent bg-[#d3e6df] text-xs font-semibold text-[#1d4136]">
+                  className={c.day.parentOnly ? "flex min-h-9 items-center justify-center gap-0.5 rounded-md border border-dashed border-muted bg-white text-xs text-muted" : "flex min-h-9 items-center justify-center gap-0.5 rounded-md border border-accent bg-[#d3e6df] text-xs font-semibold text-[#1d4136]"}>
                   <span aria-hidden="true">{Number(c.date.slice(8, 10))}</span>
-                  <span aria-hidden="true">●</span>
+                  <span aria-hidden="true">{c.day.parentOnly ? "○" : "●"}</span>
                 </button>
               );
             })}
@@ -51,7 +51,7 @@ export function WeekGrid({ rows }: { rows: WeekRow[] }) {
       </div>
       <p aria-live="polite" data-testid="week-detail" className="min-h-6 text-sm">
         {pick && picked
-          ? `${longDay(picked)} · ${unitsText(pick.units) || ""}${pick.sameDay ? ` ${sessionStatsCopy.sameDay}` : ""}`.replace(/ · $/, "")
+          ? [longDay(picked), pick.parentOnly ? sessionStatsCopy.parentOnly : unitsText(pick.units), pick.sameDay ? sessionStatsCopy.sameDay : ""].filter(Boolean).join(" · ")
           : <span className="text-muted">{sessionStatsCopy.detailHint}</span>}
       </p>
     </div>

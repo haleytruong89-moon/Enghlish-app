@@ -162,7 +162,7 @@ Hạn là một **ngày lịch Việt Nam**; nộp trước 24:00 ngày đó là
 Dùng để đối chiếu số buổi cuối tháng và theo dõi sự đều đặn. **Không có số tiền** trong app: học phí thỏa thuận ngoài app, app chỉ cho số buổi.
 
 1. **Ghi chú hiện hành** = ghi chú không bị dòng nào khác trỏ `supersedes_id` tới. Bản đã bị thay không tính.
-2. **Một buổi = một ngày lịch Việt Nam (`session_date`) có ít nhất một ghi chú hiện hành**, bất kể ai ghi (thầy/cô hay phụ huynh) và có chia sẻ với phụ huynh hay không. Hai ghi chú cùng ngày = **1 buổi**, kèm dấu "⚠ 2 ghi chú cùng ngày" ở bảng tháng.
+2. **Một buổi = một ngày lịch Việt Nam (`session_date`) có ít nhất một ghi chú hiện hành do thầy/cô ghi** (có chia sẻ với phụ huynh hay không đều tính). ❓ **Chờ phụ huynh xác nhận: chỉ đếm buổi do thầy/cô ghi** (an toàn khi đối chiếu học phí). Ngày chỉ có ghi chú của phụ huynh vẫn hiện trong lịch và danh sách tháng với dấu riêng "Phụ huynh ghi", nhưng **không** vào tổng, trung bình, số buổi tháng, "buổi gần nhất", chữ Zalo/bản in. Hai ghi chú cùng ngày = **1 buổi**, kèm dấu "⚠ 2 ghi chú cùng ngày" ở bảng tháng.
 3. Số buổi tháng M = số ngày có buổi trong M (theo `session_date`, không theo giờ ghi). Tổng = mọi tháng. "Buổi gần nhất" = ngày có buổi lớn nhất không quá hôm nay.
 4. **Trung bình/tuần** = số buổi trong **8 tuần trọn gần nhất** (T2–CN, không tính tuần đang chạy) ÷ 8; nếu buổi đầu tiên mới hơn 8 tuần thì chia cho số tuần trọn kể từ tuần của buổi đầu (tối thiểu 1); một chữ số thập phân ("1,5"); chưa có tuần trọn nào (buổi đầu nằm trong tuần đang chạy) hoặc chưa có buổi → "—".
 5. **Thầy/cô và phụ huynh thấy cùng một số.** Số đếm đọc bằng quyền máy chủ **sau cổng** `notes:read`, chỉ các cột cấu trúc (ngày, chuỗi sửa, vai người ghi, cờ chia sẻ, giờ ghi) và Unit đã dạy. Với ghi chú riêng tư (không chia sẻ), phụ huynh chỉ thấy **ngày**, không thấy nội dung và không thấy Unit.
@@ -171,6 +171,7 @@ Dùng để đối chiếu số buổi cuối tháng và theo dõi sự đều �
 | Ví dụ | Kết quả |
 |---|---|
 | 03/11 một ghi chú; 05/11 một ghi chú; 05/11 phụ huynh ghi thêm một ghi chú | Tháng 11: **2 buổi**; 05/11 có "⚠ 2 ghi chú cùng ngày" |
+| 07/11 chỉ có ghi chú do phụ huynh ghi | Hiện trong lịch/danh sách với dấu "Phụ huynh ghi"; **không** tính buổi |
 | Ghi chú 10/11 được sửa (bản mới) thành 11/11 | 10/11 **không** còn buổi; 11/11 có buổi; tổng không đổi |
 | Ghi chú riêng tư (không chia sẻ) ngày 12/11 | Thầy/cô và phụ huynh đều thấy **12/11 · 1 buổi**; phụ huynh không thấy nội dung, Unit |
 | Ghi chú 31/10 và 01/11 | Tháng 10: 1 buổi; tháng 11: 1 buổi |

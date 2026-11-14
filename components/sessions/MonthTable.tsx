@@ -27,7 +27,8 @@ export function MonthTable({ learnerId, months }: { learnerId: string; months: M
                   <span key={d.date}>
                     {i > 0 ? ", " : ""}
                     {dayMonth(d.date)}
-                    {d.sameDay ? <span title={sessionStatsCopy.sameDay} aria-label={sessionStatsCopy.sameDay}> ⚠</span> : null}
+                    {d.sameDay ? <span title={sessionStatsCopy.sameDay} aria-label={sessionStatsCopy.sameDay}>{sessionStatsCopy.sameDayMark}</span> : null}
+                    {d.parentOnly ? <span className="text-muted" data-testid={`parent-only-${d.date}`}> ({sessionStatsCopy.parentOnly})</span> : null}
                   </span>
                 ))}
               </td>

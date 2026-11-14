@@ -1,7 +1,8 @@
 /**
  * Counting lesson sessions (pure, DOMAIN §5.6). One session = one calendar day (Asia/Ho_Chi_Minh, the note's session_date) with at least
- * one CURRENT lesson note (not replaced by a later version), whoever wrote it and whether or not it is shared. Two notes the same day =
- * one session, flagged. No money here (U11).
+ * one CURRENT lesson note (not replaced by a later version) written by a TUTOR, shared or not. A day with only parent-written notes is
+ * listed (parentOnly) but is not a session: it is out of every total, average, month count and the Zalo text. Two notes the same day =
+ * one session, flagged. No money here (U11). Output carries no ids (it crosses to client components).
  */
 import { sessionMonthCopy } from "@/lib/copy/vi";
 import { addDays } from "@/lib/inquiries/dates";
@@ -29,13 +30,14 @@ export function sessionDays(rows: NoteRow[], taught: TaughtRow[], titleOf: (curr
           const k = `${t.curriculumId}/${t.unitCode}`;
           if (seen.has(k)) continue;
           seen.add(k);
-          units.push({ curriculumId: t.curriculumId, code: t.unitCode, title: titleOf(t.curriculumId, t.unitCode) });
+          units.push({ code: t.unitCode, title: titleOf(t.curriculumId, t.unitCode) });
         }
       }
+      const byTutor = notes.some((n) => n.authorRole === "tutor");
       return {
         date,
-        noteIds: notes.map((n) => n.id),
-        sessions: 1,
+        sessions: byTutor ? 1 : 0,
+        parentOnly: !byTutor,
         sameDay: notes.length > 1,
         units,
         authors: [...new Set(notes.map((n) => n.authorRole))],
@@ -74,7 +76,8 @@ export function weekStart(iso: string): string {
  * Average per week (U12): sessions in the last 8 FULL weeks (Mon–Sun, the running week is not counted) ÷ 8; when the first session is
  * newer, ÷ the full weeks since the week of the first session (at least 1); no full week yet → null.
  */
-export function stats(days: SessionDay[], todayIso: string): SessionStats {
+export function stats(allDays: SessionDay[], todayIso: string): SessionStats {
+  const days = allDays.filter((d) => d.sessions > 0);
   const total = days.reduce((a, d) => a + d.sessions, 0);
   const thisMonth = days.filter((d) => monthOf(d.date) === monthOf(todayIso)).reduce((a, d) => a + d.sessions, 0);
   const past = days.filter((d) => d.date <= todayIso);
@@ -116,5 +119,5 @@ export const monthLabel = (m: string): string => `${m.slice(5, 7)}/${m.slice(0, 
 
 /** The text to paste into Zalo (U25), with the child's alias. */
 export function monthText(alias: string, m: MonthSummary): string {
-  return sessionMonthCopy.text(alias, monthLabel(m.month), m.sessions, m.days.map((d) => dayMonth(d.date)).join(", "));
+  return sessionMonthCopy.text(alias, monthLabel(m.month), m.sessions, m.days.filter((d) => d.sessions > 0).map((d) => dayMonth(d.date)).join(", "));
 }
