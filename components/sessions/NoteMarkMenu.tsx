@@ -14,12 +14,13 @@ const KIND_TEXT: Record<Kind, string> = { regular: sessionKindCopy.regular, make
 
 /** "Đánh dấu" on one current lesson note: Thường · Học bù (+ the absence it makes up) · Không tính (a reason is required). The newest mark wins. */
 export function NoteMarkMenu({
-  learnerId, noteId, current, makeupChoices, parentNote,
-}: { learnerId: string; noteId: string; current: Kind; makeupChoices: { id: string; label: string }[]; parentNote: boolean }) {
+  learnerId, noteId, current, currentMakeupFor = null, makeupChoices, parentNote,
+}: { learnerId: string; noteId: string; current: Kind; currentMakeupFor?: string | null; makeupChoices: { id: string; label: string }[]; parentNote: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<Kind>(current);
-  const [makeupFor, setMakeupFor] = useState("");
+  const linkOf = () => (currentMakeupFor && makeupChoices.some((c) => c.id === currentMakeupFor) ? currentMakeupFor : "");
+  const [makeupFor, setMakeupFor] = useState(linkOf);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const clientId = useRef(crypto.randomUUID());
@@ -28,6 +29,8 @@ export function NoteMarkMenu({
   async function save() {
     setError(null);
     if (kind === "not_counted" && reason.trim().length < 5) return setError(sessionKindCopy.reasonNeeded);
+    // Nothing changed on a note that is already Học bù with the same absence: no new mark row, the link stays.
+    if (kind === "makeup" && current === "makeup" && makeupFor === (currentMakeupFor ?? "")) return setOpen(false);
     const r = await track(() => postJson(`/api/learners/${learnerId}/sessions/marks`, {
       client_id: clientId.current, note_id: noteId, kind,
       ...(kind === "makeup" && makeupFor ? { makeup_for: makeupFor } : {}),
@@ -41,7 +44,7 @@ export function NoteMarkMenu({
 
   if (!open) {
     return (
-      <button type="button" onClick={() => { setKind(current); setOpen(true); }} data-testid={`note-mark-${noteId}`} className="mt-2 min-h-11 rounded-lg border border-line bg-white px-4 text-sm font-semibold text-ink">
+      <button type="button" onClick={() => { setKind(current); setMakeupFor(linkOf()); setOpen(true); }} data-testid={`note-mark-${noteId}`} className="mt-2 min-h-11 rounded-lg border border-line bg-white px-4 text-sm font-semibold text-ink">
         {sessionKindCopy.mark}
         <span className="sr-only">: {KIND_TEXT[current]}</span>
       </button>
@@ -51,14 +54,14 @@ export function NoteMarkMenu({
     <div className="mt-2 flex flex-col gap-2 rounded-lg border border-line p-3" data-testid={`note-mark-box-${noteId}`}>
       <div role="radiogroup" aria-label={sessionKindCopy.label} className="flex flex-wrap gap-2">
         {(["regular", "makeup", "not_counted"] as const).map((k) => (
-          <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)} data-testid={`note-mark-kind-${k}`} className={seg(kind === k)}>{KIND_TEXT[k]}</button>
+          <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => { if (k !== kind) clientId.current = crypto.randomUUID(); setKind(k); }} data-testid={`note-mark-kind-${k}`} className={seg(kind === k)}>{KIND_TEXT[k]}</button>
         ))}
       </div>
       {parentNote ? <p className="text-xs text-muted">{sessionKindCopy.parentNoteHint}</p> : null}
       {kind === "makeup" && makeupChoices.length > 0 ? (
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-muted">{sessionKindCopy.makeupFor}</span>
-          <select value={makeupFor} onChange={(e) => setMakeupFor(e.target.value)} data-testid="note-mark-makeup-for" className={`max-w-72 ${field}`}>
+          <select value={makeupFor} onChange={(e) => { clientId.current = crypto.randomUUID(); setMakeupFor(e.target.value); }} data-testid="note-mark-makeup-for" className={`max-w-72 ${field}`}>
             <option value="">{sessionKindCopy.makeupForNone}</option>
             {makeupChoices.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>

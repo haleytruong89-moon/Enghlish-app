@@ -52,7 +52,7 @@ describe("MonthSheet", () => {
     expect(screen.getByTestId("month-copy").className).toContain("print:hidden");
   });
   it("an empty month", () => {
-    render(<MonthSheet alias="Nguyên" month={{ month: "2026-10", sessions: 0, days: [], billing: { sessions: 0, makeups: 0, absences: { student: 0, tutor: 0, other: 0 }, absenceTotal: 0, billable: 0, dates: [], absenceDates: [] } }} />);
+    render(<MonthSheet alias="Nguyên" month={{ month: "2026-10", sessions: 0, days: [], billing: { sessions: 0, makeups: 0, absences: { student: 0, tutor: 0, other: 0 }, absenceTotal: 0, billable: 0, dates: [], absenceDates: [], clashDates: [] } }} />);
     expect(screen.getByTestId("month-empty")).toBeTruthy();
   });
 });
@@ -61,7 +61,12 @@ describe("parseMonth (the page answers 404 for null)", () => {
   it("accepts a real month up to today's, refuses the rest", () => {
     expect(parseMonth("2026-11", "2026-11-14")).toBe("2026-11");
     expect(parseMonth("2026-01", "2026-11-14")).toBe("2026-01");
-    for (const bad of ["2026-13", "2026-00", "abc", "2026-12", "2027-01", "2026-1", "2026-11-01"]) expect(parseMonth(bad, "2026-11-14"), bad).toBeNull();
+    // up to 2 months ahead (the +60-day window of absences)
+    expect(parseMonth("2026-12", "2026-11-14")).toBe("2026-12");
+    expect(parseMonth("2027-01", "2026-11-14")).toBe("2027-01");
+    expect(parseMonth("2026-02", "2025-12-31")).toBe("2026-02");
+    expect(parseMonth("2026-03", "2025-12-31")).toBeNull();
+    for (const bad of ["2026-13", "2026-00", "abc", "2027-02", "2026-1", "2026-11-01"]) expect(parseMonth(bad, "2026-11-14"), bad).toBeNull();
   });
 });
 
@@ -79,7 +84,14 @@ describe("MonthSheet 3B", () => {
     expect(screen.getByTestId("sheet-row-2026-11-12").textContent).toContain("học bù");
   });
   it("the copied text adds the makeups, the absences and the billable count", () => {
-    expect(monthText("Nguyên", m)).toBe("Nguyên · Tháng 11/2026: 3 buổi — 03/11, 10/11, 12/11 · học bù 1 · nghỉ 1 (thầy/cô, tính phí) · tính phí 3 buổi.");
+    expect(monthText("Nguyên", m)).toBe("Nguyên · Tháng 11/2026: 3 buổi — 03/11, 10/11, 12/11 · học bù 1 · nghỉ 1 (05/11 thầy/cô, tính phí) · tính phí 3 buổi.");
+  });
+  it("a live absence on a day with a session is flagged in the sheet", () => {
+    const clash = months(d, "2026-11-14", [...abs, { ...abs[0]!, id: "a2", absentOn: "2026-11-10" }])[0]!;
+    render(<MonthSheet alias="Nguyên" month={clash} billing />);
+    expect(screen.getByTestId("sheet-clash-2026-11-10")).toBeTruthy();
+    expect(screen.getByTestId("absence-clash-2026-11-10")).toBeTruthy();
+    expect(screen.queryByTestId("absence-clash-2026-11-05")).toBeNull();
   });
   it("without billing the sheet has no 3B block", () => {
     render(<MonthSheet alias="Nguyên" month={m} />);

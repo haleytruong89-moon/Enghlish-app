@@ -80,6 +80,28 @@ const view = (over: Partial<LessonNoteView>): LessonNoteView => ({
   id: NOTE, learnerId: "L1", tutorMemberId: "m1", sessionDate: "2026-11-07", goals: "Ôn bài", observed: null, supportLevel: null, nextActions: [], practisedTargetIds: [],
   published: true, supersedesId: null, createdAt: "2026-11-07T10:00:00Z", current: true, weakTagKeys: [], messageToLearner: null, noteForParent: null, authorRole: "tutor", ...over,
 });
+describe("editing a note that is already a makeup", () => {
+  const choices = [{ id: "a1", label: "19/11 · con, không tính phí" }, { id: "a2", label: "20/11 · con, có tính phí" }];
+  it("preselects its absence; saving without a change posts nothing and keeps the link", () => {
+    const f = fetchMock(201, { id: "m", replayed: false });
+    render(<NoteMarkMenu learnerId="L1" noteId={NOTE} current="makeup" currentMakeupFor="a2" makeupChoices={choices} parentNote={false} />);
+    fireEvent.click(screen.getByTestId(`note-mark-${NOTE}`));
+    expect((screen.getByTestId("note-mark-makeup-for") as HTMLSelectElement).value).toBe("a2");
+    fireEvent.click(screen.getByTestId("note-mark-save"));
+    expect(f).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("note-mark-save")).toBeNull();
+  });
+  it("changing to another absence posts the new link; switching to Thường and back does not lose the preselection", async () => {
+    const f = fetchMock(201, { id: "m", replayed: false });
+    render(<NoteMarkMenu learnerId="L1" noteId={NOTE} current="makeup" currentMakeupFor="a2" makeupChoices={choices} parentNote={false} />);
+    fireEvent.click(screen.getByTestId(`note-mark-${NOTE}`));
+    fireEvent.change(screen.getByTestId("note-mark-makeup-for"), { target: { value: "a1" } });
+    fireEvent.click(screen.getByTestId("note-mark-save"));
+    await waitFor(() => expect(f).toHaveBeenCalled());
+    expect(bodyOf(f)).toMatchObject({ kind: "makeup", makeup_for: "a1" });
+  });
+});
+
 describe("the notes list with marks", () => {
   const props = { learnerId: "L1", targets: [], canWrite: false, memberId: "m9", today: "2026-11-14", minDate: "2026-07-16" };
   it("a Không tính note is struck through with its reason; a makeup note has the Học bù tag; every note has the menu", () => {

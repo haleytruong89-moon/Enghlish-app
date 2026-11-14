@@ -83,6 +83,7 @@ export function SessionNoteForm({
   const [savedId, setSavedId] = useState<string | null>(null);
   const [sameNote, setSameNote] = useState<{ practised: string; weak: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  // The client id belongs to ONE kind (and one absence): changing either gets a new id, so a replay of a lost answer can never keep the other kind.
   const [kind, setKind] = useState<"regular" | "makeup">("regular");
   const [makeupFor, setMakeupFor] = useState("");
   const { state: saveState, track } = useSaveStatus({ date, studied, weak, practised, message, parentNote, rechecks, taught, kind, makeupFor });
@@ -183,7 +184,7 @@ export function SessionNoteForm({
           <div role="radiogroup" aria-labelledby="session-kind-label" className="flex flex-wrap gap-2">
             {([["regular", sessionKindCopy.regular], ["makeup", sessionKindCopy.makeup]] as const).map(([k, text]) => (
               <button key={k} type="button" role="radio" aria-checked={kind === k} data-testid={`session-kind-${k}`} className={seg(kind === k)}
-                onClick={() => { setKind(k); if (k === "regular") setMakeupFor(""); }}>
+                onClick={() => { if (k !== kind) clientId.current = crypto.randomUUID(); setKind(k); if (k === "regular") setMakeupFor(""); }}>
                 {text}
               </button>
             ))}
@@ -191,7 +192,7 @@ export function SessionNoteForm({
           {kind === "makeup" && makeupChoices.length > 0 ? (
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-muted">{sessionKindCopy.makeupFor}</span>
-              <select value={makeupFor} onChange={(e) => setMakeupFor(e.target.value)} data-testid="session-makeup-for" className={`min-h-11 max-w-72 ${field}`}>
+              <select value={makeupFor} onChange={(e) => { clientId.current = crypto.randomUUID(); setMakeupFor(e.target.value); }} data-testid="session-makeup-for" className={`min-h-11 max-w-72 ${field}`}>
                 <option value="">{sessionKindCopy.makeupForNone}</option>
                 {makeupChoices.map((c) => (
                   <option key={c.id} value={c.id}>{c.label}</option>

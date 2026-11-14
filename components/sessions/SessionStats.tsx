@@ -2,7 +2,7 @@ import { sessionBillingCopy, sessionStatsCopy } from "@/lib/copy/vi";
 import type { AbsenceRow } from "@/lib/sessions/types";
 import { AbsenceForm } from "./AbsenceForm";
 import { addDays } from "@/lib/inquiries/dates";
-import { months as monthsOf, stats as statsOf, weekGrid } from "@/lib/sessions/count";
+import { liveAbsences, months as monthsOf, stats as statsOf, weekGrid } from "@/lib/sessions/count";
 import type { SessionDay } from "@/lib/sessions/types";
 import { currentUnitLines, perWeekText } from "@/lib/sessions/view";
 import { MonthTable } from "./MonthTable";
@@ -47,7 +47,7 @@ export function SessionStats({ learnerId, days, today, cards, absences = [], bil
           )}
         </div>
       </div>
-      {days.length === 0 && (!billing || absences.length === 0) ? (
+      {days.length === 0 && (!billing || liveAbsences(absences).length === 0) ? (
         <p className="rounded-xl border border-line bg-white px-5 py-4" data-testid="sessions-none">{sessionStatsCopy.none}</p>
       ) : (
         <>

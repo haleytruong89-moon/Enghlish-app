@@ -36,6 +36,7 @@ export function MonthTable({ learnerId, months, billing = false }: { learnerId: 
                     {dayMonth(d.date)}
                     {d.sameDay ? <span title={sessionStatsCopy.sameDay} aria-label={sessionStatsCopy.sameDay}>{sessionStatsCopy.sameDayMark}</span> : null}
                     {d.makeup ? <span className="text-muted"> ({sessionBillingCopy.makeupDay.toLowerCase()})</span> : null}
+                    {billing && m.billing.clashDates.includes(d.date) ? <span title={sessionBillingCopy.clash} aria-label={sessionBillingCopy.clash} data-testid={`clash-${d.date}`}>{sessionBillingCopy.clashMark}</span> : null}
                     {d.parentOnly ? <span className="text-muted" data-testid={`parent-only-${d.date}`}> ({sessionStatsCopy.parentOnly})</span> : null}
                   </span>
                 ))}

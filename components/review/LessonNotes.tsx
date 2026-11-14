@@ -19,6 +19,7 @@ export function LessonNotes({
   tagLabels = {},
   marks,
   makeupChoices = [],
+  makeupChoicesByNote = {},
 }: {
   learnerId: string;
   notes: LessonNoteView[];
@@ -31,8 +32,10 @@ export function LessonNotes({
   /** Tag key → label, for the "Điểm cần củng cố" of notes written with "Ghi buổi học" (v2). */
   tagLabels?: Record<string, string>;
   /** 3B: the kind that applies to each current note (note id → kind and reason). Absent = the mark menu is off (0030 not applied yet). */
-  marks?: Record<string, { kind: "regular" | "makeup" | "not_counted"; reason: string | null }>;
+  marks?: Record<string, { kind: "regular" | "makeup" | "not_counted"; reason: string | null; makeupFor?: string | null }>;
   makeupChoices?: { id: string; label: string }[];
+  /** Per note that is already a makeup: the choices plus the absence it points to. */
+  makeupChoicesByNote?: Record<string, { id: string; label: string }[]>;
 }) {
   const [editing, setEditing] = useState<LessonNoteView | null>(null);
   const titleOf = new Map(targets.map((t) => [t.id, t.title]));
@@ -96,7 +99,7 @@ export function LessonNotes({
                   {notesPage.practisedTitle}: {n.practisedTargetIds.map((k) => titleOf.get(k) ?? fallbackLabels.skill).join("; ")}
                 </p>
               ) : null}
-              {marks ? <NoteMarkMenu learnerId={learnerId} noteId={n.id} current={marks[n.id]?.kind ?? "regular"} makeupChoices={makeupChoices} parentNote={n.authorRole === "parent"} /> : null}
+              {marks ? <NoteMarkMenu learnerId={learnerId} noteId={n.id} current={marks[n.id]?.kind ?? "regular"} currentMakeupFor={marks[n.id]?.makeupFor ?? null} makeupChoices={makeupChoicesByNote[n.id] ?? makeupChoices} parentNote={n.authorRole === "parent"} /> : null}
               {canWrite && n.tutorMemberId === memberId && n.supportLevel !== null ? (
                 <button type="button" data-testid={`note-edit-${n.id}`} onClick={() => setEditing(n)} className="mt-2 min-h-11 rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent">
                   {notesPage.edit}

@@ -66,6 +66,7 @@ export function MonthSheet({ alias, month, billing = false }: { alias: string; m
                 <td className="py-2 pr-3">
                   {d.parentOnly ? sessionMonthCopy.parentOnly : d.privateOnly ? sessionMonthCopy.privateNote : unitsText(d.units) || sessionMonthCopy.noUnits}
                   {d.makeup ? <span className="text-muted"> ({sessionBillingCopy.makeupDay.toLowerCase()})</span> : null}
+                  {billing && month.billing.clashDates.includes(d.date) ? <span data-testid={`sheet-clash-${d.date}`}> {sessionBillingCopy.clash}</span> : null}
                 </td>
                 <td className="py-2">{d.authors.map((a) => todayPage.roleLabel[a]).join(", ")}</td>
               </tr>
@@ -78,7 +79,7 @@ export function MonthSheet({ alias, month, billing = false }: { alias: string; m
           <h2 className="text-sm font-semibold">{sessionBillingCopy.absenceDays}</h2>
           <ul className="text-sm">
             {month.billing.absenceDates.map((a, i) => (
-              <li key={`${a.date}-${i}`}>{dayMonth(a.date)} · {absenceCopy.who[a.requestedBy]}, {a.billable ? absenceCopy.billableYes.toLowerCase() : absenceCopy.billableNo.toLowerCase()}</li>
+              <li key={`${a.date}-${i}`}>{dayMonth(a.date)} · {absenceCopy.who[a.requestedBy]}, {a.billable ? absenceCopy.billableYes.toLowerCase() : absenceCopy.billableNo.toLowerCase()}{month.billing.clashDates.includes(a.date) ? <span data-testid={`absence-clash-${a.date}`}> {sessionBillingCopy.clash}</span> : null}</li>
             ))}
           </ul>
         </div>

@@ -42,6 +42,7 @@ export function WeekGrid({ rows }: { rows: WeekRow[] }) {
               const aria = [
                 c.day ? (c.day.parentOnly ? sessionStatsCopy.cellParent(label) : sessionStatsCopy.cellHas(label, [units, c.day.makeup ? sessionBillingCopy.makeupDay.toLowerCase() : ""].filter(Boolean).join(" · "))) : null,
                 c.absence ? sessionBillingCopy.cellAbsence(label, sessionBillingCopy.partyShort[c.absence.requestedBy], c.absence.billable) : null,
+                c.clash ? sessionBillingCopy.cellClash(label) : null,
               ].filter(Boolean).join(" · ");
               const counted = !!c.day && !c.day.parentOnly;
               return (
@@ -52,6 +53,7 @@ export function WeekGrid({ rows }: { rows: WeekRow[] }) {
                   <span aria-hidden="true">{c.day ? (c.day.parentOnly ? "○" : "●") : ""}</span>
                   {c.day?.makeup ? <span aria-hidden="true" data-testid={`cell-makeup-${c.date}`}>{sessionBillingCopy.makeupMark}</span> : null}
                   {c.absence ? <span aria-hidden="true" data-testid={`cell-absence-${c.date}`}>{sessionBillingCopy.absenceMark}</span> : null}
+                  {c.clash ? <span aria-hidden="true" data-testid={`cell-clash-${c.date}`}>{sessionBillingCopy.clashMark}</span> : null}
                 </button>
               );
             })}
@@ -65,6 +67,7 @@ export function WeekGrid({ rows }: { rows: WeekRow[] }) {
               pick ? (pick.parentOnly ? sessionStatsCopy.parentOnly : unitsText(pick.units)) : "",
               pick?.makeup ? sessionBillingCopy.makeupDay : "",
               pick?.sameDay ? sessionStatsCopy.sameDay : "",
+              pickCell?.clash ? sessionBillingCopy.clash : "",
               pickAbsence ? `${sessionBillingCopy.absenceDays}: ${absenceLine({ absentOn: picked, ...pickAbsence })}` : "",
             ].filter(Boolean).join(" · ")
           : <span className="text-muted">{sessionStatsCopy.detailHint}</span>}

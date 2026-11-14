@@ -35,8 +35,12 @@ export default async function NotesPage({ params }: { params: Promise<{ id: stri
   const today = todayVn();
   // 3B: the kind of each current note (notes of this page only), when the tables of 0030 can be read.
   const marks = facts?.billing
-    ? Object.fromEntries([...effectiveKinds(facts.notes, facts.marks)].map(([id, m]) => [id, { kind: m?.kind ?? "regular", reason: m?.reason ?? null }]))
+    ? Object.fromEntries([...effectiveKinds(facts.notes, facts.marks)].map(([id, m]) => [id, { kind: m?.kind ?? "regular", reason: m?.reason ?? null, makeupFor: m?.makeupFor ?? null }]))
     : undefined;
+
+  const choicesByNote = facts?.billing
+    ? Object.fromEntries(notes.filter((n) => marks?.[n.id]?.kind === "makeup").map((n) => [n.id, makeupChoices(facts.notes, facts.marks, facts.absences, n.id)]))
+    : {};
 
   return (
     <>
@@ -58,7 +62,7 @@ export default async function NotesPage({ params }: { params: Promise<{ id: stri
           <p className="mt-6 rounded-xl border border-line bg-white px-5 py-4 text-sm text-muted" data-testid="sessions-unreadable">{sessionStatsCopy.unreadable}</p>
         )}
         <h2 className="mt-8 text-lg font-semibold">{notesPage.link}</h2>
-        <LessonNotes learnerId={learner.id} notes={notes} targets={targets} canWrite={canWrite} memberId={member.id} today={today} minDate={addDays(today, -120)} tagLabels={tagLabels} marks={marks} makeupChoices={facts?.billing ? makeupChoices(facts.notes, facts.marks, facts.absences) : []} />
+        <LessonNotes learnerId={learner.id} notes={notes} targets={targets} canWrite={canWrite} memberId={member.id} today={today} minDate={addDays(today, -120)} tagLabels={tagLabels} marks={marks} makeupChoices={facts?.billing ? makeupChoices(facts.notes, facts.marks, facts.absences) : []} makeupChoicesByNote={choicesByNote} />
       </div>
     </>
   );
