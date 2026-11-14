@@ -2,6 +2,7 @@
 import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { InboxBadge } from "./InboxBadge";
 import { appFeedback, shellCopy } from "@/lib/copy/vi";
 import type { NavLink, NavModel } from "@/lib/shell/nav";
 import { activeFor, feedbackHref } from "@/lib/shell/paths";
@@ -43,6 +44,7 @@ export function SidebarNav({ nav, learnerId }: { nav: NavModel; learnerId: strin
                   <Link href={s.href} onClick={close} data-testid={`nav-${s.key}`} data-level="section" aria-current={current ? "page" : undefined}
                     className={`${item} text-[15px] ${current ? "bg-[#e3ece8] font-semibold text-[#1d4136]" : "font-medium text-ink hover:bg-[#eceee8]"}`}>
                     {s.label}
+                    {s.key === "inbox" && learnerId ? <InboxBadge learnerId={learnerId} /> : null}
                   </Link>
                 ) : (
                   <span data-testid={`nav-${s.key}`} aria-disabled="true" data-status={s.status} data-level="section" className={`${item} cursor-default text-[15px] font-medium text-muted`}>

@@ -2148,6 +2148,7 @@ export const shellCopy = {
     inbox: "Chờ duyệt",
   },
   soon: "Sắp có",
+  inboxBadge: (n: string) => `${n} việc đang chờ duyệt`,
   parentGroup: "Phụ huynh",
   inquiriesChild: "Bài chủ đề trong app",
   inboxAll: "Tất cả việc chờ",
