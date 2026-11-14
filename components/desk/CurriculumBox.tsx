@@ -4,7 +4,7 @@ import { deskCopy, shellCopy } from "@/lib/copy/vi";
 import type { CurriculumCard } from "@/lib/curriculum/shape";
 import { BOX, BOX_LINK } from "./ProfileBox";
 
-/** Stands in the "Lộ trình" slot of the prototype until W5 (plan K7). */
+/** Stands in the "Lộ trình" slot of the prototype until W6 (plan K7; the roadmap of milestones is live since W4a, the multi-line 12-month roadmap comes in W6). */
 export function CurriculumBox({ learnerId, cards }: { learnerId: string; cards: CurriculumCard[] | null }) {
   return (
     <section data-testid="desk-curricula" className={BOX}>

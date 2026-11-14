@@ -11,6 +11,7 @@ vi.mock("@/lib/import/load", () => ({ loadImportPending: (...a: unknown[]) => m.
 vi.mock("@/lib/tutorwork/load", () => ({ loadToday: vi.fn() }));
 vi.mock("@/lib/workdesk/load", () => ({ loadIntake: vi.fn() }));
 vi.mock("@/lib/sessions/load", () => ({ loadSessionFacts: (...a: unknown[]) => m.loadSessionFacts(...a) }));
+vi.mock("@/lib/roadmap/load", () => ({ loadRoadmap: vi.fn().mockResolvedValue({ kind: "unavailable" }) }));
 vi.mock("@/lib/levels/load", () => ({ loadLevelProfile: vi.fn(), loadRecentLevelChanges: vi.fn() }));
 
 import { loadDesk, loadPendingRows } from "@/lib/desk/load";

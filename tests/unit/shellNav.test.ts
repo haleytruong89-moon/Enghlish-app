@@ -25,17 +25,13 @@ describe("staff sidebar model", () => {
     expect(r.children.map((c) => c.href)).toEqual([`/learners/${NG}/imports/new`, `/learners/${NG}/results/new`]);
   });
 
-  it("sections of later slices are 'soon' (Bản đồ kiến thức is live since W3): no link, no children (no dead link, no 404)", () => {
+  it("every section is live since W4a (Lộ trình opens /roadmap); Bản đồ kiến thức is live since W3", () => {
     const n = buildNav("tutor", NG, { revisionsReady: true });
-    for (const key of ["roadmap"] as const) {
-      const s = n.sections.find((x) => x.key === key)!;
-      expect(s.status).toBe("soon");
-      expect(s.href).toBeNull();
-      expect(s.children).toEqual([]);
-    }
+    for (const s of n.sections) expect(s.status, s.key).toBe("live");
+    const r = n.sections.find((x) => x.key === "roadmap")!;
+    expect([r.status, r.lane, r.href, r.children]).toEqual(["live", null, `/learners/${NG}/roadmap`, []]);
     const k = n.sections.find((x) => x.key === "knowledge")!;
     expect([k.status, k.href]).toEqual(["live", `/learners/${NG}/knowledge`]);
-    expect(n.sections.find((x) => x.key === "roadmap")!.lane).toBe("W5");
   });
 
   it("every link is about the chosen child and no other", () => {

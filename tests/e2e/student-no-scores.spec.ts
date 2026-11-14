@@ -23,6 +23,20 @@ for (const key of ["studentAn", "studentNguyen"] as AccountKey[]) {
     // Studio B1: the child's review block, when present, never shows a ratio, a percentage or a count of right items.
     const review = page.locator('[data-testid="studio-review"]');
     if (await review.count()) expect(await review.innerText()).not.toMatch(/\d+\s*\/\s*\d+|%|đúng\s+\d/i);
+    // W4a: Hành trình shows counts of Units only: no %, no score, no level, no "đúng n".
+    await page.goto("/journey");
+    // PRD D35: a/b may appear only inside [data-count="work"] (counts of the child's own work); everything else is checked without them.
+    const journey = await page.evaluate(() => {
+      const c = document.body.cloneNode(true) as HTMLElement;
+      c.querySelectorAll('script, style, template, [data-count="work"]').forEach((e) => e.remove());
+      return c.textContent ?? "";
+    });
+    expect(journey).not.toMatch(SCORE_PATTERN);
+    expect(journey).not.toMatch(/(?<![\d/])\d{1,3}\s*\/\s*\d{1,3}(?![\d/])/);
+    expect(journey).not.toMatch(/%|(^|[^\p{L}])điểm(?!\p{L})|đúng\s+\d|\bsai\s+\d/iu);
+    expect(journey).not.toMatch(/đang học (A1|A2|B1|B2|C1|C2)/);
+    expect(journey).not.toContain(levelCopy.assumed);
+    expect(await page.locator('[data-testid^="mt-"]').evaluateAll((els) => els.every((e) => !/\d\s*\/\s*4\s*·/.test(e.getAttribute("aria-label") ?? "")))).toBe(true);
     // S6: the child's revision pages (todo and seen) and the home box are checked in the S6 serial suite of review.spec.ts, on real data.
   });
 }

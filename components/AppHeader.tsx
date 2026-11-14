@@ -2,7 +2,7 @@ import Link from "next/link";
 import { account, app, appFeedback, auth, practiceStudent } from "@/lib/copy/vi";
 
 /** `feedbackScreen` (adult pages only): the label of this screen; when given, the "Góp ý về app" link is shown and carries it to /feedback. */
-export function AppHeader({ name, showTestBadge, studentNav, feedbackScreen }: { name?: string; showTestBadge?: boolean; studentNav?: "next" | "practice"; feedbackScreen?: string }) {
+export function AppHeader({ name, showTestBadge, studentNav, feedbackScreen }: { name?: string; showTestBadge?: boolean; studentNav?: "next" | "practice" | "journey"; feedbackScreen?: string }) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line px-4 py-3 sm:px-6">
       {/* Wraps on a phone: the student nav drops to its own row instead of pushing the page sideways. */}
@@ -29,6 +29,14 @@ export function AppHeader({ name, showTestBadge, studentNav, feedbackScreen }: {
               className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm no-underline ${studentNav === "practice" ? "bg-[#f6e9df] font-semibold text-[#6e3410]" : "text-ink"}`}
             >
               {practiceStudent.navPractice}
+            </Link>
+            <Link
+              href="/journey"
+              data-testid="nav-journey"
+              aria-current={studentNav === "journey" ? "page" : undefined}
+              className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm no-underline ${studentNav === "journey" ? "bg-[#e3ece8] font-semibold text-accent" : "text-ink"}`}
+            >
+              {practiceStudent.navJourney}
             </Link>
           </nav>
         ) : null}

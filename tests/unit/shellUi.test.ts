@@ -38,11 +38,10 @@ describe("staff shell", () => {
     expect(html).toContain('data-testid="nav-profile-weak"');
     expect(html).not.toContain('data-testid="nav-assign-studio"');
   });
-  it("'soon' sections are not links", () => {
+  it("Lộ trình is a link to the roadmap page since W4a (no 'Sắp có' left)", () => {
     const html = render(shell(), "/");
-    expect(html).toMatch(/<span[^>]*data-testid="nav-roadmap"[^>]*aria-disabled="true"|<span[^>]*aria-disabled="true"[^>]*data-testid="nav-roadmap"/);
-    expect(html).toContain(shellCopy.soon);
-    expect(html).not.toContain("/roadmap");
+    expect(html).toMatch(/<a[^>]*data-testid="nav-roadmap"[^>]*href="\/learners\/[^"]+\/roadmap"|<a[^>]*href="\/learners\/[^"]+\/roadmap"[^>]*data-testid="nav-roadmap"/);
+    expect(html).not.toContain(shellCopy.soon);
   });
   it("'Góp ý về app' is always in the sidebar and carries the screen and the child", () => {
     const html = render(shell(), `/learners/${an.id}/weak`);

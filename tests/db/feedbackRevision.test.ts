@@ -151,7 +151,7 @@ describe("S6 feedback + revision (migration 0021)", () => {
     });
 
     it("track settings: A does not require a reason, B does; each track has its A3 target; the table is not readable by app roles", async () => {
-      const rows = await q1<{ track_id: string; key: string; value: unknown }>("select track_id, key, value from english.track_settings order by track_id, key");
+      const rows = await q1<{ track_id: string; key: string; value: unknown }>("select track_id, key, value from english.track_settings where key like 'revision_%' order by track_id, key");
       expect(rows).toEqual([
         { track_id: "A", key: "revision_reason_required", value: false },
         { track_id: "A", key: "revision_target_key", value: "A-A3-REDRAFT" },

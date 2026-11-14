@@ -59,11 +59,12 @@ Mỗi lát = một nhánh = một PR; có migration thì phụ huynh áp trướ
 | **W1** | Hồ sơ đầu vào (mục tiêu, mạnh/yếu ban đầu) + **Ghi chú dạy học** + **Góp ý về app** (gửi + trạng thái + màn phụ huynh trả lời) | `learner_goals`, `teaching_notes`, `app_feedback`, `app_feedback_events` | — | Nhỏ, không AI. Có kênh góp ý ngay từ lát đầu, các lát sau nhận góp ý thật |
 | **W2** | **Giáo trình**: nạp PDF mục lục → AI đọc → duyệt Unit + bảng nối Unit → nhãn → "đang học đến"; Ghi buổi chọn Unit đã dạy; nhãn hạt giống dạng câu nghe (R7) | `curricula` (không `kind`, R4), `curriculum_versions`, `curriculum_units`, `curriculum_unit_points`, `curriculum_unit_events`; `lesson_notes` thêm Unit; seed nhãn nghe | Công thức `curriculum-toc.v1` | Nền cho mọi lát sau |
 | **W3** | **Mức điểm kiến thức** (`PP-0.1`, đề xuất vào **cùng tab "Kỹ năng"** của Hộp duyệt — R1) + **Bản đồ kiến thức** + **Nạp bài đã làm** (mẫu `kind = 'imported'`, không thuộc bước nào — R2; phụ huynh tải, gia sư xác nhận — R8) | `point_policies` (seed), `point_decisions` (chỉ thêm), `point_state` (dẫn xuất); `attempts.provenance` thêm `imported` + mức hỗ trợ + ngày làm thật + mã băm file | Công thức `read-answers.v1` | Cần W2 để nối Unit; dùng ngay Progress Test thật |
-| **W4** | **4 cách giao bài**: ② file → con nộp ảnh/file → AI đọc → code so đáp án; ③ link → con nộp ảnh trang kết quả → điểm theo phần; ④ nhập nhanh khi ghi buổi. **Thang `CAM-WS-1`** cho bài viết/nói + quy đổi 0–4 (R6). Chờ duyệt gom mọi cách nộp + vòng góp ý ngắn cho AI | `submission_files`, `ai_feedback` (chỉ thêm), seed `CAM-WS-1` | `read-answers.v1` (dùng lại), `read-result-page.v1` | Gia sư dùng cả 4 cách (08/11) |
-| **W5** | **Lộ trình 12 tháng nhiều dòng** (có phiên bản, chỉ duyệt phần thay đổi, phụ huynh được báo) + **Kiểm tra tiến độ tháng** (Studio B1 đánh dấu "kiểm tra tháng") | `roadmap_versions` (chỉ thêm) | `roadmap.v1` | Cần độ phủ giáo trình (W2) + mức (W3) |
-| **W6** | **Vòng tháng**: nhận xét tháng nháp (4 mục quen dùng của cô, mỗi câu dẫn bằng chứng) + cờ "Cần đối chiếu"; kế hoạch buổi sau; gợi ý bài luyện (gộp Studio bước 2); **Tổng hợp góp ý** cho phụ huynh | `monthly_comments`, `comment_point_links`, `consistency_flags` | `monthly-comment.v1`, `session-plan.v1`, `practice-suggest.v1` | Cần đủ bằng chứng từ W3–W5 |
+| **W4a** | **Lộ trình mốc** (gia sư đặt mốc + đỉnh, app đề xuất từ giáo trình) + **"Hành trình"** của con (ngọn núi: Unit + mốc đã xác nhận, không điểm) | `roadmap_milestones`, `roadmap_main_curriculum` (chỉ thêm) | `roadmap:read`, `roadmap:write` | Kế hoạch `2026-11-14-w4-student-desk.md` |
+| **W5** | **4 cách giao bài**: ② file → con nộp ảnh/file → AI đọc → code so đáp án; ③ link → con nộp ảnh trang kết quả → điểm theo phần; ④ nhập nhanh khi ghi buổi. **Thang `CAM-WS-1`** cho bài viết/nói + quy đổi 0–4 (R6). Chờ duyệt gom mọi cách nộp + vòng góp ý ngắn cho AI | `submission_files`, `ai_feedback` (chỉ thêm), seed `CAM-WS-1` | `read-answers.v1` (dùng lại), `read-result-page.v1` | Gia sư dùng cả 4 cách (08/11) |
+| **W6** | **Lộ trình 12 tháng nhiều dòng** (có phiên bản, chỉ duyệt phần thay đổi, phụ huynh được báo) + **Kiểm tra tiến độ tháng** (Studio B1 đánh dấu "kiểm tra tháng") | `roadmap_versions` (chỉ thêm) | `roadmap.v1` | Cần độ phủ giáo trình (W2) + mức (W3) |
+| **W7** | **Vòng tháng**: nhận xét tháng nháp (4 mục quen dùng của cô, mỗi câu dẫn bằng chứng) + cờ "Cần đối chiếu"; kế hoạch buổi sau; gợi ý bài luyện (gộp Studio bước 2); **Tổng hợp góp ý** cho phụ huynh | `monthly_comments`, `comment_point_links`, `consistency_flags` | `monthly-comment.v1`, `session-plan.v1`, `practice-suggest.v1` | Cần đủ bằng chứng từ W3–W5 |
 
-Thứ tự có thể đổi W4 ↔ W5 nếu gia sư cần lộ trình sớm hơn. Mỗi lát có buổi gia sư thử bản preview trước khi gộp.
+Thứ tự có thể đổi W5 ↔ W6 nếu gia sư cần lộ trình sớm hơn. Mỗi lát có buổi gia sư thử bản preview trước khi gộp.
 
 ## 5. Yêu cầu chung cho mọi lát
 
@@ -103,9 +104,10 @@ Thứ tự có thể đổi W4 ↔ W5 nếu gia sư cần lộ trình sớm hơn
 | W1 | Gia sư sửa 4 ô Ghi chú dạy học, lịch sử giữ đủ; gửi góp ý về app, thấy trạng thái phụ huynh đổi; con không thấy gì mới |
 | W2 | Nạp PDF mục lục Destination → AI ra 26 Unit đúng thứ tự (bộ đề chuẩn), gia sư duyệt; nối Unit → nhãn chỉ trong danh sách đóng; "đang học đến" đúng 3 ví dụ DOMAIN §5.1; sửa sau duyệt tạo v2, bằng chứng cũ không đổi; nhãn nghe chọn được trong ô chọn |
 | W3 | Nạp Progress Test thật → 60 câu được tính đúng ngày 23/10; mức đúng 5 ví dụ DOMAIN §5.2; nạp trùng bị chặn; "làm cùng cô" không vượt mức 2; tính lại từ đầu cho kết quả giống hệt; **trạng thái S7a không đổi sau khi nạp** (R2); đề xuất mức điểm nằm trong tab "Kỹ năng" (R1) |
-| W4 | Con nộp ảnh bài giấy → AI đọc → code chấm; câu mờ → gia sư phán; trang kết quả link → điểm theo phần, không bịa câu sai; góp ý cho AI ghi đủ |
-| W5 | Lộ trình nhiều dòng (≥ 4 dòng cho Nguyên), tổng buổi khớp phép tính; duyệt phần thay đổi; phụ huynh thấy thông báo phiên bản mới |
-| W6 | Nhận xét tháng nháp có 4 mục, mỗi câu dẫn bằng chứng; cờ "Cần đối chiếu" đúng 3 ví dụ DOMAIN §5.4; Tổng hợp góp ý đếm đúng |
+| W4a | Gia sư đặt mốc + đỉnh, mỗi mốc ghi sửa/bỏ có lý do; con thấy ngọn núi chỉ có Unit + mốc đã xác nhận, không điểm/mức; đỉnh chưa xác nhận hiện "Đỉnh của bạn — … sẽ đặt tên" |
+| W5 | Con nộp ảnh bài giấy → AI đọc → code chấm; câu mờ → gia sư phán; trang kết quả link → điểm theo phần, không bịa câu sai; góp ý cho AI ghi đủ |
+| W6 | Lộ trình nhiều dòng (≥ 4 dòng cho Nguyên), tổng buổi khớp phép tính; duyệt phần thay đổi; phụ huynh thấy thông báo phiên bản mới |
+| W7 | Nhận xét tháng nháp có 4 mục, mỗi câu dẫn bằng chứng; cờ "Cần đối chiếu" đúng 3 ví dụ DOMAIN §5.4; Tổng hợp góp ý đếm đúng |
 
 ## 7. Rủi ro
 | Rủi ro | Cách giảm |
