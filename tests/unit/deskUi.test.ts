@@ -5,6 +5,8 @@ import { deskCopy, fallbackLabels, home, pendingCopy, todayPage } from "@/lib/co
 import type { DeskData } from "@/lib/desk/load";
 import type { ShellData } from "@/lib/shell/shell";
 import type { TodayData } from "@/lib/tutorwork/load";
+import { sessionDays } from "@/lib/sessions/count";
+import type { NoteRow } from "@/lib/sessions/types";
 import type { AssignmentView } from "@/lib/practice/types";
 
 vi.mock("server-only", () => ({}));
@@ -21,7 +23,7 @@ const today = (over: Partial<TodayData> = {}): TodayData => ({
   lastNote: { id: "n1", sessionDate: "2026-10-15", studied: "Unit 7", weakTagKeys: ["x-gone"], practisedTargetIds: [], message: "Had it not been for + N", authorRole: "tutor" },
   recent: { id: "r0", title: "Destination U1-12", takenOn: "2026-10-16", total: 60, correct: 50 }, practice: [], tagLabels: {}, ...over,
 } as TodayData);
-const data = (over: Partial<DeskData> = {}): DeskData => ({ today: today(), pending: { rows: [], failed: [], more: false }, intakeMissing: false, curricula: [], profile: null, recent: null, aiSettings: null, ...over });
+const data = (over: Partial<DeskData> = {}): DeskData => ({ today: today(), pending: { rows: [], failed: [], more: false }, intakeMissing: false, curricula: [], profile: null, recent: null, aiSettings: null, sessions: null, ...over });
 const render = (role: "tutor" | "parent", d: DeskData) => renderToStaticMarkup(createElement(DeskView, { shell: shell(role), learner, data: d, todayIso: "2026-10-18" }));
 
 describe("Bàn làm việc", () => {
@@ -89,5 +91,24 @@ describe("Bàn làm việc", () => {
   it("parent: the family summary line; tutor: none", () => {
     expect(render("parent", data())).toContain(home.parentSummary(1));
     expect(render("tutor", data())).not.toContain(home.parentSummary(1));
+  });
+});
+
+describe("one line with this month's sessions (U9/U10)", () => {
+  const nr = (d: string, id: string): NoteRow => ({ id, sessionDate: d, supersedesId: null, authorRole: "tutor", published: true, createdAt: d });
+  const line = (rows: NoteRow[] | null) => {
+    const h = render("tutor", data({ sessions: rows ? sessionDays(rows, [], () => null) : null }));
+    return h.match(/data-testid="desk-month-line"[^>]*>([^<]*)</)?.[1] ?? null;
+  };
+  it("count and last session, linked to the sessions page", () => {
+    expect(line([nr("2026-10-03", "a"), nr("2026-10-05", "b"), nr("2026-10-05", "b2"), nr("2026-10-12", "c")])).toBe(deskCopy.monthLine(10, 3, "12/10"));
+    expect(render("tutor", data({ sessions: sessionDays([nr("2026-10-03", "a")], [], () => null) }))).toContain(`href="/learners/${L}/notes"`);
+  });
+  it("a month without a session still names the last one", () => {
+    expect(line([nr("2026-09-28", "a")])).toBe(deskCopy.monthLineNone(10, "28/09"));
+  });
+  it("no session at all, or an unreadable count: no line", () => {
+    expect(line([])).toBeNull();
+    expect(line(null)).toBeNull();
   });
 });

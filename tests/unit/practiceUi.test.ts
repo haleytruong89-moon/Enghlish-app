@@ -143,7 +143,7 @@ describe("Bàn làm việc: practice", () => {
 
   it("shows only the counts of open practice (the list lives on the assign page)", () => {
     const html = render(createElement(SessionsBox, { learnerId, today: today([assignment()]), todayIso: "2026-10-17" }));
-    expect(html).toContain(`href="/learners/${learnerId}/assign"`);
+    expect(html).toContain(`href="/learners/${learnerId}/assign#assigned-list"`);
     expect(html).toContain(deskCopy.practiceCounts(1, 0, 0));
   });
 

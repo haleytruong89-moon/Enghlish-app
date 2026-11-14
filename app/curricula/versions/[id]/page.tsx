@@ -9,7 +9,8 @@ import { curriculumCopy, studioCopy } from "@/lib/copy/vi";
 import { loadVersionPage } from "@/lib/curriculum/load";
 import { NonUnitList } from "@/components/curriculum/NonUnitList";
 import { relatedUnits } from "@/lib/curriculum/rows";
-import { buildPrefill, prefillTitle } from "@/lib/prefill";
+import { chooserHref } from "@/lib/assign/ways";
+import { prefillTitle } from "@/lib/prefill";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { loadTags } from "@/lib/tutorwork/load";
 
@@ -28,9 +29,7 @@ export default async function CurriculumVersionPage({ params }: { params: Promis
   // "Giao bài này →" on the Review / Progress Test rows of an approved version: the name, the book page and the Units it revises come along.
   const rel = v.payload.ignored.map((_, k) => relatedUnits(v.payload, k));
   const links = v.payload.ignored.map((r, k) => {
-    const sp = buildPrefill({ title: prefillTitle(v.title, r.label, rel[k]!), pages: r.page !== null ? String(r.page) : null, units: rel[k] });
-    const q = sp.toString();
-    return { studio: `/studio/new?learner=${v.learnerId}${q ? `&${q}` : ""}`, assign: `/learners/${v.learnerId}/assign${q ? `?${q}` : ""}` };
+    return chooserHref(v.learnerId, { title: prefillTitle(v.title, r.label, rel[k]!), pages: r.page !== null ? String(r.page) : null, units: rel[k] });
   });
   const labelOf = Object.fromEntries(r.data.context.tags.map((t) => [t.key, t.label]));
   return (

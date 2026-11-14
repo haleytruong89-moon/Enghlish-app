@@ -1,12 +1,17 @@
 import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { SessionStats } from "@/components/sessions/SessionStats";
 import { LessonNotes } from "@/components/review/LessonNotes";
-import { learnerWithTrack, notesPage } from "@/lib/copy/vi";
+import { learnerWithTrack, notesPage, sessionStatsCopy } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { loadNotesPage } from "@/lib/review/load";
 import { getAuthUser } from "@/lib/auth/session";
+import { loadCurriculumCards } from "@/lib/curriculum/load";
+import { sessionDays } from "@/lib/sessions/count";
+import { loadSessionFacts } from "@/lib/sessions/load";
+import { unitTitleOf } from "@/lib/sessions/view";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +26,12 @@ export default async function NotesPage({ params }: { params: Promise<{ id: stri
 
   const { member, learner } = access.grant;
   const canWrite = member.role === "tutor";
-  const { notes, targets, tagLabels } = await loadNotesPage(learner.id, learner.trackId);
+  // Stats read after the gate above (admin client, same number for tutor and parent; plan U9). The cards only name the Units.
+  const [{ notes, targets, tagLabels }, facts, cards] = await Promise.all([
+    loadNotesPage(learner.id, learner.trackId),
+    loadSessionFacts(learner.id).catch(() => null),
+    loadCurriculumCards(learner.id).catch(() => []),
+  ]);
   const today = todayVn();
 
   return (
@@ -38,6 +48,12 @@ export default async function NotesPage({ params }: { params: Promise<{ id: stri
             {notesPage.writeNew}
           </Link>
         ) : null}
+        {facts ? (
+          <SessionStats learnerId={learner.id} days={sessionDays(facts.notes, facts.taught, unitTitleOf(cards))} today={today} cards={cards} />
+        ) : (
+          <p className="mt-6 rounded-xl border border-line bg-white px-5 py-4 text-sm text-muted" data-testid="sessions-unreadable">{sessionStatsCopy.unreadable}</p>
+        )}
+        <h2 className="mt-8 text-lg font-semibold">{notesPage.link}</h2>
         <LessonNotes learnerId={learner.id} notes={notes} targets={targets} canWrite={canWrite} memberId={member.id} today={today} minDate={addDays(today, -120)} tagLabels={tagLabels} />
       </div>
     </>

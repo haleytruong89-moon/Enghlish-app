@@ -44,7 +44,7 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
       <div className="grid items-start gap-4 lg:grid-cols-3">
         <ProfileBox learnerId={id} alias={learner.alias} profile={data.profile} weak={data.today?.weak.tags ?? []} />
         <CurriculumBox learnerId={id} cards={data.curricula} />
-        <SessionsBox learnerId={id} today={data.today} todayIso={todayIso} />
+        <SessionsBox learnerId={id} today={data.today} todayIso={todayIso} sessions={data.sessions} />
       </div>
       {parent && data.recent ? <RecentLevelChanges items={data.recent} /> : null}
       {parent && data.aiSettings ? <AiSoftCapBox settings={data.aiSettings} /> : null}

@@ -18,11 +18,12 @@ describe("activeFor: every existing page keeps the feedback screen it passed to 
     [`/learners/${X}/reading/new`, "profile", "reading", S.reading],
     [`/learners/${X}/notes/new`, "sessions", "notesNew", S.notesNew],
     [`/learners/${X}/notes`, "sessions", "notes", S.notes],
-    [`/learners/${X}/assign`, "assign", "assign", S.assign],
-    ["/studio/new", "assign", "studio", S.studioNew],
-    ["/studio/drafts/d1", "assign", "studio", S.studioDraft],
-    [`/learners/${X}/inquiries`, "assign", "inquiries", S.inquiries],
-    [`/learners/${X}/results/new`, "assign", "results", S.resultsNew],
+    [`/learners/${X}/notes/month/2026-11`, "sessions", "notes", S.notes],
+    [`/learners/${X}/assign`, "assign", null, S.assign],
+    ["/studio/new", "assign", null, S.studioNew],
+    ["/studio/drafts/d1", "assign", null, S.studioDraft],
+    [`/learners/${X}/inquiries`, "assign", null, S.inquiries],
+    [`/learners/${X}/results/new`, "results", "results", S.resultsNew],
     [`/learners/${X}/curricula`, "curricula", null, curriculumCopy.screenLabel],
     [`/learners/${X}/curricula/c1`, "curricula", null, curriculumCopy.screenLabel],
     ["/curricula/versions/v1", "curricula", null, curriculumCopy.screenLabel],
@@ -39,8 +40,8 @@ describe("activeFor: every existing page keeps the feedback screen it passed to 
     // W3 (knowledge map, import) is live; the roadmap is reserved for a later slice
     [`/learners/${X}/knowledge`, "knowledge", null, S.knowledgeMap],
     [`/learners/${X}/roadmap`, "roadmap", null, shellCopy.sections.roadmap],
-    [`/learners/${X}/imports/new`, "assign", "import", S.importNew],
-    ["/imports/b1", "assign", "import", S.importConfirm],
+    [`/learners/${X}/imports/new`, "results", "import", S.importNew],
+    ["/imports/b1", "results", "import", S.importConfirm],
   ];
   for (const [path, section, child, screen] of table) {
     it(path, () => expect(activeFor(path)).toEqual({ section, child, screen }));
@@ -58,7 +59,10 @@ describe("switchHref keeps the part of the app that is open", () => {
     expect(switchHref(`/learners/${X}/curricula/c1`, Y)).toBe(`/learners/${Y}/curricula`);
     expect(switchHref("/curricula/versions/v1", Y)).toBe(`/learners/${Y}/curricula`);
     expect(switchHref("/review/e1", Y)).toBe(`/review?learner=${Y}`);
-    expect(switchHref("/studio/drafts/d1", Y)).toBe(`/studio/new?learner=${Y}`);
+    expect(switchHref("/studio/drafts/d1", Y)).toBe(`/learners/${Y}/assign`);
+    expect(switchHref("/studio/new", Y)).toBe(`/studio/new?learner=${Y}`);
+    expect(switchHref(`/learners/${X}/inquiries`, Y)).toBe(`/learners/${Y}/inquiries`);
+    expect(switchHref(`/learners/${X}/results/new`, Y)).toBe(`/learners/${Y}/results/new`);
     expect(switchHref(`/learners/${X}/inbox`, Y)).toBe(`/learners/${Y}/inbox`);
   });
   it("desk, feedback, AI settings and delete", () => {

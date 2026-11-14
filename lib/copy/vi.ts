@@ -2143,10 +2143,12 @@ export const shellCopy = {
     roadmap: "Lộ trình",
     sessions: "Buổi học",
     assign: "Giao bài",
+    results: "Ghi kết quả",
     curricula: "Giáo trình",
     inbox: "Chờ duyệt",
   },
   soon: "Sắp có",
+  inboxBadge: (n: string) => `${n} việc đang chờ duyệt`,
   parentGroup: "Phụ huynh",
   inquiriesChild: "Bài chủ đề trong app",
   inboxAll: "Tất cả việc chờ",
@@ -2230,6 +2232,8 @@ export const deskCopy = {
   sessionsUnavailable: "Chưa đọc được buổi học và bài giao.",
   practiceCounts: (open: number, sent: number, late: number) => `Bài giao: ${open} đang mở · ${sent} em đã gửi${late > 0 ? ` · ${late} quá hạn` : ""}`,
   seeAssignments: "Xem bài giao",
+  monthLine: (month: number, n: number, last: string) => `Tháng ${month}: ${n} buổi · buổi gần nhất ${last}`,
+  monthLineNone: (month: number, last: string) => `Tháng ${month}: chưa có buổi · buổi gần nhất ${last}`,
   noSchedule: "Lịch buổi học chưa có trong app.",
 } as const;
 
@@ -2444,11 +2448,7 @@ export const importCopy = {
   } as Record<string, string>,
 } as const;
 
-/** UX vòng 2: màn đang tải và chữ trên nút khi đang làm việc (người lớn). */
-export const loadingCopy = {
-  page: "Đang tải…",
-} as const;
-
+/** UX vòng 2: chữ trên nút khi đang làm việc (người lớn). */
 export const busyCopy = {
   saving: "Đang lưu…",
   sending: "Đang gửi…",
@@ -2514,8 +2514,7 @@ export const nonUnitCopy = {
   progressBadge: "Kiểm tra tiến độ",
   line: (reason: string, label: string, page: number | null) => `${reason} · ${label}${page !== null ? ` · tr. ${page}` : ""}`,
   related: (units: string) => `Ôn: Unit ${units}`,
-  studioLink: "Tạo bài từ đề →",
-  assignLink: "Giao bài luyện →",
+  giveLink: "Giao bài này →",
   assignHeading: "Giao bài từ các dòng này",
   assignHelp: "Review và Kiểm tra tiến độ không phải Unit nên không có trong độ phủ; bài giao xong chỉ điền sẵn tên bài.",
   approvedOnly: "Muốn đổi dòng nào là Unit hay không: dùng “Sửa mục lục / bảng nối” (tạo bản mới).",
@@ -2526,4 +2525,78 @@ export const prefillCopy = {
   pages: (p: string) => `Trang trong sách: ${p}`,
   units: (range: string) => `Unit liên quan: ${range}`,
   fromBook: "Điền sẵn từ giáo trình. Bạn sửa được tên bài.",
+} as const;
+
+/** UX vòng 3A · một trang "Giao bài": chọn 1 trong 4 cách + dải "Cách giao" (kế hoạch 14/11, U5–U8). */
+export const assignWaysCopy = {
+  title: (alias: string) => `Giao bài · ${alias}`,
+  intro: "Chọn một cách giao. Cách nào cũng chọn được Unit của giáo trình (trừ Bài chủ đề).",
+  stripLabel: "Cách giao",
+  recommended: "Nên dùng",
+  ways: {
+    studio: {
+      title: "Đề + đáp án → bài trên app",
+      desc: `Tải đề và đáp án (PDF hoặc Word). AI soạn nháp, ${tutorHonorific} duyệt; con làm ngay trên app, app tự chấm và ghi mục kiến thức của từng câu.`,
+      note: "Hạn nộp chọn sau khi duyệt nháp.",
+    },
+    link: {
+      title: "Giao bằng link",
+      desc: "Bài trên test-english, NotebookLM, Gemini… Con làm ở đó rồi nộp ảnh trang kết quả.",
+    },
+    pdf: {
+      title: "PDF để con tải về",
+      desc: "Con tải đề về làm trên giấy rồi nộp ảnh hoặc file bài làm.",
+    },
+    topic: {
+      title: "Bài chủ đề trong app",
+      note: "Không dùng Unit.",
+    },
+  },
+  choose: "Chọn cách này →",
+  fromBook: (label: string) => `Từ giáo trình: ${label} — chọn cách giao bên dưới.`,
+  seeStudio: "Bài đã tạo từ đề →",
+  seeTopic: "Bài chủ đề đã giao →",
+  listTitle: "Bài link / PDF đã giao",
+} as const;
+
+/** UX vòng 3A · thống kê buổi học (kế hoạch 14/11, U9–U14, U25). Một buổi = một ngày có ghi chú buổi học hiện hành; không có số tiền. */
+export const sessionStatsCopy = {
+  title: "Tổng quan buổi học",
+  cards: { total: "Tổng số buổi", thisMonth: "Buổi tháng này", perWeek: "Trung bình / tuần", unit: "Đang học đến" },
+  perWeekHint: "8 tuần trọn gần nhất",
+  perWeekNone: "—",
+  unitNone: "Chưa bắt đầu",
+  unitMore: (k: number) => `+${k}`,
+  calendarTitle: "12 tuần gần đây",
+  weekdays: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
+  weekdaysLong: ["Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy", "Chủ nhật"],
+  cellHas: (day: string, units: string) => `${day}: có buổi học${units ? ` · ${units}` : ""}`,
+  cellNone: (day: string) => `${day}: không có buổi`,
+  cellFuture: (day: string) => `${day}: chưa tới`,
+  detailHint: "Chạm vào một ô có chấm để xem ngày đó.",
+  monthTable: { title: "Theo tháng", month: "Tháng", count: "Số buổi", dates: "Các ngày", open: "Sao chép / In" },
+  sameDay: "⚠ 2 ghi chú cùng ngày",
+  sameDayMark: " ⚠",
+  parentOnly: "Phụ huynh ghi",
+  cellParent: (day: string) => `${day}: phụ huynh ghi, chưa tính là buổi`,
+  rule: "Một buổi = một ngày có ghi chú buổi học do thầy/cô ghi. Ngày chỉ có ghi chú của phụ huynh được hiện nhưng không tính vào số buổi. Bản đã sửa chỉ tính bản mới nhất.",
+  none: "Chưa ghi buổi học nào.",
+  unreadable: "Chưa đọc được thống kê buổi học.",
+} as const;
+
+/** Trang tháng để in / sao chép. */
+export const sessionMonthCopy = {
+  title: (alias: string, month: string) => `Buổi học tháng ${month} · ${alias}`,
+  back: "Về Buổi học",
+  total: (n: number) => `${n} buổi`,
+  copy: "Sao chép danh sách",
+  copied: "✓ Đã chép",
+  copyManual: "Chưa chép tự động được. Bạn chọn đoạn chữ dưới đây rồi chép tay nhé.",
+  print: "In",
+  text: (alias: string, month: string, n: number, dates: string) => (n > 0 ? `${alias} · Tháng ${month}: ${n} buổi — ${dates}.` : `${alias} · Tháng ${month}: chưa có buổi.`),
+  cols: { date: "Ngày", weekday: "Thứ", units: "Unit đã dạy", by: "Người ghi" },
+  privateNote: `(ghi chú riêng của ${tutorHonorific})`,
+  noUnits: "—",
+  empty: "Tháng này chưa có buổi.",
+  parentOnly: "Phụ huynh ghi (không tính)",
 } as const;

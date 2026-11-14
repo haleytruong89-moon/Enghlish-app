@@ -173,3 +173,39 @@ describe("AssignForm · Giao theo Unit (4b)", () => {
     expect((screen.getByTestId("assign-title") as HTMLInputElement).value).toBe("Destination C1 C2 · Review 2 (Unit 3–4)");
   });
 });
+
+describe("fixedKind and the order of the fields (U8)", () => {
+  it("fixedKind=pdf: no kind switch, the PDF boxes are there", () => {
+    render(<AssignForm learnerId="l1" alias="An" tags={TAGS} frames={[]} today="2026-11-13" map={levelledMap()} fixedKind="pdf" />);
+    expect(screen.queryByTestId("kind-link")).toBeNull();
+    expect(screen.queryByTestId("kind-pdf")).toBeNull();
+    expect(screen.getByTestId("pdf-input")).toBeTruthy();
+    expect(screen.queryByTestId("assign-url")).toBeNull();
+  });
+  it("fixedKind=link: the link box; without fixedKind the switch is still there", () => {
+    const { unmount } = render(<AssignForm learnerId="l1" alias="An" tags={TAGS} frames={[]} today="2026-11-13" map={levelledMap()} fixedKind="link" />);
+    expect(screen.getByTestId("assign-url")).toBeTruthy();
+    expect(screen.queryByTestId("kind-pdf")).toBeNull();
+    unmount();
+    mount();
+    expect(screen.getByTestId("kind-pdf")).toBeTruthy();
+  });
+  it("the page reuses the form when the way changes (soft navigation): the kind follows fixedKind", () => {
+    const el = (k: "link" | "pdf") => <AssignForm learnerId="l1" alias="An" tags={TAGS} frames={[]} today="2026-11-13" map={levelledMap()} fixedKind={k} />;
+    const { rerender } = render(el("link"));
+    expect(screen.getByTestId("assign-url")).toBeTruthy();
+    rerender(el("pdf"));
+    expect(screen.getByTestId("pdf-input")).toBeTruthy();
+    expect(screen.queryByTestId("assign-url")).toBeNull();
+  });
+  it("order: Unit block, then the name, then the link, then the due date", () => {
+    mount();
+    const pos = (id: string) => {
+      const all = Array.from(document.querySelectorAll("[data-testid]"));
+      return all.findIndex((n) => n.getAttribute("data-testid") === id);
+    };
+    expect(pos("assign-by-unit")).toBeLessThan(pos("assign-title"));
+    expect(pos("assign-title")).toBeLessThan(pos("assign-url"));
+    expect(pos("assign-url")).toBeLessThan(pos("assign-due"));
+  });
+});

@@ -218,4 +218,29 @@ Phụ huynh duyệt 13/11 sau buổi gia sư thử: chữ "điểm" khi nghĩa l
 
 ## Mẫu báo lưu (13/11/2026)
 
-Mọi ô sửa của người lớn dùng một mẫu: **"Đang lưu…"** → **"✓ Đã lưu lúc hh:mm"** (giờ Việt Nam, giữ nguyên tới lần sửa tiếp) → **"● Có thay đổi chưa lưu"**; lỗi: "Chưa lưu được. Thay đổi vẫn còn trên màn hình, bạn bấm Lưu lại nhé." Còn thay đổi chưa lưu thì đóng tab / tải lại hỏi lại, và bấm liên kết của khung (cột trái, thanh trên, "Đóng") hiện "Còn thay đổi chưa lưu. Rời trang thì mất các thay đổi này. Vẫn rời?". Khóa: `saveStatusCopy`, `busyCopy`, `loadingCopy` trong `lib/copy/vi.ts`. Chữ ký hiệu (● ✓) đi kèm chữ, không chỉ màu.
+Mọi ô sửa của người lớn dùng một mẫu: **"Đang lưu…"** → **"✓ Đã lưu lúc hh:mm"** (giờ Việt Nam, giữ nguyên tới lần sửa tiếp) → **"● Có thay đổi chưa lưu"**; lỗi: "Chưa lưu được. Thay đổi vẫn còn trên màn hình, bạn bấm Lưu lại nhé." Còn thay đổi chưa lưu thì đóng tab / tải lại hỏi lại, và bấm liên kết của khung (cột trái, thanh trên, "Đóng") hiện "Còn thay đổi chưa lưu. Rời trang thì mất các thay đổi này. Vẫn rời?". Khóa: `saveStatusCopy`, `busyCopy` trong `lib/copy/vi.ts`. Chữ ký hiệu (● ✓) đi kèm chữ, không chỉ màu.
+
+## UX vòng 3A (14/11/2026)
+
+Khóa mới trong `lib/copy/vi.ts` (chữ đã duyệt theo kế hoạch 14/11; đổi chữ = sửa ở đây và ở file đó):
+
+| Khóa | Chữ |
+|---|---|
+| `shellCopy.sections.results` | Ghi kết quả |
+| `shellCopy.inboxBadge(n)` (aria) | `{n} việc đang chờ duyệt` |
+| `assignWaysCopy.title(alias)` · `intro` · `stripLabel` | Giao bài · {alias} · Chọn một cách giao. Cách nào cũng chọn được Unit của giáo trình (trừ Bài chủ đề). · Cách giao |
+| `assignWaysCopy.recommended` · `choose` | Nên dùng · Chọn cách này → |
+| `assignWaysCopy.ways.studio` | Đề + đáp án → bài trên app · Tải đề và đáp án (PDF hoặc Word). AI soạn nháp, {thầy/cô} duyệt; con làm ngay trên app, app tự chấm và ghi mục kiến thức của từng câu. · Hạn nộp chọn sau khi duyệt nháp. |
+| `assignWaysCopy.ways.link` · `pdf` | Giao bằng link · Bài trên test-english, NotebookLM, Gemini… Con làm ở đó rồi nộp ảnh trang kết quả. / PDF để con tải về · Con tải đề về làm trên giấy rồi nộp ảnh hoặc file bài làm. |
+| `assignWaysCopy.ways.topic` | Bài chủ đề trong app · (lời giới thiệu `inquiriesPage.intro`, có liên kết Góp ý về app) · Không dùng Unit. |
+| `assignWaysCopy.fromBook(label)` · `seeStudio` · `seeTopic` · `listTitle` | Từ giáo trình: {label} — chọn cách giao bên dưới. · Bài đã tạo từ đề → · Bài chủ đề đã giao → · Bài link / PDF đã giao |
+| `nonUnitCopy.giveLink` | Giao bài này → |
+| `sessionStatsCopy.title` · `cards.*` | Tổng quan buổi học · Tổng số buổi / Buổi tháng này / Trung bình / tuần / Đang học đến |
+| `sessionStatsCopy.perWeekHint` · `unitNone` · `perWeekNone` | 8 tuần trọn gần nhất · Chưa bắt đầu · — |
+| `sessionStatsCopy.calendarTitle` · `weekdays` · `cellHas/cellNone/cellFuture` | 12 tuần gần đây · T2…CN · "{Thứ Năm 12/11/2026}: có buổi học · {U13 Unreal time}" / "…: không có buổi" / "…: chưa tới" |
+| `sessionStatsCopy.monthTable.*` · `sameDay` · `rule` · `none` · `unreadable` | Theo tháng / Tháng / Số buổi / Các ngày / Sao chép / In · ⚠ 2 ghi chú cùng ngày · Một buổi = một ngày có ghi chú buổi học do thầy/cô ghi (ngày chỉ phụ huynh ghi hiện dấu "Phụ huynh ghi", không tính). Bản đã sửa chỉ tính bản mới nhất. · Chưa ghi buổi học nào. · Chưa đọc được thống kê buổi học. |
+| `sessionMonthCopy.*` | Buổi học tháng {11/2026} · {alias} · {n} buổi · Sao chép danh sách / ✓ Đã chép / In · Ngày, Thứ, Unit đã dạy, Người ghi · (ghi chú riêng của {thầy/cô}) · câu Zalo: "{Nguyên} · Tháng {11/2026}: {5} buổi — {03/11, 05/11, …}." (tháng trống: "… chưa có buổi.") |
+| `deskCopy.monthLine` · `monthLineNone` | Tháng {11}: {5} buổi · buổi gần nhất {12/11} · Tháng {11}: chưa có buổi · buổi gần nhất {28/10} |
+
+Bỏ khóa `loadingCopy` (không dùng). Cột "Người ghi" dùng `todayPage.roleLabel` (Gia sư / Phụ huynh). Không có số tiền ở bất cứ chữ nào về buổi học.
+

@@ -42,9 +42,8 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
 
   test("the tutor gives a PDF (uploaded straight to the private bucket) and can open it", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
-    await page.goto(`/learners/${NG}/assign`);
+    await page.goto(`/learners/${NG}/assign?way=pdf`);
     await expect(page.getByTestId("assign-page")).toBeVisible();
-    await page.getByTestId("kind-pdf").click();
     await page.getByTestId("pdf-input").setInputFiles({ name: "de-thu.pdf", mimeType: "application/pdf", buffer: PDF });
     await expect(page.getByTestId("pdf-chosen")).toContainText("de-thu.pdf");
     await page.getByTestId("assign-title").fill(title);
@@ -67,9 +66,31 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     expect((await res.body()).subarray(0, 5).toString()).toBe("%PDF-");
   });
 
+  test("switching from the link way to the PDF way through the strip gives a PDF assignment (no stale kind)", async ({ page }) => {
+    await loginAs(page, "tutorNguyen");
+    await page.goto(`/learners/${NG}/assign?way=link`);
+    await expect(page.getByTestId("assign-url")).toBeVisible();
+    await page.getByTestId("strip-pdf").click();
+    await expect(page).toHaveURL(/way=pdf/);
+    await expect(page.getByTestId("pdf-input")).toBeVisible();
+    await expect(page.getByTestId("assign-url")).toHaveCount(0);
+    const t = `Đề đổi cách ${Date.now()}`;
+    await page.getByTestId("pdf-input").setInputFiles({ name: "doi-cach.pdf", mimeType: "application/pdf", buffer: PDF });
+    await page.getByTestId("assign-title").fill(t);
+    await openExtraItems(page);
+    await page.getByTestId("tab-assign-tags-vocab").click();
+    await page.getByTestId("tag-chip-thanh-ngu").click();
+    await page.getByTestId("assign-due").fill(todayVn());
+    await page.getByTestId("assign-submit").click();
+    await expect(page.getByTestId("assign-done")).toContainText(assignPage.done);
+    const id = await assignmentIdOf(page, t);
+    // A PDF assignment has a file to open; a link one would not.
+    await expect(page.getByTestId(`assignment-${id}`).locator('a[href^="/api/files/"]').first()).toBeVisible();
+  });
+
   test("a link is recognised by its source and a non-https link is refused", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
-    await page.goto(`/learners/${NG}/assign`);
+    await page.goto(`/learners/${NG}/assign?way=link`);
     await page.getByTestId("assign-url").fill("https://notebooklm.google.com/notebook/abc");
     await expect(page.getByTestId("assign-source")).toContainText(assignPage.sourceDetected("NotebookLM"));
     await page.getByTestId("assign-url").fill("http://example.com/x");
@@ -81,7 +102,7 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
 
   test("the tutor picks three knowledge items across tabs and through the search box (Enter never gives the assignment)", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
-    await page.goto(`/learners/${NG}/assign`);
+    await page.goto(`/learners/${NG}/assign?way=link`);
     await page.getByTestId("assign-title").fill(`Ba mục thử ${Date.now()}`);
     await page.getByTestId("assign-url").fill("https://notebooklm.google.com/notebook/abc");
     await openExtraItems(page);
@@ -228,7 +249,7 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
   test("a retracted assignment disappears for the child and cannot be sent to", async ({ page }) => {
     const gone = `Bài rút thử ${Date.now()}`;
     await loginAs(page, "parent");
-    await page.goto(`/learners/${AN}/assign`);
+    await page.goto(`/learners/${AN}/assign?way=link`);
     await page.getByTestId("assign-url").fill("https://www.test-english.com/grammar-points/a2/x");
     await page.getByTestId("assign-title").fill(gone);
     await page.getByTestId("assign-submit").click();
@@ -269,9 +290,8 @@ test.describe("no sideways scrolling on a phone", () => {
 
   test("the tutor's 'Giao bài luyện' page", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
-    await page.goto(`/learners/${NG}/assign`);
+    await page.goto(`/learners/${NG}/assign?way=pdf`);
     await expect(page.getByTestId("assign-page")).toBeVisible();
-    await page.getByTestId("kind-pdf").click();
     expect(await fits(page)).toBe(true);
   });
 });
@@ -296,7 +316,7 @@ test("the tutor gives an assignment by Unit: the title fills itself, the row sho
     await db.end();
   }
   await loginAs(page, "tutorNguyen");
-  await page.goto(`/learners/${NG}/assign`);
+  await page.goto(`/learners/${NG}/assign?way=link`);
   await expect(page.getByTestId("assign-by-unit")).toBeVisible();
   await expect(page.getByTestId("assign-extra-items")).toBeVisible();
   const list = page.getByTestId("unit-picker").locator("details", { hasText: bookTitle });
@@ -311,4 +331,19 @@ test("the tutor gives an assignment by Unit: the title fills itself, the row sho
   const item = page.locator('li[data-testid^="assignment-"]', { hasText: bookTitle }).first();
   await expect(item).toContainText("Unit 2–3");
   await expect(item).toContainText("2 mục");
+});
+
+
+// UX vòng 3A · one 'Giao bài' page: the chooser carries the prefill from the curriculum into the way that is chosen.
+test("the chooser carries the 'from the book' prefill into the link way", async ({ page }) => {
+  await loginAs(page, "tutorNguyen");
+  await page.goto(`/learners/${NG}/assign?title=${encodeURIComponent("Sách thử · Review 2")}&pages=34`);
+  await expect(page.getByTestId("way-cards")).toBeVisible();
+  await expect(page.getByTestId("ways-from-book")).toContainText("Sách thử · Review 2");
+  await expect(page.getByTestId("way-studio")).toHaveAttribute("data-recommended", "true");
+  await page.getByTestId("way-choose-link").click();
+  await expect(page).toHaveURL(/way=link/);
+  await expect(page.getByTestId("assign-title")).toHaveValue("Sách thử · Review 2");
+  await expect(page.getByTestId("kind-pdf")).toHaveCount(0);
+  await expect(page.getByTestId("ways-strip")).toBeVisible();
 });

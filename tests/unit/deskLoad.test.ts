@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-const m = { loadInbox: vi.fn(), loadStudioPending: vi.fn(), loadSkillInbox: vi.fn(), loadPointInbox: vi.fn(), loadDraftList: vi.fn(), loadCurriculumCards: vi.fn(), loadImportPending: vi.fn() };
+const m = { loadInbox: vi.fn(), loadStudioPending: vi.fn(), loadSkillInbox: vi.fn(), loadPointInbox: vi.fn(), loadDraftList: vi.fn(), loadCurriculumCards: vi.fn(), loadImportPending: vi.fn(), loadSessionFacts: vi.fn() };
 vi.mock("@/lib/review/load", () => ({ loadInbox: (...a: unknown[]) => m.loadInbox(...a) }));
 vi.mock("@/lib/studio/load", () => ({ loadStudioPending: (...a: unknown[]) => m.loadStudioPending(...a), loadDraftList: (...a: unknown[]) => m.loadDraftList(...a), loadAiSettings: vi.fn() }));
 vi.mock("@/lib/skills/load", () => ({ loadSkillInbox: (...a: unknown[]) => m.loadSkillInbox(...a) }));
@@ -10,9 +10,10 @@ vi.mock("@/lib/curriculum/load", () => ({ loadCurriculumCards: (...a: unknown[])
 vi.mock("@/lib/import/load", () => ({ loadImportPending: (...a: unknown[]) => m.loadImportPending(...a) }));
 vi.mock("@/lib/tutorwork/load", () => ({ loadToday: vi.fn() }));
 vi.mock("@/lib/workdesk/load", () => ({ loadIntake: vi.fn() }));
+vi.mock("@/lib/sessions/load", () => ({ loadSessionFacts: (...a: unknown[]) => m.loadSessionFacts(...a) }));
 vi.mock("@/lib/levels/load", () => ({ loadLevelProfile: vi.fn(), loadRecentLevelChanges: vi.fn() }));
 
-import { loadPendingRows } from "@/lib/desk/load";
+import { loadDesk, loadPendingRows } from "@/lib/desk/load";
 import { PENDING_MAX_PAGES, PENDING_PAGE_SIZE } from "@/lib/desk/pending";
 
 beforeEach(() => {
@@ -71,5 +72,18 @@ describe("loadPendingRows", () => {
   it("a failing page makes the whole work source `failed`", async () => {
     m.loadInbox.mockRejectedValue(new Error("rpc"));
     expect((await loadPendingRows("m1", "parent", "L1")).failed).toEqual(["work"]);
+  });
+});
+
+describe("loadDesk: session days", () => {
+  const shell = { role: "tutor", memberId: "m1", learners: [] } as never;
+  const learner = { id: "L1", trackId: "B" } as never;
+  it("counts the notes in `settle`: a failure gives sessions null and the desk still builds", async () => {
+    m.loadSessionFacts.mockResolvedValue({ notes: [{ id: "n1", sessionDate: "2026-11-03", supersedesId: null, authorRole: "tutor", published: false, createdAt: "x" }], taught: [] });
+    expect((await loadDesk(shell, learner)).sessions?.map((d) => d.date)).toEqual(["2026-11-03"]);
+    m.loadSessionFacts.mockRejectedValue(new Error("boom"));
+    expect((await loadDesk(shell, learner)).sessions).toBeNull();
+    m.loadSessionFacts.mockResolvedValue(null);
+    expect((await loadDesk(shell, learner)).sessions).toBeNull();
   });
 });

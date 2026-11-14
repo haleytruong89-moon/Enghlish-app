@@ -65,18 +65,20 @@ describe("VersionReview: 'Không phải Unit' / 'Đưa về Unit' in the draft",
 });
 
 describe("NonUnitList in an approved version", () => {
-  it("each row offers 'Tạo bài từ đề' and 'Giao bài luyện' with the prepared links, and no 'Đưa về Unit'", () => {
+  it("each row has ONE 'Giao bài này' link to the chooser, and no 'Đưa về Unit'", () => {
     render(
       <NonUnitList
         rows={payload.ignored}
         mode="approved"
         related={payload.ignored.map((_, i) => relatedUnits(payload, i))}
-        links={payload.ignored.map((_, i) => ({ studio: `/studio/new?learner=${L}&i=${i}`, assign: `/learners/${L}/assign?i=${i}` }))}
+        links={payload.ignored.map((_, i) => `/learners/${L}/assign?i=${i}`)}
       />,
     );
     const row = screen.getByTestId("ignored-row-1");
-    expect(within(row).getByTestId("ignored-studio-1").getAttribute("href")).toBe(`/studio/new?learner=${L}&i=1`);
-    expect(within(row).getByTestId("ignored-assign-1").getAttribute("href")).toBe(`/learners/${L}/assign?i=1`);
+    expect(within(row).getByTestId("ignored-give-1").getAttribute("href")).toBe(`/learners/${L}/assign?i=1`);
+    expect(within(row).getByTestId("ignored-give-1").textContent).toBe("Giao bài này →");
+    expect(screen.queryByTestId("ignored-studio-1")).toBeNull();
+    expect(screen.queryByTestId("ignored-assign-1")).toBeNull();
     expect(row.textContent).toContain("Ôn: Unit 3–4");
     expect(screen.queryByTestId("ignored-to-unit-1")).toBeNull();
   });

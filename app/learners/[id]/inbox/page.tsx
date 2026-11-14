@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BadgeSeed } from "@/components/shell/BadgeSeed";
 import { PendingTable } from "@/components/desk/PendingTable";
 import { pendingCopy } from "@/lib/copy/vi";
 import { loadPendingRows } from "@/lib/desk/load";
@@ -18,6 +19,7 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
   const v = pendingView(pending);
   return (
     <div className="flex flex-col gap-4" data-testid="pending-page">
+      <BadgeSeed learnerId={learner.id} count={v.count} />
       <div>
         <h1 className="text-2xl font-bold">{pendingCopy.title(learner.alias)}</h1>
         <p className="mt-1 text-sm text-muted">{pendingCopy.intro}</p>

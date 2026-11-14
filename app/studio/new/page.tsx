@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { StaffShell } from "@/components/shell/StaffShell";
 import { requireShell } from "@/lib/shell/load";
+import { WaysStrip } from "@/components/assign/WaysStrip";
 import { DraftList } from "@/components/studio/DraftList";
 import { UploadForm } from "@/components/studio/UploadForm";
 import { learnerWithTrack, reviewPage, studioCopy } from "@/lib/copy/vi";
@@ -37,9 +38,12 @@ export default async function StudioNewPage({ searchParams }: { searchParams: Pr
         <p className="mt-1 text-muted">
           {studioCopy.learnerLabel} {learnerWithTrack(l.alias, l.trackId)}
         </p>
+        <WaysStrip learnerId={l.id} current="studio" prefill={prefill} />
         <p className="mt-3 text-[15px]">{studioCopy.newIntro}</p>
         <UploadForm learnerId={l.id} aiAllowed={gate.allowed} aiReason={gate.reason} prefill={prefill} unitChoices={unitChoices} />
-        <DraftList drafts={drafts} />
+        <div id="drafts">
+          <DraftList drafts={drafts} />
+        </div>
       </div>
     </StaffShell>
   );
