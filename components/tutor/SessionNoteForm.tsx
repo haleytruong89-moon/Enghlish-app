@@ -6,11 +6,12 @@ import { blockImplicitSubmit } from "@/lib/forms/enter";
 import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
-import { curriculumCopy, fallbackLabels, sessionNotePage } from "@/lib/copy/vi";
+import { curriculumCopy, fallbackLabels, sessionKindCopy, sessionNotePage } from "@/lib/copy/vi";
+import { sessionFailText } from "@/lib/sessions/client";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { firstTab, groupTargets } from "@/lib/skillmap/group";
 import type { SkillMapView } from "@/lib/skillmap/types";
-import { failText, postJson } from "@/lib/tutorwork/client";
+import { postJson } from "@/lib/tutorwork/client";
 import {
   MAX_PRACTISED_PER_NOTE,
   MAX_WEAK_TAGS_PER_NOTE,
@@ -48,6 +49,7 @@ export function SessionNoteForm({
   minDate,
   map,
   taughtChoices = [],
+  makeupChoices = [],
 }: {
   learnerId: string;
   tags: TagInfo[];
@@ -61,6 +63,8 @@ export function SessionNoteForm({
   map: SkillMapView;
   /** W2: approved curricula of the child for "Unit đã dạy hôm nay" (empty before 0026 or when none is approved). */
   taughtChoices?: TaughtChoice[];
+  /** 3B: live absences with no makeup yet ("Bù cho buổi nghỉ ngày …"); empty when there are none or before 0030. */
+  makeupChoices?: { id: string; label: string }[];
 }) {
   const router = useRouter();
   const { tags, add, setGroup } = useTags(learnerId, initialTags);
@@ -79,7 +83,9 @@ export function SessionNoteForm({
   const [savedId, setSavedId] = useState<string | null>(null);
   const [sameNote, setSameNote] = useState<{ practised: string; weak: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const { state: saveState, track } = useSaveStatus({ date, studied, weak, practised, message, parentNote, rechecks, taught });
+  const [kind, setKind] = useState<"regular" | "makeup">("regular");
+  const [makeupFor, setMakeupFor] = useState("");
+  const { state: saveState, track } = useSaveStatus({ date, studied, weak, practised, message, parentNote, rechecks, taught, kind, makeupFor });
   const clientId = useRef<string>(crypto.randomUUID());
   const labelOf = new Map(tags.map((t) => [t.key, t.label]));
 
@@ -120,9 +126,10 @@ export function SessionNoteForm({
       ...(parentNote.trim() ? { note_for_parent: parentNote.trim() } : {}),
       rechecks: answered,
       ...(taught.length > 0 ? { taught_units: taught } : {}),
+      ...(kind === "makeup" ? { session_kind: "makeup", ...(makeupFor ? { makeup_for: makeupFor } : {}) } : {}),
     }));
     setBusy(false);
-    if (!r.ok) return setError(failText(r));
+    if (!r.ok) return setError(sessionFailText(r));
     setSavedId(r.body.id);
     setSaved(true);
     router.refresh();
@@ -170,6 +177,29 @@ export function SessionNoteForm({
             className={`min-h-11 max-w-56 ${field}`}
           />
         </label>
+
+        <div className="flex flex-col gap-2" data-testid="session-kind">
+          <span className="text-sm text-muted" id="session-kind-label">{sessionKindCopy.label}</span>
+          <div role="radiogroup" aria-labelledby="session-kind-label" className="flex flex-wrap gap-2">
+            {([["regular", sessionKindCopy.regular], ["makeup", sessionKindCopy.makeup]] as const).map(([k, text]) => (
+              <button key={k} type="button" role="radio" aria-checked={kind === k} data-testid={`session-kind-${k}`} className={seg(kind === k)}
+                onClick={() => { setKind(k); if (k === "regular") setMakeupFor(""); }}>
+                {text}
+              </button>
+            ))}
+          </div>
+          {kind === "makeup" && makeupChoices.length > 0 ? (
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-muted">{sessionKindCopy.makeupFor}</span>
+              <select value={makeupFor} onChange={(e) => setMakeupFor(e.target.value)} data-testid="session-makeup-for" className={`min-h-11 max-w-72 ${field}`}>
+                <option value="">{sessionKindCopy.makeupForNone}</option>
+                {makeupChoices.map((c) => (
+                  <option key={c.id} value={c.id}>{c.label}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+        </div>
 
         {taughtChoices.length > 0 ? (
           <div className="flex flex-col gap-1">

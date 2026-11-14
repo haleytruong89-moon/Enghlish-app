@@ -11,6 +11,7 @@ import { apiErrors } from "@/lib/copy/vi";
 import type { PointHook } from "@/lib/engine/points/runner";
 import { fromDbError, ReviewDbError, type HandlerResult } from "@/lib/review/handlers";
 import { addTagBodySchema, resultBodySchema, sessionNoteBodySchema, setTagGroupBodySchema, tagItemsBodySchema, writingTagsBodySchema } from "./schemas";
+import { sessionError } from "@/lib/sessions/errors";
 import { customTagKey } from "./frameScore";
 import type { TaughtUnit } from "@/lib/curriculum/schema";
 
@@ -55,6 +56,9 @@ export interface TutorWorkStore {
     clientId: string;
     /** W2 (0026): sent only when not empty (then eng_write_lesson_note_v3 is called). */
     taughtUnits?: TaughtUnit[];
+    /** 3B (0030): "Học bù" notes go through eng_write_lesson_note_v4; "Thường" keeps the v2 / v3 calls (works before 0030). */
+    sessionKind?: "regular" | "makeup";
+    makeupFor?: string | null;
   }): Promise<unknown>;
 }
 
@@ -234,6 +238,8 @@ export async function handleWriteSessionNote(deps: TutorWorkDeps, learnerId: str
       byMemberId: g.grant.member.id,
       clientId: b.client_id,
       taughtUnits: b.taught_units,
+      sessionKind: b.session_kind,
+      makeupFor: b.makeup_for ?? null,
     })) as { id: string; replayed: boolean };
     if (!r.replayed && b.taught_units.length > 0) await deps.afterPoints?.(g.grant.learner.id, null);
     return {
@@ -241,6 +247,6 @@ export async function handleWriteSessionNote(deps: TutorWorkDeps, learnerId: str
       body: { id: r.id, replayed: r.replayed },
     };
   } catch (err) {
-    return fromDbError(err);
+    return sessionError(err);
   }
 }

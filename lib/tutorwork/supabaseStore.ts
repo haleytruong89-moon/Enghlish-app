@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ReviewDbError } from "@/lib/review/handlers";
+import { isMissingFunction } from "@/lib/sessions/errors";
 import type { TutorWorkStore } from "./handlers";
 
 function dbError(what: string, err: { code?: string; message?: string }): never {
@@ -91,6 +92,30 @@ export function createSupabaseTutorWorkStore(): TutorWorkStore {
     },
 
     async writeSessionNote(a) {
+      // 3B: a "Học bù" note = v4 (0030): the note and its mark in one transaction. Before 0030 the missing function becomes sessions_unavailable.
+      if (a.sessionKind === "makeup") {
+        const { data, error } = await db().rpc("eng_write_lesson_note_v4", {
+          p_learner: a.learnerId,
+          p_session_date: a.sessionDate,
+          p_studied: a.studied,
+          p_weak_tags: a.weakTags,
+          p_message: a.message,
+          p_note_for_parent: a.noteForParent,
+          p_rechecks: a.rechecks,
+          p_supersedes: a.supersedes,
+          p_by: a.byMemberId,
+          p_client_id: a.clientId,
+          p_practised_target_ids: a.practisedTargetIds,
+          p_taught_units: a.taughtUnits ?? [],
+          p_session_kind: "makeup",
+          p_makeup_for: a.makeupFor ?? null,
+        });
+        if (error) {
+          if (isMissingFunction(error.code)) throw new ReviewDbError("sessions_unavailable", "eng_write_lesson_note_v4 is missing: apply migration 0030");
+          dbError("eng_write_lesson_note_v4", error);
+        }
+        return data;
+      }
       // W2: units taught today → v3 (0026). Without units the v2 call is unchanged, so the code also runs before 0026 is applied.
       if (a.taughtUnits && a.taughtUnits.length > 0) {
         const { data, error } = await db().rpc("eng_write_lesson_note_v3", {

@@ -106,7 +106,11 @@ export const sessionNoteBodySchema = z.strictObject({
   supersedes_id: uuid.optional(),
   /** W2: units taught today ("Unit đã dạy hôm nay"); the database checks each is in a current curriculum of the learner. */
   taught_units: taughtUnitsSchema,
-});
+  /** 3B: "Loại buổi" of a NEW note. A makeup note may name the absence it makes up. Changing the kind of an existing note = the marks route. */
+  session_kind: z.enum(["regular", "makeup"]).default("regular"),
+  makeup_for: uuid.optional(),
+}).refine((b) => b.makeup_for === undefined || b.session_kind === "makeup", { message: "makeup_for needs a makeup note", path: ["makeup_for"] })
+  .refine((b) => b.session_kind === "regular" || b.supersedes_id === undefined, { message: "an edit keeps its kind", path: ["session_kind"] });
 export type SessionNoteBody = z.infer<typeof sessionNoteBodySchema>;
 
 /** Query of GET weak points: ?weeks=4|8|all. */

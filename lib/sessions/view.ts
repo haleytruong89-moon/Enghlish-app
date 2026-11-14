@@ -1,7 +1,7 @@
 /** Small pure helpers that turn curriculum cards and day facts into the words the sessions page shows. */
-import { sessionStatsCopy } from "@/lib/copy/vi";
-import { dayMonth } from "./count";
-import type { DayUnit, SessionDay } from "./types";
+import { absenceCopy, sessionStatsCopy } from "@/lib/copy/vi";
+import { dayMonth, effectiveKinds, liveAbsences } from "./count";
+import type { AbsenceRow, DayUnit, MarkRow, NoteRow, SessionDay } from "./types";
 
 type CardLike = { id: string; title: string; current: { units: { code: string; title: string }[] } | null; progress: { current: { code: string; title: string } | null } | null };
 
@@ -41,4 +41,15 @@ export type { SessionDay };
 /** "2026-11" → itself when it is a real month that is not after today's month; otherwise null (the page answers 404). */
 export function parseMonth(v: string, todayIso: string): string | null {
   return /^\d{4}-(0[1-9]|1[0-2])$/.test(v) && v <= todayIso.slice(0, 7) ? v : null;
+}
+
+/** "19/11 · con, không tính phí" (the words that name an absence in a list). */
+export function absenceLine(a: Pick<AbsenceRow, "absentOn" | "requestedBy" | "billable">): string {
+  return `${dayMonth(a.absentOn)} · ${absenceCopy.who[a.requestedBy]}, ${a.billable ? absenceCopy.billableYes.toLowerCase() : absenceCopy.billableNo.toLowerCase()}`;
+}
+
+/** Live absences that no current "Học bù" note points to yet: the choices of "Bù cho buổi nghỉ ngày …". */
+export function makeupChoices(notes: NoteRow[], marks: MarkRow[], absences: AbsenceRow[]): { id: string; label: string }[] {
+  const used = new Set([...effectiveKinds(notes, marks).values()].map((m) => (m?.kind === "makeup" ? m.makeupFor : null)).filter((x): x is string => !!x));
+  return liveAbsences(absences).filter((a) => !used.has(a.id)).map((a) => ({ id: a.id, label: absenceLine(a) }));
 }
