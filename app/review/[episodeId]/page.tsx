@@ -16,7 +16,7 @@ import { findEpisodeLearner, loadEpisode, loadTransferMark } from "@/lib/review/
 import { transferMarkMode } from "@/lib/review/transferMark";
 import { loadFeedbackPanel, loadRevisionView } from "@/lib/revision/load";
 import { loadPickerMap } from "@/lib/skillmap/load";
-import { createUserClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
 import { loadTags, loadWritingTagKeys } from "@/lib/tutorwork/load";
 import { TAGGABLE_ACTIVITIES } from "@/lib/tutorwork/types";
 
@@ -28,10 +28,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function ReviewEpisodePage({ params }: { params: Promise<{ episodeId: string }> }) {
   const { episodeId } = await params;
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const learnerId = await findEpisodeLearner(episodeId);

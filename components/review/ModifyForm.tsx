@@ -1,5 +1,7 @@
 "use client";
 
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { formatScore, reviewPage } from "@/lib/copy/vi";
@@ -27,6 +29,7 @@ export function ModifyForm({
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { state: saveState, track } = useSaveStatus(open ? { choice, reason } : null, { resetKey: open ? "open" : "closed" });
   const clientId = useRef<string>(crypto.randomUUID());
 
   // "No opportunity to show it" (NULL) is its own choice, never 0; and no button starts selected, so a change is always deliberate.
@@ -41,11 +44,11 @@ export function ModifyForm({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/review/decisions/${decisionId}/modify`, {
+      const res = await track(() => fetch(`/api/review/decisions/${decisionId}/modify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ client_id: clientId.current, ...choiceToScore(choice), reason: reason.trim() }),
-      });
+      }));
       if (res.status === 409) {
         router.refresh();
         return setError(reviewPage.saveConflict);
@@ -101,6 +104,7 @@ export function ModifyForm({
         </p>
       ) : null}
       <div className="flex gap-2">
+        <SaveStatus state={saveState} />
         <button
           type="submit"
           disabled={busy}

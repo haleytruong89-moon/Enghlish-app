@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import { usePathname } from "next/navigation";
 import { shellCopy } from "@/lib/copy/vi";
 import { switchHref } from "@/lib/shell/paths";

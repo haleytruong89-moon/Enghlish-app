@@ -167,7 +167,7 @@ describe("S5b-1 'Chờ gắn nhãn' and 'Ghi buổi học' and writing tags", ()
     const chip = (key: string) => html.match(new RegExp(`<button[^>]*data-testid="tag-chip-${key}"[^>]*>`))?.[0] ?? "";
     expect(chip("dang-tu")).toContain('aria-checked="true"');
     expect(chip("cau-dieu-kien-dao-ngu")).toContain("disabled");
-    expect(html).toContain("(nhãn riêng)");
+    expect(html).toContain("(mục riêng)");
     const locked = render(createElement(TagChips, { tags, map, selected: ["dang-tu"], onChange: vi.fn(), max: 3, locked: ["dang-tu"], onAdd: vi.fn() }));
     expect(locked.match(/<button[^>]*data-testid="tag-chip-dang-tu"[^>]*>/)?.[0]).toContain("disabled");
   });

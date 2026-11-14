@@ -23,9 +23,13 @@ export async function loadRevisionListSoft(learnerId: string): Promise<RevisionL
   }
 }
 /** Can the "Bài đã sửa" books be read at all (migration 0021 applied)? Used to hide the link on the learner card until then. */
+let revisionsKnown = false;
 export async function revisionsAvailable(): Promise<boolean> {
+  // Once the table exists it stays: remember "yes" for the life of the process. "No" is asked again next time (0021 may be applied meanwhile).
+  if (revisionsKnown) return true;
   try {
     const { error } = await createAdminClient().from("feedback_notes").select("id").limit(1);
+    revisionsKnown = !error;
     return !error;
   } catch {
     return false;

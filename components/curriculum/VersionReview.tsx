@@ -3,16 +3,20 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { NonUnitList } from "@/components/curriculum/NonUnitList";
 import { AddTag } from "@/components/tutor/AddTag";
 import { TagSelect } from "@/components/tutor/TagSelect";
 import { useTags } from "@/components/tutor/useTags";
-import { curriculumCopy } from "@/lib/copy/vi";
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
+import { curriculumCopy, nonUnitCopy } from "@/lib/copy/vi";
 import { curriculumErrorText, sendJson } from "@/lib/curriculum/client";
 import { buildTocContext } from "@/lib/curriculum/context";
 import { editStats, tooManyEdits } from "@/lib/curriculum/editStats";
 import type { CurriculumPayload, UnitDraft } from "@/lib/curriculum/schema";
 import type { VersionPageData } from "@/lib/curriculum/shape";
-import { EDIT_REASONS, QUALITY, UNIT_CODE_RE, type EditReason, type Quality } from "@/lib/curriculum/types";
+import { EDIT_REASONS, IGNORED_REASONS, QUALITY, UNIT_CODE_RE, type EditReason, type IgnoredReason, type Quality } from "@/lib/curriculum/types";
+import { moveToNonUnit, moveToUnit, nonUnitFull, relatedUnits, restoreUnit, unitsFull } from "@/lib/curriculum/rows";
 import { rowsToResolve, validateCurriculum, type CurriculumIssue } from "@/lib/curriculum/validate";
 import type { SkillMapView } from "@/lib/skillmap/types";
 import type { TagInfo } from "@/lib/tutorwork/types";
@@ -31,10 +35,9 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
   const { tags, add } = useTags(learnerId, initialTags);
   const [payload, setPayload] = useState<CurriculumPayload>(v.payload);
   const [base, setBase] = useState(v.updatedAt);
-  const [dirty, setDirty] = useState(false);
+  const { state: saveState, dirty, run } = useSaveStatus(payload, { savedAt: v.updatedAt });
   const [busy, setBusy] = useState<"save" | "approve" | "discard" | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
   const [quality, setQuality] = useState<Quality | null>(null);
   const [qualityNote, setQualityNote] = useState("");
   const ctx = useMemo(() => buildTocContext(map, tags), [map, tags]);
@@ -50,9 +53,17 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
 
   function update(i: number, patch: Partial<UnitDraft>) {
     setPayload((p) => ({ ...p, units: p.units.map((u, k) => (k === i ? { ...u, ...patch } : u)) }));
-    setDirty(true);
-    setNote(null);
   }
+  const notAUnit = (i: number, reason: IgnoredReason) => {
+    if (nonUnitFull(payload)) return setProblem(nonUnitCopy.listFull);
+    setProblem(null);
+    setPayload((p) => moveToNonUnit(p, i, reason));
+  };
+  const backToUnit = (k: number) => {
+    if (unitsFull(payload)) return setProblem(nonUnitCopy.unitsFull);
+    setProblem(null);
+    setPayload((p) => moveToUnit(p, k));
+  };
   function addUnit() {
     setPayload((p) => {
       const used = new Set(p.units.map((u) => u.code));
@@ -64,22 +75,25 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
       };
       return { ...p, units: [...p.units, unit] };
     });
-    setDirty(true);
   }
   /** Returns the new lock value, or null when the save failed. */
   async function save(): Promise<string | null> {
     setBusy("save");
     setProblem(null);
-    const r = await sendJson<{ updated_at: string }>(`/api/curricula/versions/${v.id}`, "PUT", { payload, base_updated_at: base });
+    let lock: string | null = null;
+    const ok = await run(async () => {
+      const r = await sendJson<{ updated_at: string }>(`/api/curricula/versions/${v.id}`, "PUT", { payload, base_updated_at: base });
+      if (!r.ok) {
+        setProblem(curriculumErrorText(r.error));
+        return { ok: false };
+      }
+      lock = r.body.updated_at;
+      return { ok: true, savedAt: r.body.updated_at };
+    });
     setBusy(null);
-    if (!r.ok) {
-      setProblem(curriculumErrorText(r.error));
-      return null;
-    }
-    setBase(r.body.updated_at);
-    setDirty(false);
-    setNote(curriculumCopy.saved);
-    return r.body.updated_at;
+    if (!ok || lock === null) return null;
+    setBase(lock);
+    return lock;
   }
   async function approve() {
     // Unsaved changes are saved first; the approval then uses the NEW lock value (state updates are not visible in this closure).
@@ -109,6 +123,7 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
       tags={tags}
       labelOf={labelOf}
       onChange={(patch) => update(i, patch)}
+      onNotUnit={(reason) => notAUnit(i, reason)}
       onAdd={add}
     />
   );
@@ -151,7 +166,7 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
               <span className="text-muted line-through">
                 {u.code} · {u.title}
               </span>
-              <button type="button" className={small} onClick={() => update(i, { dropped: false })} data-testid={`row-undrop-${i}`}>
+              <button type="button" className={small} onClick={() => setPayload((p) => restoreUnit(p, i))} data-testid={`row-undrop-${i}`}>
                 {curriculumCopy.undrop}
               </button>
             </p>
@@ -159,21 +174,7 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
         </details>
       ) : null}
 
-      {payload.ignored.length > 0 ? (
-        <details className="mt-4 rounded-xl border border-line bg-white p-3" data-testid="review-ignored">
-          <summary className="min-h-11 cursor-pointer text-sm font-semibold">
-            {curriculumCopy.ignoredTitle} ({payload.ignored.length})
-          </summary>
-          <ul className="mt-2 text-sm text-muted">
-            {payload.ignored.map((r, k) => (
-              <li key={k}>
-                {curriculumCopy.ignoredReasons[r.reason]} · {r.label}
-                {r.page ? ` · ${r.page}` : ""}
-              </li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
+      <NonUnitList rows={payload.ignored} mode="draft" onToUnit={backToUnit} related={payload.ignored.map((_, k) => relatedUnits(payload, k))} />
 
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-white/95 backdrop-blur" data-testid="review-bar">
         <div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-3 px-4 py-3">
@@ -194,7 +195,7 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
             </fieldset>
           ) : null}
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            {note ? <span role="status" className="text-sm text-accent">{note}</span> : null}
+            <SaveStatus state={saveState} />
             {problem ? <span role="alert" className="text-sm text-[#8A1C12]" data-testid="review-problem">{problem}</span> : null}
             <button type="button" disabled={busy !== null} onClick={() => void discard()} data-testid="review-discard" className={small}>
               {curriculumCopy.discard}
@@ -221,7 +222,7 @@ export function VersionReview({ initial, map, tags: initialTags, learnerId }: { 
 }
 
 function UnitRow({
-  u, issues, map, tags, labelOf, onChange, onAdd,
+  u, issues, map, tags, labelOf, onChange, onNotUnit, onAdd,
 }: {
   u: UnitDraft;
   issues: CurriculumIssue[];
@@ -229,6 +230,7 @@ function UnitRow({
   tags: TagInfo[];
   labelOf: Map<string, string>;
   onChange: (patch: Partial<UnitDraft>) => void;
+  onNotUnit: (reason: IgnoredReason) => void;
   onAdd: ReturnType<typeof useTags>["add"];
 }) {
   const [making, setMaking] = useState<string | null>(null);
@@ -304,6 +306,20 @@ function UnitRow({
         <button type="button" className={small} onClick={() => onChange({ dropped: true })} data-testid={`${id}-drop`}>
           {curriculumCopy.drop}
         </button>
+        <select
+          value=""
+          aria-label={nonUnitCopy.notUnit}
+          onChange={(e) => e.target.value && onNotUnit(e.target.value as IgnoredReason)}
+          className="min-h-11 rounded-lg border border-line bg-white px-2 text-sm"
+          data-testid={`${id}-notunit`}
+        >
+          <option value="">{nonUnitCopy.notUnitPick}</option>
+          {IGNORED_REASONS.map((r) => (
+            <option key={r} value={r}>
+              {curriculumCopy.ignoredReasons[r]}
+            </option>
+          ))}
+        </select>
         {u.origin === "ai" ? (
           <label className="flex items-center gap-2 text-xs text-muted">
             {curriculumCopy.reasonLabel}

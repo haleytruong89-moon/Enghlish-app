@@ -1,11 +1,15 @@
 "use client";
 
-import { FilePicker } from "@/components/ui/FilePicker";
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
+import { blockImplicitSubmit } from "@/lib/forms/enter";
+import { PdfPagePicker, type PdfPick } from "@/components/ui/PdfPagePicker";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { TagChips } from "@/components/tutor/TagChips";
 import { useTags } from "@/components/tutor/useTags";
-import { assignPage, sourceLabels } from "@/lib/copy/vi";
+import { assignPage, prefillCopy, sourceLabels } from "@/lib/copy/vi";
+import { formatRange, type Prefill } from "@/lib/prefill";
 import { codeOf, nextAttempt, practiceErrorText, uploadAll, type SendAttempt, type UploadCache } from "@/lib/practice/client";
 import { detectLinkSource } from "@/lib/practice/link";
 import { addDays } from "@/lib/inquiries/dates";
@@ -25,6 +29,7 @@ export function AssignForm({
   frames,
   today,
   map,
+  prefill,
 }: {
   learnerId: string;
   alias: string;
@@ -32,6 +37,8 @@ export function AssignForm({
   frames: FrameView[];
   today: string;
   map: SkillMapView;
+  /** From a Review / Progress Test row of the curriculum: the name of the bài, the pages in the book, the Units it revises. */
+  prefill?: Prefill;
 }) {
   const router = useRouter();
   const { tags, add, setGroup } = useTags(learnerId, initialTags);
@@ -39,27 +46,32 @@ export function AssignForm({
   const [url, setUrl] = useState("");
   const [pdf, setPdf] = useState<Prepared | null>(null);
   const [answer, setAnswer] = useState<Prepared | null>(null);
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(prefill?.title ?? "");
   const [picked, setPicked] = useState<string[]>([]);
   const [due, setDue] = useState("");
   const [frameId, setFrameId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState<"upload" | "save" | null>(null);
+  const [round, setRound] = useState(0);
+  const { state: saveState, track } = useSaveStatus({ kind, url, title, picked, due, frameId, pdf: pdf?.name ?? null, answer: answer?.name ?? null }, { resetKey: round });
   const attempt = useRef<SendAttempt | null>(null);
   const uploaded = useRef<UploadCache>(new Map());
 
   const source = kind === "link" && url.trim() ? detectLinkSource(url) : null;
 
-  async function pick(file: File | undefined, set: (p: Prepared | null) => void) {
+  const [pdfPending, setPdfPending] = useState(false);
+  async function pick(sel: PdfPick, set: (p: Prepared | null) => void) {
     setError(null);
-    if (!file) return;
+    const file = sel.file;
+    if (!file) return set(null);
     const r = await prepareFile(file);
     if (!r.ok) return setError(practiceErrorText(r.reason === "type" ? "file_type" : r.reason === "too_big" ? "file_too_big" : "unreadable", "staff"));
     set(r.file);
   }
 
   function reset() {
+    setRound((n) => n + 1);
     setUrl("");
     setPdf(null);
     setAnswer(null);
@@ -112,7 +124,7 @@ export function AssignForm({
     attempt.current = nextAttempt(attempt.current, JSON.stringify(body));
     body.client_id = attempt.current.id;
     setBusy("save");
-    const r = await postJson(`/api/learners/${learnerId}/assignments`, body);
+    const r = await track(() => postJson(`/api/learners/${learnerId}/assignments`, body));
     setBusy(null);
     if (!r.ok) return setError(practiceErrorText(codeOf(r), "staff"));
     setDone(true);
@@ -124,7 +136,7 @@ export function AssignForm({
     `min-h-11 px-4 text-sm ${on ? "bg-accent font-semibold text-white" : "bg-white text-ink"}`;
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-5 rounded-2xl border border-line bg-white p-5" data-testid="assign-form">
+    <form onSubmit={submit} onKeyDown={blockImplicitSubmit} className="flex flex-col gap-5 rounded-2xl border border-line bg-white p-5" data-testid="assign-form">
       <fieldset disabled={done} className="m-0 flex min-w-0 flex-col gap-5 border-0 p-0">
         <div role="group" aria-label={assignPage.kind} className="flex flex-col gap-1.5 text-sm font-medium">
           {assignPage.kind}
@@ -160,17 +172,24 @@ export function AssignForm({
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5 text-sm font-medium">
               {assignPage.pdfLabel}
-              <FilePicker testId="pdf-input" nameTestId="pdf-chosen" accept="application/pdf" name={pdf?.name ?? null} onPick={(f) => void pick(f, setPdf)} ariaLabel={assignPage.pdfLabel} />
+              <PdfPagePicker flow="assignment" role="main" testId="pdf-input" nameTestId="pdf-chosen" accept="application/pdf" resetKey={round} onChange={(s) => { setPdfPending(s.pending); void pick(s, setPdf); }} ariaLabel={assignPage.pdfLabel} />
               <span className="text-sm font-normal text-muted">{assignPage.pdfHelp}</span>
             </div>
             <div className="flex flex-col gap-1.5 text-sm font-medium">
               {assignPage.answerLabel}
-              <FilePicker testId="answer-input" nameTestId="answer-chosen" accept="application/pdf,image/png,image/jpeg,image/webp" name={answer?.name ?? null} onPick={(f) => void pick(f, setAnswer)} ariaLabel={assignPage.answerLabel} />
+              <PdfPagePicker flow="assignment" role="other" testId="answer-input" nameTestId="answer-chosen" accept="application/pdf,image/png,image/jpeg,image/webp" resetKey={round} onChange={(s) => void pick(s, setAnswer)} ariaLabel={assignPage.answerLabel} />
               <span className="text-sm font-normal text-muted">{assignPage.answerHelp}</span>
             </div>
           </div>
         )}
 
+        {prefill && (prefill.pages || prefill.units.length > 0) ? (
+          <p className="rounded-xl bg-[#eef3ef] px-3.5 py-2 text-sm" data-testid="assign-prefill">
+            {prefillCopy.fromBook} {prefill.pages ? prefillCopy.pages(prefill.pages) : ""}
+            {prefill.pages && prefill.units.length > 0 ? " · " : ""}
+            {prefill.units.length > 0 ? prefillCopy.units(formatRange(prefill.units)) : ""}
+          </p>
+        ) : null}
         <label className="flex flex-col gap-1.5 text-sm font-medium">
           {assignPage.titleLabel}
           <input
@@ -226,9 +245,10 @@ export function AssignForm({
         </div>
       ) : null}
       <div>
+        <SaveStatus state={saveState} />
         <button
           type="submit"
-          disabled={busy !== null || done}
+          disabled={busy !== null || done || pdfPending}
           data-testid="assign-submit"
           className="min-h-12 rounded-xl bg-accent px-6 text-base font-bold text-white disabled:opacity-60"
         >

@@ -13,22 +13,18 @@ import { loadInbox } from "@/lib/review/load";
 import { loadSkillInbox } from "@/lib/skills/load";
 import { loadPointInbox } from "@/lib/points/load";
 import { combinedTabCount } from "@/lib/points/view";
-import { createUserClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 /** Inbox of submitted work — parent and tutor only (students and outsiders get a plain 404). */
 export default async function ReviewInboxPage({ searchParams }: { searchParams: Promise<{ f?: string | string[]; after?: string | string[]; learner?: string | string[] }> }) {
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const access = await authorizeStaffPage(user);
+  const user = await getAuthUser();
+  const sp = await searchParams;
+  const [access, shell] = await Promise.all([authorizeStaffPage(user), requireShell(firstParam(sp.learner))]);
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();
 
-  const sp = await searchParams;
-  const shell = await requireShell(firstParam(sp.learner));
   const filter = parseFilter(sp.f);
   const after = parseCursor(sp.after);
   // The database filters, orders (oldest first) and pages; the counts on the filter chips come from it too.

@@ -1,4 +1,5 @@
 import "server-only";
+import { deferHook } from "@/lib/engine/defer";
 import { writeHook } from "@/lib/engine/writeHook";
 import { NextResponse } from "next/server";
 import { apiErrors } from "@/lib/copy/vi";
@@ -19,7 +20,7 @@ export async function runReviewRoute(
       data: { user },
     } = await supabase.auth.getUser();
     userId = user?.id ?? null;
-    const result = await run({ user, store: createSupabaseReviewStore(), afterWrite: writeHook(routeName, userId) });
+    const result = await run({ user, store: createSupabaseReviewStore(), afterWrite: deferHook(writeHook(routeName, userId), { route: routeName, userId }) });
     return NextResponse.json(result.body, { status: result.status, headers: { "Cache-Control": "private, no-store" } });
   } catch (err) {
     await logAppError({ route: routeName, code: "internal", error: err, userId });

@@ -1,8 +1,8 @@
 // app/studio/drafts/[id]/page.tsx
-import Link from "next/link";
+import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import { notFound, redirect } from "next/navigation";
 import { StaffShell } from "@/components/shell/StaffShell";
-import { requireShell } from "@/lib/shell/load";
+import { withShell } from "@/lib/shell/parallel";
 import { AssignStudioForm } from "@/components/studio/AssignStudioForm";
 import { DraftEditor } from "@/components/studio/DraftEditor";
 import { EditApprovedButton } from "@/components/studio/EditApprovedButton";
@@ -19,10 +19,9 @@ export const dynamic = "force-dynamic";
 /** Duyệt đề (board 19) and, once approved, Giao bài. The child's tutor or parent; others 404. */
 export default async function DraftPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const r = await loadDraftPage(id);
+  const { data: r, shell } = await withShell(loadDraftPage(id), (x) => (x.kind === "ok" ? x.data.draft.learnerId : null));
   if (r.kind === "login") redirect("/login");
-  if (r.kind === "not-found") notFound();
-  const shell = await requireShell(r.data.draft.learnerId);
+  if (r.kind === "not-found" || !shell) notFound();
   const { draft, summary, gate } = r.data;
   return (
     <StaffShell shell={shell}>

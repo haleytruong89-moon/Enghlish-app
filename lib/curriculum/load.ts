@@ -2,6 +2,7 @@
 import "server-only";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { createFileStorage } from "@/lib/storage/server";
+import { getAuthUser, getMemberByUserId } from "@/lib/auth/session";
 import { createUserClient } from "@/lib/supabase/server";
 import { loadTags } from "@/lib/tutorwork/load";
 import { buildTocContext, type TocContext } from "./context";
@@ -44,10 +45,9 @@ export async function loadTaughtChoices(learnerId: string): Promise<TaughtChoice
 
 /** The page calls the same handler as GET /api/curricula/versions/:id (one access path). No AI and no background job from a page. */
 export async function loadVersionPage(versionId: string): Promise<{ kind: "ok"; data: VersionPageData } | { kind: "login" } | { kind: "not-found" }> {
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
+  // Warm the per-request member cache while the guard looks up the record's child; requireAccess then reuses the same read.
+  if (user) void getMemberByUserId(user.id).catch(() => undefined);
   const deps: CurriculumDeps = {
     user,
     store: createSupabaseCurriculumStore(),

@@ -1,5 +1,7 @@
 import "server-only";
 import { allowRealLearners } from "@/lib/env";
+import { cache } from "react";
+import { getAuthUser, getMemberByUserId } from "@/lib/auth/session";
 import { createUserClient } from "@/lib/supabase/server";
 import type { Role } from "@/lib/auth/requireAccess";
 import { visibleLearners, type LearnerSummary } from "./visible";
@@ -23,21 +25,14 @@ type LearnerRow = {
  * Uses the USER client: RLS decides scope (student → self, tutor → active relationships,
  * parent → family). ALLOW_REAL_LEARNERS filters on top.
  */
-export async function loadHome(): Promise<HomeData> {
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+async function loadHomeUncached(): Promise<HomeData> {
+  const user = await getAuthUser();
   if (!user) return { kind: "signed-out" };
 
-  const { data: member, error: memberError } = await supabase
-    .from("members")
-    .select("id, role, display_name")
-    .eq("user_id", user.id)
-    .maybeSingle<{ id: string; role: Role; display_name: string }>();
-  if (memberError) throw new Error(`members lookup failed: ${memberError.code}`);
+  const member = await getMemberByUserId(user.id);
   if (!member) return { kind: "no-member", email: user.email ?? null };
 
+  const supabase = await createUserClient();
   const { data: rows, error } = await supabase
     .from("learners")
     .select("id, alias, track_id, status, is_test, member:members!learners_member_id_fkey(color)")
@@ -56,5 +51,8 @@ export async function loadHome(): Promise<HomeData> {
     allowRealLearners(),
   );
 
-  return { kind: member.role, displayName: member.display_name, memberId: member.id, learners };
+  return { kind: member.role, displayName: member.displayName, memberId: member.id, learners };
 }
+
+/** Cached per request: the layout and the page of one route share a single read. */
+export const loadHome = cache(loadHomeUncached);

@@ -1,5 +1,7 @@
 "use client";
 
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { app, fallbackLabels, formatScore, reviewPage, scoreLabels, type Score } from "@/lib/copy/vi";
@@ -46,6 +48,8 @@ export function ScoringPanel({
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [round, setRound] = useState(0);
+  const { state: saveState, track } = useSaveStatus({ choices, notes, criteria }, { resetKey: round });
   const clientId = useRef<string>(crypto.randomUUID());
 
   const remaining = open.filter((t) => choices[t.key] === undefined).length;
@@ -69,11 +73,11 @@ export function ScoringPanel({
           ...(note ? { rationale: note } : {}),
         };
       });
-      const res = await fetch(`/api/review/episodes/${episodeId}/decisions`, {
+      const res = await track(() => fetch(`/api/review/episodes/${episodeId}/decisions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ client_id: clientId.current, items }),
-      });
+      }));
       if (res.status === 409) {
         router.refresh();
         return setError(reviewPage.saveConflict);
@@ -82,6 +86,7 @@ export function ScoringPanel({
       if (!res.ok) throw new Error(String(res.status));
       clientId.current = crypto.randomUUID();
       setChoices({});
+      setRound((n) => n + 1);
       setSaved(true);
       router.refresh();
     } catch {
@@ -271,6 +276,7 @@ export function ScoringPanel({
               {error}
             </p>
           ) : null}
+          <SaveStatus state={saveState} />
           <button
             type="button"
             disabled={!canSave}

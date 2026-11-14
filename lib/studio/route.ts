@@ -1,5 +1,6 @@
 // lib/studio/route.ts
 import "server-only";
+import { deferHook } from "@/lib/engine/defer";
 import { after, NextResponse } from "next/server";
 import { createToolCaller } from "@/lib/ai/anthropic";
 import { studioModel, studioToolChoice } from "@/lib/ai/config";
@@ -34,7 +35,7 @@ export async function runStudioRoute(routeName: string, run: (deps: StudioDeps) 
       loadContext: loadStudioContext,
       getAi: () => ({ call: createToolCaller(), model: studioModel(), toolChoice: studioToolChoice(), prompt: { text: loadPrompt(STUDIO_PROMPT.file), version: STUDIO_PROMPT.version } }),
       docxToText,
-      afterWrite: writeHook(routeName, userId),
+      afterWrite: deferHook(writeHook(routeName, userId), { route: routeName, userId }),
       log: (error) => logAppError({ route: routeName, code: "studio_extract", error, userId }),
     });
     return NextResponse.json(result.body, { status: result.status, headers: NO_STORE });

@@ -41,6 +41,7 @@ export function DomainTabs<T>({
   itemText,
   renderItem,
   testId,
+  onEnterSingle,
 }: {
   buckets: Bucket<T>[];
   active: string;
@@ -49,6 +50,8 @@ export function DomainTabs<T>({
   itemText: (item: T) => string;
   renderItem: (item: T) => ReactNode;
   testId: string;
+  /** Enter in the search box never submits a form; with exactly one hit it picks that item. */
+  onEnterSingle?: (item: T) => void;
 }) {
   const [query, setQuery] = useState("");
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -83,6 +86,11 @@ export function DomainTabs<T>({
         placeholder={skillMapCopy.searchPlaceholder}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter" || e.nativeEvent.isComposing) return; // Enter that confirms a Vietnamese IME word is not a search
+          e.preventDefault();
+          if (hits.length === 1) onEnterSingle?.(hits[0]!.it);
+        }}
         data-testid={`search-${testId}`}
         className="min-h-11 rounded-lg border border-line px-3 text-sm"
       />

@@ -15,6 +15,14 @@ export default defineConfig({
         },
       },
       {
+        resolve: { alias, },
+        test: {
+          name: "dom",
+          include: ["tests/dom/**/*.test.tsx"],
+          environment: "jsdom",
+        },
+      },
+      {
         resolve: { alias },
         test: {
           name: "db",

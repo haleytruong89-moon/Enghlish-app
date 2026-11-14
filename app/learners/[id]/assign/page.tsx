@@ -2,6 +2,7 @@ import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { AssignForm } from "@/components/practice/AssignForm";
 import { AssignmentTable } from "@/components/practice/AssignmentTable";
+import { readPrefill } from "@/lib/prefill";
 import { assignPage, learnerWithTrack } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { loadAssignments } from "@/lib/practice/load";
@@ -12,8 +13,9 @@ import { requireLearnerPage } from "@/lib/tutorwork/page";
 export const dynamic = "force-dynamic";
 
 /** "Giao bài luyện": give a link or a PDF to one child (tutor or parent), and follow what came back. Same screen for both tutors. */
-export default async function AssignPracticePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AssignPracticePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { id } = await params;
+  const prefill = readPrefill(await searchParams);
   const { learner } = await requireLearnerPage(id, "practice:write");
   const [tags, frames, assignments, map] = await Promise.all([
     loadTags(learner.trackId),
@@ -32,7 +34,7 @@ export default async function AssignPracticePage({ params }: { params: Promise<{
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
         <p className="mt-3 text-muted">{assignPage.intro}</p>
         <div className="mt-6 flex flex-col gap-8">
-          <AssignForm learnerId={learner.id} alias={learner.alias} tags={tags} frames={frames} today={todayVn()} map={map} />
+          <AssignForm learnerId={learner.id} alias={learner.alias} tags={tags} frames={frames} today={todayVn()} map={map} prefill={prefill} />
           <section className="flex flex-col gap-3" aria-label={assignPage.listTitle}>
             <h2 className="text-lg font-semibold">{assignPage.listTitle}</h2>
             <AssignmentTable learnerId={learner.id} assignments={assignments} tagLabels={tagLabels} today={todayVn()} />

@@ -1,5 +1,7 @@
 "use client";
 
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { levelCopy, levelFormCopy } from "@/lib/copy/vi";
@@ -17,6 +19,7 @@ export function BaselineForm({ learnerId, rows }: { learnerId: string; rows: Bas
   const [levels, setLevels] = useState<Record<string, string>>(() => Object.fromEntries(rows.map((r) => [r.key, r.assumed])));
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const { state: saveState, track } = useSaveStatus({ levels, note });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   // One client id per screen: a retry after a lost answer is recognised as the same save (replayed).
   const [clientId, setClientId] = useState(() => crypto.randomUUID());
@@ -25,12 +28,12 @@ export function BaselineForm({ learnerId, rows }: { learnerId: string; rows: Bas
     e.preventDefault();
     setMsg(null);
     setBusy(true);
-    const r = await postJson(`/api/learners/${learnerId}/levels`, {
+    const r = await track(() => postJson(`/api/learners/${learnerId}/levels`, {
       client_id: clientId,
       kind: "baseline",
       levels,
       ...(note.trim() ? { reason: note.trim() } : {}),
-    });
+    }));
     setBusy(false);
     // After a 409 (e.g. a domain was confirmed meanwhile) the next try must be a new save, not the same client id again.
     setClientId(clientIdAfter(r, clientId));
@@ -83,6 +86,7 @@ export function BaselineForm({ learnerId, rows }: { learnerId: string; rows: Bas
           {msg.text}
         </p>
       ) : null}
+      <SaveStatus state={saveState} />
       <button type="submit" disabled={busy} data-testid="baseline-save" aria-describedby={describedBy(msg && "baseline-msg")} className="min-h-12 rounded-xl bg-accent px-5 text-base font-semibold text-white disabled:opacity-60">
         {busy ? levelFormCopy.saving : levelFormCopy.saveBaseline}
       </button>

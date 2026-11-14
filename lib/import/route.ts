@@ -1,4 +1,5 @@
 // lib/import/route.ts
+import { deferHook } from "@/lib/engine/defer";
 import "server-only";
 import { after, NextResponse } from "next/server";
 import { createToolCaller } from "@/lib/ai/anthropic";
@@ -36,8 +37,8 @@ export async function runImportRoute(routeName: string, run: (deps: ImportDeps) 
       // Same model and tool-choice switch as Studio B1 (one priced model, lib/ai/pricing.ts).
       getAi: () => ({ call: createToolCaller(), model: studioModel(), toolChoice: studioToolChoice(), prompt: { text: loadPrompt(READ_ANSWERS_PROMPT.file), version: READ_ANSWERS_PROMPT.version } }),
       docxToText,
-      afterPoints: pointHook(routeName, userId),
-      afterSkills: engineHook(routeName, userId),
+      afterPoints: deferHook(pointHook(routeName, userId), { route: routeName, userId }),
+      afterSkills: deferHook(engineHook(routeName, userId), { route: routeName, userId }),
       log: (error) => logAppError({ route: routeName, code: "import_read", error, userId }),
     });
     return NextResponse.json(result.body, { status: result.status, headers: NO_STORE });

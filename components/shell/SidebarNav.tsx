@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { appFeedback, shellCopy } from "@/lib/copy/vi";

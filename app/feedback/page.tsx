@@ -7,20 +7,18 @@ import { FeedbackForm } from "@/components/workdesk/FeedbackForm";
 import { FeedbackList } from "@/components/workdesk/FeedbackList";
 import { appFeedback, reviewPage } from "@/lib/copy/vi";
 import { authorizeStaffPage } from "@/lib/review/access";
-import { createUserClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
 import { allowRealLearners } from "@/lib/env";
 import { feedbackAllowedHere } from "@/lib/workdesk/guard";
+import { parseFeedbackKind } from "@/lib/workdesk/kind";
 import { loadAppFeedback } from "@/lib/workdesk/load";
 import { createSupabaseWorkdeskStore } from "@/lib/workdesk/supabaseStore";
 
 export const dynamic = "force-dynamic";
 
 /** "Góp ý về app": tutor and parent of the family (students and outsiders get a plain 404, like the other adult pages). */
-export default async function FeedbackPage({ searchParams }: { searchParams: Promise<{ screen?: string | string[]; learner?: string | string[] }> }) {
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export default async function FeedbackPage({ searchParams }: { searchParams: Promise<{ screen?: string | string[]; learner?: string | string[]; kind?: string | string[] }> }) {
+  const user = await getAuthUser();
   const access = await authorizeStaffPage(user);
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();
@@ -45,7 +43,7 @@ export default async function FeedbackPage({ searchParams }: { searchParams: Pro
         <p className="mt-1 text-sm text-muted">{appFeedback.intro}</p>
         {loaded.available ? (
           <>
-            <FeedbackForm defaultScreen={screen} />
+            <FeedbackForm defaultScreen={screen} initialKind={parseFeedbackKind(sp.kind)} />
             <h2 className="mt-8 text-lg font-semibold">{role === "parent" ? appFeedback.all : appFeedback.allMine}</h2>
             <FeedbackList items={loaded.data} role={role} />
           </>

@@ -11,6 +11,7 @@ import type { PointHook } from "@/lib/engine/points/runner";
 import { ReviewDbError, type HandlerResult } from "@/lib/review/handlers";
 import { buildPath, checkFile, type AllowedMime } from "@/lib/storage/rules";
 import type { FileDownloader, FileStorage } from "@/lib/storage/types";
+import { overPageLimit } from "@/lib/storage/serverPages";
 import { FILE_ERRORS, verifyStoredFile } from "@/lib/storage/verify";
 import type { RunLog } from "@/lib/studio/extract";
 import { sameInstant } from "@/lib/studio/instant";
@@ -136,6 +137,7 @@ async function startVersion(
     const bad = await verifyStoredFile(deps.storage, owner, "curriculum_toc", { id: body.toc_file.id, mime: body.toc_file.mime as AllowedMime, bytes: body.toc_file.bytes });
     if (bad) return fail(400, bad);
   }
+  if (body.mode === "ai" && (await overPageLimit(deps, owner, "toc", body.toc_file, null))) return fail(400, "pages_too_long");
   let ctx: TocContext | null = null;
   if (body.mode === "ai") {
     const gate = parseGate(await deps.store.aiGate(learner.id));

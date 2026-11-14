@@ -7,16 +7,13 @@ import { AiSettingsForm } from "@/components/settings/AiSettingsForm";
 import { aiSettingsCopy } from "@/lib/copy/vi";
 import { authorizeStaffPage } from "@/lib/review/access";
 import { loadAiSettings } from "@/lib/studio/load";
-import { createUserClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 /** Cài đặt AI (spec §3 step 0): parent only. Tutors and students: 404. */
 export default async function AiSettingsPage({ searchParams }: { searchParams: Promise<{ learner?: string | string[] }> }) {
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   const access = await authorizeStaffPage(user);
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found" || access.member.role !== "parent") notFound();

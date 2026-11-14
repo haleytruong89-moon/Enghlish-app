@@ -9,7 +9,7 @@ import { authorizeInquiriesPage } from "@/lib/inquiries/access";
 import { addDays, dateWindow, defaultDueOn, todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi, safeExternalUrl } from "@/lib/inquiries/format";
 import { loadInquiriesPage } from "@/lib/inquiries/load";
-import { createUserClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
@@ -19,10 +19,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function InquiriesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const supabase = await createUserClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   const access = await authorizeInquiriesPage(user, id);
   if (access.kind === "login") redirect("/login");
@@ -42,6 +39,14 @@ export default async function InquiriesPage({ params }: { params: Promise<{ id: 
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{inquiriesPage.title(learner.alias)}</h1>
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
+
+        <p className="mt-4 rounded-xl border border-line bg-white px-5 py-3 text-sm" data-testid="inquiries-intro">
+          {inquiriesPage.intro.before}
+          <Link href={inquiriesPage.introHref(learner.id)} className="text-accent underline">
+            {inquiriesPage.intro.link}
+          </Link>
+          {inquiriesPage.intro.after}
+        </p>
 
         <h2 className="mt-8 text-lg font-semibold">{inquiriesPage.availableTitle}</h2>
         {templates.length === 0 ? (

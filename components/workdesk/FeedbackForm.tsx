@@ -1,5 +1,7 @@
 "use client";
 
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { appFeedback } from "@/lib/copy/vi";
@@ -7,12 +9,14 @@ import { failText, postJson } from "@/lib/tutorwork/client";
 import { FEEDBACK_KINDS, FEEDBACK_SCREEN_MAX, FEEDBACK_TEXT_MAX, type FeedbackKind } from "@/lib/workdesk/types";
 
 /** "Góp ý về app": pick a kind, say where, say what. Goes to the parent (who built the app). */
-export function FeedbackForm({ defaultScreen }: { defaultScreen: string }) {
+export function FeedbackForm({ defaultScreen, initialKind }: { defaultScreen: string; initialKind?: FeedbackKind }) {
   const router = useRouter();
-  const [kind, setKind] = useState<FeedbackKind>("hard_to_use");
+  const [kind, setKind] = useState<FeedbackKind>(initialKind ?? "hard_to_use");
   const [screen, setScreen] = useState(defaultScreen);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [round, setRound] = useState(0);
+  const { state: saveState, track } = useSaveStatus({ kind, screen, text }, { resetKey: round });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function send(e: React.FormEvent) {
@@ -20,10 +24,11 @@ export function FeedbackForm({ defaultScreen }: { defaultScreen: string }) {
     if (!text.trim() || !screen.trim()) return setMsg({ ok: false, text: appFeedback.required });
     setBusy(true);
     setMsg(null);
-    const r = await postJson("/api/feedback", { kind, screen: screen.trim(), text: text.trim(), client_id: crypto.randomUUID() });
+    const r = await track(() => postJson("/api/feedback", { kind, screen: screen.trim(), text: text.trim(), client_id: crypto.randomUUID() }));
     setBusy(false);
     if (!r.ok) return setMsg({ ok: false, text: failText(r) });
     setText("");
+    setRound((n) => n + 1);
     setMsg({ ok: true, text: appFeedback.sent });
     router.refresh();
   }
@@ -52,6 +57,7 @@ export function FeedbackForm({ defaultScreen }: { defaultScreen: string }) {
         <textarea id="fb_text" rows={4} maxLength={FEEDBACK_TEXT_MAX} value={text} placeholder={appFeedback.textHint} onChange={(e) => setText(e.target.value)} className="rounded-lg border border-line bg-white px-3 py-2" />
       </label>
       <div className="flex flex-wrap items-center gap-3">
+        <SaveStatus state={saveState} />
         <button type="submit" disabled={busy} data-testid="fb-send" className="min-h-12 rounded-xl bg-accent px-5 text-base font-semibold text-white disabled:opacity-60">
           {busy ? appFeedback.sending : appFeedback.send}
         </button>

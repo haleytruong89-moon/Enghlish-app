@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { Client } from "pg";
-import { importCopy } from "@/lib/copy/vi";
+import { importCopy, pdfPickCopy } from "@/lib/copy/vi";
+import { KEY_RECOMMEND, PAGE_LIMITS } from "@/lib/pdf/limits";
 import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { LEARNER_IDS, loginAs } from "./helpers";
 
@@ -28,6 +29,7 @@ async function q<R extends Record<string, unknown>>(sql: string, params: unknown
 async function startImport(page: Page, o: { title: string; day: string; tag: string }) {
   await page.goto(`/learners/${NGUYEN}/imports/new`);
   await page.getByTestId("import-title").fill(o.title);
+  await expect(page.getByTestId("page-guidance")).toContainText(pdfPickCopy.guidance.import(PAGE_LIMITS.import, KEY_RECOMMEND));
   await page.getByTestId("import-work").setInputFiles({ name: "bai-lam.pdf", mimeType: "application/pdf", buffer: pdf(`work ${o.tag}`) });
   await page.getByTestId("import-key").setInputFiles({ name: "dap-an.pdf", mimeType: "application/pdf", buffer: pdf(`key ${o.tag}`) });
   await page.getByTestId("import-date").fill(o.day);
@@ -87,9 +89,12 @@ test("a second occasion on another day gives the engine enough days: a point pro
   await loginAs(page, "tutorNguyen");
   await startImport(page, { title: `Progress Test 1-12 (${RUN} b)`, day: daysAgo(1), tag: `${RUN}b` });
   await resolveAndConfirm(page);
-  await page.goto("/review/skills");
   const group = page.getByTestId(`points-group-${NGUYEN}`);
-  await expect(group).toBeVisible();
+  // The levels are recomputed after the response (after()): poll with a reload instead of reading once.
+  await expect(async () => {
+    await page.goto("/review/skills");
+    await expect(group).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
   const cards = group.locator('li[data-testid^="point-proposal-"]');
   expect(await cards.count()).toBeGreaterThan(0);
   await expect(page.getByTestId("point-confirm-all")).toHaveCount(0); // one at a time (H5)

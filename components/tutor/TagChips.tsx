@@ -36,7 +36,7 @@ export function TagChips({
   onSetGroup?: SetGroupFn;
   testId?: string;
 }) {
-  const keep = [...selected, ...locked];
+  const keep = [...new Set([...selected, ...locked])];
   const keepKey = keep.join("|");
   // The near/far split uses the selection at mount only: a far chip ticked now stays under "Cấp khác" until the screen is reopened.
   const [atMount] = useState(() => keep);
@@ -90,16 +90,46 @@ export function TagChips({
       <p className="text-sm text-muted" aria-live="polite">
         {full ? tagPicker.maxReached(max) : tagPicker.selected(selected.length, max)}
       </p>
-      {selected.length > 0 ? (
-        <p className="text-sm" data-testid={`${testId}-chosen`}>
-          {skillMapCopy.chosen(selected.map((k) => labelOf.get(k) ?? fallbackLabels.tag).join(", "))}
-        </p>
+      {keep.length > 0 ? (
+        <div className="flex flex-col gap-1.5" data-testid={`${testId}-chosen`}>
+          <span className="sr-only" aria-live="polite">
+            {skillMapCopy.chosen(keep.map((k) => labelOf.get(k) ?? fallbackLabels.tag).join(", "))}
+          </span>
+          <ul className="flex flex-wrap gap-2">
+            {keep.map((k) => {
+              const label = labelOf.get(k) ?? fallbackLabels.tag;
+              const isLocked = locked.includes(k);
+              return (
+                <li key={k}>
+                  {isLocked ? (
+                    <span className="inline-flex min-h-11 items-center rounded-full border border-accent bg-accent px-4 text-sm font-semibold text-white" data-testid={`${testId}-chosen-${k}`}>
+                      ✓ {label}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => toggle(k)}
+                      aria-label={tagPicker.remove(label)}
+                      data-testid={`${testId}-chosen-${k}`}
+                      className="inline-flex min-h-11 items-center gap-2 rounded-full border border-accent bg-accent px-4 text-sm font-semibold text-white"
+                    >
+                      ✓ {label} <span aria-hidden="true">×</span>
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       ) : null}
       <DomainTabs
         buckets={buckets}
         active={active}
         onActive={setTab}
         testId={testId}
+        onEnterSingle={(t) => {
+          if (!selected.includes(t.key)) toggle(t.key);
+        }}
         itemKey={(t) => t.key}
         itemText={(t) => t.label}
         renderItem={(t) => (

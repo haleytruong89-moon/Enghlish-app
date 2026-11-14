@@ -1,6 +1,8 @@
 // components/skills/ManualForm.tsx
 "use client";
 
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { levelLabels, skillStateCopy } from "@/lib/copy/vi";
@@ -19,6 +21,8 @@ export function ManualForm({ learnerId, targetKey, current }: { learnerId: strin
   const state = pickManualState(picked, current);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const [round, setRound] = useState(0);
+  const { state: saveState, track } = useSaveStatus({ picked, reason }, { resetKey: round });
   const [msg, setMsg] = useState<string | null>(null);
   const [clientId, setClientId] = useState(() => crypto.randomUUID());
   const msgId = `skill-manual-msg-${targetKey}`;
@@ -28,11 +32,12 @@ export function ManualForm({ learnerId, targetKey, current }: { learnerId: strin
     setMsg(null);
     if (reason.trim().length < REASON_MIN) return setMsg(skillStateCopy.reasonRequired);
     setBusy(true);
-    const r = await postJson(`/api/learners/${learnerId}/skills/manual`, { client_id: clientId, target_key: targetKey, state, reason: reason.trim() });
+    const r = await track(() => postJson(`/api/learners/${learnerId}/skills/manual`, { client_id: clientId, target_key: targetKey, state, reason: reason.trim() }));
     setBusy(false);
     setClientId(clientIdAfter(r, clientId));
     if (!r.ok) return setMsg(failText(r));
     setReason("");
+    setRound((n) => n + 1);
     router.refresh();
   }
 
@@ -69,6 +74,7 @@ export function ManualForm({ learnerId, targetKey, current }: { learnerId: strin
             {msg}
           </p>
         ) : null}
+        <SaveStatus state={saveState} />
         <button type="submit" disabled={busy} data-testid="skill-manual-save" className="min-h-11 self-start rounded-lg bg-accent px-4 font-semibold text-white disabled:opacity-60">
           {busy ? skillStateCopy.saving : skillStateCopy.manualSave}
         </button>

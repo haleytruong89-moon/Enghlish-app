@@ -1,12 +1,15 @@
-import Link from "next/link";
+import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import { notFound, redirect } from "next/navigation";
 import { StaffShell } from "@/components/shell/StaffShell";
-import { requireShell } from "@/lib/shell/load";
+import { withShell } from "@/lib/shell/parallel";
 import { MapTable } from "@/components/curriculum/MapTable";
 import { TocWaiting } from "@/components/curriculum/TocWaiting";
 import { VersionReview } from "@/components/curriculum/VersionReview";
 import { curriculumCopy, studioCopy } from "@/lib/copy/vi";
 import { loadVersionPage } from "@/lib/curriculum/load";
+import { NonUnitList } from "@/components/curriculum/NonUnitList";
+import { relatedUnits } from "@/lib/curriculum/rows";
+import { buildPrefill, prefillTitle } from "@/lib/prefill";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { loadTags } from "@/lib/tutorwork/load";
 
@@ -15,14 +18,20 @@ export const dynamic = "force-dynamic";
 /** Duyệt mục lục (draft) or the read-only Bảng nối (approved / superseded). The child's tutor or parent; others 404. Wide page (spec §5.1). */
 export default async function CurriculumVersionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const r = await loadVersionPage(id);
+  const { data: r, shell } = await withShell(loadVersionPage(id), (x) => (x.kind === "ok" ? x.data.version.learnerId : null));
   if (r.kind === "login") redirect("/login");
-  if (r.kind === "not-found") notFound();
-  const shell = await requireShell(r.data.version.learnerId);
+  if (r.kind === "not-found" || !shell) notFound();
   const { version: v, stats } = r.data;
   const back = `/learners/${v.learnerId}/curricula`;
   const editable = v.status === "draft" || v.status === "ai_failed";
   const [map, tags] = editable ? await Promise.all([loadPickerMap(v.learnerId), loadTags(r.data.track_id)]) : [null, null];
+  // "Giao bài này →" on the Review / Progress Test rows of an approved version: the name, the book page and the Units it revises come along.
+  const rel = v.payload.ignored.map((_, k) => relatedUnits(v.payload, k));
+  const links = v.payload.ignored.map((r, k) => {
+    const sp = buildPrefill({ title: prefillTitle(v.title, r.label, rel[k]!), pages: r.page !== null ? String(r.page) : null, units: rel[k] });
+    const q = sp.toString();
+    return { studio: `/studio/new?learner=${v.learnerId}${q ? `&${q}` : ""}`, assign: `/learners/${v.learnerId}/assign${q ? `?${q}` : ""}` };
+  });
   const labelOf = Object.fromEntries(r.data.context.tags.map((t) => [t.key, t.label]));
   return (
     <StaffShell shell={shell}>
@@ -56,6 +65,7 @@ export default async function CurriculumVersionPage({ params }: { params: Promis
             ) : null}
             {stats ? <p className="mt-1 text-sm" data-testid="review-stats">{curriculumCopy.stats(stats)}</p> : null}
             <MapTable units={v.payload.units} labelOf={labelOf} />
+            {v.status === "approved" ? <NonUnitList rows={v.payload.ignored} mode="approved" related={rel} links={links} /> : null}
           </>
         ) : null}
         {v.status === "discarded" ? <p className="mt-4 text-muted">{curriculumCopy.statusLabels.discarded}</p> : null}

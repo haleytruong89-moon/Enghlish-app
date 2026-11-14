@@ -1,6 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
+import { blockImplicitSubmit } from "@/lib/forms/enter";
+import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import { curriculumCopy, fallbackLabels, sessionNotePage } from "@/lib/copy/vi";
@@ -76,6 +79,7 @@ export function SessionNoteForm({
   const [savedId, setSavedId] = useState<string | null>(null);
   const [sameNote, setSameNote] = useState<{ practised: string; weak: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const { state: saveState, track } = useSaveStatus({ date, studied, weak, practised, message, parentNote, rechecks, taught });
   const clientId = useRef<string>(crypto.randomUUID());
   const labelOf = new Map(tags.map((t) => [t.key, t.label]));
 
@@ -106,7 +110,7 @@ export function SessionNoteForm({
     if (!studied.trim() && weak.length === 0 && practised.length === 0 && !message.trim() && !parentNote.trim() && answered.length === 0 && taught.length === 0) return setError(sessionNotePage.empty);
     if (answered.some((a) => a.result === "ok" && weak.includes(a.tag_key))) return setError(sessionNotePage.recheckConflict);
     setBusy(true);
-    const r = await postJson<{ id: string }>(`/api/learners/${learnerId}/session-notes`, {
+    const r = await track(() => postJson<{ id: string }>(`/api/learners/${learnerId}/session-notes`, {
       client_id: clientId.current,
       session_date: date,
       ...(studied.trim() ? { studied: studied.trim() } : {}),
@@ -116,7 +120,7 @@ export function SessionNoteForm({
       ...(parentNote.trim() ? { note_for_parent: parentNote.trim() } : {}),
       rechecks: answered,
       ...(taught.length > 0 ? { taught_units: taught } : {}),
-    });
+    }));
     setBusy(false);
     if (!r.ok) return setError(failText(r));
     setSavedId(r.body.id);
@@ -129,7 +133,7 @@ export function SessionNoteForm({
     `min-h-11 rounded-lg border px-3 text-sm font-medium ${on ? "border-accent bg-accent text-white" : "border-line bg-white text-ink hover:border-accent"}`;
 
   return (
-    <form onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]" data-testid="session-form">
+    <form onSubmit={submit} onKeyDown={blockImplicitSubmit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]" data-testid="session-form">
       <fieldset disabled={saved} className="m-0 flex min-w-0 flex-col gap-5 rounded-xl border border-line bg-white p-4">
         {canAddFromPrevious || sameNoteText ? (
           <div className="flex flex-col gap-1">
@@ -271,7 +275,7 @@ export function SessionNoteForm({
             {error}
           </p>
         ) : null}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="submit"
             disabled={busy || saved}
@@ -280,6 +284,7 @@ export function SessionNoteForm({
           >
             {busy ? sessionNotePage.saving : sessionNotePage.save}
           </button>
+          <SaveStatus state={saveState} />
         </div>
       </fieldset>
 

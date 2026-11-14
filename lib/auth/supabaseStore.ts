@@ -1,8 +1,8 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { AccessStore, Learner, Member, Relationship, Role } from "./requireAccess";
+import type { AccessStore, Learner, Relationship } from "./requireAccess";
+import { getMemberByUserId } from "./session";
 
-type MemberRow = { id: string; user_id: string; family_id: string; role: Role; display_name: string };
 type LearnerRow = {
   id: string;
   family_id: string;
@@ -20,13 +20,7 @@ type RelationshipRow = {
   valid_to: string | null;
 };
 
-export const toMember = (r: MemberRow): Member => ({
-  id: r.id,
-  userId: r.user_id,
-  familyId: r.family_id,
-  role: r.role,
-  displayName: r.display_name,
-});
+export { toMember } from "./session";
 
 export const toLearner = (r: LearnerRow): Learner => ({
   id: r.id,
@@ -42,15 +36,8 @@ export const toLearner = (r: LearnerRow): Learner => ({
 export function createSupabaseAccessStore(): AccessStore {
   const db = createAdminClient();
   return {
-    async getMemberByUserId(userId) {
-      const { data, error } = await db
-        .from("members")
-        .select("id, user_id, family_id, role, display_name")
-        .eq("user_id", userId)
-        .maybeSingle<MemberRow>();
-      if (error) throw new Error(`members lookup failed: ${error.code}`);
-      return data ? toMember(data) : null;
-    },
+    // One read per request, shared with the pages (session.ts).
+    getMemberByUserId: (userId) => getMemberByUserId(userId),
     async getLearner(learnerId) {
       const { data, error } = await db
         .from("learners")

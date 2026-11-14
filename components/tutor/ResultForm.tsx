@@ -1,5 +1,8 @@
 "use client";
 
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
+import { blockImplicitSubmit } from "@/lib/forms/enter";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import type { SkillMapView } from "@/lib/skillmap/types";
@@ -11,7 +14,7 @@ import { paperMode, startMode } from "@/lib/tutorwork/resultMode";
 import { scaleBand } from "@/lib/frames/frame";
 import { SubmissionPreview } from "@/components/practice/SubmissionPreview";
 import type { AssignmentView } from "@/lib/practice/types";
-import Link from "next/link";
+import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import type { FrameView, ResultAttempt, ResultContext, ResultEdit, ResultMode, ResultSource, TagInfo } from "@/lib/tutorwork/types";
 import { TagSelect } from "./TagSelect";
 import { useTags } from "./useTags";
@@ -74,6 +77,8 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [round, setRound] = useState(0);
+  const { state: saveState, track } = useSaveStatus({ assignmentId, mode, frameId, wrong: [...wrong].sort(), title, rows, itemTags, source, attempt, usedHint, context, date }, { resetKey: round });
   const clientId = useRef<string>(crypto.randomUUID());
 
   const frame = frames.find((f) => f.id === frameId) ?? null;
@@ -118,6 +123,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
   }
 
   function reset() {
+    setRound((n) => n + 1);
     setSuperseding(null);
     setAssignmentId("");
     setMode(paperMode(initialFramed, frames.length > 0));
@@ -182,7 +188,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
       };
     }
     setBusy(true);
-    const r = await postJson<{ id: string; untagged: number }>(`/api/learners/${learnerId}/results`, payload);
+    const r = await track(() => postJson<{ id: string; untagged: number }>(`/api/learners/${learnerId}/results`, payload));
     setBusy(false);
     if (!r.ok) return setError(failText(r));
     setSaved(resultPage.saved(r.body.untagged));
@@ -194,7 +200,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
     `min-h-11 rounded-lg border px-4 text-sm font-medium ${on ? "border-accent bg-accent text-white" : "border-line bg-white text-ink hover:border-accent"}`;
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-6" data-testid="result-form">
+    <form onSubmit={submit} onKeyDown={blockImplicitSubmit} className="flex flex-col gap-6" data-testid="result-form">
       {/* Once saved, the form is read-only until "Ghi bài khác": editing and saving again would record a second result. */}
       <fieldset disabled={saved !== null} className="m-0 flex min-w-0 flex-col gap-6 border-0 p-0">
         <section className="flex flex-col gap-2 rounded-xl border border-line bg-white p-4">
@@ -540,7 +546,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
           </button>
         </div>
       ) : null}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-3">
         <button
           type="submit"
           disabled={busy || saved !== null}
@@ -549,6 +555,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
         >
           {busy ? resultPage.saving : resultPage.save}
         </button>
+        <SaveStatus state={saveState} />
       </div>
     </form>
   );

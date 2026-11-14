@@ -1,4 +1,5 @@
 import "server-only";
+import { deferHook } from "@/lib/engine/defer";
 import { NextResponse } from "next/server";
 import { apiErrors } from "@/lib/copy/vi";
 import { logAppError } from "@/lib/ops/logAppError";
@@ -17,7 +18,7 @@ export async function runTutorWorkRoute(routeName: string, run: (deps: TutorWork
       data: { user },
     } = await supabase.auth.getUser();
     userId = user?.id ?? null;
-    const result = await run({ user, store: createSupabaseTutorWorkStore(), afterPoints: pointHook(routeName, userId) });
+    const result = await run({ user, store: createSupabaseTutorWorkStore(), afterPoints: deferHook(pointHook(routeName, userId), { route: routeName, userId }) });
     return NextResponse.json(result.body, {
       status: result.status,
       headers: { "Cache-Control": "private, no-store" },

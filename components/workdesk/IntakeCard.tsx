@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { intakeCopy } from "@/lib/copy/vi";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { failText, postJson } from "@/lib/tutorwork/client";
@@ -21,6 +23,8 @@ export function IntakeCard({ learnerId, view, canEdit, domains, levelsAssumed = 
   const [weaknesses, setWeaknesses] = useState<Partial<Record<DomainKey, string>>>({});
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [session, setSession] = useState(0);
+  const { state: saveState, run } = useSaveStatus(editing ? { goals, strengths, weaknesses, note } : null, { resetKey: editing ? session : "closed" });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const start = () => {
@@ -29,6 +33,7 @@ export function IntakeCard({ learnerId, view, canEdit, domains, levelsAssumed = 
     setWeaknesses({ ...(view?.weaknesses ?? {}) });
     setNote(view?.note ?? "");
     setMsg(null);
+    setSession((n) => n + 1);
     setEditing(true);
   };
 
@@ -36,15 +41,23 @@ export function IntakeCard({ learnerId, view, canEdit, domains, levelsAssumed = 
     e.preventDefault();
     setBusy(true);
     setMsg(null);
-    const r = await postJson(`/api/learners/${learnerId}/intake`, {
-      goals: goals.filter((g) => g.title.trim()).map((g) => ({ title: g.title.trim(), due: g.due.trim() || null })),
-      strengths,
-      weaknesses,
-      note: note.trim(),
-      client_id: crypto.randomUUID(),
+    let failed: string | null = null;
+    const ok = await run(async () => {
+      const r = await postJson(`/api/learners/${learnerId}/intake`, {
+        goals: goals.filter((g) => g.title.trim()).map((g) => ({ title: g.title.trim(), due: g.due.trim() || null })),
+        strengths,
+        weaknesses,
+        note: note.trim(),
+        client_id: crypto.randomUUID(),
+      });
+      if (!r.ok) {
+        failed = failText(r);
+        return { ok: false };
+      }
+      return { ok: true };
     });
     setBusy(false);
-    if (!r.ok) return setMsg({ ok: false, text: failText(r) });
+    if (!ok) return setMsg({ ok: false, text: failed ?? "" });
     setEditing(false);
     setMsg({ ok: true, text: intakeCopy.saved });
     router.refresh();
@@ -163,6 +176,7 @@ export function IntakeCard({ learnerId, view, canEdit, domains, levelsAssumed = 
           {intakeCopy.empty}
         </p>
       )}
+      <SaveStatus state={saveState} className="mt-2" />
       {msg ? (
         <p role={msg.ok ? "status" : "alert"} data-testid="intake-msg" className={`mt-3 text-sm font-medium ${msg.ok ? "text-accent" : "text-[#7a2a0c]"}`}>
           {msg.text}

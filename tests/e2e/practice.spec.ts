@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
-import { assignPage, practiceStudent, resultPage } from "@/lib/copy/vi";
+import { assignPage, practiceStudent, resultPage, tagPicker } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { LEARNER_IDS, loginAs } from "./helpers";
 
@@ -68,6 +68,24 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     await page.getByTestId("assign-title").fill("Link thử");
     await page.getByTestId("assign-submit").click();
     await expect(page.getByTestId("assign-error")).toHaveText(assignPage.needLink);
+  });
+
+  test("the tutor picks three knowledge items across tabs and through the search box (Enter never gives the assignment)", async ({ page }) => {
+    await loginAs(page, "tutorNguyen");
+    await page.goto(`/learners/${NG}/assign`);
+    await page.getByTestId("assign-title").fill(`Ba mục thử ${Date.now()}`);
+    await page.getByTestId("assign-url").fill("https://notebooklm.google.com/notebook/abc");
+    await page.getByTestId("tab-assign-tags-vocab").click();
+    await page.getByTestId("tag-chip-thanh-ngu").click();
+    await page.getByTestId("search-assign-tags").fill("phat am");
+    await page.getByTestId("search-assign-tags").press("Enter");
+    await expect(page.getByTestId("assign-done")).toHaveCount(0);
+    await expect(page.getByTestId("assign-tags")).toContainText(tagPicker.selected(2, 3));
+    await page.getByTestId("search-assign-tags").fill("");
+    await page.getByTestId("tab-assign-tags-vocab").click();
+    await page.getByTestId("tag-chip-dang-tu").click();
+    await expect(page.getByTestId("assign-tags")).toContainText(tagPicker.maxReached(3));
+    await expect(page.getByTestId("assign-tags-chosen")).toContainText("Thành ngữ");
   });
 
   test("the child downloads the PDF through the app, sends a picture, and sees no score", async ({ page }) => {

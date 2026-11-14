@@ -1,7 +1,11 @@
 "use client";
+
+import { SaveStatus } from "@/components/ui/SaveStatus";
+import { useSaveStatus } from "@/components/ui/useSaveStatus";
+import { BusyButton } from "@/components/ui/BusyButton";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { readingPage } from "@/lib/copy/vi";
+import { busyCopy, readingPage } from "@/lib/copy/vi";
 import { buildReadingRows, type ReadingCell } from "@/lib/reading/rows";
 import type { ReadingReportEdit } from "@/lib/reading/types";
 import { failText, postJson } from "@/lib/tutorwork/client";
@@ -28,6 +32,7 @@ export function ReadingReportForm({ learnerId, tags, month, existing }: {
   const [note, setNote] = useState(existing?.note ?? "");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const { state: saveState, track } = useSaveStatus({ cells, note });
   const [clientId] = useState(() => crypto.randomUUID());
 
   async function save(e: React.FormEvent) {
@@ -36,9 +41,9 @@ export function ReadingReportForm({ learnerId, tags, month, existing }: {
     if (r === null) return setMsg({ ok: false, text: readingPage.rowInvalid });
     if (r.length === 0) return setMsg({ ok: false, text: readingPage.needOneRow });
     setBusy(true);
-    const res = await postJson(`/api/learners/${learnerId}/reading-reports`, {
+    const res = await track(() => postJson(`/api/learners/${learnerId}/reading-reports`, {
       client_id: clientId, month, rows: r, ...(note.trim() ? { note: note.trim() } : {}), ...(existing ? { supersedes_id: existing.id } : {}),
-    });
+    }));
     setBusy(false);
     if (!res.ok) return setMsg({ ok: false, text: failText(res) });
     setMsg({ ok: true, text: readingPage.saved });
@@ -83,9 +88,10 @@ export function ReadingReportForm({ learnerId, tags, month, existing }: {
         <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} rows={2} className="rounded-lg border border-line px-3 py-2" data-testid="reading-note" />
       </label>
       {msg ? <p role="status" className={msg.ok ? "text-accent" : "text-[#8a3b12]"} data-testid="reading-msg">{msg.text}</p> : null}
-      <button type="submit" disabled={busy} className="min-h-11 self-start rounded-lg bg-accent px-5 font-semibold text-white disabled:opacity-60" data-testid="reading-save">
+      <SaveStatus state={saveState} />
+      <BusyButton busy={busy} busyLabel={busyCopy.saving} type="submit"  className="min-h-11 self-start rounded-lg bg-accent px-5 font-semibold text-white disabled:opacity-60" data-testid="reading-save">
         {existing ? readingPage.saveCorrection : readingPage.save}
-      </button>
+      </BusyButton>
     </form>
   );
 }
