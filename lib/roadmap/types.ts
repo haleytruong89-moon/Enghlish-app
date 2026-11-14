@@ -1,6 +1,6 @@
 /**
  * Roadmap milestones (W4a · Lộ trình mốc) — constants and row types shared by the server, the browser and the tests. Pure.
- * Same limits as migration 0032. Rules: docs/DOMAIN.md §4 / §6 (bản 0.5), plan docs/superpowers/plans/2026-11-14-w4-student-desk.md §3.3–§3.4.
+ * Same limits as migration 0031. Rules: docs/DOMAIN.md §4 / §6 (bản 0.5), plan docs/superpowers/plans/2026-11-14-w4-student-desk.md §3.3–§3.4.
  */
 export const MILESTONE_KINDS = ["progress_test", "mock_exam", "exam", "goal", "other"] as const;
 export type MilestoneKind = (typeof MILESTONE_KINDS)[number];

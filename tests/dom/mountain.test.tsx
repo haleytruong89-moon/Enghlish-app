@@ -11,7 +11,7 @@ const flag = (afterUnit: string): ChildMilestone => ({ id: "m1", kind: "progress
 const summit: ChildMilestone = { id: "s1", kind: "goal", role: "summit", title: "Lên C1", curriculumId: null, afterUnit: null, targetMonth: "2027-06-01", approx: false };
 const journey = (milestones: ChildMilestone[] = []) =>
   buildJourney({
-    main: { id: "c1", title: "Destination B2" }, others: [{ title: "Grammar", done: 2, total: 10 }], milestones,
+    main: { id: "c1", title: "Destination B2" }, others: [{ id: "c2", title: "Grammar", done: 2, total: 10 }], milestones,
     units: [unit(1, "done"), unit(2, "done"), unit(3, "in_progress"), unit(4), unit(5, "not_started", true), unit(6)],
   });
 
@@ -69,7 +69,7 @@ describe("Hành trình · the mountain", () => {
   it("no score-like text anywhere on the page: no %, no 'điểm', no 'x/4', no 'đúng/sai'", () => {
     const { container } = render(<JourneyView journey={journey([flag("U4"), summit])} />);
     const text = container.textContent ?? "";
-    expect(text).not.toMatch(/%|\bđiểm\b|\/\s*4\b|đúng|sai\b|cấp\b/i);
+    expect(text).not.toMatch(/%|(^|[^\p{L}])điểm(?!\p{L})|\/\s*4\b|đúng|sai\b|cấp\b/iu);
     // the only "a/b" in the page are counts of work (Units), inside a data-count element (months like 06/2027 are dates, not counts)
     const slashes = [...container.querySelectorAll("*")].filter((el) => el.children.length === 0 && /(?<![\d/])\d{1,3}\s*\/\s*\d{1,3}(?![\d/])/.test(el.textContent ?? ""));
     for (const el of slashes) expect(el.closest("[data-count='work']"), el.textContent ?? "").not.toBeNull();

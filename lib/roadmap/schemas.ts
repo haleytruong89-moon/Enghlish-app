@@ -31,6 +31,7 @@ export const milestoneBodySchema = z
   .refine((b) => b.milestone_id !== undefined || b.fields !== undefined, { message: "a new milestone needs fields", path: ["fields"] })
   .refine((b) => (b.milestone_id === undefined) === (b.base_version === undefined), { message: "base_version goes with milestone_id", path: ["base_version"] })
   .refine((b) => b.status !== "removed" || (b.reason ?? "").length >= ROADMAP_LIMITS.reasonMin, { message: "reason needed", path: ["reason"] })
+  .refine((b) => b.status !== "removed" || b.milestone_id !== undefined || b.proposal_key !== undefined, { message: "a new milestone is never created already removed (only a dismissed proposal is)", path: ["status"] })
   .refine((b) => b.proposal_key === undefined || b.milestone_id === undefined, { message: "a proposal key belongs to a new milestone", path: ["proposal_key"] });
 export type MilestoneBody = z.infer<typeof milestoneBodySchema>;
 

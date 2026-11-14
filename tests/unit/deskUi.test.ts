@@ -58,14 +58,18 @@ describe("Bàn làm việc", () => {
     expect(h.slice(h.indexOf('data-testid="desk-inbox"'), h.indexOf(`data-testid="attention-${L}"`))).not.toMatch(/<button\b/);
   });
   it("W4a: the parent sees one line about a milestone confirmed this week; the tutor does not; a vanished Unit is an alert", () => {
-    const d = data({ roadmap: { orphans: 2, recentTitle: "Progress Test 1" } });
+    const d = data({ roadmap: { orphans: 2, recentTitle: "Progress Test 1", proposals: 0 } });
     const parent = render("parent", d);
     expect(parent).toContain('data-testid="desk-roadmap-line"');
     expect(parent).toContain(deskCopy.roadmapLine.parentNew("Progress Test 1"));
     expect(parent).toContain(`href="/learners/${L}/roadmap"`);
     expect(render("tutor", d)).not.toContain('data-testid="desk-roadmap-line"');
+    // proposals of the app: a soft line for the tutor only, never an inbox row
+    const withProposals = data({ roadmap: { orphans: 0, recentTitle: null, proposals: 3 } });
+    expect(render("tutor", withProposals)).toContain(deskCopy.roadmapLine.proposals(3));
+    expect(render("parent", withProposals)).not.toContain('data-testid="desk-roadmap-proposals"');
     expect(render("tutor", d)).toContain(deskCopy.alerts.orphanTitle(2));
-    expect(render("parent", data({ roadmap: { orphans: 0, recentTitle: null } }))).not.toContain('data-testid="desk-roadmap-line"');
+    expect(render("parent", data({ roadmap: { orphans: 0, recentTitle: null, proposals: 0 } }))).not.toContain('data-testid="desk-roadmap-line"');
   });
   it("Chờ duyệt box never says 'nothing waiting' when a source failed or the list may be incomplete", () => {
     const failed = render("tutor", data({ pending: { rows: [], failed: ["studio"], more: false } }));

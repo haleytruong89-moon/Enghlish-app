@@ -72,7 +72,7 @@ test("the child sees the flag, the Units in their own state and counts (no score
   await page.getByTestId("journey-list-toggle").locator("summary").click();
   await expect(page.getByTestId("path-list")).toContainText(journeyCopy.here);
   const text = await page.locator("body").innerText();
-  expect(text).not.toMatch(/%|\bđiểm\b|\d\s*\/\s*4\s*·|đúng\s+\d/i);
+  expect(text).not.toMatch(/%|(^|[^\p{L}])điểm(?!\p{L})|\d\s*\/\s*4\s*·|đúng\s+\d/iu);
   expect(text).not.toContain("⚑ Cần xem lại");
 });
 

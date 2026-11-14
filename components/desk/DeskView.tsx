@@ -5,6 +5,7 @@ import { deskCopy, home, learnerWithTrack, todayPage } from "@/lib/copy/vi";
 import { deskAlerts } from "@/lib/desk/alerts";
 import type { DeskData } from "@/lib/desk/load";
 import type { LearnerSummary } from "@/lib/home/visible";
+import { roadmapHref } from "@/lib/shell/paths";
 import { formatDay } from "@/lib/review/format";
 import type { ShellData } from "@/lib/shell/shell";
 import { CurriculumBox } from "./CurriculumBox";
@@ -45,7 +46,13 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
       {parent && data.roadmap?.recentTitle ? (
         <p className="rounded-xl border border-line bg-white px-4 py-3 text-sm" data-testid="desk-roadmap-line">
           {deskCopy.roadmapLine.parentNew(data.roadmap.recentTitle)}{" "}
-          <Link href={`/learners/${id}/roadmap`} className="font-medium text-accent underline">{deskCopy.roadmapLine.open}</Link>
+          <Link href={roadmapHref(id)} className="font-medium text-accent underline">{deskCopy.roadmapLine.open}</Link>
+        </p>
+      ) : null}
+      {!parent && data.roadmap && data.roadmap.proposals > 0 ? (
+        <p className="rounded-xl border border-line bg-white px-4 py-3 text-sm" data-testid="desk-roadmap-proposals">
+          {deskCopy.roadmapLine.proposals(data.roadmap.proposals)}{" "}
+          <Link href={roadmapHref(id)} className="font-medium text-accent underline">{deskCopy.roadmapLine.open}</Link>
         </p>
       ) : null}
       <div className="grid items-start gap-4 lg:grid-cols-3">

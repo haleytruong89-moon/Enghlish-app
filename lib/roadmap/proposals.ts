@@ -38,6 +38,8 @@ export type ProposalInput = {
   trackGoalLabel: string | null;
   /** Every proposal_key already used by a milestone of this child (any status). */
   usedKeys: ReadonlySet<string>;
+  /** A summit already exists (the child sees one): goals are then proposed as "after the summit", never as a second summit. */
+  summitExists?: boolean;
 };
 
 const clipTitle = (s: string) => s.replace(/\s+/g, " ").trim().slice(0, ROADMAP_LIMITS.title).trim();
@@ -74,7 +76,7 @@ export function buildProposals(i: ProposalInput): Proposal[] {
   goals.forEach((g, n) => {
     const due = parseDue(g.due);
     add({
-      key: `goal:${normalizeName(g.title, 120)}`, kind: "goal", role: n === 0 ? "summit" : "beyond", title: clipTitle(g.title),
+      key: `goal:${normalizeName(g.title, 120)}`, kind: "goal", role: n === 0 && !i.summitExists ? "summit" : "beyond", title: clipTitle(g.title),
       curriculumId: null, afterUnit: null, targetMonth: due.month, approx: due.approx, source: "intake",
     });
   });
@@ -82,7 +84,7 @@ export function buildProposals(i: ProposalInput): Proposal[] {
   // (iii) the goal of the track: the summit when the intake has no goal, else after the summit.
   if (i.trackGoalLabel && clipTitle(i.trackGoalLabel) !== "") {
     add({
-      key: `track:${normalizeName(i.trackId, 100)}`, kind: "goal", role: goals.length === 0 ? "summit" : "beyond", title: clipTitle(i.trackGoalLabel),
+      key: `track:${normalizeName(i.trackId, 100)}`, kind: "goal", role: goals.length === 0 && !i.summitExists ? "summit" : "beyond", title: clipTitle(i.trackGoalLabel),
       curriculumId: null, afterUnit: null, targetMonth: null, approx: false, source: "track",
     });
   }

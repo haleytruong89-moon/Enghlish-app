@@ -23,7 +23,7 @@ const fetchMock = (status: number, body: unknown) => {
 const bodyOf = (f: ReturnType<typeof fetchMock>, i = 0) => JSON.parse((f.mock.calls[i] as unknown as [string, { body: string }])[1].body) as Record<string, unknown>;
 const urlOf = (f: ReturnType<typeof fetchMock>, i = 0) => (f.mock.calls[i] as unknown as [string])[0];
 
-const curricula: RoadmapCurriculum[] = [{ id: "c1", title: "Destination B2", units: [{ code: "U1", ord: 1, title: "Unit 1", skipped: false }, { code: "U2", ord: 2, title: "Unit 2", skipped: false }] }];
+const curricula: RoadmapCurriculum[] = [{ id: "c1", title: "Destination B2", units: [{ code: "U1", ord: 1, title: "Unit 1", skipped: false }, { code: "U2", ord: 2, title: "Unit 2", skipped: false }], unitStates: { U1: "done", U2: "not_started" } }];
 const ver = (over: Partial<MilestoneVersion>): MilestoneVersion => ({
   id: "r1", milestoneId: "m1", version: 1, kind: "mock_exam", role: "flag", title: "Thi thử vào 10", curriculumId: "c1", afterUnit: "U2", targetMonth: "2027-03-01", approx: false,
   status: "confirmed", reason: null, proposalKey: null, createdAt: "2026-11-10T00:00:00Z", ...over,
@@ -114,5 +114,47 @@ describe("Lộ trình · proposals", () => {
     fireEvent.click(screen.getByTestId("proposal-dismiss-go"));
     await waitFor(() => expect(f).toHaveBeenCalled());
     expect(bodyOf(f)).toMatchObject({ status: "removed", reason: "không làm đề này", proposal_key: p.key });
+  });
+});
+
+describe("Lộ trình · idempotency id (client_id)", () => {
+  const p: Proposal = { key: "pt:c1:progress-test-1", kind: "progress_test", role: "flag", title: "Progress Test 1", curriculumId: "c1", afterUnit: "U2", targetMonth: null, approx: false, source: "progress_test" };
+  const seq = (...answers: (number | "network")[]) => {
+    const f = vi.fn(async () => {
+      const a = answers.shift() ?? 201;
+      if (a === "network") throw new Error("offline");
+      return { ok: a < 300, status: a, json: async () => ({ error: a === 400 ? "bad_fields" : "x", milestone_id: "m1", version: 1, replayed: false }) };
+    });
+    vi.stubGlobal("fetch", f);
+    return f;
+  };
+  const idOf = (f: ReturnType<typeof seq>, i: number) => bodyOf(f as unknown as ReturnType<typeof fetchMock>, i).client_id;
+  const mount = () => render(<ProposalList learnerId="L1" proposals={[p]} curricula={curricula} mainId="c1" canWrite summitTitle={null} />);
+
+  it("a network error or a 5xx keeps the id (the retry is the same intent); a definite 4xx rotates it", async () => {
+    const f = seq("network", 500, 400, 201);
+    mount();
+    for (let i = 0; i < 4; i += 1) {
+      fireEvent.click(screen.getByTestId("proposal-confirm"));
+      await waitFor(() => expect(f).toHaveBeenCalledTimes(i + 1));
+      await waitFor(() => expect(screen.getByTestId("proposal-confirm")).toBeTruthy());
+    }
+    expect(idOf(f, 1)).toBe(idOf(f, 0)); // after the network error
+    expect(idOf(f, 2)).toBe(idOf(f, 0)); // after the 500
+    expect(idOf(f, 3)).not.toBe(idOf(f, 0)); // after the 400 the next try is a new intent
+  });
+  it("a success rotates the id; changing the content (the reason) also gets a new id", async () => {
+    const f = seq(500, 500, 201);
+    render(<MilestoneList learnerId="L1" cards={buildCards([ver({})])} curricula={curricula} mainId="c1" canWrite orphanIds={[]} />);
+    fireEvent.click(screen.getByTestId("ms-remove-m1"));
+    const reason = screen.getByTestId("ms-remove-reason-m1");
+    fireEvent.change(reason, { target: { value: "lịch thi đổi" } });
+    fireEvent.click(screen.getByTestId("ms-remove-go-m1"));
+    await waitFor(() => expect(f).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect((screen.getByTestId("ms-remove-go-m1") as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.change(reason, { target: { value: "đề đổi lịch, bỏ mốc này" } });
+    fireEvent.click(screen.getByTestId("ms-remove-go-m1"));
+    await waitFor(() => expect(f).toHaveBeenCalledTimes(2));
+    expect(idOf(f, 1)).not.toBe(idOf(f, 0));
   });
 });

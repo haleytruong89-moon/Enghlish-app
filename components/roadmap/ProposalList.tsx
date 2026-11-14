@@ -5,6 +5,7 @@ import { SaveStatus } from "@/components/ui/SaveStatus";
 import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { roadmapCopy } from "@/lib/copy/vi";
 import { roadmapFailText } from "@/lib/roadmap/client";
+import { clientIdBook } from "@/lib/roadmap/clientId";
 import type { RoadmapCurriculum } from "@/lib/roadmap/shape";
 import type { Proposal } from "@/lib/roadmap/types";
 import { fieldsOf, placeLine, valuesOf } from "@/lib/roadmap/view";
@@ -36,18 +37,16 @@ function ProposalRow({ learnerId, p, curricula, mainId, canWrite, summitTitle, o
   const [mode, setMode] = useState<"view" | "edit" | "dismiss">("view");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const clientId = useRef(crypto.randomUUID());
+  const book = useRef(clientIdBook());
   const { state, track } = useSaveStatus({ mode, reason });
 
   async function write(status: "confirmed" | "removed") {
     setError(null);
     const fields = fieldsOf(valuesOf(p));
-    const r = await track(() =>
-      postJson(`/api/learners/${learnerId}/roadmap/milestones`, {
-        client_id: clientId.current, status, fields, proposal_key: p.key, ...(status === "removed" ? { reason: reason.trim() } : {}),
-      }),
-    );
-    if (!r.ok) { clientId.current = crypto.randomUUID(); return setError(r.error === "summit_exists" && summitTitle ? `${roadmapCopy.errors.summit_exists} (${summitTitle})` : roadmapFailText(r)); }
+    const body = { status, fields, proposal_key: p.key, ...(status === "removed" ? { reason: reason.trim() } : {}) };
+    const r = await track(() => postJson(`/api/learners/${learnerId}/roadmap/milestones`, { client_id: book.current.idFor(body), ...body }));
+    book.current.settle(r);
+    if (!r.ok) { return setError(r.error === "summit_exists" && summitTitle ? `${roadmapCopy.errors.summit_exists} (${summitTitle})` : roadmapFailText(r)); }
     onDone();
   }
 

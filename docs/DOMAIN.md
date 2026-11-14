@@ -28,7 +28,7 @@ Ký hiệu: ✅ đã chốt (ghi ngày) · ❓ cần phụ huynh quyết · 🕓
 
 | Vai trò | Được làm | Không được |
 |---|---|---|
-| **Con** | Xem "Hành trình" (W4a, Q2d 14/11): **Unit + trạng thái của giáo trình chính** và **mốc đã xác nhận** (tên + tháng), không điểm/mức/nhãn kỹ năng/số câu; làm và nộp bài được giao (trong app, ảnh, file, ảnh trang kết quả); xem "Câu cần xem lại", góp ý, lời nhắn | Thấy điểm, x/y, %, mức, nhãn kỹ năng, nhận xét cho phụ huynh, nháp AI chưa duyệt |
+| **Con** | Xem "Hành trình" (W4a, Q2d 14/11, PRD D38) và **số đếm việc của chính mình** (PRD D35: bài đã nộp, Unit đã xong, câu đã trả lời — không bao giờ đúng/sai, %, điểm, so với em kia): **Unit + trạng thái của giáo trình chính** và **mốc đã xác nhận** (tên + tháng), không điểm/mức/nhãn kỹ năng/số câu; làm và nộp bài được giao (trong app, ảnh, file, ảnh trang kết quả); xem "Câu cần xem lại", góp ý, lời nhắn | Thấy điểm, x/y của **kết quả** (đúng/sai), %, mức, nhãn kỹ năng, nhận xét cho phụ huynh, nháp AI chưa duyệt |
 | **Gia sư của em** (quan hệ còn hiệu lực) | Mọi việc chuyên môn: hồ sơ đầu vào, Ghi chú dạy học, giáo trình, lộ trình, giao bài, xem/duyệt mọi nháp AI, phán Đúng/Sai, xác nhận mức 3–4 và cấp, nhận xét tháng, góp ý cho AI, góp ý về app | Thấy hay sửa em không do mình dạy; sửa công thức AI; đổi luật cứng |
 | **Phụ huynh** | Xem mọi thứ của con mình; bật AI, trần chi phí, đồng ý `ai_text`; xem "Tổng hợp góp ý"; sửa công thức AI (tạo phiên bản mới); trả lời góp ý về app; tải file bài đã làm (gia sư xác nhận kết quả, R8), ghi buổi (như hiện nay) | Xác nhận mức 3–4, cấp, bài kiểm tra trong buổi (D14/D15, chỉ gia sư); duyệt nháp chuyên môn của AI thay gia sư (chỉ được **bỏ** nháp) ✅ D-W8 08/11 |
 | **AI** | Đọc tài liệu được đưa vào, soạn nháp theo công thức | Ghi thẳng vào bằng chứng, mức, cấp; tự giao bài; tự đổi công thức; chấm bài viết/nói thay người |
@@ -234,7 +234,7 @@ Cách ③ chỉ ghi **điểm theo phần** nếu trang kết quả không ghi c
 3. Mức điểm 3–4 chỉ có khi có dòng **xác nhận của gia sư của em**; app không bao giờ tự lên 3–4, không bao giờ tự hạ.
 4. Bài nạp "làm cùng cô" không bao giờ đóng góp cho mức 3–4.
 5. Mức điểm, độ phủ, "đang học đến" là **dẫn xuất**: xóa đi tính lại được, kết quả giống hệt.
-6. Con không bao giờ nhận điểm, x/y, %, mức hay nhãn kỹ năng (như hiện nay).
+6. Con không bao giờ nhận điểm, x/y kết quả (đúng/sai), %, mức hay nhãn kỹ năng (như hiện nay). **Ngoại lệ có giới hạn (PRD D35):** số đếm **việc của chính con** (bài đã nộp, Unit đã xong, câu đã trả lời) được hiện, và ở giao diện chỉ nằm trong phần tử `data-count="work"`; không bao giờ so với em kia.
 7. Mỗi lần gọi AI có `ai_runs` với `prompt_version`; mỗi nháp AI trỏ tới lần gọi đã tạo ra nó.
 8. Góp ý cho AI, góp ý về app, Ghi chú dạy học, nhận xét tháng, sự kiện Unit, phiên bản lộ trình: **chỉ thêm** (`eng_forbid_mutation`).
 9. Mọi bảng mới có `learner_id` nằm trong `eng_purge_learner` / `eng_purge_preview` (kèm test).

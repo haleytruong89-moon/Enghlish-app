@@ -10,7 +10,7 @@ import type { ChildMilestone } from "@/lib/roadmap/types";
 
 export type JourneyUnitStatus = "done" | "in_progress" | "not_started" | "skipped";
 export type JourneyUnitInput = { code: string; ord: number; title: string; skipped: boolean; status: "done" | "in_progress" | "not_started" | "skipped"; doneOn: string | null };
-export type JourneyOtherInput = { title: string; done: number; total: number };
+export type JourneyOtherInput = { id: string; title: string; done: number; total: number };
 export type JourneyInput = {
   main: { id: string; title: string } | null;
   units: readonly JourneyUnitInput[];
@@ -43,7 +43,7 @@ export type Journey = {
   summit: { title: string; targetMonth: string | null; approx: boolean } | null;
   beyond: { id: string; title: string; targetMonth: string | null; approx: boolean }[];
   otherMilestones: JourneyOtherMilestone[];
-  others: { title: string; done: number; total: number }[];
+  others: { id: string; title: string; done: number; total: number }[];
 };
 
 const byMonthThenTitle = (a: { targetMonth: string | null; title: string }, b: { targetMonth: string | null; title: string }) =>

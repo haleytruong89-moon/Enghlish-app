@@ -68,6 +68,8 @@ describe("roadmap bodies (zod)", () => {
     expect(milestoneBodySchema.safeParse({ client_id: "client-0001", status: "removed", milestone_id: MS, base_version: 2, reason: "lịch thi đổi" }).success).toBe(true);
     expect(milestoneBodySchema.safeParse({ client_id: "client-0001", status: "removed", fields: BODY.fields, proposal_key: "pt:x:y", reason: "không làm" }).success).toBe(true);
     expect(milestoneBodySchema.safeParse({ client_id: "client-0001", status: "confirmed", milestone_id: MS, base_version: 1, proposal_key: "pt:x:y" }).success).toBe(false);
+    // a brand-new milestone is never created already removed, unless it is a dismissed proposal
+    expect(milestoneBodySchema.safeParse({ client_id: "client-0001", status: "removed", fields: BODY.fields, reason: "không làm" }).success).toBe(false);
     expect(milestoneBodySchema.safeParse({ ...BODY, extra: 1 }).success).toBe(false);
     expect(milestoneBodySchema.safeParse({ ...BODY, fields: { ...BODY.fields, target_month: "2027-13" } }).success).toBe(false);
     expect(milestoneBodySchema.safeParse({ ...BODY, fields: { ...BODY.fields, title: "   " } }).success).toBe(false);

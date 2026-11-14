@@ -25,9 +25,15 @@ for (const key of ["studentAn", "studentNguyen"] as AccountKey[]) {
     if (await review.count()) expect(await review.innerText()).not.toMatch(/\d+\s*\/\s*\d+|%|đúng\s+\d/i);
     // W4a: Hành trình shows counts of Units only: no %, no score, no level, no "đúng n".
     await page.goto("/journey");
-    const journey = await page.locator("body").innerText();
+    // PRD D35: a/b may appear only inside [data-count="work"] (counts of the child's own work); everything else is checked without them.
+    const journey = await page.evaluate(() => {
+      const c = document.body.cloneNode(true) as HTMLElement;
+      c.querySelectorAll('[data-count="work"]').forEach((e) => e.remove());
+      return c.textContent ?? "";
+    });
     expect(journey).not.toMatch(SCORE_PATTERN);
-    expect(journey).not.toMatch(/%|\bđiểm\b|đúng\s+\d|\bsai\s+\d/i);
+    expect(journey).not.toMatch(/\d+\s*\/\s*\d+(?!\d)(?<!\/\d{4})/);
+    expect(journey).not.toMatch(/%|(^|[^\p{L}])điểm(?!\p{L})|đúng\s+\d|\bsai\s+\d/iu);
     expect(journey).not.toMatch(/đang học (A1|A2|B1|B2|C1|C2)/);
     expect(journey).not.toContain(levelCopy.assumed);
     expect(await page.locator('[data-testid^="mt-"]').evaluateAll((els) => els.every((e) => !/\d\s*\/\s*4\s*·/.test(e.getAttribute("aria-label") ?? "")))).toBe(true);

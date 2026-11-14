@@ -14,10 +14,9 @@ const fnBody = (src: string, name: string) => {
 const deletes = (body: string) => [...body.matchAll(/delete from (english\.\w+)/g)].map((m) => m[1]);
 
 describe("*_roadmap_milestones.sql (found by suffix)", () => {
-  it("exists, ends with its own version, is expand-only, never touches public, and is not 0031 (reserved)", () => {
+  it("exists, ends with its own version, is expand-only, never touches public", () => {
     expect(file).toBeTruthy();
     const version = file.slice(0, 4);
-    expect(version).not.toBe("0031");
     expect(sql.trim().endsWith(`insert into english.schema_migrations(version) values ('${version}') on conflict do nothing;`)).toBe(true);
     expect(code).not.toMatch(/drop\s+table|drop\s+column|rename\s+(to|column)|alter\s+column\s+\w+\s+type/i);
     expect(code).not.toMatch(/\bpublic\./);

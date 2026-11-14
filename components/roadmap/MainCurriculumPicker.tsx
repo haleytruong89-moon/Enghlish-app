@@ -6,6 +6,7 @@ import { SaveStatus } from "@/components/ui/SaveStatus";
 import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { roadmapCopy } from "@/lib/copy/vi";
 import { roadmapFailText } from "@/lib/roadmap/client";
+import { clientIdBook } from "@/lib/roadmap/clientId";
 import type { RoadmapCurriculum } from "@/lib/roadmap/shape";
 import { postJson } from "@/lib/tutorwork/client";
 
@@ -16,7 +17,7 @@ export function MainCurriculumPicker({ learnerId, curricula, mainId, chosen, can
   const router = useRouter();
   const [pick, setPick] = useState(mainId ?? "");
   const [error, setError] = useState<string | null>(null);
-  const clientId = useRef(crypto.randomUUID());
+  const book = useRef(clientIdBook());
   const { state, track } = useSaveStatus(pick);
   if (curricula.length === 0) {
     return (
@@ -29,9 +30,10 @@ export function MainCurriculumPicker({ learnerId, curricula, mainId, chosen, can
   }
   async function save() {
     setError(null);
-    const r = await track(() => postJson(`/api/learners/${learnerId}/roadmap/main`, { client_id: clientId.current, curriculum_id: pick }));
-    if (!r.ok) { clientId.current = crypto.randomUUID(); return setError(roadmapFailText(r)); }
-    clientId.current = crypto.randomUUID();
+    const body = { curriculum_id: pick };
+    const r = await track(() => postJson(`/api/learners/${learnerId}/roadmap/main`, { client_id: book.current.idFor(body), ...body }));
+    book.current.settle(r);
+    if (!r.ok) return setError(roadmapFailText(r));
     router.refresh();
   }
   return (

@@ -13,7 +13,7 @@ export function OtherCurricula({ journey }: { journey: Journey }) {
           <p className="mt-1 text-sm text-muted">{journeyCopy.otherNote(journey.mainTitle as string)}</p>
           <ul className="mt-3 flex flex-col gap-3">
             {journey.others.map((o) => (
-              <li key={o.title} className="flex flex-col gap-1">
+              <li key={o.id} className="flex flex-col gap-1">
                 <span className="font-medium">{o.title}</span>
                 <span className="text-sm text-muted" data-count="work">{journeyCopy.otherDone(o.done, o.total)}</span>
               </li>

@@ -89,7 +89,7 @@ describe("buildJourney (plan 3.3 examples)", () => {
   });
 
   it("other curricula are passed through", () => {
-    const j = buildJourney({ main, others: [{ title: "Grammar", done: 2, total: 10 }], milestones: [], units: units(2) });
-    expect(j.others).toEqual([{ title: "Grammar", done: 2, total: 10 }]);
+    const j = buildJourney({ main, others: [{ id: "c2", title: "Grammar", done: 2, total: 10 }], milestones: [], units: units(2) });
+    expect(j.others).toEqual([{ id: "c2", title: "Grammar", done: 2, total: 10 }]);
   });
 });

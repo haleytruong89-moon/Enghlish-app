@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { MainCurriculumPicker } from "@/components/roadmap/MainCurriculumPicker";
 import { MilestoneList } from "@/components/roadmap/MilestoneList";
+import { PathStrip } from "@/components/roadmap/PathStrip";
 import { ProposalList } from "@/components/roadmap/ProposalList";
 import { learnerWithTrack, roadmapCopy } from "@/lib/copy/vi";
 import { loadRoadmap } from "@/lib/roadmap/load";
+import { buildStrip } from "@/lib/roadmap/strip";
 import { summitOf } from "@/lib/roadmap/visible";
 import { deskHref } from "@/lib/shell/paths";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
@@ -37,6 +39,7 @@ export default async function RoadmapPage({ params }: { params: Promise<{ id: st
         <p className="mt-6 rounded-xl border border-line bg-white px-5 py-4" data-testid="roadmap-unavailable">{roadmapCopy.unavailable}</p>
       ) : (
         <div className="mt-5 flex flex-col gap-4">
+          <PathStrip strip={buildStrip(loaded.view.mainId, loaded.view.curricula, loaded.view.cards)} curriculaHref={`/learners/${learner.id}/curricula`} />
           <MainCurriculumPicker learnerId={learner.id} curricula={loaded.view.curricula} mainId={loaded.view.mainId} chosen={loaded.view.mainChosen} canWrite={canWrite} />
           <ProposalList
             learnerId={learner.id} proposals={loaded.view.proposals} curricula={loaded.view.curricula} mainId={loaded.view.mainId} canWrite={canWrite}

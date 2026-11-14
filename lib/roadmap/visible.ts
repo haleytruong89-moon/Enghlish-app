@@ -27,11 +27,15 @@ export function childVersion(versions: readonly MilestoneVersion[]): MilestoneVe
   return sorted.find((v) => v.version < cur.version && v.status === "confirmed") ?? null;
 }
 
-export function buildCards(rows: readonly MilestoneVersion[]): MilestoneCard[] {
+/**
+ * `childIds` (milestone id → id of the version the child sees) comes from the database, which knows it even when the 20-row history is
+ * capped; without it the rule above is applied to the rows given.
+ */
+export function buildCards(rows: readonly MilestoneVersion[], childIds?: ReadonlyMap<string, string>): MilestoneCard[] {
   const cards: MilestoneCard[] = [];
   for (const [milestoneId, versions] of groupByMilestone(rows)) {
     const current = versions[versions.length - 1] as MilestoneVersion;
-    const childSees = childVersion(versions);
+    const childSees = childIds ? (versions.find((v) => v.id === childIds.get(milestoneId)) ?? null) : childVersion(versions);
     cards.push({ milestoneId, current, childSees, childSeesOlder: current.status === "draft" && childSees !== null, history: [...versions].reverse() });
   }
   return cards.sort((a, b) => (a.current.createdAt < b.current.createdAt ? -1 : a.current.createdAt > b.current.createdAt ? 1 : a.milestoneId.localeCompare(b.milestoneId)));

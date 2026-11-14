@@ -5,6 +5,7 @@ import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { roadmapCopy, tutorHonorific } from "@/lib/copy/vi";
 import { blockImplicitSubmit } from "@/lib/forms/enter";
 import { roadmapFailText } from "@/lib/roadmap/client";
+import { clientIdBook } from "@/lib/roadmap/clientId";
 import type { RoadmapCurriculum } from "@/lib/roadmap/shape";
 import { MILESTONE_KINDS, type MilestoneVersion } from "@/lib/roadmap/types";
 import { fieldsOf, type FormValues } from "@/lib/roadmap/view";
@@ -33,7 +34,7 @@ export function MilestoneForm({
 }) {
   const [v, setV] = useState<FormValues>(initial);
   const [error, setError] = useState<string | null>(null);
-  const clientId = useRef(crypto.randomUUID());
+  const book = useRef(clientIdBook());
   const { state, track } = useSaveStatus(v);
   const curriculumId = v.curriculumId ?? mainId;
   const units = curricula.find((c) => c.id === curriculumId)?.units ?? [];
@@ -44,15 +45,14 @@ export function MilestoneForm({
     if (v.title.trim() === "") return setError(roadmapCopy.errors.bad_fields!);
     const fields = fieldsOf({ ...v, curriculumId });
     if (fields === null) return setError(roadmapCopy.errors.bad_fields!);
-    const r = await track(() =>
-      postJson(`/api/learners/${learnerId}/roadmap/milestones`, {
-        client_id: clientId.current, status, fields,
-        ...(editing ? { milestone_id: editing.milestoneId, base_version: editing.version } : {}),
-        ...(proposalKey ? { proposal_key: proposalKey } : {}),
-      }),
-    );
+    const body = {
+      status, fields,
+      ...(editing ? { milestone_id: editing.milestoneId, base_version: editing.version } : {}),
+      ...(proposalKey ? { proposal_key: proposalKey } : {}),
+    };
+    const r = await track(() => postJson(`/api/learners/${learnerId}/roadmap/milestones`, { client_id: book.current.idFor(body), ...body }));
+    book.current.settle(r);
     if (!r.ok) {
-      clientId.current = crypto.randomUUID();
       return setError(r.error === "summit_exists" && summitTitle ? `${roadmapCopy.errors.summit_exists} (${summitTitle})` : roadmapFailText(r));
     }
     onDone();

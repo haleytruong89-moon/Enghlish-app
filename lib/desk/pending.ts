@@ -2,6 +2,7 @@
  * "Chờ duyệt" of one child as one compact list (spec §3, §5 rule 4): every source that already waits for an adult, oldest first.
  * Pure. A row only LINKS to the page where the decision is made (DOMAIN R1, spec §3: no one-click approval) — it decides nothing.
  */
+import { roadmapHref } from "@/lib/shell/paths";
 import { activityLabels, curriculumCopy, fallbackLabels, pendingCopy, reviewPage, revisionReviewCopy } from "@/lib/copy/vi";
 import type { CurriculumCard } from "@/lib/curriculum/shape";
 import type { ImportPendingItem } from "@/lib/import/pending";
@@ -30,8 +31,8 @@ export type PendingInput = {
   curricula: readonly CurriculumCard[];
   /** Unfinished imports (W3): reading / draft / ai_failed. They only LINK to /imports/<id>; the child's tutor confirms there (R8). */
   imports?: readonly ImportPendingItem[];
-  /** Roadmap (W4a): proposals not yet handled + milestones whose current version is a draft; they only LINK to the Lộ trình page. 0 / undefined = none. */
-  roadmapWaiting?: number;
+  /** Roadmap (W4a): milestones whose current version is a draft (proposals of the app are NOT counted: they show on the Lộ trình page and as a soft line on the desk). 0 / undefined = none. */
+  roadmapDrafts?: number;
 };
 /**
  * The S5 inbox RPC has no learner filter and returns at most 100 rows (oldest first) across ALL the caller's children, so one
@@ -121,10 +122,10 @@ export function buildPendingRows(i: PendingInput): PendingRow[] {
       href: `/imports/${m.id}`, waitingTutor: i.role !== "tutor" && m.status === "draft",
     });
   }
-  if ((i.roadmapWaiting ?? 0) > 0) {
+  if ((i.roadmapDrafts ?? 0) > 0) {
     push({
-      key: "roadmap-waiting", kind: "milestone", label: pendingCopy.kinds.milestone, title: pendingCopy.need.milestone(i.roadmapWaiting as number), since: null,
-      need: pendingCopy.need.milestoneNeed, href: `/learners/${i.learnerId}/roadmap`, waitingTutor: i.role !== "tutor",
+      key: "roadmap-waiting", kind: "milestone", label: pendingCopy.kinds.milestone, title: pendingCopy.need.milestone(i.roadmapDrafts as number), since: null,
+      need: pendingCopy.need.milestoneNeed, href: roadmapHref(i.learnerId), waitingTutor: i.role !== "tutor",
     });
   }
   return rows.sort(byOldest);

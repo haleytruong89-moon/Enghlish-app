@@ -6,7 +6,7 @@
 
 **Goal:** Dựng "Bàn học của con" theo brief S-1…S-10 (14/11): màn **Hôm nay** (thẻ Làm tiếp + danh sách việc), **Cô đã xem**, **Đã làm**, **Hành trình** (núi theo trạng thái từng Unit + mốc do thầy/cô xác nhận, cấp theo mảng, mục tiêu tuần + chuỗi tuần mềm, thành tích, "Những điều mình đã làm được", "Ngày ấy – bây giờ"), các luồng làm / nộp bài (trên app có tự lưu, bài giấy chụp nhiều trang, bài link), màn sau khi nộp theo S-10 (không điểm, không đáp án, "Thử lại câu này" một lần ở bài luyện), Đặt mục tiêu tuần; phía thầy/cô thêm trang **Lộ trình** nhỏ (mốc) và các chỗ duyệt mục tiêu / lần thử lại.
 
-**Architecture:** Chia **6 PR tuần tự** (W4a → W4e, W4c tách đôi), mỗi PR một nhánh `feature/w4x-…`, mỗi PR có một migration riêng (số từ **0032**; **0031 để dành** cho bộ mục kiến thức Destination đang chờ). Học sinh vẫn chỉ đọc / ghi qua hàm `eng_my_*` (`security definer`, `search_path = ''`, nhận diện bằng `auth.uid()`, chỉ `authenticated`). Mọi luật dẫn xuất (núi, chuỗi tuần, thành tích, "bài tính vào mục tiêu") là **hàm thuần TypeScript một nơi** (như `lib/sessions/count.ts`), SQL chỉ trả dữ kiện có cấu trúc. Không AI mới, không đổi `prompts/*`, không đổi engine S7a / điểm.
+**Architecture:** Chia **6 PR tuần tự** (W4a → W4e, W4c tách đôi), mỗi PR một nhánh `feature/w4x-…`, mỗi PR có một migration riêng (W4a lấy **0031**; các PR sau lấy **số trống kế tiếp lúc gộp**; bộ mục kiến thức Destination cũng lấy số trống kế tiếp khi sẵn sàng). Học sinh vẫn chỉ đọc / ghi qua hàm `eng_my_*` (`security definer`, `search_path = ''`, nhận diện bằng `auth.uid()`, chỉ `authenticated`). Mọi luật dẫn xuất (núi, chuỗi tuần, thành tích, "bài tính vào mục tiêu") là **hàm thuần TypeScript một nơi** (như `lib/sessions/count.ts`), SQL chỉ trả dữ kiện có cấu trúc. Không AI mới, không đổi `prompts/*`, không đổi engine S7a / điểm.
 
 **Tech Stack:** Next.js 16 App Router · React 19 · TypeScript strict · Tailwind 4 · Supabase (schema `english`) · zod · Vitest (unit · dom · db) · Playwright (CI). Không thêm thư viện (núi vẽ bằng SVG tay; xoay / nén ảnh bằng `<canvas>`).
 
@@ -24,14 +24,14 @@
 
 | PR | Nhánh | Làm gì | SQL (phụ huynh áp sau khi gộp) |
 |---|---|---|---|
-| **W4a** | `feature/w4a-roadmap` | Lộ trình mốc (thầy/cô) + Hành trình: núi (con) | `0032_roadmap_milestones.sql` |
+| **W4a** | `feature/w4a-roadmap` | Lộ trình mốc (thầy/cô) + Hành trình: núi (con) | `0031_roadmap_milestones.sql` |
 | **W4b** | `feature/w4b-student-desk` | Khung bàn học: Hôm nay · Cô đã xem · Đã làm · Hành trình; bỏ trang "Bài luyện" cũ (chuyển hướng) | `0033_student_desk_reads.sql` (chỉ hàm đọc, không bảng) |
 | **W4c1** | `feature/w4c1-paper-link` | Nộp bài giấy (camera, nhiều trang, xếp / xoay / xóa, 2 câu hỏi) + nộp bài link + góp ý của thầy/cô cho bài nộp | `0034_paper_link_submit.sql` |
 | **W4c2** | `feature/w4c2-player-result` | Làm bài trên app (từng câu, tự lưu) + màn sau khi nộp S-10 + "Thử lại câu này" + loại bài Luyện tập / Kiểm tra | `0035_result_view_retry.sql` |
 | **W4d** | `feature/w4d-weekly-goal` | Mục tiêu tuần (con đề xuất, thầy/cô đồng ý) + chuỗi tuần mềm + thành tích; **đổi luật "không streak"** trong PRD / CLAUDE.md / DOMAIN | `0036_weekly_goals.sql` |
 | **W4e** | `feature/w4e-levels-cando` | Cấp theo mảng (con thấy) + "Những điều mình đã làm được" + "Ngày ấy – bây giờ" (thầy/cô chọn bài) | `0037_then_now.sql` |
 
-Số migration lấy theo thứ tự gộp; **nếu một PR khác chen vào thì lấy số trống kế tiếp** (test tìm file theo hậu tố, không viết cứng số — như 3B U23). `0031` không dùng ở W4.
+Số migration lấy theo thứ tự gộp; **nếu một PR khác chen vào thì lấy số trống kế tiếp** (test tìm file theo hậu tố, không viết cứng số — như 3B U23).
 
 **Không làm trong W4:** nút "Hỏi gia sư" (S-3: chỉ để **một ô mờ "Sắp có"** trong bài luyện, không có ở bài kiểm tra); bước **Nói** của bài chủ đề bằng chuyển giọng nói thành chữ trên máy (chưa có — cần spike `Sp` trước, xem Q13); AI đọc ảnh bài giấy con nộp (thuộc lát "giao bài AI đọc ảnh" của spec); bảng xếp hạng, so sánh hai em, xu / điểm thưởng.
 
@@ -62,7 +62,7 @@ Số migration lấy theo thứ tự gộp; **nếu một PR khác chen vào th�
 
 ## 2. Câu hỏi cho phụ huynh — **ĐÃ TRẢ LỜI 14/11 (22:26)**
 
-> **Phụ huynh: "ok đề xuất"** — mọi câu Q1–Q22 theo cột "Đề xuất", **trừ Q5: chọn (i) chỉ đếm bài đã nộp** (không ghi phút làm bài, không bảng `work_minutes`, không mục tiêu phút, không văn bản đồng ý mới). Ghi thành quyết định **D34–D37** trong PRD ở đúng PR dùng tới. Không còn câu nào chặn PR.
+> **Phụ huynh: "ok đề xuất"** — mọi câu Q1–Q22 theo cột "Đề xuất", **trừ Q5: chọn (i) chỉ đếm bài đã nộp** (không ghi phút làm bài, không bảng `work_minutes`, không mục tiêu phút, không văn bản đồng ý mới). Ghi thành quyết định **D34–D38** trong PRD (D35 + D38 đã vào ở W4a) ở đúng PR dùng tới. Không còn câu nào chặn PR.
 
 
 Mỗi câu có **đề xuất**; kế hoạch dưới đây viết theo đề xuất, đổi nếu phụ huynh chọn khác. "Chặn PR" = PR đó không bắt đầu code khi chưa có câu trả lời.
@@ -212,7 +212,7 @@ Mọi hàm: `language sql|plpgsql stable security definer set search_path = ''`,
 
 ## 4. Global Constraints (mọi PR)
 
-- Migration: `db/migrations/NNNN_<tên>.sql` (NNNN từ 0032, số trống kế tiếp lúc gộp), idempotent (`if not exists`, `create or replace`, `do $$ … $$`), chỉ thêm, kết thúc `insert into english.schema_migrations(version) values ('NNNN') on conflict do nothing;`. **Không sửa 0001–0030** (và 0031 khi đã áp). Không `public`. Không `supabase db push`.
+- Migration: `db/migrations/NNNN_<tên>.sql` (NNNN = số trống kế tiếp lúc gộp), idempotent (`if not exists`, `create or replace`, `do $$ … $$`), chỉ thêm, kết thúc `insert into english.schema_migrations(version) values ('NNNN') on conflict do nothing;`. **Không sửa 0001–0030** (và 0031 khi đã áp). Không `public`. Không `supabase db push`.
 - Bảng chỉ thêm: trigger `english.eng_forbid_mutation('learner_id')` + chặn TRUNCATE (mẫu 0030) + `revoke insert, update, delete, truncate … from authenticated, anon, service_role`; RLS bật; policy select `eng_is_staff_of(learner_id)` cho người lớn; học sinh **không** SELECT bảng nào (chỉ qua `eng_my_*`). Không `grant … on all tables`.
 - Hàm ghi của người lớn: `security definer set search_path = ''`, `revoke` khỏi `public, anon, authenticated`, `grant` cho `service_role`; route máy chủ gọi **sau** `requireAccess`; hàm **tự kiểm lại người thao tác trước mọi kiểm khác**; idempotent theo `client_id` (khác nội dung → `23505 (client_id_reused)`); lỗi có thẻ `(tag)` cuối câu; `audit_log` không chứa chữ của người dùng.
 - Hàm ghi của con (`eng_my_*` ghi: đề xuất mục tiêu, thử lại câu, nhịp phút): chỉ `authenticated`, nhận diện bằng `auth.uid()`, kiểm việc thuộc chính con.
@@ -254,7 +254,7 @@ Mọi hàm: `language sql|plpgsql stable security definer set search_path = ''`,
 
 **Mục tiêu:** thầy/cô đặt / xác nhận / bỏ mốc trên trang **Lộ trình** (app đề xuất nháp), chọn giáo trình chính; con mở **Hành trình** (tạm qua nút thứ ba ở đầu trang của con, W4b đưa vào khung tab) thấy núi + danh sách. Chờ Q1, Q2(d), Q9, Q10, Q11, Q19.
 
-**SQL `0032_roadmap_milestones.sql`** (cần 0026 + 0030 đã áp):
+**SQL `0031_roadmap_milestones.sql`** (cần 0026 + 0030 đã áp):
 1. `english.roadmap_milestones` (chỉ thêm): `id uuid pk`, `milestone_id uuid not null` (= `id` của v1), `learner_id uuid not null → learners`, `version int not null check (1..999)`, `supersedes_id uuid → roadmap_milestones(id)` (unique khi khác NULL; `check ((version = 1) = (supersedes_id is null))`), `kind text check in ('progress_test','mock_exam','exam','goal','other')`, `role text check in ('flag','summit','beyond')`, `title text check (btrim 1..80)`, `curriculum_id uuid → curricula`, `after_unit text check (~ '^[A-Z0-9][A-Z0-9-]{0,19}$')`, `check (after_unit is null or curriculum_id is not null)`, `check (role = 'flag' or after_unit is null)`, `target_month date check (extract(day from target_month) = 1)`, `approx boolean not null default false check (not approx or target_month is not null)`, `status text check in ('draft','confirmed','removed')`, `reason text check (null or btrim 5..300)`, `check (status <> 'removed' or reason is not null)`, `proposal_key text check (null or ~ '^(pt|goal|track):[a-z0-9:_-]{1,140}$')`, `by_member uuid not null`, `by_role text check (= 'tutor')`, `client_id text check (8..100)`, `created_at timestamptz default clock_timestamp()`; `unique (milestone_id, version)`, `unique (learner_id, client_id)`, `unique (learner_id, proposal_key) where version = 1 and proposal_key is not null`; index `(learner_id, milestone_id, version desc)`.
 2. `english.roadmap_main_curriculum` (chỉ thêm): `id`, `learner_id`, `curriculum_id → curricula`, `by_member`, `by_role = 'tutor'`, `client_id`, `created_at`; dòng mới nhất thắng.
 3. `track_settings` thêm `('A','roadmap_goal_label','"Lên B1"')`, `('B','roadmap_goal_label','"Lên C1"')` (`on conflict do nothing`).
@@ -271,15 +271,15 @@ Mọi hàm: `language sql|plpgsql stable security definer set search_path = ''`,
 **Tasks:**
 - [ ] A0 Đọc lại brief + bản thử workdesk (màn Lộ trình bản mới nhất); ghi lệch vào PROGRESS.
 - [ ] A1 Test trước (thuần): `tests/unit/journeyPath.test.ts` (mọi ví dụ mục 3.3 + hai Unit đang học + không giáo trình + mốc mất Unit), `tests/unit/roadmapVisible.test.ts` (mục 3.4: draft trên confirmed, removed, chưa từng confirmed), `tests/unit/roadmapProposals.test.ts` (Progress Test → sau Unit lớn nhất của `relatedUnits`; mục tiêu đầu vào `06/2027`, `~10/2027`, chữ lạ; khóa ổn định; ẩn khi đã dùng; không `if track`).
-- [ ] A2 Viết `0032` → Opus review riêng file SQL → `tests/db/roadmap.test.ts`: chỉ thầy/cô của em ghi (phụ huynh 42501, thầy/cô em kia 42501, học sinh không gọi được), trình tự kiểm (quyền trước), `stale_version`, `summit_exists`, `bad_unit` (Unit của em kia), `reason_required`, `proposal_used`, phát lại `client_id`, chỉ thêm (UPDATE/DELETE/TRUNCATE bị chặn kể cả service_role), RLS (học sinh 0 dòng), `eng_my_roadmap` không có khóa cấm (mục 3.9) và không thấy nháp / đã bỏ / mốc em kia, giáo trình chính mặc định SQL = TS (bảng ví dụ), purge xóa đủ + biên nhận khớp xem trước, migration chạy 2 lần.
-- [ ] A3 `lib/roadmap/*` + route POST (zod, `no-store`, chưa áp 0032 → 409 `roadmap_unavailable` có chữ).
+- [ ] A2 Viết `0031` → Opus review riêng file SQL → `tests/db/roadmap.test.ts`: chỉ thầy/cô của em ghi (phụ huynh 42501, thầy/cô em kia 42501, học sinh không gọi được), trình tự kiểm (quyền trước), `stale_version`, `summit_exists`, `bad_unit` (Unit của em kia), `reason_required`, `proposal_used`, phát lại `client_id`, chỉ thêm (UPDATE/DELETE/TRUNCATE bị chặn kể cả service_role), RLS (học sinh 0 dòng), `eng_my_roadmap` không có khóa cấm (mục 3.9) và không thấy nháp / đã bỏ / mốc em kia, giáo trình chính mặc định SQL = TS (bảng ví dụ), purge xóa đủ + biên nhận khớp xem trước, migration chạy 2 lần.
+- [ ] A3 `lib/roadmap/*` + route POST (zod, `no-store`, chưa áp 0031 → 409 `roadmap_unavailable` có chữ).
 - [ ] A4 Trang `/learners/[id]/roadmap` (thầy/cô sửa, phụ huynh chỉ xem); cột trái sáng mục Lộ trình + số nháp; Chờ duyệt / Bàn làm việc.
 - [ ] A5 Trang con `/journey`: SVG núi (chấm ≥ 44 px, `<title>` + `aria-label` từng chấm), dạng danh sách, tóm tắt, giáo trình khác; DOM test `tests/dom/mountain.test.tsx` (chữ trạng thái có mặt, không màu đơn thuần, không số dạng điểm).
 - [ ] A6 Docs: DOMAIN bản 0.5 (§4/§6 dòng Lộ trình theo mục 3.4; §2 con thấy Unit + mốc — Q2d), DESIGN §19.20, UX "W4a", PROGRESS mục W4a (SQL cần áp, cách thử, giả định), CLAUDE.md "Current status" (một dòng).
 - [ ] A7 e2e `tests/e2e/roadmap.spec.ts` (thầy/cô xác nhận đề xuất → con thấy cờ; sửa nháp → con vẫn thấy bản cũ; bỏ → con không thấy; phụ huynh không có nút ghi); mở rộng `student-no-scores.spec.ts` cho `/journey`.
 - [ ] A8 Opus `reviewer` diff cuối → PR.
 
-**Thử trên preview (gia đình THỬ, sau khi áp 0032):** thầy/cô của Nguyên (thử) → Giáo trình đã duyệt có Unit đánh dấu → **Lộ trình**: thấy đề xuất "Progress Test 1" (sau Unit 12), đỉnh từ Hồ sơ đầu vào → Xác nhận; thêm "Thi thử vào 10 · Tháng 03/2027 · sau Unit 18" → Lưu và xác nhận. Đăng nhập Nguyên (thử) → Hành trình: núi, người leo đúng Unit đang học, "còn k Unit tới Progress Test 1". Thầy/cô sửa mốc thành nháp → con vẫn thấy bản cũ. Bỏ mốc (lý do) → con không thấy. Phụ huynh: xem được, không có nút. An (thử) chưa có giáo trình → núi trống, đỉnh không tên.
+**Thử trên preview (gia đình THỬ, sau khi áp 0031):** thầy/cô của Nguyên (thử) → Giáo trình đã duyệt có Unit đánh dấu → **Lộ trình**: thấy đề xuất "Progress Test 1" (sau Unit 12), đỉnh từ Hồ sơ đầu vào → Xác nhận; thêm "Thi thử vào 10 · Tháng 03/2027 · sau Unit 18" → Lưu và xác nhận. Đăng nhập Nguyên (thử) → Hành trình: núi, người leo đúng Unit đang học, "còn k Unit tới Progress Test 1". Thầy/cô sửa mốc thành nháp → con vẫn thấy bản cũ. Bỏ mốc (lý do) → con không thấy. Phụ huynh: xem được, không có nút. An (thử) chưa có giáo trình → núi trống, đỉnh không tên.
 
 **Đạt khi:** ví dụ 3.3 / 3.4 là test xanh; con không thấy nháp / đã bỏ / lý do / mốc của em kia (DB + e2e); chỉ thầy/cô ghi; 0032 áp 2 lần; purge đủ. **Rủi ro:** dòng "Không phải Unit" không có id → khóa đề xuất theo tên chuẩn hóa (đổi tên dòng ở bản mới ⇒ đề xuất mới hiện lại: chấp nhận, ghi PROGRESS); vẽ núi trên iPad cũ (giữ SVG tĩnh, không animation nặng).
 
@@ -430,7 +430,7 @@ Mọi hàm: `language sql|plpgsql stable security definer set search_path = ''`,
 | `docs/superpowers/specs/2026-11-08-tutor-workdesk-design.md` | đổi tên W4→W5, W5→W6, W6→W7 (Q1); thêm dòng "W4 · Bàn học của con" | W4a |
 | `lib/shell/nav.ts` | `roadmap` hết "soon", `lane` mới | W4a |
 | `docs/DOMAIN.md` → bản 0.5 | §1 (chuỗi tuần mềm), §2 (con thấy gì mới), §4 / §6 (Lộ trình = mốc, mục 3.4), §7.6, §11, R6 (`CAM-WS-1` sang W5 mới) | W4a, W4b, W4d, W4e |
-| `docs/PRD_FAMILY_EDITION.md` | D34 (chuỗi tuần mềm), D35 (số đếm của con), D36 (S-10 + con thấy cấp / điều đã làm được), D37 (Launcher, Q14), §6.2 | W4b–W4e |
+| `docs/PRD_FAMILY_EDITION.md` | D34 (chuỗi tuần mềm, W4d), D35 (số đếm của con, **W4a**), D36 (S-10 + con thấy cấp / điều đã làm được, W4c2/W4e), D37 (Launcher, Q14, W4b), **D38 (con thấy Unit + trạng thái giáo trình chính, W4a)**, §6.2 | W4a–W4e |
 | `CLAUDE.md` | dòng "Warnings" về streak (Q2a); "Current status" mỗi PR | W4d (+ mỗi PR) |
 | `docs/UX_COPY_GUIDE.md` | §3.2, §3.5, mục mới "W4a"…"W4e" (bảng chữ) | mọi PR |
 | `docs/DESIGN.md` | §19.20–§19.25 | mọi PR |
@@ -440,5 +440,5 @@ Mọi hàm: `language sql|plpgsql stable security definer set search_path = ''`,
 
 - Màn **Lộ trình** của bản bấm thử workdesk đang được sửa (đọc bản 21:27: có dữ liệu mốc của An — đỉnh nháp "Lên B1" do app đề xuất, lịch sử, `removed` — chưa thấy bản vẽ đầy đủ của màn). W4a bước A0 đọc lại bản mới nhất.
 - Hành vi camera / HEIC / bộ nhớ trên **iPad thật của con** (chỉ kiểm được trên thiết bị; ghi vào tiêu chí W4c1).
-- Nội dung `0031` (bộ mục kiến thức Destination) chưa có — nếu nó đổi purge, các migration W4 chép thân purge từ 0031.
+- Bộ mục kiến thức Destination chưa có số — nếu nó đổi purge, các migration W4 chép thân purge từ migration mới nhất đã gộp.
 - Thời gian chạy `eng_my_seen` / `eng_my_today` trên dữ liệu thật (chưa có dữ liệu thật của con, 07/11).

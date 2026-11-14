@@ -36,8 +36,8 @@ describe("Chờ duyệt — unfinished imports (W3)", () => {
 
 describe("Chờ duyệt — roadmap (W4a)", () => {
   const only = (over: Partial<PendingInput>) => input({ work: [], studio: [], skills: [], drafts: [], curricula: [], ...over });
-  it("proposals + draft milestones are ONE link-only row to the roadmap page, in its own group", () => {
-    const rows = buildPendingRows(only({ roadmapWaiting: 3 }));
+  it("draft milestones are ONE link-only row to the roadmap page, in its own group", () => {
+    const rows = buildPendingRows(only({ roadmapDrafts: 3 }));
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ key: "roadmap-waiting", kind: "milestone", group: "roadmap", href: `/learners/${L}/roadmap`, title: pendingCopy.need.milestone(3), label: pendingCopy.kinds.milestone, waitingTutor: false });
     expect(countGroups(rows).roadmap).toBe(1);
@@ -45,9 +45,9 @@ describe("Chờ duyệt — roadmap (W4a)", () => {
     expect(parseGroup("roadmap")).toBe("roadmap");
   });
   it("nothing waiting (0 or not given) = no row; a parent sees it as waiting for the tutor", () => {
-    expect(buildPendingRows(only({ roadmapWaiting: 0 }))).toEqual([]);
+    expect(buildPendingRows(only({ roadmapDrafts: 0 }))).toEqual([]);
     expect(buildPendingRows(only({}))).toEqual([]);
-    expect(buildPendingRows(only({ role: "parent", roadmapWaiting: 2 }))[0]?.waitingTutor).toBe(true);
+    expect(buildPendingRows(only({ role: "parent", roadmapDrafts: 2 }))[0]?.waitingTutor).toBe(true);
   });
 });
 

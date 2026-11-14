@@ -8,7 +8,7 @@ export type JourneyPageData = { kind: "ok"; journey: Journey } | { kind: "unavai
 
 /**
  * The child's own Hành trình. Reads through the USER client (eng_my_roadmap identifies the child by auth.uid()); staff and anyone who is not
- * a student get "not-found". Migration 0032 not applied → "unavailable" (one soft line, no error).
+ * a student get "not-found". Migration 0031 not applied → "unavailable" (one soft line, no error).
  */
 export async function loadJourneyPage(): Promise<JourneyPageData> {
   const user = await getAuthUser();

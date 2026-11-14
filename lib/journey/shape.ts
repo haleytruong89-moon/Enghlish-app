@@ -12,7 +12,7 @@ const raw = z.object({
     code: z.string(), ord: z.number().int(), title: z.string(), skipped: z.boolean(),
     status: z.enum(["done", "in_progress", "not_started", "skipped"]), done_on: z.string().nullable(),
   })),
-  others: z.array(z.object({ title: z.string(), done: z.number().int(), total: z.number().int() })),
+  others: z.array(z.object({ id: z.string(), title: z.string(), done: z.number().int(), total: z.number().int() })),
   milestones: z.array(z.object({
     id: z.string(), kind: z.enum(MILESTONE_KINDS), role: z.enum(MILESTONE_ROLES), title: z.string(), curriculum_id: z.string().nullable(),
     after_unit: z.string().nullable(), target_month: z.string().nullable(), approx: z.boolean(),

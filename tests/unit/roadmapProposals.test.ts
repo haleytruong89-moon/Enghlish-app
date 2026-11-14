@@ -68,3 +68,16 @@ describe("buildProposals", () => {
     expect(buildProposals({ ...base, curriculum: { ...curriculum, payload: { nope: 1 } } })).toEqual([]);
   });
 });
+
+describe("buildProposals when a summit already exists", () => {
+  it("proposes `beyond` instead of a second summit (intake goal and track goal)", () => {
+    const p = buildProposals({ ...base, curriculum: null, trackGoalLabel: "Lên C1", intakeGoals: [{ title: "Vào chuyên Anh" }], summitExists: true });
+    expect(p.map((x) => [x.title, x.role])).toEqual([["Vào chuyên Anh", "beyond"], ["Lên C1", "beyond"]]);
+  });
+  it("the goal of the track alone is `beyond` too", () => {
+    expect(buildProposals({ ...base, curriculum: null, trackGoalLabel: "Lên B1", summitExists: true })[0]?.role).toBe("beyond");
+  });
+  it("without a summit nothing changes", () => {
+    expect(buildProposals({ ...base, curriculum: null, trackGoalLabel: "Lên B1", summitExists: false })[0]?.role).toBe("summit");
+  });
+});

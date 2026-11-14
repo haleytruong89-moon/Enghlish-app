@@ -480,7 +480,7 @@ Trang `/learners/<id>/delete` (chỉ phụ huynh; gia sư/học sinh 403, em ngo
 - **Giao diện.** `AbsenceForm`, `NoteMarkMenu` (dùng `useSaveStatus` / `SaveStatus`, chặn Enter gửi form), cột Học bù · Nghỉ · Buổi tính phí, ô lịch N / B (chữ + `aria-label`, không chỉ màu). Học sinh không có trang hay API nào (404 / 403).
 - **Xóa dữ liệu.** `eng_purge_learner` / `eng_purge_preview` = nguyên bản 0029 + hai bảng, `session_marks` rồi `session_absences` trước `lesson_notes` (FK); khóa biên nhận = khóa bản xem trước (test canh).
 
-### 19.20. W4a · Lộ trình mốc + Hành trình của con (14/11/2026, migration `0032`)
+### 19.20. W4a · Lộ trình mốc + Hành trình của con (14/11/2026, migration `0031`)
 
 - **Dữ liệu.** `roadmap_milestones` (chỉ thêm: mỗi lần ghi = dòng mới `version`+1, `supersedes_id`; `eng_forbid_mutation` + chặn TRUNCATE; RLS đọc `eng_is_staff_of`) và `roadmap_main_curriculum` (chọn giáo trình chính, dòng mới nhất thắng). `track_settings.roadmap_goal_label` (A "Lên B1", B "Lên C1") là dữ liệu cấu hình, không `if track`.
 - **Hàm SQL** (`security definer`, `search_path = ''`): `eng_roadmap_write` / `eng_roadmap_set_main` (chỉ thầy/cô của em, 42501 `tutor_only`; khóa dòng em `for update`; idempotent theo `client_id`, payload khác = `client_id_reused`; bỏ cần lý do; một đỉnh đã xác nhận mỗi em); `eng_roadmap` (người lớn, `service_role`); `eng_my_roadmap()` (con, chỉ `authenticated`, nhận diện bằng `auth.uid()`, chỉ trả tên mốc, tháng, Unit và trạng thái — không điểm, mức, nhãn kỹ năng). `eng_roadmap_main_id` và `pickMainCurriculum` (TS) cùng một luật; test DB so hai bên.

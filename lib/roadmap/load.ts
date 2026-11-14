@@ -2,13 +2,13 @@ import "server-only";
 import { ReviewDbError } from "@/lib/review/handlers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingFunction } from "./errors";
-import { parseRoadmap, waitingCount, type RoadmapView } from "./shape";
+import { parseRoadmap, type RoadmapView } from "./shape";
 
 export type RoadmapLoad = { kind: "ok"; view: RoadmapView } | { kind: "unavailable" };
 
 /**
  * The roadmap of one child for the tutor page, the desk and "Chờ duyệt". Call ONLY after the page gate of that child ("roadmap:read"):
- * it reads with the admin client. Migration 0032 not applied → { kind: "unavailable" } (the page says so in words, no error).
+ * it reads with the admin client. Migration 0031 not applied → { kind: "unavailable" } (the page says so in words, no error).
  */
 export async function loadRoadmap(learnerId: string): Promise<RoadmapLoad> {
   const { data, error } = await createAdminClient().rpc("eng_roadmap", { p_learner: learnerId });
@@ -17,10 +17,4 @@ export async function loadRoadmap(learnerId: string): Promise<RoadmapLoad> {
     throw new ReviewDbError(error.code ?? "unknown", `eng_roadmap: ${error.message ?? "error"}`);
   }
   return { kind: "ok", view: parseRoadmap(data) };
-}
-
-/** How many roadmap items wait for the tutor (proposals + drafts). 0 when migration 0032 is missing (nothing waits); throws on a real error. */
-export async function loadRoadmapWaiting(learnerId: string): Promise<number> {
-  const r = await loadRoadmap(learnerId);
-  return r.kind === "ok" ? waitingCount(r.view) : 0;
 }

@@ -6,6 +6,7 @@ import { deskCopy, fallbackLabels, todayPage } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { isOverdue } from "@/lib/practice/overdue";
+import { roadmapHref } from "@/lib/shell/paths";
 import { itemList } from "@/lib/tutorwork/frameScore";
 import type { TodayData } from "@/lib/tutorwork/load";
 import { formatHm } from "@/lib/work/view";
@@ -59,7 +60,7 @@ export function deskAlerts(i: DeskAlertInput): DeskAlert[] {
       out.push({ key: `due-${d.tagKey}`, tone: "recheck", badge: todayPage.recheckBadge, title: label(d.tagKey), line: todayPage.recheckLine(d.lastSeen ? formatDateVi(d.lastSeen) : null, t.weak.policyDays), href: `${base}/notes/new` });
     }
   }
-  if ((i.roadmapOrphans ?? 0) > 0) out.push({ key: "roadmap-orphans", tone: "warn", badge: A.missingBadge, title: A.orphanTitle(i.roadmapOrphans as number), line: A.orphanLine, href: `${base}/roadmap` });
+  if ((i.roadmapOrphans ?? 0) > 0) out.push({ key: "roadmap-orphans", tone: "warn", badge: A.missingBadge, title: A.orphanTitle(i.roadmapOrphans as number), line: A.orphanLine, href: roadmapHref(i.learnerId) });
   if (i.flagCount > 0) out.push({ key: "flags", tone: "info", badge: A.flagBadge, title: A.flagsTitle(i.flagCount), line: A.flagsLine, href: `${base}/inbox?f=skills` });
   return out;
 }

@@ -1,10 +1,13 @@
 import { randomUUID } from "node:crypto";
+import { Client } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { pickMainCurriculum } from "@/lib/roadmap/mainCurriculum";
+import { parseRoadmap } from "@/lib/roadmap/shape";
+import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { asCommit, createTestDb, migrate, rowsAs, seed, type Seeded, type TestDb } from "./helpers";
 
-/** W4a · Lộ trình mốc + Hành trình (migration 0032). One database. */
-describe("roadmap milestones + eng_my_roadmap (migration 0032)", () => {
+/** W4a · Lộ trình mốc + Hành trình (migration 0031). One database. */
+describe("roadmap milestones + eng_my_roadmap (migration 0031)", () => {
   let db: TestDb;
   let s: Seeded;
   const M = () => s.members;
@@ -270,7 +273,7 @@ describe("roadmap milestones + eng_my_roadmap (migration 0032)", () => {
     it("other curricula of the child: title and counts of Units only", async () => {
       const r = await mine(s.users.studentNguyen);
       expect(r.others.length).toBeGreaterThan(0);
-      for (const o of r.others as Record<string, unknown>[]) expect(Object.keys(o).sort()).toEqual(["done", "title", "total"]);
+      for (const o of r.others as Record<string, unknown>[]) expect(Object.keys(o).sort()).toEqual(["done", "id", "title", "total"]);
     });
 
     it("anon and service_role cannot call it; authenticated can", async () => {
@@ -298,6 +301,113 @@ describe("roadmap milestones + eng_my_roadmap (migration 0032)", () => {
     });
   });
 
+  it("replay comes before everything else: a retry still gets its first answer after a newer version exists, also with no fields", async () => {
+    const cid = randomUUID();
+    const v1 = await write({ clientId: cid, fields: fields({ title: "Replay later" }), status: "draft" });
+    const cid2 = randomUUID();
+    const v2 = await write({ milestone: v1.milestone_id, base: 1, fields: null, status: "confirmed", clientId: cid2 });
+    await write({ milestone: v1.milestone_id, base: 2, fields: fields({ title: "Replay later (đổi tên)" }), status: "confirmed" });
+    // the first call again, now that v3 exists: same answer, not stale_version
+    expect(await write({ clientId: cid, fields: fields({ title: "Replay later" }), status: "draft" })).toEqual({ ...v1, replayed: true });
+    // the second call again with NO fields (it was a confirm as-is): compared against the row that call wrote
+    expect(await write({ milestone: v1.milestone_id, base: 1, fields: null, status: "confirmed", clientId: cid2 })).toEqual({ ...v2, replayed: true });
+    // a different intent with the same id is refused, with or without fields
+    await fail(write({ milestone: v1.milestone_id, base: 1, fields: null, status: "draft", clientId: cid2 }), "23505", /client_id_reused/);
+    await fail(write({ milestone: randomUUID(), base: 1, fields: null, status: "confirmed", clientId: cid2 }), "23505", /client_id_reused/);
+    await fail(write({ clientId: cid, fields: fields({ title: "Other" }), status: "draft" }), "23505", /client_id_reused/);
+  });
+
+  it("history is capped at 20 per milestone but the used proposal keys and the version the child sees are NOT", async () => {
+    const keyOk = `pt:${randomUUID()}:long-confirmed`;
+    const keyDraft = `pt:${randomUUID()}:long-draft`;
+    const a = await write({ key: keyOk, fields: fields({ title: "Long confirmed" }), status: "confirmed" });
+    const b = await write({ key: keyDraft, fields: fields({ title: "Long draft" }), status: "draft" });
+    for (let v = 1; v <= 22; v += 1) {
+      await write({ milestone: a.milestone_id, base: v, fields: null, status: "draft" });
+      await write({ milestone: b.milestone_id, base: v, fields: null, status: "draft" });
+    }
+    const raw = (await rowsAs<{ r: Record<string, unknown> & { milestones: { milestone_id: string; version: number; id: string }[]; used_keys: string[]; visible_ids: Record<string, string> } }>(
+      db.client, "service_role", null, "select english.eng_roadmap($1) as r", [NG()]))[0]!.r;
+    const ofA = raw.milestones.filter((m) => m.milestone_id === a.milestone_id).map((m) => m.version);
+    const ofB = raw.milestones.filter((m) => m.milestone_id === b.milestone_id).map((m) => m.version);
+    expect(ofA).toEqual([1, ...Array.from({ length: 20 }, (_, i) => i + 4)]); // v1 is kept because the child still sees it; v2, v3 are cut
+    expect(ofB).toEqual(Array.from({ length: 20 }, (_, i) => i + 4));          // v1 of the never-confirmed one is cut
+    expect(raw.used_keys).toContain(keyOk);
+    expect(raw.used_keys).toContain(keyDraft);                                  // the key lives on a version that is no longer listed
+    const visibleOfA = (await q1<{ id: string }>("select id from english.roadmap_milestones where milestone_id = $1 and version = 1", [a.milestone_id]))[0]!.id;
+    expect(raw.visible_ids[a.milestone_id]).toBe(visibleOfA);
+    expect(raw.visible_ids[b.milestone_id]).toBeUndefined();
+    // the TypeScript side uses them: the child-visible version is v1 (confirmed), the other milestone is invisible to the child
+    const view = parseRoadmap(raw);
+    const cardA = view.cards.find((c) => c.milestoneId === a.milestone_id)!;
+    expect(cardA.current.version).toBe(23);
+    expect(cardA.childSees?.version).toBe(1);
+    expect(view.cards.find((c) => c.milestoneId === b.milestone_id)!.childSees).toBeNull();
+  });
+
+  it("a tutor whose relationship has ended is refused; the same tutor writes again when it is restored", async () => {
+    await q1("update english.relationships set valid_from = now() - interval '10 days' where member_id = $1 and learner_id = $2", [M().tutorNguyen, NG()]);
+    await q1("update english.relationships set valid_to = now() - interval '1 day' where member_id = $1 and learner_id = $2", [M().tutorNguyen, NG()]);
+    try {
+      await fail(write({ fields: fields({ title: "Too late" }) }), "42501", /tutor_only/);
+      await fail(svc("select english.eng_roadmap_set_main($1,$2,$3,$4) as r", [NG(), cNg.id, M().tutorNguyen, randomUUID()]), "42501", /tutor_only/);
+    } finally {
+      await q1("update english.relationships set valid_to = null where member_id = $1 and learner_id = $2", [M().tutorNguyen, NG()]);
+    }
+    expect((await write({ fields: fields({ title: "Back again" }) })).version).toBe(1);
+  });
+
+  it("two tutors' calls at the same moment cannot leave two confirmed summits", async () => {
+    // start clean: demote every summit the child sees now
+    for (const m of await q1<{ milestone_id: string; version: number }>("select s.milestone_id, (select max(version) from english.roadmap_milestones r where r.milestone_id = s.milestone_id) as version from english.eng_roadmap_visible($1) s where s.role = 'summit'", [NG()])) {
+      await write({ milestone: m.milestone_id, base: m.version, fields: fields({ kind: "goal", role: "beyond", title: "Demoted" }), status: "confirmed" });
+    }
+    const one = await write({ fields: fields({ kind: "goal", role: "summit", title: "Đỉnh A" }), status: "draft" });
+    const two = await write({ fields: fields({ kind: "goal", role: "summit", title: "Đỉnh B" }), status: "draft" });
+    const clients = await Promise.all([1, 2].map(async () => { const c = new Client(pgConfigFromUrl(db.url)); await c.connect(); return c; }));
+    try {
+      const results = await Promise.allSettled(
+        [one, two].map(async (m, i) => {
+          const c = clients[i]!;
+          await c.query("begin");
+          try {
+            await c.query("set local role service_role");
+            const r = await c.query("select english.eng_roadmap_write($1,$2,$3,null,'confirmed',null,null,$4,$5) as r", [NG(), m.milestone_id, 1, M().tutorNguyen, randomUUID()]);
+            await c.query("commit");
+            return r.rows[0];
+          } catch (err) {
+            await c.query("rollback");
+            throw err;
+          }
+        }),
+      );
+      expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+      const bad = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+      expect(bad).toHaveLength(1);
+      expect(bad[0]!.reason).toMatchObject({ code: "23514" });
+      expect(String((bad[0]!.reason as Error).message)).toMatch(/summit_exists/);
+    } finally {
+      await Promise.all(clients.map((c) => c.end()));
+    }
+    expect(await q1("select 1 from english.eng_roadmap_visible($1) where role = 'summit'", [NG()])).toHaveLength(1);
+  });
+
+  it("the migration is idempotent: applying it twice changes nothing", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const { MIGRATIONS_DIR } = await import("../../scripts/lib/migrate");
+    const file = (await import("node:fs")).readdirSync(MIGRATIONS_DIR).find((f) => f.endsWith("_roadmap_milestones.sql"))!;
+    const sql = await readFile(`${MIGRATIONS_DIR}/${file}`, "utf8");
+    const snapshot = async () => ({
+      milestones: await count("roadmap_milestones"), main: await count("roadmap_main_curriculum"),
+      settings: JSON.stringify(await q1("select track_id, key, value from english.track_settings order by track_id, key")),
+    });
+    const before = await snapshot();
+    await db.client.query(sql);
+    await db.client.query(sql);
+    expect(await snapshot()).toEqual(before);
+    expect(await count("schema_migrations", "version = $1", [file.slice(0, 4)])).toBe(1);
+  });
+
   it("purge: the dry run and the receipt count both tables; afterwards there are no rows; the receipt matches the dry run", async () => {
     const L = NG();
     const before = { m: await count("roadmap_milestones", "learner_id = $1", [L]), c: await count("roadmap_main_curriculum", "learner_id = $1", [L]) };
@@ -310,15 +420,5 @@ describe("roadmap milestones + eng_my_roadmap (migration 0032)", () => {
     expect(Object.keys(receipt.deleted).sort()).toEqual(Object.keys(dry.counts).sort());
     expect(await count("roadmap_milestones", "learner_id = $1", [L])).toBe(0);
     expect(await count("roadmap_main_curriculum", "learner_id = $1", [L])).toBe(0);
-  });
-
-  it("the migration is idempotent: applying it twice changes nothing", async () => {
-    const { readFile } = await import("node:fs/promises");
-    const { MIGRATIONS_DIR } = await import("../../scripts/lib/migrate");
-    const file = (await import("node:fs")).readdirSync(MIGRATIONS_DIR).find((f) => f.endsWith("_roadmap_milestones.sql"))!;
-    const sql = await readFile(`${MIGRATIONS_DIR}/${file}`, "utf8");
-    await db.client.query(sql);
-    await db.client.query(sql);
-    expect(await count("schema_migrations", "version = $1", [file.slice(0, 4)])).toBe(1);
   });
 });

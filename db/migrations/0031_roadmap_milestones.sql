@@ -1,4 +1,4 @@
--- 0032_roadmap_milestones.sql
+-- 0031_roadmap_milestones.sql
 -- W4a · Lộ trình mốc (thầy/cô) + Hành trình (con). Kế hoạch docs/superpowers/plans/2026-11-14-w4-student-desk.md (PR W4a, mục 3.3–3.4, 3.9).
 --   1. roadmap_milestones (chỉ thêm): mỗi lần ghi một mốc = MỘT dòng phiên bản mới (version + 1, supersedes_id = dòng trước); trạng thái
 --      draft / confirmed / removed (bỏ bắt buộc lý do 5..300). Con thấy bản hiện hành nếu confirmed; draft → bản confirmed gần nhất trước nó; removed → không thấy.
@@ -10,7 +10,7 @@
 --      trang sách / mục kiến thức / điểm), eng_roadmap_main_id (nội bộ).
 --   6. RLS: người lớn của em đọc (eng_is_staff_of); học sinh không SELECT bảng nào (chỉ qua eng_my_roadmap); không ai ghi trực tiếp (kể cả service_role).
 --   7. eng_purge_learner / eng_purge_preview: chép NGUYÊN thân 0030 + 2 bảng (trước giáo trình vì khóa ngoại).
--- Chỉ thêm, idempotent. Không đụng schema public. Cần 0026 + 0030 đã áp. (0031 để dành cho bộ mục kiến thức Destination; không dùng ở đây.)
+-- Chỉ thêm, idempotent. Không đụng schema public. Cần 0026 + 0030 đã áp.
 
 -- 1. Bảng ------------------------------------------------------------------------------------------------------------------
 create table if not exists english.roadmap_milestones (
@@ -161,12 +161,13 @@ declare
   v_id uuid;
   v_mid uuid;
   v_version int;
+  v_replay boolean;
 begin
   if p_learner is null or p_by is null then
     raise exception 'eng_roadmap_write: learner and actor are required' using errcode = '22004';
   end if;
   v_m := english.eng_roadmap_actor(p_by, p_learner, 'eng_roadmap_write');                 -- permissions first (2B lesson)
-  select * into v_l from english.learners l where l.id = p_learner for update;               -- one writer per child: versions and the single summit stay consistent
+  select * into v_l from english.learners l where l.id = p_learner for no key update;          -- one writer per child (versions + the single summit stay consistent); FK inserts elsewhere are not blocked
   if not found then raise exception 'eng_roadmap_write: learner not found' using errcode = 'P0002'; end if;
   if p_client_id is null or pg_catalog.length(pg_catalog.btrim(p_client_id)) < 8 or pg_catalog.length(p_client_id) > 100 then
     raise exception 'eng_roadmap_write: client_id must be 8..100 characters (bad_fields)' using errcode = '22023';
@@ -175,11 +176,15 @@ begin
     raise exception 'eng_roadmap_write: unknown status (bad_fields)' using errcode = '22023';
   end if;
 
+  -- Replay first (7): the same client_id is looked up before anything is derived, so a retry still gets its first answer after a newer version exists.
+  select * into v_row from english.roadmap_milestones r where r.learner_id = p_learner and r.client_id = p_client_id;
+  v_replay := found;
+
   -- Fields: the new ones, or the previous version's when p_fields is null.
-  if p_milestone is not null then
+  if p_milestone is not null and not v_replay then
     select * into v_prev from english.roadmap_milestones r where r.learner_id = p_learner and r.milestone_id = p_milestone order by r.version desc limit 1;
     if not found then raise exception 'eng_roadmap_write: milestone not found' using errcode = 'P0002'; end if;
-  elsif p_fields is null then
+  elsif p_milestone is null and p_fields is null then
     raise exception 'eng_roadmap_write: fields are required for a new milestone (bad_fields)' using errcode = '22023';
   end if;
   if p_fields is not null then
@@ -199,6 +204,10 @@ begin
       end if;
       v_month := (pg_catalog.left(v_month_txt, 7) || '-01')::date;
     end if;
+  elsif v_replay then
+    -- no new fields on a replay: compare against what that call wrote
+    v_kind := v_row.kind; v_role := v_row.role; v_title := v_row.title; v_curr := v_row.curriculum_id; v_unit := v_row.after_unit;
+    v_month := v_row.target_month; v_approx := v_row.approx;
   else
     v_kind := v_prev.kind; v_role := v_prev.role; v_title := v_prev.title; v_curr := v_prev.curriculum_id; v_unit := v_prev.after_unit;
     v_month := v_prev.target_month; v_approx := v_prev.approx;
@@ -214,8 +223,7 @@ begin
   end if;
 
   -- Replay of the same client_id: same content → the first answer; other content → 23505.
-  select * into v_row from english.roadmap_milestones r where r.learner_id = p_learner and r.client_id = p_client_id;
-  if found then
+  if v_replay then
     if (p_milestone is not null and v_row.milestone_id <> p_milestone) or v_row.status <> p_status
        or v_row.reason is distinct from (case when p_status = 'removed' then v_reason else null end)
        or v_row.proposal_key is distinct from p_proposal_key
@@ -301,7 +309,7 @@ begin
     raise exception 'eng_roadmap_set_main: learner, curriculum and actor are required' using errcode = '22004';
   end if;
   v_m := english.eng_roadmap_actor(p_by, p_learner, 'eng_roadmap_set_main');
-  select * into v_l from english.learners l where l.id = p_learner for update;
+  select * into v_l from english.learners l where l.id = p_learner for no key update;
   if not found then raise exception 'eng_roadmap_set_main: learner not found' using errcode = 'P0002'; end if;
   if p_client_id is null or pg_catalog.length(pg_catalog.btrim(p_client_id)) < 8 or pg_catalog.length(p_client_id) > 100 then
     raise exception 'eng_roadmap_set_main: client_id must be 8..100 characters' using errcode = '22023';
@@ -356,7 +364,10 @@ begin
         select r.*, pg_catalog.first_value(r.created_at) over (partition by r.milestone_id order by r.version) as milestone_created,
                pg_catalog.row_number() over (partition by r.milestone_id order by r.version desc) as rn
         from english.roadmap_milestones r where r.learner_id = p_learner
-      ) q where q.rn <= 20), '[]'::jsonb),
+      ) q where q.rn <= 20 or q.id in (select s.id from english.eng_roadmap_visible(p_learner) s)), '[]'::jsonb),
+    -- Not capped (5): every proposal key in use, and which version of each milestone the child sees.
+    'used_keys', coalesce((select pg_catalog.jsonb_agg(distinct r.proposal_key) from english.roadmap_milestones r where r.learner_id = p_learner and r.proposal_key is not null), '[]'::jsonb),
+    'visible_ids', coalesce((select pg_catalog.jsonb_object_agg(s.milestone_id::text, s.id) from english.eng_roadmap_visible(p_learner) s), '{}'::jsonb),
     'curricula', coalesce((
       select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
         'id', c.id, 'title', c.title, 'created_at', c.created_at,
@@ -403,7 +414,7 @@ begin
                          where e.curriculum_id = v_main and e.unit_code = u.code order by e.created_at desc, e.id desc limit 1) le on true
       where u.version_id = v_ver), '[]'::jsonb),
     'others', coalesce((
-      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('title', o.title, 'done', o.done, 'total', o.total) order by o.created_at, o.id)
+      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('id', o.id, 'title', o.title, 'done', o.done, 'total', o.total) order by o.created_at, o.id)
       from (
         select c.id, c.title, c.created_at,
           (select pg_catalog.count(*) from english.curriculum_units u
@@ -571,7 +582,7 @@ begin
   delete from english.assignment_units au where au.learner_id = p_learner_id;
   get diagnostics n_assignment_units = row_count;
 
-  -- 0032: mốc lộ trình (tự trỏ supersedes_id: một câu lệnh) và giáo trình chính trỏ tới giáo trình → TRƯỚC giáo trình.
+  -- 0031: mốc lộ trình (tự trỏ supersedes_id: một câu lệnh) và giáo trình chính trỏ tới giáo trình → TRƯỚC giáo trình.
   delete from english.roadmap_milestones rm where rm.learner_id = p_learner_id;
   get diagnostics n_roadmap_milestones = row_count;
   delete from english.roadmap_main_curriculum rc where rc.learner_id = p_learner_id;
@@ -946,7 +957,7 @@ begin
     || pg_catalog.jsonb_build_object(
       'session_marks', (select pg_catalog.count(*) from english.session_marks x where x.learner_id = p_learner),
       'session_absences', (select pg_catalog.count(*) from english.session_absences x where x.learner_id = p_learner))
-    -- 0032
+    -- 0031
     || pg_catalog.jsonb_build_object(
       'roadmap_milestones', (select pg_catalog.count(*) from english.roadmap_milestones x where x.learner_id = p_learner),
       'roadmap_main_curriculum', (select pg_catalog.count(*) from english.roadmap_main_curriculum x where x.learner_id = p_learner)));
@@ -956,4 +967,4 @@ $$;
 revoke execute on function english.eng_purge_preview(uuid) from public, anon, authenticated;
 grant execute on function english.eng_purge_preview(uuid) to service_role;
 
-insert into english.schema_migrations(version) values ('0032') on conflict do nothing;
+insert into english.schema_migrations(version) values ('0031') on conflict do nothing;

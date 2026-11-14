@@ -5,6 +5,7 @@ import { SaveStatus } from "@/components/ui/SaveStatus";
 import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { roadmapCopy } from "@/lib/copy/vi";
 import { roadmapFailText } from "@/lib/roadmap/client";
+import { clientIdBook } from "@/lib/roadmap/clientId";
 import type { RoadmapCurriculum } from "@/lib/roadmap/shape";
 import type { MilestoneCard } from "@/lib/roadmap/types";
 import { dateOf, placeLine, valuesOf } from "@/lib/roadmap/view";
@@ -24,6 +25,8 @@ export function MilestoneList({
   const removed = cards.filter((c) => c.current.status === "removed");
   // Titles of what the child sees as the summit, for the "Đã có đỉnh" message.
   const summitTitle = cards.map((c) => c.childSees).find((v) => v && v.role === "summit")?.title ?? null;
+  // The child may still see an older confirmed summit while the current version is a draft flag: "Đặt đỉnh" must not offer a second one.
+  const hasSummit = summitTitle !== null || live.some((c) => c.current.role === "summit");
   const done = () => { setAdding(null); router.refresh(); };
   const group = (role: "summit" | "beyond" | "flag", title: string, none: string, addLabel: string, hint?: string) => {
     const items = live.filter((c) => c.current.role === role);
@@ -31,7 +34,7 @@ export function MilestoneList({
       <section className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-4" aria-label={title} data-testid={`ms-group-${role}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">{title}{hint ? <span className="ml-2 text-sm font-normal text-muted">({hint})</span> : null}</h2>
-          {canWrite && adding !== role && (role !== "summit" || items.length === 0) ? (
+          {canWrite && adding !== role && (role !== "summit" || !hasSummit) ? (
             <button type="button" onClick={() => setAdding(role)} data-testid={`ms-add-${role}`} className="min-h-11 rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent">{addLabel}</button>
           ) : null}
         </div>
@@ -42,6 +45,7 @@ export function MilestoneList({
           />
         ) : null}
         {items.length === 0 && adding !== role ? <p className="text-sm text-muted">{none}</p> : null}
+        {role === "summit" && summitTitle === null ? <p className="text-sm text-muted" data-testid="ms-summit-unnamed">{roadmapCopy.summit.unnamedForChild}</p> : null}
         {items.map((c) => (
           <MilestoneRow key={c.milestoneId} learnerId={learnerId} card={c} curricula={curricula} mainId={mainId} canWrite={canWrite} orphan={orphanIds.includes(c.milestoneId)} summitTitle={summitTitle} onChanged={() => router.refresh()} />
         ))}
@@ -81,17 +85,15 @@ function MilestoneRow({
   const [mode, setMode] = useState<"view" | "edit" | "remove">("view");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const clientId = useRef(crypto.randomUUID());
+  const book = useRef(clientIdBook());
   const { state, track } = useSaveStatus({ mode, reason });
 
   async function write(status: "confirmed" | "removed") {
     setError(null);
-    const r = await track(() =>
-      postJson(`/api/learners/${learnerId}/roadmap/milestones`, {
-        client_id: clientId.current, milestone_id: v.milestoneId, base_version: v.version, status, ...(status === "removed" ? { reason: reason.trim() } : {}),
-      }),
-    );
-    if (!r.ok) { clientId.current = crypto.randomUUID(); return setError(roadmapFailText(r)); }
+    const body = { milestone_id: v.milestoneId, base_version: v.version, status, ...(status === "removed" ? { reason: reason.trim() } : {}) };
+    const r = await track(() => postJson(`/api/learners/${learnerId}/roadmap/milestones`, { client_id: book.current.idFor(body), ...body }));
+    book.current.settle(r);
+    if (!r.ok) { return setError(r.error === "summit_exists" && summitTitle ? `${roadmapCopy.errors.summit_exists} (${summitTitle})` : roadmapFailText(r)); }
     setMode("view");
     onChanged();
   }

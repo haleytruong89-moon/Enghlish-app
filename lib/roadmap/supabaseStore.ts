@@ -5,12 +5,12 @@ import { isMissingFunction } from "./errors";
 import type { RoadmapStore } from "./handlers";
 
 function dbError(what: string, err: { code?: string; message?: string }): never {
-  // Before migration 0032 is applied the functions are missing: one clear answer instead of a 500.
-  if (isMissingFunction(err.code)) throw new ReviewDbError("roadmap_unavailable", `${what} is missing: apply migration 0032`);
+  // Before migration 0031 is applied the functions are missing: one clear answer instead of a 500.
+  if (isMissingFunction(err.code)) throw new ReviewDbError("roadmap_unavailable", `${what} is missing: apply migration 0031`);
   throw new ReviewDbError(err.code ?? "unknown", `${what}: ${err.message ?? err.code ?? "error"}`);
 }
 
-/** Writes call the service-role functions of migration 0032, only after the handler ran requireAccess; the SQL checks the actor again. */
+/** Writes call the service-role functions of migration 0031, only after the handler ran requireAccess; the SQL checks the actor again. */
 export function createSupabaseRoadmapStore(): RoadmapStore {
   const db = () => createAdminClient();
   return {
