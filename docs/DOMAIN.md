@@ -1,4 +1,4 @@
-# Luật và dữ liệu nghiệp vụ · Bàn làm việc gia sư (bản 0.4 · thêm §5.6 "Đếm buổi học" 14/11/2026)
+# Luật và dữ liệu nghiệp vụ · Bàn làm việc gia sư (bản 0.5 · thêm Lộ trình mốc W4a 14/11/2026; trước đó 0.4 thêm §5.6 "Đếm buổi học")
 
 Trạng thái: **0.3 — phụ huynh duyệt 08/11** (D-W1…D-W8 + 8 điểm rà soát R1–R8, mục 14). Đổi sau này = bản 0.5 có ghi lý do. **Bản 0.4 (14/11/2026):** thêm §5.6 "Đếm buổi học" (UX vòng 3A) và dòng "thống kê buổi học dẫn xuất" ở tầng C và §7; phụ huynh xem lại luật đếm trên bản thử. Viết trước spec `docs/superpowers/specs/2026-11-08-tutor-workdesk-design.md` để chốt phần khó đổi về sau (dữ liệu, phiên bản, cách tính, trạng thái, quyền) trước khi code.
 Nguồn: bản bấm thử + trang luồng (07/11), `TUTOR_WORKDESK_REVIEW_2026-11-07.md`, `AI_QUALITY_PLAN_2026-11-07.md`, câu trả lời thay gia sư của phụ huynh (08/11, mục 12), hiện trạng code đến migration `0024`.
@@ -28,7 +28,7 @@ Ký hiệu: ✅ đã chốt (ghi ngày) · ❓ cần phụ huynh quyết · 🕓
 
 | Vai trò | Được làm | Không được |
 |---|---|---|
-| **Con** | Làm và nộp bài được giao (trong app, ảnh, file, ảnh trang kết quả); xem "Câu cần xem lại", góp ý, lời nhắn | Thấy điểm, x/y, %, mức, nhãn kỹ năng, nhận xét cho phụ huynh, nháp AI chưa duyệt |
+| **Con** | Xem "Hành trình" (W4a, Q2d 14/11): **Unit + trạng thái của giáo trình chính** và **mốc đã xác nhận** (tên + tháng), không điểm/mức/nhãn kỹ năng/số câu; làm và nộp bài được giao (trong app, ảnh, file, ảnh trang kết quả); xem "Câu cần xem lại", góp ý, lời nhắn | Thấy điểm, x/y, %, mức, nhãn kỹ năng, nhận xét cho phụ huynh, nháp AI chưa duyệt |
 | **Gia sư của em** (quan hệ còn hiệu lực) | Mọi việc chuyên môn: hồ sơ đầu vào, Ghi chú dạy học, giáo trình, lộ trình, giao bài, xem/duyệt mọi nháp AI, phán Đúng/Sai, xác nhận mức 3–4 và cấp, nhận xét tháng, góp ý cho AI, góp ý về app | Thấy hay sửa em không do mình dạy; sửa công thức AI; đổi luật cứng |
 | **Phụ huynh** | Xem mọi thứ của con mình; bật AI, trần chi phí, đồng ý `ai_text`; xem "Tổng hợp góp ý"; sửa công thức AI (tạo phiên bản mới); trả lời góp ý về app; tải file bài đã làm (gia sư xác nhận kết quả, R8), ghi buổi (như hiện nay) | Xác nhận mức 3–4, cấp, bài kiểm tra trong buổi (D14/D15, chỉ gia sư); duyệt nháp chuyên môn của AI thay gia sư (chỉ được **bỏ** nháp) ✅ D-W8 08/11 |
 | **AI** | Đọc tài liệu được đưa vào, soạn nháp theo công thức | Ghi thẳng vào bằng chứng, mức, cấp; tự giao bài; tự đổi công thức; chấm bài viết/nói thay người |
@@ -52,7 +52,7 @@ Bản đồ kỹ năng SM-1 (7 mảng · 40 nhóm), danh mục kỹ năng 0.2.1,
 | **Phiên bản giáo trình** | Mục lục + bảng nối Unit → điểm tại một thời điểm | **Nháp** thì sửa tự do. **Đã duyệt** thì bất biến; sửa = phiên bản mới (mục 4) |
 | **Unit** | Một đơn vị trong mục lục (Unit, Lesson, Chapter) | Có thứ tự, tên, trang. Unit "bỏ qua" vẫn giữ trong phiên bản, chỉ đánh dấu |
 | **Nối Unit → điểm** | Unit dạy những điểm nào | Mỗi dòng trỏ tới **đúng một** nhãn của track (`error_tags`: nhãn hạt giống, nhãn dạng câu đọc 0018, **nhãn dạng câu nghe — hạt giống mới ở migration W2 với `group_key` mảng Nghe của SM-1 (R7)**, hoặc nhãn riêng có nhóm SM-1). Tiêu chí viết/nói (`CAM-WS-1`) không nối từ Unit; chúng đi theo bài viết/nói (R6). Không có "điểm" nào ngoài danh sách đóng; điểm mới = nhãn riêng mới (bắt buộc nhóm SM-1, như hiện nay) ✅ 07/11 (danh sách đóng) |
-| **Thang chấm viết/nói** | Tiêu chí Cambridge ✅ 08/11: Content · Communicative Achievement · Organisation · Language, mỗi tiêu chí 0–5 | Cấu hình có phiên bản `CAM-WS-1` (seed, làm ở **W4**, R6). Lưu điểm 0–5 gốc **và** quy đổi sang 0–4 cho kỹ năng danh mục: **5→4 · 4→3 · 3→2 · 2→1 · 0–1→0**. Nối: Content→L4 (+T theo bài), Communicative→L8, Organisation→L3, Language→L1 và L2 ✅ D-W4 |
+| **Thang chấm viết/nói** | Tiêu chí Cambridge ✅ 08/11: Content · Communicative Achievement · Organisation · Language, mỗi tiêu chí 0–5 | Cấu hình có phiên bản `CAM-WS-1` (seed, làm ở **W5**, R6). Lưu điểm 0–5 gốc **và** quy đổi sang 0–4 cho kỹ năng danh mục: **5→4 · 4→3 · 3→2 · 2→1 · 0–1→0**. Nối: Content→L4 (+T theo bài), Communicative→L8, Organisation→L3, Language→L1 và L2 ✅ D-W4 |
 
 **Điểm kiến thức = nhãn.** Không tạo bảng "điểm" thứ hai. Lý do: bằng chứng hiện có (`tag_marks`, `studio_item_meta`, "Điểm cần chú ý", ô chọn nhãn) đều gắn với nhãn. Một điểm của Destination U7 "bị động vô nhân xưng" chính là một nhãn có nhóm SM-1. ✅ D-W1 08/11
 
@@ -76,6 +76,7 @@ Bản đồ kỹ năng SM-1 (7 mảng · 40 nhóm), danh mục kỹ năng 0.2.1,
 | Nội dung | Luật |
 |---|---|
 | **Giáo trình** | Nháp → duyệt → **khóa**. Sửa mục lục hay bảng nối sau khi duyệt = phiên bản mới (v2), gia sư duyệt. **Bằng chứng cũ không đổi**: mọi bằng chứng lưu thẳng khóa nhãn / kỹ năng của từng câu (như `studio_item_meta` hiện nay), không lưu "Unit 7" rồi tra bảng nối. Đổi bảng nối không đổi mức đã tính. "Đang học đến" chuyển sang phiên bản mới theo **mã Unit ổn định** (Unit giữ mã qua các phiên bản; Unit bị bỏ ở v2 thì vẫn còn trong lịch sử) |
+| **Lộ trình mốc** (W4a, bản 0.5) | Mỗi lần ghi mốc = dòng mới (version+1, `supersedes_id`); bản hiện hành = version cao nhất của mốc. Chỉ **thầy/cô của em** ghi; phụ huynh chỉ xem. Bỏ mốc cần lý do. Chỉ một đỉnh đã xác nhận mỗi em. Con thấy: bản hiện hành nếu đã xác nhận; không thấy gì nếu đã bỏ; nếu bản hiện hành là nháp thì thấy bản đã xác nhận gần nhất trước nó. Đề xuất của app (`pt:`/`goal:`/`track:`) không lưu cho tới khi thầy/cô bấm; đã có mốc mang khóa đó thì ẩn đề xuất. Giáo trình chính: lựa chọn mới nhất của thầy/cô (nếu có bản đã duyệt); không thì giáo trình đã duyệt có sự kiện Unit gần nhất; không thì tạo sớm nhất. |
 | **Lộ trình** | Mỗi lần duyệt = phiên bản mới, giữ bản cũ. Chỉ hiện phần thay đổi để duyệt từng dòng. **Phụ huynh được báo** mỗi phiên bản mới (trang chủ phụ huynh), không cần duyệt ✅ 07/11 |
 | **Công thức AI** (`prompts/<việc>.vN.md`) | Phụ huynh giữ. Đổi = vN+1, chạy bộ đề chuẩn trước, đạt mới bật. Mỗi lần gọi AI ghi `ai_runs.prompt_version` (đã có cột). Bản cũ giữ để quay về |
 | **Chính sách ngưỡng** (mức điểm kiến thức) | Theo cách của AP: file có phiên bản, sinh migration bằng `gen:config -- --new`, không sửa bản đã công bố |
@@ -223,6 +224,8 @@ Cách ③ chỉ ghi **điểm theo phần** nếu trang kết quả không ghi c
 
 **Lộ trình:** `nháp` → `đã duyệt (vN)` → `thay bằng vN+1`. Phụ huynh được báo mỗi vN.
 
+**Mốc lộ trình (W4a):** `nháp` → `đã xác nhận` · `đã bỏ` (kèm lý do). Mốc đã xác nhận mới hiện cho con, cùng Unit của giáo trình chính; con không thấy điểm, mức, nhãn kỹ năng hay số câu.
+
 **Góp ý về app:** `mới` → `đang sửa` → `đã sửa` · `không làm` (kèm lời trả lời). Gia sư thấy trạng thái.
 
 ## 7. Bất biến (code + cơ sở dữ liệu phải giữ)
@@ -290,7 +293,7 @@ Lớp / đợt, chứng chỉ, streak, bảng xếp hạng, video; chat tự do 
 | Reading Explorer | **Quyển 3** (≈ B1+) | Mảng Đọc của Nguyên thấp hơn hẳn mảng Ngữ pháp / Từ vựng (Destination C1–C2) → lộ trình nhiều dòng, mỗi dòng một cấp |
 | Great Writing | **Quyển 4**, thỉnh thoảng ôn lại cách triển khai đoạn văn, viết câu gọn, không lặp / rối ý | Viết: tiêu chí Organisation + Language là trọng tâm; nhãn riêng cho "câu lặp ý", "triển khai đoạn" |
 | Listening & Notetaking | **Quyển 1** | Mảng Nghe thấp nhất. Mục tiêu C1 ~10/2027 có rủi ro ở Nghe → đưa vào lộ trình như một dòng riêng, báo phụ huynh |
-| Chấm viết / nói | **Tiêu chí Cambridge** | Thang `CAM-WS-1` (4 tiêu chí × 0–5), nối sang kỹ năng ✅ D-W4 |
+| Chấm viết / nói | **Tiêu chí Cambridge** | Thang `CAM-WS-1` (4 tiêu chí × 0–5), nối sang kỹ năng ✅ D-W5 |
 | Progress Test U1–12 | **Tự làm, sau đó chữa cùng cô** | Câu trả lời là của con → được tính; AI bỏ qua dấu chữa |
 | Nhận xét T10 | Viết **sau** bài test | Lệch giữa nhận xét và test là lệch thật → cờ "Cần đối chiếu" |
 | Điểm cần củng cố mỗi buổi | **1–3 là đủ** | Giữ tối đa 3 (khớp PR #23) |
@@ -320,6 +323,6 @@ Lớp / đợt, chứng chỉ, streak, bảng xếp hạng, video; chat tự do 
 | R3 | Nút chép giáo trình sang em kia không chạy được (nhãn theo track) | **Bỏ nút** |
 | R4 | `curriculum.kind` thừa | **Bỏ**; cách đo ở nhãn |
 | R5 | "Dịp" mơ hồ | Dịp = ngày lịch VN |
-| R6 | `CAM-WS-1` chưa thuộc lát nào | Vào **W4**; bảng quy đổi 0–5 → 0–4 cố định ở §3 |
+| R6 | `CAM-WS-1` chưa thuộc lát nào | Vào **W5** (đổi từ W4, 14/11); bảng quy đổi 0–5 → 0–4 cố định ở §3 |
 | R7 | Nhãn dạng câu nghe chưa có chỗ | Nhãn hạt giống mới ở migration W2, `group_key` mảng Nghe |
 | R8 | Phụ huynh "nạp bài" vs D-W8 | Phụ huynh tải file; gia sư xác nhận kết quả |
