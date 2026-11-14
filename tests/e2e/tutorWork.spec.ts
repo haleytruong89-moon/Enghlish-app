@@ -148,6 +148,33 @@ test.describe.serial("S5b-1 tutor work", () => {
     await expect(page.getByTestId("note-for-parent").filter({ hasText: "cụm động từ" }).first()).toBeVisible();
   });
 
+  test("UX vòng 3A: two session notes on two days show up as two sessions (calendar, month sheet), the same for the parent", async ({ page }) => {
+    const vnDaysAgo = (n: number) => new Date(Date.now() + 7 * 3_600_000 - n * 86_400_000).toISOString().slice(0, 10);
+    const days = [vnDaysAgo(100), vnDaysAgo(101)];
+    await loginAs(page, "tutorNguyen");
+    for (const d of days) {
+      await page.goto(`/learners/${NG}/notes/new`);
+      await page.getByTestId("session-date").fill(d);
+      await page.getByTestId("session-studied").fill(`Buổi đếm ${d}`);
+      await page.getByTestId("session-save").click();
+      await expect(page.getByTestId("session-saved")).toBeVisible();
+    }
+    const check = async () => {
+      await page.goto(`/learners/${NG}/notes`);
+      await expect(page.getByTestId("session-stats")).toBeVisible();
+      for (const m of new Set(days.map((d) => d.slice(0, 7)))) await expect(page.getByTestId(`month-row-${m}`), m).toBeVisible();
+      for (const d of days) {
+        await page.goto(`/learners/${NG}/notes/month/${d.slice(0, 7)}`);
+        await expect(page.getByTestId("month-sheet")).toBeVisible();
+        await expect(page.getByTestId(`sheet-row-${d}`)).toBeVisible();
+      }
+    };
+    await check();
+    await page.context().clearCookies();
+    await loginAs(page, "parent");
+    await check();
+  });
+
   test("Điểm cần chú ý: the table for the child, with windows; the parent sees it too", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
     await page.goto(`/learners/${NG}/weak?weeks=all`);

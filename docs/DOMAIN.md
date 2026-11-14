@@ -1,6 +1,6 @@
-# Luật và dữ liệu nghiệp vụ · Bàn làm việc gia sư (bản 0.3.1 · đổi chữ 13/11/2026)
+# Luật và dữ liệu nghiệp vụ · Bàn làm việc gia sư (bản 0.4 · thêm §5.6 "Đếm buổi học" 14/11/2026)
 
-Trạng thái: **0.3 — phụ huynh duyệt 08/11** (D-W1…D-W8 + 8 điểm rà soát R1–R8, mục 14). Đổi sau này = bản 0.4 có ghi lý do. Viết trước spec `docs/superpowers/specs/2026-11-08-tutor-workdesk-design.md` để chốt phần khó đổi về sau (dữ liệu, phiên bản, cách tính, trạng thái, quyền) trước khi code.
+Trạng thái: **0.3 — phụ huynh duyệt 08/11** (D-W1…D-W8 + 8 điểm rà soát R1–R8, mục 14). Đổi sau này = bản 0.5 có ghi lý do. **Bản 0.4 (14/11/2026):** thêm §5.6 "Đếm buổi học" (UX vòng 3A) và dòng "thống kê buổi học dẫn xuất" ở tầng C và §7; phụ huynh xem lại luật đếm trên bản thử. Viết trước spec `docs/superpowers/specs/2026-11-08-tutor-workdesk-design.md` để chốt phần khó đổi về sau (dữ liệu, phiên bản, cách tính, trạng thái, quyền) trước khi code.
 Nguồn: bản bấm thử + trang luồng (07/11), `TUTOR_WORKDESK_REVIEW_2026-11-07.md`, `AI_QUALITY_PLAN_2026-11-07.md`, câu trả lời thay gia sư của phụ huynh (08/11, mục 12), hiện trạng code đến migration `0024`.
 Khi file này mâu thuẫn với PRD Family / DESIGN: **PRD và DESIGN thắng**, trừ những dòng ghi rõ "đổi so với PRD", là chỗ cần phụ huynh duyệt.
 
@@ -64,7 +64,7 @@ Bản đồ kỹ năng SM-1 (7 mảng · 40 nhóm), danh mục kỹ năng 0.2.1,
 | **Ghi chú dạy học**: 4 ô *Đang tập trung vào · Cách giải thích hợp với con · Lỗi hay lặp lại · Cần tránh* | **Mới**, chỉ thêm (mỗi lần sửa = dòng mới) ✅ 07/11 |
 | "Đang học đến" của từng giáo trình | **Mới**, dẫn xuất từ sự kiện (mục 5.1) |
 | Lộ trình (nhiều dòng song song) | **Mới**, có phiên bản (mục 4) |
-| Buổi học | Có (`lesson_notes`); thêm nối với Unit đã dạy |
+| Buổi học | Có (`lesson_notes`); thêm nối với Unit đã dạy. **Thống kê buổi học** (số buổi, trung bình/tuần, lịch, bảng tháng): **dẫn xuất** từ ghi chú hiện hành (mục 5.6), không lưu số |
 | Bài giao (4 cách), bài làm, câu tự chấm, Đúng/Sai | Có (`inquiry_instances`, `attempts`, `results`, Studio); thêm cách ②③ và nạp bài đã làm |
 | Mức từng kỹ năng | Có (S7a, `competency_state`) |
 | Mức từng điểm kiến thức | **Mới**, dẫn xuất (mục 5.2) |
@@ -158,6 +158,27 @@ Hạn là một **ngày lịch Việt Nam**; nộp trước 24:00 ngày đó là
 | Nộp 28/11 00:01 | Nộp muộn |
 | Máy của con chạy sai giờ | Server ghi giờ nộp; giờ máy bỏ qua |
 
+### 5.6 Đếm buổi học (bản 0.4, 14/11/2026) — ❓ phụ huynh xem lại trên bản thử
+Dùng để đối chiếu số buổi cuối tháng và theo dõi sự đều đặn. **Không có số tiền** trong app: học phí thỏa thuận ngoài app, app chỉ cho số buổi.
+
+1. **Ghi chú hiện hành** = ghi chú không bị dòng nào khác trỏ `supersedes_id` tới. Bản đã bị thay không tính.
+2. **Một buổi = một ngày lịch Việt Nam (`session_date`) có ít nhất một ghi chú hiện hành**, bất kể ai ghi (thầy/cô hay phụ huynh) và có chia sẻ với phụ huynh hay không. Hai ghi chú cùng ngày = **1 buổi**, kèm dấu "⚠ 2 ghi chú cùng ngày" ở bảng tháng.
+3. Số buổi tháng M = số ngày có buổi trong M (theo `session_date`, không theo giờ ghi). Tổng = mọi tháng. "Buổi gần nhất" = ngày có buổi lớn nhất không quá hôm nay.
+4. **Trung bình/tuần** = số buổi trong **8 tuần trọn gần nhất** (T2–CN, không tính tuần đang chạy) ÷ 8; nếu buổi đầu tiên mới hơn 8 tuần thì chia cho số tuần trọn kể từ tuần của buổi đầu (tối thiểu 1); một chữ số thập phân ("1,5"); chưa có tuần trọn nào (buổi đầu nằm trong tuần đang chạy) hoặc chưa có buổi → "—".
+5. **Thầy/cô và phụ huynh thấy cùng một số.** Số đếm đọc bằng quyền máy chủ **sau cổng** `notes:read`, chỉ các cột cấu trúc (ngày, chuỗi sửa, vai người ghi, cờ chia sẻ, giờ ghi) và Unit đã dạy. Với ghi chú riêng tư (không chia sẻ), phụ huynh chỉ thấy **ngày**, không thấy nội dung và không thấy Unit.
+6. Học sinh không thấy gì về buổi học; không có bảng mới ở bản này (3A không SQL).
+
+| Ví dụ | Kết quả |
+|---|---|
+| 03/11 một ghi chú; 05/11 một ghi chú; 05/11 phụ huynh ghi thêm một ghi chú | Tháng 11: **2 buổi**; 05/11 có "⚠ 2 ghi chú cùng ngày" |
+| Ghi chú 10/11 được sửa (bản mới) thành 11/11 | 10/11 **không** còn buổi; 11/11 có buổi; tổng không đổi |
+| Ghi chú riêng tư (không chia sẻ) ngày 12/11 | Thầy/cô và phụ huynh đều thấy **12/11 · 1 buổi**; phụ huynh không thấy nội dung, Unit |
+| Ghi chú 31/10 và 01/11 | Tháng 10: 1 buổi; tháng 11: 1 buổi |
+| 12 buổi trong 8 tuần trọn gần nhất | Trung bình 1,5 buổi/tuần |
+| Buổi đầu tiên nằm trong tuần đang chạy | Trung bình "—" |
+
+**Để dành cho 3B (chưa làm, cần SQL):** buổi nghỉ (ngày, bên báo nghỉ, có tính phí), học bù / "không tính" (dấu trên ghi chú), buổi tính phí = đã học + nghỉ có tính phí − bù cho buổi nghỉ đã tính phí (cùng ngày: buổi thường và buổi bù = 2 buổi). **Không có chốt tháng** (phụ huynh quyết 14/11).
+
 ## 6. Trạng thái
 
 **Giáo trình (phiên bản):** `nháp` (AI đang đọc / gia sư đang sửa) → `đã duyệt` (đang dùng) → `thay bằng vN+1` · hoặc `lưu trữ` (thôi dạy; dữ liệu giữ nguyên).
@@ -190,6 +211,7 @@ Cách ③ chỉ ghi **điểm theo phần** nếu trang kết quả không ghi c
 8. Góp ý cho AI, góp ý về app, Ghi chú dạy học, nhận xét tháng, sự kiện Unit, phiên bản lộ trình: **chỉ thêm** (`eng_forbid_mutation`).
 9. Mọi bảng mới có `learner_id` nằm trong `eng_purge_learner` / `eng_purge_preview` (kèm test).
 10. Không có gì ghi vào schema `public`.
+11. **Số buổi học là dẫn xuất** (mục 5.6): tính lại từ ghi chú hiện hành, không lưu; thầy/cô và phụ huynh thấy cùng số; học sinh không thấy.
 
 ## 8. Ca biên bắt buộc xét
 - Giáo trình dùng cho cả 2 em (vd sách ngữ pháp chung) → tạo riêng cho từng em (khác track, nhãn khác); không chia sẻ trạng thái.

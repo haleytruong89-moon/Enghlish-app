@@ -28,6 +28,27 @@ test.describe("workdesk shell", () => {
     await expect(page.getByTestId("feedback-link")).toBeVisible();
   });
 
+  test("UX vòng 3A: 9 sections (Giao bài has no sub-pages; Ghi kết quả is a group); the pending number appears after the page", async ({ page }) => {
+    await loginAs(page, "tutorNguyen");
+    await expect(page.getByTestId("staff-sidebar")).toBeVisible();
+    for (const k of ["desk", "profile", "knowledge", "roadmap", "sessions", "assign", "results", "curricula", "inbox"]) await expect(page.getByTestId(`nav-${k}`), k).toBeVisible();
+    await page.getByTestId("nav-assign").click();
+    await expect(page).toHaveURL(new RegExp(`/learners/${NG}/assign$`));
+    await expect(page.getByTestId("way-cards")).toBeVisible();
+    await expect(page.locator('[data-testid^="nav-assign-"]')).toHaveCount(0);
+    await page.getByTestId("nav-results").click();
+    await expect(page).toHaveURL(new RegExp(`/learners/${NG}/imports/new$`));
+    await expect(page.getByTestId("nav-results-import")).toHaveAttribute("aria-current", "page");
+    await expect(page.getByTestId("nav-results-results")).toBeVisible();
+    await page.getByTestId("nav-results-results").click();
+    await expect(page).toHaveURL(new RegExp(`/learners/${NG}/results/new$`));
+    // The number comes from the read-only route (other specs may leave nothing waiting: then no badge at all, never a false one).
+    const res = await page.request.get(`/api/learners/${NG}/pending-count`);
+    expect(res.status()).toBe(200);
+    const { count } = (await res.json()) as { count: string | null };
+    if (count !== null && count !== "0") await expect(page.getByTestId("inbox-badge")).toHaveText(count);
+  });
+
   for (const t of [{ key: "tutorNguyen", own: NG, other: AN }, { key: "tutorAn", own: AN, other: NG }] as const) {
     test(`${t.key}: every sidebar link opens (200); the same links for the other child are 404; parent-only pages are 404`, async ({ page }) => {
       test.setTimeout(120_000);

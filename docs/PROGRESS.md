@@ -1440,3 +1440,32 @@ Nhánh `feature/ux-round2b` (dựa trên `feature/ux-round2` = PR 2A; kế hoạ
 
 ### Tiêu chí đạt
 `npm run typecheck && npm run lint && npm test && npm run gen:config` xanh; `npx playwright test --list` liệt kê test mới (e2e "Giao theo Unit" chưa chạy được ở máy không có Docker — chạy trong CI); Opus review SQL `0029` và diff cuối. **Chưa đạt/chưa làm:** phụ huynh chưa áp `0029` (sau khi gộp 2A và 2B); chưa thử bằng giáo trình thật; Studio/Nạp bài chưa lưu Unit (V11).
+
+## UX vòng 3A (14/11/2026) — cột trái rõ hơn, một trang "Giao bài", thống kê buổi học
+
+Nhánh `feature/ux-round3a` (dựa trên `feature/ux-round2` = main + 2A + 2B; PR #32 đưa 2B vào main đang mở). Kế hoạch `docs/superpowers/plans/2026-11-14-ux-round3.md` (Task A0–A13). **SQL cần phụ huynh áp: không có** (3A không migration, không API ghi mới, không AI). Quyết định phụ huynh 14/11: **U1–U14, U23–U27 theo đề xuất (14/11); luật đếm buổi phụ huynh xem lại trên bản thử.** 3B (buổi nghỉ / học bù / "không tính", có SQL): làm 3B, trường nghỉ như U16, công thức buổi tính phí U19 ok, **không có chốt tháng** (ghi ở đầu kế hoạch để 3B bỏ Task B6).
+
+### Làm gì
+1. **Cột trái (A1, A2):** 9 mục; **Giao bài** là một mục không trang con; nhóm mới **Ghi kết quả** (Nạp bài đã làm · Ghi điểm nhanh). Cấp 1 chữ vừa (500, đang mở 600), trang con thụt vào, nhỏ và nhạt hơn. Nút đổi em giữ đúng trang (Studio, Bài chủ đề, nháp Studio → trang chọn của em kia).
+2. **Số trên "Chờ duyệt" (A3, A4):** route `GET /api/learners/[id]/pending-count` (chỉ đọc, dùng lại `loadPendingRows` + `pendingView`, chỉ trả con số); cột trái đọc **sau khi trang hiện**, nhớ 30 giây, đọc lại khi rời trang duyệt / đổi em; ẩn khi 0, không rõ hoặc lỗi (không bao giờ hiện số sai). Trên điện thoại số nằm trong ngăn kéo "Các phần".
+3. **Một trang "Giao bài" (A5–A7):** `/learners/[id]/assign` = chọn 1 trong 4 cách (Studio "Nên dùng" ở đầu); `?way=link|pdf` = form hiện có với loại cố định; `?way=studio|topic` chuyển sang trang đích; dải "Cách giao" ở đầu 4 trang; thứ tự ô: Unit → tên → link/file → mục thêm tay → hạn; "Giao bài này →" ở Giáo trình là **một** liên kết tới trang chọn có điền sẵn.
+4. **Thống kê buổi học (A8–A11):** một buổi = một ngày (giờ VN) có ít nhất một ghi chú buổi học hiện hành (DOMAIN §5.6, bản 0.4). Trang Buổi học: 4 thẻ (Tổng · Tháng này · Trung bình/tuần · Đang học đến), lịch 12 tuần (ô có buổi có "●"), bảng tháng; trang tháng `/learners/[id]/notes/month/YYYY-MM` để in và sao chép câu gửi Zalo; Bàn làm việc có một dòng "Tháng 11: 5 buổi · buổi gần nhất 12/11". Thầy/cô và phụ huynh thấy cùng một số; ghi chú riêng tư chỉ lộ **ngày**. Không có số tiền.
+5. **Dọn (A12):** bỏ `loadingCopy`.
+
+### Lệch nhỏ so với kế hoạch (ghi để Opus / phụ huynh biết)
+- **Trung bình/tuần:** ví dụ test trong kế hoạch "buổi đầu 10 ngày trước (0 tuần trọn) → null" mâu thuẫn với U12 (10 ngày trước thường đã nằm trong một tuần trọn). Làm theo U12: chỉ "—" khi buổi đầu nằm trong **tuần đang chạy** (hoặc chưa có buổi); test viết theo đó.
+- **Cột "Người ghi"** dùng chữ có sẵn `todayPage.roleLabel` (Gia sư / Phụ huynh), không tạo chữ mới "Thầy/cô".
+- **Đơn vị lỗi:** `loadSessionFacts` trả `null` khi không đọc được ghi chú; nếu chỉ bảng Unit đã dạy lỗi thì vẫn đếm buổi (Unit trống).
+- Route đếm trả 404 cho học sinh (cổng báo 403) để không lộ gì.
+- e2e mới viết (shell 9 mục + số; tutorWork 2 ngày → lịch/bảng tháng; practice trang chọn) nhưng **chưa chạy được ở máy không có Docker** — chạy trong CI.
+
+### Cách thử trên bản thử (gia đình THỬ; đăng nhập thầy/cô của Nguyên (thử), rồi phụ huynh)
+- Cột trái: thấy 9 mục; bấm **Giao bài** → trang chọn 4 thẻ, Studio có huy hiệu "Nên dùng"; không có mục con dưới Giao bài. Bấm **Ghi kết quả** → mở "Nạp bài đã làm", thấy thêm "Ghi điểm nhanh (bài link)". Mục đang mở đậm hơn, mục con thụt vào và nhạt hơn.
+- "Chờ duyệt": nếu có việc chờ, vài giây sau khi trang hiện có số cạnh chữ; duyệt xong một việc, quay lại thì số cập nhật.
+- Giao bài: chọn "Giao bằng link" → form không còn nút chuyển Link/PDF; dải "Cách giao" ở đầu để đổi cách. Giáo trình (bản đã duyệt) → "Giao bài này →" → trang chọn có dòng "Từ giáo trình: …"; chọn Giao bằng link → tên bài điền sẵn.
+- Buổi học → Ghi chú buổi học: thấy "Tổng quan buổi học". Ghi 2 buổi ở 2 ngày khác nhau → "Tổng số buổi" tăng 2; ô ngày có "●"; bảng tháng liệt kê các ngày; bấm "Sao chép / In" → trang tháng; "Sao chép danh sách" rồi dán thử ("Nguyên · Tháng 11/2026: 5 buổi — 03/11, …."); "In" → bản in không có thanh trên và cột trái. Ghi 2 ghi chú cùng một ngày → vẫn 1 buổi, có "⚠ 2 ghi chú cùng ngày". Đăng nhập phụ huynh: cùng số.
+- Bàn làm việc → ô Buổi học có dòng tháng này (bấm mở trang Buổi học).
+- Màn của con không đổi.
+
+### Tiêu chí đạt
+`npm run typecheck && npm run lint && npm test && npm run gen:config` xanh; `npx playwright test --list` liệt kê test mới; **e2e xanh trong CI** (chưa chạy ở máy dev — tiêu chí chưa đạt cho tới khi CI chạy); Opus `reviewer` xem toàn bộ diff (trọng tâm: route đếm chỉ trả con số và chạy sau cổng; `loadSessionFacts` không đọc cột chữ; phụ huynh không thấy nội dung / Unit ghi chú riêng tư; liên kết cũ còn chạy; màn của con không đổi; không lồng `<a>`). **Chưa đạt:** phụ huynh xem lại luật đếm buổi (§5.6) trên bản thử.
