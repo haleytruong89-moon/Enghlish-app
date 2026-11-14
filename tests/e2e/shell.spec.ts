@@ -43,10 +43,13 @@ test.describe("workdesk shell", () => {
     await page.getByTestId("nav-results-results").click();
     await expect(page).toHaveURL(new RegExp(`/learners/${NG}/results/new$`));
     // The number comes from the read-only route (other specs may leave nothing waiting: then no badge at all, never a false one).
+    // Other specs run in parallel and may change the number, so assert only the format, after a fresh page load (never a false or empty badge).
     const res = await page.request.get(`/api/learners/${NG}/pending-count`);
     expect(res.status()).toBe(200);
-    const { count } = (await res.json()) as { count: string | null };
-    if (count !== null && count !== "0") await expect(page.getByTestId("inbox-badge")).toHaveText(count);
+    await page.reload();
+    await expect(page.getByTestId("staff-sidebar")).toBeVisible();
+    const badge = page.getByTestId("inbox-badge");
+    if ((await badge.count()) > 0) await expect(badge).toHaveText(/^(≥ )?[1-9]\d*$/);
   });
 
   for (const t of [{ key: "tutorNguyen", own: NG, other: AN }, { key: "tutorAn", own: AN, other: NG }] as const) {

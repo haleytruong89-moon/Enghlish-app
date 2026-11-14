@@ -5,13 +5,20 @@ import { shellCopy } from "@/lib/copy/vi";
 import { type BadgeMemo, shouldFetch } from "@/lib/shell/badgeMemo";
 
 type Memo = BadgeMemo & { count: string | null };
-let memo: Memo | null = null;
+/** One remembered number per child (this tab). */
+const memos = new Map<string, Memo>();
 let lastPath: string | null = null;
 
 /** Test hook: forget what this tab remembered. */
 export function resetInboxBadge(): void {
-  memo = null;
+  memos.clear();
   lastPath = null;
+}
+
+/** A page that already counted the waiting items (the desk, the inbox) tells the badge so it need not ask the route again. Browser only. */
+export function seedInboxBadge(learnerId: string, count: string | null): void {
+  if (typeof window === "undefined") return;
+  memos.set(learnerId, { learnerId, at: Date.now(), count });
 }
 
 /**
@@ -20,12 +27,18 @@ export function resetInboxBadge(): void {
  */
 export function InboxBadge({ learnerId }: { learnerId: string }) {
   const pathname = usePathname() ?? "/";
-  const [got, setGot] = useState<{ learnerId: string; count: string | null } | null>(memo ? { learnerId: memo.learnerId, count: memo.count } : null);
+  const first = memos.get(learnerId);
+  const [got, setGot] = useState<{ learnerId: string; count: string | null } | null>(first ? { learnerId, count: first.count } : null);
   const count = got && got.learnerId === learnerId ? got.count : null;
   useEffect(() => {
     const left = lastPath;
     lastPath = pathname;
-    if (!shouldFetch(memo, learnerId, Date.now(), left)) return; // the number already on screen is the remembered one
+    const known = memos.get(learnerId) ?? null;
+    if (!shouldFetch(known, learnerId, Date.now(), left)) {
+      // The remembered (or page-seeded) number is the one to show.
+      if (known) setGot({ learnerId, count: known.count });
+      return;
+    }
     const ctl = new AbortController();
     (async () => {
       try {
@@ -33,7 +46,7 @@ export function InboxBadge({ learnerId }: { learnerId: string }) {
         if (!res.ok) throw new Error(String(res.status));
         const body = (await res.json()) as { count?: string | null };
         const c = typeof body.count === "string" ? body.count : null;
-        memo = { learnerId, at: Date.now(), count: c };
+        memos.set(learnerId, { learnerId, at: Date.now(), count: c });
         setGot({ learnerId, count: c });
       } catch {
         if (!ctl.signal.aborted) setGot({ learnerId, count: null });
