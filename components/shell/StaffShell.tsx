@@ -13,7 +13,7 @@ export function StaffShell({ shell, children }: { shell: ShellData; children: Re
   const options = shell.learners.map((l) => ({ id: l.id, label: learnerWithTrack(l.alias, l.trackId) }));
   return (
     <div data-testid="staff-shell" className="min-h-dvh">
-      <header data-testid="staff-topbar" className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line bg-white px-4 py-3 md:px-6">
+      <header data-testid="staff-topbar" className="print:hidden flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line bg-white px-4 py-3 md:px-6">
         <span className="font-semibold text-accent">{app.name}</span>
         {shell.current?.isTest ? <span className="rounded-full border border-accent/40 px-2 py-0.5 text-xs font-medium text-accent">{app.testBadge}</span> : null}
         {options.length > 1 ? (
@@ -32,9 +32,11 @@ export function StaffShell({ shell, children }: { shell: ShellData; children: Re
           </form>
         </div>
       </header>
-      <div className="md:grid md:grid-cols-[220px_minmax(0,1fr)]">
-        <SidebarNav nav={nav} learnerId={learnerId} />
-        <main className="min-w-0 px-4 py-6 md:px-7">
+      <div className="md:grid md:grid-cols-[220px_minmax(0,1fr)] print:block">
+        <div data-testid="staff-sidebar-wrap" className="print:hidden">
+          <SidebarNav nav={nav} learnerId={learnerId} />
+        </div>
+        <main className="min-w-0 px-4 py-6 md:px-7 print:p-0">
           <div className="mx-auto w-full max-w-[1240px]">{children}</div>
         </main>
       </div>

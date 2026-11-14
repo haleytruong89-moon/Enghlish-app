@@ -64,4 +64,11 @@ describe("staff shell", () => {
     expect(html).toMatch(/data-testid="nav-profile-weak"[^>]*data-level="child"[^>]*text-\[13px\][^>]*text-accent[^>]*font-semibold|data-testid="nav-profile-weak"[^>]*data-level="child"[^>]*font-semibold[^>]*text-accent/);
     expect(html).toMatch(/data-testid="nav-profile-levels"[^>]*text-muted/);
   });
+  it("printing: the top bar and the left column are hidden, the page body is not", () => {
+    const html = render(shell(), `/learners/${an.id}/notes/month/2026-11`);
+    expect(html).toMatch(/<header[^>]*data-testid="staff-topbar"[^>]*print:hidden|<header[^>]*print:hidden[^>]*data-testid="staff-topbar"/);
+    expect(html).toMatch(/data-testid="staff-sidebar-wrap" class="print:hidden"|class="print:hidden" data-testid="staff-sidebar-wrap"/);
+    expect(html).toMatch(/<main[^>]*print:p-0/);
+    expect(html).not.toMatch(/<main[^>]*print:hidden/);
+  });
 });

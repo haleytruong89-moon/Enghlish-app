@@ -33,3 +33,8 @@ export const perWeekText = (v: number | null): string => (v === null ? sessionSt
 
 export const lastText = (last: string | null): string => (last ? dayMonth(last) : "");
 export type { SessionDay };
+
+/** "2026-11" → itself when it is a real month that is not after today's month; otherwise null (the page answers 404). */
+export function parseMonth(v: string, todayIso: string): string | null {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(v) && v <= todayIso.slice(0, 7) ? v : null;
+}
