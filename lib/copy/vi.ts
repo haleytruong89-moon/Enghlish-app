@@ -2143,6 +2143,7 @@ export const shellCopy = {
     roadmap: "Lộ trình",
     sessions: "Buổi học",
     assign: "Giao bài",
+    results: "Ghi kết quả",
     curricula: "Giáo trình",
     inbox: "Chờ duyệt",
   },

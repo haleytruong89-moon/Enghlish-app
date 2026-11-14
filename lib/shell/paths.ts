@@ -11,7 +11,7 @@ export type Active = { section: ActiveKey | null; child: string | null; screen: 
 
 const S = appFeedback.screens;
 const lp = (rest: string) => new RegExp(`^/learners/[^/]+${rest}$`);
-type Rule = { re: RegExp; section: ActiveKey; child: string | null; screen: string };
+type Rule = { re: RegExp; section: ActiveKey; child: string | null; screen: string; switchTo?: (to: string) => string };
 
 const RULES: readonly Rule[] = [
   { re: /^\/$/, section: "desk", child: null, screen: S.home },
@@ -25,15 +25,15 @@ const RULES: readonly Rule[] = [
   { re: lp("/knowledge(/.*)?"), section: "knowledge", child: null, screen: S.knowledgeMap },
   { re: lp("/roadmap(/.*)?"), section: "roadmap", child: null, screen: shellCopy.sections.roadmap },
   { re: lp("/notes/new"), section: "sessions", child: "notesNew", screen: S.notesNew },
-  { re: lp("/notes"), section: "sessions", child: "notes", screen: S.notes },
-  { re: lp("/assign"), section: "assign", child: "assign", screen: S.assign },
-  { re: /^\/studio\/new$/, section: "assign", child: "studio", screen: S.studioNew },
-  { re: /^\/studio\/drafts\/[^/]+$/, section: "assign", child: "studio", screen: S.studioDraft },
-  { re: lp("/inquiries"), section: "assign", child: "inquiries", screen: S.inquiries },
-  { re: lp("/results/new"), section: "assign", child: "results", screen: S.resultsNew },
-  { re: lp("/imports/new"), section: "assign", child: "import", screen: S.importNew },
-  { re: lp("/imports(/.*)?"), section: "assign", child: "import", screen: S.importNew },
-  { re: /^\/imports\/[^/]+$/, section: "assign", child: "import", screen: S.importConfirm },
+  { re: lp("/notes(/month/[^/]+)?"), section: "sessions", child: "notes", screen: S.notes },
+  { re: lp("/assign"), section: "assign", child: null, screen: S.assign },
+  { re: /^\/studio\/new$/, section: "assign", child: null, screen: S.studioNew, switchTo: (to) => `/studio/new${learnerQuery(to)}` },
+  { re: /^\/studio\/drafts\/[^/]+$/, section: "assign", child: null, screen: S.studioDraft, switchTo: (to) => `/learners/${to}/assign` },
+  { re: lp("/inquiries"), section: "assign", child: null, screen: S.inquiries, switchTo: (to) => `/learners/${to}/inquiries` },
+  { re: lp("/results/new"), section: "results", child: "results", screen: S.resultsNew },
+  { re: lp("/imports/new"), section: "results", child: "import", screen: S.importNew },
+  { re: lp("/imports(/.*)?"), section: "results", child: "import", screen: S.importNew },
+  { re: /^\/imports\/[^/]+$/, section: "results", child: "import", screen: S.importConfirm },
   { re: lp("/curricula(/[^/]+)?"), section: "curricula", child: null, screen: curriculumCopy.screenLabel },
   { re: /^\/curricula\/versions\/[^/]+$/, section: "curricula", child: null, screen: curriculumCopy.screenLabel },
   { re: lp("/inbox"), section: "inbox", child: "all", screen: S.inbox },
@@ -60,6 +60,8 @@ export function switchHref(pathname: string, to: string): string {
   if (a.section === "aiSettings") return `/settings/ai${learnerQuery(to)}`;
   // Switching child must never land on another child's delete screen: go to that child's desk instead.
   if (a.section === "delete") return `/${learnerQuery(to)}`;
+  const rule = RULES.find((x) => x.re.test(pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname));
+  if (rule?.switchTo) return rule.switchTo(to);
   const def = SECTIONS.find((s) => s.key === a.section);
   if (!def || def.status !== "live") return `/${learnerQuery(to)}`;
   const child = a.child ? def.children(to, { revisionsReady: true }).find((c) => c.key === a.child) : undefined;

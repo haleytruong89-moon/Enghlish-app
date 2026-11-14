@@ -9,9 +9,20 @@ const hrefs = (n: ReturnType<typeof buildNav>) => [...n.sections.flatMap((s) => 
 describe("staff sidebar model", () => {
   it("follows the prototype order with the agreed labels", () => {
     const n = buildNav("tutor", NG, { revisionsReady: true });
-    expect(n.sections.map((s) => s.key)).toEqual(["desk", "profile", "knowledge", "roadmap", "sessions", "assign", "curricula", "inbox"]);
+    expect(n.sections.map((s) => s.key)).toEqual(["desk", "profile", "knowledge", "roadmap", "sessions", "assign", "results", "curricula", "inbox"]);
     expect(n.sections.map((s) => s.key)).toEqual([...SECTION_KEYS]);
     for (const s of n.sections) expect(s.label).toBe(shellCopy.sections[s.key]);
+  });
+
+  it("'Giao bài' is one entry without children; 'Ghi kết quả' groups the two result entries", () => {
+    const n = buildNav("tutor", NG, { revisionsReady: true });
+    const a = n.sections.find((x) => x.key === "assign")!;
+    expect(a.children).toEqual([]);
+    expect(a.href).toBe(`/learners/${NG}/assign`);
+    const r = n.sections.find((x) => x.key === "results")!;
+    expect(r.label).toBe("Ghi kết quả");
+    expect(r.children.map((c) => c.key)).toEqual(["import", "results"]);
+    expect(r.children.map((c) => c.href)).toEqual([`/learners/${NG}/imports/new`, `/learners/${NG}/results/new`]);
   });
 
   it("sections of later slices are 'soon' (Bản đồ kiến thức is live since W3): no link, no children (no dead link, no 404)", () => {
@@ -36,7 +47,7 @@ describe("staff sidebar model", () => {
     }
     expect(all).toContain(`/?learner=${NG}`);
     expect(all).toContain(`/learners/${NG}/inbox`);
-    expect(all).toContain(`/studio/new?learner=${NG}`);
+    expect(all).toContain(`/learners/${NG}/assign`);
     expect(all).toContain(`/review/skills?learner=${NG}`);
   });
 

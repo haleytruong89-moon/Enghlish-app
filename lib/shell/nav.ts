@@ -3,9 +3,9 @@
  * slice builds is "soon": shown, never a link, until that slice flips its status here. No track branching: the same model for every
  * child; only the learner id differs.
  */
-import { aiSettingsCopy, assignPage, importCopy, levelCopy, notesPage, purgePage, readingPage, resultPage, revisionReviewCopy, sessionNotePage, shellCopy, skillStateCopy, studioCopy, studioInboxCopy, targetsPage, weakPage } from "@/lib/copy/vi";
+import { aiSettingsCopy, importCopy, levelCopy, notesPage, purgePage, readingPage, resultPage, revisionReviewCopy, sessionNotePage, shellCopy, skillStateCopy, studioInboxCopy, targetsPage, weakPage } from "@/lib/copy/vi";
 
-export const SECTION_KEYS = ["desk", "profile", "knowledge", "roadmap", "sessions", "assign", "curricula", "inbox"] as const;
+export const SECTION_KEYS = ["desk", "profile", "knowledge", "roadmap", "sessions", "assign", "results", "curricula", "inbox"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 export type NavStatus = "live" | "soon";
 export type NavRole = "tutor" | "parent";
@@ -46,14 +46,12 @@ export const SECTIONS: readonly SectionDef[] = [
       { key: "notes", label: notesPage.link, href: `${L(id)}/notes` },
     ],
   },
+  { key: "assign", status: "live", lane: null, root: (id) => `${L(id)}/assign`, children: () => [] },
   {
-    key: "assign", status: "live", lane: null, root: (id) => `${L(id)}/assign`,
+    key: "results", status: "live", lane: null, root: (id) => `${L(id)}/imports/new`,
     children: (id) => [
-      { key: "assign", label: assignPage.link, href: `${L(id)}/assign` },
-      { key: "studio", label: studioCopy.navLink, href: `/studio/new${learnerQuery(id)}` },
-      { key: "inquiries", label: shellCopy.inquiriesChild, href: `${L(id)}/inquiries` },
-      { key: "results", label: resultPage.link, href: `${L(id)}/results/new` },
       { key: "import", label: importCopy.link, href: `${L(id)}/imports/new` },
+      { key: "results", label: resultPage.link, href: `${L(id)}/results/new` },
     ],
   },
   { key: "curricula", status: "live", lane: null, root: (id) => `${L(id)}/curricula`, children: () => [] },
