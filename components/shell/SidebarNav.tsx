@@ -6,7 +6,7 @@ import { appFeedback, shellCopy } from "@/lib/copy/vi";
 import type { NavLink, NavModel } from "@/lib/shell/nav";
 import { activeFor, feedbackHref } from "@/lib/shell/paths";
 
-const item = "flex min-h-11 items-center justify-between gap-2 rounded-lg px-3 text-sm no-underline";
+const item = "flex min-h-11 items-center justify-between gap-2 rounded-lg px-3 no-underline";
 
 /**
  * The left column (spec §5 rule 5): sticky on a computer, a drawer under one button on a phone. One <nav> only (no duplicate test ids).
@@ -20,8 +20,8 @@ export function SidebarNav({ nav, learnerId }: { nav: NavModel; learnerId: strin
   const openLabel = nav.sections.find((s) => s.key === active.section)?.label ?? nav.parent.find((p) => p.key === active.section)?.label ?? shellCopy.sections.desk;
   const child = (c: NavLink, testid: string, current: boolean) => (
     <li key={c.key}>
-      <Link href={c.href} onClick={close} data-testid={testid} aria-current={current ? "page" : undefined}
-        className={`${item} pl-6 ${current ? "font-semibold text-accent" : "text-ink hover:bg-[#eceee8]"}`}>
+      <Link href={c.href} onClick={close} data-testid={testid} data-level="child" aria-current={current ? "page" : undefined}
+        className={`${item} text-[13px] md:min-h-9 ${current ? "font-semibold text-accent" : "text-muted hover:bg-[#eceee8]"}`}>
         {c.label}
       </Link>
     </li>
@@ -40,18 +40,18 @@ export function SidebarNav({ nav, learnerId }: { nav: NavModel; learnerId: strin
             return (
               <li key={s.key}>
                 {s.href ? (
-                  <Link href={s.href} onClick={close} data-testid={`nav-${s.key}`} aria-current={current ? "page" : undefined}
-                    className={`${item} ${current ? "bg-[#e3ece8] font-semibold text-[#1d4136]" : "text-ink hover:bg-[#eceee8]"}`}>
+                  <Link href={s.href} onClick={close} data-testid={`nav-${s.key}`} data-level="section" aria-current={current ? "page" : undefined}
+                    className={`${item} text-[15px] ${current ? "bg-[#e3ece8] font-semibold text-[#1d4136]" : "font-medium text-ink hover:bg-[#eceee8]"}`}>
                     {s.label}
                   </Link>
                 ) : (
-                  <span data-testid={`nav-${s.key}`} aria-disabled="true" data-status={s.status} className={`${item} cursor-default text-muted`}>
+                  <span data-testid={`nav-${s.key}`} aria-disabled="true" data-status={s.status} data-level="section" className={`${item} cursor-default text-[15px] font-medium text-muted`}>
                     {s.label}
                     {s.status === "soon" ? <span className="rounded-full bg-[#eceee8] px-2 py-0.5 text-xs font-semibold">{shellCopy.soon}</span> : null}
                   </span>
                 )}
                 {current && s.children.length > 0 ? (
-                  <ul className="mt-1 flex flex-col gap-0.5">{s.children.map((c) => child(c, `nav-${s.key}-${c.key}`, active.child === c.key))}</ul>
+                  <ul data-level="children" className="ml-3 mt-1 flex flex-col gap-0.5 border-l border-line pl-3">{s.children.map((c) => child(c, `nav-${s.key}-${c.key}`, active.child === c.key))}</ul>
                 ) : null}
               </li>
             );
