@@ -733,6 +733,8 @@ export const purgePage = {
     assignment_units: "Unit của bài luyện đã giao",
     session_marks: "Đánh dấu loại buổi học",
     session_absences: "Buổi nghỉ",
+    roadmap_milestones: "Mốc lộ trình",
+    roadmap_main_curriculum: "Giáo trình chính của Hành trình",
     login_names: "Tên đăng nhập ngắn",
     learners: "Hồ sơ của em",
     members: "Tài khoản của em trong app",
