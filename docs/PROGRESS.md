@@ -1532,7 +1532,7 @@ Nhánh `feature/w4a-roadmap` (từ `main` + các commit kế hoạch W4). Kế h
 - Xóa dữ liệu em thử: biên nhận có hai mục mới.
 
 ### Tiêu chí đạt
-`npm run typecheck && npm run lint && npm test` xanh; `npx playwright test --list` có `roadmap.spec.ts`; **e2e chưa chạy ở máy dev (không Docker), chỉ CI**; `0031` áp được hai lần; Opus `reviewer` (SQL + diff) **chưa chạy** trong lượt này (cần bên điều phối).
+`npm run typecheck && npm run lint && npm test` xanh; `npx playwright test --list` có `roadmap.spec.ts`; **e2e chưa chạy ở máy dev (không Docker), chỉ CI**; `0031` áp được hai lần; Opus `reviewer` đã soát SQL + diff hai vòng (14/11): không lỗi chặn; mọi điểm nên sửa đã sửa.
 
 ### Giả định và lệch so với kế hoạch
 - Phát lại `client_id` được tra TRƯỚC mọi thứ khác (kể cả khi không gửi trường); thêm chốt `already_removed` (không sửa mốc đã bỏ).
