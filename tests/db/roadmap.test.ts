@@ -357,7 +357,7 @@ describe("roadmap milestones + eng_my_roadmap (migration 0031)", () => {
     expect((await write({ fields: fields({ title: "Back again" }) })).version).toBe(1);
   });
 
-  it("two tutors' calls at the same moment cannot leave two confirmed summits", async () => {
+  it("two concurrent confirm calls cannot leave two confirmed summits", async () => {
     // start clean: demote every summit the child sees now
     for (const m of await q1<{ milestone_id: string; version: number }>("select s.milestone_id, (select max(version) from english.roadmap_milestones r where r.milestone_id = s.milestone_id) as version from english.eng_roadmap_visible($1) s where s.role = 'summit'", [NG()])) {
       await write({ milestone: m.milestone_id, base: m.version, fields: fields({ kind: "goal", role: "beyond", title: "Demoted" }), status: "confirmed" });

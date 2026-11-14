@@ -38,7 +38,8 @@ export function buildStrip(mainId: string | null, curricula: readonly RoadmapCur
     counts[state] += 1;
     return { code: u.code, ord: u.ord, title: u.title, state, flags: onUnit.get(u.code) ?? [] };
   });
-  const summitCard = live.find((c) => c.current.role === "summit");
+  // the summit the child sees wins; else a (draft) summit the tutor is preparing
+  const summitCard = live.find((c) => c.childSees?.role === "summit") ?? live.find((c) => c.current.role === "summit");
   return {
     curriculumTitle: main.title, cells, counts,
     summit: summitCard ? { title: summitCard.current.title, draft: summitCard.current.status === "draft" } : null,

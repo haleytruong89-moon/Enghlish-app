@@ -29,7 +29,7 @@ export function MilestoneList({
   const hasSummit = summitTitle !== null || live.some((c) => c.current.role === "summit");
   const done = () => { setAdding(null); router.refresh(); };
   const group = (role: "summit" | "beyond" | "flag", title: string, none: string, addLabel: string, hint?: string) => {
-    const items = live.filter((c) => c.current.role === role);
+    const items = live.filter((c) => (role === "summit" && c.childSees?.role === "summit" ? true : c.current.role === role && !(c.childSees?.role === "summit" && role !== "summit")));
     return (
       <section className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-4" aria-label={title} data-testid={`ms-group-${role}`}>
         <div className="flex flex-wrap items-center justify-between gap-2">

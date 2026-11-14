@@ -85,7 +85,7 @@ export function parseRoadmap(input: unknown): RoadmapView {
     intakeGoals: goals.success ? goals.data.map((g) => ({ title: g.title, due: g.due ?? null })) : [],
     trackGoalLabel: r.goal_label,
     usedKeys: used,
-    summitExists: cards.some((c) => c.childSees?.role === "summit" || (c.current.role === "summit" && c.current.status === "confirmed")),
+    summitExists: cards.some((c) => c.childSees?.role === "summit"),
   });
   const unitsOf = new Map(r.curricula.map((c) => [c.id, new Set(c.units.map((u) => u.code))]));
   const orphanIds = cards

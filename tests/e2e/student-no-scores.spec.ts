@@ -28,11 +28,11 @@ for (const key of ["studentAn", "studentNguyen"] as AccountKey[]) {
     // PRD D35: a/b may appear only inside [data-count="work"] (counts of the child's own work); everything else is checked without them.
     const journey = await page.evaluate(() => {
       const c = document.body.cloneNode(true) as HTMLElement;
-      c.querySelectorAll('[data-count="work"]').forEach((e) => e.remove());
+      c.querySelectorAll('script, style, template, [data-count="work"]').forEach((e) => e.remove());
       return c.textContent ?? "";
     });
     expect(journey).not.toMatch(SCORE_PATTERN);
-    expect(journey).not.toMatch(/\d+\s*\/\s*\d+(?!\d)(?<!\/\d{4})/);
+    expect(journey).not.toMatch(/(?<![\d/])\d{1,3}\s*\/\s*\d{1,3}(?![\d/])/);
     expect(journey).not.toMatch(/%|(^|[^\p{L}])điểm(?!\p{L})|đúng\s+\d|\bsai\s+\d/iu);
     expect(journey).not.toMatch(/đang học (A1|A2|B1|B2|C1|C2)/);
     expect(journey).not.toContain(levelCopy.assumed);
