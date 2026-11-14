@@ -24,6 +24,7 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
     curriculaCount: data.curricula === null ? null : data.curricula.length,
     levelsAssumed: data.profile ? data.profile.domains.some((d) => d.status === "assumed") : null,
     flagCount: data.pending.rows.filter((r) => r.kind === "flag").length,
+    roadmapOrphans: data.roadmap ? data.roadmap.orphans : null,
   });
   return (
     <div className="flex flex-col gap-5" data-testid="today-page">
@@ -41,6 +42,12 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
       </div>
       <DeskInbox learnerId={id} pending={data.pending} />
       <DeskAlerts learnerId={id} items={alerts} />
+      {parent && data.roadmap?.recentTitle ? (
+        <p className="rounded-xl border border-line bg-white px-4 py-3 text-sm" data-testid="desk-roadmap-line">
+          {deskCopy.roadmapLine.parentNew(data.roadmap.recentTitle)}{" "}
+          <Link href={`/learners/${id}/roadmap`} className="font-medium text-accent underline">{deskCopy.roadmapLine.open}</Link>
+        </p>
+      ) : null}
       <div className="grid items-start gap-4 lg:grid-cols-3">
         <ProfileBox learnerId={id} alias={learner.alias} profile={data.profile} weak={data.today?.weak.tags ?? []} />
         <CurriculumBox learnerId={id} cards={data.curricula} />

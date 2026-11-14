@@ -1,6 +1,6 @@
 /**
  * Which sidebar entry a URL belongs to, and the screen name sent with "Góp ý về app" (pure, unit-tested). One table: the order
- * matters (specific paths before /review/[id]). Paths of later slices (W3 knowledge / imports, W5 roadmap) are registered already
+ * matters (specific paths before /review/[id]). Paths of later slices (W3 knowledge / imports, W4a roadmap) are registered already
  * so their pages light up the right entry as soon as they exist.
  */
 import { appFeedback, curriculumCopy, shellCopy } from "@/lib/copy/vi";

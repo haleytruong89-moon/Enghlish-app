@@ -23,7 +23,7 @@ const today = (over: Partial<TodayData> = {}): TodayData => ({
   lastNote: { id: "n1", sessionDate: "2026-10-15", studied: "Unit 7", weakTagKeys: ["x-gone"], practisedTargetIds: [], message: "Had it not been for + N", authorRole: "tutor" },
   recent: { id: "r0", title: "Destination U1-12", takenOn: "2026-10-16", total: 60, correct: 50 }, practice: [], tagLabels: {}, ...over,
 } as TodayData);
-const data = (over: Partial<DeskData> = {}): DeskData => ({ today: today(), pending: { rows: [], failed: [], more: false }, intakeMissing: false, curricula: [], profile: null, recent: null, aiSettings: null, sessions: null, ...over });
+const data = (over: Partial<DeskData> = {}): DeskData => ({ today: today(), pending: { rows: [], failed: [], more: false }, intakeMissing: false, curricula: [], profile: null, recent: null, aiSettings: null, sessions: null, roadmap: null, ...over });
 const render = (role: "tutor" | "parent", d: DeskData) => renderToStaticMarkup(createElement(DeskView, { shell: shell(role), learner, data: d, todayIso: "2026-10-18" }));
 
 describe("Bàn làm việc", () => {
@@ -56,6 +56,16 @@ describe("Bàn làm việc", () => {
     expect(h).toContain(pendingCopy.deskMore(1));
     expect(h).toContain(`href="/learners/${L}/inbox"`);
     expect(h.slice(h.indexOf('data-testid="desk-inbox"'), h.indexOf(`data-testid="attention-${L}"`))).not.toMatch(/<button\b/);
+  });
+  it("W4a: the parent sees one line about a milestone confirmed this week; the tutor does not; a vanished Unit is an alert", () => {
+    const d = data({ roadmap: { orphans: 2, recentTitle: "Progress Test 1" } });
+    const parent = render("parent", d);
+    expect(parent).toContain('data-testid="desk-roadmap-line"');
+    expect(parent).toContain(deskCopy.roadmapLine.parentNew("Progress Test 1"));
+    expect(parent).toContain(`href="/learners/${L}/roadmap"`);
+    expect(render("tutor", d)).not.toContain('data-testid="desk-roadmap-line"');
+    expect(render("tutor", d)).toContain(deskCopy.alerts.orphanTitle(2));
+    expect(render("parent", data({ roadmap: { orphans: 0, recentTitle: null } }))).not.toContain('data-testid="desk-roadmap-line"');
   });
   it("Chờ duyệt box never says 'nothing waiting' when a source failed or the list may be incomplete", () => {
     const failed = render("tutor", data({ pending: { rows: [], failed: ["studio"], more: false } }));

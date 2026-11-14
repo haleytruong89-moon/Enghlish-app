@@ -34,6 +34,23 @@ describe("Chờ duyệt — unfinished imports (W3)", () => {
   });
 });
 
+describe("Chờ duyệt — roadmap (W4a)", () => {
+  const only = (over: Partial<PendingInput>) => input({ work: [], studio: [], skills: [], drafts: [], curricula: [], ...over });
+  it("proposals + draft milestones are ONE link-only row to the roadmap page, in its own group", () => {
+    const rows = buildPendingRows(only({ roadmapWaiting: 3 }));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ key: "roadmap-waiting", kind: "milestone", group: "roadmap", href: `/learners/${L}/roadmap`, title: pendingCopy.need.milestone(3), label: pendingCopy.kinds.milestone, waitingTutor: false });
+    expect(countGroups(rows).roadmap).toBe(1);
+    expect(filterRows(rows, "roadmap")).toHaveLength(1);
+    expect(parseGroup("roadmap")).toBe("roadmap");
+  });
+  it("nothing waiting (0 or not given) = no row; a parent sees it as waiting for the tutor", () => {
+    expect(buildPendingRows(only({ roadmapWaiting: 0 }))).toEqual([]);
+    expect(buildPendingRows(only({}))).toEqual([]);
+    expect(buildPendingRows(only({ role: "parent", roadmapWaiting: 2 }))[0]?.waitingTutor).toBe(true);
+  });
+});
+
 describe("Chờ duyệt rows", () => {
   it("one row per waiting item of THIS child, oldest first, undated last", () => {
     const rows = buildPendingRows(input({ work: [work(), work({ episodeId: "e9", learnerId: O })], studio: [studio(), studio({ attemptId: "s9", learnerId: O })] }));
@@ -79,7 +96,7 @@ describe("Chờ duyệt rows", () => {
   });
   it("filters, counts, parses the group", () => {
     const rows = buildPendingRows(input());
-    expect(countGroups(rows)).toEqual({ all: 6, work: 1, check: 1, ai: 2, skills: 2 });
+    expect(countGroups(rows)).toEqual({ all: 6, work: 1, check: 1, ai: 2, skills: 2, roadmap: 0 });
     expect(filterRows(rows, "ai").map((r) => r.kind)).toEqual(["studio_draft", "curriculum_draft"]);
     expect(filterRows(rows, "all")).toHaveLength(6);
     expect(parseGroup("skills")).toBe("skills");

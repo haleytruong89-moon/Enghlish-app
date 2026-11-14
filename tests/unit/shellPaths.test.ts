@@ -71,10 +71,10 @@ describe("switchHref keeps the part of the app that is open", () => {
     expect(switchHref("/settings/ai", Y)).toBe(`/settings/ai?learner=${Y}`);
     expect(switchHref(`/learners/${X}/delete`, Y)).toBe(`/?learner=${Y}`);
   });
-  it("the knowledge map keeps the part of the app that is open; a 'soon' section or an unknown page goes to the desk", () => {
+  it("the knowledge map and the roadmap keep the part of the app that is open; an unknown page goes to the desk", () => {
     expect(switchHref(`/learners/${X}/knowledge`, Y)).toBe(`/learners/${Y}/knowledge`);
     expect(switchHref(`/learners/${X}/imports/new`, Y)).toBe(`/learners/${Y}/imports/new`);
-    expect(switchHref(`/learners/${X}/roadmap`, Y)).toBe(`/?learner=${Y}`);
+    expect(switchHref(`/learners/${X}/roadmap`, Y)).toBe(`/learners/${Y}/roadmap`);
     expect(switchHref("/somewhere", Y)).toBe(`/?learner=${Y}`);
   });
 });
