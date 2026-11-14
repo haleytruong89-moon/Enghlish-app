@@ -730,6 +730,7 @@ export const purgePage = {
     curriculum_unit_points: "Bảng nối Unit → mục kiến thức",
     curriculum_unit_events: "Lần đặt trạng thái Unit",
     lesson_note_units: "Unit đã dạy trong buổi học",
+    assignment_units: "Unit của bài luyện đã giao",
     login_names: "Tên đăng nhập ngắn",
     learners: "Hồ sơ của em",
     members: "Tài khoản của em trong app",
@@ -930,6 +931,28 @@ export const tagPicker = {
   remove: (label: string) => `Bỏ mục ${label}`,
 } as const;
 
+/** UX vòng 2B: ô chọn Unit của giáo trình đã duyệt (Giao bài luyện; dạng gọn ở Tạo bài từ đề / Nạp bài đã làm). */
+export const unitPickerCopy = {
+  title: "Giao theo Unit",
+  help: "Chọn Unit của giáo trình đã duyệt. App tự suy ra các mục kiến thức của bài từ những Unit này.",
+  helpTitleOnly: "Chọn Unit để điền sẵn tên bài. Bạn sửa được tên.",
+  compactOpen: "Chọn Unit để điền tên bài",
+  none: "Chưa có giáo trình đã duyệt.",
+  noneLink: "Mở Giáo trình",
+  unitLine: (code: string, title: string, status: string | null) => `${code} · ${title}${status ? ` · ${status}` : ""}`,
+  reviewHint: (units: string) => `ôn ${units}`,
+  derived: (n: number, labels: string, more: number) => `Bài này luyện ${n} mục kiến thức: ${labels}${more > 0 ? ` + ${more} mục` : ""}`,
+  derivedNone: "Các Unit đã chọn chưa gắn mục kiến thức nào.",
+  titleFilled: "Tên bài tự điền theo Unit đã chọn. Bạn sửa được.",
+  moreItems: "+ Thêm mục kiến thức khác",
+  sep: " · ",
+  titleJoin: " + ",
+  maxUnits: (max: number) => `Một bài giao tối đa ${max} Unit. Bỏ bớt một Unit để chọn Unit khác.`,
+  reviewPartial: (max: number) => `Dòng ôn này có nhiều Unit hơn mức còn lại (tối đa ${max}): app chỉ tick được một phần. Chọn thêm Unit bằng tay nếu cần.`,
+  reviewNoUnits: "Dòng này chưa gắn Unit nào. Hãy tick Unit bằng tay.",
+  statuses: { not_started: "", in_progress: "Đang học", done: "Đã học", skipped: "" } as Record<string, string>,
+} as const;
+
 /** SM-1: bản đồ kỹ năng trong ô chọn nhãn / kỹ năng (gia sư, phụ huynh). Tên mảng và nhóm đến từ bản đồ (cơ sở dữ liệu). */
 export const skillMapCopy = {
   tabsLabel: "Mảng kỹ năng",
@@ -1118,6 +1141,7 @@ export const assignPage = {
   titleLabel: "Tên bài",
   titlePlaceholder: "Ví dụ: Unless, even if, provided… (trang 2)",
   tagsLabel: "Luyện mục kiến thức (tối đa 3, không bắt buộc)",
+  tagsLabelExtra: "Mục kiến thức khác (tối đa 3, không bắt buộc)",
   tagsHelp: `Chỉ ${tutorHonorific} và phụ huynh thấy các mục này. Em không thấy.`,
   dueLabel: "Hạn làm",
   frameLabel: "Khung đề (nếu bài này có khung)",
@@ -1143,6 +1167,8 @@ export const assignPage = {
     uploadFailed: "Chưa tải file lên được. Bạn kiểm tra mạng rồi thử lại nhé.",
     unreadable: "Không đọc được ảnh này. Bạn chọn ảnh khác nhé.",
     upload_limit: "Hôm nay đã tải lên quá nhiều file (tối đa 60 lần mỗi ngày cho mỗi em). Thử lại ngày mai.",
+    units_unavailable: "Phần Giao theo Unit chưa sẵn sàng (cần cập nhật cơ sở dữ liệu). Bạn bỏ chọn Unit để giao bài như thường.",
+    bad_units: "Có Unit không còn trong giáo trình đã duyệt của em. Bạn tải lại trang rồi chọn lại nhé.",
     generic: "Chưa lưu được. Bạn thử lại sau ít phút.",
   } as Record<string, string>,
   // bảng "Bài luyện đã giao"
@@ -1150,6 +1176,9 @@ export const assignPage = {
   listEmpty: "Chưa giao bài luyện nào.",
   colTitle: "Bài",
   colTags: "Luyện mục kiến thức",
+  unitGroup: (title: string | null, range: string) => `${title ? `${title} · ` : ""}Unit ${range}`,
+  unitsLine: (groups: string, n: number) => `${groups}${n > 0 ? ` (${n} mục)` : ""}`,
+  extraItemsLine: (n: number) => `+ ${n} mục thêm tay`,
   colDue: "Hạn",
   colSent: "Em đã gửi",
   colStatus: "Trạng thái",

@@ -6,9 +6,11 @@ import { blockImplicitSubmit } from "@/lib/forms/enter";
 import { PdfPagePicker, type PdfPick } from "@/components/ui/PdfPagePicker";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { UnitPicker } from "@/components/curriculum/UnitPicker";
 import { TagChips } from "@/components/tutor/TagChips";
 import { useTags } from "@/components/tutor/useTags";
-import { assignPage, prefillCopy, sourceLabels } from "@/lib/copy/vi";
+import { assignPage, prefillCopy, sourceLabels, unitPickerCopy } from "@/lib/copy/vi";
+import { autoTitle, emptyPicker, selectedUnits, stateFromCodes, type PickerState, type UnitChoice } from "@/lib/curriculum/unitPicker";
 import { formatRange, type Prefill } from "@/lib/prefill";
 import { codeOf, nextAttempt, practiceErrorText, uploadAll, type SendAttempt, type UploadCache } from "@/lib/practice/client";
 import { detectLinkSource } from "@/lib/practice/link";
@@ -30,6 +32,7 @@ export function AssignForm({
   today,
   map,
   prefill,
+  unitChoices = [],
 }: {
   learnerId: string;
   alias: string;
@@ -39,6 +42,8 @@ export function AssignForm({
   map: SkillMapView;
   /** From a Review / Progress Test row of the curriculum: the name of the bài, the pages in the book, the Units it revises. */
   prefill?: Prefill;
+  /** Units of the approved curricula (none = the form keeps its old shape: only the manual items). */
+  unitChoices?: UnitChoice[];
 }) {
   const router = useRouter();
   const { tags, add, setGroup } = useTags(learnerId, initialTags);
@@ -48,16 +53,26 @@ export function AssignForm({
   const [answer, setAnswer] = useState<Prepared | null>(null);
   const [title, setTitle] = useState(prefill?.title ?? "");
   const [picked, setPicked] = useState<string[]>([]);
+  const [units, setUnits] = useState<PickerState>(() => stateFromCodes(unitChoices, prefill?.units ?? []));
+  // Once the tutor edits the name by hand (or it came prefilled from the book link), ticking Units no longer rewrites it.
+  const [titleTouched, setTitleTouched] = useState(Boolean(prefill?.title));
+  const byUnit = unitChoices.length > 0;
+  function changeUnits(next: PickerState) {
+    setUnits(next);
+    // Auto-filled name follows the ticks, including back to empty when everything is unticked; a typed or prefilled name is never touched.
+    if (!titleTouched) setTitle(autoTitle(unitChoices, next));
+  }
   const [due, setDue] = useState("");
   const [frameId, setFrameId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState<"upload" | "save" | null>(null);
   const [round, setRound] = useState(0);
-  const { state: saveState, track } = useSaveStatus({ kind, url, title, picked, due, frameId, pdf: pdf?.name ?? null, answer: answer?.name ?? null }, { resetKey: round });
+  const { state: saveState, track } = useSaveStatus({ kind, url, title, picked, units: units.units.map((u) => `${u.curriculumId}/${u.code}`), due, frameId, pdf: pdf?.name ?? null, answer: answer?.name ?? null }, { resetKey: round });
   const attempt = useRef<SendAttempt | null>(null);
   const uploaded = useRef<UploadCache>(new Map());
 
+  const tagLabels = Object.fromEntries(tags.map((t) => [t.key, t.label]));
   const source = kind === "link" && url.trim() ? detectLinkSource(url) : null;
 
   const [pdfPending, setPdfPending] = useState(false);
@@ -77,6 +92,8 @@ export function AssignForm({
     setAnswer(null);
     setTitle("");
     setPicked([]);
+    setUnits(emptyPicker);
+    setTitleTouched(false);
     setDue("");
     setFrameId("");
     setError(null);
@@ -97,6 +114,7 @@ export function AssignForm({
       kind,
       title: title.trim(),
       tags: picked,
+      units: selectedUnits(unitChoices, units),
       due_on: due || null,
       frame_id: frameId || null,
     };
@@ -186,28 +204,46 @@ export function AssignForm({
         {prefill && (prefill.pages || prefill.units.length > 0) ? (
           <p className="rounded-xl bg-[#eef3ef] px-3.5 py-2 text-sm" data-testid="assign-prefill">
             {prefillCopy.fromBook} {prefill.pages ? prefillCopy.pages(prefill.pages) : ""}
-            {prefill.pages && prefill.units.length > 0 ? " · " : ""}
+            {prefill.pages && prefill.units.length > 0 ? unitPickerCopy.sep : ""}
             {prefill.units.length > 0 ? prefillCopy.units(formatRange(prefill.units)) : ""}
           </p>
         ) : null}
+        <div className="flex flex-col gap-1.5" data-testid="assign-by-unit">
+          <span className="text-sm font-medium">{unitPickerCopy.title}</span>
+          <UnitPicker learnerId={learnerId} choices={unitChoices} state={units} onChange={changeUnits} tagLabels={tagLabels} />
+        </div>
         <label className="flex flex-col gap-1.5 text-sm font-medium">
           {assignPage.titleLabel}
           <input
             type="text"
             maxLength={200}
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => { setTitle(e.target.value); setTitleTouched(true); }}
             placeholder={assignPage.titlePlaceholder}
             data-testid="assign-title"
             className={`${field} text-base font-normal`}
           />
         </label>
 
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium">{assignPage.tagsLabel}</span>
-          <p className="text-sm text-muted">{assignPage.tagsHelp}</p>
-          <TagChips tags={tags} map={map} selected={picked} onChange={setPicked} max={3} onAdd={add} onSetGroup={setGroup} testId="assign-tags" />
-        </div>
+        {byUnit ? (
+          <details className="rounded-xl border border-line px-3 py-2" data-testid="assign-extra-items">
+            <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">
+              {unitPickerCopy.moreItems}
+              {picked.length > 0 ? ` (${picked.length})` : ""}
+            </summary>
+            <div className="flex flex-col gap-1.5 pb-2">
+              <span className="text-sm font-medium">{assignPage.tagsLabelExtra}</span>
+              <p className="text-sm text-muted">{assignPage.tagsHelp}</p>
+              <TagChips tags={tags} map={map} selected={picked} onChange={setPicked} max={3} onAdd={add} onSetGroup={setGroup} testId="assign-tags" />
+            </div>
+          </details>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">{assignPage.tagsLabel}</span>
+            <p className="text-sm text-muted">{assignPage.tagsHelp}</p>
+            <TagChips tags={tags} map={map} selected={picked} onChange={setPicked} max={3} onAdd={add} onSetGroup={setGroup} testId="assign-tags" />
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-4">
           <label className="flex flex-col gap-1.5 text-sm font-medium">

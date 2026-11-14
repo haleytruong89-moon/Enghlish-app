@@ -1408,3 +1408,35 @@ V1 Supabase Singapore (đã xác nhận) · V2 `vercel.json` `regions: ["sin1"]`
 
 ### Tiêu chí đạt
 `npm run typecheck && npm run lint && npm test && npm run gen:config` xanh; **e2e (job "E2E smoke") xanh trên CI**; `npx playwright test --list` liệt kê đủ; thầy/cô xác nhận lỗi chọn mục kiến thức không còn; phụ huynh đo TTFB 5 trang trên preview. **Chưa đạt/chưa làm:** số đo TTFB thật; giao theo Unit (PR 2B); chia đề dài (PR 2C).
+
+## UX vòng 2B — Giao theo Unit (13/11)
+
+Nhánh `feature/ux-round2b` (dựa trên `feature/ux-round2` = PR 2A; kế hoạch `docs/superpowers/plans/2026-11-13-ux-round2.md`, mục 4b / Task B1–B6). **SQL cần phụ huynh áp: `0029_assignment_units.sql` — áp 0029 ngay sau khi gộp 2A và 2B** — workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". Chỉ thêm, không sửa 0001–0028. Chưa áp `0029` thì Giao bài luyện vẫn chạy như cũ; tick Unit sẽ báo "Phần Giao theo Unit chưa sẵn sàng (cần cập nhật cơ sở dữ liệu)". Màn của con không đổi (con không thấy Unit hay mục kiến thức).
+
+### Làm gì
+1. **Giao bài luyện → khối "Giao theo Unit"** (em chưa có giáo trình đã duyệt thì khối hiện dòng gợi ý "Chưa có giáo trình đã duyệt — Mở Giáo trình"; tối đa 30 Unit một bài, có báo rõ khi chạm trần; tên bài tự điền được xóa/khôi phục khi bỏ tick hết, tên có sẵn từ "Giao bài này →" tính là đã sửa tay; mục kiến thức dẫn xuất theo thứ tự sách, giống thứ tự lưu): tick Unit của giáo trình; tick một dòng Review / Kiểm tra tiến độ = tự tick các Unit nó ôn (bỏ tick một Unit của nó thì dòng Review tự bỏ tick); **tên bài tự điền** ("Destination C1 C2 · Unit 3–4" / "… · Review 2 (Unit 3–4)"), gia sư sửa tay thì không bị ghi đè nữa; dòng "Bài này luyện n mục kiến thức: …" cho thấy mục kiến thức app **suy ra** từ các Unit.
+2. **Mục kiến thức thêm tay** (tối đa 3, như cũ) nằm gọn trong "+ Thêm mục kiến thức khác" (đóng sẵn). Trần 3 chỉ áp cho mục thêm tay, không áp cho Unit.
+3. **Bảng "Bài luyện đã giao"**, cột "Luyện mục kiến thức": "Unit 3–4 (8 mục) · + 2 mục thêm tay".
+4. **Tạo bài từ đề / Nạp bài đã làm:** ô chọn Unit dạng gọn (đóng sẵn) **chỉ điền sẵn tên bài**; không lưu Unit vào nháp, không gửi gì cho AI (test canh: đưa vào đầu vào một tên có "Destination C1 · Unit 3" và khẳng định nó không có trong yêu cầu gửi AI, cho cả Nạp bài `buildReadCall` và Studio `buildExtractCall`).
+5. **"Giao bài này →"** (Giáo trình, bản đã duyệt) tick sẵn các Unit liên quan trong Giao bài luyện.
+
+### SQL `0029_assignment_units.sql`
+- Bảng chỉ thêm `assignment_units` (bài giao · giáo trình · phiên bản đã duyệt · mã Unit · thứ tự), gắn `eng_forbid_mutation('learner_id')` + chặn truncate; RLS chỉ thầy/cô của em và phụ huynh đọc, học sinh không đọc; không ai (kể cả `service_role`) ghi trực tiếp.
+- `eng_create_assignment_v2` bọc `eng_create_assignment` (0016, không đổi) như `eng_write_lesson_note_v3` bọc v2: kiểm Unit thuộc giáo trình của **đúng em này**, phiên bản **đang dùng (đã duyệt)**, Unit không bị bỏ qua, không trùng, ≤ 30; sai → `22023 (bad_units)` và không tạo bài. Quyền (như v1) được kiểm **trước** Unit (không quyền → `42501`). Phát lại cùng `client_id` so Unit yêu cầu với Unit **đã lưu** (không so với phiên bản đang dùng, nên vẫn phát lại được sau khi giáo trình đổi bản); khác → `23505`; chỉ bài mới mới kiểm theo phiên bản đang dùng. Chưa ghi Unit vào `audit_log` (bản v1 đã ghi sự kiện tạo bài).
+- Mục kiến thức của bài **dẫn xuất lúc đọc** từ `curriculum_unit_points` của đúng phiên bản đã lưu kèm, không chép vào `assignments.tag_keys`.
+- Xóa dữ liệu một em: `eng_purge_learner` / `eng_purge_preview` = bản 0027 + `assignment_units` (biên nhận có khóa mới). **Lệch nhỏ so với kế hoạch:** dòng xóa `assignment_units` đặt **trước giáo trình** (không chỉ trước `assignments`), vì bảng trỏ tới `curriculum_units` / `curricula`.
+
+### Giả định đã làm theo (kế hoạch V10, V11)
+- **V10:** tick Review/Progress Test tick các Unit nó ôn (dùng lại `relatedUnits` của 2A: Review dừng ở Review/test trước; Progress Test ôn cả đoạn); dòng Review **không** được lưu như một Unit. **V11:** ô chọn Unit ở Studio/Nạp bài chỉ điền tên.
+- Danh sách chọn lấy dòng "Không phải Unit" từ `payload.ignored` của phiên bản đang dùng; chỉ dòng Review / Kiểm tra tiến độ được cho tick (trang tham khảo bị bỏ).
+
+### Cách thử (sau khi áp 0029; gia đình THỬ, thầy/cô của Nguyên (thử), em đã có giáo trình đã duyệt)
+- Giao bài → thấy khối "Giao theo Unit" ở trên; tick U3, U4 → tên bài tự điền; sửa tên tay rồi tick thêm → tên không đổi. Tick "Review 2" → U3, U4 tự tick; bỏ U4 → Review 2 tự bỏ tick, U3 còn.
+- Mở "+ Thêm mục kiến thức khác" → chọn tối đa 3 mục thêm tay. Giao → bảng hiện "Unit 3–4 (n mục) · + k mục thêm tay".
+- Giao bài không tick Unit → như cũ. Em chưa có giáo trình đã duyệt → form như cũ, chỉ thêm dòng gợi ý "Mở Giáo trình".
+- Giáo trình (đã duyệt) → "Giao bài này →" → "Giao bài luyện": Unit đã tick sẵn.
+- Tạo bài từ đề / Nạp bài đã làm → mở "Chọn Unit để điền tên bài" → tick → tên bài được điền, không có dòng mục kiến thức.
+- Xóa dữ liệu em thử (đã có bài giao theo Unit): biên nhận có "Unit của bài luyện đã giao".
+
+### Tiêu chí đạt
+`npm run typecheck && npm run lint && npm test && npm run gen:config` xanh; `npx playwright test --list` liệt kê test mới (e2e "Giao theo Unit" chưa chạy được ở máy không có Docker — chạy trong CI); Opus review SQL `0029` và diff cuối. **Chưa đạt/chưa làm:** phụ huynh chưa áp `0029` (sau khi gộp 2A và 2B); chưa thử bằng giáo trình thật; Studio/Nạp bài chưa lưu Unit (V11).

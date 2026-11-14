@@ -141,7 +141,7 @@ export async function loadToday(learnerId: string, trackId: string, viewer: { ro
     loadLastNote(learnerId),
     loadRecentResult(learnerId),
     loadTags(trackId),
-    loadAssignments(learnerId),
+    loadAssignments(learnerId, { units: false }),
   ]);
   return {
     weak,

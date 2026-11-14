@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 import { SOURCE_KEYS } from "./link";
-import type { AssignmentView, ReviewPoints, StoredFile, StudentPracticeItem } from "./types";
+import type { AssignmentUnitGroup, AssignmentView, ReviewPoints, StoredFile, StudentPracticeItem } from "./types";
 
 const text = z.string();
 const nullableText = z
@@ -63,6 +63,8 @@ export function parseAssignments(raw: unknown): AssignmentView[] {
       url: a.url,
       sourceKey: a.source_key,
       tagKeys: a.tag_keys,
+      units: [],
+      unitItems: [],
       dueOn: a.due_on,
       frameId: a.frame_id,
       createdAt: a.created_at,
@@ -151,4 +153,40 @@ export function parseStudentFile(raw: unknown): { fileId: string; path: string; 
   if (raw === null || raw === undefined) return null;
   const r = studentFileRow.parse(raw);
   return { fileId: r.file_id, path: r.path, mime: r.mime, title: r.title };
+}
+
+// ---------- 0029: units of an assignment, derived knowledge items ----------------------------------------------------
+
+const unitRowSchema = z.object({ assignment_id: text, curriculum_id: text, version_id: text, unit_code: text, ord: z.number().int() });
+const curriculumTitleSchema = z.object({ id: text, title: text });
+const unitPointSchema = z.object({ version_id: text, code: text, tag_key: text, ord: z.number().int() });
+
+/**
+ * Attach the units of each assignment and the knowledge items DERIVED from them. The items are never stored on the assignment: they come
+ * from the curriculum_unit_points of the exact version the unit was ticked in, in the stored order of the units (book order of each curriculum), without duplicates.
+ * Rows of an assignment that is not in the list are ignored.
+ */
+export function attachAssignmentUnits(assignments: AssignmentView[], rawUnits: unknown, rawCurricula: unknown, rawPoints: unknown): AssignmentView[] {
+  const units = z.array(unitRowSchema).parse(rawUnits ?? []);
+  if (units.length === 0) return assignments;
+  const titles = new Map(z.array(curriculumTitleSchema).parse(rawCurricula ?? []).map((c) => [c.id, c.title]));
+  const points = z.array(unitPointSchema).parse(rawPoints ?? []);
+  return assignments.map((a) => {
+    const mine = units.filter((u) => u.assignment_id === a.id).sort((x, y) => x.ord - y.ord);
+    if (mine.length === 0) return a;
+    const groups: AssignmentUnitGroup[] = [];
+    const items: string[] = [];
+    for (const u of mine) {
+      let g = groups.find((x) => x.curriculumId === u.curriculum_id);
+      if (!g) {
+        g = { curriculumId: u.curriculum_id, title: titles.get(u.curriculum_id) ?? "", codes: [] };
+        groups.push(g);
+      }
+      g.codes.push(u.unit_code);
+      for (const p of points.filter((q) => q.version_id === u.version_id && q.code === u.unit_code).sort((x, y) => x.ord - y.ord)) {
+        if (!items.includes(p.tag_key)) items.push(p.tag_key);
+      }
+    }
+    return { ...a, units: groups, unitItems: items };
+  });
 }

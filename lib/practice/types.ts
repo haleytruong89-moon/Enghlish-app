@@ -14,6 +14,9 @@ export type SubmissionView = {
   files: StoredFile[];
 };
 
+/** The units one assignment was given for, grouped by curriculum (0029). `codes` are in book order (the order the form sends them). */
+export type AssignmentUnitGroup = { curriculumId: string; title: string; codes: string[] };
+
 /** One assignment as the tutor / parent sees it (from english.eng_assignment_overview). */
 export type AssignmentView = {
   id: string;
@@ -21,7 +24,12 @@ export type AssignmentView = {
   title: string;
   url: string | null;
   sourceKey: SourceKey | null;
+  /** Knowledge items added by hand (at most 3). The items of the units are in `unitItems`. */
   tagKeys: string[];
+  /** Units the assignment was given for (empty before 0029 or when none was ticked). */
+  units: AssignmentUnitGroup[];
+  /** Knowledge items DERIVED from `units` (curriculum_unit_points of the version the unit was ticked in), without duplicates. */
+  unitItems: string[];
   dueOn: string | null;
   frameId: string | null;
   createdAt: string;

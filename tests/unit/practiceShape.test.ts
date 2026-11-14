@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseAssignments, parseReviewPoints, parseStudentFile, parseStudentPractice } from "@/lib/practice/shape";
+import { attachAssignmentUnits, parseAssignments, parseReviewPoints, parseStudentFile, parseStudentPractice } from "@/lib/practice/shape";
 
 describe("practice parsers", () => {
   it("parses a staff overview row, with null file / submission / result", () => {
@@ -45,5 +45,33 @@ describe("practice parsers", () => {
   it("student file lookup", () => {
     expect(parseStudentFile(null)).toBeNull();
     expect(parseStudentFile({ file_id: "f", path: "p", mime: "application/pdf", title: "T" })).toEqual({ fileId: "f", path: "p", mime: "application/pdf", title: "T" });
+  });
+});
+
+describe("assignment units (0029)", () => {
+  const list = () => parseAssignments([
+    { id: "a1", kind: "link", title: "T", created_at: "2026-11-13T10:00:00Z", source_key: null, tag_keys: ["tay-1"] },
+    { id: "a2", kind: "link", title: "Không Unit", created_at: "2026-11-13T10:00:00Z", source_key: null },
+  ]);
+  const curricula = [{ id: "c1", title: "Destination C1 C2" }];
+  const points = [
+    { version_id: "v1", code: "U3", tag_key: "p-b", ord: 2 }, { version_id: "v1", code: "U3", tag_key: "p-a", ord: 1 },
+    { version_id: "v1", code: "U4", tag_key: "p-b", ord: 1 }, { version_id: "v1", code: "U4", tag_key: "p-c", ord: 2 },
+    { version_id: "v0", code: "U3", tag_key: "old", ord: 1 },
+  ];
+  it("groups units by curriculum in ticked order and derives items from the stored version, once each", () => {
+    const rows = [
+      { assignment_id: "a1", curriculum_id: "c1", version_id: "v1", unit_code: "U4", ord: 2 },
+      { assignment_id: "a1", curriculum_id: "c1", version_id: "v1", unit_code: "U3", ord: 1 },
+    ];
+    const [a, b] = attachAssignmentUnits(list(), rows, curricula, points);
+    expect(a?.units).toEqual([{ curriculumId: "c1", title: "Destination C1 C2", codes: ["U3", "U4"] }]);
+    expect(a?.unitItems).toEqual(["p-a", "p-b", "p-c"]);
+    expect(a?.tagKeys).toEqual(["tay-1"]);
+    expect(b).toMatchObject({ units: [], unitItems: [] });
+  });
+  it("no rows (or 0029 not applied) leaves the list untouched", () => {
+    expect(attachAssignmentUnits(list(), [], [], [])).toEqual(list());
+    expect(attachAssignmentUnits(list(), null, null, null)).toEqual(list());
   });
 });

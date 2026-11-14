@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { AiCallError, type ToolCall } from "@/lib/ai/request";
 import type { GateState } from "@/lib/ai/cap";
+import { buildExtractCall } from "@/lib/studio/extractTool";
+import { buildRequestBody } from "@/lib/ai/request";
 import { runExtraction, type ExtractDeps, type ExtractJob, type RunLog } from "@/lib/studio/extract";
 import { CTX_B, FAKE_EXTRACT } from "./fixtures/studio";
 
@@ -137,5 +139,14 @@ describe("runExtraction (spec §3 step 2, §5)", () => {
     expect(calls).toHaveLength(0);
     expect(store.reserve).not.toHaveBeenCalled();
     expect(store.logRun).toHaveBeenCalledWith(expect.objectContaining({ status: "refused_model", costUsd: 0 }));
+  });
+});
+
+describe("the name of the bài never reaches the AI", () => {
+  it("buildExtractCall ignores a title even if the input carries one", () => {
+    const input = { model: "m", toolChoice: "tool", prompt: "{{TAGS}} {{READING_TAGS}} {{SKILLS}}", ctx: CTX_B, docs: [{ kind: "pdf", title: "ĐỀ", base64: "JVBERg==" }], title: "Destination C1 · Unit 3" };
+    expect(JSON.stringify(input)).toContain("Destination C1 · Unit 3");
+    const call = buildExtractCall(input as unknown as Parameters<typeof buildExtractCall>[0]);
+    expect(JSON.stringify(buildRequestBody(call))).not.toMatch(/Destination|Unit 3/);
   });
 });
