@@ -174,7 +174,12 @@ describe("cando_n — n điều tự làm được (W4e)", () => {
     expect(find(allAchievements(facts()), "cando_5")).toMatchObject({ earned: false, have: 0, need: 5 });
     expect(find(allAchievements(facts({ cando: [] })), "cando_10")).toBeUndefined();
   });
-  it("a card that is hidden later (the skill fell back) just lowers the count: the item is not earned any more", () => {
+  it("the badge stays once earned: a skill lowered later does not take it back (the ledgers' time is used)", () => {
+    const lowered = allAchievements(facts({ cando: times(4), candoEver: { 5: "2026-10-20T03:00:00Z" } }));
+    expect(find(lowered, "cando_5")).toMatchObject({ earned: true, date: "2026-10-20", have: 5, need: 5 });
+    expect(find(lowered, "cando_10")).toMatchObject({ earned: false, have: 4 });
+  });
+  it("with no ledger time, fewer cards than the rung is simply not earned", () => {
     expect(find(allAchievements(facts({ cando: times(4) })), "cando_5")).toMatchObject({ earned: false, have: 4 });
   });
 });

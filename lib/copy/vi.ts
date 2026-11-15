@@ -3293,10 +3293,8 @@ export const levelsStudentCopy = {
   title: "Cấp hiện tại theo mảng",
   note: `Cấp do ${tutorHonorific} xác nhận`,
   noteDated: `Cấp do ${tutorHonorific} xác nhận ·`,
-  tileDate: `${tutorHonorific} xác nhận`,
   waiting: `${tutorHonorificCap} chưa xác nhận`,
   noneYet: `${tutorHonorificCap} chưa xác nhận cấp nào. Khi xác nhận, cấp sẽ hiện ở đây.`,
-  target: "Hướng tới",
   foot: "Tên cấp để bạn biết mình đang ở đâu. Không so với ai, không phải kết quả của một bài.",
 } as const;
 
@@ -3306,6 +3304,7 @@ export const candoCopy = {
   note: `Mỗi điều là một việc ${tutorHonorific} đã thấy bạn tự làm được. Bài làm của bạn là bằng chứng.`,
   count: (n: number) => `${n} điều`,
   lead: "Mình đã tự làm được:",
+  leadKnowledge: "Mình đã nắm chắc:",
   newTag: "Mới",
   confirmedBy: `${tutorHonorificCap} xác nhận`,
   empty: `Chưa có điều nào. ${tutorHonorificCap} sẽ xác nhận khi thấy bạn tự làm được một việc.`,
@@ -3325,7 +3324,7 @@ export const thenNowCopy = {
 export const thenNowPickerCopy = {
   title: "Ngày ấy – bây giờ",
   intro: (alias: string) => `Chọn hai bài viết của ${alias} trên app để em tự thấy mình đã tiến bộ. Bài "ngày ấy" phải nộp trước bài "bây giờ" ít nhất một ngày.`,
-  onlyApp: "Chỉ chọn được bài viết trên app (kể cả bài giấy do người lớn gõ lại). Bài ghi trong buổi và bài nạp không chọn được.",
+  onlyApp: "Chỉ chọn được bài viết của em trên app. Bài giấy do thầy/cô gõ lại chỉ dùng làm bài ngày ấy. Bài ghi trong buổi, bài nạp và bài sửa không chọn được.",
   thenField: "Ngày ấy (bài cũ)",
   nowField: "Bây giờ (bài mới)",
   choose: "Chọn một bài",
@@ -3341,6 +3340,8 @@ export const thenNowPickerCopy = {
   current: "Đang chọn",
   empty: "Chưa đủ bài viết trên app để chọn. Cần ít nhất hai bài viết ở hai ngày khác nhau.",
   noneYet: "Chưa chọn cặp bài nào.",
+  noteShort: "Lời nhắn",
+  retyped: "bài giấy gõ lại",
   parentReadOnly: `Chỉ ${tutorHonorific} của em chọn. Phụ huynh chỉ xem.`,
   unavailable: "Ngày ấy – bây giờ chưa mở (cần áp migration 0036).",
   loadFailed: "Chưa tải được phần Ngày ấy – bây giờ. Tải lại trang nhé.",

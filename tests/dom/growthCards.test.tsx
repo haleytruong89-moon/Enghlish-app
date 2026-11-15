@@ -26,25 +26,23 @@ describe("LevelsCard", () => {
     { key: "vocab", name: "Từ vựng", scale: "cefr", level: null, on: null },
     { key: "thinking", name: "Tư duy", scale: "task_level", level: "3", on: "2026-11-07T03:00:00Z" },
   ]);
-  it("shows the confirmed level name, says 'not confirmed' for the rest, never the Tư duy domain, and the 'Hướng tới' summit when named", () => {
-    const { container } = render(<LevelsCard view={view} summitTitle="Thi vào lớp 10" />);
+  it("shows the confirmed level name, says 'not confirmed' for the rest, never the Tư duy domain, no 'Hướng tới' block", () => {
+    const { container } = render(<LevelsCard view={view} />);
     expect(screen.getByTestId("level-name-grammar").textContent).toBe("B2");
     expect(screen.getByTestId("level-tile-vocab").textContent).toMatch(/chưa xác nhận/);
     expect(screen.queryByTestId("level-tile-thinking")).toBeNull();
     expect(container.textContent).not.toContain("Tư duy");
-    expect(screen.getByTestId("levels-target").textContent).toContain("Thi vào lớp 10");
+    expect(screen.queryByTestId("levels-target")).toBeNull();
+    expect(container.textContent).not.toContain("Hướng tới");
     expect(outside(container)).not.toMatch(NO_SCORE);
     expect(container.querySelector("time")?.getAttribute("datetime")).toBe("2026-11-07");
   });
-  it("no summit named → no 'Hướng tới' tile; no domains at all → the card is left out", () => {
-    render(<LevelsCard view={view} summitTitle={null} />);
-    expect(screen.queryByTestId("levels-target")).toBeNull();
-    cleanup();
-    const { container } = render(<LevelsCard view={buildLevelsView([])} summitTitle={null} />);
+  it("no domains at all → the card is left out", () => {
+    const { container } = render(<LevelsCard view={buildLevelsView([])} />);
     expect(container.innerHTML).toBe("");
   });
   it("nothing confirmed yet: one soft line, every tile says the tutor has not confirmed", () => {
-    const { container } = render(<LevelsCard view={buildLevelsView([{ key: "grammar", name: "Ngữ pháp", scale: "cefr", level: null, on: null }])} summitTitle={null} />);
+    const { container } = render(<LevelsCard view={buildLevelsView([{ key: "grammar", name: "Ngữ pháp", scale: "cefr", level: null, on: null }])} />);
     expect(container.textContent).toMatch(/chưa xác nhận cấp nào/);
     expect(screen.getByTestId("level-tile-grammar").getAttribute("data-confirmed")).toBe("no");
   });
@@ -52,17 +50,26 @@ describe("LevelsCard", () => {
 
 describe("CandoCard", () => {
   const items = buildCando([{ code: null, name: "Thì hiện tại hoàn thành (since / for)", at: "2026-11-15T03:00:00Z" }, { code: null, name: "Viết đoạn nêu ý kiến", at: "2026-10-01T03:00:00Z" }], "2026-11-16T03:00:00Z");
-  it("one card per item with 'Mình đã tự làm được:', the newest marked 'Mới', words and dates only", () => {
+  it("one card per item (knowledge item: 'Mình đã nắm chắc:'; skill: 'Mình đã tự làm được:'), the newest marked 'Mới', words and dates only", () => {
     const { container } = render(<CandoCard items={items} />);
     const cards = screen.getAllByTestId("cando-item");
     expect(cards).toHaveLength(2);
-    expect(cards[0]!.textContent).toContain("Mình đã tự làm được:");
+    expect(cards[0]!.textContent).toContain("Mình đã nắm chắc:");
+    expect(cards[0]!.textContent).not.toContain("Mình đã tự làm được:");
     expect(cards[0]!.textContent).toContain("Mới");
     expect(cards[1]!.textContent).not.toContain("Mới");
     expect(cards[0]!.getAttribute("data-new")).toBe("yes");
     expect(screen.getByTestId("cando-count").textContent).toBe("2 điều");
     expect(outside(container)).not.toMatch(NO_SCORE);
     expect(container.textContent).not.toMatch(/INDEPENDENT|TRANSFERABLE|⚑|chờ xác nhận/i);
+  });
+  it("a knowledge item says 'Mình đã nắm chắc:', a skill says 'Mình đã tự làm được:'", () => {
+    const mixed = buildCando([{ code: "A-T1-TEXT-R", name: "Đọc hiểu bài ngắn", at: "2026-11-15T03:00:00Z" }, { code: null, name: "Hiện tại đơn", at: "2026-11-14T03:00:00Z" }], "2026-11-16T03:00:00Z");
+    render(<CandoCard items={mixed} />);
+    const [skill, point] = screen.getAllByTestId("cando-item");
+    expect(skill!.textContent).toContain("Mình đã tự làm được:");
+    expect(point!.textContent).toContain("Mình đã nắm chắc:");
+    expect(point!.textContent).not.toContain("tự làm được");
   });
   it("no cards: a soft invitation, no count", () => {
     render(<CandoCard items={[]} />);
@@ -88,9 +95,9 @@ describe("ThenNowCard", () => {
 describe("ThenNowPicker (the tutor; the parent reads)", () => {
   const view: ThenNowCandidates = {
     candidates: [
-      { id: "n", on: "2026-11-13", title: "Technology", preview: "In my opinion, technology is useful." },
-      { id: "o", on: "2026-09-15", title: null, preview: "I think technology is good for student." },
-      { id: "m", on: "2026-11-13", title: null, preview: "Same day as the new one." },
+      { id: "n", on: "2026-11-13", title: "Technology", preview: "In my opinion, technology is useful.", provenance: "in_app" },
+      { id: "o", on: "2026-09-15", title: null, preview: "I think technology is good for student.", provenance: "in_app" },
+      { id: "m", on: "2026-11-13", title: null, preview: "Same day as the new one.", provenance: "pasted" },
     ],
     current: null,
   };
@@ -154,6 +161,14 @@ describe("ThenNowPicker (the tutor; the parent reads)", () => {
     fireEvent.click(screen.getByTestId("then-now-hide"));
     await waitFor(() => expect(f).toHaveBeenCalled());
     expect(JSON.parse(String((f.mock.calls[0] as [string, RequestInit])[1].body))).toMatchObject({ then_id: "o", now_id: "n", note: "Nhắn", status: "hidden" });
+  });
+  it("a retyped paper piece is labelled and offered only as the old piece, never as the new one", () => {
+    const withPaper: ThenNowCandidates = { candidates: [...view.candidates, { id: "p", on: "2026-08-01", title: null, preview: "Typed from paper.", provenance: "manual_import" }], current: null };
+    render(<ThenNowPicker learnerId="L" alias="Nguyên" view={withPaper} canEdit />);
+    const thenOpts = Array.from(screen.getByTestId("then-select").querySelectorAll("option")).map((o) => o.textContent ?? "");
+    const nowOpts = Array.from(screen.getByTestId("now-select").querySelectorAll("option")).map((o) => o.textContent ?? "");
+    expect(thenOpts.some((t) => t.includes("bài giấy gõ lại"))).toBe(true);
+    expect(nowOpts.some((t) => t.includes("bài giấy gõ lại"))).toBe(false);
   });
   it("tap targets are at least 44px (min-h-11)", () => {
     render(<ThenNowPicker learnerId="L" alias="Nguyên" view={{ ...view, current: { id: "p", thenId: "o", nowId: "n", note: null, status: "shown", at: "2026-11-14T03:00:00Z" } }} canEdit />);

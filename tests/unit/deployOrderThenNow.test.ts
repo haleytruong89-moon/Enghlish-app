@@ -15,27 +15,28 @@ describe("before 0036", () => {
   it("the child's three reads give nothing (no card, no error page); a real fault or a network fault is nothing too", async () => {
     const { loadMyGrowth } = await import("@/lib/student/growthLoad");
     rpc.mockResolvedValue(MISSING);
-    expect(await loadMyGrowth()).toEqual({ levels: null, cando: null, thenNow: null });
+    expect(await loadMyGrowth()).toEqual({ levels: null, cando: null, candoEver: {}, thenNow: null });
     rpc.mockResolvedValue({ data: null, error: { code: "XX000", message: "boom" } });
-    expect(await loadMyGrowth()).toEqual({ levels: null, cando: null, thenNow: null });
+    expect(await loadMyGrowth()).toEqual({ levels: null, cando: null, candoEver: {}, thenNow: null });
     rpc.mockImplementation(() => Promise.reject(new Error("network")));
-    expect(await loadMyGrowth()).toEqual({ levels: null, cando: null, thenNow: null });
+    expect(await loadMyGrowth()).toEqual({ levels: null, cando: null, candoEver: {}, thenNow: null });
   });
   it("a malformed answer (a key a child must never get) is nothing, never shown", async () => {
     const { loadMyGrowth } = await import("@/lib/student/growthLoad");
-    rpc.mockResolvedValue({ data: { domains: [{ key: "g", name: "G", scale: "cefr", level: "B1", on: "2026-11-07T03:00:00Z", score: 3 }] }, error: null });
+    rpc.mockResolvedValue({ data: { domains: [{ key: "g", name: "G", level: "B1", on: "2026-11-07T03:00:00Z", score: 3 }] }, error: null });
     expect((await loadMyGrowth()).levels).toBeNull();
   });
   it("after 0036: the three reads give the cards; the Track A skill gets the name for the student", async () => {
     const { loadMyGrowth } = await import("@/lib/student/growthLoad");
     rpc.mockImplementation(async (fn: string) => {
-      if (fn === "eng_my_levels") return { data: { domains: [{ key: "grammar", name: "Ngữ pháp", scale: "cefr", level: "B2", on: "2026-11-07T03:00:00Z" }] }, error: null };
-      if (fn === "eng_my_cando") return { data: { now: "2026-11-16T03:00:00Z", items: [{ code: "A-T1-TEXT-R", name: "Đọc hiểu bài ngắn", at: "2026-11-15T03:00:00Z" }] }, error: null };
+      if (fn === "eng_my_levels") return { data: { domains: [{ key: "grammar", name: "Ngữ pháp", level: "B2", on: "2026-11-07T03:00:00Z" }] }, error: null };
+      if (fn === "eng_my_cando") return { data: { now: "2026-11-16T03:00:00Z", items: [{ code: "A-T1-TEXT-R", name: "Đọc hiểu bài ngắn", at: "2026-11-15T03:00:00Z" }], ever: [{ n: 5, at: "2026-11-01T03:00:00Z" }] }, error: null };
       return { data: null, error: null };
     });
     const g = await loadMyGrowth();
     expect(g.levels?.tiles[0]).toMatchObject({ level: "B2" });
     expect(g.cando?.[0]).toMatchObject({ text: "Hiểu bài đọc", isNew: true });
+    expect(g.candoEver).toEqual({ 5: "2026-11-01T03:00:00Z" });
     expect(g.thenNow).toBeNull();
     expect(rpc).toHaveBeenCalledWith("eng_my_levels");
   });

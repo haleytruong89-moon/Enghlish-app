@@ -41,7 +41,7 @@ describe("*_then_now.sql (found by suffix)", () => {
       expect(code, f).toContain(`revoke execute on function english.${f} from public, anon, authenticated;`);
       expect(code, f).toContain(`grant execute on function english.${f} to service_role;`);
     }
-    for (const f of ["eng_attempt_text(uuid)", "eng_pickable_write(uuid, uuid)"]) {
+    for (const f of ["eng_attempt_text(uuid)", "eng_pickable_write(uuid, uuid, text)"]) {
       expect(code, f).toContain(`revoke execute on function english.${f} from public, anon, authenticated, service_role;`);
     }
   });

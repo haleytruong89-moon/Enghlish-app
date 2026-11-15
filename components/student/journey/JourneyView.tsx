@@ -58,7 +58,7 @@ export function JourneyView({
         </section>
         <div className="flex flex-col gap-5">
           {week ? <WeekCard view={week} /> : null}
-          {levels ? <LevelsCard view={levels} summitTitle={journey.summit ? journey.summit.title : null} /> : null}
+          {levels ? <LevelsCard view={levels} /> : null}
           <OtherCurricula journey={journey} />
         </div>
       </div>

@@ -12,7 +12,8 @@ import { postJson } from "@/lib/tutorwork/client";
 const BTN = "inline-flex min-h-11 items-center rounded-xl px-5 text-sm font-semibold disabled:opacity-60";
 const SELECT = "min-h-11 w-full rounded-lg border border-line bg-white px-3 text-sm";
 
-const line = (x: ThenNowCandidates["candidates"][number]) => `${ddmm(x.on)} · ${x.title ? `${x.title} — ` : ""}${preview(x.preview, 60)}`;
+const line = (x: ThenNowCandidates["candidates"][number]) =>
+  `${ddmm(x.on)} · ${x.provenance === "manual_import" ? `${c.retyped} · ` : ""}${x.title ? `${x.title} — ` : ""}${preview(x.preview, 60)}`;
 
 /**
  * "Ngày ấy – bây giờ" (W4e · Q16/Q19) on the level page of one child: the child's tutor picks two pieces of the child's own writing on the app
@@ -30,7 +31,8 @@ export function ThenNowPicker({ learnerId, alias, view, canEdit }: { learnerId: 
   const byId = new Map(view.candidates.map((x) => [x.id, x]));
   const thenPiece = byId.get(thenId);
   const nowPiece = byId.get(nowId);
-  const ordered = thenPiece && nowPiece ? thenPiece.on < nowPiece.on : false;
+  const ordered = thenPiece && nowPiece ? thenPiece.on < nowPiece.on && nowPiece.provenance !== "manual_import" : false;
+  const nowChoices = view.candidates.filter((x) => x.provenance !== "manual_import");
   const noteCheck = normalizeNote(note);
 
   async function send(status: "shown" | "hidden") {
@@ -67,7 +69,7 @@ export function ThenNowPicker({ learnerId, alias, view, canEdit }: { learnerId: 
         <dl className="mt-2 grid gap-1 text-sm">
           <div><dt className="inline font-medium">{c.thenField}: </dt><dd className="inline">{pairLabel(cur.thenId) ?? "—"}</dd></div>
           <div><dt className="inline font-medium">{c.nowField}: </dt><dd className="inline">{pairLabel(cur.nowId) ?? "—"}</dd></div>
-          {cur.note ? <div><dt className="inline font-medium">{c.noteLabel.split(" (")[0]}: </dt><dd className="inline">{cur.note}</dd></div> : null}
+          {cur.note ? <div><dt className="inline font-medium">{c.noteShort}: </dt><dd className="inline">{cur.note}</dd></div> : null}
         </dl>
       ) : null}
       {!canEdit ? (
@@ -87,7 +89,7 @@ export function ThenNowPicker({ learnerId, alias, view, canEdit }: { learnerId: 
             <span className="font-medium">{c.nowField}</span>
             <select value={nowId} onChange={(e) => setNowId(e.target.value)} className={SELECT} data-testid="now-select">
               <option value="">{c.choose}</option>
-              {view.candidates.map((x) => <option key={x.id} value={x.id}>{line(x)}</option>)}
+              {nowChoices.map((x) => <option key={x.id} value={x.id}>{line(x)}</option>)}
             </select>
           </label>
           <label className="flex flex-col gap-1 text-sm sm:col-span-2">

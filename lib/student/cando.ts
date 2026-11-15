@@ -14,7 +14,7 @@ export type CandoRaw = {
   at: string;
 };
 
-export type CandoItem = { id: string; text: string; at: string; date: IsoDate; isNew: boolean };
+export type CandoItem = { id: string; text: string; at: string; date: IsoDate; isNew: boolean; /** "skill" (a skill, wording "Mình đã tự làm được") or "point" (a knowledge item, "Mình đã nắm chắc"). */ kind: "skill" | "point" };
 
 export const NEW_WITHIN_DAYS = 7;
 export const CANDO_SHOWN_MAX = 60;
@@ -32,10 +32,13 @@ export function buildCando(raw: readonly CandoRaw[], now: string, names: Student
     if (text === "" || seen.has(text.toLowerCase())) continue;   // the same words twice (a skill and a knowledge item) are one card
     seen.add(text.toLowerCase());
     const date = dayVn(r.at);
-    items.push({ id: `c${items.length}`, text, at: r.at, date, isNew: date >= since && date <= today });
+    items.push({ id: `c${items.length}`, text, at: r.at, date, isNew: date >= since && date <= today, kind: r.code ? "skill" : "point" });
   }
   return items.slice(0, CANDO_SHOWN_MAX);
 }
 
 /** Times (oldest first) of the cards, for the achievement "n điều tự làm được". */
 export const candoTimes = (items: readonly CandoItem[]): string[] => items.map((i) => i.at).sort();
+
+/** The "ever" times from the ledgers as the achievement wants them: rung n → time. */
+export const candoEverMap = (ever: readonly { n: number; at: string }[]): Record<number, string> => Object.fromEntries(ever.map((e) => [e.n, e.at]));

@@ -33,6 +33,8 @@ export type AchievementFacts = {
   history: readonly WeekResult[];
   /** W4e: the times (oldest first) the tutor confirmed each "điều mình đã làm được" the child can see now. Missing = none. */
   cando?: readonly string[];
+  /** W4e: rung n → when the n-th DIFFERENT item was first confirmed (ledgers). Once earned, the badge stays even if a skill is lowered later (like the streak and weeks badges). */
+  candoEver?: Readonly<Record<number, string>>;
 };
 
 export type AchievementKind = "first_work" | "units" | "units_all" | "streak" | "weeks" | "writing" | "topic_first" | "revision_first" | "milestone" | "cando";
@@ -171,14 +173,15 @@ export function allAchievements(f: AchievementFacts): AchievementItem[] {
     const earned = pred(now);
     out.push({ key: `milestone:${flag.id}`, kind: "milestone", n: null, title: flag.title, earned, date: earned ? ymd(sinceTrue(f.unitEvents, inVersion, pred)) : null, have: dn, need: Math.max(1, b.length) });
   }
-  // cando_n: the cards of "Những điều mình đã làm được" (date = when the n-th oldest card still shown was confirmed)
+  // cando_n: the cards of "Những điều mình đã làm được" (date = when the n-th different item was first confirmed, from the ledgers; else the n-th oldest card shown)
   const cando = [...(f.cando ?? [])].sort();
   let firstC = true;
   for (const n of CANDO_LADDER) {
-    const earned = cando.length >= n;
+    const ever = f.candoEver?.[n] ?? null;
+    const earned = cando.length >= n || ever !== null;
     if (!earned && !firstC) continue;
     if (!earned) firstC = false;
-    out.push({ key: `cando_${n}`, kind: "cando", n, title: null, earned, date: earned ? ymd(cando[n - 1] ?? null) : null, have: Math.min(cando.length, n), need: n });
+    out.push({ key: `cando_${n}`, kind: "cando", n, title: null, earned, date: earned ? ymd(ever ?? cando[n - 1] ?? null) : null, have: earned ? n : Math.min(cando.length, n), need: n });
   }
   return out;
 }

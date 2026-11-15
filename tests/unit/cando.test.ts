@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCando, candoTimes, NEW_WITHIN_DAYS } from "@/lib/student/cando";
+import { buildCando, candoEverMap, candoTimes, NEW_WITHIN_DAYS } from "@/lib/student/cando";
 import { parseMyCando } from "@/lib/student/growthShape";
 import { skillNames } from "@/lib/copy/vi";
 
@@ -22,18 +22,23 @@ describe("buildCando (W4e · Q17)", () => {
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({ text: "Đọc hiểu", date: "2026-11-11" });
   });
+  it("a skill card is kind skill, a knowledge item is kind point (its own lead)", () => {
+    const items = buildCando([r("A", "2026-11-12T03:00:00Z", "A-T1-TEXT-R"), r("B", "2026-11-11T03:00:00Z")], NOW);
+    expect(items.map((i) => i.kind)).toEqual(["skill", "point"]);
+  });
   it("nothing numeric leaks into the text and the times for the achievement are oldest first", () => {
     const items = buildCando([r("A", "2026-11-12T03:00:00Z"), r("B", "2026-11-03T03:00:00Z")], NOW);
     expect(candoTimes(items)).toEqual(["2026-11-03T03:00:00Z", "2026-11-12T03:00:00Z"]);
     expect(buildCando([], NOW)).toEqual([]);
+    expect(candoEverMap([{ n: 5, at: "a" }, { n: 10, at: "b" }])).toEqual({ 5: "a", 10: "b" });
   });
 });
 
 describe("parseMyCando", () => {
   it("accepts the shape, passes null through and refuses a key a child must never get", () => {
     expect(parseMyCando(null)).toBeNull();
-    expect(parseMyCando({ now: NOW, items: [{ code: null, name: "x", at: NOW }] })?.items).toHaveLength(1);
-    expect(() => parseMyCando({ now: NOW, items: [{ code: null, name: "x", at: NOW, state: "INDEPENDENT" }] })).toThrow();
-    expect(() => parseMyCando({ now: NOW, items: [], level_num: 3 })).toThrow();
+    expect(parseMyCando({ now: NOW, items: [{ code: null, name: "x", at: NOW }], ever: [{ n: 5, at: NOW }] })?.items).toHaveLength(1);
+    expect(() => parseMyCando({ now: NOW, items: [{ code: null, name: "x", at: NOW, state: "INDEPENDENT" }], ever: [] })).toThrow();
+    expect(() => parseMyCando({ now: NOW, items: [], ever: [], level_num: 3 })).toThrow();
   });
 });

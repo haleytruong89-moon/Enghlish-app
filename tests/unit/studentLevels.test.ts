@@ -37,8 +37,9 @@ describe("buildLevelsView (W4e · S-5, Q18)", () => {
 describe("parseMyLevels", () => {
   it("accepts the shape, passes null through, and refuses an extra key (a score would be a fault)", () => {
     expect(parseMyLevels(null)).toBeNull();
-    expect(parseMyLevels({ domains: [{ key: "grammar", name: "Ngữ pháp", scale: "cefr", level: "B2", on: "2026-11-07T03:00:00Z" }] })).toHaveLength(1);
-    expect(() => parseMyLevels({ domains: [{ key: "g", name: "G", scale: "cefr", level: "B2", on: "2026-11-07T03:00:00Z", level_num: 5 }] })).toThrow();
+    expect(parseMyLevels({ domains: [{ key: "grammar", name: "Ngữ pháp", level: "B2", on: "2026-11-07T03:00:00Z" }] })).toHaveLength(1);
+    expect(() => parseMyLevels({ domains: [{ key: "g", name: "G", level: "B2", on: "2026-11-07T03:00:00Z", level_num: 5 }] })).toThrow();
     expect(() => parseMyLevels({ domains: [], assumed: {} })).toThrow();
+    expect(() => parseMyLevels({ domains: [{ key: "g", name: "G", scale: "cefr", level: "B2", on: "2026-11-07T03:00:00Z" }] })).toThrow(); // the database no longer sends "scale"
   });
 });

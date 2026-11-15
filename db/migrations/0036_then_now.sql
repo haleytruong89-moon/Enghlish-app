@@ -3,8 +3,8 @@
 --   1. then_now_picks (chỉ thêm): thầy/cô của em CHỌN hai bài viết trên app của chính em ("ngày ấy" nộp trước "bây giờ") + một lời nhắn ≤ 200 ký tự
 --      (không chữ dạng điểm); dòng mới nhất của em thắng; status 'hidden' = ẩn thẻ. Học sinh không SELECT bảng (chỉ qua eng_my_then_now); phụ huynh xem.
 --   2. Ghi: eng_pick_then_now (service_role sau requireAccess "teaching:write"; CHỈ thầy/cô của em, phụ huynh bị 42501). Idempotent theo client_id.
---      Hai lần nộp phải là của ĐÚNG em, bước ACT-WRITE (không phải bài sửa), nộp trên app / dán / người lớn gõ lại bài giấy (manual_import), có chữ;
---      KHÔNG phải bài ghi trong buổi (tutor_live) hay bài nạp (imported); "ngày ấy" phải trước "bây giờ" ít nhất một ngày (giờ Việt Nam).
+--      Hai lần nộp phải là của ĐÚNG em, bước ACT-WRITE (không phải bài sửa), có chữ; "bây giờ" chỉ nộp trên app / dán; "ngày ấy" còn được là bài giấy do THẦY/CÔ gõ lại
+--      (manual_import, chữ không dạng điểm); KHÔNG phải bài ghi trong buổi (tutor_live) hay bài nạp (imported); "ngày ấy" phải trước "bây giờ" ít nhất một ngày (giờ Việt Nam).
 --   3. Đọc của người lớn: eng_then_now_candidates (service_role): các bài viết của em để chọn + dòng chọn hiện hành.
 --   4. Đọc của con (authenticated, nhận diện bằng auth.uid(), chỉ chữ + tên + ngày):
 --        eng_my_levels()   tên cấp CEFR đã được thầy/cô xác nhận theo mảng (mảng có thang CEFR; KHÔNG mảng Tư duy; KHÔNG cấp giả định; không số, không bậc 1–4);
@@ -71,9 +71,10 @@ as $$
 $$;
 revoke execute on function english.eng_attempt_text(uuid) from public, anon, authenticated, service_role;
 
--- Một lần nộp "chọn được": của đúng em, bước ACT-WRITE (không phải bài sửa), nộp trên app / dán / người lớn gõ lại bài giấy, có chữ. Không phải bài ghi trong buổi
--- (tutor_live) hay bài nạp (imported). Trả lúc nộp, hoặc null nếu không chọn được.
-create or replace function english.eng_pickable_write(p_learner uuid, p_attempt uuid) returns timestamptz
+-- Một lần nộp "chọn được": của đúng em, bước ACT-WRITE, không phải bài sửa (mode / revises_attempt_id), có chữ; không phải bài ghi trong buổi (tutor_live) hay bài nạp (imported).
+-- p_role = 'then': nộp trên app / dán, hoặc bài giấy người lớn gõ lại (manual_import: chỉ khi lần ghi chữ đầu do một THẦY/CÔ ghi và chữ không dạng điểm).
+-- p_role = 'now': chỉ nộp trên app / dán (chữ của chính con). Trả lúc nộp, hoặc null nếu không chọn được.
+create or replace function english.eng_pickable_write(p_learner uuid, p_attempt uuid, p_role text) returns timestamptz
 language sql stable security definer set search_path = ''
 as $$
   select t.submitted_at
@@ -81,10 +82,19 @@ as $$
   join english.activity_instances a on a.id = t.activity_instance_id
   where t.id = p_attempt and t.learner_id = p_learner
     and a.activity_type = 'ACT-WRITE' and a.mode <> 'REVISION'
-    and t.provenance in ('in_app', 'pasted', 'manual_import')
+    and t.mode <> 'REVISION' and t.revises_attempt_id is null
     and pg_catalog.btrim(coalesce(english.eng_attempt_text(t.id), '')) <> ''
+    and (
+      t.provenance in ('in_app', 'pasted')
+      or (p_role = 'then' and t.provenance = 'manual_import'
+          and not english.eng_has_score_words(english.eng_attempt_text(t.id))
+          and exists (
+            select 1 from english.members m
+            where m.role = 'tutor'
+              and m.id = (select av.created_by from english.artifact_versions av where av.attempt_id = t.id and av.kind = 'text' order by av.version limit 1)))
+    )
 $$;
-revoke execute on function english.eng_pickable_write(uuid, uuid) from public, anon, authenticated, service_role;
+revoke execute on function english.eng_pickable_write(uuid, uuid, text) from public, anon, authenticated, service_role;
 
 -- 4. Thầy/cô của em chọn cặp bài (hoặc ẩn thẻ) ---------------------------------------------------------------------------------------
 create or replace function english.eng_pick_then_now(p_learner uuid, p_then uuid, p_now uuid, p_note text, p_status text, p_by uuid, p_client_id text) returns jsonb
@@ -130,8 +140,8 @@ begin
     raise exception 'eng_pick_then_now: the note must not look like a score (score_words)' using errcode = '22023';
   end if;
 
-  v_then_at := english.eng_pickable_write(p_learner, p_then);
-  v_now_at := english.eng_pickable_write(p_learner, p_now);
+  v_then_at := english.eng_pickable_write(p_learner, p_then, 'then');
+  v_now_at := english.eng_pickable_write(p_learner, p_now, 'now');
   if p_then = p_now or v_then_at is null or v_now_at is null or english.eng_vn_day(v_then_at) >= english.eng_vn_day(v_now_at) then
     raise exception 'eng_pick_then_now: two own pieces of writing on the app, the first on an earlier day (bad_pick)' using errcode = '22023';
   end if;
@@ -160,17 +170,21 @@ begin
   end if;
   return pg_catalog.jsonb_build_object(
     'candidates', coalesce((
-      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('id', x.id, 'at', x.submitted_at, 'title', x.title, 'preview', pg_catalog.left(x.txt, 300))
+      -- Tối đa ~60 bài: 20 bài CŨ nhất + 40 bài MỚI nhất + cặp đang chọn (luôn có mặt, nếu còn chọn được). provenance để màn gắn nhãn "bài giấy gõ lại".
+      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('id', x.id, 'at', x.submitted_at, 'title', x.title, 'preview', pg_catalog.left(x.txt, 300), 'provenance', x.provenance)
                                   order by x.submitted_at desc, x.id)
       from (
-        select t.id, t.submitted_at, i.snapshot -> 'template' ->> 'title_vi' as title, english.eng_attempt_text(t.id) as txt
-        from english.attempts t
-        join english.activity_instances a on a.id = t.activity_instance_id
-        join english.inquiry_instances i on i.id = a.inquiry_instance_id
-        where english.eng_pickable_write(p_learner, t.id) is not null
-          and t.learner_id = p_learner
-        order by t.submitted_at desc, t.id
-        limit 60) x), '[]'::jsonb),
+        select r.* from (
+          select t.id, t.submitted_at, t.provenance, i.snapshot -> 'template' ->> 'title_vi' as title, english.eng_attempt_text(t.id) as txt,
+                 pg_catalog.row_number() over (order by t.submitted_at, t.id) as rn_old,
+                 pg_catalog.row_number() over (order by t.submitted_at desc, t.id) as rn_new
+          from english.attempts t
+          join english.activity_instances a on a.id = t.activity_instance_id
+          join english.inquiry_instances i on i.id = a.inquiry_instance_id
+          where t.learner_id = p_learner and english.eng_pickable_write(p_learner, t.id, 'then') is not null) r
+        where r.rn_old <= 20 or r.rn_new <= 40
+           or r.id in (select c.then_attempt_id from (select k.then_attempt_id, k.now_attempt_id from english.then_now_picks k where k.learner_id = p_learner order by k.created_at desc, k.id desc limit 1) c
+                       union select c.now_attempt_id from (select k.then_attempt_id, k.now_attempt_id from english.then_now_picks k where k.learner_id = p_learner order by k.created_at desc, k.id desc limit 1) c)) x), '[]'::jsonb),
     'current', (
       select pg_catalog.jsonb_build_object('id', k.id, 'then_attempt', k.then_attempt_id, 'now_attempt', k.now_attempt_id, 'note', k.note, 'status', k.status, 'created_at', k.created_at)
       from english.then_now_picks k where k.learner_id = p_learner order by k.created_at desc, k.id desc limit 1));
@@ -197,14 +211,14 @@ begin
   return pg_catalog.jsonb_build_object('domains', coalesce((
     select pg_catalog.jsonb_agg(
       pg_catalog.jsonb_build_object(
-        'key', dm.key, 'name', dm.name_vi, 'scale', dm.scale,
+        'key', dm.key, 'name', dm.name_vi,
         'level', case when lt.to_level ~ '^(A1|A2|B1|B2|C1|C2)\+?$' then lt.to_level else null end,
         'on', case when lt.to_level ~ '^(A1|A2|B1|B2|C1|C2)\+?$' then lt.decided_at else null end)
       order by dm.ord)
     from english.skill_domains dm
     left join lateral (
       select d.to_level, d.decided_at from english.level_decisions d
-      where d.learner_id = v_learner and d.domain_key = dm.key
+      where d.learner_id = v_learner and d.domain_key = dm.key and d.map_id = v_map
       order by d.decided_at desc, d.id desc limit 1) lt on true
     where dm.map_id = v_map and dm.scale = 'cefr'), '[]'::jsonb));
 end
@@ -214,16 +228,17 @@ grant execute on function english.eng_my_levels() to authenticated;
 
 -- 7. CON đọc: những điều đã làm được -----------------------------------------------------------------------------------------------------
 -- Kỹ năng đang ở bậc 3–4 mà dòng quyết định bậc MỚI NHẤT là thầy/cô XÁC NHẬN (AUTO bậc 1–2, sửa tay, bị hạ → không trả), và mục kiến thức
--- (điểm) ở mức 3–4 theo cùng luật. Chỉ tên + lúc xác nhận; "code" chỉ là mã kỹ năng để máy tìm tên cho học sinh (không hiện ra màn).
+-- (điểm) ở mức 3–4 theo cùng luật; mục kiến thức chỉ lấy nhãn có sẵn còn dùng (không nhãn riêng "x-" của gia đình, không nhãn đã nghỉ dùng: chưa có chữ can-do do thầy/cô viết, Q17).
+-- 'ever' = lúc món thứ 5 / 10 / 20 (đếm theo món KHÁC NHAU) LẦN ĐẦU được thầy/cô xác nhận ở mức 3–4, đọc từ sổ quyết định: thành tích "n điều tự làm được" không mất khi sau đó một kỹ năng bị hạ.
+-- Chỉ tên + lúc xác nhận; "code" chỉ là mã kỹ năng để máy tìm tên cho học sinh (không hiện ra màn).
 create or replace function english.eng_my_cando() returns jsonb
 language plpgsql stable security definer set search_path = ''
 as $$
 declare
   v_learner uuid;
   v_track text;
-  v_family uuid;
 begin
-  select l.id, l.track_id, l.family_id into v_learner, v_track, v_family
+  select l.id, l.track_id into v_learner, v_track
   from english.members m join english.learners l on l.member_id = m.id
   where m.user_id = auth.uid() and m.role = 'student';
   if v_learner is null then return null; end if;
@@ -243,7 +258,7 @@ begin
           union all
           select null::text,
                  (select et.label_vi from english.error_tags et
-                   where et.track_id = v_track and et.key = ps.tag_key and (et.family_id is null or et.family_id = v_family) limit 1),
+                   where et.track_id = v_track and et.key = ps.tag_key and et.family_id is null and et.retired_at is null limit 1),
                  pd.created_at
           from english.point_state ps
           join english.point_decisions pd on pd.id = ps.state_decision_id
@@ -252,7 +267,24 @@ begin
         ) u
         where u.name is not null
         order by u.at desc, u.name
-        limit 60) z), '[]'::jsonb));
+        limit 60) z), '[]'::jsonb),
+    'ever', coalesce((
+      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('n', e.rn, 'at', e.first_at) order by e.rn)
+      from (
+        select pg_catalog.row_number() over (order by f.first_at, f.item) as rn, f.first_at
+        from (
+          select 's:' || md.target_key as item, pg_catalog.min(md.created_at) as first_at
+          from english.mastery_decisions md
+          where md.learner_id = v_learner and md.kind = 'CONFIRMED' and md.to_state in ('INDEPENDENT', 'TRANSFERABLE')
+            and exists (select 1 from english.targets t where t.id = md.target_key and t.track_id = v_track)
+          group by md.target_key
+          union all
+          select 'p:' || pd.tag_key, pg_catalog.min(pd.created_at)
+          from english.point_decisions pd
+          where pd.learner_id = v_learner and pd.kind = 'CONFIRMED' and pd.to_state in ('INDEPENDENT', 'TRANSFERABLE')
+            and exists (select 1 from english.error_tags et where et.track_id = v_track and et.key = pd.tag_key and et.family_id is null and et.retired_at is null)
+          group by pd.tag_key) f) e
+      where e.rn in (5, 10, 20)), '[]'::jsonb));
 end
 $$;
 revoke execute on function english.eng_my_cando() from public, anon, service_role;
@@ -274,8 +306,8 @@ begin
   if v_learner is null then return null; end if;
   select * into v_k from english.then_now_picks k where k.learner_id = v_learner order by k.created_at desc, k.id desc limit 1;
   if not found or v_k.status <> 'shown' then return null; end if;
-  v_then_at := english.eng_pickable_write(v_learner, v_k.then_attempt_id);
-  v_now_at := english.eng_pickable_write(v_learner, v_k.now_attempt_id);
+  v_then_at := english.eng_pickable_write(v_learner, v_k.then_attempt_id, 'then');
+  v_now_at := english.eng_pickable_write(v_learner, v_k.now_attempt_id, 'now');
   if v_then_at is null or v_now_at is null then return null; end if;
   return pg_catalog.jsonb_build_object(
     'then', pg_catalog.jsonb_build_object('on', v_then_at, 'text', english.eng_attempt_text(v_k.then_attempt_id)),

@@ -49,7 +49,7 @@ describe("then-now picks (migration 0036)", () => {
   const mine = (user: string) => read<Pair | null>(user, "select english.eng_my_then_now() as r");
   const pick = (by: string, thenId: string, nowId: string, o: { learner?: string; note?: string | null; status?: string; clientId?: string } = {}) =>
     svc<{ id: string; replayed: boolean }>("select english.eng_pick_then_now($1, $2, $3, $4, $5, $6, $7) as r", [o.learner ?? NG(), thenId, nowId, o.note ?? null, o.status ?? "shown", by, o.clientId ?? randomUUID()]);
-  type Cands = { candidates: { id: string; at: string; title: string | null; preview: string }[]; current: { id: string; then_attempt: string; now_attempt: string; note: string | null; status: string } | null };
+  type Cands = { candidates: { id: string; at: string; title: string | null; preview: string; provenance: string }[]; current: { id: string; then_attempt: string; now_attempt: string; note: string | null; status: string } | null };
   const candidates = (learner = NG()) => svc<Cands>("select english.eng_then_now_candidates($1) as r", [learner]);
 
   // ---- pieces of writing, written straight as the table owner (the app writes through eng_submit_attempt; the day is what the tests need to control)
@@ -57,7 +57,7 @@ describe("then-now picks (migration 0036)", () => {
   let otherStepNg: string; // Nguyên, a step that is not writing
   let writeAn: string;
   let attemptNo = 0;
-  const attempt = async (activity: string, learner: string, o: { daysAgo: number; provenance?: string; text?: string | null; member?: string; kind?: "text" | "answers" }) => {
+  const attempt = async (activity: string, learner: string, o: { daysAgo: number; provenance?: string; text?: string | null; member?: string; kind?: "text" | "answers"; mode?: string }) => {
     attemptNo += 1;
     const id = randomUUID();
     const first = (await q1<{ id: string; learning_family_id: string; mode: string }>("select id, learning_family_id, mode from english.attempts where activity_instance_id = $1 order by attempt_no limit 1", [activity]))[0];
@@ -68,7 +68,7 @@ describe("then-now picks (migration 0036)", () => {
     await q1(
       `insert into english.attempts(id, activity_instance_id, learner_id, attempt_no, parent_attempt_id, learning_family_id, mode, provenance, declared_assistance, submitted_at, content_hash, client_submission_id${extra})
        values ($1, $2, $3, $4, $5, $6, $7, $8, array['none'], now() - ($9 || ' days')::interval, repeat('b', 64), $10${extraV})`,
-      [id, activity, learner, no, first?.id ?? null, first?.learning_family_id ?? id, first?.mode ?? "PRACTICE", provenance, String(o.daysAgo), randomUUID()],
+      [id, activity, learner, no, first?.id ?? null, first?.learning_family_id ?? id, o.mode ?? first?.mode ?? "PRACTICE", provenance, String(o.daysAgo), randomUUID()],
     );
     // attempt_no = 1 must be its own family: fix by selecting the family after insert when first is null
     if (o.text !== null) {
@@ -125,7 +125,7 @@ describe("then-now picks (migration 0036)", () => {
       await fail(as(db.client, "authenticated", U().studentNguyen, async (q) => q(sql)), "42501");
       await fail(as(db.client, "authenticated", U().tutorNguyen, async (q) => q(sql)), "42501");
     }
-    for (const sql of ["select english.eng_attempt_text(gen_random_uuid())", "select english.eng_pickable_write(gen_random_uuid(), gen_random_uuid())"]) {
+    for (const sql of ["select english.eng_attempt_text(gen_random_uuid())", "select english.eng_pickable_write(gen_random_uuid(), gen_random_uuid(), 'then')"]) {
       await fail(as(db.client, "authenticated", U().studentNguyen, async (q) => q(sql)), "42501");
       await fail(as(db.client, "service_role", null, async (q) => q(sql)), "42501");
     }
@@ -198,11 +198,27 @@ describe("then-now picks (migration 0036)", () => {
       await bad(blank, late);
       const answersOnly = await attempt(writeNg, NG(), { daysAgo: 45, kind: "answers" });
       await bad(answersOnly, late);
-      // a paper essay typed in by an adult (manual_import) and a pasted text are allowed (Q16)
-      const typed = await attempt(writeNg, NG(), { daysAgo: 79, provenance: "manual_import", text: "Typed from the paper.", member: M().tutorNguyen });
+      // a pasted text is allowed
       const pasted = await attempt(writeNg, NG(), { daysAgo: 46, provenance: "pasted", text: "Pasted." });
-      await pick(M().tutorNguyen, typed, late);
       await pick(M().tutorNguyen, pasted, late);
+    });
+    it("a paper essay typed in by a TUTOR (manual_import) is fit for 'ngày ấy' only; never as 'bây giờ'; not typed by a student / parent; not score-like", async () => {
+      const typed = await attempt(writeNg, NG(), { daysAgo: 79, provenance: "manual_import", text: "Typed from the paper.", member: M().tutorNguyen });
+      await pick(M().tutorNguyen, typed, late);
+      await bad(early, typed); // as the NEW piece: refused
+      await bad(late, typed);
+      const byStudent = await attempt(writeNg, NG(), { daysAgo: 78, provenance: "manual_import", text: "Typed by the child's own account.", member: M().studentNguyen });
+      await bad(byStudent, late);
+      const byParent = await attempt(writeNg, NG(), { daysAgo: 77, provenance: "manual_import", text: "Typed by the parent.", member: M().parent });
+      await bad(byParent, late);
+      const scored = await attempt(writeNg, NG(), { daysAgo: 76, provenance: "manual_import", text: "Bài này được 8/10 điểm.", member: M().tutorNguyen });
+      await bad(scored, late);
+      // the child's reading re-checks the same rules: a pick whose NOW is a retyped piece never shows (forced straight into the ledger as the owner)
+      const forced = (await q1<{ id: string }>("insert into english.then_now_picks(learner_id, then_attempt_id, now_attempt_id, status, by_member, by_role, client_id) values ($1,$2,$3,'shown',$4,'tutor',$5) returning id", [NG(), early, typed, M().tutorNguyen, randomUUID()]))[0]!.id;
+      expect(forced).toBeTruthy();
+      expect(await mine(U().studentNguyen)).toBeNull();
+      await pick(M().tutorNguyen, early, late); // a later, valid pick takes over again
+      expect(await mine(U().studentNguyen)).not.toBeNull();
     });
     it("a revision step (mode REVISION) is not picked", async () => {
       const revisionStep = (await q1<{ id: string }>(

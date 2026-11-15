@@ -3,10 +3,9 @@ import { latestLevelDate, type LevelsView } from "@/lib/student/levels";
 import { ddmm } from "@/lib/student/week";
 
 /**
- * "Cấp hiện tại theo mảng" (W4e · S-5): the NAME of the level the tutor confirmed for each domain ("B2", "B1+"), plus "Hướng tới" = the summit
- * the tutor named on the mountain (if any). Never a number, a score or a comparison; a domain not confirmed yet says so; no Tư duy domain (Q18).
+ * "Cấp hiện tại theo mảng" (W4e · S-5): the NAME of the level the tutor confirmed for each domain ("B2", "B1+"). Never a number, a score or a comparison; a domain not confirmed yet says so; no Tư duy domain (Q18).
  */
-export function LevelsCard({ view, summitTitle }: { view: LevelsView; summitTitle: string | null }) {
+export function LevelsCard({ view }: { view: LevelsView }) {
   if (view.tiles.length === 0) return null;
   const date = latestLevelDate(view);
   return (
@@ -27,14 +26,6 @@ export function LevelsCard({ view, summitTitle }: { view: LevelsView; summitTitl
           </li>
         ))}
       </ul>
-      {summitTitle ? (
-        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-accent/40 bg-[#F1F6F3] px-3.5 py-3" data-testid="levels-target">
-          <div>
-            <p className="text-[13.5px] text-muted">{c.target}</p>
-            <p className="text-lg font-bold text-[#1F4439]">{summitTitle}</p>
-          </div>
-        </div>
-      ) : null}
       <p className="mt-3 text-sm text-muted">{c.foot}</p>
     </section>
   );

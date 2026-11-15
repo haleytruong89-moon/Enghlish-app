@@ -30,8 +30,8 @@ describe("parsers", () => {
     expect(() => parseMyThenNow({ then: piece, now: piece, note: null, score: 3 })).toThrow();
   });
   it("the adult list", () => {
-    const r = parseThenNowCandidates({ candidates: [{ id: "a", at: "2026-11-13T03:00:00Z", title: null, preview: "x" }], current: null });
-    expect(r?.candidates[0]).toMatchObject({ id: "a", on: "2026-11-13" });
+    const r = parseThenNowCandidates({ candidates: [{ id: "a", at: "2026-11-13T03:00:00Z", title: null, preview: "x", provenance: "manual_import" }], current: null });
+    expect(r?.candidates[0]).toMatchObject({ id: "a", on: "2026-11-13", provenance: "manual_import" });
     expect(r?.current).toBeNull();
   });
 });

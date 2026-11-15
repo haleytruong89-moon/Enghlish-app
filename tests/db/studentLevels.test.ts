@@ -13,8 +13,8 @@ function keysOf(v: unknown, out: string[] = []): string[] {
   return out;
 }
 
-type Levels = { domains: { key: string; name: string; scale: string; level: string | null; on: string | null }[] };
-type Cando = { now: string; items: { code: string | null; name: string; at: string }[] };
+type Levels = { domains: { key: string; name: string; level: string | null; on: string | null }[] };
+type Cando = { now: string; items: { code: string | null; name: string; at: string }[]; ever: { n: number; at: string }[] };
 
 /** W4e (migration 0036): what the child reads of levels and "những điều đã làm được". One database. */
 describe("student levels and can-do (migration 0036)", () => {
@@ -45,9 +45,9 @@ describe("student levels and can-do (migration 0036)", () => {
     it("before the tutor confirms anything: the CEFR domains with NO level (an assumed level is never sent), and no Tư duy domain", async () => {
       const b = (await levels(U().studentNguyen))!;
       expect(b.domains.map((d) => d.key)).toEqual(["grammar", "vocab", "reading", "listening", "writing", "speaking"]);
-      for (const d of b.domains) expect(d).toMatchObject({ scale: "cefr", level: null, on: null });
+      for (const d of b.domains) expect(d).toMatchObject({ level: null, on: null });
       const a = (await levels(U().studentAn))!;
-      expect(a.domains.every((d) => d.level === null && d.scale === "cefr")).toBe(true);
+      expect(a.domains.every((d) => d.level === null)).toBe(true);
     });
     it("after the baseline: only the confirmed domains carry a level and a date; the task-level domain is never there; the newest decision wins", async () => {
       await record(M().tutorNguyen, NG(), "baseline", { grammar: "B2", listening: "B1+", thinking: "3" }, "Buổi đầu");
@@ -67,7 +67,7 @@ describe("student levels and can-do (migration 0036)", () => {
       expect(await levels(U().parent)).toBeNull();
       expect(await levels(U().tutorNguyen)).toBeNull();
       for (const who of [U().studentNguyen, U().studentAn]) expect(keysOf(await levels(who)).filter((k) => FORBIDDEN_KEY.test(k))).toEqual([]);
-      expect(Object.keys((await levels(U().studentNguyen))!.domains[0]!).sort()).toEqual(["key", "level", "name", "on", "scale"]);
+      expect(Object.keys((await levels(U().studentNguyen))!.domains[0]!).sort()).toEqual(["key", "level", "name", "on"]);
     });
   });
 
@@ -111,7 +111,8 @@ describe("student levels and can-do (migration 0036)", () => {
     it("nothing at the start; the only fields are now and items", async () => {
       const c = (await cando(U().studentNguyen))!;
       expect(c.items).toEqual([]);
-      expect(Object.keys(c).sort()).toEqual(["items", "now"]);
+      expect(c.ever).toEqual([]);
+      expect(Object.keys(c).sort()).toEqual(["ever", "items", "now"]);
     });
     it("level 1–2 (AUTO), an open proposal and an open flag do NOT count; a confirmed 3–4 does, with the skill's Vietnamese title", async () => {
       const T = "B-T1-EXAM-R";
@@ -162,6 +163,39 @@ describe("student levels and can-do (migration 0036)", () => {
       expect(await cando(U().parent)).toBeNull();
       expect(await cando(U().tutorAn)).toBeNull();
       for (const who of [U().studentNguyen, U().studentAn]) expect(keysOf(await cando(who)).filter((k) => FORBIDDEN_KEY.test(k))).toEqual([]);
+    });
+    it("a retired tag and a family's own x- tag are never a can-do card", async () => {
+      const before = (await cando(U().studentNguyen))!.items.length;
+      const retired = (await q1<{ key: string }>("select key from english.error_tags where track_id = 'B' and family_id is null and retired_at is not null limit 1").catch(() => []))[0]?.key;
+      if (retired) {
+        await confirmPoint(NG(), M().tutorNguyen, retired);
+        expect(await names(U().studentNguyen)).not.toContain(await labelOf(retired, "B"));
+      }
+      const fam = (await q1<{ family_id: string }>("select family_id from english.learners where id = $1", [NG()]))[0]!.family_id;
+      await q1("insert into english.error_tags(key, track_id, family_id, label_vi, domain) values ('x-thu-nghiem', 'B', $1, 'Nhãn riêng thử', 'grammar') on conflict do nothing", [fam]).catch(() => undefined);
+      await confirmPoint(NG(), M().tutorNguyen, "x-thu-nghiem").catch(() => undefined);
+      expect(await names(U().studentNguyen)).not.toContain("Nhãn riêng thử");
+      expect((await cando(U().studentNguyen))!.items.length).toBeGreaterThanOrEqual(before);
+    });
+    it("'ever' keeps the first time of the 5th item even after a skill is lowered", async () => {
+      const skills = ["B-T1-EXAM-R", "B-L2-CLOZE"];
+      const c0 = (await cando(U().studentNguyen))!;
+      const have = c0.items.length;
+      // earn enough distinct items to pass 5
+      const more = (await q1<{ id: string }>("select id from english.targets where track_id = 'B' and id like 'B-%' order by id limit 40")).map((r) => r.id).filter((id) => !c0.items.some((i) => i.code === id));
+      for (const id of more.slice(0, Math.max(0, 6 - have))) await confirmSkill(NG(), M().tutorNguyen, id);
+      const c1 = (await cando(U().studentNguyen))!;
+      expect(c1.items.length).toBeGreaterThanOrEqual(5);
+      const fifth = c1.ever.find((e) => e.n === 5);
+      expect(fifth).toBeTruthy();
+      // lower one skill: the shown list shrinks, the badge time does not move
+      const target = c1.items.find((i) => i.code && skills.concat(more).includes(i.code))!.code!;
+      await skillRow(NG(), target, "MANUAL", "INDEPENDENT", "DEVELOPING", { member: M().tutorNguyen, reason: "Còn hay nhầm" });
+      await project(NG(), target);
+      const c2 = (await cando(U().studentNguyen))!;
+      expect(c2.items.length).toBe(c1.items.length - 1);
+      expect(c2.ever.find((e) => e.n === 5)).toEqual(fifth);
+      expect(c2.ever.map((e) => e.n)).toEqual(c1.ever.map((e) => e.n));
     });
   });
 });

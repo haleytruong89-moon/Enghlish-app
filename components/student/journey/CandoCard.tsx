@@ -21,7 +21,7 @@ export function CandoCard({ items }: { items: readonly CandoItem[] }) {
             <li key={i.id} className={`flex items-start gap-3 rounded-xl border px-4 py-3.5 ${i.isNew ? "border-2 border-accent/50 bg-[#F1F6F3]" : "border-line bg-white"}`} data-testid="cando-item" data-new={i.isNew ? "yes" : "no"}>
               <span aria-hidden="true" className="grid h-8 w-8 flex-none place-items-center rounded-full border border-accent/40 bg-[#E3ECE8] text-[#1F4439]">✓</span>
               <div className="min-w-0">
-                <p className="break-words font-semibold"><span className="font-normal text-muted">{c.lead}</span> {i.text}</p>
+                <p className="break-words font-semibold"><span className="font-normal text-muted">{i.kind === "point" ? c.leadKnowledge : c.lead}</span> {i.text}</p>
                 <p className="mt-0.5 text-[13px] text-muted">
                   {i.isNew ? <strong className="text-[#1F4439]">{c.newTag}</strong> : null}
                   {i.isNew ? " · " : null}

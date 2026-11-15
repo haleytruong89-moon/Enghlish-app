@@ -22,7 +22,7 @@ export default async function JourneyPage() {
         <JourneyView
           journey={data.journey}
           week={week?.view ?? null}
-          achievements={week ? buildAchievements(week.facts, data.units, data.journey.nodes.flatMap((n) => n.flags.map((f) => ({ id: f.id, title: f.title, afterUnit: f.afterUnit }))), growth.cando ? candoTimes(growth.cando) : []) : null}
+          achievements={week ? buildAchievements(week.facts, data.units, data.journey.nodes.flatMap((n) => n.flags.map((f) => ({ id: f.id, title: f.title, afterUnit: f.afterUnit }))), growth.cando ? candoTimes(growth.cando) : [], growth.candoEver) : null}
           levels={growth.levels}
           cando={growth.cando}
           thenNow={growth.thenNow}
