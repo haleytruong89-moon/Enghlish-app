@@ -13,7 +13,7 @@ import type { SkillInboxItem } from "@/lib/skills/types";
 import { proposalTitle } from "@/lib/skills/view";
 import type { DraftListItem, PendingAttempt, RetryAttempt } from "@/lib/studio/types";
 
-export const PENDING_GROUPS = ["all", "work", "check", "ai", "skills", "roadmap"] as const;
+export const PENDING_GROUPS = ["all", "work", "check", "ai", "skills", "roadmap", "goals"] as const;
 export type PendingGroup = (typeof PENDING_GROUPS)[number];
 export type PendingKind = "work" | "studio_check" | "retry" | "studio_draft" | "curriculum_draft" | "skill" | "point" | "flag" | "import" | "milestone" | "goal";
 export type PendingRow = { key: string; kind: PendingKind; group: Exclude<PendingGroup, "all">; label: string; title: string; since: string | null; need: string; href: string; waitingTutor: boolean };
@@ -66,7 +66,7 @@ export function pendingView(p: { rows: readonly unknown[]; failed: readonly unkn
   };
 }
 
-const GROUP_OF: Record<PendingKind, Exclude<PendingGroup, "all">> = { work: "work", studio_check: "check", retry: "check", studio_draft: "ai", curriculum_draft: "ai", skill: "skills", point: "skills", flag: "skills", import: "check", milestone: "roadmap", goal: "roadmap" };
+const GROUP_OF: Record<PendingKind, Exclude<PendingGroup, "all">> = { work: "work", studio_check: "check", retry: "check", studio_draft: "ai", curriculum_draft: "ai", skill: "skills", point: "skills", flag: "skills", import: "check", milestone: "roadmap", goal: "goals" };
 const WAITING = ["draft", "ai_failed"] as const;
 const isWaiting = (s: string) => (WAITING as readonly string[]).includes(s);
 
@@ -157,7 +157,7 @@ export function filterRows(rows: readonly PendingRow[], g: PendingGroup): Pendin
 }
 
 export function countGroups(rows: readonly PendingRow[]): Record<PendingGroup, number> {
-  const out: Record<PendingGroup, number> = { all: rows.length, work: 0, check: 0, ai: 0, skills: 0, roadmap: 0 };
+  const out: Record<PendingGroup, number> = { all: rows.length, work: 0, check: 0, ai: 0, skills: 0, roadmap: 0, goals: 0 };
   for (const r of rows) out[r.group] += 1;
   return out;
 }

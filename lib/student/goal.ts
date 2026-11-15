@@ -22,18 +22,23 @@ export type GoalRow = {
 export const GOAL_LIMITS = { min: 1, max: 14 } as const;
 export type GoalRange = { min: number; max: number };
 
+/** Instants compare as instants (Postgres writes "+00" / "Z" / different fraction lengths: a string compare is not safe). An unreadable time sorts first. */
+const when = (g: GoalRow): number => {
+  const t = Date.parse(g.createdAt);
+  return Number.isFinite(t) ? t : 0;
+};
 const isDecision = (g: GoalRow) => g.kind === "accept" || g.kind === "adjust";
 
 /** The proposal still waiting for the tutor (nobody answered it). At most one exists; if the data ever has more, the newest wins. */
 export function pendingProposal(goals: readonly GoalRow[]): GoalRow | null {
   const answered = new Set(goals.filter((g) => g.respondsTo !== null).map((g) => g.respondsTo as string));
   const open = goals.filter((g) => g.kind === "propose" && !answered.has(g.id));
-  return open.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))[0] ?? null;
+  return open.sort((a, b) => when(b) - when(a) || b.id.localeCompare(a.id))[0] ?? null;
 }
 
 /** Decisions oldest first (by the time they were taken). */
 function decisions(goals: readonly GoalRow[]): GoalRow[] {
-  return goals.filter((g) => isDecision(g) && g.appliesFrom !== null && g.pieces !== null).sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+  return goals.filter((g) => isDecision(g) && g.appliesFrom !== null && g.pieces !== null).sort((a, b) => when(a) - when(b) || a.id.localeCompare(b.id));
 }
 
 /** The goal (pieces per week) of a week: the newest decision with appliesFrom <= week. null = no agreed goal that week. */
@@ -50,9 +55,9 @@ export function firstGoalWeek(goals: readonly GoalRow[]): IsoDate | null {
 }
 
 /** An agreed goal that has not started yet (taken this week, starts next Monday) and differs from the running goal. null = nothing to announce. */
-export function upcomingGoal(goals: readonly GoalRow[], currentWeek: IsoDate): { pieces: number; from: IsoDate } | null {
-  let found: { pieces: number; from: IsoDate } | null = null;
-  for (const d of decisions(goals)) if ((d.appliesFrom as IsoDate) > currentWeek) found = { pieces: d.pieces as number, from: d.appliesFrom as IsoDate };
+export function upcomingGoal(goals: readonly GoalRow[], currentWeek: IsoDate): { pieces: number; from: IsoDate; kind: "accept" | "adjust" } | null {
+  let found: { pieces: number; from: IsoDate; kind: "accept" | "adjust" } | null = null;
+  for (const d of decisions(goals)) if ((d.appliesFrom as IsoDate) > currentWeek) found = { pieces: d.pieces as number, from: d.appliesFrom as IsoDate, kind: d.kind as "accept" | "adjust" };
   if (!found) return null;
   return found.pieces === goalForWeek(goals, currentWeek) ? null : found;
 }

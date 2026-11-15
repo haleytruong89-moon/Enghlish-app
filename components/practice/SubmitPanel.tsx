@@ -2,9 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { practiceStudent, submitScreenCopy } from "@/lib/copy/vi";
+import { practiceStudent, submitScreenCopy, workWeekCopy } from "@/lib/copy/vi";
 import { codeOf, nextAttempt, practiceErrorText, uploadAll, type SendAttempt, type UploadCache } from "@/lib/practice/client";
 import { parseHttpsUrl } from "@/lib/practice/link";
+import { lastWeekChoiceOpen } from "@/lib/student/week";
 import { postJson } from "@/lib/tutorwork/client";
 import { ImagePicker, type PickedItem } from "./ImagePicker";
 
@@ -29,6 +30,10 @@ export function SubmitPanel({ learnerId, assignmentId, kind, onDone, maxFiles }:
   // Unknown stays unknown: nothing is pre-chosen. "first or retry" must be picked (the column is not null); the hint answer may stay "Không rõ" (sent as null).
   const [first, setFirst] = useState<boolean | null>(null);
   const [hint, setHint] = useState<boolean | null>(null);
+  // W4d: paper work (PDF assignment) sent on Monday-Tuesday may be put in LAST week. The server checks the day again; this only offers the choice.
+  const [lastWeek, setLastWeek] = useState(false);
+  // Decided ONCE when the panel opens: a retry after Tuesday midnight must not drop the choice (the server refuses it if it is really too late).
+  const [canPickWeek] = useState(() => kind === "pdf" && lastWeekChoiceOpen(new Date()));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"upload" | "send" | null>(null);
   // Kept across retries: a lost answer is retried with the same id and only the files that failed are sent again.
@@ -57,6 +62,7 @@ export function SubmitPanel({ learnerId, assignmentId, kind, onDone, maxFiles }:
       used_hint: hint, // null = the grown-up does not know
       link_url: kind === "link" && linkClean ? linkClean : null,
       files: up.files,
+      ...(lastWeek ? { work_week: "last" } : {}),
     };
     attempt.current = nextAttempt(attempt.current, JSON.stringify(body));
     const r = await postJson(`/api/learners/${learnerId}/assignments/${assignmentId}/submissions`, { client_id: attempt.current.id, ...body });
@@ -141,6 +147,20 @@ export function SubmitPanel({ learnerId, assignmentId, kind, onDone, maxFiles }:
           </button>
         </span>
       </div>
+      {canPickWeek ? (
+        <div role="group" aria-label={workWeekCopy.label} className="flex flex-col gap-2" data-testid={`${prefix}-week`}>
+          <span>{workWeekCopy.label}</span>
+          <span className="text-sm text-muted">{workWeekCopy.help}</span>
+          <span className="flex flex-wrap gap-2">
+            <button type="button" aria-pressed={!lastWeek} onClick={() => setLastWeek(false)} data-testid={`${prefix}-week-this`} className={pill(!lastWeek)}>
+              {workWeekCopy.this}
+            </button>
+            <button type="button" aria-pressed={lastWeek} onClick={() => setLastWeek(true)} data-testid={`${prefix}-week-last`} className={pill(lastWeek)}>
+              {workWeekCopy.last}
+            </button>
+          </span>
+        </div>
+      ) : null}
       {error ? (
         <p role="alert" className="text-sm text-red-700" data-testid={`${prefix}-error`}>
           {error}

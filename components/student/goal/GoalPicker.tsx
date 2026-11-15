@@ -13,13 +13,15 @@ type Props = {
   initial: number;
   pending: { id: string; pieces: number } | null;
   upcomingPieces: number | null;
+  /** "adjust" = the tutor changed the number: the child is told so, not "agreed". */
+  upcomingKind?: "accept" | "adjust";
   suggestion: string | null;
 };
 
 const wordFor = (i: number, n: number): string => c.words[n <= c.words.length ? i : Math.min(c.words.length - 1, Math.round((i / Math.max(1, n - 1)) * (c.words.length - 1)))] ?? "";
 
 /** "Đặt mục tiêu tuần": the child picks a number inside the track's range and sends it to the tutor; or takes a waiting proposal back. */
-export function GoalPicker({ options, current, initial, pending, upcomingPieces, suggestion }: Props) {
+export function GoalPicker({ options, current, initial, pending, upcomingPieces, upcomingKind, suggestion }: Props) {
   const router = useRouter();
   const [sel, setSel] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -70,7 +72,7 @@ export function GoalPicker({ options, current, initial, pending, upcomingPieces,
   return (
     <section className="flex flex-col gap-4 rounded-2xl border border-line bg-white p-5" data-testid="goal-picker">
       {upcomingPieces !== null ? (
-        <p className="rounded-xl bg-[#E3ECE8] px-3 py-2 text-[15px] font-semibold text-[#1F4439]" data-testid="goal-agreed">{c.agreed(upcomingPieces)}</p>
+        <p className="rounded-xl bg-[#E3ECE8] px-3 py-2 text-[15px] font-semibold text-[#1F4439]" data-testid="goal-agreed">{c.agreed(upcomingPieces, upcomingKind)}</p>
       ) : null}
       <div>
         <h2 className="mb-2 text-lg font-semibold">{c.question}</h2>

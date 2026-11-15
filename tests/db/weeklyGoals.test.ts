@@ -68,8 +68,11 @@ describe("weekly goals (migration 0035)", () => {
   };
   const propose = (user: string, pieces: number, clientId: string = randomUUID()) => student<G>(user, "select english.eng_my_propose_goal($1, $2) as r", [pieces, clientId]);
   const withdraw = (user: string, goal: string, clientId: string = randomUUID()) => student<G>(user, "select english.eng_my_withdraw_goal($1, $2) as r", [goal, clientId]);
-  const decide = (goal: string, action: string, pieces: number | null, by: string, clientId: string = randomUUID(), learner: string | null = null) =>
-    svc<G>("select english.eng_decide_goal($1, $2, $3, $4, $5, $6) as r", [goal, action, pieces, by, clientId, learner]);
+  /** `learner` defaults to the learner of the goal (the route always passes the child of the page); pass null to test the refusal. */
+  const decide = async (goal: string, action: string, pieces: number | null, by: string, clientId: string = randomUUID(), learner?: string | null) => {
+    const l = learner === undefined ? ((await q1<{ learner_id: string }>("select learner_id from english.weekly_goals where id = $1", [goal]))[0]?.learner_id ?? NG()) : learner;
+    return svc<G>("select english.eng_decide_goal($1, $2, $3, $4, $5, $6) as r", [goal, action, pieces, by, clientId, l]);
+  };
   const myWeek = (user: string) => read<Facts | null>(user, "select english.eng_my_week() as r");
   const factsOf = (learner: string) => svc<Facts>("select english.eng_week_facts($1) as r", [learner]);
   const count = async (sql: string, params: unknown[] = []) => ((await q1<{ n: number }>(sql, params))[0] as { n: number }).n;
@@ -329,6 +332,48 @@ describe("weekly goals (migration 0035)", () => {
     expect(f.first_revision_at).toBeNull();
     expect(Array.isArray(f.unit_events)).toBe(true);
     expect(f.range).toEqual({ min: 3, max: 6 });
+  });
+
+  it("two connections deciding the same proposal at once (accept and adjust): exactly one wins, the other gets the clear 'already_answered' (23505), nothing is half written", async () => {
+    const p = await propose(U().studentNguyen, 4);
+    const { Client } = await import("pg");
+    const { pgConfigFromUrl } = await import("../../scripts/lib/pg");
+    const other = new Client(pgConfigFromUrl(db.url));
+    await other.connect();
+    try {
+      const run = (c: typeof db.client, action: string, pieces: number | null) =>
+        asCommit(c, "service_role", null, async (q) => ((await q("select english.eng_decide_goal($1, $2, $3, $4, $5, $6) as r", [p.id, action, pieces, M().tutorNguyen, randomUUID(), NG()])).rows[0] as { r: G }).r);
+      const results = await Promise.allSettled([run(db.client, "accept", null), run(other, "adjust", 6)]);
+      expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+      const lost = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
+      expect((lost.reason as { code?: string }).code).toBe("23505");
+      expect((lost.reason as { message?: string }).message).toMatch(/\(already_answered\)/);
+      expect(await count("select count(*)::int as n from english.weekly_goals where responds_to = $1", [p.id])).toBe(1);
+    } finally {
+      await other.end();
+    }
+  });
+
+  it("a missing or bad range setting never breaks the week read or a proposal: it falls back to {1,14} and keeps the good half", async () => {
+    const set = (v: string) => db.client.query("update english.track_settings set value = $1::jsonb where track_id = 'B' and key = 'weekly_goal_range'", [v]);
+    try {
+      await set('{"min": "abc", "max": 99, "extra": true}');
+      expect((await factsOf(NG())).range).toEqual({ min: 1, max: 14 });
+      await set("[1, 2]");
+      expect((await myWeek(U().studentNguyen))!.range).toEqual({ min: 1, max: 14 });
+      await set('{"min": 6, "max": 3}');
+      expect((await factsOf(NG())).range).toEqual({ min: 6, max: 6 });
+      await set('{"min": 3, "max": 6, "extra": 1}');
+      expect((await factsOf(NG())).range).toEqual({ min: 3, max: 6 });
+    } finally {
+      await set('{"min": 3, "max": 6}');
+    }
+  });
+
+  it("eng_decide_goal needs the learner (no default): null is refused", async () => {
+    const p = await propose(U().studentNguyen, 4);
+    await fail(decide(p.id, "accept", null, M().tutorNguyen, randomUUID(), null), "22004");
+    await withdraw(U().studentNguyen, p.id);
   });
 
   it("seed-dev --goal-history: five met weeks → a streak of 5 for Nguyên (thử), twice the same (idempotent); nothing for An", async () => {

@@ -35,7 +35,7 @@ export type WeekView = {
   streak: number;
   pending: { id: string; pieces: number } | null;
   /** An agreed goal that starts next Monday and differs from this week's. */
-  upcoming: { pieces: number; from: IsoDate } | null;
+  upcoming: { pieces: number; from: IsoDate; kind: "accept" | "adjust" } | null;
   range: GoalRange;
   suggestion: { low: number; high: number } | null;
   /** Monday the next decision would start. */

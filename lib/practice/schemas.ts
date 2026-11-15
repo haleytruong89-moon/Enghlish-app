@@ -80,7 +80,9 @@ const submissionCore = {
   files: z.array(fileMetaSchema).max(MAX_FILES_PER_SUBMISSION).default([]),
 };
 export const studentSubmitBodySchema = z.strictObject({ assignment_id: uuid, ...submissionCore, used_hint: z.boolean() });
-export const staffSubmitBodySchema = z.strictObject(submissionCore);
+/** W4d: an adult sending on the child's behalf on Monday or Tuesday may say the work was done LAST week ("last"); omitted = this week. The database checks the day. */
+export const WORK_WEEKS = ["this", "last"] as const;
+export const staffSubmitBodySchema = z.strictObject({ ...submissionCore, work_week: z.enum(WORK_WEEKS).optional() });
 export type SubmitCore = z.infer<typeof staffSubmitBodySchema>;
 
 /** W4c1 · feedback on a submission: a praise (<= 400) and up to 3 things to fix (<= 300 each), at least one of the two. The database checks it again. */

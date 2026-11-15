@@ -24,37 +24,50 @@ beforeEach(() => {
 });
 
 describe("sending work before and after 0033", () => {
-  it("with 0033 applied it calls the v2 function with the hint answer, whatever the kind", async () => {
-    rpc.mockResolvedValueOnce({ data: { id: "s1", replayed: false }, error: null });
+  it("with 0035 applied it calls the v3 function (hint answer included), 'this' week unless the grown-up chose 'last'", async () => {
+    rpc.mockResolvedValue({ data: { id: "s1", replayed: false }, error: null });
     await createSupabasePracticeStore().submit(args());
     expect(rpc).toHaveBeenCalledTimes(1);
-    expect(rpc).toHaveBeenCalledWith("eng_submit_practice_v2", expect.objectContaining({ p_used_hint: true, p_files: files(2) }));
+    expect(rpc).toHaveBeenCalledWith("eng_submit_practice_v3", expect.objectContaining({ p_used_hint: true, p_files: files(2), p_work_week: "this" }));
+    await createSupabasePracticeStore().submit(args({ workWeek: "last" }));
+    expect(rpc).toHaveBeenLastCalledWith("eng_submit_practice_v3", expect.objectContaining({ p_work_week: "last" }));
+  });
+
+  it("without 0035 it falls back to v2 (0033), but the choice 'last' is refused clearly instead of being dropped", async () => {
+    rpc.mockResolvedValueOnce(missing).mockResolvedValueOnce({ data: { id: "s1", replayed: false }, error: null });
+    await createSupabasePracticeStore().submit(args());
+    expect(rpc.mock.calls.map((c) => c[0])).toEqual(["eng_submit_practice_v3", "eng_submit_practice_v2"]);
+    rpc.mockReset();
+    rpc.mockResolvedValueOnce(missing);
+    const err = await createSupabasePracticeStore().submit(args({ workWeek: "last" })).then(() => null, (e: unknown) => e);
+    expect((err as ReviewDbError).code).toBe("work_week_unavailable");
+    expect(rpc).toHaveBeenCalledTimes(1);
   });
 
   it("without 0033 it falls back to the old function: a PDF sends no hint answer (the old one refuses it), a link keeps it", async () => {
-    rpc.mockResolvedValueOnce(missing).mockResolvedValueOnce({ data: { id: "s1", replayed: false }, error: null });
+    rpc.mockResolvedValueOnce(missing).mockResolvedValueOnce(missing).mockResolvedValueOnce({ data: { id: "s1", replayed: false }, error: null });
     await createSupabasePracticeStore().submit(args());
-    expect(rpc.mock.calls.map((c) => c[0])).toEqual(["eng_submit_practice_v2", "eng_submit_practice"]);
-    expect(rpc.mock.calls[1]![1]).toMatchObject({ p_used_hint: null });
+    expect(rpc.mock.calls.map((c) => c[0])).toEqual(["eng_submit_practice_v3", "eng_submit_practice_v2", "eng_submit_practice"]);
+    expect(rpc.mock.calls[2]![1]).toMatchObject({ p_used_hint: null });
     rpc.mockReset();
-    rpc.mockResolvedValueOnce({ data: null, error: { code: "42883", message: "x" } }).mockResolvedValueOnce({ data: { id: "s2", replayed: false }, error: null });
+    rpc.mockResolvedValueOnce(missing).mockResolvedValueOnce({ data: null, error: { code: "42883", message: "x" } }).mockResolvedValueOnce({ data: { id: "s2", replayed: false }, error: null });
     await createSupabasePracticeStore().submit(args({ kind: "link", usedHint: false }));
-    expect(rpc.mock.calls[1]![1]).toMatchObject({ p_used_hint: false });
+    expect(rpc.mock.calls[2]![1]).toMatchObject({ p_used_hint: false });
   });
 
   it("without 0033, more than 6 pages is a clear 'pages_unavailable', not a database error", async () => {
-    rpc.mockResolvedValueOnce(missing);
+    rpc.mockResolvedValueOnce(missing).mockResolvedValueOnce(missing);
     const err = await createSupabasePracticeStore().submit(args({ files: files(7) })).then(() => null, (e: unknown) => e);
     expect(err).toBeInstanceOf(ReviewDbError);
     expect((err as ReviewDbError).code).toBe("pages_unavailable");
-    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledTimes(2);
   });
 
-  it("any other error of the v2 function is not hidden by the fallback", async () => {
-    rpc.mockResolvedValueOnce({ data: null, error: { code: "23505", message: "x (already_reviewed)" } });
+  it("any other error of the v3 / v2 function is not hidden by the fallback", async () => {
+    rpc.mockResolvedValueOnce(missing).mockResolvedValueOnce({ data: null, error: { code: "23505", message: "x (already_reviewed)" } });
     const err = await createSupabasePracticeStore().submit(args()).then(() => null, (e: unknown) => e);
     expect((err as ReviewDbError).code).toBe("23505");
-    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledTimes(2);
   });
 });
 

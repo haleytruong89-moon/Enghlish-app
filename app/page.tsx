@@ -67,6 +67,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   }
   // The child comes from the RLS-scoped list; the gate runs anyway before the admin-client loaders of the desk.
   await requireLearnerPage(learner.id, "tutorwork:read");
+  await requireLearnerPage(learner.id, "goals:read"); // the goal box and the goal row of Chờ duyệt read eng_week_facts with the admin client
   const desk = await loadDesk(shell, learner);
   return (
     <StaffShell shell={shell}>

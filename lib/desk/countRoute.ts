@@ -15,6 +15,7 @@ export type PendingCountDeps = { user: AccessUser; access: typeof requireAccess;
 export async function handlePendingCount(deps: PendingCountDeps, learnerId: string): Promise<{ status: number; body: PendingCountBody | Failure }> {
   try {
     const { member, learner } = await deps.access(deps.user, learnerId, "work:review");
+    await deps.access(deps.user, learnerId, "goals:read");
     const pending = await deps.load(member.id, member.role === "parent" ? "parent" : "tutor", learner.id);
     return { status: 200, body: { count: pendingView(pending).count } };
   } catch (err) {

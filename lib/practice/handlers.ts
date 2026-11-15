@@ -47,7 +47,7 @@ export interface PracticeStore {
   }): Promise<unknown>;
   retractAssignment(args: { assignmentId: string; reason: string | null; byMemberId: string }): Promise<unknown>;
   submit(args: {
-    assignmentId: string; kind: "link" | "pdf"; byMemberId: string; clientId: string; attempt: string; usedHint: boolean | null; linkUrl: string | null; files: FileMeta[];
+    assignmentId: string; kind: "link" | "pdf"; byMemberId: string; clientId: string; attempt: string; usedHint: boolean | null; linkUrl: string | null; files: FileMeta[]; workWeek?: "this" | "last";
   }): Promise<unknown>;
   /** english.eng_write_submission_feedback (0033; service role, after requireAccess; the SQL checks the actor again). */
   writeSubmissionFeedback(args: {
@@ -158,12 +158,20 @@ async function submitCore(
       usedHint: body.used_hint,
       linkUrl: link,
       files: body.files,
+      workWeek: "work_week" in body ? body.work_week : undefined,
     })) as { id: string; replayed: boolean };
     return { status: r.replayed ? 200 : 201, body: { id: r.id, replayed: r.replayed } };
   } catch (err) {
     if (err instanceof ReviewDbError && err.code === "23505" && /\(already_reviewed\)/.test(err.detail)) return fail(409, "already_reviewed");
     // More than 6 pages before migration 0033 is applied: say so (the old function still takes up to 6).
     if (err instanceof ReviewDbError && err.code === "pages_unavailable") return fail(409, "pages_unavailable");
+    // W4d: the work-week choice ("Tuần trước") is refused by the database outside Monday-Tuesday, for a link, or for a child.
+    if (err instanceof ReviewDbError && err.code === "work_week_unavailable") return fail(409, "work_week_unavailable");
+    if (err instanceof ReviewDbError && err.code === "22023") {
+      const tag = /\((work_week_closed|work_week_adults_only|work_week_not_counted|bad_work_week)\)/.exec(err.detail)?.[1];
+      if (tag) return fail(400, tag);
+    }
+    if (err instanceof ReviewDbError && err.code === "23505" && /\(client_id_reused\)/.test(err.detail)) return fail(409, "client_id_reused");
     return fromDbError(err);
   }
 }

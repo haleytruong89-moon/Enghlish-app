@@ -740,6 +740,7 @@ export const purgePage = {
     item_retries: "Lần thử lại câu",
     work_test_marks: "Dấu bài kiểm tra",
     weekly_goals: "Mục tiêu tuần",
+    submission_work_weeks: "Tuần làm bài của bài nộp thay",
     login_names: "Tên đăng nhập ngắn",
     learners: "Hồ sơ của em",
     members: "Tài khoản của em trong app",
@@ -2420,7 +2421,7 @@ export const pendingCopy = {
   title: (alias: string) => `Chờ duyệt · ${alias}`,
   intro: `Bài con nộp và nháp AI đang chờ ${tutorHonorific}. Mục cũ nhất ở trên. Mở từng mục ra xem, sửa rồi mới duyệt ở trang đó.`,
   filtersLabel: "Lọc việc chờ",
-  groups: { all: "Tất cả", work: "Bài nộp", check: "Cần xem câu", ai: "Nháp AI", skills: "Kỹ năng", roadmap: "Lộ trình" },
+  groups: { all: "Tất cả", work: "Bài nộp", check: "Cần xem câu", ai: "Nháp AI", skills: "Kỹ năng", roadmap: "Lộ trình", goals: "Mục tiêu tuần" },
   groupCount: (label: string, n: number, atLeast = false) => `${label} (${atLeast ? "≥ " : ""}${n})`,
   cols: { kind: "Loại", content: "Nội dung", since: "Từ ngày", need: "Cần làm" },
   kinds: {
@@ -3209,7 +3210,7 @@ export const weeklyGoalCopy = {
   changeGoal: "Đổi mục tiêu",
   seeJourney: "Xem hành trình",
   pendingTag: (pieces: number) => `Chờ ${tutorHonorific} đồng ý: ${pieces} bài/tuần`,
-  upcomingTag: (pieces: number) => `${tutorHonorificCap} đã đồng ý · từ tuần sau: ${pieces} bài/tuần`,
+  upcomingTag: (pieces: number, kind: "accept" | "adjust" = "accept") => `${tutorHonorificCap} ${kind === "adjust" ? "đã chỉnh" : "đã đồng ý"} · từ tuần sau: ${pieces} bài/tuần`,
   unavailable: `Mục tiêu tuần chưa mở. ${tutorHonorificCap} sẽ báo khi sẵn sàng.`,
   // trang "Đặt mục tiêu tuần"
   pageTitle: "Đặt mục tiêu tuần",
@@ -3230,12 +3231,13 @@ export const weeklyGoalCopy = {
   waitingNote: (current: number | null) => (current === null ? "Trong lúc chờ, bạn cứ làm bài như mọi khi." : `Trong lúc chờ, mục tiêu cũ (${current} bài/tuần) vẫn dùng như bình thường.`),
   withdraw: "Rút lại",
   withdrawing: "Đang rút lại…",
-  agreed: (pieces: number) => `${tutorHonorificCap} đã đồng ý: ${pieces} bài/tuần. Áp dụng từ tuần sau.`,
+  agreed: (pieces: number, kind: "accept" | "adjust" = "accept") => `${tutorHonorificCap} ${kind === "adjust" ? "đã chỉnh" : "đã đồng ý"}: ${pieces} bài/tuần. Áp dụng từ tuần sau.`,
   back: "‹ Hành trình",
   errors: {
     out_of_range: "Số bài này nằm ngoài khoảng gợi ý. Bạn chọn lại nhé.",
     pending_exists: `Bạn đã gửi một đề xuất rồi. Chờ ${tutorHonorific} trả lời, hoặc rút lại trước.`,
     bad_ref: "Đề xuất này không còn chờ nữa. Bạn tải lại trang nhé.",
+    already_answered: "Đề xuất này đã được trả lời rồi. Bạn tải lại trang nhé.",
     goal_unavailable: `Mục tiêu tuần chưa mở. ${tutorHonorificCap} sẽ báo khi sẵn sàng.`,
     generic: "Chưa gửi được. Bạn thử lại nhé.",
   } as Record<string, string>,
@@ -3299,9 +3301,10 @@ export const goalDeskCopy = {
   adjustSave: "Lưu số này",
   cancel: "Bỏ",
   parentWaiting: `Đang chờ ${tutorHonorific} của con đồng ý. Phụ huynh chỉ xem.`,
-  countsHint: "Chỉ tính bài con đã nộp (và ảnh bài giấy người lớn nộp thay). Bài ghi trong buổi và bài nạp không tính.",
+  countsHint: "Chỉ tính bài con đã nộp, và ảnh / PDF bài giấy người lớn nộp thay (tính vào tuần chọn lúc nộp). Bài ghi trong buổi, bài nạp và bài link người lớn nộp thay không tính.",
   saving: "Đang lưu…",
   saved: "Đã lưu.",
+  savedFrom: (from: string) => `Đã lưu. Mục tiêu mới bắt đầu thứ Hai ${from}.`,
   errors: {
     tutor_only: `Chỉ ${tutorHonorific} của con đồng ý được mục tiêu tuần.`,
     already_answered: "Đề xuất này đã được trả lời hoặc con đã rút lại. Tải lại trang để xem.",
@@ -3309,5 +3312,21 @@ export const goalDeskCopy = {
     bad_ref: "Đề xuất này không còn nữa. Tải lại trang.",
     goal_unavailable: "Mục tiêu tuần chưa mở (cần áp migration 0035).",
     generic: "Chưa lưu được. Thử lại nhé.",
+  } as Record<string, string>,
+} as const;
+
+/** W4d: "Tuần làm bài" when a tutor / parent sends paper work on the child's behalf (only Monday-Tuesday offer "Tuần trước"). */
+export const workWeekCopy = {
+  label: "Tuần làm bài",
+  this: "Tuần này",
+  last: "Tuần trước",
+  help: "Con làm bài vào tuần nào? Thứ Hai và thứ Ba bạn chọn được “Tuần trước” nếu con làm bài hôm Chủ nhật hay những ngày trước. Bài chỉ tính vào một tuần, theo mục tiêu tuần của con.",
+  errors: {
+    work_week_closed: "Chỉ chọn được “Tuần trước” vào thứ Hai và thứ Ba. Bạn chọn “Tuần này” nhé.",
+    work_week_adults_only: "Chỉ người lớn chọn được tuần làm bài.",
+    work_week_not_counted: "Bài link người lớn nộp thay không tính vào mục tiêu tuần, nên không chọn tuần được.",
+    bad_work_week: "Tuần làm bài không đúng. Bạn tải lại trang nhé.",
+    work_week_unavailable: "Chọn “Tuần trước” chưa dùng được (cần cập nhật cơ sở dữ liệu). Bạn chọn “Tuần này” nhé.",
+    client_id_reused: "Bài này đã gửi với lựa chọn khác. Bạn tải lại trang nhé.",
   } as Record<string, string>,
 } as const;

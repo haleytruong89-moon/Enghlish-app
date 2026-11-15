@@ -39,11 +39,11 @@ describe("*_weekly_goals.sql (found by suffix)", () => {
       expect(code, f).toContain(`revoke execute on function english.${f} from public, anon, service_role;`);
       expect(code, f).toContain(`grant execute on function english.${f} to authenticated;`);
     }
-    for (const f of ["eng_decide_goal(uuid, text, int, uuid, text, uuid)", "eng_week_facts(uuid)"]) {
+    for (const f of ["eng_decide_goal(uuid, text, int, uuid, text, uuid)", "eng_week_facts(uuid)", "eng_submit_practice_v3(uuid, uuid, text, text, boolean, text, jsonb, text)"]) {
       expect(code, f).toContain(`revoke execute on function english.${f} from public, anon, authenticated;`);
       expect(code, f).toContain(`grant execute on function english.${f} to service_role;`);
     }
-    for (const f of ["eng_week_start(timestamptz)", "eng_week_work(uuid)", "eng_week_facts_of(uuid)"]) {
+    for (const f of ["eng_week_start(timestamptz)", "eng_week_work(uuid)", "eng_week_facts_of(uuid)", "eng_goal_range(text)", "eng_work_week_choice(timestamptz, text)"]) {
       expect(code, f).toContain(`revoke execute on function english.${f} from public, anon, authenticated, service_role;`);
     }
   });
@@ -54,9 +54,19 @@ describe("*_weekly_goals.sql (found by suffix)", () => {
     expect(code).toContain("english.eng_is_staff_of(learner_id)");
     expect(code).toContain("create unique index if not exists weekly_goals_one_answer on english.weekly_goals(responds_to)");
   });
+  it("the work-week side table is append-only + RLS, does not touch the applied submissions table, and the choice is validated in SQL", () => {
+    expect(code).toContain("create table if not exists english.submission_work_weeks");
+    expect(code).toContain("foreach t in array array['weekly_goals', 'submission_work_weeks']");
+    expect(code).not.toMatch(/alter table english\.submissions/i);
+    const body = fnBody(code, "eng_submit_practice_v3");
+    expect(body).toContain("eng_submit_practice_v2(");
+    expect(body).toContain("work_week_adults_only");
+    expect(body).toContain("work_week_not_counted");
+    expect(fnBody(code, "eng_work_week_choice")).toContain("work_week_closed");
+  });
   it("the start of a decision is set by the function (no parameter for it) and is next Monday in Vietnam", () => {
     const body = fnBody(code, "eng_decide_goal");
-    expect(code).toContain("create or replace function english.eng_decide_goal(p_goal uuid, p_action text, p_pieces int, p_by uuid, p_client_id text, p_learner uuid default null)");
+    expect(code).toContain("create or replace function english.eng_decide_goal(p_goal uuid, p_action text, p_pieces int, p_by uuid, p_client_id text, p_learner uuid)");
     expect(body).toContain("v_from := english.eng_week_start(pg_catalog.now()) + 7;");
     expect(code).toContain("date_trunc('week', p_at at time zone 'Asia/Ho_Chi_Minh')");
   });
@@ -77,8 +87,11 @@ describe("*_weekly_goals.sql (found by suffix)", () => {
     const old = deletes(fnBody(read("0034_result_view_retry.sql"), "eng_purge_learner"));
     const now = deletes(fnBody(code, "eng_purge_learner"));
     for (const t of old) expect(now, t).toContain(t);
-    expect(now.length).toBe(old.length + 1);
+    expect(now.length).toBe(old.length + 2);
     expect(now).toContain("english.weekly_goals");
+    expect(now).toContain("english.submission_work_weeks");
+    // the work-week side row points at a submission: it goes BEFORE submissions
+    expect(now.indexOf("english.submission_work_weeks")).toBeLessThan(now.indexOf("english.submissions"));
     const keys = (b: string) => [...b.matchAll(/'(\w+)', \(select/g)].map((x) => x[1]);
     for (const k of keys(fnBody(read("0034_result_view_retry.sql"), "eng_purge_preview"))) expect(keys(fnBody(code, "eng_purge_preview")), k).toContain(k);
     expect(fnBody(code, "eng_purge_preview")).toContain("'weekly_goals'");
@@ -88,6 +101,9 @@ describe("*_weekly_goals.sql (found by suffix)", () => {
     let now = squash(fnBody(code, "eng_purge_learner"));
     for (const added of [
       "n_weekly_goals int := 0;",
+      "n_submission_work_weeks int := 0;",
+      "delete from english.submission_work_weeks sww where sww.learner_id = p_learner_id; get diagnostics n_submission_work_weeks = row_count;",
+      ", 'submission_work_weeks', n_submission_work_weeks",
       "delete from english.weekly_goals wg where wg.learner_id = p_learner_id; get diagnostics n_weekly_goals = row_count;",
       ") || pg_catalog.jsonb_build_object( 'weekly_goals', n_weekly_goals",
     ]) {
@@ -100,7 +116,7 @@ describe("*_weekly_goals.sql (found by suffix)", () => {
     const before = squash(fnBody(read("0034_result_view_retry.sql"), "eng_purge_preview"));
     const now = squash(fnBody(code, "eng_purge_preview"));
     const oldTail = squash("'work_test_marks', (select pg_catalog.count(*) from english.work_test_marks x where x.learner_id = p_learner)));");
-    const newTail = squash("'work_test_marks', (select pg_catalog.count(*) from english.work_test_marks x where x.learner_id = p_learner)) || pg_catalog.jsonb_build_object('weekly_goals', (select pg_catalog.count(*) from english.weekly_goals x where x.learner_id = p_learner)));");
+    const newTail = squash("'work_test_marks', (select pg_catalog.count(*) from english.work_test_marks x where x.learner_id = p_learner)) || pg_catalog.jsonb_build_object('weekly_goals', (select pg_catalog.count(*) from english.weekly_goals x where x.learner_id = p_learner), 'submission_work_weeks', (select pg_catalog.count(*) from english.submission_work_weeks x where x.learner_id = p_learner)));");
     expect(before).toContain(oldTail);
     expect(now).toBe(before.replace(oldTail, newTail));
   });

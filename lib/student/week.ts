@@ -66,3 +66,10 @@ export function ddmm(d: IsoDate): string {
 export function weekRangeLabel(week: IsoDate): string {
   return `${ddmm(week)} – ${ddmm(weekEnd(week))}`;
 }
+
+/** True on Monday and Tuesday (Vietnam time): the two days an adult may say that a child's paper work was done LAST week. The server decides; this only offers the choice. */
+export function lastWeekChoiceOpen(at: Date | number | string): boolean {
+  const ms = at instanceof Date ? at.getTime() : typeof at === "number" ? at : Date.parse(at);
+  if (!Number.isFinite(ms)) throw new RangeError("lastWeekChoiceOpen: not a time");
+  return (new Date(ms + VN_OFFSET_MS).getUTCDay() + 6) % 7 <= 1;
+}

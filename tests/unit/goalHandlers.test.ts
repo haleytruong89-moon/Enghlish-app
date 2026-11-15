@@ -117,3 +117,24 @@ describe("goalError", () => {
     expect(() => goalError(new ReviewDbError("XX000", "internal"))).toThrow();
   });
 });
+
+describe("W4d · the work-week choice of an adult upload (schema)", () => {
+  it("the staff body may say 'last' or 'this'; anything else, and the child's body, are refused", async () => {
+    const { staffSubmitBodySchema, studentSubmitBodySchema } = await import("@/lib/practice/schemas");
+    const core = { client_id: "abcdefgh1", attempt: "first", used_hint: null, files: [] };
+    expect(staffSubmitBodySchema.safeParse({ ...core, work_week: "last" }).success).toBe(true);
+    expect(staffSubmitBodySchema.safeParse({ ...core, work_week: "this" }).success).toBe(true);
+    expect(staffSubmitBodySchema.safeParse(core).success).toBe(true);
+    expect(staffSubmitBodySchema.safeParse({ ...core, work_week: "next" }).success).toBe(false);
+    expect(staffSubmitBodySchema.safeParse({ ...core, work_week: "2026-11-09" }).success).toBe(false);
+    expect(studentSubmitBodySchema.safeParse({ ...core, assignment_id: "c0000000-0000-4000-8000-000000000002", used_hint: false, work_week: "last" }).success).toBe(false);
+  });
+});
+
+describe("goalError: an untagged 23505 (the unique index on responds_to)", () => {
+  it("is the clear 'already_answered' 409, not a generic server error", () => {
+    const r = goalError(new ReviewDbError("23505", 'duplicate key value violates unique constraint "weekly_goals_one_answer"'));
+    expect(r.status).toBe(409);
+    expect((r.body as { error: string }).error).toBe("already_answered");
+  });
+});

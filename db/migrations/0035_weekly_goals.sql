@@ -9,7 +9,9 @@
 --   4. Đọc: eng_my_week() (con) và eng_week_facts(p_learner) (service_role, người lớn) cùng hình: khoảng gợi ý, sổ mục tiêu, DỮ KIỆN việc làm
 --      (mỗi việc đã nộp trong tuần nào — chỉ bài con tự nộp và ảnh bài giấy người lớn nộp thay; KHÔNG tính bài ghi trong buổi, bài nạp, phút, lượt mở)
 --      + dữ kiện thành tích. Luật "đạt tuần", chuỗi và thành tích CHỈ nằm ở TypeScript (lib/student/*).
---   5. eng_purge_learner / eng_purge_preview: chép NGUYÊN thân 0034 + bảng weekly_goals.
+--   5. eng_purge_learner / eng_purge_preview: chép NGUYÊN thân 0034 + bảng weekly_goals + submission_work_weeks.
+--   6. "Tuần làm bài" (phụ huynh duyệt 15/11): khi người lớn nộp thay ảnh bài giấy / PDF vào thứ Hai–thứ Ba, được chọn "Tuần trước"; lưu ở bảng phụ
+--      chỉ thêm submission_work_weeks (khóa theo bài nộp; KHÔNG sửa submissions của 0016) qua eng_submit_practice_v3; eng_week_work dùng tuần này thay cho giờ nộp.
 -- Không ghi phút làm bài, không bảng work_minutes, không mục tiêu phút (Q5 = i). Idempotent; chỉ thêm. Không đụng schema public. Cần 0031 + 0034 đã áp.
 
 -- 1. Sổ mục tiêu tuần ------------------------------------------------------------------------------------------------------------
@@ -33,12 +35,22 @@ create table if not exists english.weekly_goals (
 create unique index if not exists weekly_goals_one_answer on english.weekly_goals(responds_to) where responds_to is not null;
 create index if not exists weekly_goals_learner_idx on english.weekly_goals(learner_id, created_at desc);
 
+-- 1b. "Tuần làm bài" của bài người lớn nộp thay (chỉ thêm; bảng phụ khóa theo bài nộp, không sửa submissions): chỉ có dòng khi chọn "Tuần trước".
+create table if not exists english.submission_work_weeks (
+  submission_id uuid primary key references english.submissions(id),
+  learner_id uuid not null references english.learners(id),
+  work_week date not null check (extract(isodow from work_week) = 1),   -- the Monday of the week the work was done
+  by_member uuid not null,
+  created_at timestamptz not null default clock_timestamp()
+);
+create index if not exists submission_work_weeks_learner_idx on english.submission_work_weeks(learner_id);
+
 -- 2. Chỉ thêm (đầu 0004) + RLS: người lớn của em đọc; học sinh không SELECT bảng nào (chỉ qua eng_my_*); không ai ghi trực tiếp ----------
 do $$
 declare
   t text;
 begin
-  foreach t in array array['weekly_goals'] loop
+  foreach t in array array['weekly_goals', 'submission_work_weeks'] loop
     execute pg_catalog.format('drop trigger if exists %I on english.%I', t || '_forbid_mutation', t);
     execute pg_catalog.format('create trigger %I before update or delete on english.%I for each row execute function english.eng_forbid_mutation(%L)', t || '_forbid_mutation', t, 'learner_id');
     execute pg_catalog.format('drop trigger if exists %I on english.%I', t || '_forbid_truncate', t);
@@ -64,6 +76,25 @@ create or replace function english.eng_week_start(p_at timestamptz) returns date
 language sql stable set search_path = ''
 as $$ select pg_catalog.date_trunc('week', p_at at time zone 'Asia/Ho_Chi_Minh')::date $$;
 revoke execute on function english.eng_week_start(timestamptz) from public, anon, authenticated, service_role;
+
+-- 4a. Khoảng gợi ý của track, luôn là {min, max} hợp lệ (1..14, min <= max): giá trị thiếu / sai thì dùng mặc định, không bao giờ lỗi 500.
+create or replace function english.eng_goal_range(p_track text) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v jsonb := english.eng_track_setting(p_track, 'weekly_goal_range');
+  v_lo int := 1;
+  v_hi int := 14;
+begin
+  if pg_catalog.jsonb_typeof(v) = 'object' then
+    if (v ->> 'min') ~ '^[0-9]{1,2}$' then v_lo := least(14, greatest(1, (v ->> 'min')::int)); end if;
+    if (v ->> 'max') ~ '^[0-9]{1,2}$' then v_hi := least(14, greatest(1, (v ->> 'max')::int)); end if;
+  end if;
+  if v_hi < v_lo then v_hi := v_lo; end if;
+  return pg_catalog.jsonb_build_object('min', v_lo, 'max', v_hi);
+end
+$$;
+revoke execute on function english.eng_goal_range(text) from public, anon, authenticated, service_role;
 
 -- 5a. CON đề xuất một mục tiêu (số bài mỗi tuần, trong khoảng gợi ý của track). Mỗi lúc tối đa một đề xuất đang chờ.
 create or replace function english.eng_my_propose_goal(p_pieces int, p_client_id text) returns jsonb
@@ -98,9 +129,9 @@ begin
     return pg_catalog.jsonb_build_object('id', v_old.id, 'replayed', true);
   end if;
 
-  v_range := english.eng_track_setting(v_track, 'weekly_goal_range');
-  v_min := coalesce((v_range ->> 'min')::int, 1);
-  v_max := coalesce((v_range ->> 'max')::int, 14);
+  v_range := english.eng_goal_range(v_track);
+  v_min := (v_range ->> 'min')::int;
+  v_max := (v_range ->> 'max')::int;
   if p_pieces < v_min or p_pieces > v_max then
     raise exception 'eng_my_propose_goal: the number of pieces is outside the suggested range (out_of_range)' using errcode = '22023';
   end if;
@@ -163,7 +194,7 @@ grant execute on function english.eng_my_withdraw_goal(uuid, text) to authentica
 
 -- 5c. THẦY/CÔ của em đồng ý (giữ số) hoặc điều chỉnh (số khác, 1–14). Quyền của người thao tác TRƯỚC mọi kiểm khác; phụ huynh → 42501 (tutor_only).
 --     applies_from = thứ Hai của tuần sau (giờ Việt Nam) — do hàm đặt, client không gửi được.
-create or replace function english.eng_decide_goal(p_goal uuid, p_action text, p_pieces int, p_by uuid, p_client_id text, p_learner uuid default null) returns jsonb
+create or replace function english.eng_decide_goal(p_goal uuid, p_action text, p_pieces int, p_by uuid, p_client_id text, p_learner uuid) returns jsonb
 language plpgsql volatile security definer set search_path = ''
 as $$
 declare
@@ -175,16 +206,16 @@ declare
   v_from date;
   v_id uuid;
 begin
-  if p_goal is null or p_action is null or p_by is null or p_client_id is null then
-    raise exception 'eng_decide_goal: goal, action, actor and client id are required' using errcode = '22004';
+  if p_goal is null or p_action is null or p_by is null or p_client_id is null or p_learner is null then
+    raise exception 'eng_decide_goal: goal, action, actor, learner and client id are required' using errcode = '22004';
   end if;
   select * into v_m from english.members m where m.id = p_by;
   if not found or v_m.role <> 'tutor' then
     raise exception 'eng_decide_goal: only the tutor of this learner decides a weekly goal (tutor_only)' using errcode = '42501';
   end if;
   select * into v_g from english.weekly_goals g where g.id = p_goal;
-  -- p_learner = the child of the page the route passed the access gate for: a goal of ANOTHER child is refused like an unknown one.
-  if not found or not english.eng_actor_may_manage(p_by, v_g.learner_id) or (p_learner is not null and p_learner <> v_g.learner_id) then
+  -- p_learner (required) = the child of the page the route passed the access gate for: a goal of ANOTHER child is refused like an unknown one.
+  if not found or not english.eng_actor_may_manage(p_by, v_g.learner_id) or p_learner <> v_g.learner_id then
     raise exception 'eng_decide_goal: only the tutor of this learner decides a weekly goal (tutor_only)' using errcode = '42501';
   end if;
   if pg_catalog.length(pg_catalog.btrim(p_client_id)) not between 8 and 100 then
@@ -239,22 +270,98 @@ grant execute on function english.eng_decide_goal(uuid, text, int, uuid, text, u
 -- Tính: lần nộp của CON trên app (in_app / pasted, bài chủ đề / Studio, kể cả bài sửa) · bài nộp link / PDF của con · ảnh bài giấy / PDF người lớn NỘP THAY (Q6).
 -- KHÔNG tính: bài ghi trong buổi (tutor_live), bài nạp (manual_import / imported), "thử lại câu này", bản nháp, mở app / mở link, phút làm bài.
 -- Việc = một bước bài trên app ('a:<activity>') hoặc một bài giao link / PDF ('s:<assignment>').
-create or replace function english.eng_week_work(p_learner uuid) returns table (k text, at timestamptz)
+create or replace function english.eng_week_work(p_learner uuid) returns table (k text, at timestamptz, own boolean)
 language sql stable security definer set search_path = ''
 as $$
-  select 'a:' || t.activity_instance_id::text, t.submitted_at
+  select 'a:' || t.activity_instance_id::text, t.submitted_at, true
   from english.attempts t
   join english.activity_instances a on a.id = t.activity_instance_id
   join english.inquiry_instances i on i.id = a.inquiry_instance_id
   join english.inquiry_templates tp on tp.id = i.template_id and tp.version = i.template_version and tp.kind in ('topic', 'studio')
   where t.learner_id = p_learner and t.provenance in ('in_app', 'pasted')
   union all
-  select 's:' || s.assignment_id::text, s.created_at
-  from english.submissions s
-  join english.assignments g on g.id = s.assignment_id
-  where s.learner_id = p_learner and (s.submitted_by_role = 'student' or g.kind <> 'link')
+  -- MỘT dòng cho mỗi bài giao link / PDF, dù nộp nhiều lần (chuỗi nộp lại): bài chỉ tính vào MỘT tuần = lần SỚM NHẤT trong chuỗi, trong đó
+  -- bài người lớn nộp thay có "Tuần làm bài" ở submission_work_weeks thì tính vào Chủ nhật 12:00 (giờ Việt Nam) của tuần đó, không thì giờ nộp.
+  -- own = có ít nhất một lần nộp do chính con.
+  select 's:' || x.assignment_id::text, pg_catalog.min(x.eff), pg_catalog.bool_or(x.own)
+  from (
+    select s.assignment_id,
+           coalesce(((ww.work_week + 6)::timestamp + interval '12 hours') at time zone 'Asia/Ho_Chi_Minh', s.created_at) as eff,
+           s.submitted_by_role = 'student' as own
+    from english.submissions s
+    join english.assignments g on g.id = s.assignment_id
+    left join english.submission_work_weeks ww on ww.submission_id = s.id
+    where s.learner_id = p_learner and (s.submitted_by_role = 'student' or g.kind <> 'link')
+  ) x
+  group by x.assignment_id
 $$;
 revoke execute on function english.eng_week_work(uuid) from public, anon, authenticated, service_role;
+
+-- 6a. Tuần làm bài được chọn: 'this' → null (tính theo giờ nộp); 'last' → thứ Hai của tuần trước, CHỈ khi lúc nộp là thứ Hai hoặc thứ Ba (giờ Việt Nam).
+--     Nhận giờ làm tham số để kiểm ranh giới bằng test (không ai gọi trực tiếp).
+create or replace function english.eng_work_week_choice(p_at timestamptz, p_choice text) returns date
+language plpgsql stable security definer set search_path = ''
+as $$
+begin
+  if p_choice = 'this' then return null; end if;
+  if p_choice is distinct from 'last' then
+    raise exception 'eng_work_week_choice: the work week is this or last (bad_work_week)' using errcode = '22023';
+  end if;
+  if extract(isodow from p_at at time zone 'Asia/Ho_Chi_Minh') not in (1, 2) then
+    raise exception 'eng_work_week_choice: last week can only be chosen on Monday or Tuesday (work_week_closed)' using errcode = '22023';
+  end if;
+  return english.eng_week_start(p_at) - 7;
+end
+$$;
+revoke execute on function english.eng_work_week_choice(timestamptz, text) from public, anon, authenticated, service_role;
+
+-- 6b. Người lớn nộp thay + chọn "Tuần làm bài" (service_role, sau cổng của route). Bọc eng_submit_practice_v2 (cùng một giao dịch: lỗi thì lùi cả bài nộp).
+--     "last" chỉ cho: người lớn (thầy/cô / phụ huynh), bài giao PDF, và chỉ vào thứ Hai–thứ Ba (giờ Việt Nam) → tuần trước = thứ Hai của tuần trước đó.
+--     Gửi lại cùng client_id: phải cùng lựa chọn (khác → 23505 client_id_reused); không kiểm lại ngày khi gửi lại.
+create or replace function english.eng_submit_practice_v3(
+  p_assignment uuid, p_by uuid, p_client_id text, p_attempt text, p_used_hint boolean, p_link_url text, p_files jsonb, p_work_week text default 'this'
+) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_res jsonb;
+  v_sid uuid;
+  v_member english.members%rowtype;
+  v_a english.assignments%rowtype;
+  v_ww date;
+  v_now timestamptz := pg_catalog.now();
+  v_week date;
+begin
+  if p_work_week is null or p_work_week not in ('this', 'last') then
+    raise exception 'eng_submit_practice_v3: the work week is this or last (bad_work_week)' using errcode = '22023';
+  end if;
+  v_res := english.eng_submit_practice_v2(p_assignment, p_by, p_client_id, p_attempt, p_used_hint, p_link_url, p_files);   -- checks the actor first
+  v_sid := (v_res ->> 'id')::uuid;
+  select ww.work_week into v_ww from english.submission_work_weeks ww where ww.submission_id = v_sid;
+  if (v_res ->> 'replayed')::boolean then
+    if (v_ww is not null) <> (p_work_week = 'last') then
+      raise exception 'eng_submit_practice_v3: client_id was already used for a different submission (client_id_reused)' using errcode = '23505';
+    end if;
+    return v_res || pg_catalog.jsonb_build_object('work_week', v_ww);
+  end if;
+  if p_work_week = 'last' then
+    select * into v_member from english.members m where m.id = p_by;
+    if v_member.role not in ('tutor', 'parent') then
+      raise exception 'eng_submit_practice_v3: only an adult chooses the work week (work_week_adults_only)' using errcode = '22023';
+    end if;
+    select * into v_a from english.assignments a where a.id = p_assignment;
+    if v_a.kind = 'link' then
+      raise exception 'eng_submit_practice_v3: a link sent by an adult does not count toward the weekly goal (work_week_not_counted)' using errcode = '22023';
+    end if;
+    v_week := english.eng_work_week_choice(v_now, 'last');
+    insert into english.submission_work_weeks(submission_id, learner_id, work_week, by_member) values (v_sid, v_a.learner_id, v_week, p_by);
+    v_ww := v_week;
+  end if;
+  return v_res || pg_catalog.jsonb_build_object('work_week', v_ww);
+end
+$$;
+revoke execute on function english.eng_submit_practice_v3(uuid, uuid, text, text, boolean, text, jsonb, text) from public, anon, authenticated;
+grant execute on function english.eng_submit_practice_v3(uuid, uuid, text, text, boolean, text, jsonb, text) to service_role;
 
 -- 7. Dữ kiện tuần của một em (nội bộ) → eng_my_week (con) và eng_week_facts (người lớn) cùng hình -------------------------------------------------
 -- works: mỗi (việc, tuần) MỘT lần, tuần = thứ Hai giờ Việt Nam; từ min(tuần của mục tiêu đầu, 4 tuần trước). Luật đạt tuần / chuỗi / thành tích ở TypeScript.
@@ -274,7 +381,7 @@ begin
   v_main := english.eng_roadmap_main_id(p_learner);
   return pg_catalog.jsonb_build_object(
     'now', v_now,
-    'range', coalesce(english.eng_track_setting(v_track, 'weekly_goal_range'), '{"min": 1, "max": 14}'::jsonb),
+    'range', english.eng_goal_range(v_track),
     'goals', coalesce((
       select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
         'id', g.id, 'kind', g.kind, 'pieces', g.pieces, 'applies_from', g.applies_from, 'responds_to', g.responds_to, 'by_role', g.by_role, 'created_at', g.created_at)
@@ -284,7 +391,11 @@ begin
       select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('k', x.k, 'w', x.wk) order by x.wk, x.k)
       from (select distinct w.k, english.eng_week_start(w.at) as wk from english.eng_week_work(p_learner) w) x
       where x.wk >= v_from), '[]'::jsonb),
-    'first_work_at', (select pg_catalog.min(w.at) from english.eng_week_work(p_learner) w),
+    'first_work_at', (
+      select pg_catalog.min(z.t) from (
+        select w.at as t from english.eng_week_work(p_learner) w where w.k like 'a:%'
+        union all
+        select sb.created_at from english.submissions sb where sb.learner_id = p_learner and sb.submitted_by_role = 'student') z),   -- the child's OWN work only (an adult upload never opens "Bài đầu tiên")
     'writes', coalesce((
       select pg_catalog.jsonb_agg(f.at order by f.at)
       from (
@@ -349,7 +460,7 @@ $$;
 revoke execute on function english.eng_week_facts(uuid) from public, anon, authenticated;
 grant execute on function english.eng_week_facts(uuid) to service_role;
 
--- 8. Xóa dữ liệu một em: = bản 0034 + weekly_goals (xóa trước learners).
+-- 8. Xóa dữ liệu một em: = bản 0034 + weekly_goals + submission_work_weeks (submission_work_weeks xóa trước submissions).
 create or replace function english.eng_purge_learner(
   p_learner_id uuid,
   p_actor_user_id uuid default null
@@ -401,6 +512,7 @@ declare
   n_item_reveals int := 0;
   n_work_test_marks int := 0;
   n_weekly_goals int := 0;
+  n_submission_work_weeks int := 0;
   n_files int := 0;
   n_upload_tickets int := 0;
   n_reading_reports int := 0;
@@ -592,6 +704,8 @@ begin
   delete from english.submission_feedback sfb where sfb.learner_id = p_learner_id;
   get diagnostics n_submission_feedback = row_count;
 
+  delete from english.submission_work_weeks sww where sww.learner_id = p_learner_id;   -- 0035: trỏ tới submissions → trước submissions
+  get diagnostics n_submission_work_weeks = row_count;
   delete from english.submissions sb where sb.learner_id = p_learner_id;
   get diagnostics n_submissions = row_count;
 
@@ -779,7 +893,8 @@ begin
       'item_reveals', n_item_reveals,
       'work_test_marks', n_work_test_marks
     ) || pg_catalog.jsonb_build_object(
-      'weekly_goals', n_weekly_goals
+      'weekly_goals', n_weekly_goals,
+      'submission_work_weeks', n_submission_work_weeks
     ),
     'note', 'Backups expire after 30 days.'
   );
@@ -794,7 +909,7 @@ $$;
 revoke execute on function english.eng_purge_learner(uuid, uuid) from public, anon, authenticated;
 grant execute on function english.eng_purge_learner(uuid, uuid) to service_role;
 
--- Đếm trước khi xóa = bản 0034 + weekly_goals (cùng khóa với biên nhận).
+-- Đếm trước khi xóa = bản 0034 + weekly_goals + submission_work_weeks (cùng khóa với biên nhận).
 create or replace function english.eng_purge_preview(p_learner uuid) returns jsonb
 language plpgsql stable security definer set search_path = ''
 as $$
@@ -904,7 +1019,8 @@ begin
       'work_test_marks', (select pg_catalog.count(*) from english.work_test_marks x where x.learner_id = p_learner))
     -- 0035
     || pg_catalog.jsonb_build_object(
-      'weekly_goals', (select pg_catalog.count(*) from english.weekly_goals x where x.learner_id = p_learner)));
+      'weekly_goals', (select pg_catalog.count(*) from english.weekly_goals x where x.learner_id = p_learner),
+      'submission_work_weeks', (select pg_catalog.count(*) from english.submission_work_weeks x where x.learner_id = p_learner)));
 end
 $$;
 

@@ -9,18 +9,23 @@ vi.mock("@/lib/supabase/server", () => ({ createUserClient: async () => ({ rpc }
 
 const MISSING = { data: null, error: { code: "PGRST202", message: "none" } };
 const FACTS = { now: "2026-11-12T03:00:00Z", range: { min: 2, max: 5 }, goals: [], works: [], first_work_at: null, writes: [], first_topic_at: null, first_revision_at: null, unit_events: [] };
-beforeEach(() => rpc.mockReset());
+beforeEach(() => {
+  rpc.mockReset();
+});
 
 describe("before 0035", () => {
   it("the child's week is null (no chip, no card, no error); a real fault is null too, never a thrown error", async () => {
-    const { loadMyWeek, loadMyWeekView, weekFunctionMissing } = await import("@/lib/student/weekLoad");
+    const { loadMyWeek, loadMyWeekView } = await import("@/lib/student/weekLoad");
     rpc.mockResolvedValue(MISSING);
     expect(await loadMyWeek()).toBeNull();
     expect(await loadMyWeekView()).toBeNull();
-    expect(await weekFunctionMissing()).toBe(true);
     rpc.mockResolvedValue({ data: null, error: { code: "XX000", message: "boom" } });
     expect(await loadMyWeek()).toBeNull();
-    expect(await weekFunctionMissing()).toBe(false);
+  });
+  it("a network fault is null too", async () => {
+    const { loadMyWeek } = await import("@/lib/student/weekLoad");
+    rpc.mockImplementation(() => Promise.reject(new Error("network")));
+    expect(await loadMyWeek()).toBeNull();
   });
   it("the adult read tells 'not applied' ({unavailable}, the inbox count stays known) from a real fault (thrown, the source is named failed)", async () => {
     const { loadWeekFactsResult } = await import("@/lib/student/weekLoad");

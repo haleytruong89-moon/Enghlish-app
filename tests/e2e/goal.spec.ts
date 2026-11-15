@@ -37,7 +37,7 @@ test.describe("W4d weekly goal", () => {
     await expect(box.getByTestId("goal-box-upcoming")).toContainText(goalDeskCopy.upcoming(6, "").split("6")[0]!.trim());
 
     await cp.goto("/goal");
-    await expect(cp.getByTestId("goal-agreed")).toHaveText(weeklyGoalCopy.agreed(6));
+    await expect(cp.getByTestId("goal-agreed")).toHaveText(weeklyGoalCopy.agreed(6, "adjust"));
     for (const path of ["/goal", "/", "/journey"]) {
       await cp.goto(path);
       const text = await studentVisibleText(cp);

@@ -45,6 +45,7 @@ export default async function GoalPage() {
         initial={Math.min(Math.max(initial, v.range.min), v.range.max)}
         pending={v.pending}
         upcomingPieces={v.upcoming ? v.upcoming.pieces : null}
+        upcomingKind={v.upcoming?.kind}
         suggestion={v.suggestion ? c.suggestRange(v.suggestion.low, v.suggestion.high) : null}
       />
       <p className="text-sm text-muted">{journeyCopy.footnote}</p>
