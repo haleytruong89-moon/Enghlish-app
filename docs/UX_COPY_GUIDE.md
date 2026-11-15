@@ -272,14 +272,14 @@ Quy tắc: xưng "bạn" với con; "thầy/cô" qua `tutorHonorific`, không vi
 
 ## W4b (15/11/2026) — Bàn học của con: Hôm nay · Đã xem · Đã làm
 
-Khối `studentDeskCopy` trong `lib/copy/vi.ts`. Xưng "bạn"; người dạy luôn là `tutorHonorific` (**tên mục là "Đã xem", không "Cô đã xem"**; không viết cứng "cô"). Số con được thấy chỉ là việc của chính con (số việc, câu đã trả lời, bài đã nộp), bọc trong `data-count="work"`; không số câu đúng / sai, %, điểm. Chữ "điểm" chỉ xuất hiện để nói là không có ("Không có điểm số ở đây", "Không có điểm — chỉ có …").
+Khối `studentDeskCopy` trong `lib/copy/vi.ts`. Xưng "bạn"; người dạy luôn là `tutorHonorific` (**tên mục là "Đã xem", không "Cô đã xem"**; không viết cứng "cô"). Số con được thấy chỉ là việc của chính con (số việc, câu đã trả lời, bài đã nộp), bọc trong `data-count="work"`; không số câu đúng / sai, %, điểm. Chữ "điểm" **không xuất hiện** trên màn của con (kể cả để nói là không có).
 
 | Chỗ | Chữ |
 |---|---|
 | Tab | Hôm nay · Đã xem · Đã làm · Hành trình; dấu "Mới" (kèm số, `aria-label` "n lời nhắn mới") |
-| Hôm nay | "Chào {tên}!" · "Hôm nay còn n việc · khoảng m phút" · "Xong hết việc hôm nay rồi 🎉 Nghỉ ngơi, hoặc làm trước một việc sắp tới nếu bạn muốn." · "Làm tiếp" / "Việc tiếp theo" · "a/b câu" · "Việc cần làm" · "Hạn Thứ Sáu 20/11" · "Hỏi gia sư · Sắp có" + "Sắp có — gia sư sẽ gợi ý từng bước, không làm hộ. Chỉ có ở bài luyện tập, không có ở bài kiểm tra." · "{Thầy/cô} nhắn" · "Không có điểm số ở đây — {thầy/cô} xem bài và nhắn lại cho bạn." |
+| Hôm nay | "Chào {tên}!" · "Còn n việc · khoảng m phút" · "Xong hết việc rồi 🎉 Nghỉ ngơi nhé. {Thầy/cô} sẽ giao thêm bài sớm thôi." · nhóm "Làm cùng {thầy/cô}" + "Những việc này làm trên giấy hoặc trong buổi học, không làm trong app." · nhóm "Vừa gửi" + "Bạn đã gửi hôm nay. {Thầy/cô} chưa xem, nên bạn vẫn sửa lại được." · nhãn chế độ "Luyện tập (có gợi ý)" / "Bài tự làm" và "Ôn lại bài cũ" · "Làm tiếp" / "Việc tiếp theo" · "a/b câu" · "Việc cần làm" · "Hạn Thứ Sáu 20/11" · "Hỏi gia sư · Sắp có" + "Sắp có — gia sư sẽ gợi ý từng bước, không làm hộ. Chỉ có ở bài luyện tập, không có ở bài kiểm tra." · "{Thầy/cô} nhắn" · "{Thầy/cô} xem bài và nhắn lại cho bạn: điều bạn làm tốt và điều cần sửa." |
 | Loại việc | Bài trên app · Bài chủ đề · Đề giấy · Bài link · Sửa bài |
-| Đã xem | "{Thầy/cô} xem bài xong là lời nhắn hiện ngay ở đây. Không có điểm — chỉ có điều bạn làm tốt và điều cần sửa." · "{Thầy/cô} khen" · "Cần sửa" · "Chỗ này trong bài của bạn:" · "Sửa bài" · "Đã gửi bản sửa · chờ {thầy/cô} xem" · "Bài này không cần nộp lại — đọc lời {thầy/cô} là được." · "{Thầy/cô} đã xem bài này." · "Ôn lại mấy mục này" · "Xem các bài cũ hơn" |
+| Đã xem | "{Thầy/cô} xem bài xong là lời nhắn hiện ngay ở đây. điều bạn làm tốt và điều cần sửa." · "{Thầy/cô} khen" · "Cần sửa" · "Chỗ này trong bài của bạn:" · "Sửa bài" · "Đã gửi bản sửa · chờ {thầy/cô} xem" · "Bài này không cần nộp lại — đọc lời {thầy/cô} là được." · "{Thầy/cô} đã xem bài này." · "Ôn lại mấy mục này" · "Xem các bài cũ hơn" |
 | Đã làm | "Tất cả (n)" · "Chờ {thầy/cô} xem (n)" · "{Thầy/cô} đã xem" · "Nộp {ngày} · làm lần đầu / làm lại · có / không xem gợi ý" · "{Thầy/cô} ghi lại bài này" · "Xem lại" · "Bạn chưa nộp bài nào. Bài nộp xong sẽ hiện ở đây." |
 | Chưa áp 0032 | "Bàn học chưa mở được. {Thầy/cô} sẽ báo khi sẵn sàng." |
 
