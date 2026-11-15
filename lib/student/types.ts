@@ -18,6 +18,8 @@ export type Task = {
   timeMin: number | null;
   /** false = a step the app cannot do yet (with the tutor / on paper): it is listed, never opened. */
   doable: boolean;
+  /** A practice item (not a self-done check step): the only place the dimmed "Hỏi gia sư · Sắp có" slot may show. */
+  practice: boolean;
   offLabel: OffLabel | null;
   hasDraft: boolean;
   draftAt: string | null;

@@ -2,31 +2,10 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { SourceReader } from "@/components/student/SourceReader";
-import { StudentHome } from "@/components/student/StudentHome";
-import { activityLabels, tutorHonorific, weekdayNames, work } from "@/lib/copy/vi";
+import { ReviewByDomain } from "@/components/student/ReviewByDomain";
+import { tutorHonorific, weekdayNames, work } from "@/lib/copy/vi";
 import { baseRevisionOf, formatHm, nonEmptyAnswers, sourceTitle, todayLine, unsupportedLabel, wordsOf } from "@/lib/work/view";
-import type { HomeView, SourceView } from "@/lib/work/types";
-
-const home: HomeView = {
-  inquiries: [
-    {
-      instanceId: "i1",
-      titleVi: "Núi lửa",
-      bigQuestionEn: "Why do volcanoes erupt?",
-      bigQuestionVi: "Vì sao núi lửa phun?",
-      dueOn: "2026-10-20",
-      steps: [
-        { activityId: "a1", stepNo: 1, activityType: "ACT-SPEAK-LIVE", mode: "PRACTICE", purpose: [], timeMin: 10, date: "2026-10-14", attempts: 0 },
-        { activityId: "a2", stepNo: 2, activityType: "ACT-SOURCE-QA", mode: "PRACTICE", purpose: [], timeMin: 15, date: "2026-10-14", attempts: 1 },
-        { activityId: "a3", stepNo: 3, activityType: "ACT-SOURCE-QA", mode: "INDEPENDENT_CHECK", purpose: ["delayed_check"], timeMin: 20, date: "2026-10-14", attempts: 0 },
-        { activityId: "a4", stepNo: 4, activityType: "ACT-CANVAS-BASIC", mode: "PRACTICE", purpose: [], timeMin: 10, date: "2026-10-15", attempts: 0 },
-        { activityId: "a6", stepNo: 6, activityType: "ACT-WRITE", mode: "PRACTICE", purpose: [], timeMin: 20, date: "2026-10-16", attempts: 0 },
-      ],
-    },
-  ],
-};
-
-const render = (h: HomeView) => renderToStaticMarkup(createElement(StudentHome, { alias: "An (thử)", color: "#9A4A15", data: h }));
+import type { SourceView } from "@/lib/work/types";
 
 describe("student copy", () => {
   it("never talks about scores or right / wrong, and uses 'bạn'", () => {
@@ -85,51 +64,6 @@ describe("editor helpers", () => {
   });
 });
 
-describe("StudentHome", () => {
-  it("shows the next task first (earliest not-yet-submitted step the app can do) and the checklist with states", () => {
-    const html = render(home);
-    expect(html).toContain('data-testid="next-task"');
-    expect(html).toContain(work.nextTitle);
-    expect(html).toContain('href="/activities/a3"'); // step 2 is done, step 1 cannot be done in the app
-    expect(html).toContain(work.start);
-    // "Xong x/y bước" counts only the steps the app can do (a2, a3, a6); the other two are shown apart
-    expect(html).toContain(work.progress(1, 3));
-    expect(html).not.toContain(work.progress(1, 5));
-    expect(html).toContain(work.offApp(2));
-    expect(html).toContain("2 bước làm theo phiếu hoặc với thầy/cô");
-    expect(html).toMatch(/data-testid="step-2" data-state="done"/);
-    expect(html).toMatch(/data-testid="step-3" data-state="now"/);
-    expect(html).toMatch(/data-testid="step-6" data-state="later"/);
-    expect(html).toContain(activityLabels["ACT-SOURCE-QA"]);
-  });
-
-  it("steps that are not in the app have a neutral label and no link", () => {
-    const html = render(home);
-    expect(html).toContain(work.withTutor);
-    expect(html).toContain(work.noAppYet);
-    expect(html).not.toContain('href="/activities/a1"');
-    expect(html).not.toContain('href="/activities/a4"');
-  });
-
-  it("shows no score, no right/wrong, no technical code", () => {
-    const html = render(home).replace(/ (class|style)="[^"]*"/g, ""); // only what a child can read or inspect
-    expect(html).not.toMatch(/\d\s*\/\s*4\s*·/);
-    expect(html).not.toMatch(/ACT-|PRACTICE|INDEPENDENT_CHECK|baseline|checkpoint|delayed_check/);
-    expect(html).toContain("Ôn lại bài cũ"); // the delayed check, in the child's words
-  });
-
-  it("everything done → a friendly line, no streak or ranking", () => {
-    const done: HomeView = { inquiries: [{ ...home.inquiries[0]!, steps: [{ ...home.inquiries[0]!.steps[1]! }] }] };
-    const html = render(done);
-    expect(html).toContain(work.allDone);
-    expect(html).not.toContain('data-testid="next-task"');
-  });
-
-  it("nothing released yet → the empty line", () => {
-    expect(render({ inquiries: [] })).toContain("Hôm nay chưa có việc mới");
-  });
-});
-
 describe("SourceReader", () => {
   const sources: SourceView[] = [
     { id: "S1", title: "Volcanoes", author: "Jane", rightsNote: "Dùng trong lớp", modality: "text", url: null, text: "Para one.\n\nPara two with <b>tags</b>." },
@@ -165,13 +99,11 @@ describe("SourceReader", () => {
   });
 });
 
-describe("StudentHome · SM-2", () => {
+describe("ReviewByDomain (SM-2)", () => {
   it("shows 'Việc cần ôn' by domain when there is something to review, and nothing otherwise", () => {
-    const withReview = renderToStaticMarkup(createElement(StudentHome, {
-      alias: "An (thử)", color: "#9A4A15", data: { inquiries: [] }, review: [{ domainKey: "grammar", domainName: "Ngữ pháp", label: "Thì quá khứ đơn" }],
-    }));
+    const withReview = renderToStaticMarkup(createElement(ReviewByDomain, { items: [{ domainKey: "grammar", domainName: "Ngữ pháp", label: "Thì quá khứ đơn" }] }));
     expect(withReview).toContain('data-testid="review-by-domain"');
     expect(withReview).toContain("Thì quá khứ đơn");
-    expect(renderToStaticMarkup(createElement(StudentHome, { alias: "An (thử)", color: "#9A4A15", data: { inquiries: [] } }))).not.toContain('data-testid="review-by-domain"');
+    expect(renderToStaticMarkup(createElement(ReviewByDomain, { items: [] }))).not.toContain('data-testid="review-by-domain"');
   });
 });

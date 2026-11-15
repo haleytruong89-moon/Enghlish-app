@@ -9,8 +9,7 @@ import { RevisionForm } from "@/components/revision/RevisionForm";
 import { RevisionList } from "@/components/revision/RevisionList";
 import { RevisionReview } from "@/components/revision/RevisionReview";
 import { ScoringPanel } from "@/components/review/ScoringPanel";
-import { ActivityNote } from "@/components/student/FeedbackBox";
-import { StudentHome } from "@/components/student/StudentHome";
+import { ActivityNote } from "@/components/student/ActivityNote";
 import { feedbackCopy, reviewPage, revisionCopy, revisionReviewCopy, tutorHonorific, work } from "@/lib/copy/vi";
 import type { FeedbackPanelView, MyRevisionView, RevisionView } from "@/lib/revision/types";
 import { fixtureMap } from "./fixtures/skillMap";
@@ -126,50 +125,6 @@ describe("Sửa bài (the child)", () => {
     expect(html).toContain("lava flow");
     expect(html).not.toMatch(SCORE);
     expect(renderToStaticMarkup(createElement(ActivityNote, { note: null }))).toBe("");
-  });
-
-  it("home: 'Sửa bài' rows come first, above Việc tiếp theo; 'đã xem' and notes in the box; no score anywhere", () => {
-    const html = renderToStaticMarkup(createElement(StudentHome, {
-      alias: "An (thử)", color: "#9A4A15", data: { inquiries: [] }, review: null,
-      feedback: [
-        { feedbackId: "f1", activityId: "r1", titleVi: "Núi lửa", round: 1, itemsCount: 2, state: "todo", seenAt: null, closingNote: null, praise: null, notes: null },
-        { feedbackId: "f2", activityId: "r2", titleVi: "Vòng tuần hoàn nước", round: 1, itemsCount: 1, state: "seen", seenAt: "2026-10-22T03:00:00Z", closingNote: "Bài sửa rõ hơn nhiều!", praise: null, notes: null },
-        { feedbackId: "f3", activityId: "a3", titleVi: "Hành tinh", round: 1, itemsCount: 1, state: "note", seenAt: null, closingNote: null, praise: "Câu mở đoạn rõ.", notes: [{ n: 1, text: "Thêm ví dụ.", excerpt: null }] },
-      ],
-    }));
-    expect(html.indexOf('data-testid="revision-rows"')).toBeGreaterThan(-1);
-    expect(html).toContain(revisionCopy.rowTitle("Núi lửa"));
-    expect(html).toContain(revisionCopy.rowLine(2));
-    expect(html).toContain('href="/activities/r1"');
-    expect(html).toContain(revisionCopy.seenTitle);
-    expect(html).toContain("Bài sửa rõ hơn nhiều!");
-    expect(html).toContain("Câu mở đoạn rõ.");
-    expect(html).not.toMatch(SCORE);
-  });
-});
-
-describe("N6: 'Xong x/y bước' with a reused template REVISION step", () => {
-  const step = (stepNo: number, activityId: string, over: Record<string, unknown> = {}) => ({
-    activityId, stepNo, activityType: "ACT-REVISE", mode: "REVISION" as const, purpose: [], timeMin: null, date: "2026-10-22", attempts: 0, ...over,
-  });
-  const write = { activityId: "w", stepNo: 6, activityType: "ACT-WRITE", mode: "PRACTICE" as const, purpose: [], timeMin: 10, date: "2026-10-20", attempts: 1 };
-  const home = (steps: unknown[], feedback: unknown[]) =>
-    renderToStaticMarkup(createElement(StudentHome, {
-      alias: "An (thử)", color: "#9A4A15", review: null, feedback: feedback as never,
-      data: { inquiries: [{ instanceId: "i", titleVi: "Núi lửa", bigQuestionEn: null, bigQuestionVi: null, dueOn: "2026-10-30", steps }] } as never,
-    }));
-  const progress = (html: string) => (html.match(/data-testid="progress"[^>]*>([^<]*)</) ?? [])[1];
-
-  it("the template revision step is counted while open and stays counted - and done - after the revision is in, even when the box row is gone", () => {
-    const open = home([write, step(13, "t")], [{ feedbackId: "f", activityId: "t", titleVi: "Núi lửa", round: 1, itemsCount: 1, state: "todo", seenAt: null, closingNote: null, praise: null, notes: null }]);
-    expect(progress(open)).toBe(work.progress(1, 2));
-    const sent = home([write, step(13, "t", { attempts: 1 })], [{ feedbackId: "f", activityId: "t", titleVi: "Núi lửa", round: 1, itemsCount: 1, state: "submitted", seenAt: null, closingNote: null, praise: null, notes: null }]);
-    expect(progress(sent)).toBe(work.progress(2, 2));
-    // 14 days later the box row is gone; the step is still counted as done
-    const later = home([write, step(13, "t", { attempts: 1 })], []);
-    expect(progress(later)).toBe(work.progress(2, 2));
-    // a template revision step nobody has revised is still "on paper"
-    expect(progress(home([write, step(13, "t")], []))).toBe(work.progress(1, 1));
   });
 });
 

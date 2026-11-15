@@ -57,7 +57,7 @@ revoke execute on function english.eng_student_done(uuid) from public, anon, aut
 -- 2. Hôm nay -------------------------------------------------------------------------------------------------------------------------
 -- Một việc = bước bài trên app đã mở chưa có lần nộp nào (bài Studio = 'app', bài chủ đề = 'topic'; bước app chưa làm được vẫn là việc, có nhãn `off_label`,
 -- không mở bài) · bài link / PDF chưa rút, chưa có bài nộp, chưa được ghi kết quả · bài sửa S6 đang chờ em sửa. Bước chưa đến ngày không trả.
--- Số câu: items_filled / items_total = số câu ĐÃ TRẢ LỜI trong nháp / số câu của bước (không bao giờ số câu đúng). Không "quá hạn".
+-- practice = bài luyện (không phải bước kiểm tra tự làm): chỗ ô "Hỏi gia sư · Sắp có" mờ được hiện. Số câu: items_filled / items_total = số câu ĐÃ TRẢ LỜI trong nháp / số câu của bước (không bao giờ số câu đúng). Không "quá hạn".
 create or replace function english.eng_my_today() returns jsonb
 language sql stable security definer set search_path = ''
 as $$
@@ -103,6 +103,7 @@ as $$
         'opens_on', s.opens_on,
         'time_min', (s.step ->> 'time_min')::int,
         'doable', s.doable,
+        'practice', s.mode = 'PRACTICE',
         'off_label', case when s.doable then null else english.eng_step_status_label(s.activity_type, s.mode) end,
         'has_draft', s.doable and (s.n_filled > 0 or pg_catalog.btrim(coalesce(s.draft ->> 'text', '')) <> ''),
         'draft_at', case when s.doable and (s.n_filled > 0 or pg_catalog.btrim(coalesce(s.draft ->> 'text', '')) <> '') then s.draft_at end,
@@ -119,6 +120,7 @@ as $$
         'opens_on', (g.created_at at time zone 'Asia/Ho_Chi_Minh')::date,
         'time_min', null,
         'doable', true,
+        'practice', true,
         'has_draft', false)
     from (
       select g2.* from english.assignments g2 join me on me.id = g2.learner_id
@@ -137,6 +139,7 @@ as $$
         'opens_on', english.eng_step_effective_date(f.revision_activity_id),
         'time_min', null,
         'doable', true,
+        'practice', false,
         'has_draft', false)
     from english.feedback_notes f
     join me on me.id = f.learner_id

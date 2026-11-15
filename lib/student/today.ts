@@ -1,4 +1,5 @@
 /** W4b · Hôm nay (plan 3.1): the order of the child's tasks, the "Làm tiếp" card, the line "còn n việc · khoảng m phút". Pure. */
+import { weekdayNames } from "@/lib/copy/vi";
 import type { Task } from "./types";
 
 /** Can the child open this in the app (or in its own card)? A step with the tutor / on paper is listed but never opened. */
@@ -54,4 +55,12 @@ export function taskHref(t: Task): string | null {
 
 export function taskKey(t: Task): string {
   return t.assignmentId ?? t.activityId ?? `${t.kind}-${t.title}`;
+}
+
+/** "20/11" and the weekday of an ISO date (a plain calendar date, no time zone involved). */
+export function dayParts(iso: string): { weekday: string; ddmm: string } | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  return { weekday: weekdayNames[d.getUTCDay()]!, ddmm: `${iso.slice(8, 10)}/${iso.slice(5, 7)}` };
 }

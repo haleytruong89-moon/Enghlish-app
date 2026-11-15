@@ -1,17 +1,17 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { DeskView } from "@/components/desk/DeskView";
 import { StaffShell } from "@/components/shell/StaffShell";
-import { StudentHome } from "@/components/student/StudentHome";
-import { deskCopy, home } from "@/lib/copy/vi";
+import { StudentDeskShell } from "@/components/student/desk/StudentDeskShell";
+import { TodayView } from "@/components/student/desk/TodayView";
+import { deskCopy, home, studentDeskCopy } from "@/lib/copy/vi";
 import { loadDesk } from "@/lib/desk/load";
 import { loadHome } from "@/lib/home/loadHome";
-import { safeColor } from "@/lib/home/visible";
 import { todayVn } from "@/lib/inquiries/dates";
 import { revisionsAvailable } from "@/lib/revision/load";
+import { loadDeskBase, loadToday } from "@/lib/student/desk";
 import { firstParam, toShell } from "@/lib/shell/shell";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
-import { loadStudentHome } from "@/lib/work/load";
 
 export const dynamic = "force-dynamic";
 
@@ -31,28 +31,22 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     );
   }
 
-  const anyTest = data.learners.some((l) => l.isTest);
-
   if (data.kind === "student") {
-    const me = data.learners[0];
-    const alias = me?.alias ?? data.displayName;
-    const color = safeColor(me?.color);
-    const work = await loadStudentHome();
-    if (work.kind === "login") redirect("/login");
+    // W4b: the child's desk (Hôm nay). Reads through the user client and the eng_my_* functions.
+    const [base, today] = await Promise.all([loadDeskBase(), loadToday()]);
+    if (base.kind === "login" || today.kind === "login") redirect("/login");
+    if (base.kind !== "ok" || today.kind !== "ok") notFound();
     return (
-      <>
-        <AppHeader showTestBadge={anyTest} studentNav="next" />
-        {work.kind === "ok" ? (
-          <StudentHome alias={alias} color={color} data={work.home} review={work.review} feedback={work.feedback} />
+      <StudentDeskShell active="today" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.seenAt)} showTestBadge={base.isTest}>
+        {today.tasks ? (
+          <TodayView alias={base.alias} color={base.color} tasks={today.tasks} practice={today.practice} review={today.review} />
         ) : (
-          <main className="mx-auto max-w-xl px-5 py-12">
-            <h1 className="text-4xl font-bold" style={{ color }}>
-              {home.studentGreeting(alias)}
-            </h1>
-            <p className="mt-4 text-lg">{home.studentEmpty}</p>
-          </main>
+          <div className="mx-auto max-w-xl py-8">
+            <h1 className="text-3xl font-bold" style={{ color: base.color }}>{studentDeskCopy.greeting(base.alias)}</h1>
+            <p className="mt-4 text-lg" data-testid="desk-unavailable">{studentDeskCopy.unavailable}</p>
+          </div>
         )}
-      </>
+      </StudentDeskShell>
     );
   }
 

@@ -29,7 +29,7 @@ describe("workdesk shell wiring", () => {
     }
   });
   it("student pages never import the staff shell", () => {
-    const files = [...pagesUnder("app/practice"), ...pagesUnder("app/activities"), ...filesUnder("components/student", (n) => /\.tsx?$/.test(n))];
+    const files = [...pagesUnder("app/activities"), ...filesUnder("components/student", (n) => /\.tsx?$/.test(n))];
     for (const f of files) expect(read(f), f).not.toMatch(/components\/shell/);
   });
   it("staff pages outside /learners/[id] use the shell and no AppHeader", () => {
@@ -44,10 +44,21 @@ describe("workdesk shell wiring", () => {
       expect(src, f).not.toMatch(/<main\b/);
     }
   });
-  it("the home page keeps its student branch (AppHeader with the student nav + StudentHome)", () => {
+  it("the home page keeps its student branch (the child's desk: StudentDeskShell + TodayView)", () => {
     const src = read("app/page.tsx");
-    expect(src).toMatch(/studentNav="next"/);
-    expect(src).toMatch(/<StudentHome\b/);
+    expect(src).toMatch(/<StudentDeskShell\b/);
+    expect(src).toMatch(/<TodayView\b/);
+  });
+  it("every page of the child's desk uses the desk frame and never the staff shell", () => {
+    for (const f of ["app/page.tsx", "app/seen/page.tsx", "app/done/page.tsx", "app/done/[ref]/page.tsx", "app/journey/page.tsx"]) {
+      expect(read(f), f).toMatch(/<StudentDeskShell\b/);
+    }
+    for (const f of [...pagesUnder("app/seen"), ...pagesUnder("app/done"), ...pagesUnder("app/journey"), ...filesUnder("components/student", (n) => /\.tsx?$/.test(n))]) {
+      expect(read(f), f).not.toMatch(/components\/shell/);
+    }
+  });
+  it("/practice only redirects to the desk", () => {
+    expect(read("app/practice/page.tsx")).toMatch(/redirect\("\/"\)/);
   });
 });
 

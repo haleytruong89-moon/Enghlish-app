@@ -1,14 +1,15 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { AppHeader } from "@/components/AppHeader";
 import { DeskAlerts } from "@/components/desk/DeskAlerts";
 import { SessionsBox } from "@/components/desk/SessionsBox";
 import { AssignmentTable, itemsText } from "@/components/practice/AssignmentTable";
 import { SubmissionPreview } from "@/components/practice/SubmissionPreview";
 import { ResultForm } from "@/components/tutor/ResultForm";
 import { parseResultEdit } from "@/lib/tutorwork/shape";
-import { StudentPractice } from "@/components/student/StudentPractice";
+import { PracticeCard } from "@/components/student/desk/PracticeCard";
+import { StudentTabs } from "@/components/student/desk/StudentTabs";
+import { TodayView } from "@/components/student/desk/TodayView";
 import { deskCopy, assignPage, practiceStudent, resultPage, sourceLabels, todayPage } from "@/lib/copy/vi";
 import { deskAlerts } from "@/lib/desk/alerts";
 import { isOverdue } from "@/lib/practice/overdue";
@@ -51,8 +52,8 @@ describe("student practice copy", () => {
   });
 });
 
-describe("StudentPractice page", () => {
-  const html = render(createElement(StudentPractice, { items: [link, pdf], review }));
+describe("link / PDF cards (inside Hôm nay and /done/[ref])", () => {
+  const html = [link, pdf].map((item) => render(createElement(PracticeCard, { item }))).join("");
 
   it("opens the link in a new tab, downloads the PDF through the app (never a storage path), and asks the two taps", () => {
     expect(html).toContain('data-testid="open-link"');
@@ -62,34 +63,31 @@ describe("StudentPractice page", () => {
     expect(html).not.toMatch(/english-work|supabase|signed|token=/i);
     expect(html).toContain(practiceStudent.firstQ);
     expect(html).toContain(practiceStudent.hintQ);
+    expect(html).toContain(`id="task-${link.assignmentId}"`); // the "Làm tiếp" card links to it
   });
 
-  it("shows only 'Việc cần ôn' labels and the tutor's message: no tags list, no score, no counts", () => {
-    expect(html).toContain("Câu điều kiện");
-    expect(html).toContain("Nhớ đọc kỹ đề nhé");
-    const text = html.replace(/<[^>]+>/g, " ");
+  it("shows the tutor's message on Hôm nay without score, counts or tags", () => {
+    const today = render(createElement(TodayView, { alias: "An (thử)", color: "#9A4A15", tasks: [], practice: [], review }));
+    expect(today).toContain("Nhớ đọc kỹ đề nhé");
+    const text = today.replace(/<[^>]+>/g, " ").replace(/(Thứ \S+|Chủ nhật) \d{2}\/\d{2}/, "").replace(/Không có điểm(?: số)?/g, ""); // the footnote says there are no scores
     expect(text).not.toMatch(SCORE_WORDS);
     expect(html).toContain(`data-testid="sent-${pdf.assignmentId}"`); // the PDF one was already sent
   });
 
-  it("an item the tutor has looked at can no longer be changed; an empty page says so politely", () => {
-    const done = render(createElement(StudentPractice, { items: [{ ...pdf, reviewed: true }], review: null }));
+  it("an item the tutor has looked at can no longer be changed", () => {
+    const done = render(createElement(PracticeCard, { item: { ...pdf, reviewed: true } }));
     expect(done).toContain(practiceStudent.reviewed);
     expect(done).not.toContain("resend-");
-    expect(done).toContain(practiceStudent.reviewNone);
-    expect(render(createElement(StudentPractice, { items: [], review: null }))).toContain('data-testid="practice-empty"');
   });
 });
 
-describe("student navigation", () => {
-  it("shows Việc tiếp theo and Bài luyện only when asked, and marks the current page", () => {
-    expect(render(createElement(AppHeader, { name: "An" }))).not.toContain("nav-practice");
-    const next = render(createElement(AppHeader, { name: "An", studentNav: "next" }));
-    expect(next).toContain(practiceStudent.navPractice);
-    expect(next).toContain(practiceStudent.navNext);
-    const onPractice = render(createElement(AppHeader, { name: "An", studentNav: "practice" }));
-    expect(onPractice.match(/aria-current="page"/g)).toHaveLength(1);
-    expect(onPractice).toMatch(/aria-current="page"[^>]*>Bài luyện/);
+describe("student tabs", () => {
+  it("shows the four tabs and marks the current one", () => {
+    const h = render(createElement(StudentTabs, { active: "done", learnerId: "l", seenTimes: [] }));
+    for (const t of ["Hôm nay", "Đã xem", "Đã làm", "Hành trình"]) expect(h).toContain(t);
+    expect(h.match(/aria-current="page"/g)).toHaveLength(1);
+    expect(h).toMatch(/aria-current="page"[^>]*>(?:<svg.*?<\/svg>)?<span>Đã làm/);
+    expect(h).not.toContain("Bài luyện");
   });
 });
 
@@ -272,7 +270,8 @@ describe("'Quá hạn' (D4): only a label for the tutor and the parent", () => {
     expect(box).toContain(deskCopy.practiceCounts(2, 0, 1));
   });
   it("the student's practice page never shows it, even for a late item", () => {
-    const html = render(createElement(StudentPractice, { items: [{ ...link, dueOn: "2020-01-01" }], review }));
+    const task = { kind: "link" as const, activityId: null, assignmentId: link.assignmentId, stepNo: null, activityType: null, title: link.title, dueOn: "2020-01-01", opensOn: "2019-12-01", timeMin: null, doable: true, practice: true, offLabel: null, hasDraft: false, draftAt: null, filled: null, total: null };
+    const html = render(createElement(TodayView, { alias: "An", color: "#9A4A15", tasks: [task], practice: [{ ...link, dueOn: "2020-01-01" }], review }));
     expect(html).not.toContain(assignPage.overdue);
     expect(html).not.toContain(todayPage.practiceOverdue);
     expect(html).not.toMatch(/quá hạn|trễ|muộn/i);

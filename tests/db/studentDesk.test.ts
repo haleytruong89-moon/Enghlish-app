@@ -25,7 +25,10 @@ const png = () => ({ id: randomUUID(), mime: "image/png", bytes: 80_000 });
 const FORBIDDEN_KEY = /^(score|scores|correct|expected|answer|answers|explanation|explanation_vi|tag_key|tag_keys|level_num|pct|percent|result|results|wrong|wrong_items|rubric|verdict|decision)$/;
 function keysOf(v: unknown, out: string[] = []): string[] {
   if (Array.isArray(v)) v.forEach((x) => keysOf(x, out));
-  else if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) (out.push(k), keysOf(x, out));
+  else if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) {
+      out.push(k);
+      keysOf(x, out);
+    }
   return out;
 }
 
@@ -77,13 +80,13 @@ describe("student desk reads (migration 0032)", () => {
     ]);
 
   let a1: string; // An, A-W1, everything released
-  let b6: string; // Nguyên, B-W1-HOMEWORK, only step 1..? released today
+
   beforeAll(async () => {
     db = await createTestDb();
     await migrate(db.client);
     s = await seed(db.client);
     a1 = await assign("an", "A-W1-VOLCANOES", dueReleasingAll("A-W1-VOLCANOES"));
-    b6 = await assign("nguyen", "B-W1-HOMEWORK", dueReleasing("B-W1-HOMEWORK", 2));
+    await assign("nguyen", "B-W1-HOMEWORK", dueReleasing("B-W1-HOMEWORK", 2));
   });
   afterAll(async () => {
     await db?.drop();
@@ -111,19 +114,17 @@ describe("student desk reads (migration 0032)", () => {
     expect(items).toHaveLength(t.steps.filter((x) => x.mode !== "REVISION").length);
     expect(items.every((i) => i.kind === "topic")).toBe(true);
     const speak = items.find((i) => i.activity_type === "ACT-SPEAK-LIVE" && i.step_no === 1)!;
-    expect(speak).toMatchObject({ doable: false, off_label: "with_tutor", has_draft: false });
+    expect(speak).toMatchObject({ doable: false, practice: true, off_label: "with_tutor", has_draft: false });
     const qa = items.find((i) => i.step_no === 2)!;
-    expect(qa).toMatchObject({ doable: true, off_label: null, time_min: 10, items_total: 6, items_filled: 0, has_draft: false });
+    expect(qa).toMatchObject({ doable: true, practice: false, off_label: null, time_min: 10, items_total: 6, items_filled: 0, has_draft: false });
     expect(items.some((i) => i.step_no === 13)).toBe(false);
     expect(await count(U().studentAn)).toBe(items.length);
     // the other child sees only theirs (B-W1 step 1-2 released), never An's
     const ng = await today(U().studentNguyen);
-    expect(ng.every((i) => i.title !== "x")).toBe(true);
     expect(ng.length).toBeGreaterThan(0);
     expect(ng.length).toBeLessThan(items.length);
     expect(new Set(ng.map((i) => i.activity_id)).size).toBe(ng.length);
     expect(await q1("select 1 from english.activity_instances where inquiry_instance_id = $1 and id = any($2::uuid[])", [a1, ng.map((i) => i.activity_id)])).toHaveLength(0);
-    void b6;
   });
 
   it("a draft makes the card 'Làm tiếp' material: has_draft, how many items are filled (never how many are right)", async () => {
@@ -156,7 +157,7 @@ describe("student desk reads (migration 0032)", () => {
   it("link / PDF work: a task until a photo is sent; then 'Đã làm'; the result written by the adult makes it 'đã xem' without exposing it", async () => {
     const link = await makeLink("Unless, even if", addDays(TODAY, 2));
     const t1 = (await today(U().studentNguyen)).find((i) => i.assignment_id === link.id)!;
-    expect(t1).toMatchObject({ kind: "link", due_on: addDays(TODAY, 2), doable: true });
+    expect(t1).toMatchObject({ kind: "link", due_on: addDays(TODAY, 2), doable: true, practice: true });
     expect(t1.time_min).toBeNull();
     await sendLink(link.id);
     expect((await today(U().studentNguyen)).some((i) => i.assignment_id === link.id)).toBe(false);
@@ -192,6 +193,7 @@ describe("student desk reads (migration 0032)", () => {
     expect((await history(U().studentAn))[0]!.seen).toBe(true);
     const rev = (await today(U().studentAn)).find((i) => i.kind === "revision")!;
     expect(rev.activity_id).toBe(fb.revision_activity_id);
+    expect(rev.practice).toBe(false);
     // revise
     const marks = { "1": { choice: "changed" }, "2": { choice: "changed" } };
     const r2 = await student<{ attempt_id: string }>(U().studentAn, "select english.eng_submit_revision($1, $2, $3, $4::jsonb, $5::text[], 'in_app', $6) as r", [

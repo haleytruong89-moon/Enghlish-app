@@ -1212,9 +1212,6 @@ export const assignPage = {
 
 /** Phần dùng chung giữa em và người lớn khi gửi ảnh / file (chữ về nút, ảnh, lỗi). Xưng "bạn" với em. */
 export const practiceStudent = {
-  navNext: "Việc tiếp theo",
-  navPractice: "Bài luyện",
-  navJourney: "Hành trình",
   title: "Bài luyện của bạn",
   empty: `Chưa có bài luyện nào. ${tutorHonorificCap} sẽ giao bài sớm thôi.`,
   linkKind: (source: string, due: string | null) => `Bài link · ${source}${due ? ` · hạn ${due}` : ""}`,
@@ -2847,4 +2844,76 @@ export const journeyCopy = {
       `Núi hành trình: ${total} Unit từ chân núi lên ${summit}. Đã xong ${done} Unit${here ? `, bạn đang ở ${here}` : ""}.`,
     emptyMountain: (summit: string) => `Núi hành trình: chưa có giáo trình. ${summit}. ${tutorHonorificCap} sẽ vẽ đường lên đỉnh khi có giáo trình của bạn.`,
   },
+} as const;
+
+// ---------- W4b · Bàn học của con: Hôm nay · Đã xem · Đã làm (UX_COPY_GUIDE mục "W4b") ------------------------------------------------
+/**
+ * Chữ cho con (xưng "bạn", câu ngắn). Người dạy luôn là `tutorHonorific` (không viết cứng "cô"). Số đếm con được thấy chỉ là số việc của chính con
+ * (việc, câu ĐÃ TRẢ LỜI, bài đã nộp) — component bọc chúng trong data-count="work"; không bao giờ số câu đúng / sai, %, điểm (PRD D35).
+ */
+export const studentDeskCopy = {
+  tabsLabel: "Mục chính của bạn",
+  tabs: { today: "Hôm nay", seen: "Đã xem", done: "Đã làm", journey: "Hành trình" },
+  newBadge: "Mới",
+  newCountAria: (n: number) => `${n} lời nhắn mới`,
+  greeting: (alias: string) => `Chào ${alias}!`,
+  // Hôm nay
+  leadStart: "Hôm nay còn ",
+  leadCount: (n: number) => `${n} việc`,
+  leadMinutes: (m: number) => ` · khoảng ${m} phút`,
+  allDone: "Xong hết việc hôm nay rồi 🎉 Nghỉ ngơi, hoặc làm trước một việc sắp tới nếu bạn muốn.",
+  noTasks: `Chưa có việc nào. ${tutorHonorificCap} sẽ giao bài mới sau buổi học.`,
+  resume: "Làm tiếp",
+  next: "Việc tiếp theo",
+  start: "Bắt đầu",
+  openWork: "Mở bài",
+  progressBar: "Tiến độ bài",
+  filled: (a: number, b: number) => `${a}/${b} câu`,
+  tasksTitle: "Việc cần làm",
+  kinds: { app: "Bài trên app", topic: "Bài chủ đề", paper: "Đề giấy", link: "Bài link", revision: "Sửa bài" },
+  minutes: (m: number) => `khoảng ${m} phút`,
+  due: (weekday: string, ddmm: string) => `Hạn ${weekday} ${ddmm}`,
+  noDue: "Không có hạn",
+  askTutor: "Hỏi gia sư",
+  askTutorSoon: "Sắp có",
+  askTutorNote: "Sắp có — gia sư sẽ gợi ý từng bước, không làm hộ. Chỉ có ở bài luyện tập, không có ở bài kiểm tra.",
+  noteTitle: `${tutorHonorificCap} nhắn`,
+  noteReview: "Ôn lại mấy mục này",
+  footnote: `Không có điểm số ở đây — ${tutorHonorific} xem bài và nhắn lại cho bạn.`,
+  unavailable: `Bàn học chưa mở được. ${tutorHonorificCap} sẽ báo khi sẵn sàng.`,
+  // Đã xem
+  seenTitle: "Đã xem",
+  seenIntro: `${tutorHonorificCap} xem bài xong là lời nhắn hiện ngay ở đây. Không có điểm — chỉ có điều bạn làm tốt và điều cần sửa.`,
+  seenEmpty: `Chưa có bài nào được ${tutorHonorific} xem. Khi ${tutorHonorific} xem, lời nhắn hiện ở đây.`,
+  seenOn: (when: string) => `${tutorHonorificCap} xem ${when}`,
+  praise: `${tutorHonorificCap} khen`,
+  fix: "Cần sửa",
+  inYourText: "Chỗ này trong bài của bạn:",
+  reviseCta: "Sửa bài",
+  revised: `Đã gửi bản sửa · chờ ${tutorHonorific} xem`,
+  revisionClosed: "Phần sửa bài này đã xong.",
+  noRevision: `Bài này không cần nộp lại — đọc lời ${tutorHonorific} là được.`,
+  viewedOnly: `${tutorHonorificCap} đã xem bài này.`,
+  closingLabel: `Lời nhắn của ${tutorHonorific}`,
+  viewSubmitted: "Xem bài đã nộp",
+  older: "Xem các bài cũ hơn",
+  // Đã làm
+  doneTitle: "Đã làm",
+  doneIntro: "Mọi bài bạn đã nộp nằm ở đây.",
+  doneEmpty: "Bạn chưa nộp bài nào. Bài nộp xong sẽ hiện ở đây.",
+  filterAll: (n: number) => `Tất cả (${n})`,
+  filterWaiting: (n: number) => `Chờ ${tutorHonorific} xem (${n})`,
+  filterSeen: `${tutorHonorificCap} đã xem`,
+  filterLabel: "Lọc bài đã làm",
+  statusWaiting: `Chờ ${tutorHonorific} xem`,
+  statusSeen: `${tutorHonorificCap} đã xem`,
+  submittedOn: (when: string) => `Nộp ${when}`,
+  firstTime: "làm lần đầu",
+  again: "làm lại",
+  hint: { yes: "có xem gợi ý", no: "không xem gợi ý" },
+  offline: `${tutorHonorificCap} ghi lại bài này`,
+  openSubmitted: "Xem lại",
+  reviewOnly: "Chỉ xem lại — bài đã nộp thì không sửa ở đây.",
+  back: "‹ Về Đã làm",
+  filterNone: "Không có bài nào ở mục này.",
 } as const;
