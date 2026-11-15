@@ -280,14 +280,20 @@ as $$
   join english.inquiry_templates tp on tp.id = i.template_id and tp.version = i.template_version and tp.kind in ('topic', 'studio')
   where t.learner_id = p_learner and t.provenance in ('in_app', 'pasted')
   union all
-  -- "Tuần làm bài" của bài người lớn nộp thay: có dòng ở submission_work_weeks thì tính vào tuần đó (Chủ nhật 12:00 giờ Việt Nam của tuần ấy), không thì giờ nộp.
-  select 's:' || s.assignment_id::text,
-         coalesce(((ww.work_week + 6)::timestamp + interval '12 hours') at time zone 'Asia/Ho_Chi_Minh', s.created_at),
-         s.submitted_by_role = 'student'
-  from english.submissions s
-  join english.assignments g on g.id = s.assignment_id
-  left join english.submission_work_weeks ww on ww.submission_id = s.id
-  where s.learner_id = p_learner and (s.submitted_by_role = 'student' or g.kind <> 'link')
+  -- MỘT dòng cho mỗi bài giao link / PDF, dù nộp nhiều lần (chuỗi nộp lại): bài chỉ tính vào MỘT tuần = lần SỚM NHẤT trong chuỗi, trong đó
+  -- bài người lớn nộp thay có "Tuần làm bài" ở submission_work_weeks thì tính vào Chủ nhật 12:00 (giờ Việt Nam) của tuần đó, không thì giờ nộp.
+  -- own = có ít nhất một lần nộp do chính con.
+  select 's:' || x.assignment_id::text, pg_catalog.min(x.eff), pg_catalog.bool_or(x.own)
+  from (
+    select s.assignment_id,
+           coalesce(((ww.work_week + 6)::timestamp + interval '12 hours') at time zone 'Asia/Ho_Chi_Minh', s.created_at) as eff,
+           s.submitted_by_role = 'student' as own
+    from english.submissions s
+    join english.assignments g on g.id = s.assignment_id
+    left join english.submission_work_weeks ww on ww.submission_id = s.id
+    where s.learner_id = p_learner and (s.submitted_by_role = 'student' or g.kind <> 'link')
+  ) x
+  group by x.assignment_id
 $$;
 revoke execute on function english.eng_week_work(uuid) from public, anon, authenticated, service_role;
 
@@ -385,7 +391,11 @@ begin
       select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('k', x.k, 'w', x.wk) order by x.wk, x.k)
       from (select distinct w.k, english.eng_week_start(w.at) as wk from english.eng_week_work(p_learner) w) x
       where x.wk >= v_from), '[]'::jsonb),
-    'first_work_at', (select pg_catalog.min(w.at) from english.eng_week_work(p_learner) w where w.own),   -- the child's OWN work only (an adult upload never opens "Bài đầu tiên")
+    'first_work_at', (
+      select pg_catalog.min(z.t) from (
+        select w.at as t from english.eng_week_work(p_learner) w where w.k like 'a:%'
+        union all
+        select sb.created_at from english.submissions sb where sb.learner_id = p_learner and sb.submitted_by_role = 'student') z),   -- the child's OWN work only (an adult upload never opens "Bài đầu tiên")
     'writes', coalesce((
       select pg_catalog.jsonb_agg(f.at order by f.at)
       from (
@@ -450,7 +460,7 @@ $$;
 revoke execute on function english.eng_week_facts(uuid) from public, anon, authenticated;
 grant execute on function english.eng_week_facts(uuid) to service_role;
 
--- 8. Xóa dữ liệu một em: = bản 0034 + weekly_goals (xóa trước learners).
+-- 8. Xóa dữ liệu một em: = bản 0034 + weekly_goals + submission_work_weeks (submission_work_weeks xóa trước submissions).
 create or replace function english.eng_purge_learner(
   p_learner_id uuid,
   p_actor_user_id uuid default null
@@ -899,7 +909,7 @@ $$;
 revoke execute on function english.eng_purge_learner(uuid, uuid) from public, anon, authenticated;
 grant execute on function english.eng_purge_learner(uuid, uuid) to service_role;
 
--- Đếm trước khi xóa = bản 0034 + weekly_goals (cùng khóa với biên nhận).
+-- Đếm trước khi xóa = bản 0034 + weekly_goals + submission_work_weeks (cùng khóa với biên nhận).
 create or replace function english.eng_purge_preview(p_learner uuid) returns jsonb
 language plpgsql stable security definer set search_path = ''
 as $$

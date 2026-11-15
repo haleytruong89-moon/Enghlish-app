@@ -342,7 +342,9 @@ export async function seedThrowawayLearner(client: ClientBase, opts: { alias?: s
 
 /**
  * `--goal-history` (W4d, preview only): five finished weeks of 3 sent pieces each plus an agreed goal of 3 for Nguyên (thử), so the Hôm nay chip reads
- * "🔥 5 tuần liền" and Hành trình shows the card with a streak. Test learners only; idempotent (fixed client ids); uses the child's own link submissions.
+ * "🔥 5 tuần liền" and Hành trình shows the card with a streak. Test learners only. Rerun the SAME day: changes nothing (fixed client ids that carry the
+ * Monday). Rerun in a LATER week: adds one more goal decision and five more weeks of work counted from that week (the old rows stay: the ledgers are append-only),
+ * so the streak is refreshed rather than duplicated. Uses the child's own link submissions.
  */
 export async function seedGoalHistory(client: ClientBase, seeded: SeedResult): Promise<{ weeks: number; skipped?: string }> {
   const learner = seeded.learners.nguyen;

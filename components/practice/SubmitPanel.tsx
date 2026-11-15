@@ -32,7 +32,8 @@ export function SubmitPanel({ learnerId, assignmentId, kind, onDone, maxFiles }:
   const [hint, setHint] = useState<boolean | null>(null);
   // W4d: paper work (PDF assignment) sent on Monday-Tuesday may be put in LAST week. The server checks the day again; this only offers the choice.
   const [lastWeek, setLastWeek] = useState(false);
-  const canPickWeek = kind === "pdf" && lastWeekChoiceOpen(new Date());
+  // Decided ONCE when the panel opens: a retry after Tuesday midnight must not drop the choice (the server refuses it if it is really too late).
+  const [canPickWeek] = useState(() => kind === "pdf" && lastWeekChoiceOpen(new Date()));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"upload" | "send" | null>(null);
   // Kept across retries: a lost answer is retried with the same id and only the files that failed are sent again.
@@ -61,7 +62,7 @@ export function SubmitPanel({ learnerId, assignmentId, kind, onDone, maxFiles }:
       used_hint: hint, // null = the grown-up does not know
       link_url: kind === "link" && linkClean ? linkClean : null,
       files: up.files,
-      ...(canPickWeek && lastWeek ? { work_week: "last" } : {}),
+      ...(lastWeek ? { work_week: "last" } : {}),
     };
     attempt.current = nextAttempt(attempt.current, JSON.stringify(body));
     const r = await postJson(`/api/learners/${learnerId}/assignments/${assignmentId}/submissions`, { client_id: attempt.current.id, ...body });

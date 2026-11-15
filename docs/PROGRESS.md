@@ -1680,7 +1680,7 @@ Nhánh `feature/w4d-weekly-goal` (từ `main` sau PR #39). Kế hoạch `docs/su
 4. `npm run db:seed-dev -- --goal-history` tạo 5 tuần nộp bài cho Nguyên (thử) để thấy chip.
 
 ### SQL phụ huynh cần áp (sau khi gộp)
-**KHÔNG áp 0035 từ bản `main` trước PR bổ sung W4d; chỉ áp sau khi PR bổ sung gộp** (0035 được sửa tại chỗ ở PR bổ sung vì chưa áp ở đâu).
+**KHÔNG áp 0035 từ bản `main` trước PR bổ sung W4d; chỉ áp sau khi PR bổ sung gộp** (0035 được sửa tại chỗ ở PR bổ sung vì chưa áp ở đâu). Nếu lỡ áp 0035 cũ thì cần migration 0036 drop/recreate `eng_week_work` và `eng_decide_goal` (và thêm bảng + hàm mới) — báo ngay, đừng tự sửa.
 `db/migrations/0035_weekly_goals.sql` — workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". **Chưa áp:** mọi màn vẫn chạy; con không thấy chip / thẻ / `/goal` (báo "chưa mở"), hộp ở Bàn làm việc ẩn, số Chờ duyệt không đổi.
 
 ### Cách thử trên bản thử (sau khi áp 0035)
@@ -1700,6 +1700,10 @@ Nhánh `feature/w4d-weekly-goal` (từ `main` sau PR #39). Kế hoạch `docs/su
 - `eng_decide_goal` bắt buộc `p_learner`; khoảng gợi ý luôn là `{min,max}` hợp lệ (`eng_goal_range`, sai giá trị → mặc định 1–14, không lỗi 500); 23505 không gắn nhãn (chỉ mục `responds_to`) → "đã được trả lời"; có test hai kết nối quyết cùng lúc.
 - Seed `--goal-history`: mã gửi lại kèm ngày thứ Hai nên chạy lại tuần sau làm mới được; workflow "Seed test family" có ô tick.
 - Bỏ `weekFunctionMissing` (không dùng); khôi phục ca test "lỗi mạng → null" (lỗi trước là do `beforeEach` trả về giá trị của `mockReset`).
+- **Một bài giao link / PDF chỉ tính vào một tuần** (lần nộp sớm nhất trong chuỗi nộp lại): người lớn nộp "Tuần trước" rồi nộp lại "Tuần này" → chỉ tuần trước; con nộp thứ Bảy rồi người lớn nộp lại thứ Hai → chỉ tuần của con. `first_work_at` đọc riêng từ bài con tự nộp.
+- Chọn tuần được quyết **một lần khi mở ô nộp** và luôn gửi nếu đã chọn "Tuần trước" (qua nửa đêm thứ Ba, máy chủ từ chối rõ thay vì tạo bài trùng); máy chủ gọi v3 khi có.
+- **Cách thử "Tuần trước" (chỉ thử được vào thứ Hai–thứ Ba giờ Việt Nam):** giao một bài PDF cho Nguyên (thử) → "Nộp thay" → thấy ô "Tuần làm bài" → chọn "Tuần trước" → nộp. Bàn làm việc / Hành trình của Nguyên (thử): bài tính vào tuần trước (số tuần này không tăng). **Từ thứ Tư:** ô "Tuần làm bài" không hiện; nếu mở sẵn từ thứ Ba mà bấm nộp sau nửa đêm thì báo "Chỉ chọn được “Tuần trước” vào thứ Hai và thứ Ba. Bạn chọn “Tuần này” nhé."
+- Test mới: `tests/db/weeklyGoalsWorkWeek.test.ts`, `tests/dom/workWeekChoice.test.tsx`; ca thêm trong `weeklyGoals.test.ts`, `deployOrderPaperLink.test.ts`, `deployOrderWeeklyGoals.test.ts`, `goalHandlers.test.ts`, `migrationWeeklyGoals.test.ts`.
 - Lệch so với kế hoạch: thành tích "mốc" (`milestone`) chỉ tính cờ có **ít nhất một Unit trước nó** (kế hoạch ghi `k = 0`: cờ không có Unit nào trước sẽ "đạt" ngay, vô nghĩa).
 
 ### Câu hỏi mở / lệch so với kế hoạch (cần phụ huynh xem)

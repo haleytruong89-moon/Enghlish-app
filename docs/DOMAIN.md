@@ -288,6 +288,9 @@ Cách ③ chỉ ghi **điểm theo phần** nếu trang kết quả không ghi c
 ## 10. Ngân sách
 Trần $10/tháng (đã có). Gia sư dành **~30 phút/tuần/em** ✅ 08/11 → đủ cho: chuẩn bị buổi (~5'), ghi buổi (~1'/buổi), xem kết quả và duyệt nháp (~15'), phần tháng chia đều.
 
+### Quy tắc đếm bài vào mục tiêu tuần (W4d, bản 0.7)
+Một **bài** là một việc đã nộp: một bước trên app, hoặc một bài giao link / PDF. Bài giao link / PDF chỉ tính vào **một tuần**: tuần của lần nộp **sớm nhất** trong các lần nộp của nó. Với ảnh / PDF người lớn nộp thay vào thứ Hai–thứ Ba, người lớn chọn "Tuần này" hoặc "Tuần trước" (máy chủ kiểm); không tính bài link người lớn nộp thay, bài ghi trong buổi, bài nạp, lần thử lại câu, lượt mở app. Thành tích "Bài đầu tiên" chỉ từ bài con tự nộp.
+
 ## 11. Không làm trong việc này
 Lớp / đợt, chứng chỉ, chuỗi theo ngày (chuỗi **tuần** mềm thì có, D34), bảng xếp hạng, video; chat tự do với AI; AI chấm viết / nói; kênh nhắn phụ huynh → gia sư (dùng Zalo); nối bài giao sang Study Launcher (để sau); Clarifier / Challenger Track B (hè 2027).
 

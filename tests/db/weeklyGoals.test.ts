@@ -334,7 +334,7 @@ describe("weekly goals (migration 0035)", () => {
     expect(f.range).toEqual({ min: 3, max: 6 });
   });
 
-  it("two tutors' connections deciding the same proposal at once: exactly one wins, the other gets the clear 'already_answered' (23505), nothing is half written", async () => {
+  it("two connections deciding the same proposal at once (accept and adjust): exactly one wins, the other gets the clear 'already_answered' (23505), nothing is half written", async () => {
     const p = await propose(U().studentNguyen, 4);
     const { Client } = await import("pg");
     const { pgConfigFromUrl } = await import("../../scripts/lib/pg");

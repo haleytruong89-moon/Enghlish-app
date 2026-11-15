@@ -1090,7 +1090,6 @@ export const readingPage = {
   save: "Lưu báo cáo",
   saveCorrection: "Lưu bản sửa",
   saved: "Đã lưu.",
-  savedFrom: (from: string) => `Đã lưu. Mục tiêu mới bắt đầu thứ Hai ${from}.`,
   editing: (month: string) => `Tháng ${month} đã có báo cáo. Sửa các ô rồi bấm “Lưu bản sửa” (bản cũ vẫn được giữ trong lịch sử).`,
   rowInvalid: "Số câu là số nguyên 0–500 (0 = không có câu); % đúng là số nguyên 0–100; nhập cả hai hoặc để trống cả hai.",
   needOneRow: "Nhập ít nhất một kỹ năng.",
@@ -1519,7 +1518,6 @@ export const levelFormCopy = {
   saveAdjust: "Lưu điều chỉnh",
   saving: "Đang lưu…",
   saved: "Đã lưu.",
-  savedFrom: (from: string) => `Đã lưu. Mục tiêu mới bắt đầu thứ Hai ${from}.`,
 } as const;
 
 /** One shared "📎 Chọn file" control for adult file inputs (components/ui/FilePicker.tsx). */
@@ -2104,7 +2102,6 @@ export const aiSettingsCopy = {
   softWarning: (spent: string, cap: string) => `Đã dùng ${spent} trong tháng — AI sẽ dừng ở ${cap}.`,
   capReached: "Đã hết hạn mức tháng này: tới đầu tháng sau chỉ soạn tay được.",
   saved: "Đã lưu.",
-  savedFrom: (from: string) => `Đã lưu. Mục tiêu mới bắt đầu thứ Hai ${from}.`,
   homeBoxTitle: "Chi phí AI",
   homeBoxLink: "Xem Cài đặt AI",
 };
@@ -2166,7 +2163,6 @@ export const teachingNotes = {
   cancel: "Hủy",
   saving: "Đang lưu…",
   saved: "Đã lưu.",
-  savedFrom: (from: string) => `Đã lưu. Mục tiêu mới bắt đầu thứ Hai ${from}.`,
   partial: (saved: string, failed: string) => `Đã lưu: ${saved}. Chưa lưu được: ${failed}. Bấm Lưu để thử lại các ô chưa lưu.`,
   unavailable: "Ghi chú dạy học và hồ sơ đầu vào chưa dùng được vì cơ sở dữ liệu chưa cập nhật. Phụ huynh cần áp bản cập nhật 0025 trước.",
   updated: (at: string, by: string) => (by ? `Cập nhật ${at} · ${by}` : `Cập nhật ${at}`),
@@ -2361,7 +2357,6 @@ export const curriculumCopy = {
   save: "Lưu nháp",
   saving: "Đang lưu…",
   saved: "Đã lưu.",
-  savedFrom: (from: string) => `Đã lưu. Mục tiêu mới bắt đầu thứ Hai ${from}.`,
   approve: "Duyệt mục lục",
   approving: "Đang duyệt…",
   approveTutorOnly: `Chỉ ${tutorHonorific} của em duyệt được. Phụ huynh có thể bỏ nháp.`,

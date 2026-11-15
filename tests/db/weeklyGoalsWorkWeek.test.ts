@@ -101,7 +101,10 @@ describe("weekly goal · work week of an adult upload", () => {
     const r = await v3(paper.id, M().tutorNguyen, "this");
     await db.client.query("insert into english.submission_work_weeks(submission_id, learner_id, work_week, by_member) values ($1, $2, $3::date, $4)", [r.id, NG(), addDays(thisMonday(), -7), M().tutorNguyen]);
     await fail(db.client.query("update english.submission_work_weeks set work_week = $2::date where submission_id = $1", [r.id, thisMonday()]), "42501");
-    await fail(db.client.query("insert into english.submission_work_weeks(submission_id, learner_id, work_week, by_member) values ($1, $2, $3::date, $4)", [paper.id, NG(), "2026-11-10", M().tutorNguyen]), "23514"); // not a Monday
+    const second = await v3((await pdf(NG(), M().tutorNguyen)).id, M().tutorNguyen, "this");
+    await fail(db.client.query("insert into english.submission_work_weeks(submission_id, learner_id, work_week, by_member) values ($1, $2, $3::date, $4)", [second.id, NG(), "2026-11-10", M().tutorNguyen]), "23514"); // a Tuesday, not a Monday
+    await fail(db.client.query("delete from english.submission_work_weeks where submission_id = $1", [r.id]), "42501");
+    await fail(db.client.query("truncate english.submission_work_weeks"), "42501");
     const seen = await asCommit(db.client, "authenticated", s.users.studentNguyen, async (q) => (await q("select 1 from english.submission_work_weeks")).rows.length);
     expect(seen).toBe(0);
   });
@@ -154,5 +157,27 @@ describe("weekly goal · work week of an adult upload", () => {
     await db.client.query("insert into english.submission_work_weeks(submission_id, learner_id, work_week, by_member) values ($1, $2, $3::date, $4)", [r.id, AN(), addDays(thisMonday(), -70), M().parent]);
     const again = await svc<{ first_work_at: string | null; works: { k: string; w: string }[] }>("select english.eng_week_facts($1) as r", [AN()]);
     expect(again.first_work_at).toBe(facts.first_work_at);
+  });
+
+  it("one link / PDF assignment counts in ONE week only: the earliest of its submissions", async () => {
+    const monday = thisMonday();
+    const weekOf = async (assignment: string) => (await svc<{ works: { k: string; w: string }[] }>("select english.eng_week_facts($1) as r", [NG()])).works.filter((x) => x.k === `s:${assignment}`).map((x) => x.w);
+    // (a) an adult sends it as "Tuần trước", then sends it again as "Tuần này": only last week
+    const a = await pdf(NG(), M().tutorNguyen);
+    const first = await svc<V3>("select english.eng_submit_practice_v2($1, $2, $3, 'first', false, null, $4::jsonb) as r", [a.id, M().tutorNguyen, randomUUID(), JSON.stringify([png()])]);
+    await db.client.query("insert into english.submission_work_weeks(submission_id, learner_id, work_week, by_member) values ($1, $2, $3::date, $4)", [first.id, NG(), addDays(monday, -7), M().tutorNguyen]);
+    expect(await weekOf(a.id)).toEqual([addDays(monday, -7)]);
+    await svc<V3>("select english.eng_submit_practice_v2($1, $2, $3, 'retry', false, null, $4::jsonb) as r", [a.id, M().tutorNguyen, randomUUID(), JSON.stringify([png()])]);
+    expect(await weekOf(a.id)).toEqual([addDays(monday, -7)]);
+    // (b) the child sent it on Saturday (last week), an adult re-uploads it on Monday: only the child's week
+    const b = await pdf(NG(), M().tutorNguyen);
+    const own = (await q1<{ id: string }>(
+      "insert into english.submissions(assignment_id, learner_id, attempt, used_hint, file_ids, submitted_by_member, submitted_by_role, client_id, created_at) values ($1, $2, 'first', false, array[$3::uuid], $4, 'student', $5, $6::timestamptz) returning id",
+      [b.id, NG(), randomUUID(), M().studentNguyen, randomUUID(), `${addDays(monday, -2)}T10:00:00+07`],
+    ))[0]!.id;
+    expect(await weekOf(b.id)).toEqual([addDays(monday, -7)]);
+    const adult = await svc<V3>("select english.eng_submit_practice_v2($1, $2, $3, 'retry', false, null, $4::jsonb) as r", [b.id, M().tutorNguyen, randomUUID(), JSON.stringify([png()])]);
+    expect(adult.id).not.toBe(own);
+    expect(await weekOf(b.id)).toEqual([addDays(monday, -7)]);
   });
 });
