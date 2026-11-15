@@ -69,7 +69,7 @@ export function parseRetryPending(raw: unknown): RetryInbox {
       items: z.array(z.object({
         attempt_id: z.string(), learner_id: z.string(), alias: z.string(), is_test: z.boolean(), activity_id: z.string(), title: z.string(),
         submitted_at: z.string(), since: z.string(),
-        retries: z.array(z.object({ item_id: z.string(), n: z.number().int(), stem: z.string(), given: z.string(), retry: z.string(), at: z.string() })),
+        retries: z.array(z.object({ item_id: z.string(), n: z.number().int(), stem: z.string(), given: z.string(), retry: z.string().nullable(), kind: z.enum(["retry", "revealed"]), at: z.string() })),
       })),
     })
     .parse(raw);
@@ -78,7 +78,7 @@ export function parseRetryPending(raw: unknown): RetryInbox {
     attempts: p.items.map((a) => ({
       attemptId: a.attempt_id, learnerId: a.learner_id, alias: a.alias, isTest: a.is_test, activityId: a.activity_id, title: a.title,
       submittedAt: a.submitted_at, since: a.since,
-      retries: a.retries.map((r) => ({ itemId: r.item_id, n: r.n, stem: r.stem, given: r.given, retry: r.retry, at: r.at })),
+      retries: a.retries.map((r) => ({ itemId: r.item_id, n: r.n, stem: r.stem, given: r.given, retry: r.retry, kind: r.kind, at: r.at })),
     })),
   };
 }

@@ -20,7 +20,7 @@ import { buildStudioBuild } from "./buildTemplate";
 import type { StudioContext } from "./context";
 import { runExtraction, type ExtractStore, type RunLog } from "./extract";
 import {
-  aiSettingsBodySchema, approveBodySchema, assignStudioBodySchema, createDraftBodySchema, decideBodySchema, editBodySchema, saveDraftBodySchema,
+  aiSettingsBodySchema, approveBodySchema, assignStudioBodySchema, createDraftBodySchema, decideBodySchema, editBodySchema, retrySeenBodySchema, saveDraftBodySchema,
   studioUploadBodySchema, type FileMetaBody,
 } from "./requests";
 import type { StudioDraft } from "./schema";
@@ -50,6 +50,8 @@ export interface StudioStore {
   pending(a: { byMemberId: string; allowReal: boolean }): Promise<unknown>;
   /** Writes the Kết quả bài of submitted Studio attempts that have no pending item and no result yet (idempotent; returns how many). */
   retryResults(a: { byMemberId: string; allowReal: boolean }): Promise<unknown>;
+  /** english.eng_mark_retry_seen (0034): the adult has read the child's retries of one attempt (note optional, adult-only). */
+  markRetrySeen(a: { attemptId: string; note: string | null; seenThrough: string; byMemberId: string; clientId: string; allowReal: boolean }): Promise<unknown>;
   decide(a: { attemptId: string; items: { item_id: string; result: string }[]; byMemberId: string; clientId: string }): Promise<unknown>;
 }
 
@@ -101,7 +103,7 @@ async function staff(deps: StudioDeps): Promise<{ ok: true; member: Member } | {
 }
 
 /** Database errors → HTTP. The "(tag)" at the end of a message becomes the error code the screens explain (lib/copy/vi.ts studioErrors). */
-export function fromStudioDbError(err: unknown, opts: { v2?: boolean } = {}): HandlerResult {
+export function fromStudioDbError(err: unknown, opts: { /** The error tag when the function is missing (migration 0034 not applied); anything else with a missing function is a real fault. */ missing?: string } = {}): HandlerResult {
   if (err instanceof ReviewDbError) {
     const tag = /\(([a-z_]+)\)\s*$/.exec(err.detail)?.[1] ?? null;
     switch (err.code) {
@@ -115,8 +117,8 @@ export function fromStudioDbError(err: unknown, opts: { v2?: boolean } = {}): Ha
         return fail(429, "upload_limit");
       case "PGRST202":
       case "42883":
-        // Only the v2 assign call (the "Bài kiểm tra" flag) needs 0034; a missing function elsewhere is a real fault (rethrown below).
-        if (opts.v2) return fail(409, "needs_update");
+        // Only the calls that name a tag need 0034 (the "Bài kiểm tra" flag, "Đã xem"); a missing function elsewhere is a real fault (rethrown below).
+        if (opts.missing) return fail(409, opts.missing);
         break;
       case "23514":
       case "22023":
@@ -285,7 +287,7 @@ export async function handleAssign(deps: StudioDeps, draftId: string, raw: unkno
     const r = (await deps.store.assign({ draftId, startOn: p.data.start_on, dueOn: p.data.due_on, byMemberId: g.grant.member.id, clientId: p.data.client_id, isTest: p.data.is_test === true })) as { instance_id: string; activity_id: string; replayed: boolean };
     return { status: r.replayed ? 200 : 201, body: r };
   } catch (err) {
-    return fromStudioDbError(err, { v2: p.data.is_test === true });
+    return fromStudioDbError(err, p.data.is_test === true ? { missing: "needs_update" } : {});
   }
 }
 
@@ -367,4 +369,23 @@ export async function handleDecide(deps: StudioDeps, attemptId: string, raw: unk
     status: 200,
     body: { decided: r.decided, pending: r.pending, result: { recorded: r.result.recorded, correct: r.result.correct ?? null, in_app: r.result.in_app ?? null } },
   };
+}
+
+/** POST /api/review/studio/attempts/:id/retry-seen - "Đã xem" on the child's retries of one attempt (the same people who may decide its items). */
+export async function handleMarkRetrySeen(deps: StudioDeps, attemptId: string, raw: unknown): Promise<HandlerResult> {
+  if (!deps.user?.id) return fail(401, "unauthenticated");
+  if (!UUID_RE.test(attemptId)) return fail(404, "not_found");
+  const learnerId = await deps.store.getAttemptLearnerId(attemptId);
+  if (!learnerId) return fail(404, "not_found");
+  const g = await guard(deps, learnerId, "studio:write");
+  if (!g.ok) return g.result;
+  const p = retrySeenBodySchema.safeParse(raw);
+  if (!p.success) return fail(400, "invalid_body");
+  try {
+    const allowReal = deps.access?.allowRealLearners ?? allowRealLearners();
+    const r = (await deps.store.markRetrySeen({ attemptId, note: p.data.note ?? null, seenThrough: p.data.seen_through, byMemberId: g.grant.member.id, clientId: p.data.client_id, allowReal })) as { id: string; replayed: boolean };
+    return { status: r.replayed ? 200 : 201, body: r };
+  } catch (err) {
+    return fromStudioDbError(err, { missing: "retry_needs_update" });
+  }
 }

@@ -51,3 +51,46 @@ describe("groupResult", () => {
     expect(g.nothing).toBe(true);
   });
 });
+
+describe("parseResultView · marks of a practice work (D39)", () => {
+  const mark = (over: Record<string, unknown> = {}) => ({ id: "q2", n: 2, stem: "s", given: "B", mark: "wrong", retry: null, revealed: false, can_retry: true, can_reveal: true, answer: null, why: null, ...over });
+  it("reads marks; a work without marks gives null", () => {
+    expect(parseResultView(base)!.marks).toBeNull();
+    const v = parseResultView({ ...base, marks: [mark(), mark({ id: "q3", n: 3, mark: "right", can_retry: false, can_reveal: false, why: "Vì lý do" })] })!;
+    expect(v.marks!.map((m) => [m.n, m.mark, m.canReveal, m.answer, m.why])).toEqual([[2, "wrong", true, null, null], [3, "right", false, null, "Vì lý do"]]);
+  });
+  it("a test never carries marks (the whole reply is refused), and unknown keys / totals are refused", () => {
+    expect(parseResultView({ ...base, is_test: true, marks: [mark()] })).toBeNull();
+    expect(parseResultView({ ...base, marks: [mark({ correct: 1 })] })).toBeNull();
+    expect(parseResultView({ ...base, marks: [mark({ mark: "maybe" })] })).toBeNull();
+    expect(parseResultView({ ...base, marks: [mark()], total: 8 })).toBeNull();
+  });
+});
+
+describe("parseResultView (D39 marks): the reply is refused when it disagrees with itself", () => {
+  const mark = { id: "q2", n: 2, stem: "s", given: "x", mark: "wrong", retry: null, revealed: false, can_retry: true, can_reveal: true, answer: null, why: null };
+  const withMarks = (...marks: Record<string, unknown>[]) => ({ ...base, marks });
+  it("a consistent reply is read", () => {
+    const v = parseResultView(withMarks(mark, { ...mark, id: "q1", n: 1, mark: "right", can_retry: false, can_reveal: false, why: "Vì sao có" }, { ...mark, id: "q3", n: 3, mark: "wrong", revealed: true, can_retry: false, can_reveal: false, answer: "A. must", why: "Vì" }))!;
+    expect(v.marks!.map((m) => [m.n, m.mark, m.revealed, m.answer])).toEqual([[2, "wrong", false, null], [1, "right", false, null], [3, "wrong", true, "A. must"]]);
+  });
+  it("an answer or a 'why' of an item that was not retried / given up is refused (only a right item keeps its 'why')", () => {
+    expect(parseResultView(withMarks({ ...mark, answer: "A. must" }))).toBeNull();
+    expect(parseResultView(withMarks({ ...mark, why: "Vì" }))).toBeNull();
+    expect(parseResultView(withMarks({ ...mark, mark: "waiting", can_retry: false, can_reveal: false, why: "Vì" }))).toBeNull();
+    expect(parseResultView(withMarks({ ...mark, mark: "right", can_retry: false, can_reveal: false, answer: "A. must" }))).toBeNull();
+  });
+  it("a button on an item that is not wrong, or on one already revealed, is refused", () => {
+    expect(parseResultView(withMarks({ ...mark, mark: "right" }))).toBeNull();
+    expect(parseResultView(withMarks({ ...mark, mark: "waiting", can_reveal: false }))).toBeNull();
+    expect(parseResultView(withMarks({ ...mark, revealed: true, answer: "A", can_reveal: false }))).toBeNull();
+  });
+  it("one bad item refuses the WHOLE reply", () => {
+    expect(parseResultView(withMarks({ ...mark, id: "q1", n: 1, mark: "right", can_retry: false, can_reveal: false }, { ...mark, answer: "A. must" }))).toBeNull();
+  });
+  it("a test with marks is refused; a total or count key anywhere is refused", () => {
+    expect(parseResultView({ ...withMarks(mark), is_test: true })).toBeNull();
+    expect(parseResultView(withMarks({ ...mark, correct: 3 }))).toBeNull();
+    expect(parseResultView({ ...withMarks(mark), total: 8 })).toBeNull();
+  });
+});

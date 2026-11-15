@@ -1,4 +1,7 @@
 import { assistanceLabels, fallbackLabels, reviewPage, supportKindLabels, verificationLabels } from "@/lib/copy/vi";
+import { WorkItems, type WorkItemRow } from "@/components/review/WorkItems";
+import { itemStatus } from "@/lib/review/itemStatus";
+import { questionNumber } from "@/lib/studio/view";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { formatWhen } from "@/lib/review/format";
 import type { ReviewEpisodeView } from "@/lib/review/types";
@@ -7,7 +10,7 @@ const text = (v: unknown): string | null => (typeof v === "string" ? v : null);
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
 /** The work itself, beside the keys and the machine check (staff only): answers per question, or the text, and the help used. */
-export function WorkPanel({ view }: { view: ReviewEpisodeView }) {
+export function WorkPanel({ view, decisions }: { view: ReviewEpisodeView; /** The adult's Đúng/Sai on items the app could not mark (by item id); null / absent = unknown, those items stay "waiting". */ decisions?: Record<string, "correct" | "incorrect"> | null }) {
   const alias = view.learner.alias;
   const content = view.artifact?.content ?? {};
   const answers = content.answers && typeof content.answers === "object" ? (content.answers as Record<string, unknown>) : null;
@@ -16,7 +19,8 @@ export function WorkPanel({ view }: { view: ReviewEpisodeView }) {
   const dw = reviewPage.durationWords(num(content.duration_sec), num(content.word_count));
   const keyByItem = new Map(view.keys.map((k) => [k.itemId, k]));
   const auto = view.autoChecks;
-  const needsPerson = auto ? Object.values(auto.items).filter((i) => i.result === "needs_person").length : 0;
+  const decided = (id: string) => decisions?.[id] ?? null;
+  const needsPerson = auto ? Object.entries(auto.items).filter(([id, i]) => i.result === "needs_person" && !decided(id)).length : 0;
 
   return (
     <section aria-labelledby="work-title" className="flex flex-col gap-3 rounded-xl border border-line bg-white p-4" data-testid="work-panel">
@@ -46,32 +50,24 @@ export function WorkPanel({ view }: { view: ReviewEpisodeView }) {
               {needsPerson > 0 ? ` · ${reviewPage.autoNeedsPerson(needsPerson)}` : ""}
             </p>
           ) : null}
-          <ol className="flex flex-col gap-3">
-            {view.step.items.map((it) => {
-              const given = text(answers[it.id]);
+          <WorkItems
+            givenLabel={reviewPage.itemGiven(alias)}
+            blankLabel={reviewPage.itemBlank}
+            rows={view.step.items.map((it, i): WorkItemRow => {
               const res = auto?.items[it.id]?.result;
+              const decision = res === "needs_person" ? decided(it.id) : null;
               const key = keyByItem.get(it.id);
-              return (
-                <li key={it.id} className="rounded-lg border border-line px-3 py-2" data-testid={`item-${it.id}`}>
-                  <p lang="en" className="text-sm font-medium">
-                    {it.stem}
-                  </p>
-                  <p lang="en" className="mt-1 text-sm">
-                    {reviewPage.itemGiven(alias)}: <b>{given && given.trim() ? given : reviewPage.itemBlank}</b>
-                    {res ? (
-                      <span className="ml-2 rounded-full border border-line px-2 py-0.5 text-xs">{reviewPage.autoResult[res] ?? fallbackLabels.autoResult}</span>
-                    ) : null}
-                  </p>
-                  {key && (key.answer || key.explanationVi) ? (
-                    <p lang="en" className="mt-1 text-xs text-muted">
-                      {reviewPage.keyKinds[key.kind] ?? fallbackLabels.keyKind}: {key.answer ?? ""}
-                      {key.explanationVi ? ` · ${key.explanationVi}` : ""}
-                    </p>
-                  ) : null}
-                </li>
-              );
+              return {
+                id: it.id,
+                n: questionNumber(it.id, i),
+                stem: it.stem,
+                given: text(answers[it.id]) ?? "",
+                status: itemStatus(decision ?? res),
+                blank: res === "blank",
+                keyLine: key && (key.answer || key.explanationVi) ? `${reviewPage.keyKinds[key.kind] ?? fallbackLabels.keyKind}: ${key.answer ?? ""}${key.explanationVi ? ` · ${key.explanationVi}` : ""}` : null,
+              };
             })}
-          </ol>
+          />
         </>
       ) : body !== null ? (
         <p lang="en" className="whitespace-pre-wrap text-[15px] leading-7" data-testid="work-text">

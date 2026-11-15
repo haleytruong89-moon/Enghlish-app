@@ -42,6 +42,19 @@ export async function loadNotesPage(learnerId: string, trackId: string): Promise
   };
 }
 
+/**
+ * The adult's Đúng/Sai on the items the app could not mark (item_decisions, 0024) of one attempt, by item id. Staff only (RLS). A failed lookup is
+ * null: the screen then treats those items as still waiting (never blocks the review).
+ */
+export async function loadItemDecisions(attemptId: string): Promise<Record<string, "correct" | "incorrect"> | null> {
+  const db = await createUserClient();
+  const { data, error } = await db.from("item_decisions").select("item_id, result").eq("attempt_id", attemptId).returns<{ item_id: string; result: string }[]>();
+  if (error) return null;
+  const out: Record<string, "correct" | "incorrect"> = {};
+  for (const d of data ?? []) if (d.result === "correct" || d.result === "incorrect") out[d.item_id] = d.result;
+  return out;
+}
+
 /** G4: is the "new topic / source" mark on this piece of work ticked right now? The latest row wins; null = unknown (e.g. 0023 not applied yet). Staff only (RLS). */
 export async function loadTransferMark(episodeId: string): Promise<boolean | null> {
   const db = await createUserClient();

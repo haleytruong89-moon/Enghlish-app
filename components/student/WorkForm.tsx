@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { messages, work } from "@/lib/copy/vi";
 import { isStudioStep, questionNumber } from "@/lib/studio/view";
 import { ASSISTANCE_VALUES, type SupportedActivityView, type Assistance, type DraftContent, type ItemView, type Receipt } from "@/lib/work/types";
-import { baseRevisionOf, formatHm, nonEmptyAnswers, wordsOf } from "@/lib/work/view";
+import { baseRevisionOf, formatDmy, formatHm, nonEmptyAnswers, wordsOf } from "@/lib/work/view";
 
 const AUTOSAVE_MS = 5000;
 
@@ -211,7 +211,7 @@ export function WorkForm({ activity }: { activity: SupportedActivityView }) {
     >
       {last && attemptCount > 0 ? (
         <p role="status" className="rounded-xl bg-[#E3ECE8] px-3.5 py-3 text-sm leading-snug text-[#1F4439]" data-testid="already-submitted">
-          {last.provenance === "offline" ? work.doneOffline : work.alreadySubmitted(formatHm(last.submittedAt))} {work.mayRetry}
+          {last.provenance === "offline" ? work.doneOffline : work.alreadySubmitted(formatHm(last.submittedAt), formatDmy(last.submittedAt))} {work.mayRetry}
         </p>
       ) : null}
 

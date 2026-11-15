@@ -73,6 +73,13 @@ function byOldest(a: PendingRow, b: PendingRow): number {
   return Date.parse(a.since) - Date.parse(b.since) || a.key.localeCompare(b.key);
 }
 
+/** "Con thử lại 2 câu" / "Con xem đáp án 1 câu" / both with " · ". */
+function retryNeed(items: readonly { kind: "retry" | "revealed" }[]): string {
+  const retried = items.filter((x) => x.kind === "retry").length;
+  const shown = items.length - retried;
+  return [retried > 0 ? pendingCopy.need.retry(retried) : null, shown > 0 ? pendingCopy.need.reveal(shown) : null].filter(Boolean).join(" · ");
+}
+
 export function buildPendingRows(i: PendingInput): PendingRow[] {
   const rows: PendingRow[] = [];
   const push = (r: Omit<PendingRow, "group">) => rows.push({ ...r, group: GROUP_OF[r.kind] });
@@ -93,7 +100,7 @@ export function buildPendingRows(i: PendingInput): PendingRow[] {
   }
   for (const a of i.retries ?? []) {
     if (a.learnerId !== i.learnerId) continue;
-    push({ key: `retry-${a.attemptId}`, kind: "retry", label: pendingCopy.kinds.retry, title: a.title, since: a.since, need: pendingCopy.need.retry(a.retries.length), href: `/review/studio?learner=${a.learnerId}#retry-${a.attemptId}`, waitingTutor: false });
+    push({ key: `retry-${a.attemptId}`, kind: "retry", label: pendingCopy.kinds.retry, title: a.title, since: a.since, need: retryNeed(a.retries), href: `/review/studio?learner=${a.learnerId}#retry-${a.attemptId}`, waitingTutor: false });
   }
   for (const s of i.skills) {
     if (s.learnerId !== i.learnerId) continue;

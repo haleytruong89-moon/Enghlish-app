@@ -10,7 +10,7 @@ import { WorkForm } from "@/components/student/WorkForm";
 import { concepts, messages, modeLabels, revisionCopy, work } from "@/lib/copy/vi";
 import { loadDeskBase } from "@/lib/student/desk";
 import { loadActivityPage, loadIsTest, loadResultView, loadRevisionPage } from "@/lib/work/load";
-import { formatHm, stepTitle } from "@/lib/work/view";
+import { formatDmy, formatHm, stepTitle } from "@/lib/work/view";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Learning OS" };
@@ -119,7 +119,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
           ) : (
             <section data-testid="already-submitted" className="mx-auto flex max-w-2xl flex-col gap-2 rounded-2xl border border-line bg-white p-4">
               <p role="status" className="text-[15px] font-semibold text-accent">
-                {last ? (last.provenance === "offline" ? work.doneOffline : work.alreadySubmitted(formatHm(last.submittedAt))) : ""}
+                {last ? (last.provenance === "offline" ? work.doneOffline : work.alreadySubmitted(formatHm(last.submittedAt), formatDmy(last.submittedAt))) : ""}
               </p>
               <Link href="/" className="flex min-h-12 items-center self-start rounded-xl bg-accent px-5 text-base font-bold text-white">
                 {work.homeLink}
@@ -172,7 +172,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
             ) : (
               <section data-testid="already-submitted" className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-4">
                 <p role="status" className="text-[15px] font-semibold text-accent">
-                  {last ? (last.provenance === "offline" ? work.doneOffline : work.alreadySubmitted(formatHm(last.submittedAt))) : ""}
+                  {last ? (last.provenance === "offline" ? work.doneOffline : work.alreadySubmitted(formatHm(last.submittedAt), formatDmy(last.submittedAt))) : ""}
                 </p>
                 <p className="text-sm text-muted">{work.checkOnce}</p>
                 <Link href="/" className="flex min-h-12 items-center self-start rounded-xl bg-accent px-5 text-base font-bold text-white">

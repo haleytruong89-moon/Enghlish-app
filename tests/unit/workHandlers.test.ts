@@ -7,6 +7,7 @@ import {
   handleStudentActivityNote,
   handleStudentResultView,
   handleRetryItem,
+  handleRevealItem,
   handleStudentFeedback,
   handleStudentHome,
   handleStudentRevision,
@@ -83,6 +84,7 @@ function makeStore(over: Partial<WorkStore> = {}) {
     getMyActivityNote: vi.fn(async (): Promise<unknown> => null),
     getMyResultView: vi.fn(async (): Promise<unknown> => null),
     retryItem: vi.fn(async (): Promise<unknown> => ({ id: "r1", replayed: false })),
+    revealItem: vi.fn(async (): Promise<unknown> => ({ id: "v1", replayed: false })),
     getMyTestMarks: vi.fn(async (): Promise<unknown> => ({ activity_ids: [], assignment_ids: [] })),
     saveRevisionDraft: vi.fn(async (): Promise<unknown> => ({ revision: 1, saved_at: "2026-10-14T08:00:00Z", other_tab_changed: false })),
     submitRevision: vi.fn(async (): Promise<unknown> => rpcReceipt),
@@ -318,6 +320,13 @@ describe("S4 route handlers: submit", () => {
     expect(again.status).toBe(200);
   });
 
+  it("D39: a redo of a work whose answers were shown is 409 answers_shown; other 23514 stay 400", async () => {
+    const refuse = (msg: string) => makeStore({ submit: vi.fn(async () => { throw new WorkDbError("23514", msg); }) });
+    const r = await handleSubmit(deps("studentAn", refuse("eng_submit_attempt: the answers of this work were already shown (answers_shown)")), goodAttempt);
+    expect(r).toMatchObject({ status: 409, body: { error: "answers_shown" } });
+    expect((await handleSubmit(deps("studentAn", refuse("eng_submit_attempt: something else")), goodAttempt)).status).toBe(400);
+  });
+
   it("the receipt carries no result of any kind", async () => {
     const s = makeStore({ submit: vi.fn(async () => ({ ...rpcReceipt, checks: { correct: 3 }, score: 4, auto_checks: {} })) });
     const r = await handleSubmit(deps("studentAn", s), goodAttempt);
@@ -441,7 +450,7 @@ describe("W4c2: the child's result screen and retry", () => {
   it("result: the child's own step only; a broken or answer-carrying reply shows nothing", async () => {
     const store = makeStore({ getMyResultView: vi.fn(async (): Promise<unknown> => view) });
     const ok = await handleStudentResultView(deps("studentAn", store), ACT_AN);
-    expect(ok.body).toEqual({ result: { attemptNo: 1, submittedAt: "2026-11-05T03:00:00Z", isTest: false, othersFine: true, look: [{ id: "q2", n: 2, stem: "s", given: "B. can't", retryText: null, canRetry: true }], open: [] } });
+    expect(ok.body).toEqual({ result: { marks: null, attemptNo: 1, submittedAt: "2026-11-05T03:00:00Z", isTest: false, othersFine: true, look: [{ id: "q2", n: 2, stem: "s", given: "B. can't", retryText: null, canRetry: true }], open: [] } });
     const extra = makeStore({ getMyResultView: vi.fn(async (): Promise<unknown> => ({ ...view, look: [{ ...view.look[0], expected: "A. must" }] })) });
     expect((await handleStudentResultView(deps("studentAn", extra), ACT_AN)).body).toEqual({ result: null });
     expect((await handleStudentResultView(deps("studentNguyen", store), ACT_AN)).status).toBe(404);
@@ -458,5 +467,16 @@ describe("W4c2: the child's result screen and retry", () => {
     expect((await handleRetryItem(deps("studentAn", refuse("(bad_item)", "22023")), ACT_AN, good)).status).toBe(400);
     expect((await handleRetryItem(deps("studentNguyen", makeStore()), ACT_AN, good)).status).toBe(404);
     expect((await handleRetryItem(deps("parent", makeStore()), ACT_AN, good)).status).toBe(403);
+  });
+  it("reveal (Xem đáp án): validates the body, maps the tags, a replay is 200, another child's work is 404, staff 403", async () => {
+    const good = { item_id: "q2", client_id: "0b0f6f1e-0000-4000-8000-000000000002" };
+    expect((await handleRevealItem(deps("studentAn", makeStore()), ACT_AN, good)).status).toBe(201);
+    expect((await handleRevealItem(deps("studentAn", makeStore({ revealItem: vi.fn(async (): Promise<unknown> => ({ id: "v", replayed: true })) })), ACT_AN, good)).status).toBe(200);
+    for (const bad of [{}, { ...good, answer: "x" }, { ...good, client_id: "x" }]) expect((await handleRevealItem(deps("studentAn", makeStore()), ACT_AN, bad)).status, JSON.stringify(bad)).toBe(400);
+    const refuse = (tag: string, code = "23514") => makeStore({ revealItem: vi.fn(async () => { throw new WorkDbError(code, `x: ${tag}`); }) });
+    expect((await handleRevealItem(deps("studentAn", refuse("(not_revealable)")), ACT_AN, good)).body).toMatchObject({ error: "not_revealable" });
+    expect((await handleRevealItem(deps("studentAn", refuse("(already_retried)", "23505")), ACT_AN, good)).body).toMatchObject({ error: "already_retried" });
+    expect((await handleRevealItem(deps("studentNguyen", makeStore()), ACT_AN, good)).status).toBe(404);
+    expect((await handleRevealItem(deps("parent", makeStore()), ACT_AN, good)).status).toBe(403);
   });
 });

@@ -9,7 +9,7 @@ import {
 import { type ResultView as ResultData } from "@/lib/student/result";
 import { questionNumber } from "@/lib/studio/view";
 import { ASSISTANCE_VALUES, type Assistance, type DraftContent, type Receipt, type SupportedActivityView } from "@/lib/work/types";
-import { baseRevisionOf, formatHm, nonEmptyAnswers } from "@/lib/work/view";
+import { baseRevisionOf, formatDmy, formatHm, nonEmptyAnswers } from "@/lib/work/view";
 import { AskTutorSlot } from "./AskTutorSlot";
 import { QuestionCard } from "./QuestionCard";
 import { QuestionDots } from "./QuestionDots";
@@ -32,7 +32,9 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
   const [answers, setAnswers] = useState<Record<string, string>>(initial.answers ?? {});
   const [idx, setIdx] = useState(() => startIndex(items, initial.answers ?? {}));
   // A draft that exists after an attempt is a redo in progress (submit deletes the draft): open the questions, never the old result.
-  const redoing = !!draft;
+  // Except when the answers of the work were shown (D39): the whole work is not redone any more, so a draft left by another tab is ignored.
+  const revealedAlready = !!initialResult?.marks?.some((m) => m.revealed);
+  const redoing = !!draft && !revealedAlready;
   const [phase, setPhase] = useState<Phase>(redoing ? "questions" : initialResult ? "result" : sentAt ? "receipt" : "questions");
   const [result, setResult] = useState<ResultData | null>(redoing ? null : initialResult);
   const [pasted, setPasted] = useState(initial.pasted ?? false);
@@ -192,8 +194,18 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
     try {
       const res = await fetch("/api/attempts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, client_submission_id: pending.current.id }) });
       if (res.status === 409) {
-        setProblem(work.submitConflict); // `closed` stays: an attempt may exist, an autosave must not recreate a draft
-        pending.current = null;
+        pending.current = null; // `closed` stays: an attempt may exist, an autosave must not recreate a draft
+        const err = ((await res.json().catch(() => null)) as { error?: string } | null)?.error;
+        if (err === "answers_shown") {
+          // D39: the answers of this work were shown (another tab, or before): the whole work is not redone. Show the result with the answers.
+          const shown = await fetchResult();
+          if (shown) {
+            setResult(shown);
+            setPhase("result");
+          } else setProblem(work.answersShown);
+          return;
+        }
+        setProblem(work.submitConflict);
         return;
       }
       if (!res.ok) throw new Error(String(res.status));
@@ -201,10 +213,7 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
       closed.current = true;
       pending.current = null;
       setReceipt(json.receipt);
-      const r = await fetch(`/api/student/activities/${activity.activityId}/result`, { cache: "no-store" })
-        .then((x) => (x.ok ? x.json() : null))
-        .then((x: { result?: unknown } | null) => (x?.result ? (x.result as ResultData) : null))
-        .catch(() => null);
+      const r = await fetchResult();
       setResult(r);
       setPhase(r ? "result" : "receipt");
     } catch {
@@ -213,6 +222,20 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
     } finally {
       setBusy(false);
     }
+  }
+
+  function fetchResult(): Promise<ResultData | null> {
+    return fetch(`/api/student/activities/${activity.activityId}/result`, { cache: "no-store" })
+      .then((x) => (x.ok ? x.json() : null))
+      .then((x: { result?: unknown } | null) => (x?.result ? (x.result as ResultData) : null))
+      .catch(() => null);
+  }
+
+  /** Re-reads the result after a retry / "Xem đáp án": the server sends the answer only for items that were retried or given up. false = could not read it. */
+  async function refreshResult(): Promise<boolean> {
+    const r = await fetchResult();
+    if (r) setResult(r);
+    return r !== null;
   }
 
   function redo() {
@@ -231,13 +254,13 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
   }
 
   if (phase === "result" && result) {
-    return <ResultView activityId={activity.activityId} title={activity.titleVi} result={result} items={items.map((i) => ({ id: i.id, kind: i.kind, options: i.options }))} canRedo={!isTest && activity.canSubmit} onRedo={redo} />;
+    return <ResultView activityId={activity.activityId} title={activity.titleVi} result={result} items={items.map((i) => ({ id: i.id, kind: i.kind, options: i.options }))} canRedo={!isTest && activity.canSubmit && !result.marks?.some((m) => m.revealed)} onRedo={redo} onRefresh={refreshResult} />;
   }
   if (phase === "receipt" && receipt) {
     return (
       <section aria-live="polite" data-testid="receipt" className="mx-auto flex max-w-2xl flex-col gap-3 rounded-2xl border border-line bg-white p-5">
         <h2 role="status" className="text-xl font-bold text-accent">
-          {early ? work.alreadySubmitted(formatHm(receipt.submittedAt)) : work.submittedAt(formatHm(receipt.submittedAt))}
+          {early ? work.alreadySubmitted(formatHm(receipt.submittedAt), formatDmy(receipt.submittedAt)) : work.submittedAt(formatHm(receipt.submittedAt))}
         </h2>
         <p className="text-[15px]">{messages.submitted}</p>
         {early && !isTest && activity.canSubmit ? (

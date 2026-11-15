@@ -221,6 +221,22 @@ describe("S5 work panel", () => {
     expect(html).not.toMatch(/AP-0\.2|A-W1-VOLCANOES/);
   });
 
+  it("an item the app could not mark takes the adult's decision colour; undecided or unknown stays orange 'waiting'", () => {
+    const row = (html: string, id: string) => new RegExp(`data-testid="item-${id}" data-status="(\\w+)"`).exec(html)?.[1];
+    const view = { ...base, autoChecks: { total: 2, checked: 1, correct: 1, items: { "W1-R1": { kind: "mcq", result: "correct" }, "W1-R2": { kind: "short", result: "needs_person" } } } } as ReviewEpisodeView;
+    const withDecisions = (d: Record<string, "correct" | "incorrect"> | null | undefined) => renderToStaticMarkup(createElement(WorkPanel, { view, decisions: d }));
+    expect(row(withDecisions(undefined), "W1-R2")).toBe("waiting");
+    expect(row(withDecisions(null), "W1-R2")).toBe("waiting"); // lookup failed: never blocks, still waiting
+    expect(row(withDecisions({}), "W1-R2")).toBe("waiting");
+    expect(row(withDecisions({ "W1-R2": "incorrect" }), "W1-R2")).toBe("wrong");
+    expect(row(withDecisions({ "W1-R2": "correct" }), "W1-R2")).toBe("right");
+    // a decision on an item the app DID mark is ignored (it is not an item waiting for a person)
+    expect(row(withDecisions({ "W1-R1": "incorrect" }), "W1-R1")).toBe("right");
+    // the "needs a person" count drops once the adult decided it
+    expect(withDecisions({}).includes(reviewPage.autoNeedsPerson(1))).toBe(true);
+    expect(withDecisions({ "W1-R2": "correct" }).includes(reviewPage.autoNeedsPerson(1))).toBe(false);
+  });
+
   it("a typed text is shown as written; a recorded-outside piece shows who recorded it and the date", () => {
     const html = render({
       ...base,

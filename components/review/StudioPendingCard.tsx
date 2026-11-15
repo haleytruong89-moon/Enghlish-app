@@ -2,7 +2,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { studioCopy, studioInboxCopy } from "@/lib/copy/vi";
+import { reviewItemCopy, studioCopy, studioInboxCopy } from "@/lib/copy/vi";
+import { itemStatus, STATUS_TONE } from "@/lib/review/itemStatus";
 import { formatDay } from "@/lib/review/format";
 import { sendJson } from "@/lib/studio/client";
 import type { PendingAttempt } from "@/lib/studio/types";
@@ -18,6 +19,8 @@ export function StudioPendingCard({ attempt }: { attempt: PendingAttempt }) {
   const [line, setLine] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const clientId = useRef(crypto.randomUUID());
+  /** Orange until the adult picks; then green (Đúng) or red (Sai). */
+  const statusOf = (id: string) => itemStatus(verdicts[id] ?? "needs_person");
   async function save() {
     const items = Object.entries(verdicts).map(([item_id, result]) => ({ item_id, result }));
     if (items.length === 0) return;
@@ -44,8 +47,13 @@ export function StudioPendingCard({ attempt }: { attempt: PendingAttempt }) {
       {done ? null : (
         <ul className="mt-3 flex flex-col gap-3">
           {attempt.items.map((i) => (
-            <li key={i.itemId} className="flex flex-col gap-1 rounded-xl border border-line p-3" data-testid={`studio-item-${attempt.attemptId}-${i.itemId}`}>
-              <p className="font-semibold">{studioCopy.itemLabel(i.n)}. <span lang="en" className="font-normal">{i.stem}</span></p>
+            <li key={i.itemId} data-status={statusOf(i.itemId)} className={`flex flex-col gap-1 rounded-xl border-2 p-3 ${STATUS_TONE[statusOf(i.itemId)].box}`} data-testid={`studio-item-${attempt.attemptId}-${i.itemId}`}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-semibold">{studioCopy.itemLabel(i.n)}. <span lang="en" className="font-normal">{i.stem}</span></p>
+                <span data-testid={`studio-chip-${attempt.attemptId}-${i.itemId}`} className={`rounded-full px-3 py-1 text-xs font-bold ${STATUS_TONE[statusOf(i.itemId)].chip}`}>
+                  {verdicts[i.itemId] === "correct" ? reviewItemCopy.right : verdicts[i.itemId] === "incorrect" ? reviewItemCopy.wrong : reviewItemCopy.waiting}
+                </span>
+              </div>
               <p className="text-sm">{studioInboxCopy.expected}: <span lang="en">{i.expected ?? "—"}</span>{i.accepted.length ? <> · {studioInboxCopy.accepted}: <span lang="en">{i.accepted.join(" / ")}</span></> : null}</p>
               <p className="text-sm">{studioInboxCopy.wrote(attempt.alias)}: <span lang="en" className="font-semibold">{i.given || studioInboxCopy.blankAnswer}</span></p>
               <div className="mt-1 flex gap-2" role="radiogroup" aria-label={studioCopy.itemLabel(i.n)}>

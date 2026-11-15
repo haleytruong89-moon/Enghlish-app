@@ -5,6 +5,7 @@ import type { StudioContext } from "../../lib/studio/context";
 import { normalizeExtract } from "../../lib/studio/normalize";
 import { aiExtractSchema, type StudioDraft } from "../../lib/studio/schema";
 import { FAKE_EXTRACT } from "../unit/fixtures/studio";
+import { todayVn } from "../../lib/inquiries/dates";
 import { asCommit, createTestDb, errorAs, migrate, rowsAs, seed, type Seeded, type TestDb } from "./helpers";
 
 /** W4c2 · the screen after submitting (no score, no answer), one retry per item, the "Bài kiểm tra" flag (migration 0034). One database. */
@@ -49,7 +50,8 @@ describe("result view, retry and test flag (migration 0034)", () => {
   const WRONG = { q1: "B. had", q2: "B. can't", q3: "A. off", q4: "C. A visit that changed Lan's plans", q6: "happyness", q7: "I wish I could", q8: "is said to be a" };
   const submit = (activity: string, answers: Record<string, string> = WRONG, user = s.users.studentNguyen) =>
     asUser<{ attempt_id: string }>(user, "select english.eng_submit_attempt($1, $2, $3::jsonb, $4::text[], 'in_app') as r", [activity, randomUUID(), JSON.stringify({ answers }), ["none"]]);
-  type View = { attempt_no: number; is_test: boolean; others_fine: boolean; look: { id: string; n: number; stem: string; given: string; retry: { text: string } | null; can_retry: boolean }[]; open: { n: number }[] };
+  type Mark = { id: string; n: number; mark: string; given: string; retry: { text: string; mark: string } | null; revealed: boolean; can_retry: boolean; can_reveal: boolean; answer: string | null; why: string | null };
+  type View = { attempt_no: number; is_test: boolean; others_fine: boolean; marks?: Mark[]; look: { id: string; n: number; stem: string; given: string; retry: { text: string } | null; can_retry: boolean }[]; open: { n: number }[] };
   const view = (activity: string, user = s.users.studentNguyen) => asUser<View | null>(user, "select english.eng_my_result_view($1) as r", [activity]);
   const retry = (activity: string, item: string, answer: string, clientId: string = randomUUID(), user = s.users.studentNguyen) =>
     asUser<{ id: string; replayed: boolean }>(user, "select english.eng_my_retry_item($1, $2, $3, $4) as r", [activity, item, answer, clientId]);
@@ -94,8 +96,12 @@ describe("result view, retry and test flag (migration 0034)", () => {
         else if (x && typeof x === "object") for (const [k, val] of Object.entries(x)) { keys.add(k); walk(val); }
       };
       walk(v);
-      expect([...keys].sort()).toEqual(["attempt_no", "can_retry", "given", "id", "is_test", "look", "n", "open", "others_fine", "retry", "stem", "submitted_at", "text"].filter((k) => k !== "text" || keys.has("text")).sort());
-      expect(JSON.stringify(v)).not.toMatch(/"(score|correct|expected|answer|explanation|explanation_vi|tag_key|level_num|pct|result|total|checked)"/);
+      expect([...keys].sort()).toEqual(["answer", "attempt_no", "can_retry", "can_reveal", "given", "id", "is_test", "look", "mark", "marks", "n", "open", "others_fine", "retry", "revealed", "stem", "submitted_at", "why"].filter((k) => keys.has(k)).sort());
+      // practice of a Studio set: marks yes, but no answer / explanation for an item that was not retried or revealed, and no total anywhere
+      expect(v.marks!.every((m) => m.answer === null && (m.mark === "right" || m.why === null))).toBe(true);
+      expect(v.marks!.map((m) => [m.n, m.mark])).toEqual([[1, "right"], [2, "wrong"], [3, "right"], [4, "right"], [5, "wrong"], [6, "wrong"], [7, "waiting"], [8, "waiting"]]);
+      expect(JSON.stringify(v)).not.toMatch(/"(score|correct|expected|explanation|explanation_vi|tag_key|level_num|pct|result|total|checked)"/);
+      expect(JSON.stringify(v)).not.toMatch(/"answer":"/); // null until an item is retried / given up (a right item may show its "why")
       // the printed answers of the key never appear
       expect(JSON.stringify(v)).not.toContain("A. must");
       expect(JSON.stringify(v)).not.toContain("happiness");
@@ -146,18 +152,22 @@ describe("result view, retry and test flag (migration 0034)", () => {
       await fail(retry(practice, "q8", "x"), "23514", /\(not_retryable\)/);
     });
 
-    it("only the NEWEST attempt: after a second attempt the earlier retries are not shown and the items are open again", async () => {
-      await submit(practice, { ...WRONG, q2: "B. can't", q5: "", q6: "happiness" });
-      const v = (await view(practice))!;
+    it("only the NEWEST attempt: a work nothing was shown for can be redone; the view is of attempt 2 and the items are open again", async () => {
+      const w = await newWork(false);
+      await submit(w);
+      await submit(w, { ...WRONG, q2: "B. can't", q5: "", q6: "happiness" });
+      const v = (await view(w))!;
       expect(v.attempt_no).toBe(2);
       expect(v.look.map((x) => x.n)).toEqual([2, 5]);
       expect(v.look.every((x) => x.retry === null && x.can_retry)).toBe(true);
-      await retry(practice, "q2", "A. must"); // allowed again: it is another attempt
+      await retry(w, "q2", "A. must"); // allowed on attempt 2
     });
 
     it("the retry is not evidence: the inputs of the engines do not change", async () => {
+      const w = await newWork(false);
+      await submit(w);
       const before = await inputs();
-      await retry(practice, "q5", "B. The robot room was interesting");
+      await retry(w, "q5", "B. The robot room was interesting");
       expect(await inputs()).toEqual(before);
     });
 
@@ -276,7 +286,7 @@ describe("result view, retry and test flag (migration 0034)", () => {
 
   describe("the adult read of retries (eng_retry_pending) and when a retry stops waiting", () => {
     const pending = (by: string, allowReal = false) =>
-      svc<{ count: number; items: { attempt_id: string; learner_id: string; since: string; retries: { item_id: string; n: number; stem: string; given: string; retry: string }[] }[] }>(
+      svc<{ count: number; items: { attempt_id: string; learner_id: string; since: string; retries: { item_id: string; n: number; stem: string; given: string; retry: string; at: string }[] }[] }>(
         "select english.eng_retry_pending($1, $2) as r", [by, allowReal]);
     const mineOf = async (by: string, activity: string) => {
       const att = (await q1<{ id: string }>("select id from english.attempts where activity_instance_id = $1 order by attempt_no desc limit 1", [activity]))[0]!.id;
@@ -311,52 +321,274 @@ describe("result view, retry and test flag (migration 0034)", () => {
       expect((await errorAs(db.client, "authenticated", s.users.tutorNguyen, "select english.eng_retry_pending($1, true)", [s.members.tutorNguyen]))?.code).toBe("42501");
     });
 
-    it("clears after a LATER feedback note on the attempt, but not after one that came before the retry", async () => {
-      // eng_write_feedback only accepts writing work, so the note rows are inserted directly (same shape the function writes).
-      const note = (att: string, text: string, kind = "feedback") => q1(
-        `insert into english.feedback_notes(learner_id, source_attempt_id, root_attempt_id, round, kind, praise, items, author_member, author_role, client_id)
-         values ($1, $2, $2, 1, $5, 'Bạn làm tốt', $3::jsonb, $4, 'tutor', $6)`,
-        [s.learners.nguyen, att, JSON.stringify([{ n: 1, text }]), s.members.tutorNguyen, kind, `fb-${randomUUID()}`]);
-      const w = await newWork(false);
-      await submit(w);
-      const att = (await q1<{ id: string }>("select id from english.attempts where activity_instance_id = $1", [w]))[0]!.id;
-      await note(att, "Xem lại câu 2");
-      await retry(w, "q2", "A. must");
-      expect((await mineOf(s.members.tutorNguyen, w)).row?.retries).toHaveLength(1);
+    /** `through` = the newest retry time the card showed (the exact string of the server); default = now (the card was opened after every retry). */
+    const seen = (by: string, att: string, note: string | null = null, cid: string = `seen-${randomUUID()}`, through: string | null = null, allowReal = false) =>
+      svc<{ id: string; replayed: boolean }>("select english.eng_mark_retry_seen($1, $2, $3, $4, coalesce($5::timestamptz, clock_timestamp()), $6) as r", [att, note, by, cid, through, allowReal]);
+
+    it("waits until an adult presses Đã xem; no other action clears it (feedback, item decision, validation decision)", async () => {
+      const w = await fresh();
+      const { att } = await mineOf(s.members.tutorNguyen, w);
       await q1(
-        `insert into english.feedback_notes(learner_id, source_attempt_id, root_attempt_id, round, kind, praise, items, supersedes_id, author_member, author_role, client_id)
-         values ($1, $2, $2, 1, 'feedback', 'Tốt hơn', $3::jsonb, (select id from english.feedback_notes where source_attempt_id = $2 and supersedes_id is null), $4, 'tutor', $5)`,
-        [s.learners.nguyen, att, JSON.stringify([{ n: 1, text: "Câu 2 ổn rồi" }]), s.members.tutorNguyen, `fb-${randomUUID()}`]);
-      expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined();
-    });
-
-    it("clears after a later item decision", async () => {
-      const w = await fresh();
-      const { att } = await mineOf(s.members.tutorNguyen, w);
+        `insert into english.feedback_notes(learner_id, source_attempt_id, root_attempt_id, round, kind, praise, items, author_member, author_role, client_id)
+         values ($1, $2, $2, 1, 'feedback', 'Bạn làm tốt', $3::jsonb, $4, 'tutor', $5)`,
+        [s.learners.nguyen, att, JSON.stringify([{ n: 1, text: "Xem lại câu 2" }]), s.members.tutorNguyen, `fb-${randomUUID()}`]);
       await svc("select english.eng_decide_studio_items($1, $2::jsonb, $3, $4) as r", [att, JSON.stringify([{ item_id: "q7", result: "incorrect" }]), s.members.tutorNguyen, `dc-${randomUUID()}`]);
-      expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined();
-    });
-
-    it("clears after a later validation decision", async () => {
-      const w = await fresh();
-      const { att } = await mineOf(s.members.tutorNguyen, w);
       const ep = (await q1<{ id: string }>("select id from english.episodes where attempt_id = $1", [att]))[0]!.id;
       await q1(`insert into english.validation_decisions(episode_id, learner_id, target_key, decision, validator_member_id, validator_role)
                 values ($1, $2, 'T-RETRY-TEST', 'INSUFFICIENT', $3, 'tutor')`, [ep, s.learners.nguyen, s.members.tutorNguyen]);
+      expect((await mineOf(s.members.tutorNguyen, w)).row?.retries).toHaveLength(2);
+    });
+
+    it("clears after Đã xem (a note is optional and stays adult-only); a replay is a replay; the parent may press it too", async () => {
+      const w = await fresh();
+      const { att } = await mineOf(s.members.tutorNguyen, w);
+      const cid = `seen-${randomUUID()}`;
+      const through = (await q1<{ t: string }>("select clock_timestamp()::text as t"))[0]!.t;
+      expect(await seen(s.members.tutorNguyen, att, "  Ổn rồi  ", cid, through)).toMatchObject({ replayed: false });
+      expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined();
+      expect((await mineOf(s.members.parent, w)).row).toBeUndefined();
+      expect((await seen(s.members.tutorNguyen, att, "Ổn rồi", cid, through)).replayed).toBe(true);
+      await fail(seen(s.members.tutorNguyen, att, "Khác", cid, through), "23505", /\(client_id_reused\)/);
+      await fail(seen(s.members.tutorNguyen, att, "Ổn rồi", cid, (await q1<{ t: string }>("select (clock_timestamp() - interval '1 second')::text as t"))[0]!.t), "23505", /\(client_id_reused\)/);
+      expect((await q1<{ note: string }>("select note from english.retry_seen where client_id = $1", [cid]))[0]!.note).toBe("Ổn rồi");
+      const read = (await svc<{ attempt_id: string; seen: { note: string } | null }[]>("select english.eng_item_retries($1) as r", [s.learners.nguyen])).filter((x) => x.attempt_id === att);
+      expect(read.every((x) => x.seen?.note === "Ổn rồi")).toBe(true);
+      const w2 = await fresh();
+      expect((await seen(s.members.parent, (await mineOf(s.members.parent, w2)).att)).replayed).toBe(false);
+    });
+
+    it("an earlier Đã xem does not cover a later retry (another item of the same attempt)", async () => {
+      const w = await newWork(false);
+      await submit(w);
+      await retry(w, "q2", "A. must");
+      const { att } = await mineOf(s.members.tutorNguyen, w);
+      await seen(s.members.tutorNguyen, att);
+      expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined();
+      await retry(w, "q6", "happiness"); // another item of the same attempt, after Đã xem
+      expect((await mineOf(s.members.tutorNguyen, w)).row?.retries.map((r) => r.item_id)).toEqual(["q6"]);
+    });
+
+    it("another child's tutor and a student cannot mark; a bad note, an attempt without a retry and a missing attempt are refused", async () => {
+      const w = await fresh();
+      const { att } = await mineOf(s.members.tutorNguyen, w);
+      await fail(seen(s.members.tutorAn, att), "42501");
+      await fail(seen(s.members.studentNguyen, att), "42501");
+      await fail(seen(s.members.tutorNguyen, att, "x".repeat(301)), "22023", /\(bad_note\)/);
+      await fail(seen(s.members.tutorNguyen, randomUUID()), "42501");
+      expect((await mineOf(s.members.tutorNguyen, w)).row).toBeDefined();
+      const none = await newWork(false);
+      await submit(none);
+      const noneAtt = (await q1<{ id: string }>("select id from english.attempts where activity_instance_id = $1", [none]))[0]!.id;
+      await fail(seen(s.members.tutorNguyen, noneAtt), "23514", /\(no_retry\)/);
+      expect((await errorAs(db.client, "authenticated", s.users.tutorNguyen, "select english.eng_mark_retry_seen($1, null, $2, 'seen-0000-0001', clock_timestamp(), false)", [att, s.members.tutorNguyen]))?.code).toBe("42501");
+      expect(await rowsAs(db.client, "authenticated", s.users.studentNguyen, "select 1 from english.retry_seen")).toEqual([]);
+      expect(await rowsAs(db.client, "authenticated", s.users.tutorAn, "select 1 from english.retry_seen")).toEqual([]);
+      await fail(q1("update english.retry_seen set note = 'x'"), "42501");
+    });
+
+    it("a retry made AFTER the card was opened stays pending: Đã xem covers only what the card showed (seen_through)", async () => {
+      const w = await fresh();
+      const { att, row } = await mineOf(s.members.tutorNguyen, w);
+      const through = row!.retries.map((r) => r.at).sort().at(-1)!; // what the card showed, the server's own string
+      await retry(w, "q5", "B. The robot room was interesting"); // the child retries while the card is open
+      await seen(s.members.tutorNguyen, att, null, `seen-${randomUUID()}`, through);
+      expect((await mineOf(s.members.tutorNguyen, w)).row?.retries.map((r) => r.item_id)).toEqual(["q5"]);
+      await seen(s.members.tutorNguyen, att); // a later card that showed q5 too
       expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined();
     });
 
-    it("a retry of the NEXT attempt waits again after an earlier one was cleared", async () => {
+    it("a time in the future is refused; a real learner needs allow_real", async () => {
       const w = await fresh();
       const { att } = await mineOf(s.members.tutorNguyen, w);
-      await svc("select english.eng_decide_studio_items($1, $2::jsonb, $3, $4) as r", [att, JSON.stringify([{ item_id: "q7", result: "incorrect" }]), s.members.tutorNguyen, `dc-${randomUUID()}`]);
-      expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined();
-      await submit(w, { ...WRONG, q2: "B. can't" });
-      expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined(); // the new attempt has no retry yet
+      await fail(seen(s.members.tutorNguyen, att, null, `seen-${randomUUID()}`, (await q1<{ t: string }>("select (clock_timestamp() + interval '1 hour')::text as t"))[0]!.t), "22023", /\(bad_seen_through\)/);
+      await db.client.query("update english.learners set is_test = false where id = $1", [s.learners.nguyen]);
+      try {
+        await fail(seen(s.members.tutorNguyen, att), "42501");
+        expect((await seen(s.members.tutorNguyen, att, null, `seen-${randomUUID()}`, null, true)).replayed).toBe(false);
+      } finally {
+        await db.client.query("update english.learners set is_test = true where id = $1", [s.learners.nguyen]);
+      }
+    });
+  });
+
+  describe("answers after a retry or 'Xem đáp án' (D39)", () => {
+    const reveal = (activity: string, item: string, clientId: string = randomUUID(), user = s.users.studentNguyen) =>
+      asUser<{ id: string; replayed: boolean }>(user, "select english.eng_my_reveal_item($1, $2, $3) as r", [activity, item, clientId]);
+    const markOf = async (w: string, n: number) => (await view(w))!.marks!.find((m) => m.n === n)!;
+
+    it("an item the child retried shows whether the retry matches, then the model answer and its 'why'; the others show nothing", async () => {
+      const w = await newWork(false);
+      await submit(w);
       await retry(w, "q2", "A. must");
-      const again = await mineOf(s.members.tutorNguyen, w);
-      expect(again.att).not.toBe(att);
-      expect(again.row?.retries).toHaveLength(1);
+      await retry(w, "q6", "happyness again");
+      const q2 = await markOf(w, 2);
+      expect(q2).toMatchObject({ mark: "wrong", revealed: true, can_retry: false, can_reveal: false, answer: "A. must", retry: { text: "A. must", mark: "right" } });
+      expect(await markOf(w, 6)).toMatchObject({ revealed: true, answer: "happiness", retry: { mark: "wrong" } });
+      const q5 = await markOf(w, 5);
+      expect(q5).toMatchObject({ mark: "wrong", revealed: false, can_retry: true, can_reveal: true, answer: null, why: null });
+      for (const n of [7, 8]) expect(await markOf(w, n)).toMatchObject({ mark: "waiting", answer: null, can_retry: false, can_reveal: false });
+      const json = JSON.stringify(await view(w));
+      expect(json).not.toMatch(/"(score|total|count|checked|pct|percent)"/);
+    });
+
+    it("'Xem đáp án' gives up the retry of that item: the answer shows at once, the retry is refused, and a replay is the same receipt", async () => {
+      const w = await newWork(false);
+      await submit(w);
+      const cid = `rev-${randomUUID()}`;
+      expect(await reveal(w, "q5", cid)).toMatchObject({ replayed: false });
+      expect(await markOf(w, 5)).toMatchObject({ revealed: true, can_retry: false, can_reveal: false, retry: null });
+      expect((await markOf(w, 5)).answer).toEqual(expect.any(String));
+      expect((await reveal(w, "q5", cid)).replayed).toBe(true);
+      expect((await reveal(w, "q5")).replayed).toBe(true);
+      await fail(retry(w, "q5", "B. The robot room was interesting"), "23505", /\(already_revealed\)/);
+      await retry(w, "q2", "A. must");
+      await fail(reveal(w, "q2"), "23505", /\(already_retried\)/);
+      await fail(reveal(w, "q1"), "23514", /\(not_retryable\)/); // a right item
+      await fail(reveal(w, "q7"), "23514", /\(not_retryable\)/); // waiting for a person
+      await fail(reveal(w, "q99"), "22023", /\(bad_item\)/);
+      await fail(reveal(w, "q6", cid), "23505", /\(client_id_reused\)/);
+    });
+
+    it("a right item shows its 'why' (if there is one) and never the answer; a person's Sai on an open item can be retried or given up like any wrong one", async () => {
+      const w = await newWork(false);
+      await submit(w);
+      const q1m = await markOf(w, 1);
+      expect(q1m).toMatchObject({ mark: "right", answer: null, revealed: false });
+      const att = (await q1<{ id: string }>("select id from english.attempts where activity_instance_id = $1", [w]))[0]!.id;
+      await svc("select english.eng_decide_studio_items($1, $2::jsonb, $3, $4) as r", [att, JSON.stringify([{ item_id: "q7", result: "incorrect" }, { item_id: "q8", result: "correct" }]), s.members.tutorNguyen, `dc-${randomUUID()}`]);
+      expect(await markOf(w, 7)).toMatchObject({ mark: "wrong", can_reveal: true, answer: null });
+      expect(await markOf(w, 8)).toMatchObject({ mark: "right" });
+      await reveal(w, "q7");
+      expect((await markOf(w, 7)).revealed).toBe(true);
+    });
+
+    it("a test (flag) has no marks, no answers and no reveal; another child's work and a student-less call are refused", async () => {
+      const t = await newWork(true);
+      await submit(t);
+      const v = (await view(t))!;
+      expect(v.is_test).toBe(true);
+      expect("marks" in v).toBe(false);
+      expect(JSON.stringify(v)).not.toMatch(/"(answer|why|mark|marks|revealed)"/);
+      await fail(reveal(t, "q2"), "23514", /\(not_revealable\)/);
+      const w = await newWork(false);
+      await submit(w);
+      await fail(reveal(w, "q2", randomUUID(), s.users.studentAn), "P0002");
+      for (const u of [s.users.parent, s.users.tutorNguyen]) await fail(reveal(w, "q2", randomUUID(), u), "42501");
+      expect((await errorAs(db.client, "service_role", null, "select english.eng_my_reveal_item($1, 'q2', 'rev-0000-0001')", [w]))?.code).toBe("42501");
+      expect(await view(w, s.users.studentAn)).toBeNull();
+    });
+
+    it("never feeds the engines, and the adult sees 'xem đáp án' beside the answer (kind revealed) until Đã xem", async () => {
+      const w = await newWork(false);
+      await submit(w);
+      const before = await inputs();
+      await reveal(w, "q5");
+      await retry(w, "q2", "A. must");
+      expect(await inputs()).toEqual(before);
+      const att = (await q1<{ id: string }>("select id from english.attempts where activity_instance_id = $1", [w]))[0]!.id;
+      const row = (await svc<{ items: { attempt_id: string; retries: { item_id: string; kind: string; retry: string | null }[] }[] }>("select english.eng_retry_pending($1, false) as r", [s.members.tutorNguyen])).items.find((i) => i.attempt_id === att);
+      expect(row?.retries.map((r) => [r.item_id, r.kind, r.retry])).toEqual([["q2", "retry", "A. must"], ["q5", "revealed", null]]);
+      await svc("select english.eng_mark_retry_seen($1, null, $2, $3, clock_timestamp(), false) as r", [att, s.members.tutorNguyen, `seen-${randomUUID()}`]);
+      expect((await svc<{ items: { attempt_id: string }[] }>("select english.eng_retry_pending($1, false) as r", [s.members.tutorNguyen])).items.some((i) => i.attempt_id === att)).toBe(false);
+    });
+
+    it("after any answer was shown the whole work is not redone: the database refuses attempt 2 (answers_shown); an untouched work, a test and a weekly topic can be redone", async () => {
+      const attempts = async (w: string) => (await q1<{ n: number }>("select count(*)::int as n from english.attempts where activity_instance_id = $1", [w]))[0]!.n;
+      const byReveal = await newWork(false);
+      await submit(byReveal);
+      await reveal(byReveal, "q5");
+      await fail(submit(byReveal), "23514", /\(answers_shown\)/);
+      expect(await attempts(byReveal)).toBe(1);
+      const byRetry = await newWork(false);
+      await submit(byRetry);
+      await retry(byRetry, "q2", "A. must");
+      await fail(submit(byRetry), "23514", /\(answers_shown\)/);
+      expect(await attempts(byRetry)).toBe(1);
+      // nothing shown yet: redo allowed; the answers shown on attempt 2 close it again
+      const untouched = await newWork(false);
+      await submit(untouched);
+      await submit(untouched);
+      expect(await attempts(untouched)).toBe(2);
+      await reveal(untouched, "q5");
+      await fail(submit(untouched), "23514", /\(answers_shown\)/);
+      // the view of the closed work still shows the answers (the screen falls back to it)
+      expect((await markOf(byReveal, 5)).answer).toEqual(expect.any(String));
+      // another child's work is not touched by it
+      expect(await view(byReveal, s.users.studentAn)).toBeNull();
+    });
+
+    it("only the child's own redo is blocked: an attempt recorded by an adult (manual_import / tutor_live) on a revealed work is allowed", async () => {
+      const w = await newWork(false);
+      await submit(w);
+      await reveal(w, "q5");
+      const first = (await q1<{ id: string; learning_family_id: string; mode: string }>("select id, learning_family_id, mode from english.attempts where activity_instance_id = $1", [w]))[0]!;
+      const insert = (provenance: string, no: number) =>
+        q1(`insert into english.attempts(id, activity_instance_id, learner_id, attempt_no, parent_attempt_id, learning_family_id, mode, provenance, declared_assistance, submitted_at, content_hash, client_submission_id)
+            values (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, array['none'], now(), repeat('a', 64), $8)`,
+          [w, s.learners.nguyen, no, first.id, first.learning_family_id, first.mode, provenance, randomUUID()]);
+      await fail(insert("in_app", 2), "23514", /\(answers_shown\)/);
+      await fail(insert("pasted", 2), "23514", /\(answers_shown\)/);
+      await insert("manual_import", 2);
+      await insert("tutor_live", 3);
+      expect((await q1<{ n: number }>("select count(*)::int as n from english.attempts where activity_instance_id = $1", [w]))[0]!.n).toBe(3);
+    });
+
+    it("a lost reply: re-sending the same submission after answers were shown is still a replay, not a refusal", async () => {
+      const w = await newWork(false);
+      const cid = randomUUID();
+      const send = () => asUser<{ attempt_id: string; replayed: boolean }>(s.users.studentNguyen, "select english.eng_submit_attempt($1, $2, $3::jsonb, $4::text[], 'in_app') as r", [w, cid, JSON.stringify({ answers: WRONG }), ["none"]]);
+      const first = await send();
+      await reveal(w, "q5");
+      expect(await send()).toMatchObject({ attempt_id: first.attempt_id, replayed: true });
+    });
+
+    describe("weekly topics and one-time checks never show marks, answers or a reveal", () => {
+      const TODAY = todayVn();
+      const topic = async () => {
+        const inst = (await q1<{ id: string }>("select english.eng_assign_inquiry($1, 'B-W1-HOMEWORK', 1, $2, $3, $4) as id", [s.learners.nguyen, TODAY, s.members.parent, `wk-${randomUUID()}`]))[0]!.id;
+        const step = async (n: number) => (await q1<{ id: string }>("select id from english.activity_instances where inquiry_instance_id = $1 and step_no = $2", [inst, n]))[0]!.id;
+        return { practice: await step(6), check: await step(2) };
+      };
+      const answersOf = async (activity: string) => {
+        const items = (await q1<{ items: { id: string; options: string[] }[] }>(
+          `select x -> 'items' as items from english.activity_instances a join english.inquiry_instances i on i.id = a.inquiry_instance_id,
+                  pg_catalog.jsonb_array_elements(i.snapshot -> 'steps') x where a.id = $1 and (x ->> 'step_no')::int = a.step_no`, [activity]))[0]!.items;
+        return Object.fromEntries(items.map((i) => [i.id, i.options[0] ?? "x"]));
+      };
+
+      it("a PRACTICE step of a weekly topic: no marks key, no answer, no why; the reveal is refused; a retry can be sent but shows nothing; redo stays allowed", async () => {
+        const { practice: act } = await topic();
+        await submit(act, await answersOf(act));
+        const v = (await view(act))!;
+        expect(v).not.toBeNull();
+        expect("marks" in v).toBe(false);
+        expect(JSON.stringify(v)).not.toMatch(/"(answer|why|mark|marks|revealed|can_reveal)"/);
+        expect(v.look.length).toBeGreaterThan(0);
+        await fail(reveal(act, v.look[0]!.id), "23514", /\(not_revealable\)/);
+        await retry(act, v.look[0]!.id, "cooked");
+        const after = (await view(act))!;
+        expect("marks" in after).toBe(false);
+        expect(JSON.stringify(after)).not.toMatch(/"(answer|why|mark|marks|revealed)"/);
+        await submit(act, await answersOf(act)); // no trigger for a topic: attempt 2 is fine
+        expect((await view(act))!.attempt_no).toBe(2);
+      });
+
+      it("a one-time check (INDEPENDENT_CHECK): same - nothing but 'the tutor will go through it'", async () => {
+        const { check: act } = await topic();
+        await submit(act, await answersOf(act));
+        const v = (await view(act))!;
+        expect(v.is_test).toBe(true);
+        expect("marks" in v).toBe(false);
+        expect(JSON.stringify(v)).not.toMatch(/"(answer|why|mark|marks|revealed|can_reveal)"/);
+        await fail(reveal(act, "W1-A2-1"), "23514", /\(not_revealable\)/);
+        await fail(retry(act, "W1-A2-1", "x"), "23514", /\(test_no_retry\)/);
+      });
+    });
+
+    it("append-only", async () => {
+      await fail(q1("update english.item_reveals set item_id = 'q1'"), "42501");
+      await fail(q1("delete from english.item_reveals"), "42501");
+      expect(await rowsAs(db.client, "authenticated", s.users.studentNguyen, "select 1 from english.item_reveals")).toEqual([]);
     });
   });
 
@@ -368,11 +600,17 @@ describe("result view, retry and test flag (migration 0034)", () => {
       expect(retries).toBeGreaterThan(0);
       expect(marks).toBeGreaterThan(0);
       const dry = await svc<{ counts: Record<string, number> }>("select english.eng_purge_preview($1) as r", [L]);
-      expect(dry.counts).toMatchObject({ item_retries: retries, work_test_marks: marks });
+      const reveals = (await q1<{ n: number }>("select count(*)::int as n from english.item_reveals where learner_id = $1", [L]))[0]!.n;
+      expect(reveals).toBeGreaterThan(0);
+      const seenN = (await q1<{ n: number }>("select count(*)::int as n from english.retry_seen where learner_id = $1", [L]))[0]!.n;
+      expect(seenN).toBeGreaterThan(0);
+      expect(dry.counts).toMatchObject({ item_retries: retries, retry_seen: seenN, item_reveals: reveals, work_test_marks: marks });
       const receipt = await svc<{ deleted: Record<string, number> }>("select english.eng_purge_learner($1,$2) as r", [L, s.users.parent]);
-      expect(receipt.deleted).toMatchObject({ item_retries: retries, work_test_marks: marks });
+      expect(receipt.deleted).toMatchObject({ item_retries: retries, retry_seen: seenN, item_reveals: reveals, work_test_marks: marks });
       expect(Object.keys(receipt.deleted).sort()).toEqual(Object.keys(dry.counts).sort());
       expect((await q1<{ n: number }>("select count(*)::int as n from english.item_retries where learner_id = $1", [L]))[0]!.n).toBe(0);
+      expect((await q1<{ n: number }>("select count(*)::int as n from english.retry_seen where learner_id = $1", [L]))[0]!.n).toBe(0);
+      expect((await q1<{ n: number }>("select count(*)::int as n from english.item_reveals where learner_id = $1", [L]))[0]!.n).toBe(0);
       expect((await q1<{ n: number }>("select count(*)::int as n from english.work_test_marks where learner_id = $1", [L]))[0]!.n).toBe(0);
     });
   });

@@ -123,12 +123,13 @@ describe("pendingView: what a Chờ duyệt surface may claim", () => {
 describe("Chờ duyệt — the child's retries (W4c2)", () => {
   const retry = (over: Record<string, unknown> = {}) => ({
     attemptId: "t1", learnerId: L, alias: "An (thử)", isTest: true, activityId: "act", title: "Unit 5 test", submittedAt: "2026-11-01T03:00:00Z", since: "2026-11-02T03:00:00Z",
-    retries: [{ itemId: "q2", n: 2, stem: "x", given: "a", retry: "b", at: "2026-11-02T03:00:00Z" }, { itemId: "q6", n: 6, stem: "y", given: "", retry: "c", at: "2026-11-02T03:01:00Z" }], ...over,
+    retries: [{ itemId: "q2", n: 2, stem: "x", given: "a", retry: "b", kind: "retry", at: "2026-11-02T03:00:00Z" }, { itemId: "q6", n: 6, stem: "y", given: "", retry: null, kind: "revealed", at: "2026-11-02T03:01:00Z" }], ...over,
   });
   it("is one link-only row per attempt of THIS child, in the 'check' group, saying how many questions", () => {
     const rows = buildPendingRows(input({ work: [], studio: [], skills: [], drafts: [], curricula: [], retries: [retry(), retry({ attemptId: "t2", learnerId: O })] as never }));
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ key: "retry-t1", kind: "retry", group: "check", label: pendingCopy.kinds.retry, need: pendingCopy.need.retry(2), href: `/review/studio?learner=${L}#retry-t1`, waitingTutor: false });
+    expect(rows[0]).toMatchObject({ key: "retry-t1", kind: "retry", group: "check", label: pendingCopy.kinds.retry, need: `${pendingCopy.need.retry(1)} · ${pendingCopy.need.reveal(1)}`, href: `/review/studio?learner=${L}#retry-t1`, waitingTutor: false });
     expect(pendingCopy.need.retry(2)).toBe("Con thử lại 2 câu");
+    expect(pendingCopy.need.reveal(1)).toBe("Con xem đáp án 1 câu");
   });
 });

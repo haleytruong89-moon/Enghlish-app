@@ -20,9 +20,10 @@ for (const key of ["studentAn", "studentNguyen"] as AccountKey[]) {
     expect(text).not.toContain(skillStateCopy.pending("").trim());
     expect(text).not.toContain(skillStateCopy.autoNote);
     expect(await page.locator('[data-testid="skill-scale"], [data-testid^="skill-row-"], [data-testid="review-tab-skills"], [data-testid^="transfer-mark"]').count()).toBe(0);
-    // W4c2: the child's result screen, when present, never shows a ratio, a percentage, a count of right items or an answer.
+    // W4c2 / D39: the child's result screen, when present, never shows a ratio, a percentage, "điểm" or a count of right items (a practice work of a Studio
+    // set may show ✓ / ✗, an answer and a "Vì sao" after a retry: those are not scores; the marks themselves are checked in studio.spec.ts).
     const review = page.locator('[data-testid="result-view"]');
-    if (await review.count()) expect(await review.innerText()).not.toMatch(/\d+\s*\/\s*\d+|%|đúng\s+\d|nên là|vì sao/i);
+    if (await review.count()) expect(await studentVisibleText(page, "result-view")).not.toMatch(/(?<![\d/])\d{1,3}\s*\/\s*\d{1,3}(?![\d/])|%|(^|[^\p{L}])điểm(?!\p{L})|đúng\s+\d|\bsai\s+\d/iu);
     // W4a: Hành trình shows counts of Units only: no %, no score, no level, no "đúng n".
     await page.goto("/journey");
     // PRD D35: a/b may appear only inside [data-count="work"] (counts of the child's own work); everything else is checked without them.

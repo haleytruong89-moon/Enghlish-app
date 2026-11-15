@@ -307,7 +307,11 @@ Bốn khối trong `lib/copy/vi.ts`: `playerCopy` (làm bài), `resultCopy` (sau
 | Thử lại | "Thử lại câu này" → ô nhập → "Gửi cho {thầy/cô}" · "Để sau"; gửi rồi: "Lần thử lại của bạn: “…”" + "Đã gửi lần thử lại cho {thầy/cô}" (app **không** nói đúng hay sai) |
 | Giao bài (người lớn) | Ô "Loại bài": Luyện tập · Bài kiểm tra + một dòng giải thích ("Cách app đếm bằng chứng không đổi") |
 
-| Người lớn thấy lần thử lại | Chờ duyệt: "Thử lại" · "Con thử lại n câu"; trang "Cần thầy/cô xem" có mục "Con thử lại": "Lần đầu: …" · "Thử lại: …". Tự hết chờ khi thầy/cô góp ý, chấm một câu hoặc duyệt bài đó |
+| Người lớn thấy lần thử lại | Chờ duyệt: "Thử lại" · "Con thử lại n câu"; trang "Cần thầy/cô xem" có mục "Con thử lại": "Đọc lần thử lại của con rồi bấm Đã xem." · "Lần đầu: …" · "Thử lại: …" · ô "Ghi chú (không bắt buộc, chỉ người lớn thấy)" · "Con không thấy ghi chú này." · nút **Đã xem** (chỉ nút này làm dòng hết chờ) |
 | Con (S4, S5) | "Mỗi câu bạn được thử lại một lần. {Thầy/cô} sẽ thấy lần thử của bạn. App không hiện đáp án." · tiêu đề câu viết tự do: "Câu {thầy/cô} sẽ đọc" |
 
 Luật: cờ "Bài kiểm tra" **chỉ đổi giao diện** (không thử lại, không ô hỏi gia sư, chữ khác); không đổi `mode`, không đổi cách S7a / điểm kiến thức đếm. Lần thử lại **không phải bằng chứng** (không engine nào đọc).
+
+### D39 (15/11) — đáp án sau lần thử lại, chỉ bài luyện tập của bộ Studio
+- **Con:** "Từng câu" · "✓ Đúng" / "✗ Chưa đúng" / "{Thầy/cô} sẽ đọc câu này" (hộp xanh / đỏ / cam: màu **và** chữ) · câu ✗: "Thử lại câu này" hoặc "Xem đáp án" · sau lần thử: "Lần thử lại: ✓ đúng / ✗ chưa đúng" rồi "Đáp án: …" và "Vì sao: …" · câu ✓: "Vì sao" thu gọn · không "Các câu còn lại: ổn", không tổng / % / điểm · không "Làm lại cả bài" khi đã hiện đáp án (nếu vẫn nộp được từ tab khác: "Bạn đã xem đáp án của bài này nên không làm lại cả bài được. Bạn mở lại trang chủ nhé."). Dòng "Bạn đã nộp bài này lúc 15:05 ngày 15/11/2026." có cả ngày. Bài kiểm tra: như cũ ("{thầy/cô} sẽ chữa cùng bạn").
+- **Thầy/cô:** màn bài làm: chip "✓ Đúng" (xanh) · "✗ Sai" / "✗ Để trống" (đỏ) · "⏳ Chờ thầy/cô xem" (cam); bộ lọc "Tất cả" / "Chỉ câu sai và cần xem"; thẻ "Con thử lại" ghi "Con chọn Xem đáp án, không thử lại" khi không thử lại; dòng Chờ duyệt "Con thử lại n câu · Con xem đáp án m câu".
