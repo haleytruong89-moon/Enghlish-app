@@ -55,14 +55,19 @@ describe("student practice copy", () => {
 describe("link / PDF cards (inside Hôm nay and /done/[ref])", () => {
   const html = [link, pdf].map((item) => render(createElement(PracticeCard, { item }))).join("");
 
-  it("opens the link in a new tab, downloads the PDF through the app (never a storage path), and asks the two taps", () => {
+  it("opens the link in a new tab, downloads the PDF through the app (never a storage path), and sends the child to the full-page send screen", () => {
     expect(html).toContain('data-testid="open-link"');
     expect(html).toContain('href="https://www.test-english.com/x"');
     expect(html).toContain('rel="noopener noreferrer"');
     expect(html).toContain(`href="/api/student/practice/${pdf.assignmentId}/file"`);
     expect(html).not.toMatch(/english-work|supabase|signed|token=/i);
-    expect(html).toContain(practiceStudent.firstQ);
-    expect(html).toContain(practiceStudent.hintQ);
+    // W4c1: the two questions are on the send screen (/submit/[id]), not in the card; an unsent card has the way there, a sent one has "Sửa lại" to it
+    expect(html).not.toContain(practiceStudent.firstQ);
+    expect(html).toContain(`href="/submit/${link.assignmentId}"`);
+    expect(html).toContain(practiceStudent.goSubmit);
+    expect(html).toContain(`href="/submit/${pdf.assignmentId}"`);
+    expect(html).toContain(`data-testid="resend-${pdf.assignmentId}"`);
+    expect(render(createElement(PracticeCard, { item: { ...pdf, submission: null } }))).toContain(practiceStudent.goSubmitPdf);
     expect(html).toContain(`id="task-${link.assignmentId}"`); // the "Làm tiếp" card links to it
   });
 
@@ -93,7 +98,7 @@ describe("student tabs", () => {
 
 const assignment = (over: Partial<AssignmentView> = {}): AssignmentView => ({
   id: "c0000000-0000-4000-8000-000000000001", kind: "link", title: "Unless", url: "https://www.test-english.com/x", sourceKey: "test-english", tagKeys: [], units: [], unitItems: [],
-  dueOn: null, frameId: null, createdAt: "2026-10-16T01:00:00Z", retractedAt: null, file: null, answerFile: null, submission: null, resultId: null, ...over,
+  dueOn: null, frameId: null, createdAt: "2026-10-16T01:00:00Z", retractedAt: null, file: null, answerFile: null, submission: null, resultId: null, feedback: [], ...over,
 });
 
 describe("SubmissionPreview (staff)", () => {
@@ -186,13 +191,17 @@ describe("browser upload helpers", () => {
   });
 });
 
-describe("a PDF has no Hint question", () => {
-  it("the preview says 'not applicable' for a PDF submission, and the Hint answer for a link", () => {
+describe("the hint answer in the staff preview (0033: a PDF asks it too)", () => {
+  it("says 'no answer' when an adult sent without one, 'Hint' for a link and 'hint or answers' for a PDF", () => {
     const sub = (usedHint: boolean | null) =>
       assignment({ submission: { id: "s", createdAt: "2026-10-16T09:00:00Z", attempt: "first", usedHint, linkUrl: null, byRole: "student", files: [] } });
     expect(render(createElement(SubmissionPreview, { assignment: sub(null) }))).toContain(resultPage.sentHintNA);
     expect(render(createElement(SubmissionPreview, { assignment: sub(true) }))).toContain(resultPage.sentHint);
     expect(render(createElement(SubmissionPreview, { assignment: sub(false) }))).not.toContain(resultPage.sentHintNA);
+    const pdfSub = (usedHint: boolean) => ({ ...sub(usedHint), kind: "pdf" as const });
+    expect(render(createElement(SubmissionPreview, { assignment: pdfSub(true) }))).toContain(resultPage.sentHintPdf);
+    expect(render(createElement(SubmissionPreview, { assignment: pdfSub(false) }))).toContain(resultPage.sentNoHintPdf);
+    expect(render(createElement(SubmissionPreview, { assignment: pdfSub(true) }))).not.toContain(resultPage.sentHint + "<");
   });
 });
 
@@ -200,7 +209,7 @@ describe("recorded assignment: 'Sửa kết quả' (the new result replaces the 
   const recorded = assignment({ resultId: "e0000000-0000-4000-8000-000000000001" });
   it("the table offers 'Sửa kết quả' for a recorded row and 'Ghi kết quả' for the others", () => {
     const html = render(
-      createElement(AssignmentTable, { learnerId: "a0000000-0000-4000-8000-000000000001", assignments: [recorded, assignment({ id: "c0000000-0000-4000-8000-000000000009" })], tagLabels: {} }),
+      createElement(AssignmentTable, { learnerId: "a0000000-0000-4000-8000-000000000001", assignments: [recorded, assignment({ id: "c0000000-0000-4000-8000-000000000009" })], tagLabels: {}, viewerMemberId: "m-tutor" }),
     );
     expect(html.match(new RegExp(assignPage.editResult, "g"))).toHaveLength(1);
     expect(html.match(new RegExp(`>${assignPage.recordResult}<`, "g"))).toHaveLength(1);
@@ -259,7 +268,7 @@ describe("'Quá hạn' (D4): only a label for the tutor and the parent", () => {
     const late = assignment({ id: "c0000000-0000-4000-8000-0000000000a1", dueOn: "2026-10-10" });
     const fine = assignment({ id: "c0000000-0000-4000-8000-0000000000a2", dueOn: "2026-10-30" });
     const sent = assignment({ id: "c0000000-0000-4000-8000-0000000000a3", dueOn: "2026-10-10", submission: SENT });
-    const table = render(createElement(AssignmentTable, { learnerId: "a0000000-0000-4000-8000-000000000001", assignments: [late, fine, sent], tagLabels: {}, today: "2026-10-18" }));
+    const table = render(createElement(AssignmentTable, { learnerId: "a0000000-0000-4000-8000-000000000001", assignments: [late, fine, sent], tagLabels: {}, viewerMemberId: "m-tutor", today: "2026-10-18" }));
     expect(table).toContain(`data-testid="overdue-${late.id}"`);
     expect(table).not.toContain(`data-testid="overdue-${fine.id}"`);
     expect(table).not.toContain(`data-testid="overdue-${sent.id}"`);

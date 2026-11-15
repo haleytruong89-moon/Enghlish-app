@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { expect, test, type Page } from "@playwright/test";
-import { assignPage, resultPage, tagPicker, unitPickerCopy } from "@/lib/copy/vi";
+import { assignPage, resultPage, submissionFeedbackCopy, submitScreenCopy, tagPicker, unitPickerCopy } from "@/lib/copy/vi";
 import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { todayVn } from "@/lib/inquiries/dates";
-import { LEARNER_IDS, loginAs, studentVisibleText } from "./helpers";
+import { LEARNER_IDS, loginAs, solidPng, studentVisibleText } from "./helpers";
 
 // S5b-1 PR B: the tutor gives a PDF, the child downloads it and sends a picture, the tutor reads the picture beside "Nhập nhanh",
 // records the result with tags, and the weak point appears - while the child never sees a score. Needs Supabase STORAGE in the local
@@ -130,10 +130,17 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     expect(pdf.status()).toBe(200);
     expect((await pdf.body()).subarray(0, 5).toString()).toBe("%PDF-");
 
-    await card.getByTestId(`submit-${assignmentId}-picker-input`).setInputFiles({ name: "bai-lam.png", mimeType: "image/png", buffer: PNG });
-    await expect(card.getByTestId(`submit-${assignmentId}-picker-item`)).toHaveCount(1);
-    await card.getByTestId(`submit-${assignmentId}-first-yes`).click();
-    await card.getByTestId(`submit-${assignmentId}-send`).click();
+    // W4c1: the card leads to the full-page send screen (pages, two questions, "Nộp")
+    await card.getByTestId(`open-submit-${assignmentId}`).click();
+    await expect(page).toHaveURL(new RegExp(`/submit/${assignmentId}$`));
+    await page.getByTestId("paper-file-input").setInputFiles({ name: "bai-lam.png", mimeType: "image/png", buffer: PNG });
+    await expect(page.getByTestId("paper-page")).toHaveCount(1);
+    await expect(page.getByTestId("submit-send")).toBeDisabled(); // nothing is pre-answered
+    await page.getByTestId("ask-first-yes").click();
+    await page.getByTestId("ask-hint-no").click();
+    await page.getByTestId("submit-send").click();
+    await expect(page.getByTestId("submit-done")).toBeVisible();
+    await page.goto("/");
     await expect(page.getByTestId(`sent-${assignmentId}`)).toBeVisible();
 
     // W4b: after a reload the sent card is still in "Vừa gửi" (the tutor has not looked yet), and the work is in Đã làm as "Chờ xem"
@@ -147,10 +154,14 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     await page.goto(`/done/${assignmentId}`);
     const again = page.locator(`[data-assignment="${assignmentId}"]`);
     await again.getByTestId(`resend-${assignmentId}`).click();
-    await again.getByTestId(`submit-${assignmentId}-picker-input`).setInputFiles({ name: "bai-lam-2.png", mimeType: "image/png", buffer: PNG });
-    await expect(again.getByTestId(`submit-${assignmentId}-picker-item`)).toHaveCount(1);
-    await again.getByTestId(`submit-${assignmentId}-send`).click();
-    await expect(page.getByTestId(`sent-${assignmentId}`)).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/submit/${assignmentId}$`));
+    await expect(page.getByTestId("paper-resend-note")).toBeVisible();
+    await page.getByTestId("paper-file-input").setInputFiles({ name: "bai-lam-2.png", mimeType: "image/png", buffer: PNG });
+    await expect(page.getByTestId("paper-page")).toHaveCount(1);
+    await page.getByTestId("ask-first-no").click();
+    await page.getByTestId("ask-hint-yes").click();
+    await page.getByTestId("submit-send").click();
+    await expect(page.getByTestId("submit-done")).toBeVisible();
     await page.goto("/done");
     await expect(page.getByTestId("history-row").filter({ hasText: title })).toHaveCount(1);
 
@@ -376,4 +387,138 @@ test("the chooser carries the 'from the book' prefill into the link way", async 
   await expect(page.getByTestId("assign-title")).toHaveValue("Sách thử · Review 2");
   await expect(page.getByTestId("kind-pdf")).toHaveCount(0);
   await expect(page.getByTestId("ways-strip")).toBeVisible();
+});
+
+
+// W4c1 · the child sends paper work as several pages (arranged and turned on the device), a link assignment through its three steps, and an adult's feedback
+// on a submission shows in "Đã xem" at once. Nguyên (thử) and his tutor; every run gives NEW work (unique titles).
+test.describe.serial("W4c1: paper pages, link result pictures, feedback on a submission", () => {
+  const paperTitle = `Đề giấy nhiều trang ${Date.now()}`;
+  const linkTitle = `Bài link nộp ảnh ${Date.now()}`;
+  let paperId = "";
+  let linkId = "";
+  const sizes = (page: Page, scope: string) =>
+    page.getByTestId(scope).locator('[data-testid="submission-image"]').evaluateAll((els) => els.map((e) => `${(e as HTMLImageElement).naturalWidth}x${(e as HTMLImageElement).naturalHeight}`));
+
+  test("the tutor gives a PDF sheet and a link", async ({ page }) => {
+    await loginAs(page, "tutorNguyen");
+    await page.goto(`/learners/${NG}/assign?way=pdf`);
+    await page.getByTestId("pdf-input").setInputFiles({ name: "de-giay.pdf", mimeType: "application/pdf", buffer: PDF });
+    await page.getByTestId("assign-title").fill(paperTitle);
+    await page.getByTestId("assign-submit").click();
+    await expect(page.getByTestId("assign-done")).toContainText(assignPage.done);
+    paperId = await assignmentIdOf(page, paperTitle);
+    await page.goto(`/learners/${NG}/assign?way=link`);
+    await page.getByTestId("assign-title").fill(linkTitle);
+    await page.getByTestId("assign-url").fill("https://www.test-english.com/grammar-points/a2/w4c1");
+    await page.getByTestId("assign-submit").click();
+    await expect(page.getByTestId("assign-done")).toContainText(assignPage.done);
+    linkId = await assignmentIdOf(page, linkTitle);
+  });
+
+  test("the child takes 3 pages, moves one, turns one, answers the two questions and sends", async ({ page }) => {
+    await loginAs(page, "studentNguyen");
+    await page.goto(`/submit/${paperId}`);
+    await expect(page.getByTestId("paper-submit")).toBeVisible();
+    // the camera button asks for the back camera (the iPad opens it); a laptop gets the same screen with "Chọn ảnh"
+    await expect(page.getByTestId("paper-camera-input")).toHaveAttribute("capture", "environment");
+    await page.getByTestId("paper-file-input").setInputFiles([
+      { name: "a.png", mimeType: "image/png", buffer: solidPng(40, 20) },
+      { name: "b.png", mimeType: "image/png", buffer: solidPng(60, 20) },
+      { name: "c.png", mimeType: "image/png", buffer: solidPng(80, 20) },
+    ]);
+    const pages = page.getByTestId("paper-page");
+    await expect(pages).toHaveCount(3);
+    for (let i = 0; i < 3; i++) await expect(pages.nth(i).getByTestId("paper-label")).toHaveText(submitScreenCopy.page(i + 1));
+    await expect(page.getByTestId("submit-missing")).toContainText(submitScreenCopy.missingPart.questions);
+    await pages.nth(2).getByTestId("paper-up").click(); // a c b
+    await pages.nth(0).getByTestId("paper-turn").click(); // a turned a quarter
+    await expect(pages.nth(0)).toHaveAttribute("data-quarter", "1");
+    await expect(page.getByTestId("submit-send")).toBeDisabled();
+    await page.getByTestId("ask-first-yes").click();
+    await expect(page.getByTestId("submit-missing")).toContainText(submitScreenCopy.missingPart.hint);
+    await page.getByTestId("ask-hint-yes").click(); // the hint answer is kept for a PDF too
+    await expect(page.getByTestId("submit-send")).toBeEnabled();
+    await page.getByTestId("submit-send").click();
+    await expect(page.getByTestId("submit-done")).toBeVisible();
+    expect(await studentVisibleText(page)).not.toMatch(SCORE_PATTERN);
+  });
+
+  test("the tutor sees the 3 pictures in the child's order and turned the right way, and the hint answer", async ({ page }) => {
+    await loginAs(page, "tutorNguyen");
+    await page.goto(`/learners/${NG}/assign`);
+    const work = page.getByTestId(`work-${paperId}`);
+    await work.locator("summary").click();
+    await expect.poll(() => sizes(page, `work-${paperId}`)).toEqual(["20x40", "80x20", "60x20"]);
+    await expect(work).toContainText(resultPage.sentHintPdf);
+    await expect(work).toContainText(resultPage.sentFirst);
+  });
+
+  test("feedback: a score is refused; a praise + something to fix is sent; the child sees it at once in 'Đã xem' and cannot send again", async ({ page }) => {
+    await loginAs(page, "tutorNguyen");
+    await page.goto(`/learners/${NG}/assign`);
+    await page.getByTestId(`sfb-open-${paperId}`).click();
+    await page.getByTestId("sfb-praise").fill("Con được 8 điểm");
+    await page.getByTestId("sfb-send").click();
+    await expect(page.getByTestId("sfb-error")).toHaveText(submissionFeedbackCopy.errors.score_words as string);
+    await page.getByTestId("sfb-praise").fill("Bạn trình bày rõ ràng.");
+    await page.getByTestId("sfb-item-1").fill("Câu 38 đến 40: xem lại cách chia.");
+    await page.getByTestId("sfb-send").click();
+    await expect(page.getByTestId("sfb-shown-praise")).toContainText("Bạn trình bày rõ ràng.");
+    await expect(page.getByTestId("sfb-shown-item-1")).toContainText("Câu 38 đến 40");
+
+    await page.context().clearCookies();
+    await loginAs(page, "studentNguyen");
+    await page.goto("/seen");
+    const card = page.getByTestId("seen-card").filter({ hasText: paperTitle });
+    await expect(card).toBeVisible();
+    await expect(card.getByTestId("seen-praise")).toContainText("Bạn trình bày rõ ràng.");
+    await expect(card.getByTestId("seen-fix")).toContainText("Câu 38 đến 40");
+    await expect(card.getByTestId("seen-revise")).toHaveCount(0); // never asks the child to send again
+    expect(await studentVisibleText(page)).not.toMatch(SCORE_PATTERN);
+    await page.goto(`/submit/${paperId}`);
+    await expect(page.getByTestId("submit-reviewed")).toBeVisible();
+    const again = await page.request.post("/api/student/submissions", {
+      data: { assignment_id: paperId, client_id: randomUUID(), attempt: "first", used_hint: false, link_url: null, files: [] },
+    });
+    expect(again.status()).toBe(400); // no files and no link; and a real send would be 409 already_reviewed
+  });
+
+  test("a link: 'Chưa, làm tiếp sau' keeps it in Hôm nay; 'Xong rồi' opens the result pictures; two pictures + two answers send it", async ({ page }) => {
+    await loginAs(page, "studentNguyen");
+    await page.goto(`/submit/${linkId}`);
+    await expect(page.getByTestId("link-locked")).toBeVisible();
+    await expect(page.getByTestId("link-open")).toHaveAttribute("target", "_blank");
+    await page.getByTestId("link-finished-no").click();
+    await expect(page.getByTestId("link-not-yet")).toBeVisible();
+    await page.getByTestId("link-back-today").click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.locator(`[data-assignment="${linkId}"]`)).toContainText(linkTitle);
+    await expect(page.getByTestId(`sent-${linkId}`)).toHaveCount(0);
+
+    await page.goto(`/submit/${linkId}`);
+    await page.getByTestId("link-finished-yes").click();
+    await page.getByTestId("link-file-input").setInputFiles([
+      { name: "k1.png", mimeType: "image/png", buffer: solidPng(30, 30) },
+      { name: "k2.png", mimeType: "image/png", buffer: solidPng(50, 30) },
+    ]);
+    await expect(page.getByTestId("link-page")).toHaveCount(2);
+    await page.getByTestId("ask-first-yes").click();
+    await page.getByTestId("ask-hint-no").click();
+    await page.getByTestId("submit-send").click();
+    await expect(page.getByTestId("submit-done")).toBeVisible();
+    await page.goto("/done");
+    await expect(page.getByTestId("history-list")).toContainText(linkTitle);
+    expect(await studentVisibleText(page)).not.toMatch(SCORE_PATTERN);
+  });
+
+  test("the other child cannot open the send screen of Nguyên's work", async ({ page }) => {
+    await loginAs(page, "studentAn");
+    const res = await page.goto(`/submit/${paperId}`);
+    expect(res?.status()).toBe(404);
+    const send = await page.request.post("/api/student/submissions", {
+      data: { assignment_id: paperId, client_id: randomUUID(), attempt: "first", used_hint: false, link_url: null, files: [] },
+    });
+    expect(send.status()).toBe(404);
+  });
 });

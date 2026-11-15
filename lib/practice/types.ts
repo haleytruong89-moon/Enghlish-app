@@ -17,6 +17,20 @@ export type SubmissionView = {
 /** The units one assignment was given for, grouped by curriculum (0029). `codes` are in book order (the order the form sends them). */
 export type AssignmentUnitGroup = { curriculumId: string; title: string; codes: string[] };
 
+/** One version of an adult's feedback on a submission (english.eng_submission_feedback). `live` = the newest version (not edited since). */
+export type SubmissionFeedbackView = {
+  id: string;
+  submissionId: string;
+  assignmentId: string;
+  praise: string | null;
+  items: { n: number; text: string }[];
+  authorMember: string;
+  authorRole: "tutor" | "parent";
+  authorName: string | null;
+  createdAt: string;
+  live: boolean;
+};
+
 /** One assignment as the tutor / parent sees it (from english.eng_assignment_overview). */
 export type AssignmentView = {
   id: string;
@@ -39,6 +53,8 @@ export type AssignmentView = {
   submission: SubmissionView | null;
   /** Id of the newest result recorded for this assignment, if any. */
   resultId: string | null;
+  /** Feedback on the submissions of this assignment, newest first (0033; empty before it is applied). */
+  feedback: SubmissionFeedbackView[];
 };
 
 /** One assignment as the STUDENT sees it (english.eng_my_practice): no tags, no frame, no result, no answer key. */

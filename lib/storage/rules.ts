@@ -17,8 +17,8 @@ export const SIGNED_URL_TTL_SECONDS = 300;
 export const MAX_IMAGE_SIDE = 1600;
 /** Upload links the server hands out per child per 24 hours (counted in the database; the same number is in migration 0016). */
 export const UPLOAD_LINKS_PER_DAY = 60;
-/** Files in one submission. */
-export const MAX_FILES_PER_SUBMISSION = 6;
+/** Files (pages) in one submission: 12 since migration 0033 (was 6). */
+export const MAX_FILES_PER_SUBMISSION = 12;
 
 export const IMAGE_MIMES = ["image/png", "image/jpeg", "image/webp"] as const;
 /** Word .docx: accepted ONLY for a Studio test or answer key (Studio B1; same rule as files_kind_mime in 0024). */

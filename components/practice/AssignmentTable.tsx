@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { assignPage, fallbackLabels, sourceLabels } from "@/lib/copy/vi";
+import { assignPage, fallbackLabels, sourceLabels, submissionFeedbackCopy } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { formatRange } from "@/lib/prefill";
 import { formatDateVi, safeExternalUrl } from "@/lib/inquiries/format";
@@ -12,6 +12,8 @@ import { codeOf, practiceErrorText } from "@/lib/practice/client";
 import { isOverdue } from "@/lib/practice/overdue";
 import type { AssignmentView } from "@/lib/practice/types";
 import { formatHm } from "@/lib/work/view";
+import { SubmissionFeedbackForm } from "./SubmissionFeedbackForm";
+import { SubmissionPreview } from "./SubmissionPreview";
 import { SubmitPanel } from "./SubmitPanel";
 
 export function statusOf(a: AssignmentView): "retracted" | "recorded" | "sent" | "notDone" {
@@ -35,11 +37,14 @@ export function AssignmentTable({
   learnerId,
   assignments,
   tagLabels,
+  viewerMemberId,
   today = todayVn(),
 }: {
   learnerId: string;
   assignments: AssignmentView[];
   tagLabels: Record<string, string>;
+  /** The signed-in adult's member id: only the author of a feedback may edit it. */
+  viewerMemberId: string;
   /** Today in Vietnam (YYYY-MM-DD), from the server page; used only for the "Quá hạn" label. */
   today?: string;
 }) {
@@ -110,7 +115,7 @@ export function AssignmentTable({
                 <dd>{a.dueOn ? formatDateVi(a.dueOn) : assignPage.nothingSent}</dd>
                 <dt className="text-muted">{assignPage.colSent}</dt>
                 <dd data-testid={`sent-${a.id}`}>
-                  {sub ? assignPage.sentLine(when, sub.attempt === "first", sub.usedHint, sub.files.length, sub.byRole) : assignPage.nothingSent}
+                  {sub ? assignPage.sentLine(when, sub.attempt === "first", sub.usedHint, sub.files.length, sub.byRole, a.kind) : assignPage.nothingSent}
                 </dd>
               </dl>
               <div className="flex flex-wrap gap-x-4">
@@ -143,11 +148,22 @@ export function AssignmentTable({
                   </>
                 ) : null}
               </div>
+              {sub && status !== "retracted" ? (
+                <details className="rounded-xl bg-paper px-3" data-testid={`work-${a.id}`}>
+                  <summary className="min-h-11 cursor-pointer py-2.5 text-sm font-medium text-accent">{submissionFeedbackCopy.viewWork(sub.files.length)}</summary>
+                  <div className="pb-3">
+                    <SubmissionPreview assignment={a} />
+                  </div>
+                </details>
+              ) : null}
+              {sub && status !== "retracted" ? (
+                <SubmissionFeedbackForm learnerId={learnerId} assignmentId={a.id} submissionId={sub.id} feedback={a.feedback} viewerMemberId={viewerMemberId} />
+              ) : null}
               {open === a.id && status !== "retracted" ? (
                 <div className="mt-2 flex flex-col gap-2 rounded-xl bg-paper p-4">
                   <h3 className="font-semibold">{assignPage.submitForTitle(a.title)}</h3>
                   <p className="text-sm text-muted">{assignPage.submitForHelp}</p>
-                  <SubmitPanel variant="staff" learnerId={learnerId} assignmentId={a.id} kind={a.kind} onDone={() => setOpen(null)} />
+                  <SubmitPanel learnerId={learnerId} assignmentId={a.id} kind={a.kind} onDone={() => setOpen(null)} />
                 </div>
               ) : null}
             </li>

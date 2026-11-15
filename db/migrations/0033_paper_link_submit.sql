@@ -309,18 +309,18 @@ begin
 end
 $$;
 
--- Người lớn đọc: mọi bản góp ý của một bài giao (mới nhất trước), kèm cờ `live` (chưa bị sửa) và tên người gửi. Chỉ service_role (máy chủ gọi SAU requireAccess).
-create or replace function english.eng_submission_feedback(p_learner uuid, p_assignment uuid) returns jsonb
+-- Người lớn đọc: mọi bản góp ý của một bài giao (p_assignment trống = mọi bài giao của em; mới nhất trước), kèm cờ `live` (chưa bị sửa) và tên người gửi. Chỉ service_role (máy chủ gọi SAU requireAccess).
+create or replace function english.eng_submission_feedback(p_learner uuid, p_assignment uuid default null) returns jsonb
 language sql stable security definer set search_path = ''
 as $$
   select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
-    'id', f.id, 'submission_id', f.submission_id, 'praise', f.praise, 'items', f.items, 'supersedes_id', f.supersedes_id,
+    'id', f.id, 'submission_id', f.submission_id, 'assignment_id', f.assignment_id, 'praise', f.praise, 'items', f.items, 'supersedes_id', f.supersedes_id,
     'author_member', f.author_member, 'author_role', f.author_role,
     'author_name', (select m.display_name from english.members m where m.id = f.author_member),
     'created_at', f.created_at,
     'live', not exists (select 1 from english.submission_feedback f2 where f2.supersedes_id = f.id)) order by f.created_at desc, f.id), '[]'::jsonb)
   from english.submission_feedback f
-  where f.learner_id = p_learner and f.assignment_id = p_assignment
+  where f.learner_id = p_learner and (p_assignment is null or f.assignment_id = p_assignment)
 $$;
 
 -- 5. Phía con: ba hàm cũ thay bằng bản có thêm góp ý bài nộp (thân = bản cũ + đúng các nhánh nói ở đầu tệp) -----------------------------

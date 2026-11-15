@@ -78,7 +78,7 @@ export function createSupabasePracticeStore(): PracticeStore {
     },
 
     async submit(a) {
-      const { data, error } = await db().rpc("eng_submit_practice", {
+      const args = {
         p_assignment: a.assignmentId,
         p_by: a.byMemberId,
         p_client_id: a.clientId,
@@ -86,8 +86,27 @@ export function createSupabasePracticeStore(): PracticeStore {
         p_used_hint: a.usedHint,
         p_link_url: a.linkUrl,
         p_files: a.files.map((f) => ({ id: f.id, mime: f.mime, bytes: f.bytes })),
+      };
+      const v2 = await db().rpc("eng_submit_practice_v2", args);
+      if (!v2.error) return v2.data;
+      // Migration 0033 not applied yet: the old function takes up to 6 files and no hint answer for a PDF (it is dropped, not guessed).
+      if (v2.error.code !== "PGRST202" && v2.error.code !== "42883") dbError("eng_submit_practice_v2", v2.error);
+      if (a.files.length > 6) throw new ReviewDbError("pages_unavailable", "eng_submit_practice_v2 is missing: apply migration 0033");
+      const v1 = await db().rpc("eng_submit_practice", { ...args, p_used_hint: a.kind === "link" ? a.usedHint : null });
+      if (v1.error) dbError("eng_submit_practice", v1.error);
+      return v1.data;
+    },
+
+    async writeSubmissionFeedback(a) {
+      const { data, error } = await db().rpc("eng_write_submission_feedback", {
+        p_submission: a.submissionId,
+        p_praise: a.praise,
+        p_items: a.items,
+        p_supersedes: a.supersedesId,
+        p_by: a.byMemberId,
+        p_client_id: a.clientId,
       });
-      if (error) dbError("eng_submit_practice", error);
+      if (error) dbError("eng_write_submission_feedback", error);
       return data;
     },
 

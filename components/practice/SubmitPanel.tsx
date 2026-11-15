@@ -2,39 +2,36 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { practiceStudent } from "@/lib/copy/vi";
+import { practiceStudent, submitScreenCopy } from "@/lib/copy/vi";
 import { codeOf, nextAttempt, practiceErrorText, uploadAll, type SendAttempt, type UploadCache } from "@/lib/practice/client";
 import { parseHttpsUrl } from "@/lib/practice/link";
 import { postJson } from "@/lib/tutorwork/client";
 import { ImagePicker, type PickedItem } from "./ImagePicker";
 
 type Props = {
-  /** "student": the child sends their own work. "staff": a tutor / parent sends it on the child's behalf ("nộp thay"). */
-  variant: "student" | "staff";
-  learnerId?: string;
+  learnerId: string;
   assignmentId: string;
   kind: "link" | "pdf";
-  /** When the student sends again, start from what they said before. */
-  initial?: { attempt: "first" | "retry"; usedHint: boolean | null };
   onDone?: () => void;
 };
 
 /**
- * The "send" form of one assignment: pictures (paste or pick), an optional link, and the two taps - first time? pressed Hint?
+ * "Nộp thay": a tutor / parent sends the child's work on the child's behalf: pictures (paste or pick, up to 12), an optional link, and the two taps - first
+ * time? looked at a hint or the answers? (asked for a PDF too since W4c1). The child sends from their own screens (components/student/submit).
  * Uploads each picture straight to storage through a one-time link, then registers the work in one call.
  */
-export function SubmitPanel({ variant, learnerId, assignmentId, kind, initial, onDone }: Props) {
+export function SubmitPanel({ learnerId, assignmentId, kind, onDone }: Props) {
   const router = useRouter();
   const [items, setItems] = useState<PickedItem[]>([]);
   const [link, setLink] = useState("");
-  const [first, setFirst] = useState(initial ? initial.attempt === "first" : true);
-  const [hint, setHint] = useState(initial?.usedHint ?? false);
+  const [first, setFirst] = useState(true);
+  const [hint, setHint] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"upload" | "send" | null>(null);
   // Kept across retries: a lost answer is retried with the same id and only the files that failed are sent again.
   const attempt = useRef<SendAttempt | null>(null);
   const uploaded = useRef<UploadCache>(new Map());
-  const who = variant;
+  const who = "staff" as const;
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
@@ -45,10 +42,7 @@ export function SubmitPanel({ variant, learnerId, assignmentId, kind, initial, o
 
     setBusy("upload");
     const files = items.map((i) => i.file);
-    const up =
-      variant === "student"
-        ? await uploadAll(files, "/api/student/files", { assignment_id: assignmentId }, uploaded.current)
-        : await uploadAll(files, `/api/learners/${learnerId}/files`, { purpose: "submission", assignment_id: assignmentId }, uploaded.current);
+    const up = await uploadAll(files, `/api/learners/${learnerId}/files`, { purpose: "submission", assignment_id: assignmentId }, uploaded.current);
     if (!up.ok) {
       setBusy(null);
       return setError(practiceErrorText(up.error, who));
@@ -56,17 +50,12 @@ export function SubmitPanel({ variant, learnerId, assignmentId, kind, initial, o
     setBusy("send");
     const body = {
       attempt: first ? "first" : "retry",
-      // The Hint question exists only for link assignments; a PDF sends null.
-      used_hint: kind === "link" ? hint : null,
+      used_hint: hint,
       link_url: kind === "link" && linkClean ? linkClean : null,
       files: up.files,
     };
     attempt.current = nextAttempt(attempt.current, JSON.stringify(body));
-    const common = { client_id: attempt.current.id, ...body };
-    const r =
-      variant === "student"
-        ? await postJson("/api/student/submissions", { assignment_id: assignmentId, ...common })
-        : await postJson(`/api/learners/${learnerId}/assignments/${assignmentId}/submissions`, common);
+    const r = await postJson(`/api/learners/${learnerId}/assignments/${assignmentId}/submissions`, { client_id: attempt.current.id, ...body });
     setBusy(null);
     if (!r.ok) return setError(practiceErrorText(codeOf(r), who));
     attempt.current = null;
@@ -80,6 +69,8 @@ export function SubmitPanel({ variant, learnerId, assignmentId, kind, initial, o
   const pill = (on: boolean) =>
     `min-h-11 rounded-full border px-4 text-base ${on ? "border-2 border-accent bg-[#e3ece8] font-semibold text-[#1d4136]" : "border-line bg-white text-ink"}`;
   const prefix = `submit-${assignmentId}`;
+  // A link has a "Hint" button; a PDF has hints or an answer key.
+  const hintQuestion = kind === "link" ? practiceStudent.hintQ : submitScreenCopy.hintQ;
 
   return (
     <form onSubmit={send} className="flex flex-col gap-4 border-t border-line pt-4" data-testid={prefix}>
@@ -130,19 +121,17 @@ export function SubmitPanel({ variant, learnerId, assignmentId, kind, initial, o
           </button>
         </span>
       </div>
-      {kind === "link" ? (
-        <div role="group" aria-label={practiceStudent.hintQ} className="flex flex-col gap-2">
-          <span>{practiceStudent.hintQ}</span>
-          <span className="flex flex-wrap gap-2">
-            <button type="button" aria-pressed={hint} onClick={() => setHint(true)} data-testid={`${prefix}-hint-yes`} className={pill(hint)}>
-              {practiceStudent.hintYes}
-            </button>
-            <button type="button" aria-pressed={!hint} onClick={() => setHint(false)} data-testid={`${prefix}-hint-no`} className={pill(!hint)}>
-              {practiceStudent.hintNo}
-            </button>
-          </span>
-        </div>
-      ) : null}
+      <div role="group" aria-label={hintQuestion} className="flex flex-col gap-2">
+        <span>{hintQuestion}</span>
+        <span className="flex flex-wrap gap-2">
+          <button type="button" aria-pressed={hint} onClick={() => setHint(true)} data-testid={`${prefix}-hint-yes`} className={pill(hint)}>
+            {practiceStudent.hintYes}
+          </button>
+          <button type="button" aria-pressed={!hint} onClick={() => setHint(false)} data-testid={`${prefix}-hint-no`} className={pill(!hint)}>
+            {practiceStudent.hintNo}
+          </button>
+        </span>
+      </div>
       {error ? (
         <p role="alert" className="text-sm text-red-700" data-testid={`${prefix}-error`}>
           {error}

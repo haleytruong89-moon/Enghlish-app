@@ -5,7 +5,7 @@ import { getAuthUser } from "@/lib/auth/session";
 import { createFileStorage } from "@/lib/storage/server";
 import { handleStudentPractice } from "./handlers";
 import { createSupabasePracticeStore } from "./supabaseStore";
-import { attachAssignmentUnits, parseAssignments } from "./shape";
+import { attachAssignmentUnits, attachSubmissionFeedback, parseAssignments } from "./shape";
 import type { AssignmentView, ReviewPoints, StudentPracticeItem } from "./types";
 
 /**
@@ -22,7 +22,19 @@ export async function loadAssignments(learnerId: string, opts: { units?: boolean
   const { data, error } = await createAdminClient().rpc("eng_assignment_overview", { p_learner: learnerId, p_assignment: null });
   if (error) fail("eng_assignment_overview", error);
   const list = parseAssignments(data);
-  return opts.units === false ? list : withUnits(learnerId, list);
+  const withFeedback = await withSubmissionFeedback(learnerId, list);
+  return opts.units === false ? withFeedback : withUnits(learnerId, withFeedback);
+}
+
+/** The feedback adults wrote on the submissions (0033). Before 0033 is applied the function is missing: the list simply has no feedback. */
+async function withSubmissionFeedback(learnerId: string, list: AssignmentView[]): Promise<AssignmentView[]> {
+  if (!list.some((a) => a.submission)) return list;
+  const { data, error } = await createAdminClient().rpc("eng_submission_feedback", { p_learner: learnerId, p_assignment: null });
+  if (error) {
+    if (error.code === "PGRST202" || error.code === "42883") return list;
+    fail("eng_submission_feedback", error);
+  }
+  return attachSubmissionFeedback(list, data);
 }
 
 const UNIT_CHUNK = 100;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attachAssignmentUnits, parseAssignments, parseReviewPoints, parseStudentFile, parseStudentPractice } from "@/lib/practice/shape";
+import { attachAssignmentUnits, attachSubmissionFeedback, parseAssignments, parseReviewPoints, parseStudentFile, parseStudentPractice, parseSubmissionFeedback } from "@/lib/practice/shape";
 
 describe("practice parsers", () => {
   it("parses a staff overview row, with null file / submission / result", () => {
@@ -73,5 +73,36 @@ describe("assignment units (0029)", () => {
   it("no rows (or 0029 not applied) leaves the list untouched", () => {
     expect(attachAssignmentUnits(list(), [], [], [])).toEqual(list());
     expect(attachAssignmentUnits(list(), null, null, null)).toEqual(list());
+  });
+});
+
+describe("feedback on a submission (0033)", () => {
+  const row = (over: Record<string, unknown> = {}) => ({
+    id: "f1", submission_id: "s1", assignment_id: "a1", praise: "Chữ rõ.", items: [{ n: 1, text: "Câu 38" }], supersedes_id: null,
+    author_member: "m1", author_role: "tutor", author_name: "Thầy Hùng", created_at: "2026-11-15T03:00:00Z", live: true, ...over,
+  });
+  const assignment = (id: string) => parseAssignments([{ id, kind: "link", title: id, created_at: "2026-11-14T00:00:00Z" }])[0]!;
+
+  it("parses the rows, keeps the order, and tolerates a note with only items", () => {
+    const list = parseSubmissionFeedback([row(), row({ id: "f0", live: false, praise: null })]);
+    expect(list.map((f) => [f.id, f.live, f.praise])).toEqual([["f1", true, "Chữ rõ."], ["f0", false, null]]);
+    expect(list[0]).toMatchObject({ authorRole: "tutor", authorName: "Thầy Hùng", items: [{ n: 1, text: "Câu 38" }] });
+    expect(parseSubmissionFeedback(null)).toEqual([]);
+  });
+
+  it("puts each note on its assignment; notes of an assignment that is not listed are ignored; no notes = the list is returned as it was", () => {
+    const a = assignment("a1");
+    const b = assignment("a2");
+    expect(a.feedback).toEqual([]);
+    const out = attachSubmissionFeedback([a, b], [row(), row({ id: "fx", assignment_id: "elsewhere" })]);
+    expect(out[0]!.feedback.map((f) => f.id)).toEqual(["f1"]);
+    expect(out[1]!.feedback).toEqual([]);
+    const same = [a, b];
+    expect(attachSubmissionFeedback(same, [])).toBe(same);
+  });
+
+  it("an unexpected role or a missing flag is an error, not a half-right page", () => {
+    expect(() => parseSubmissionFeedback([row({ author_role: "student" })])).toThrow();
+    expect(() => parseSubmissionFeedback([row({ live: undefined })])).toThrow();
   });
 });
