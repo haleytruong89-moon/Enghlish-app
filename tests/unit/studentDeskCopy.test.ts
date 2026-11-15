@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { studentDeskCopy, tutorHonorific } from "@/lib/copy/vi";
+import { studentDeskCopy } from "@/lib/copy/vi";
 
 const strings = (): string[] => {
   const all: string[] = [];
