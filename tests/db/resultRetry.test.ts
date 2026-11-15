@@ -219,7 +219,7 @@ describe("result view, retry and test flag (migration 0034)", () => {
       expect(await set(false, s.members.parent, "mark-0000-0004")).toMatchObject({ is_test: false }); // the newest wins
       expect((await asUser<{ activity_ids: string[] }>(s.users.studentNguyen, "select english.eng_my_test_marks() as r")).activity_ids).not.toContain(w);
       await fail(svc("select english.eng_set_test_mark('nope', $1, true, $2, 'mark-0000-0005') as r", [w, s.members.parent]), "22023", /\(bad_kind\)/);
-      await fail(svc("select english.eng_set_test_mark('activity', $1, true, $2, 'mark-0000-0006') as r", [randomUUID(), s.members.parent]), "P0002");
+      await fail(svc("select english.eng_set_test_mark('activity', $1, true, $2, 'mark-0000-0006') as r", [randomUUID(), s.members.parent]), "42501"); // not found = not yours (no oracle)
       await submit(w);
       await fail(set(true, s.members.tutorNguyen, "mark-0000-0007"), "23514", /\(already_started\)/);
       expect((await errorAs(db.client, "authenticated", s.users.parent, "select english.eng_set_test_mark('activity', $1, true, $2, 'mark-0000-0008')", [w, s.members.parent]))?.code).toBe("42501");
@@ -248,6 +248,116 @@ describe("result view, retry and test flag (migration 0034)", () => {
       const b = await svc<{ replayed: boolean }>("select english.eng_assign_studio_v2($1, current_date, current_date + 3, true, $2, $3) as r", [d, s.members.parent, cid]);
       expect([a.replayed, b.replayed]).toEqual([false, true]);
       expect((await q1<{ n: number }>("select count(*)::int as n from english.work_test_marks"))[0]!.n).toBe(before + 1);
+    });
+
+    it("replay with another kind of work is client_id_reused (Studio v2 and link v3 alike); the same kind replays", async () => {
+      const d = (await q1<{ id: string }>("select id from english.studio_drafts where status = 'approved' order by created_at desc limit 1"))[0]!.id;
+      const cid = `as-${randomUUID()}`;
+      const go = (is: boolean) => svc("select english.eng_assign_studio_v2($1, current_date, current_date + 3, $2, $3, $4) as r", [d, is, s.members.parent, cid]);
+      await go(false);
+      await fail(go(true), "23505", /\(client_id_reused\)/);
+      await go(false);
+      const cid2 = `as-${randomUUID()}`;
+      const go2 = (is: boolean) => svc("select english.eng_assign_studio_v2($1, current_date, current_date + 3, $2, $3, $4) as r", [d, is, s.members.parent, cid2]);
+      await go2(true);
+      await fail(go2(false), "23505", /\(client_id_reused\)/);
+      const mk = (cid3: string, is: boolean) =>
+        svc("select english.eng_create_assignment_v3($1, 'link', 'https://www.test-english.com/y', 'Bài link', '{}'::text[], null, null, null, $2, $3, '[]'::jsonb, $4) as r", [s.learners.nguyen, s.members.tutorNguyen, cid3, is]);
+      const l1 = `ln-${randomUUID()}`;
+      await mk(l1, false);
+      await fail(mk(l1, true), "23505", /\(client_id_reused\)/);
+      await mk(l1, false);
+      const l2 = `ln-${randomUUID()}`;
+      await mk(l2, true);
+      await fail(mk(l2, false), "23505", /\(client_id_reused\)/);
+      await mk(l2, true);
+    });
+  });
+
+  describe("the adult read of retries (eng_retry_pending) and when a retry stops waiting", () => {
+    const pending = (by: string, allowReal = false) =>
+      svc<{ count: number; items: { attempt_id: string; learner_id: string; since: string; retries: { item_id: string; n: number; stem: string; given: string; retry: string }[] }[] }>(
+        "select english.eng_retry_pending($1, $2) as r", [by, allowReal]);
+    const mineOf = async (by: string, activity: string) => {
+      const att = (await q1<{ id: string }>("select id from english.attempts where activity_instance_id = $1 order by attempt_no desc limit 1", [activity]))[0]!.id;
+      return { att, row: (await pending(by)).items.find((i) => i.attempt_id === att) };
+    };
+    const fresh = async () => {
+      const w = await newWork(false);
+      await submit(w);
+      await retry(w, "q2", "A. must");
+      await retry(w, "q6", "happiness");
+      return w;
+    };
+
+    it("shows the retried items beside the original answer and counts them", async () => {
+      const w = await fresh();
+      const { row } = await mineOf(s.members.tutorNguyen, w);
+      expect(row?.retries.map((r) => [r.n, r.given, r.retry])).toEqual([[2, "B. can't", "A. must"], [6, "happyness", "happiness"]]);
+      expect(row?.retries[0]!.stem).toEqual(expect.any(String));
+      expect((await mineOf(s.members.parent, w)).row).toBeDefined();
+    });
+
+    it("another child's tutor sees nothing; a real learner needs allow_real; a student cannot read it", async () => {
+      const w = await fresh();
+      expect((await mineOf(s.members.tutorAn, w)).row).toBeUndefined();
+      await db.client.query("update english.learners set is_test = false where id = $1", [s.learners.nguyen]);
+      try {
+        expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined();
+        expect((await pending(s.members.tutorNguyen, true)).items.some((i) => i.learner_id === s.learners.nguyen)).toBe(true);
+      } finally {
+        await db.client.query("update english.learners set is_test = true where id = $1", [s.learners.nguyen]);
+      }
+      expect((await errorAs(db.client, "authenticated", s.users.tutorNguyen, "select english.eng_retry_pending($1, true)", [s.members.tutorNguyen]))?.code).toBe("42501");
+    });
+
+    it("clears after a LATER feedback note on the attempt, but not after one that came before the retry", async () => {
+      // eng_write_feedback only accepts writing work, so the note rows are inserted directly (same shape the function writes).
+      const note = (att: string, text: string, kind = "feedback") => q1(
+        `insert into english.feedback_notes(learner_id, source_attempt_id, root_attempt_id, round, kind, praise, items, author_member, author_role, client_id)
+         values ($1, $2, $2, 1, $5, 'Bạn làm tốt', $3::jsonb, $4, 'tutor', $6)`,
+        [s.learners.nguyen, att, JSON.stringify([{ n: 1, text }]), s.members.tutorNguyen, kind, `fb-${randomUUID()}`]);
+      const w = await newWork(false);
+      await submit(w);
+      const att = (await q1<{ id: string }>("select id from english.attempts where activity_instance_id = $1", [w]))[0]!.id;
+      await note(att, "Xem lại câu 2");
+      await retry(w, "q2", "A. must");
+      expect((await mineOf(s.members.tutorNguyen, w)).row?.retries).toHaveLength(1);
+      await q1(
+        `insert into english.feedback_notes(learner_id, source_attempt_id, root_attempt_id, round, kind, praise, items, supersedes_id, author_member, author_role, client_id)
+         values ($1, $2, $2, 1, 'feedback', 'Tốt hơn', $3::jsonb, (select id from english.feedback_notes where source_attempt_id = $2 and supersedes_id is null), $4, 'tutor', $5)`,
+        [s.learners.nguyen, att, JSON.stringify([{ n: 1, text: "Câu 2 ổn rồi" }]), s.members.tutorNguyen, `fb-${randomUUID()}`]);
+      expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined();
+    });
+
+    it("clears after a later item decision", async () => {
+      const w = await fresh();
+      const { att } = await mineOf(s.members.tutorNguyen, w);
+      await svc("select english.eng_decide_studio_items($1, $2::jsonb, $3, $4) as r", [att, JSON.stringify([{ item_id: "q7", result: "incorrect" }]), s.members.tutorNguyen, `dc-${randomUUID()}`]);
+      expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined();
+    });
+
+    it("clears after a later recorded result and after a later validation decision; a new retry after that waits again", async () => {
+      const w = await fresh();
+      const { att } = await mineOf(s.members.tutorNguyen, w);
+      await q1(`insert into english.results(learner_id, mode, context, attempt, source, title, total_items, correct, wrong_items, taken_on, recorded_by_member, recorded_role, client_id, attempt_id)
+                values ($1, 'quick', 'home', 'first', 'practice', 'Kết quả thử', 1, 1, '{}', current_date, $2, 'tutor', $3, $4)`, [s.learners.nguyen, s.members.tutorNguyen, `rs-${randomUUID()}`, att]);
+      expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined();
+
+      const w2 = await fresh();
+      const { att: att2 } = await mineOf(s.members.tutorNguyen, w2);
+      const ep = (await q1<{ id: string }>("select id from english.episodes where attempt_id = $1", [att2]))[0]!.id;
+      await q1(`insert into english.validation_decisions(episode_id, learner_id, target_key, decision, validator_member_id, validator_role)
+                values ($1, $2, 'T-RETRY-TEST', 'INSUFFICIENT', $3, 'tutor')`, [ep, s.learners.nguyen, s.members.tutorNguyen]);
+      expect((await mineOf(s.members.tutorNguyen, w2)).row).toBeUndefined();
+    });
+
+    it("a retry of the NEXT attempt is a new row", async () => {
+      const w = await fresh();
+      await submit(w, { ...WRONG, q2: "B. can't" });
+      expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined();
+      await retry(w, "q2", "A. must");
+      expect((await mineOf(s.members.tutorNguyen, w)).row?.retries).toHaveLength(1);
     });
   });
 

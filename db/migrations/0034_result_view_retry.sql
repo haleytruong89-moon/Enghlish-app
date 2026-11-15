@@ -94,16 +94,17 @@ begin
   if pg_catalog.length(pg_catalog.btrim(p_client_id)) not between 8 and 110 then
     raise exception 'eng_set_test_mark: client_id must be 8..110 characters' using errcode = '22023';
   end if;
+  -- Vai của người thao tác TRƯỚC khi tìm bài: không phân biệt "không có bài" với "không phải việc của bạn" (không lộ bài có tồn tại).
+  select m.role into v_role from english.members m where m.id = p_by;
+  if v_role is null or v_role not in ('tutor', 'parent') then
+    raise exception 'eng_set_test_mark: this member may not change this work (staff_only)' using errcode = '42501';
+  end if;
   if p_ref_kind = 'activity' then
     select a.learner_id into v_learner from english.activity_instances a where a.id = p_ref_id;
   else
     select a.learner_id into v_learner from english.assignments a where a.id = p_ref_id;
   end if;
-  if v_learner is null then
-    raise exception 'eng_set_test_mark: not found (not_found)' using errcode = 'P0002';
-  end if;
-  select m.role into v_role from english.members m where m.id = p_by;
-  if v_role is null or v_role not in ('tutor', 'parent') or not english.eng_actor_may_manage(p_by, v_learner) then
+  if v_learner is null or not english.eng_actor_may_manage(p_by, v_learner) then
     raise exception 'eng_set_test_mark: this member may not change this work (staff_only)' using errcode = '42501';
   end if;
 
@@ -143,7 +144,13 @@ declare
   v_r jsonb;
 begin
   v_r := english.eng_assign_studio(p_draft, p_start, p_due, p_by, p_client_id);   -- kiểm người thao tác, quyền, bản đã duyệt, ngày
-  if coalesce(p_is_test, false) and not (v_r ->> 'replayed')::boolean then
+  if (v_r ->> 'replayed')::boolean then
+    -- Gửi lại cùng client_id: loại bài phải giống lần đầu (có dấu = bài kiểm tra, không dấu = luyện tập); khác → client_id_reused (như v3).
+    if exists (select 1 from english.work_test_marks m where m.activity_id = (v_r ->> 'activity_id')::uuid and m.client_id = p_client_id || ':test')
+       is distinct from coalesce(p_is_test, false) then
+      raise exception 'eng_assign_studio_v2: client_id was already used for a different kind of work (client_id_reused)' using errcode = '23505';
+    end if;
+  elsif coalesce(p_is_test, false) then
     perform english.eng_set_test_mark('activity', (v_r ->> 'activity_id')::uuid, true, p_by, p_client_id || ':test');
   end if;
   return v_r;
@@ -161,13 +168,18 @@ language plpgsql volatile security definer set search_path = ''
 as $$
 declare
   v_r jsonb;
+  v_replay boolean;
 begin
+  v_replay := exists (select 1 from english.assignments a where a.learner_id = p_learner and a.client_id = p_client_id);
   v_r := english.eng_create_assignment_v2(p_learner, p_kind, p_url, p_title, p_tag_keys, p_due_on, p_frame, p_files, p_by, p_client_id, p_units);
-  if coalesce(p_is_test, false) then
-    -- Gửi lại cùng client_id: cờ đã có thì eng_set_test_mark trả bản cũ; nếu bài đã có bài nộp thì (already_started) không chặn việc gửi lại.
-    if not exists (select 1 from english.work_test_marks m where m.learner_id = p_learner and m.client_id = p_client_id || ':test') then
-      perform english.eng_set_test_mark('assignment', (v_r ->> 'id')::uuid, true, p_by, p_client_id || ':test');
+  if v_replay then
+    -- Gửi lại cùng client_id: loại bài phải giống lần đầu; khác → client_id_reused (như eng_assign_studio_v2).
+    if exists (select 1 from english.work_test_marks m where m.learner_id = p_learner and m.client_id = p_client_id || ':test')
+       is distinct from coalesce(p_is_test, false) then
+      raise exception 'eng_create_assignment_v3: client_id was already used for a different kind of work (client_id_reused)' using errcode = '23505';
     end if;
+  elsif coalesce(p_is_test, false) then
+    perform english.eng_set_test_mark('assignment', (v_r ->> 'id')::uuid, true, p_by, p_client_id || ':test');
   end if;
   return v_r;
 end
@@ -187,7 +199,7 @@ as $$
     'activity_ids', coalesce((
       select pg_catalog.jsonb_agg(a.id order by a.id)
       from english.activity_instances a join me on me.id = a.learner_id
-      where english.eng_work_is_test(a.id)), '[]'::jsonb),
+      where english.eng_activity_released(a.id) and english.eng_work_is_test(a.id)), '[]'::jsonb),
     'assignment_ids', coalesce((
       select pg_catalog.jsonb_agg(g.id order by g.id)
       from english.assignments g join me on me.id = g.learner_id
@@ -364,6 +376,66 @@ as $$
 $$;
 revoke execute on function english.eng_item_retries(uuid) from public, anon, authenticated;
 grant execute on function english.eng_item_retries(uuid) to service_role;
+
+-- 3e. Người lớn: lần thử lại CHƯA có người lớn làm gì sau đó (cho Chờ duyệt "Con thử lại n câu" và màn xem). Cùng kiểu eng_studio_pending:
+--     người thao tác (p_by) là phụ huynh của gia đình / gia sư còn hiệu lực của em; em thật chỉ khi p_allow_real.
+--     "Người lớn làm gì đó với lần làm này" = góp ý bài (feedback_notes), quyết định một câu (item_decisions), Kết quả bài (results),
+--     quyết định duyệt (validation_decisions của episode). Lần thử lại hết chờ khi có việc như vậy MUỘN HƠN nó; không có bảng "đã xem" mới.
+create or replace function english.eng_retry_pending(p_by uuid, p_allow_real boolean default false) returns jsonb
+language sql stable security definer set search_path = ''
+as $$
+  with ls as (
+    select l.id, l.alias, l.is_test
+    from english.learners l
+    join english.members m on m.id = p_by and m.role in ('tutor', 'parent')
+    where english.eng_actor_may_manage(p_by, l.id) and (l.is_test or p_allow_real)
+  ),
+  att as (
+    select t.id as attempt_id, t.learner_id, t.activity_instance_id, t.submitted_at, ls.alias, ls.is_test,
+           i.snapshot, a.step_no,
+           (select pg_catalog.max(x.at) from (
+              select f.created_at as at from english.feedback_notes f where f.source_attempt_id = t.id
+              union all select d.at from english.item_decisions d where d.attempt_id = t.id
+              union all select r.created_at from english.results r where r.attempt_id = t.id
+              union all select v.created_at from english.validation_decisions v join english.episodes e on e.id = v.episode_id where e.attempt_id = t.id
+            ) x) as last_action,
+           (select av.content -> 'answers' from english.artifact_versions av
+            where av.attempt_id = t.id and av.kind = 'answers' order by av.version desc limit 1) as answers
+    from english.attempts t
+    join ls on ls.id = t.learner_id
+    join english.activity_instances a on a.id = t.activity_instance_id
+    join english.inquiry_instances i on i.id = a.inquiry_instance_id
+    where exists (select 1 from english.item_retries r where r.attempt_id = t.id)
+  ),
+  waiting as (
+    select att.attempt_id, r.item_id, r.answer, r.created_at as at, q.x, q.o
+    from att
+    join english.item_retries r on r.attempt_id = att.attempt_id and (att.last_action is null or r.created_at > att.last_action)
+    cross join lateral (
+      select st.s from pg_catalog.jsonb_array_elements(att.snapshot -> 'steps') as st(s) where (st.s ->> 'step_no')::int = att.step_no
+    ) step
+    cross join lateral pg_catalog.jsonb_array_elements(coalesce(step.s -> 'items', '[]'::jsonb)) with ordinality as q(x, o)
+    where q.x ->> 'id' = r.item_id
+  )
+  select pg_catalog.jsonb_build_object(
+    'count', (select pg_catalog.count(*) from waiting),
+    'items', coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+      'attempt_id', att.attempt_id, 'learner_id', att.learner_id, 'alias', att.alias, 'is_test', att.is_test,
+      'activity_id', att.activity_instance_id, 'title', att.snapshot -> 'template' ->> 'title_vi', 'submitted_at', att.submitted_at,
+      'since', (select pg_catalog.min(w.at) from waiting w where w.attempt_id = att.attempt_id),
+      'retries', (
+        select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+                 'item_id', w.item_id,
+                 'n', coalesce(nullif(pg_catalog.substring(w.item_id, '^q([1-9][0-9]{0,2})$'), '')::int, w.o::int),
+                 'stem', w.x ->> 'stem', 'given', coalesce(att.answers ->> w.item_id, ''), 'retry', w.answer, 'at', w.at)
+               order by w.o)
+        from waiting w where w.attempt_id = att.attempt_id))
+      order by (select pg_catalog.min(w.at) from waiting w where w.attempt_id = att.attempt_id), att.attempt_id), '[]'::jsonb))
+  from att
+  where exists (select 1 from waiting w where w.attempt_id = att.attempt_id)
+$$;
+revoke execute on function english.eng_retry_pending(uuid, boolean) from public, anon, authenticated;
+grant execute on function english.eng_retry_pending(uuid, boolean) to service_role;
 
 -- 5. Q3: con không còn lấy được "Nên là / Vì sao". Hàm giữ nguyên thân (0024) cho người xem lại; không ai gọi được từ trình duyệt.
 revoke execute on function english.eng_my_studio_review(uuid) from public, anon, authenticated, service_role;
