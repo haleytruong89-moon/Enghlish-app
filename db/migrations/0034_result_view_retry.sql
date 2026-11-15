@@ -63,6 +63,7 @@ create table if not exists english.item_reveals (
   unique (learner_id, client_id)
 );
 create index if not exists item_reveals_learner_idx on english.item_reveals(learner_id, created_at desc);
+create index if not exists item_reveals_activity_idx on english.item_reveals(activity_id); -- the redo trigger checks it on every in-app submit
 
 -- 3a'. "Đã xem lần thử lại" (chỉ thêm): người lớn đọc các lần thử lại của một lần làm rồi bấm Đã xem (ghi chú ngắn không bắt buộc).
 --      Một dòng phủ các lần thử lại của lần làm đó có created_at <= seen_through (mốc thời gian người lớn đã thấy trên thẻ); lần thử lại tạo sau mốc
@@ -413,6 +414,10 @@ begin
   if not found then
     raise exception 'eng_my_retry_item: send the work first (not_sent)' using errcode = '23514';
   end if;
+  -- a redo may have been committed while we waited for the lock: only the NEWEST attempt takes a retry
+  if exists (select 1 from english.attempts t where t.activity_instance_id = p_activity and t.attempt_no > v_t.attempt_no) then
+    raise exception 'eng_my_retry_item: a newer attempt exists, look at the result again (not_sent)' using errcode = '23514';
+  end if;
   select c.checks into v_checks from english.attempt_auto_checks c where c.attempt_id = v_t.id;
   select * into v_inst from english.inquiry_instances i where i.id = v_act.inquiry_instance_id;
   select x into v_step from pg_catalog.jsonb_array_elements(v_inst.snapshot -> 'steps') as x where (x ->> 'step_no')::int = v_act.step_no;
@@ -490,6 +495,9 @@ begin
   select t.* into v_t from english.attempts t where t.activity_instance_id = p_activity order by t.attempt_no desc limit 1 for no key update;
   if not found then
     raise exception 'eng_my_reveal_item: send the work first (not_sent)' using errcode = '23514';
+  end if;
+  if exists (select 1 from english.attempts t where t.activity_instance_id = p_activity and t.attempt_no > v_t.attempt_no) then
+    raise exception 'eng_my_reveal_item: a newer attempt exists, look at the result again (not_sent)' using errcode = '23514';
   end if;
   select c.checks into v_checks from english.attempt_auto_checks c where c.attempt_id = v_t.id;
   select x into v_step from pg_catalog.jsonb_array_elements(v_inst.snapshot -> 'steps') as x where (x ->> 'step_no')::int = v_act.step_no;

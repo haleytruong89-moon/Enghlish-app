@@ -162,7 +162,7 @@ export function createSupabaseWorkStore(): WorkStore {
         p_assistance: assistance,
         p_provenance: provenance,
       });
-      if (error) dbError("eng_submit_attempt", error);
+      if (error) dbErrorWithTag("eng_submit_attempt", error); // keeps "(answers_shown)" for the handler; the message never reaches the browser
       return data;
     },
   };

@@ -517,6 +517,22 @@ describe("result view, retry and test flag (migration 0034)", () => {
       expect(await view(byReveal, s.users.studentAn)).toBeNull();
     });
 
+    it("only the child's own redo is blocked: an attempt recorded by an adult (manual_import / tutor_live) on a revealed work is allowed", async () => {
+      const w = await newWork(false);
+      await submit(w);
+      await reveal(w, "q5");
+      const first = (await q1<{ id: string; learning_family_id: string; mode: string }>("select id, learning_family_id, mode from english.attempts where activity_instance_id = $1", [w]))[0]!;
+      const insert = (provenance: string, no: number) =>
+        q1(`insert into english.attempts(id, activity_instance_id, learner_id, attempt_no, parent_attempt_id, learning_family_id, mode, provenance, declared_assistance, submitted_at, content_hash, client_submission_id)
+            values (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, array['none'], now(), repeat('a', 64), $8)`,
+          [w, s.learners.nguyen, no, first.id, first.learning_family_id, first.mode, provenance, randomUUID()]);
+      await fail(insert("in_app", 2), "23514", /\(answers_shown\)/);
+      await fail(insert("pasted", 2), "23514", /\(answers_shown\)/);
+      await insert("manual_import", 2);
+      await insert("tutor_live", 3);
+      expect((await q1<{ n: number }>("select count(*)::int as n from english.attempts where activity_instance_id = $1", [w]))[0]!.n).toBe(3);
+    });
+
     it("a lost reply: re-sending the same submission after answers were shown is still a replay, not a refusal", async () => {
       const w = await newWork(false);
       const cid = randomUUID();

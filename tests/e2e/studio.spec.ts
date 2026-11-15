@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { aiSettingsCopy, levelLabels, pdfPickCopy, pendingCopy, playerCopy, resultCopy, studioInboxCopy, work } from "@/lib/copy/vi";
 import { KEY_RECOMMEND, PAGE_LIMITS } from "@/lib/pdf/limits";
@@ -128,6 +129,12 @@ test("Nguyên retries one question once; he is told it went to the tutor, no sco
   await expect(page.getByTestId("retry-open-q6")).toHaveCount(0);
   // after any answer was shown there is no "Làm lại cả bài"
   await expect(page.getByTestId("result-redo")).toHaveCount(0);
+  // ... and the server refuses it too (the trigger answers_shown), with a tag the screen understands - never a generic 400
+  const redo = await page.request.post("/api/attempts", {
+    data: { activity_id: activityId, client_submission_id: randomUUID(), content: { answers: { q1: "A. had" } }, assistance: ["none"], provenance: "in_app" },
+  });
+  expect(redo.status()).toBe(409);
+  expect(await redo.json()).toMatchObject({ error: "answers_shown" });
   const text = await studentVisibleText(page, "result-view");
   expect(text).toContain(resultCopy.markWrong);
   expect(text).not.toMatch(NO_TOTALS); // answers and "Vì sao" are now shown for q2 / q6, still no totals
@@ -144,9 +151,14 @@ test("Nguyên retries one question once; he is told it went to the tutor, no sco
   await expect(tutor.getByTestId(`pending-row-retry-${attemptId}`)).toContainText(pendingCopy.need.reveal(1));
   await tutor.getByTestId(`pending-open-retry-${attemptId}`).click();
   const card = tutor.getByTestId(`retry-card-${attemptId}`);
-  await expect(card.getByTestId("retry-given")).toHaveText("B. can't");
-  await expect(card.getByTestId("retry-text")).toHaveText("A. must");
-  await expect(card.getByTestId("retry-revealed")).toBeVisible(); // q6: the child chose Xem đáp án
+  // the card has two items (q2 retried, q6 gave up): every locator is scoped to its own item
+  const q2 = card.getByTestId(`retry-item-${attemptId}-q2`);
+  const q6 = card.getByTestId(`retry-item-${attemptId}-q6`);
+  await expect(q2.getByTestId("retry-given")).toHaveText("B. can't");
+  await expect(q2.getByTestId("retry-text")).toHaveText("A. must");
+  await expect(q2.getByTestId("retry-revealed")).toHaveCount(0);
+  await expect(q6.getByTestId("retry-revealed")).toBeVisible(); // q6: the child chose Xem đáp án
+  await expect(q6.getByTestId("retry-text")).toHaveCount(0);
   // Only "Đã xem" clears the row (with an optional note the child does not see).
   await card.getByTestId(`retry-note-${attemptId}`).fill("Câu 2 con tự sửa được.");
   await card.getByTestId(`retry-seen-${attemptId}`).click();
