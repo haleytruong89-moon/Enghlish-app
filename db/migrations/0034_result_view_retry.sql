@@ -8,7 +8,8 @@
 --   4. eng_my_result_view (con đọc): câu nên nhìn lại + câu viết tự do + "các câu còn lại ổn" (một cờ, không số). KHÔNG đáp án, giải thích, số đúng.
 --      eng_my_test_marks (con đọc): mã bài của chính con được coi là bài kiểm tra.
 --   5. Thu quyền eng_my_studio_review khỏi authenticated (Q3): trình duyệt của con không lấy được "Nên là / Vì sao" nữa.
---   6. eng_purge_learner / eng_purge_preview: chép NGUYÊN thân 0033 + 2 bảng (trước submissions / attempts).
+--   6. eng_purge_learner / eng_purge_preview: chép NGUYÊN thân 0033 + 3 bảng (item_retries, retry_seen, work_test_marks) (trước submissions / attempts).
+--   5'. retry_seen (chỉ thêm) + eng_mark_retry_seen: người lớn bấm "Đã xem" lần thử lại (phụ huynh quyết 15/11); eng_retry_pending chỉ dựa vào đó.
 -- Idempotent; chỉ thêm. Không đụng schema public. Cần 0024 + 0033 đã áp.
 
 -- 1. Cờ "Bài kiểm tra" ---------------------------------------------------------------------------------------------------------
@@ -45,12 +46,27 @@ create table if not exists english.item_retries (
 create index if not exists item_retries_learner_idx on english.item_retries(learner_id, created_at desc);
 create index if not exists item_retries_activity_idx on english.item_retries(activity_id);
 
+-- 3a'. "Đã xem lần thử lại" (chỉ thêm): người lớn đọc các lần thử lại của một lần làm rồi bấm Đã xem (ghi chú ngắn không bắt buộc).
+--      Một dòng phủ MỌI lần thử lại của lần làm đó tạo trước nó; lần thử lại tạo sau (câu khác, hay lần làm mới) chờ lại. Ghi chú CHỈ người lớn thấy.
+create table if not exists english.retry_seen (
+  id uuid primary key default gen_random_uuid(),
+  learner_id uuid not null references english.learners(id),
+  attempt_id uuid not null references english.attempts(id),
+  note text check (note is null or (pg_catalog.length(pg_catalog.btrim(note)) between 1 and 300 and not english.eng_has_score_words(note))),
+  seen_by uuid not null,                         -- english.members.id, no FK (like session_marks.by_member)
+  seen_role text not null check (seen_role in ('tutor', 'parent')),
+  client_id text not null check (pg_catalog.length(pg_catalog.btrim(client_id)) between 8 and 100),
+  created_at timestamptz not null default clock_timestamp(),
+  unique (learner_id, client_id)
+);
+create index if not exists retry_seen_attempt_idx on english.retry_seen(attempt_id, created_at desc);
+
 -- 2. Chỉ thêm (đầu 0004) + RLS: người lớn của em đọc; học sinh không SELECT bảng nào (chỉ qua eng_my_*); không ai ghi trực tiếp -----
 do $$
 declare
   t text;
 begin
-  foreach t in array array['work_test_marks', 'item_retries'] loop
+  foreach t in array array['work_test_marks', 'item_retries', 'retry_seen'] loop
     execute pg_catalog.format('drop trigger if exists %I on english.%I', t || '_forbid_mutation', t);
     execute pg_catalog.format('create trigger %I before update or delete on english.%I for each row execute function english.eng_forbid_mutation(%L)', t || '_forbid_mutation', t, 'learner_id');
     execute pg_catalog.format('drop trigger if exists %I on english.%I', t || '_forbid_truncate', t);
@@ -362,6 +378,8 @@ language sql stable security definer set search_path = ''
 as $$
   select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
            'id', r.id, 'activity_id', r.activity_id, 'attempt_id', r.attempt_id, 'item_id', r.item_id, 'retry', r.answer, 'at', r.created_at,
+           'seen', (select pg_catalog.jsonb_build_object('at', z.created_at, 'note', z.note) from english.retry_seen z
+                    where z.attempt_id = r.attempt_id and z.created_at > r.created_at order by z.created_at limit 1),
            'title', i.snapshot -> 'template' ->> 'title_vi',
            'stem', (select it ->> 'stem' from pg_catalog.jsonb_array_elements(coalesce(
                       (select x -> 'items' from pg_catalog.jsonb_array_elements(i.snapshot -> 'steps') x where (x ->> 'step_no')::int = a.step_no), '[]'::jsonb)) it
@@ -377,13 +395,9 @@ $$;
 revoke execute on function english.eng_item_retries(uuid) from public, anon, authenticated;
 grant execute on function english.eng_item_retries(uuid) to service_role;
 
--- 3e. Người lớn: lần thử lại CHƯA có người lớn làm gì sau đó (cho Chờ duyệt "Con thử lại n câu" và màn xem). Cùng kiểu eng_studio_pending:
+-- 3e. Người lớn: lần thử lại CHƯA được bấm "Đã xem" (cho Chờ duyệt "Con thử lại n câu" và màn xem). Cùng kiểu eng_studio_pending:
 --     người thao tác (p_by) là phụ huynh của gia đình / gia sư còn hiệu lực của em; em thật chỉ khi p_allow_real.
---     "Người lớn làm gì đó với lần làm này" = góp ý bài (feedback_notes), quyết định một câu (item_decisions; Kết quả bài do người lớn
---     quyết định đi theo đó), quyết định duyệt (validation_decisions của episode). Lần thử lại hết chờ khi có việc như vậy MUỘN HƠN nó;
---     không có bảng "đã xem" mới.
-create index if not exists feedback_notes_source_attempt_idx on english.feedback_notes(source_attempt_id);
-create index if not exists validation_decisions_episode_idx on english.validation_decisions(episode_id);
+--     Một lần thử lại chờ cho tới khi có dòng retry_seen của đúng lần làm đó TẠO SAU nó. Không suy ra từ việc khác (góp ý, chấm câu, duyệt).
 create or replace function english.eng_retry_pending(p_by uuid, p_allow_real boolean default false) returns jsonb
 language sql stable security definer set search_path = ''
 as $$
@@ -396,11 +410,6 @@ as $$
   att as (
     select t.id as attempt_id, t.learner_id, t.activity_instance_id, t.submitted_at, ls.alias, ls.is_test,
            i.snapshot, a.step_no,
-           (select pg_catalog.max(x.at) from (
-              select f.created_at as at from english.feedback_notes f where f.source_attempt_id = t.id
-              union all select d.at from english.item_decisions d where d.attempt_id = t.id
-              union all select v.created_at from english.validation_decisions v join english.episodes e on e.id = v.episode_id where e.attempt_id = t.id
-            ) x) as last_action,
            (select av.content -> 'answers' from english.artifact_versions av
             where av.attempt_id = t.id and av.kind = 'answers' order by av.version desc limit 1) as answers
     from (select distinct r0.attempt_id from english.item_retries r0 where r0.learner_id in (select id from ls)) rr
@@ -412,7 +421,8 @@ as $$
   waiting as (
     select att.attempt_id, r.item_id, r.answer, r.created_at as at, q.x, q.o
     from att
-    join english.item_retries r on r.attempt_id = att.attempt_id and (att.last_action is null or r.created_at > att.last_action)
+    join english.item_retries r on r.attempt_id = att.attempt_id
+      and not exists (select 1 from english.retry_seen z where z.attempt_id = r.attempt_id and z.created_at > r.created_at)
     cross join lateral (
       select st.s from pg_catalog.jsonb_array_elements(att.snapshot -> 'steps') as st(s) where (st.s ->> 'step_no')::int = att.step_no
     ) step
@@ -438,6 +448,54 @@ as $$
 $$;
 revoke execute on function english.eng_retry_pending(uuid, boolean) from public, anon, authenticated;
 grant execute on function english.eng_retry_pending(uuid, boolean) to service_role;
+
+-- 3f. Người lớn bấm "Đã xem" cho các lần thử lại của một lần làm. Cùng luật với việc chấm câu Studio (eng_decide_studio_items):
+--     phụ huynh của gia đình / gia sư còn hiệu lực của em. Gửi lại cùng client_id = cùng biên nhận; khác nội dung → 23505.
+create or replace function english.eng_mark_retry_seen(p_attempt uuid, p_note text, p_by uuid, p_client_id text) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_t english.attempts%rowtype;
+  v_role text;
+  v_note text := nullif(pg_catalog.btrim(coalesce(p_note, '')), '');
+  v_old english.retry_seen%rowtype;
+  v_id uuid;
+begin
+  if p_attempt is null or p_by is null or p_client_id is null then
+    raise exception 'eng_mark_retry_seen: attempt, actor and client id are required' using errcode = '22004';
+  end if;
+  if pg_catalog.length(pg_catalog.btrim(p_client_id)) not between 8 and 100 then
+    raise exception 'eng_mark_retry_seen: client_id must be 8..100 characters' using errcode = '22023';
+  end if;
+  if v_note is not null and (pg_catalog.length(v_note) > 300 or english.eng_has_score_words(v_note)) then
+    raise exception 'eng_mark_retry_seen: the note is at most 300 characters and has no score words (bad_note)' using errcode = '22023';
+  end if;
+  select m.role into v_role from english.members m where m.id = p_by;
+  if v_role is null or v_role not in ('tutor', 'parent') then
+    raise exception 'eng_mark_retry_seen: this member may not check work (staff_only)' using errcode = '42501';
+  end if;
+  select * into v_t from english.attempts t where t.id = p_attempt;
+  if not found or not english.eng_actor_may_manage(p_by, v_t.learner_id) then
+    raise exception 'eng_mark_retry_seen: this member may not check work of this learner (staff_only)' using errcode = '42501';
+  end if;
+  select * into v_old from english.retry_seen z where z.learner_id = v_t.learner_id and z.client_id = p_client_id;
+  if found then
+    if v_old.attempt_id <> p_attempt or v_old.note is distinct from v_note then
+      raise exception 'eng_mark_retry_seen: client_id was already used for another mark (client_id_reused)' using errcode = '23505';
+    end if;
+    return pg_catalog.jsonb_build_object('id', v_old.id, 'replayed', true);
+  end if;
+  if not exists (select 1 from english.item_retries r where r.attempt_id = p_attempt) then
+    raise exception 'eng_mark_retry_seen: this attempt has no retry (no_retry)' using errcode = '23514';
+  end if;
+  insert into english.retry_seen(learner_id, attempt_id, note, seen_by, seen_role, client_id)
+  values (v_t.learner_id, p_attempt, v_note, p_by, v_role, p_client_id)
+  returning id into v_id;
+  return pg_catalog.jsonb_build_object('id', v_id, 'replayed', false);
+end
+$$;
+revoke execute on function english.eng_mark_retry_seen(uuid, text, uuid, text) from public, anon, authenticated;
+grant execute on function english.eng_mark_retry_seen(uuid, text, uuid, text) to service_role;
 
 -- 5. Q3: con không còn lấy được "Nên là / Vì sao". Hàm giữ nguyên thân (0024) cho người xem lại; không ai gọi được từ trình duyệt.
 revoke execute on function english.eng_my_studio_review(uuid) from public, anon, authenticated, service_role;
@@ -491,6 +549,7 @@ declare
   n_roadmap_main_curriculum int := 0;
   n_submission_feedback int := 0;
   n_item_retries int := 0;
+  n_retry_seen int := 0;
   n_work_test_marks int := 0;
   n_files int := 0;
   n_upload_tickets int := 0;
@@ -602,6 +661,9 @@ begin
   get diagnostics n_curricula = row_count;
 
   -- 0034: lần thử lại của con (trỏ tới attempts) và cờ "Bài kiểm tra" (trỏ tới activity_instances / assignments): xóa trước các bảng đó.
+  delete from english.retry_seen rs where rs.learner_id = p_learner_id;
+  get diagnostics n_retry_seen = row_count;
+
   delete from english.item_retries ir where ir.learner_id = p_learner_id;
   get diagnostics n_item_retries = row_count;
 
@@ -856,6 +918,7 @@ begin
       'submission_feedback', n_submission_feedback
     ) || pg_catalog.jsonb_build_object(
       'item_retries', n_item_retries,
+      'retry_seen', n_retry_seen,
       'work_test_marks', n_work_test_marks
     ),
     'note', 'Backups expire after 30 days.'
@@ -976,6 +1039,7 @@ begin
     -- 0034
     || pg_catalog.jsonb_build_object(
       'item_retries', (select pg_catalog.count(*) from english.item_retries x where x.learner_id = p_learner),
+      'retry_seen', (select pg_catalog.count(*) from english.retry_seen x where x.learner_id = p_learner),
       'work_test_marks', (select pg_catalog.count(*) from english.work_test_marks x where x.learner_id = p_learner)));
 end
 $$;

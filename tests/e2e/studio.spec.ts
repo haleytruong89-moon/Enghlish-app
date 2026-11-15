@@ -127,6 +127,16 @@ test("Nguyên retries one question once; he is told it went to the tutor, no sco
   const card = tutor.getByTestId(`retry-card-${attemptId}`);
   await expect(card.getByTestId("retry-given")).toHaveText("B. can't");
   await expect(card.getByTestId("retry-text")).toHaveText("A. must");
+  // Only "Đã xem" clears the row (with an optional note the child does not see).
+  await card.getByTestId(`retry-note-${attemptId}`).fill("Câu 2 con tự sửa được.");
+  await card.getByTestId(`retry-seen-${attemptId}`).click();
+  await expect(tutor.getByTestId(`retry-card-${attemptId}`)).toHaveCount(0);
+  await tutor.goto(`/learners/${NGUYEN}/inbox`);
+  await expect(tutor.getByTestId("pending-table")).toBeVisible();
+  await expect(tutor.getByTestId(`pending-row-retry-${attemptId}`)).toHaveCount(0);
+  // the child never sees the note
+  await page.reload();
+  expect(await studentVisibleText(page)).not.toContain("tự sửa được");
 });
 
 test("the tutor decides the two waiting items; the result, the tag marks and the skills are updated", async ({ page }) => {
@@ -141,10 +151,6 @@ test("the tutor decides the two waiting items; the result, the tag marks and the
   await expect(page.getByTestId(`studio-line-${attemptId}`)).toContainText(studioInboxCopy.doneLine("Nguyên (thử)", 5, 8));
   const marks = await q<{ tag_key: string }>("select tag_key from english.tag_marks where learner_id = $1 and source = 'practice' order by item_no", [NGUYEN]);
   expect(marks.map((m) => m.tag_key)).toEqual(expect.arrayContaining(["modal-suy-doan", "doc-inference", "dang-tu"]));
-  // An item decision after the retry clears the "Con thử lại" row by itself.
-  await page.goto(`/learners/${NGUYEN}/inbox`);
-  await expect(page.getByTestId("pending-table")).toBeVisible();
-  await expect(page.getByTestId(`pending-row-retry-${attemptId}`)).toHaveCount(0);
   // Điểm cần chú ý shows the new tag; the skill page shows a level reached through the app's own checks (route 2)
   const label = (await q<{ label_vi: string }>("select label_vi from english.error_tags where key = 'dang-tu' and track_id = 'B'"))[0]!.label_vi;
   await page.goto(`/learners/${NGUYEN}/weak`);

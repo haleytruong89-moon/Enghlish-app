@@ -33,4 +33,5 @@ export const decideBodySchema = z.strictObject({
   items: z.array(z.strictObject({ item_id: z.string().regex(/^q[1-9][0-9]{0,2}$/), result: z.enum(["correct", "incorrect"]) })).min(1).max(300),
   client_id: clientId,
 });
+export const retrySeenBodySchema = z.strictObject({ note: z.string().trim().max(300).optional(), client_id: clientId });
 export type FileMetaBody = z.infer<typeof fileMeta>;

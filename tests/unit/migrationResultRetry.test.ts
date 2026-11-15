@@ -38,7 +38,7 @@ describe("*_result_view_retry.sql (found by suffix)", () => {
       expect(code, f).toContain(`grant execute on function english.${f} to authenticated;`);
       expect(code).not.toMatch(new RegExp(`grant execute on function english\\.${name}\\([^)]*\\) to service_role`));
     }
-    for (const f of ["eng_set_test_mark(text, uuid, boolean, uuid, text)", "eng_assign_studio_v2(uuid, date, date, boolean, uuid, text)", "eng_item_retries(uuid)", "eng_retry_pending(uuid, boolean)"]) {
+    for (const f of ["eng_set_test_mark(text, uuid, boolean, uuid, text)", "eng_assign_studio_v2(uuid, date, date, boolean, uuid, text)", "eng_item_retries(uuid)", "eng_retry_pending(uuid, boolean)", "eng_mark_retry_seen(uuid, text, uuid, text)"]) {
       expect(code, f).toContain(`revoke execute on function english.${f} from public, anon, authenticated;`);
       expect(code, f).toContain(`grant execute on function english.${f} to service_role;`);
     }
@@ -60,12 +60,12 @@ describe("*_result_view_retry.sql (found by suffix)", () => {
     const body = fnBody(code, "eng_my_retry_item");
     expect(body).not.toMatch(/insert into english\.(attempts|artifact_versions|episodes|exposure_log|results|tag_marks)/);
   });
-  it("purge keeps everything 0033 removed, plus the two tables, before attempts / submissions / assignments / activity_instances", () => {
+  it("purge keeps everything 0033 removed, plus the three tables, before attempts / submissions / assignments / activity_instances", () => {
     const old = deletes(fnBody(read("0033_paper_link_submit.sql"), "eng_purge_learner"));
     const now = deletes(fnBody(code, "eng_purge_learner"));
     for (const t of old) expect(now, t).toContain(t);
-    expect(now.length).toBe(old.length + 2);
-    for (const t of ["english.item_retries", "english.work_test_marks"]) {
+    expect(now.length).toBe(old.length + 3);
+    for (const t of ["english.retry_seen", "english.item_retries", "english.work_test_marks"]) {
       for (const parent of ["english.attempts", "english.submissions", "english.assignments", "english.activity_instances"]) {
         expect(now.indexOf(t), `${t} before ${parent}`).toBeLessThan(now.indexOf(parent));
       }
@@ -73,15 +73,16 @@ describe("*_result_view_retry.sql (found by suffix)", () => {
     const keys = (b: string) => [...b.matchAll(/'(\w+)', \(select/g)].map((x) => x[1]);
     for (const k of keys(fnBody(read("0033_paper_link_submit.sql"), "eng_purge_preview"))) expect(keys(fnBody(code, "eng_purge_preview")), k).toContain(k);
     expect(fnBody(code, "eng_purge_preview")).toContain("'item_retries'");
+    expect(fnBody(code, "eng_purge_preview")).toContain("'retry_seen'");
     expect(fnBody(code, "eng_purge_preview")).toContain("'work_test_marks'");
   });
   it("purge = the 0033 body with ONLY the listed edits", () => {
     const before = squash(fnBody(read("0033_paper_link_submit.sql"), "eng_purge_learner"));
     let now = squash(fnBody(code, "eng_purge_learner"));
     for (const added of [
-      "n_item_retries int := 0; n_work_test_marks int := 0;",
-      "delete from english.item_retries ir where ir.learner_id = p_learner_id; get diagnostics n_item_retries = row_count; delete from english.work_test_marks wtm where wtm.learner_id = p_learner_id; get diagnostics n_work_test_marks = row_count;",
-      "|| pg_catalog.jsonb_build_object( 'item_retries', n_item_retries, 'work_test_marks', n_work_test_marks )",
+      "n_item_retries int := 0; n_retry_seen int := 0; n_work_test_marks int := 0;",
+      "delete from english.retry_seen rs where rs.learner_id = p_learner_id; get diagnostics n_retry_seen = row_count; delete from english.item_retries ir where ir.learner_id = p_learner_id; get diagnostics n_item_retries = row_count; delete from english.work_test_marks wtm where wtm.learner_id = p_learner_id; get diagnostics n_work_test_marks = row_count;",
+      "|| pg_catalog.jsonb_build_object( 'item_retries', n_item_retries, 'retry_seen', n_retry_seen, 'work_test_marks', n_work_test_marks )",
     ]) {
       expect(now, added).toContain(squash(added));
       now = now.replace(squash(added), "");

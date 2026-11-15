@@ -20,7 +20,7 @@ import { buildStudioBuild } from "./buildTemplate";
 import type { StudioContext } from "./context";
 import { runExtraction, type ExtractStore, type RunLog } from "./extract";
 import {
-  aiSettingsBodySchema, approveBodySchema, assignStudioBodySchema, createDraftBodySchema, decideBodySchema, editBodySchema, saveDraftBodySchema,
+  aiSettingsBodySchema, approveBodySchema, assignStudioBodySchema, createDraftBodySchema, decideBodySchema, editBodySchema, retrySeenBodySchema, saveDraftBodySchema,
   studioUploadBodySchema, type FileMetaBody,
 } from "./requests";
 import type { StudioDraft } from "./schema";
@@ -50,6 +50,8 @@ export interface StudioStore {
   pending(a: { byMemberId: string; allowReal: boolean }): Promise<unknown>;
   /** Writes the Kết quả bài of submitted Studio attempts that have no pending item and no result yet (idempotent; returns how many). */
   retryResults(a: { byMemberId: string; allowReal: boolean }): Promise<unknown>;
+  /** english.eng_mark_retry_seen (0034): the adult has read the child's retries of one attempt (note optional, adult-only). */
+  markRetrySeen(a: { attemptId: string; note: string | null; byMemberId: string; clientId: string }): Promise<unknown>;
   decide(a: { attemptId: string; items: { item_id: string; result: string }[]; byMemberId: string; clientId: string }): Promise<unknown>;
 }
 
@@ -367,4 +369,22 @@ export async function handleDecide(deps: StudioDeps, attemptId: string, raw: unk
     status: 200,
     body: { decided: r.decided, pending: r.pending, result: { recorded: r.result.recorded, correct: r.result.correct ?? null, in_app: r.result.in_app ?? null } },
   };
+}
+
+/** POST /api/review/studio/attempts/:id/retry-seen - "Đã xem" on the child's retries of one attempt (the same people who may decide its items). */
+export async function handleMarkRetrySeen(deps: StudioDeps, attemptId: string, raw: unknown): Promise<HandlerResult> {
+  if (!deps.user?.id) return fail(401, "unauthenticated");
+  if (!UUID_RE.test(attemptId)) return fail(404, "not_found");
+  const learnerId = await deps.store.getAttemptLearnerId(attemptId);
+  if (!learnerId) return fail(404, "not_found");
+  const g = await guard(deps, learnerId, "studio:write");
+  if (!g.ok) return g.result;
+  const p = retrySeenBodySchema.safeParse(raw);
+  if (!p.success) return fail(400, "invalid_body");
+  try {
+    const r = (await deps.store.markRetrySeen({ attemptId, note: p.data.note ?? null, byMemberId: g.grant.member.id, clientId: p.data.client_id })) as { id: string; replayed: boolean };
+    return { status: r.replayed ? 200 : 201, body: r };
+  } catch (err) {
+    return fromStudioDbError(err, { v2: true });
+  }
 }
