@@ -315,13 +315,43 @@ describe("student desk reads (migration 0032)", () => {
     });
   });
 
-  it("the imported (Nạp bài) template kind is excluded from both internal reads", async () => {
-    const { MIGRATIONS_DIR } = await import("../../scripts/lib/migrate");
-    const { readdirSync } = await import("node:fs");
-    const f = readdirSync(MIGRATIONS_DIR).find((x) => x.endsWith("_student_desk_reads.sql"))!;
-    const code = readFileSync(path.join(MIGRATIONS_DIR, f), "utf8").split("\n").filter((l) => !l.trim().startsWith("--")).join("\n");
-    expect(code.match(/tp\.kind in \('topic', 'studio'\)/g)?.length).toBe(2); // eng_student_done + eng_my_today
-    expect(code).not.toMatch(/'imported'\s*\)/);
+  it("tie: three submissions with the identical timestamp are walked one by one with no duplicate and no gap", async () => {
+    const ids: string[] = [];
+    for (const n of [1, 2, 3]) ids.push((await makeLink(`Tie ${n}`)).id);
+    const at = "2026-01-05T03:00:00.123456Z";
+    const subs: string[] = [];
+    for (const g of ids) {
+      subs.push((await q1<{ id: string }>(
+        "insert into english.submissions(assignment_id, learner_id, attempt, used_hint, link_url, submitted_by_member, submitted_by_role, client_id, created_at) values ($1, $2, 'first', false, 'https://example.org/t', $3, 'student', $4, $5) returning id",
+        [g, NG(), M().studentNguyen, `tie-${randomUUID()}`, at],
+      ))[0]!.id);
+    }
+    const all = await history(U().studentNguyen, null, 50);
+    const tied = all.filter((r) => subs.includes(r.ref));
+    expect(tied).toHaveLength(3);
+    expect(tied.map((r) => r.ref)).toEqual([...subs].sort().reverse()); // same time: the ref decides, descending
+    const walked: string[] = [];
+    let cur = await history(U().studentNguyen, null, 1);
+    while (cur.length > 0) {
+      walked.push(cur[0]!.ref);
+      cur = await history(U().studentNguyen, (cur[0] as unknown as { submitted_at: string }).submitted_at, 1, cur[0]!.ref);
+    }
+    expect(walked).toEqual(all.map((r) => r.ref));
+    expect(new Set(walked).size).toBe(walked.length);
+  });
+
+  it("validation_decisions (the adult scores a skill of the episode) make the attempt 'seen'", async () => {
+    const act = await step(a1, 11);
+    const sub = await submitText(U().studentAn, act, "Volcanoes erupt because pressure builds up. As a result, the lava flows out.");
+    expect((await history(U().studentAn, null, 50)).find((r) => r.ref === sub.attempt_id)!.seen).toBe(false);
+    const ep = (await q1<{ id: string }>("select id from english.episodes where attempt_id = $1", [sub.attempt_id]))[0]!.id;
+    await svc("select english.eng_record_reviews($1, $2::jsonb, $3, $4) as r", [ep, JSON.stringify([{ target_key: "A-L3-CAUSE-W", score: 3, not_observed: false }]), M().tutorAn, randomUUID()]);
+    expect((await q1("select 1 from english.validation_decisions where episode_id = $1", [ep])).length).toBeGreaterThan(0);
+    const h = (await history(U().studentAn, null, 50)).find((r) => r.ref === sub.attempt_id)!;
+    expect(h.seen).toBe(true);
+    const sn = (await seen(U().studentAn, null, 50)).find((r) => r.ref === sub.attempt_id)!;
+    expect(sn).toMatchObject({ fb_state: null, praise: null, notes: null });
+    expect(JSON.stringify(sn)).not.toMatch(/score|"3"|CAUSE/);
   });
 
   it("no forbidden key anywhere in what the child gets back", async () => {
@@ -341,5 +371,32 @@ describe("student desk reads (migration 0032)", () => {
     expect(code).not.toMatch(/\bpublic\./);
     await migrate(db.client, true);
     expect((await q1<{ n: number }>("select count(*)::int as n from english.schema_migrations where version = $1", [f.slice(0, 4)]))[0]!.n).toBe(1);
+  });
+
+  // last: an import leaves files that the repeat-migration test above would trip over (a seed constraint re-check)
+  describe("imported work (Nạp bài) is invisible to the child", () => {
+    const pdf = () => ({ id: randomUUID(), mime: "application/pdf", bytes: 4096 });
+    it("the imported attempt is absent from Đã làm and Đã xem and its activities from Hôm nay", async () => {
+      const [tag] = (await q1<{ key: string }>("select key from english.error_tags where track_id='B' and origin='seed' and retired_at is null and key !~ '^nghe-' order by key limit 1"));
+      const hash = randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, "");
+      const c = await svc<{ id: string }>("select english.eng_create_import($1,$2,$3::jsonb,$4::jsonb,$5,$6,$7,$8,$9,$10) as r", [
+        NG(), "Imported for desk", JSON.stringify(pdf()), JSON.stringify(pdf()), "2026-10-23", "tu_lam_chua", hash, M().tutorNguyen, randomUUID(), false,
+      ]);
+      await svc("select english.eng_finish_import_read($1,$2::jsonb,null) as r", [c.id, JSON.stringify({ items: [] })]);
+      const upd = (await q1<{ t: string }>("select updated_at::text as t from english.import_batches where id = $1", [c.id]))[0]!.t;
+      const items = ["q1", "q2"].map((id, k) => ({ id, kind: "short", stem: `Câu ${k + 1}`, options: [], target_id: null }));
+      const build = {
+        template: { prompt_en: "Imported work.", time_min: 5, items },
+        keys: items.map((x) => ({ item_id: x.id, kind: "answer", answer: "x", explanation_vi: null })),
+        meta: items.map((x, k) => ({ n: k + 1, part: "A", tag_key: tag!.key, reading_skill_key: null, out_of_app: false })),
+        results: [{ item_id: "q1", result: "correct" }, { item_id: "q2", result: "incorrect" }],
+      };
+      const conf = await svc<{ attempt_id: string }>("select english.eng_confirm_import($1,$2,$3::jsonb,$4,$5) as r", [c.id, upd, JSON.stringify(build), M().tutorNguyen, randomUUID()]);
+      expect((await q1("select 1 from english.attempts where id = $1 and provenance = 'imported'", [conf.attempt_id]))).toHaveLength(1);
+      const actIds = (await q1<{ id: string }>("select id from english.activity_instances where id = (select activity_instance_id from english.attempts where id = $1)", [conf.attempt_id])).map((r) => r.id);
+      expect((await history(U().studentNguyen, null, 50)).some((r) => r.ref === conf.attempt_id)).toBe(false);
+      expect((await seen(U().studentNguyen, null, 50)).some((r) => r.ref === conf.attempt_id)).toBe(false);
+      expect((await today(U().studentNguyen)).some((i) => actIds.includes(i.activity_id as string))).toBe(false);
+    });
   });
 });

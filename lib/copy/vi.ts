@@ -2913,4 +2913,5 @@ export const studentDeskCopy = {
   openSubmitted: "Xem lại",
   back: "‹ Về Đã làm",
   filterNone: "Không có bài nào ở mục này.",
+  filterNoneMore: "Chưa thấy bài nào ở mục này trong các bài mới nhất. Bấm \"Xem các bài cũ hơn\" để tìm tiếp.",
 } as const;

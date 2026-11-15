@@ -105,5 +105,10 @@ describe("Đã làm", () => {
     render(<HistoryList rows={[row("a", false)]} olderHref={null} total={1} waiting={1} />);
     fireEvent.click(screen.getByTestId("filter-seen"));
     expect(screen.getByTestId("history-filter-empty").textContent).toBe(studentDeskCopy.filterNone);
+    // with older pages left, an empty filter says it only looked at the loaded page
+    cleanup();
+    render(<HistoryList rows={[row("a", false)]} olderHref="/done?before=x" total={30} waiting={1} />);
+    fireEvent.click(screen.getByTestId("filter-seen"));
+    expect(screen.getByTestId("history-filter-empty").textContent).toBe(studentDeskCopy.filterNoneMore);
   });
 });

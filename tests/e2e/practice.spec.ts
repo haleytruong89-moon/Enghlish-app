@@ -143,6 +143,17 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     await page.goto("/done");
     await expect(page.getByTestId("history-list")).toContainText(title);
 
+    // resend before the tutor looks: the new picture replaces the old one, so Đã làm still lists the work once
+    await page.goto(`/done/${assignmentId}`);
+    const again = page.locator(`[data-assignment="${assignmentId}"]`);
+    await again.getByTestId(`resend-${assignmentId}`).click();
+    await again.getByTestId(`submit-${assignmentId}-picker-input`).setInputFiles({ name: "bai-lam-2.png", mimeType: "image/png", buffer: PNG });
+    await expect(again.getByTestId(`submit-${assignmentId}-picker-item`)).toHaveCount(1);
+    await again.getByTestId(`submit-${assignmentId}-send`).click();
+    await expect(page.getByTestId(`sent-${assignmentId}`)).toBeVisible();
+    await page.goto("/done");
+    await expect(page.getByTestId("history-row").filter({ hasText: title })).toHaveCount(1);
+
     expect(await page.locator("body").innerText()).not.toMatch(SCORE_PATTERN);
   });
 
@@ -226,6 +237,16 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
 
   test("the child still sees no score, no tags - and cannot open the staff file route", async ({ page }) => {
     await loginAs(page, "studentNguyen");
+    // after the tutor recorded the result: the sent card is closed ("seen"), nothing can be resent, and no score or tag leaks on any page of the desk
+    await page.goto(`/done/${assignmentId}`);
+    await expect(page.getByTestId(`reviewed-${assignmentId}`)).toBeVisible();
+    await expect(page.getByTestId(`resend-${assignmentId}`)).toHaveCount(0);
+    for (const path of [`/done/${assignmentId}`, "/done", "/seen"]) {
+      await page.goto(path);
+      const t = await page.locator("body").innerText();
+      expect(t, path).not.toMatch(SCORE_PATTERN);
+      expect(t, path).not.toMatch(/Thành ngữ/);
+    }
     await page.goto("/practice");
     await expect(page).toHaveURL(/\/$/); // the old page now only redirects to Hôm nay
     const text = await page.locator("body").innerText();

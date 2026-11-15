@@ -74,7 +74,7 @@ export function HistoryList({ rows, total, waiting, olderHref }: { rows: History
       {rows.length === 0 ? (
         <p className="rounded-2xl border border-line bg-white p-4 text-muted" data-testid="history-empty">{c.doneEmpty}</p>
       ) : shown.length === 0 ? (
-        <p className="rounded-2xl border border-line bg-white p-4 text-muted" data-testid="history-filter-empty">{c.filterNone}</p>
+        <p className="rounded-2xl border border-line bg-white p-4 text-muted" data-testid="history-filter-empty">{olderHref ? c.filterNoneMore : c.filterNone}</p>
       ) : (
         <ul className="flex flex-col gap-2" data-testid="history-list">
           {shown.map((r) => (
