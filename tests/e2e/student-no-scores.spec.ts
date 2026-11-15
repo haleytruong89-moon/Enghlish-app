@@ -37,6 +37,26 @@ for (const key of ["studentAn", "studentNguyen"] as AccountKey[]) {
     expect(journey).not.toMatch(/đang học (A1|A2|B1|B2|C1|C2)/);
     expect(journey).not.toContain(levelCopy.assumed);
     expect(await page.locator('[data-testid^="mt-"]').evaluateAll((els) => els.every((e) => !/\d\s*\/\s*4\s*·/.test(e.getAttribute("aria-label") ?? "")))).toBe(true);
+    // W4b (PRD D35): on every page of the child's desk a number like a/b may only sit inside [data-count="work"] (the child's own work: tasks, answered
+    // questions, sent work); dates are <time> (or a weekday line) and are set aside. No %, no "đúng n" / "sai n", and "điểm" only in "Không có điểm …".
+    for (const path of ["/", "/seen", "/done", "/journey"]) {
+      await page.goto(path);
+      await expect(page.getByTestId("student-nav")).toBeVisible();
+      const desk = await page.evaluate(() => {
+        const c = document.body.cloneNode(true) as HTMLElement;
+        c.querySelectorAll('script, style, template, time, [data-count="work"]').forEach((e) => e.remove());
+        return c.textContent ?? "";
+      });
+      const text = desk.replace(/(Thứ \S+|Chủ nhật) \d{1,2}\/\d{1,2}(\/\d{4})?/g, "").replace(/\d{1,2}\/\d{1,2}\/\d{4}/g, "").replace(/Không có điểm( số)?/g, "");
+      expect(text, path).not.toMatch(SCORE_PATTERN);
+      expect(text, path).not.toMatch(/(?<![\d/])\d{1,3}\s*\/\s*\d{1,3}(?![\d/])/);
+      expect(text, path).not.toMatch(/%|(^|[^\p{L}])điểm(?!\p{L})|đúng\s+\d|\bsai\s+\d|quá hạn|streak|xếp hạng/iu);
+      expect(text, path).not.toMatch(/đang học (A1|A2|B1|B2|C1|C2)/);
+      expect(await page.content(), path).not.toMatch(/"verdict"|ref_key|tag_key/);
+    }
+    // The old "Bài luyện" page only redirects to Hôm nay.
+    await page.goto("/practice");
+    await expect(page).toHaveURL(/\/$/);
     // S6: the child's revision pages (todo and seen) and the home box are checked in the S6 serial suite of review.spec.ts, on real data.
   });
 }

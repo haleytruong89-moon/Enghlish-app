@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
-import { feedbackCopy, formatScore, notesPage, offlineForm, reviewPage, revisionCopy, revisionReviewCopy, scoreLabels, work } from "@/lib/copy/vi";
+import { feedbackCopy, formatScore, notesPage, offlineForm, reviewPage, revisionCopy, revisionReviewCopy, scoreLabels, studentDeskCopy, work } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { LEARNER_IDS, loginAs } from "./helpers";
 
@@ -499,13 +499,17 @@ test.describe.serial("S6 feedback and revision", () => {
 
   test("An: 'Sửa bài' sits above Việc tiếp theo; the page shows praise and the marked excerpt; An revises, marks the item, gets a receipt - no score", async ({ page }) => {
     await loginAs(page, "studentAn");
-    const row = page.getByTestId(`revision-row-${revisionActivity}`);
-    await expect(row).toContainText(revisionCopy.rowTitle(""));
-    await expectNoScoreLeak(page, "home, revision todo", "revision-rows");
-    const rowsBox = await page.getByTestId("revision-rows").boundingBox();
-    const nextBox = await page.locator('[data-testid="next-task"], [data-testid="no-next-task"]').first().boundingBox();
-    expect(rowsBox!.y).toBeLessThan(nextBox!.y);
-    await row.click();
+    const row = page.locator(`[data-testid="task-row"][data-activity="${revisionActivity}"]`);
+    await expect(row).toContainText(studentDeskCopy.kinds.revision);
+    await expectNoScoreLeak(page, "home, revision todo", "task-list");
+    // W4b: a revision is the first task of the list
+    await expect(page.getByTestId("task-row").first()).toHaveAttribute("data-kind", "revision");
+    // …and the "Đã xem" tab already carries the tutor's feedback with the "Sửa bài" button
+    await page.goto("/seen");
+    await expect(page.getByTestId("seen-revise").first()).toHaveAttribute("href", `/activities/${revisionActivity}`);
+    await expectNoScoreLeak(page, "seen, revision todo", "seen-list");
+    await page.goto("/");
+    await row.getByRole("link").click();
     await expect(page).toHaveURL(new RegExp(`/activities/${revisionActivity}$`));
     await expect(page.getByTestId("revision-praise")).toContainText("Con so sánh rõ Sao Kim và Sao Hỏa.");
     await expectNoScoreLeak(page, "revision page, todo");
@@ -543,11 +547,12 @@ test.describe.serial("S6 feedback and revision", () => {
 
   test("An sees 'Thầy/cô đã xem bài sửa của bạn' with the note - still no score", async ({ page }) => {
     await loginAs(page, "studentAn");
-    const box = page.getByTestId("feedback-box");
-    await expect(box).toContainText(revisionCopy.seenTitle);
+    await page.goto("/seen");
+    const box = page.getByTestId("seen-list");
     await expect(box).toContainText("Câu kết rất rõ!");
+    await expect(box.getByTestId("seen-closing").first()).toContainText(studentDeskCopy.closingLabel);
     expect(await page.locator("body").innerText()).not.toMatch(SCORE_PATTERN);
-    await expectNoScoreLeak(page, "home, revision seen", "feedback-box");
+    await expectNoScoreLeak(page, "seen, revision done", "seen-list");
     // the revision page itself in the "seen" state (the adult checked it): still no verdict, skill code or score
     await page.goto(`/activities/${revisionActivity}`);
     await expect(page.getByTestId("revision-form")).toHaveCount(0);

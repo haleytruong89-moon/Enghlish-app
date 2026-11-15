@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { messages, work } from "@/lib/copy/vi";
+import { messages, studentDeskCopy, work } from "@/lib/copy/vi";
 import { LEARNER_IDS, loginAs } from "./helpers";
 
 // S4: the child's side. The dev seed starts the test learners' week 3 days ago, so An has steps 1-7 of A-W1-VOLCANOES
@@ -21,7 +21,8 @@ async function homeSteps(page: Page, title: string): Promise<Map<number, { activ
 
 const AN_TITLE = "Núi lửa";
 const NGUYEN_TITLE = "Baseline";
-const card = (page: Page, title: string) => page.getByTestId("inquiry-card").filter({ hasText: title });
+/** A task of Hôm nay: step `stepNo` of the weekly topic called `title`. */
+const row = (page: Page, title: string, stepNo: number) => page.locator(`[data-testid="task-row"][data-step="${stepNo}"]`).filter({ hasText: title });
 
 const FORBIDDEN_KEYS = ["auto_check", "autoCheck", "explanation_vi", "prompt_vi", "transcript", "review_note", "target_id", "target_ids", '"answer"', "needs_person", "incorrect", "score"];
 
@@ -35,18 +36,16 @@ test.describe("An (thử): reading step, writing step, receipts", () => {
 
   test("home shows the next task, answers a reading step, declares help, submits and sees a receipt without any result", async ({ page }) => {
     await loginAs(page, "studentAn");
-    await expect(page.getByTestId("next-task")).toBeVisible();
-    await expect(page.getByTestId("next-task").getByText(work.nextTitle)).toBeVisible();
-    await expect(page.getByTestId("next-task").getByRole("link", { name: work.start })).toBeVisible();
+    await expect(page.getByTestId("continue-card")).toBeVisible();
+    await expect(page.getByTestId("continue-card").getByRole("link").first()).toBeVisible();
+    await expect(page.getByTestId("today-lead")).toContainText(studentDeskCopy.leadStart);
     // no sideways scrolling on a phone
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     // steps that are not in the app yet have a neutral label and no link
-    await expect(card(page, AN_TITLE).getByTestId("step-4")).toContainText(work.noAppYet);
-    await expect(card(page, AN_TITLE).getByTestId("step-4").getByRole("link")).toHaveCount(0);
-    // the progress counts only steps the app can do; the others are listed apart
-    await expect(card(page, AN_TITLE).getByTestId("off-app")).toBeVisible();
+    await expect(row(page, AN_TITLE, 4)).toContainText(work.noAppYet);
+    await expect(row(page, AN_TITLE, 4).getByRole("link")).toHaveCount(0);
 
-    await card(page, AN_TITLE).getByTestId("step-3").getByRole("link").click();
+    await row(page, AN_TITLE, 3).getByRole("link").click();
     await expect(page).toHaveURL(/\/activities\/[0-9a-f-]{36}$/);
     await expect(page.getByTestId("mode-banner")).toContainText(messages.independentCheck);
     await expect(page.getByTestId("source-text")).toContainText("Deep under the ground");
@@ -89,9 +88,13 @@ test.describe("An (thử): reading step, writing step, receipts", () => {
     // back on the home page the step is done and the next task moved on
     await receipt.getByRole("link", { name: work.homeLink }).click();
     await expect(page).toHaveURL(/\/$/);
-    await expect(card(page, AN_TITLE).getByTestId("step-3")).toHaveAttribute("data-state", "done");
+    await expect(row(page, AN_TITLE, 3)).toHaveCount(0); // a sent step is no longer a task…
     await page.reload();
-    await expect(card(page, AN_TITLE).getByTestId("step-3")).toHaveAttribute("data-state", "done");
+    await expect(row(page, AN_TITLE, 3)).toHaveCount(0);
+    await page.goto("/done"); // …it is in "Đã làm", waiting for the tutor
+    const sentRow = page.getByTestId("history-row").filter({ hasText: AN_TITLE }).first();
+    await expect(sentRow).toBeVisible();
+    await expect(sentRow.getByTestId("history-status")).toHaveText(studentDeskCopy.statusWaiting);
   });
 
   test("a one-time check cannot be done twice: the page has no form any more and the API says 409", async ({ page }) => {
@@ -203,11 +206,11 @@ test.describe("An (thử): reading step, writing step, receipts", () => {
 test.describe("Nguyên (thử)", () => {
   test("home shows the baseline reading step; live speaking is labelled with the tutor", async ({ page }) => {
     await loginAs(page, "studentNguyen");
-    await expect(page.getByTestId("next-task")).toBeVisible();
-    await expect(card(page, NGUYEN_TITLE).getByTestId("step-6")).toContainText(work.withTutor);
-    await expect(card(page, NGUYEN_TITLE).getByTestId("step-6").getByRole("link")).toHaveCount(0);
+    await expect(page.getByTestId("continue-card")).toBeVisible();
+    await expect(row(page, NGUYEN_TITLE, 6)).toContainText(work.withTutor);
+    await expect(row(page, NGUYEN_TITLE, 6).getByRole("link")).toHaveCount(0);
 
-    await card(page, NGUYEN_TITLE).getByTestId("step-1").getByRole("link").click();
+    await row(page, NGUYEN_TITLE, 1).getByRole("link").click();
     await expect(page.getByTestId("source-text").first()).toBeVisible();
     await expect(page.getByTestId("mode-banner")).toBeVisible();
     // the technical code of the activity never shows

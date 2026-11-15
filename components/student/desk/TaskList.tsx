@@ -31,7 +31,7 @@ function TaskRow({ task }: { task: Task }) {
   );
   const cls = "flex min-h-14 items-center gap-3 rounded-xl border border-line bg-white px-4 py-2 text-left no-underline";
   return (
-    <li data-testid="task-row" data-kind={task.kind} data-doable={task.doable ? "yes" : "no"}>
+    <li data-testid="task-row" data-kind={task.kind} data-doable={task.doable ? "yes" : "no"} data-activity={task.activityId ?? task.assignmentId ?? ""} data-step={task.stepNo ?? ""}>
       {href && !task.assignmentId ? (
         <Link href={href} className={`${cls} hover:border-accent`}>
           {body}
