@@ -15,6 +15,7 @@ export function achievementName(i: AchievementItem): string {
     case "topic_first": return c.name.topic_first;
     case "revision_first": return c.name.revision_first;
     case "milestone": return i.title ?? "";
+    case "cando": return c.name.cando(i.n as number);
   }
 }
 export function achievementNeed(i: AchievementItem): string {
@@ -29,6 +30,7 @@ export function achievementNeed(i: AchievementItem): string {
     case "topic_first": return c.need.topic_first;
     case "revision_first": return c.need.revision_first;
     case "milestone": return c.need.milestone(k);
+    case "cando": return c.need.cando(k, i.have);
   }
 }
 

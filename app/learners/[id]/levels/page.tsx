@@ -5,8 +5,9 @@ import { LevelBars } from "@/components/levels/LevelBars";
 import { LevelSummaryCard } from "@/components/levels/LevelSummaryCard";
 import { IntakeCard } from "@/components/workdesk/IntakeCard";
 import { TeachingNotesCard } from "@/components/workdesk/TeachingNotesCard";
+import { ThenNowPicker } from "@/components/workdesk/ThenNowPicker";
 import { Milestones } from "@/components/levels/Milestones";
-import { learnerWithTrack, levelCopy, pointStateCopy, skillStateCopy, teachingNotes } from "@/lib/copy/vi";
+import { learnerWithTrack, levelCopy, pointStateCopy, skillStateCopy, teachingNotes, thenNowPickerCopy } from "@/lib/copy/vi";
 import { loadLevelProfile } from "@/lib/levels/load";
 import { levelsAction } from "@/lib/levels/view";
 import { strongestWeakest } from "@/lib/levels/scale";
@@ -14,6 +15,7 @@ import { groupWeakPoints } from "@/lib/skillmap/group";
 import { loadSkillMap } from "@/lib/skillmap/load";
 import { loadSkillStatesSoft } from "@/lib/skills/load";
 import { domainSkills, solidByDomain } from "@/lib/skills/view";
+import { loadThenNowCandidates } from "@/lib/thennow/load";
 import { loadWeakPoints } from "@/lib/tutorwork/load";
 import { loadIntake, loadTeachingNotes } from "@/lib/workdesk/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
@@ -28,13 +30,14 @@ export default async function LevelsPage({ params, searchParams }: { params: Pro
   const { id } = await params;
   const { domain } = await searchParams;
   const { member, learner } = await requireLearnerPage(id, "tutorwork:read");
-  const [profile, map, weak, { skills, failed }, notes, intake] = await Promise.all([
+  const [profile, map, weak, { skills, failed }, notes, intake, thenNow] = await Promise.all([
     loadLevelProfile(learner.id),
     loadSkillMap(learner.id),
     loadWeakPoints(learner.id, "8"),
     loadSkillStatesSoft(learner.id, "GET /learners/[id]/levels"),
     loadTeachingNotes(learner.id),
     loadIntake(learner.id),
+    loadThenNowCandidates(learner.id),
   ]);
   const focus = strongestWeakest(profile.domains).weakest[0]?.key;
   const active = profile.domains.find((d) => d.key === domain) ?? profile.domains.find((d) => d.key === focus) ?? profile.domains[0]!;
@@ -62,6 +65,13 @@ export default async function LevelsPage({ params, searchParams }: { params: Pro
         ) : (
           <p role="status" data-testid="workdesk-unavailable" className="mt-6 rounded-xl border border-line bg-white px-5 py-3 text-sm text-muted">
             {teachingNotes.unavailable}
+          </p>
+        )}
+        {thenNow.available ? (
+          <ThenNowPicker learnerId={learner.id} alias={learner.alias} view={thenNow.data} canEdit={canDecide} />
+        ) : (
+          <p role="status" data-testid="then-now-unavailable" className="mt-6 rounded-xl border border-line bg-white px-5 py-3 text-sm text-muted">
+            {thenNow.failed ? thenNowPickerCopy.loadFailed : thenNowPickerCopy.unavailable}
           </p>
         )}
         <LevelSummaryCard alias={learner.alias} profile={profile} />

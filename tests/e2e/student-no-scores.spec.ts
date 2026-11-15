@@ -10,10 +10,12 @@ for (const key of ["studentAn", "studentNguyen"] as AccountKey[]) {
     await loginAs(page, key);
     expect(await page.locator("body").innerText()).not.toMatch(SCORE_PATTERN);
     expect(await page.content()).not.toMatch(SCORE_PATTERN);
-    // SM-2 (P2-d): a student never sees a level, assumed or confirmed.
+    // W4e (D36, replaces SM-2 P2-d): the child may see the NAME of a level the tutor confirmed, only on Hành trình (checked below); never an assumed level,
+    // never a number level, never "đang học B2"-style sentences, and not on the home page.
     const text = await page.locator("body").innerText();
     expect(text).not.toMatch(/đang học (A1|A2|B1|B2|C1|C2)/);
     expect(text).not.toContain(levelCopy.assumed);
+    expect(await page.locator('[data-testid="levels-card"]').count()).toBe(0);
     // S7a: no skill level, no ⚑, no "waiting for confirmation" and no "app updated" note anywhere on the child's home.
     for (const s of ["SUPPORTED", "DEVELOPING", "INDEPENDENT", "TRANSFERABLE", "NEEDS_CONFIRMATION"] as const) expect(text, s).not.toContain(levelLabels[s].label);
     expect(text).not.toContain("⚑");
@@ -33,6 +35,14 @@ for (const key of ["studentAn", "studentNguyen"] as AccountKey[]) {
     expect(journey).not.toMatch(/%|(^|[^\p{L}])điểm(?!\p{L})|đúng\s+\d|\bsai\s+\d/iu);
     expect(journey).not.toMatch(/đang học (A1|A2|B1|B2|C1|C2)/);
     expect(journey).not.toContain(levelCopy.assumed);
+    // W4e: the level names are words (CEFR names) the tutor confirmed, with the tutor's name for it; an unconfirmed domain says so; never the Tư duy domain, never ⚑.
+    if (await page.getByTestId("levels-card").count()) {
+      const lv = await studentVisibleText(page, "levels-card");
+      expect(lv).not.toContain(levelCopy.assumed);
+      expect(lv).not.toMatch(/giả định|ước lượng|⚑|Tư duy|(^|\s)[1-4](\s|$)/i);
+      await expect(page.getByTestId("level-tile-thinking")).toHaveCount(0);
+      for (const tile of await page.locator('[data-testid^="level-name-"]').all()) expect(((await tile.textContent()) ?? "").trim()).toMatch(/^(A1|A2|B1|B2|C1|C2)\+?$/);
+    }
     expect(await page.locator('[data-testid^="mt-"]').evaluateAll((els) => els.every((e) => !/\d\s*\/\s*4\s*·/.test(e.getAttribute("aria-label") ?? "")))).toBe(true);
     // W4b (PRD D35): on every page of the child's desk a number like a/b may only sit inside [data-count="work"] (the child's own work: tasks, answered
     // questions, sent work); dates are <time> (or a weekday line) and are set aside. No %, no "đúng n" / "sai n".
