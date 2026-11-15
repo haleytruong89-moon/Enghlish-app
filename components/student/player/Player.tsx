@@ -49,7 +49,6 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
   const pending = useRef<{ id: string; sig: string } | null>(null);
   const contentRef = useRef<DraftContent>({});
   useEffect(() => {
-    flowRef.current = flow;
     contentRef.current = { answers: nonEmptyAnswers(answers), pasted, assistance: assist };
   });
 
@@ -58,18 +57,22 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
   const numbers = useMemo(() => items.map((it, i) => questionNumber(it.id, i)), [items]);
   const item = items[clampIndex(idx, total)];
 
+  /** The ref is the truth (a save may run before the next render); the state only mirrors it for display. */
+  function mutateFlow(fn: (s: SaveFlow) => SaveFlow) {
+    flowRef.current = fn(flowRef.current);
+    setFlow(flowRef.current);
+  }
   function touch(next: (s: SaveFlow) => SaveFlow = onEdit) {
     setProblem(null);
     setLeaveWarn(false);
-    flowRef.current = next(flowRef.current); // the refs are read by a save that may run before the next render
-    setFlow((s) => next(s));
+    mutateFlow(next);
   }
 
   async function saveNow(): Promise<void> {
     if (closed.current || !shouldSave(flowRef.current)) return;
     const snapshot = contentRef.current;
-    setFlow((s) => onSaveStart(s));
-    flowRef.current = onSaveStart(flowRef.current);
+    mutateFlow(onSaveStart);
+    let ok = false;
     try {
       const res = await fetch(`/api/drafts/${activity.activityId}`, {
         method: "PUT",
@@ -80,12 +83,12 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
       const json = (await res.json()) as { draft: { revision: number; otherTabChanged: boolean } };
       revision.current = json.draft.revision;
       setOtherTab(json.draft.otherTabChanged);
-      flowRef.current = onSaveDone(flowRef.current, true);
-      setFlow((s) => onSaveDone(s, true));
+      ok = true;
     } catch {
-      flowRef.current = onSaveDone(flowRef.current, false);
-      setFlow((s) => onSaveDone(s, false));
+      ok = false;
     }
+    mutateFlow((s) => onSaveDone(s, ok)); // keeps `dirty` when an edit came in while this save ran
+    if (ok && flowRef.current.dirty) await saveNow(); // edits made during the save: one more save now, not at the next tick
   }
   const saveRef = useRef(saveNow);
   useEffect(() => {
@@ -211,7 +214,7 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
     setReceipt(null);
     setResult(null);
     setProblem(null);
-    setFlow(initialSaveFlow(false));
+    mutateFlow(() => initialSaveFlow(false));
     setPhase("questions");
   }
 

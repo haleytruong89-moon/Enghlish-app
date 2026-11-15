@@ -71,3 +71,23 @@ describe("player · autosave merges edits", () => {
     expect(saveLabel(initialSaveFlow(true))).toBe("saved");
   });
 });
+
+describe("player · the 'saved' label never claims more than is stored", () => {
+  it("a change made after the last stored copy shows 'saving' (not 'saved'), also while no save is running", () => {
+    let s = onSaveDone(onSaveStart(onEdit(initialSaveFlow(false))), true);
+    expect(saveLabel(s)).toBe("saved");
+    s = onEdit(s); // typed after the save finished, before the next one starts
+    expect(saveLabel(s)).toBe("saving");
+    s = onSaveStart(onEdit(onSaveStart(onEdit(initialSaveFlow(false))))); // edit during a running save
+    s = onSaveDone(s, true);
+    expect(s.dirty).toBe(false);
+  });
+  it("an edit made while a save runs keeps the flow dirty when that save ends", () => {
+    let s = onSaveStart(onEdit(initialSaveFlow(false)));
+    s = onEdit(s);
+    s = onSaveDone(s, true);
+    expect(s.dirty).toBe(true);
+    expect(saveLabel(s)).toBe("saving");
+    expect(shouldSave(s)).toBe(true);
+  });
+});

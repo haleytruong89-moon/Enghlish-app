@@ -51,5 +51,6 @@ export type SaveLabel = "saving" | "error" | "saved" | "none";
 export function saveLabel(s: SaveFlow): SaveLabel {
   if (s.inflight) return "saving";
   if (s.failed) return "error";
+  if (s.dirty) return "saving"; // changed since the last stored copy: never claim "saved"
   return s.everSaved ? "saved" : "none";
 }

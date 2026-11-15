@@ -348,6 +348,14 @@ describe("S4 student work (DESIGN §5, §6, §8, §9)", () => {
       expect(await rowsAs(db.client, "authenticated", s.users.tutorAn, "select 1 from english.working_drafts")).toHaveLength(1);
     });
 
+    it("a reading step's draft keeps the answers by item id and gives them back (the reload of the player)", async () => {
+      const step = await activity(x1, 3);
+      const answers = { "W1-R1": "b) why volcanoes erupt, and why eruptions are different", "W1-R2": "Melted rock under the ground." };
+      expect(await saveAs(an(), step, { answers })).toMatchObject({ revision: 1 });
+      const a = await rpcAs<{ draft: { content: { answers: Record<string, string> } } }>(an(), "select english.eng_my_activity($1) as r", [step]);
+      expect(a.draft.content.answers).toEqual(answers);
+    });
+
     it("two tabs that both started with no draft: the second one (base revision 0) is warned, and a lone first save is not", async () => {
       const step = await activity(x3, 6);
       // tab 1 and tab 2 both opened the page with no saved draft, so each reports base 0
