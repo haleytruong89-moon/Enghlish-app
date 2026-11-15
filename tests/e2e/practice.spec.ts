@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { assignPage, resultPage, tagPicker, unitPickerCopy } from "@/lib/copy/vi";
 import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { todayVn } from "@/lib/inquiries/dates";
-import { LEARNER_IDS, loginAs } from "./helpers";
+import { LEARNER_IDS, loginAs, studentVisibleText } from "./helpers";
 
 // S5b-1 PR B: the tutor gives a PDF, the child downloads it and sends a picture, the tutor reads the picture beside "Nhập nhanh",
 // records the result with tags, and the weak point appears - while the child never sees a score. Needs Supabase STORAGE in the local
@@ -154,7 +154,7 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     await page.goto("/done");
     await expect(page.getByTestId("history-row").filter({ hasText: title })).toHaveCount(1);
 
-    expect(await page.locator("body").innerText()).not.toMatch(SCORE_PATTERN);
+    expect(await studentVisibleText(page)).not.toMatch(SCORE_PATTERN);
   });
 
   test("the tutor sees 'Em đã gửi', opens Nhập nhanh from it, reads the picture and records the result with a tag", async ({ page }) => {
@@ -243,13 +243,13 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     await expect(page.getByTestId(`resend-${assignmentId}`)).toHaveCount(0);
     for (const path of [`/done/${assignmentId}`, "/done", "/seen"]) {
       await page.goto(path);
-      const t = await page.locator("body").innerText();
+      const t = await studentVisibleText(page);
       expect(t, path).not.toMatch(SCORE_PATTERN);
       expect(t, path).not.toMatch(/Thành ngữ/);
     }
     await page.goto("/practice");
     await expect(page).toHaveURL(/\/$/); // the old page now only redirects to Hôm nay
-    const text = await page.locator("body").innerText();
+    const text = await studentVisibleText(page);
     expect(text).not.toMatch(SCORE_PATTERN);
     expect(text).not.toMatch(/Thành ngữ/); // the tag name is for the grown-ups; the child gets only what the tutor writes as "Việc cần ôn"
     expect((await page.request.get(`/api/files/${fileId}`, { maxRedirects: 0 })).status()).toBe(403);
@@ -311,7 +311,7 @@ test.describe("no sideways scrolling on a phone", () => {
     await expect(page.getByTestId("student-nav")).toBeVisible();
     expect(await fits(page)).toBe(true);
     for (const [tab, view] of [["seen", "seen-page"], ["done", "done-page"], ["journey", "journey-page"], ["today", "today-view"]] as const) {
-      await page.getByTestId(`tab-${tab}`).click();
+      await page.getByTestId(`nav-${tab}`).click();
       await expect(page.getByTestId(view)).toBeVisible();
       await expect(page.getByTestId("student-nav")).toBeVisible();
       expect(await fits(page), tab).toBe(true);

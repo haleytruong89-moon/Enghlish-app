@@ -2,6 +2,7 @@ import { studentDeskCopy as c } from "@/lib/copy/vi";
 import type { ReviewPoints, StudentPracticeItem } from "@/lib/practice/types";
 import { pickContinue, summarize } from "@/lib/student/today";
 import type { Task } from "@/lib/student/types";
+import { todayVn } from "@/lib/inquiries/dates";
 import { todayLine } from "@/lib/work/view";
 import { ContinueCard } from "./ContinueCard";
 import { RefreshOnFocus } from "./RefreshOnFocus";
@@ -27,7 +28,7 @@ export function TodayView({
     <div className="mx-auto flex max-w-4xl flex-col gap-5" data-testid="today-view">
       <RefreshOnFocus />
       <header className="flex flex-col gap-1">
-        <span className="text-[13px] text-muted">{todayLine()}</span>
+        <time dateTime={todayVn()} className="text-[13px] text-muted">{todayLine()}</time>
         <h1 className="text-3xl font-bold" style={{ color }}>{c.greeting(alias)}</h1>
         <p className="text-lg" data-testid="today-lead">
           {sum.count > 0 ? (

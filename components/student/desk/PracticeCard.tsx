@@ -34,7 +34,14 @@ export function PracticeCard({ item }: { item: StudentPracticeItem }) {
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="flex min-w-0 flex-col">
-          <span className="text-[13px] text-muted">{kindLine}</span>
+          <span className="text-[13px] text-muted">
+            {kindLine.split(" · ").map((part, i) => (
+              <span key={i}>
+                {i > 0 ? " · " : ""}
+                {/\d/.test(part) ? <time dateTime={part.includes("hạn") ? item.dueOn ?? undefined : item.assignedOn}>{part}</time> : part}
+              </span>
+            ))}
+          </span>
           <b className="text-lg font-semibold">{item.title}</b>
         </span>
         {item.kind === "link" && href ? (

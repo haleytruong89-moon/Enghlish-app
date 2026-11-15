@@ -44,3 +44,17 @@ export function supabaseEnv(): { url: string; anonKey: string } {
   if (!url || !anonKey) throw new Error("NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY must be set");
   return { url, anonKey };
 }
+
+/**
+ * What the child can READ as text, without the things that look like numbers but are not scores (PRD D35): the child's own counts
+ * ([data-count="work"]) and dates (<time>, [data-date]); scripts, styles and templates never show. `scope` is a data-testid (default: the whole body).
+ */
+export async function studentVisibleText(page: Page, scope?: string): Promise<string> {
+  return page.evaluate((testId) => {
+    const root = testId ? document.querySelector(`[data-testid="${testId}"]`) : document.body;
+    if (!root) return "";
+    const c = root.cloneNode(true) as HTMLElement;
+    c.querySelectorAll('script, style, template, time, [data-date], [data-count="work"]').forEach((e) => e.remove());
+    return c.innerText ?? c.textContent ?? "";
+  }, scope ?? null);
+}

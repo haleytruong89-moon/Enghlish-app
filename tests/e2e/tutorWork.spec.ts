@@ -345,6 +345,8 @@ test.describe.serial("S5b-1 tutor work", () => {
     expect(saved.status()).toBe(201);
     await page.context().clearCookies();
     await loginAs(page, "studentNguyen");
+    await page.getByTestId("nav-seen").click(); // W4b: "Việc cần ôn" moved from the old home to the top of Đã xem
+    await expect(page).toHaveURL(/\/seen$/);
     const box = page.getByTestId("review-by-domain");
     await expect(box).toContainText(studentReviewCopy.title);
     await expect(box).not.toContainText(/\b[ABC][12]\b|\/\d|bậc/);

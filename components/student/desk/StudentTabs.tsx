@@ -34,7 +34,7 @@ export function StudentTabs({ active, learnerId, seenTimes }: { active: DeskTab;
           <Link
             key={t.key}
             href={t.href}
-            data-testid={`tab-${t.key}`}
+            data-testid={`nav-${t.key}`}
             aria-current={on ? "page" : undefined}
             className={`relative flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-2 text-[13px] no-underline md:min-h-12 md:flex-none md:flex-row md:justify-start md:gap-3 md:px-3 md:text-base ${on ? "bg-[#e3ece8] font-semibold text-accent" : "text-ink"}`}
           >

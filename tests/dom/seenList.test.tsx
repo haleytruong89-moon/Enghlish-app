@@ -68,7 +68,7 @@ describe("tab badge", () => {
     const badge = screen.getByTestId("seen-new-badge");
     expect(badge.getAttribute("aria-label")).toBe(studentDeskCopy.newCountAria(2));
     expect(badge.textContent).toBe(`2 ${studentDeskCopy.newBadge}`);
-    expect(screen.getByTestId("tab-today").getAttribute("aria-current")).toBe("page");
+    expect(screen.getByTestId("nav-today").getAttribute("aria-current")).toBe("page");
     unmount();
     render(<StudentTabs active="seen" learnerId={KID} seenTimes={times} />);
     expect(screen.queryByTestId("seen-new-badge")).toBeNull();

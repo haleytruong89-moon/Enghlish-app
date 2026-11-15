@@ -35,7 +35,7 @@ export function PracticeSubmitArea({ item }: { item: StudentPracticeItem }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#e3ece8] px-4 py-3 text-[#1d4136]" data-testid={`sent-${item.assignmentId}`}>
       <span>
-        <b className="font-semibold">{sameDay ? practiceStudent.sentAt(formatHm(sub.submittedAt)) : practiceStudent.sentLater(formatDateVi(day), formatHm(sub.submittedAt))}</b>{" "}
+        <b className="font-semibold"><time dateTime={sub.submittedAt}>{sameDay ? practiceStudent.sentAt(formatHm(sub.submittedAt)) : practiceStudent.sentLater(formatDateVi(day), formatHm(sub.submittedAt))}</time></b>{" "}
         {practiceStudent.sentWait}
       </span>
       <button
