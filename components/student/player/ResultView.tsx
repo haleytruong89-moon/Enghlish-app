@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { resultCopy as c, retryCopy } from "@/lib/copy/vi";
+import { resultCopy as c, retryCopy, work } from "@/lib/copy/vi";
 import { playerCopy } from "@/lib/copy/vi";
 import { groupResult, type ResultView as ResultData } from "@/lib/student/result";
+import { formatHm } from "@/lib/work/view";
 import { RetryBox } from "./RetryBox";
 
 const itemOf = (items: { id: string; kind: string; options: string[] }[], id: string) => items.find((i) => i.id === id);
@@ -28,6 +29,10 @@ export function ResultView({ activityId, title, result, items, canRedo, onRedo }
           {c.title}
         </h1>
         <p className="text-muted">{title}</p>
+        {/* Reopening a sent work must say so plainly: it was already sent, and there is no form here. */}
+        <p data-testid="already-submitted" className="text-sm text-muted">
+          {work.alreadySubmitted(formatHm(result.submittedAt))}
+        </p>
         <span className="rounded-full bg-[#E3ECE8] px-3 py-1 text-sm font-semibold text-[#1F4439]">{result.isTest ? playerCopy.testTag : playerCopy.practiceTag}</span>
       </section>
       {result.isTest ? (

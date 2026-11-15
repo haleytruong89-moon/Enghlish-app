@@ -21,6 +21,14 @@ const html = (r: ResultData, canRedo = true) => renderToStaticMarkup(createEleme
 const text = (h: string) => h.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 
 describe("the result screen (S-10)", () => {
+  it("says plainly that the work was already sent (also when reopened) and has no submit button", () => {
+    for (const isTest of [false, true]) {
+      const h = html(result({ isTest }));
+      expect(h).toContain('data-testid="already-submitted"');
+      expect(text(h)).toContain("Bạn đã nộp bài này lúc");
+      expect(h).not.toContain("player-submit");
+    }
+  });
   it("practice: what the child wrote, one retry button, a sent retry, the free items, one 'rest is fine' line - no score, answer, count", () => {
     const h = html(result());
     const t = text(h);
