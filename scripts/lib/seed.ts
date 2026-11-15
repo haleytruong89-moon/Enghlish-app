@@ -339,3 +339,58 @@ export async function seedThrowawayLearner(client: ClientBase, opts: { alias?: s
     throw err;
   }
 }
+
+/**
+ * `--goal-history` (W4d, preview only): five finished weeks of 3 sent pieces each plus an agreed goal of 3 for Nguyên (thử), so the Hôm nay chip reads
+ * "🔥 5 tuần liền" and Hành trình shows the card with a streak. Test learners only; idempotent (fixed client ids); uses the child's own link submissions.
+ */
+export async function seedGoalHistory(client: ClientBase, seeded: SeedResult): Promise<{ weeks: number; skipped?: string }> {
+  const learner = seeded.learners.nguyen;
+  const ok = await client.query<{ ok: boolean }>(
+    `select to_regclass('english.weekly_goals') is not null and to_regclass('english.submissions') is not null
+        and (select is_test from english.learners where id = $1) as ok`,
+    [learner],
+  );
+  if (!ok.rows[0]?.ok) return { weeks: 0, skipped: "migration 0035 is not applied, or the learner is not a test learner" };
+  const WEEKS = 5;
+  await client.query("begin");
+  try {
+    const mon = await client.query<{ d: string }>("select english.eng_week_start(pg_catalog.now())::text as d");
+    const thisMonday = (mon.rows[0] as { d: string }).d;
+    const start = `(${"$1"}::date - ${(WEEKS + 1) * 7})`;
+    await client.query(
+      `insert into english.weekly_goals(learner_id, kind, pieces, by_member, by_role, client_id, created_at)
+       values ($2, 'propose', 3, $3, 'student', 'seed-goal-history-propose', ${start}::timestamptz) on conflict (learner_id, client_id) do nothing`,
+      [thisMonday, learner, seeded.members.studentNguyen],
+    );
+    const prop = await client.query<{ id: string }>("select id from english.weekly_goals where learner_id = $1 and client_id = 'seed-goal-history-propose'", [learner]);
+    const propId = (prop.rows[0] as { id: string }).id;
+    await client.query(
+      `insert into english.weekly_goals(learner_id, kind, pieces, applies_from, responds_to, by_member, by_role, client_id, created_at)
+       values ($2, 'accept', 3, ${start}, $4, $3, 'tutor', 'seed-goal-history-accept', ${start}::timestamptz + interval '1 hour') on conflict (learner_id, client_id) do nothing`,
+      [thisMonday, learner, seeded.members.tutorNguyen, propId],
+    );
+    for (let w = WEEKS; w >= 1; w--) {
+      for (let n = 1; n <= 3; n++) {
+        const key = `seed-goal-history-${w}-${n}`;
+        const at = `($1::date - ${w * 7})::timestamptz + interval '${10 + n} hours'`;
+        await client.query(
+          `insert into english.assignments(learner_id, kind, url, source_key, title, assigned_by_member, client_id, created_at)
+           values ($2, 'link', 'https://example.com/seed-goal-history', 'other', $4, $3, $5, ${at}) on conflict (learner_id, client_id) do nothing`,
+          [thisMonday, learner, seeded.members.tutorNguyen, `Bài thử tuần ${WEEKS - w + 1} (${n})`, key],
+        );
+        const a = await client.query<{ id: string }>("select id from english.assignments where learner_id = $1 and client_id = $2", [learner, key]);
+        await client.query(
+          `insert into english.submissions(assignment_id, learner_id, attempt, link_url, submitted_by_member, submitted_by_role, client_id, created_at)
+           values ($2, $3, 'first', 'https://example.com/seed-goal-history', $4, 'student', $5, ${at} + interval '30 minutes') on conflict (learner_id, client_id) do nothing`,
+          [thisMonday, (a.rows[0] as { id: string }).id, learner, seeded.members.studentNguyen, `${key}-s`],
+        );
+      }
+    }
+    await client.query("commit");
+  } catch (err) {
+    await client.query("rollback");
+    throw err;
+  }
+  return { weeks: WEEKS };
+}

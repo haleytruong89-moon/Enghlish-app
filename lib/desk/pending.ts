@@ -2,7 +2,7 @@
  * "Chờ duyệt" of one child as one compact list (spec §3, §5 rule 4): every source that already waits for an adult, oldest first.
  * Pure. A row only LINKS to the page where the decision is made (DOMAIN R1, spec §3: no one-click approval) — it decides nothing.
  */
-import { roadmapHref } from "@/lib/shell/paths";
+import { deskHref, roadmapHref } from "@/lib/shell/paths";
 import { activityLabels, curriculumCopy, fallbackLabels, pendingCopy, reviewPage, revisionReviewCopy } from "@/lib/copy/vi";
 import type { CurriculumCard } from "@/lib/curriculum/shape";
 import type { ImportPendingItem } from "@/lib/import/pending";
@@ -15,7 +15,7 @@ import type { DraftListItem, PendingAttempt, RetryAttempt } from "@/lib/studio/t
 
 export const PENDING_GROUPS = ["all", "work", "check", "ai", "skills", "roadmap"] as const;
 export type PendingGroup = (typeof PENDING_GROUPS)[number];
-export type PendingKind = "work" | "studio_check" | "retry" | "studio_draft" | "curriculum_draft" | "skill" | "point" | "flag" | "import" | "milestone";
+export type PendingKind = "work" | "studio_check" | "retry" | "studio_draft" | "curriculum_draft" | "skill" | "point" | "flag" | "import" | "milestone" | "goal";
 export type PendingRow = { key: string; kind: PendingKind; group: Exclude<PendingGroup, "all">; label: string; title: string; since: string | null; need: string; href: string; waitingTutor: boolean };
 export type PendingInput = {
   learnerId: string;
@@ -35,6 +35,8 @@ export type PendingInput = {
   imports?: readonly ImportPendingItem[];
   /** Roadmap (W4a): milestones whose current version is a draft (proposals of the app are NOT counted: they show on the Lộ trình page and as a soft line on the desk). 0 / undefined = none. */
   roadmapDrafts?: number;
+  /** Weekly goal (W4d): the proposal the child made that nobody answered. It only LINKS to the goal box of the desk, where the child's tutor agrees. */
+  goal?: { id: string; pieces: number; since: string } | null;
 };
 /**
  * The S5 inbox RPC has no learner filter and returns at most 100 rows (oldest first) across ALL the caller's children, so one
@@ -64,7 +66,7 @@ export function pendingView(p: { rows: readonly unknown[]; failed: readonly unkn
   };
 }
 
-const GROUP_OF: Record<PendingKind, Exclude<PendingGroup, "all">> = { work: "work", studio_check: "check", retry: "check", studio_draft: "ai", curriculum_draft: "ai", skill: "skills", point: "skills", flag: "skills", import: "check", milestone: "roadmap" };
+const GROUP_OF: Record<PendingKind, Exclude<PendingGroup, "all">> = { work: "work", studio_check: "check", retry: "check", studio_draft: "ai", curriculum_draft: "ai", skill: "skills", point: "skills", flag: "skills", import: "check", milestone: "roadmap", goal: "roadmap" };
 const WAITING = ["draft", "ai_failed"] as const;
 const isWaiting = (s: string) => (WAITING as readonly string[]).includes(s);
 
@@ -139,6 +141,12 @@ export function buildPendingRows(i: PendingInput): PendingRow[] {
     push({
       key: "roadmap-waiting", kind: "milestone", label: pendingCopy.kinds.milestone, title: pendingCopy.need.milestone(i.roadmapDrafts as number), since: null,
       need: pendingCopy.need.milestoneNeed, href: roadmapHref(i.learnerId), waitingTutor: i.role !== "tutor",
+    });
+  }
+  if (i.goal) {
+    push({
+      key: `goal-${i.goal.id}`, kind: "goal", label: pendingCopy.kinds.goal, title: pendingCopy.need.goal(i.goal.pieces), since: i.goal.since,
+      need: pendingCopy.need.goalNeed, href: `${deskHref(i.learnerId)}#goal-box`, waitingTutor: i.role !== "tutor",
     });
   }
   return rows.sort(byOldest);

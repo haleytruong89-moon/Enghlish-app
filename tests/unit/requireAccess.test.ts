@@ -148,6 +148,16 @@ describe("requireAccess", () => {
     expect(await status("parent", AN, "work:submit")).toBe(403);
   });
 
+  it("W4d: goals — the learner's tutor reads and decides; the parent only reads; the child's own goal work is work:submit", async () => {
+    expect(await status("tutorAn", AN, "goals:read")).toBe(200);
+    expect(await status("tutorAn", AN, "goals:decide")).toBe(200);
+    expect(await status("parent", AN, "goals:read")).toBe(200);
+    expect(await status("parent", AN, "goals:decide")).toBe(403);
+    expect(await status("studentAn", AN, "goals:read")).toBe(403);
+    expect(await status("studentAn", AN, "goals:decide")).toBe(403);
+    expect(await status("tutorAn", NGUYEN, "goals:decide")).toBe(404);
+  });
+
   it("out of scope wins over action: never 403 for someone else's learner", async () => {
     expect(await status("tutorAn", NGUYEN, "admin")).toBe(404);
     expect(await status("studentAn", NGUYEN, "work:submit")).toBe(404);

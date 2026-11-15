@@ -50,10 +50,10 @@ describe("workdesk shell wiring", () => {
     expect(src).toMatch(/<TodayView\b/);
   });
   it("every page of the child's desk uses the desk frame and never the staff shell", () => {
-    for (const f of ["app/page.tsx", "app/seen/page.tsx", "app/done/page.tsx", "app/done/[ref]/page.tsx", "app/journey/page.tsx", "app/submit/[assignmentId]/page.tsx"]) {
+    for (const f of ["app/page.tsx", "app/seen/page.tsx", "app/done/page.tsx", "app/done/[ref]/page.tsx", "app/journey/page.tsx", "app/goal/page.tsx", "app/submit/[assignmentId]/page.tsx"]) {
       expect(read(f), f).toMatch(/<StudentDeskShell\b/);
     }
-    for (const f of [...pagesUnder("app/seen"), ...pagesUnder("app/done"), ...pagesUnder("app/journey"), ...pagesUnder("app/submit"), ...filesUnder("components/student", (n) => /\.tsx?$/.test(n))]) {
+    for (const f of [...pagesUnder("app/seen"), ...pagesUnder("app/done"), ...pagesUnder("app/journey"), ...pagesUnder("app/goal"), ...pagesUnder("app/submit"), ...filesUnder("components/student", (n) => /\.tsx?$/.test(n))]) {
       expect(read(f), f).not.toMatch(/components\/shell/);
     }
   });

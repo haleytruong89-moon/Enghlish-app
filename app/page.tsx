@@ -10,6 +10,7 @@ import { loadHome } from "@/lib/home/loadHome";
 import { todayVn } from "@/lib/inquiries/dates";
 import { revisionsAvailable } from "@/lib/revision/load";
 import { loadDeskBase, loadToday } from "@/lib/student/desk";
+import { loadMyWeekView } from "@/lib/student/weekLoad";
 import { firstParam, toShell } from "@/lib/shell/shell";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
@@ -33,13 +34,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   if (data.kind === "student") {
     // W4b: the child's desk (Hôm nay). Reads through the user client and the eng_my_* functions.
-    const [base, today] = await Promise.all([loadDeskBase(), loadToday()]);
+    const [base, today, week] = await Promise.all([loadDeskBase(), loadToday(), loadMyWeekView()]);
     if (base.kind === "login" || today.kind === "login") redirect("/login");
     if (base.kind !== "ok" || today.kind !== "ok") notFound();
     return (
       <StudentDeskShell active="today" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest}>
         {today.tasks ? (
-          <TodayView alias={base.alias} color={base.color} tasks={today.tasks} practice={today.practice} review={today.review} />
+          <TodayView alias={base.alias} color={base.color} tasks={today.tasks} practice={today.practice} review={today.review} week={week?.view ?? null} />
         ) : (
           <div className="mx-auto max-w-xl py-8">
             <h1 className="text-3xl font-bold" style={{ color: base.color }}>{studentDeskCopy.greeting(base.alias)}</h1>

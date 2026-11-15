@@ -1,12 +1,15 @@
 import { journeyCopy } from "@/lib/copy/vi";
 import type { Journey } from "@/lib/journey/path";
+import { AchievementsCard } from "@/components/student/goal/AchievementsCard";
+import { WeekCard } from "@/components/student/goal/WeekCard";
+import type { ShownAchievements, WeekView } from "@/lib/student/weekView";
 import { JourneySummary } from "./JourneySummary";
 import { Mountain } from "./Mountain";
 import { OtherCurricula } from "./OtherCurricula";
 import { PathList } from "./PathList";
 
 /** The student's Hành trình page body (W4a: the mountain, the list, the summary, other curricula). Counts of Units only; no score anywhere. */
-export function JourneyView({ journey }: { journey: Journey }) {
+export function JourneyView({ journey, week = null, achievements = null }: { journey: Journey; /** W4d: this week, the goal and the soft streak (null = not available yet). */ week?: WeekView | null; achievements?: ShownAchievements | null }) {
   return (
     <div className="mx-auto max-w-5xl" data-testid="journey-page">
       <h1 className="text-3xl font-bold">{journeyCopy.title}</h1>
@@ -37,9 +40,15 @@ export function JourneyView({ journey }: { journey: Journey }) {
           {!journey.summit ? <p className="mt-3 text-sm text-muted" data-testid="journey-summit-unnamed">{journeyCopy.summitUnnamed}</p> : null}
         </section>
         <div className="flex flex-col gap-5">
+          {week ? <WeekCard view={week} /> : null}
           <OtherCurricula journey={journey} />
         </div>
       </div>
+      {achievements ? (
+        <div className="mt-5">
+          <AchievementsCard shown={achievements} />
+        </div>
+      ) : null}
       <p className="mt-6 text-sm text-muted">{journeyCopy.footnote}</p>
     </div>
   );

@@ -1668,3 +1668,34 @@ Nhánh `feature/w4c2-player-result` (từ `main` sau PR #37). Kế hoạch `docs
 - **Sửa e2e trên main:** màn kết quả của bài đã nộp có dòng "Bạn đã nộp bài này lúc …" (`already-submitted`).
 - **Ai được bấm "Đã xem" (S5, giữ nguyên):** gia sư **hoặc** phụ huynh của em (cùng người được chấm câu Studio), đúng với CLAUDE.md: ngoài bài kiểm tra trong buổi, gia sư hoặc phụ huynh duyệt. Thẻ gửi thêm mốc `seen_through` (lần thử lại mới nhất thẻ đã hiện): lần thử lại tạo **sau khi thẻ mở** vẫn chờ.
 - **Chưa kiểm:** e2e chỉ chạy được trên CI.
+
+## W4d — Mục tiêu tuần · chuỗi tuần mềm · thành tích v1 (15/11)
+
+Nhánh `feature/w4d-weekly-goal` (từ `main` sau PR #39). Kế hoạch `docs/superpowers/plans/2026-11-14-w4-student-desk.md` mục "PR W4d". Phụ huynh duyệt "như đề xuất" (14/11): Q5 chọn (i) chỉ đếm bài đã nộp; Q6 bài con tự nộp + ảnh bài giấy người lớn nộp thay; Q7 không tuần nghỉ; Q8 An 2–5, Nguyên 3–6; Q19 chỉ thầy/cô của em đồng ý; Q20 danh sách thành tích v1. **Đổi luật:** "không streak" → chuỗi tuần mềm được phép (PRD D34; CLAUDE.md, DOMAIN bản 0.7 đã sửa).
+
+### Đã làm
+1. **`0035_weekly_goals.sql`** (chỉ thêm, idempotent; cần 0031 + 0034): bảng `weekly_goals` (chỉ thêm, RLS, chặn TRUNCATE), `track_settings.weekly_goal_range`, hàm `eng_week_start`, `eng_my_propose_goal`, `eng_my_withdraw_goal`, `eng_decide_goal`, `eng_week_work` (nội bộ), `eng_week_facts_of` (nội bộ), `eng_my_week`, `eng_week_facts`; xóa dữ liệu một em gồm bảng mới.
+2. Con: chip "🔥 n tuần liền" + thẻ tuần ở Hôm nay; Hành trình có thẻ "Mục tiêu tuần" + "Bộ sưu tập thành tích"; trang `/goal` (đặt mục tiêu, chờ thầy/cô, rút lại).
+3. Người lớn: hộp "Mục tiêu tuần" ở Bàn làm việc (thầy/cô của em: Đồng ý / Điều chỉnh; phụ huynh chỉ xem) + dòng ở Chờ duyệt. Route `POST /api/student/goal`, `.../goal/withdraw`, `/api/learners/[id]/goals/[gid]`.
+4. `npm run db:seed-dev -- --goal-history` tạo 5 tuần nộp bài cho Nguyên (thử) để thấy chip.
+
+### SQL phụ huynh cần áp (sau khi gộp)
+`db/migrations/0035_weekly_goals.sql` — workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". **Chưa áp:** mọi màn vẫn chạy; con không thấy chip / thẻ / `/goal` (báo "chưa mở"), hộp ở Bàn làm việc ẩn, số Chờ duyệt không đổi.
+
+### Cách thử trên bản thử (sau khi áp 0035)
+- (Tùy chọn, chỉ gia đình THỬ) chạy workflow "Seed test family" kèm `--goal-history`, hoặc `npm run db:seed-dev -- --goal-history`: Nguyên (thử) thấy "🔥 5 tuần liền" ở Hôm nay.
+- Nguyên (thử) → Hành trình → "Đặt mục tiêu tuần" → chọn 4 → "Gửi thầy/cô". Thầy/cô của Nguyên (thử): Bàn làm việc → hộp "Mục tiêu tuần" → **Điều chỉnh** 6 → Lưu. Nguyên (thử) mở lại: "đã đồng ý: 6 bài/tuần. Áp dụng từ tuần sau."
+- Phụ huynh mở Bàn làm việc của Nguyên (thử): thấy hộp, **không có nút**.
+- Con không thấy chữ "điểm", "%", "xếp hạng", tên em kia.
+
+### Tiêu chí đạt
+`npm run typecheck && npm run lint && npm test` xanh (gồm `tests/db/weeklyGoals.test.ts`, `tests/unit/{week,goalEffective,streak,achievements,weekShape,goalHandlers,deployOrderWeeklyGoals,migrationWeeklyGoals,weeklyGoalCopy}.test.ts`, `tests/dom/weeklyGoal.test.tsx`); `npx playwright test --list` đủ test (mới `goal.spec.ts`; sửa `student-no-scores.spec.ts`). **Chưa kiểm:** e2e chỉ chạy được trên CI; iPad thật chưa thử; SQL chưa qua review Opus.
+
+### Câu hỏi mở / lệch so với kế hoạch (cần phụ huynh xem)
+- Kế hoạch **không nói** thầy/cô tự đặt mục tiêu khi con chưa đề xuất: v1 chỉ trả lời đề xuất của con (không có mục tiêu do thầy/cô khởi tạo).
+- Câu gợi ý khi đặt mục tiêu: dùng tối đa 4 tuần đủ gần nhất kể từ tuần có bài đầu tiên; cả 4 tuần bằng 0 thì không có câu gợi ý (kế hoạch không nói).
+- Chuỗi đếm tối đa 52 tuần đã qua + tuần đang chạy.
+- Bài giao **link** do người lớn nộp thay **không** tính (chỉ lần con tự nộp link; ảnh / PDF người lớn nộp thay thì tính) — theo Q6 ("ảnh bài giấy").
+- `eng_decide_goal` có thêm tham số `p_learner` (không có trong kế hoạch) để một thầy/cô không quyết hộ đề xuất của em khác.
+- Chữ "điểm thưởng" trong kế hoạch đổi thành "thưởng" (e2e cấm "điểm" trên trang của con).
+- Một ca test (lỗi mạng khi tải tuần của con trả về `null`) bị bỏ vì bộ test báo lỗi lạ dù mã bắt đúng; hành vi vẫn được kiểm bằng ca "lỗi thật" và "thiếu hàm".
