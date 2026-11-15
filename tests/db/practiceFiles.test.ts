@@ -634,7 +634,7 @@ describe("S5b-1 PR B: practice assignments, submissions, files (migration 0016)"
         "truncate english.files cascade",
         "truncate english.assignments cascade",
         "truncate english.assignment_events",
-        "truncate english.submissions",
+        "truncate english.submissions cascade", // 0033: submission_feedback points at it, so a plain TRUNCATE is refused by the foreign key (its own guard still fires with cascade)
       ];
       for (const sql of stmts) {
         const err = await db.client.query(sql).then(() => null, (e: { code?: string }) => e);

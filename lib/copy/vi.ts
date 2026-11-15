@@ -735,6 +735,7 @@ export const purgePage = {
     session_absences: "Buổi nghỉ",
     roadmap_milestones: "Mốc lộ trình",
     roadmap_main_curriculum: "Giáo trình chính của Hành trình",
+    submission_feedback: "Góp ý cho bài nộp",
     login_names: "Tên đăng nhập ngắn",
     learners: "Hồ sơ của em",
     members: "Tài khoản của em trong app",
