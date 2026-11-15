@@ -16,6 +16,8 @@ import { QuestionDots } from "./QuestionDots";
 import { ResultView } from "./ResultView";
 
 const AUTOSAVE_MS = 5000;
+const SAVE_TIMEOUT_MS = 10_000;
+const KEEPALIVE_MAX_BYTES = 60_000;
 type Phase = "questions" | "review" | "receipt" | "result";
 
 /**
@@ -29,8 +31,10 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
   const initial: DraftContent = draft?.content ?? {};
   const [answers, setAnswers] = useState<Record<string, string>>(initial.answers ?? {});
   const [idx, setIdx] = useState(() => startIndex(items, initial.answers ?? {}));
-  const [phase, setPhase] = useState<Phase>(initialResult ? "result" : sentAt ? "receipt" : "questions");
-  const [result, setResult] = useState<ResultData | null>(initialResult);
+  // A draft that exists after an attempt is a redo in progress (submit deletes the draft): open the questions, never the old result.
+  const redoing = !!draft;
+  const [phase, setPhase] = useState<Phase>(redoing ? "questions" : initialResult ? "result" : sentAt ? "receipt" : "questions");
+  const [result, setResult] = useState<ResultData | null>(redoing ? null : initialResult);
   const [pasted, setPasted] = useState(initial.pasted ?? false);
   const [pasteSeen, setPasteSeen] = useState(initial.pasted ?? false);
   const [assist, setAssist] = useState<Assistance[]>(initial.assistance ?? []);
@@ -39,12 +43,13 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
   const [otherTab, setOtherTab] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const [receipt, setReceipt] = useState<Receipt | null>(sentAt ? { attemptId: "", attemptNo: 0, submittedAt: sentAt, hash: "", replayed: true } : null);
-  const [early, setEarly] = useState(!!sentAt);
+  const [receipt, setReceipt] = useState<Receipt | null>(sentAt && !redoing ? { attemptId: "", attemptNo: 0, submittedAt: sentAt, hash: "", replayed: true } : null);
+  const [early, setEarly] = useState(!!sentAt && !redoing);
   const [leaveWarn, setLeaveWarn] = useState(false);
 
   const flowRef = useRef(flow);
   const closed = useRef(false);
+  const leaving = useRef(false);
   const revision = useRef<number>(baseRevisionOf(draft));
   const pending = useRef<{ id: string; sig: string } | null>(null);
   const contentRef = useRef<DraftContent>({});
@@ -78,6 +83,7 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: snapshot, base_revision: revision.current }),
+        signal: typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(SAVE_TIMEOUT_MS) : undefined,
       });
       if (!res.ok) throw new Error(String(res.status));
       const json = (await res.json()) as { draft: { revision: number; otherTabChanged: boolean } };
@@ -101,38 +107,36 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
   // a changed draft that is still unsaved asks the browser to keep the page open (also covers a closed tab)
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
-      if (flowRef.current.dirty && !closed.current) e.preventDefault();
+      if (flowRef.current.dirty && !closed.current && !leaving.current) e.preventDefault();
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, []);
 
-  // Leaving by anything other than the exit button (tab switch, iPad Safari, closing): a keepalive save of the unsaved draft.
+  // Hidden tab (the page is still alive): a normal save, which updates the revision and the label. Closing / leaving the page: one
+  // fire-and-forget keepalive save (only when the body is small enough for keepalive).
   useEffect(() => {
-    const flush = () => {
-      if (closed.current || !flowRef.current.dirty) return;
-      void fetch(`/api/drafts/${activity.activityId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: contentRef.current, base_revision: revision.current }),
-        keepalive: true,
-      }).catch(() => undefined);
-    };
     const onHide = () => {
-      if (document.visibilityState === "hidden") flush();
+      if (document.visibilityState === "hidden") void saveRef.current();
     };
-    window.addEventListener("pagehide", flush);
+    const onPageHide = () => {
+      if (closed.current || !flowRef.current.dirty) return;
+      const body = JSON.stringify({ content: contentRef.current, base_revision: revision.current });
+      void fetch(`/api/drafts/${activity.activityId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body, keepalive: body.length <= KEEPALIVE_MAX_BYTES }).catch(() => undefined);
+    };
+    window.addEventListener("pagehide", onPageHide);
     document.addEventListener("visibilitychange", onHide);
     return () => {
-      window.removeEventListener("pagehide", flush);
+      window.removeEventListener("pagehide", onPageHide);
       document.removeEventListener("visibilitychange", onHide);
     };
   }, [activity.activityId]);
 
   /** Waits for a running save, saves what is left, and says whether everything is stored. */
   async function flushAll(): Promise<boolean> {
-    for (let i = 0; i < 3; i += 1) {
-      while (flowRef.current.inflight) await new Promise((r) => setTimeout(r, 50));
+    const deadline = Date.now() + 2 * SAVE_TIMEOUT_MS; // offline: Thoát must not hang
+    for (let i = 0; i < 3 && Date.now() < deadline; i += 1) {
+      while (flowRef.current.inflight && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
       if (!flowRef.current.dirty) break;
       await saveNow();
     }
@@ -141,13 +145,21 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
 
   async function leave() {
     // A full page load on purpose: Hôm nay is read fresh, and no router context is needed (the player is also rendered in unit tests).
-    /* eslint-disable @next/next/no-location-assign-relative-destination */
-    if (leaveWarn) { window.location.href = "/"; return; }
+    if (leaveWarn) {
+      leaving.current = true;
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.href = "/";
+      return;
+    }
     setBusy(true);
     const ok = await flushAll();
     setBusy(false);
-    if (ok) { window.location.href = "/"; return; }
-    /* eslint-enable @next/next/no-location-assign-relative-destination */
+    if (ok) {
+      leaving.current = true;
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.href = "/";
+      return;
+    }
     setLeaveWarn(true);
   }
 
@@ -176,12 +188,11 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
     const body = { activity_id: activity.activityId, content: { answers: nonEmptyAnswers(answers) }, assistance: assist, provenance: pasted ? "pasted" : "in_app" };
     const sig = JSON.stringify(body);
     if (!pending.current || pending.current.sig !== sig) pending.current = { id: crypto.randomUUID(), sig };
-    closed.current = true; // no autosave may recreate a draft from here on; reset below when the send fails
+    closed.current = true; // no autosave may recreate a draft from here on; stays set when the send fails (the reply may only be lost)
     try {
       const res = await fetch("/api/attempts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, client_submission_id: pending.current.id }) });
       if (res.status === 409) {
-        closed.current = false;
-        setProblem(work.submitConflict);
+        setProblem(work.submitConflict); // `closed` stays: an attempt may exist, an autosave must not recreate a draft
         pending.current = null;
         return;
       }
@@ -197,7 +208,7 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
       setResult(r);
       setPhase(r ? "result" : "receipt");
     } catch {
-      closed.current = false;
+      // `closed` stays on purpose: the reply may only have been lost, and an autosave would recreate a draft after a stored attempt.
       setProblem(work.submitError);
     } finally {
       setBusy(false);
@@ -207,14 +218,15 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
   function redo() {
     setEarly(false);
     closed.current = false;
-    revision.current = baseRevisionOf(null);
+    // With a server draft (another tab started a redo) keep its revision and answers; otherwise start empty.
+    revision.current = baseRevisionOf(draft);
     pending.current = null;
-    setAnswers({});
-    setIdx(0);
+    setAnswers(initial.answers ?? {});
+    setIdx(startIndex(items, initial.answers ?? {}));
     setReceipt(null);
     setResult(null);
     setProblem(null);
-    mutateFlow(() => initialSaveFlow(false));
+    mutateFlow(() => initialSaveFlow(!!draft));
     setPhase("questions");
   }
 
@@ -251,7 +263,7 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
     <div className="mx-auto flex max-w-5xl flex-col gap-3.5" data-testid="player" data-test={isTest ? "yes" : "no"} onPasteCapture={() => { setPasted(true); setPasteSeen(true); touch(); }}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <button type="button" onClick={() => void leave()} disabled={busy} data-testid="player-exit" className="flex min-h-11 items-center text-sm font-semibold text-accent">
-          ‹ {leaveWarn ? c.exitAnyway : flow.dirty || flow.inflight || flow.failed ? c.exit : c.exitSaved}
+          ‹ {leaveWarn ? c.exitAnyway : flow.everSaved && !flow.dirty && !flow.inflight && !flow.failed ? c.exitSaved : c.exit}
         </button>
         {leaveWarn ? (
           <span role="alert" data-testid="leave-warn" className="text-sm text-[#6B4600]">

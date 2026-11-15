@@ -38,7 +38,7 @@ export default async function ReviewStudioPage({ searchParams }: { searchParams:
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{studioInboxCopy.title}</h1>
         <p className="mt-1 text-sm text-muted">{studioInboxCopy.intro}</p>
-        <ReviewTabs active="studio" skillsCount={combinedTabCount(skillInbox, pointInbox, access.member.role)} studioCount={pending?.count ?? null} />
+        <ReviewTabs active="studio" skillsCount={combinedTabCount(skillInbox, pointInbox, access.member.role)} studioCount={pending ? pending.count + (retries?.attempts.length ?? 0) : null} />
         {pending === null ? (
           <p className="mt-6 rounded-xl border border-line bg-white px-5 py-4">{studioInboxCopy.notReady}</p>
         ) : pending.attempts.length === 0 ? (

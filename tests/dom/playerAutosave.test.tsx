@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Player } from "@/components/student/player/Player";
-import { playerCopy } from "@/lib/copy/vi";
+import { playerCopy, work } from "@/lib/copy/vi";
 import type { SupportedActivityView } from "@/lib/work/types";
 
 vi.mock("next/link", () => ({ default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a> }));
@@ -68,5 +68,31 @@ describe("the player stores every answer (the e2e reload scenario)", () => {
     expect(screen.getByTestId("question-W1-R3")).toBeTruthy();
     expect(screen.getByTestId("test-line")).toBeTruthy();
     expect(screen.getByTestId("save-status").textContent).toBe(playerCopy.saved);
+  });
+
+  it("a server draft after an attempt is a redo in progress: the questions open with its answers, not the old result or receipt", () => {
+    const redo = { ...base, attempts: [{ attemptNo: 1, submittedAt: "2026-11-15T02:00:00Z", provenance: "in_app" }] as never, draft: { content: { answers: { "W1-R1": "b) y" } }, revision: 4, updatedAt: "2026-11-15T03:00:00Z" } };
+    const oldResult = { attemptNo: 1, submittedAt: "2026-11-15T02:00:00Z", isTest: false, othersFine: true, look: [], open: [] };
+    render(<Player activity={redo} isTest={false} initialResult={oldResult} sentAt="2026-11-15T02:00:00Z" />);
+    expect(screen.queryByTestId("result-view")).toBeNull();
+    expect(screen.queryByTestId("receipt")).toBeNull();
+    expect(screen.getByTestId("question-W1-R2")).toBeTruthy(); // R1 is answered in the draft
+  });
+
+  it("a failed submit does not let autosave recreate a draft (the reply may have been lost)", { timeout: 15000 }, async () => {
+    const f = vi.fn(async (url: string) => (url === "/api/attempts" ? { ok: false, status: 500, json: async () => ({}) } : { ok: true, status: 200, json: async () => ({ draft: { revision: 1, otherTabChanged: false } }) }));
+    vi.stubGlobal("fetch", f);
+    render(<Player activity={base} isTest initialResult={null} />);
+    fireEvent.click(screen.getByLabelText("b) y"));
+    await waitFor(() => expect(f.mock.calls.filter((c) => String(c[0]).startsWith("/api/drafts")).length).toBe(1));
+    fireEvent.click(screen.getByTestId("player-submit-top"));
+    fireEvent.click(screen.getByLabelText(work.help.none));
+    fireEvent.click(screen.getByTestId("player-submit"));
+    await waitFor(() => expect(screen.getByTestId("problem")).toBeTruthy());
+    const drafts = () => f.mock.calls.filter((c) => String(c[0]).startsWith("/api/drafts")).length;
+    const before = drafts();
+    fireEvent.click(screen.getByLabelText(work.help.notes)); // an edit after the failure
+    await new Promise((r) => setTimeout(r, 6000)); // longer than the autosave tick
+    expect(drafts()).toBe(before);
   });
 });

@@ -337,27 +337,26 @@ describe("result view, retry and test flag (migration 0034)", () => {
       expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined();
     });
 
-    it("clears after a later recorded result and after a later validation decision; a new retry after that waits again", async () => {
+    it("clears after a later validation decision", async () => {
       const w = await fresh();
       const { att } = await mineOf(s.members.tutorNguyen, w);
-      await q1(`insert into english.results(learner_id, mode, context, attempt, source, title, total_items, correct, wrong_items, taken_on, recorded_by_member, recorded_role, client_id, attempt_id)
-                values ($1, 'quick', 'home', 'first', 'practice', 'Kết quả thử', 1, 1, '{}', current_date, $2, 'tutor', $3, $4)`, [s.learners.nguyen, s.members.tutorNguyen, `rs-${randomUUID()}`, att]);
-      expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined();
-
-      const w2 = await fresh();
-      const { att: att2 } = await mineOf(s.members.tutorNguyen, w2);
-      const ep = (await q1<{ id: string }>("select id from english.episodes where attempt_id = $1", [att2]))[0]!.id;
+      const ep = (await q1<{ id: string }>("select id from english.episodes where attempt_id = $1", [att]))[0]!.id;
       await q1(`insert into english.validation_decisions(episode_id, learner_id, target_key, decision, validator_member_id, validator_role)
                 values ($1, $2, 'T-RETRY-TEST', 'INSUFFICIENT', $3, 'tutor')`, [ep, s.learners.nguyen, s.members.tutorNguyen]);
-      expect((await mineOf(s.members.tutorNguyen, w2)).row).toBeUndefined();
+      expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined();
     });
 
-    it("a retry of the NEXT attempt is a new row", async () => {
+    it("a retry of the NEXT attempt waits again after an earlier one was cleared", async () => {
       const w = await fresh();
-      await submit(w, { ...WRONG, q2: "B. can't" });
+      const { att } = await mineOf(s.members.tutorNguyen, w);
+      await svc("select english.eng_decide_studio_items($1, $2::jsonb, $3, $4) as r", [att, JSON.stringify([{ item_id: "q7", result: "incorrect" }]), s.members.tutorNguyen, `dc-${randomUUID()}`]);
       expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined();
+      await submit(w, { ...WRONG, q2: "B. can't" });
+      expect((await mineOf(s.members.tutorNguyen, w)).row).toBeUndefined(); // the new attempt has no retry yet
       await retry(w, "q2", "A. must");
-      expect((await mineOf(s.members.tutorNguyen, w)).row?.retries).toHaveLength(1);
+      const again = await mineOf(s.members.tutorNguyen, w);
+      expect(again.att).not.toBe(att);
+      expect(again.row?.retries).toHaveLength(1);
     });
   });
 

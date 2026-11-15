@@ -379,8 +379,11 @@ grant execute on function english.eng_item_retries(uuid) to service_role;
 
 -- 3e. Người lớn: lần thử lại CHƯA có người lớn làm gì sau đó (cho Chờ duyệt "Con thử lại n câu" và màn xem). Cùng kiểu eng_studio_pending:
 --     người thao tác (p_by) là phụ huynh của gia đình / gia sư còn hiệu lực của em; em thật chỉ khi p_allow_real.
---     "Người lớn làm gì đó với lần làm này" = góp ý bài (feedback_notes), quyết định một câu (item_decisions), Kết quả bài (results),
---     quyết định duyệt (validation_decisions của episode). Lần thử lại hết chờ khi có việc như vậy MUỘN HƠN nó; không có bảng "đã xem" mới.
+--     "Người lớn làm gì đó với lần làm này" = góp ý bài (feedback_notes), quyết định một câu (item_decisions; Kết quả bài do người lớn
+--     quyết định đi theo đó), quyết định duyệt (validation_decisions của episode). Lần thử lại hết chờ khi có việc như vậy MUỘN HƠN nó;
+--     không có bảng "đã xem" mới.
+create index if not exists feedback_notes_source_attempt_idx on english.feedback_notes(source_attempt_id);
+create index if not exists validation_decisions_episode_idx on english.validation_decisions(episode_id);
 create or replace function english.eng_retry_pending(p_by uuid, p_allow_real boolean default false) returns jsonb
 language sql stable security definer set search_path = ''
 as $$
@@ -396,16 +399,15 @@ as $$
            (select pg_catalog.max(x.at) from (
               select f.created_at as at from english.feedback_notes f where f.source_attempt_id = t.id
               union all select d.at from english.item_decisions d where d.attempt_id = t.id
-              union all select r.created_at from english.results r where r.attempt_id = t.id
               union all select v.created_at from english.validation_decisions v join english.episodes e on e.id = v.episode_id where e.attempt_id = t.id
             ) x) as last_action,
            (select av.content -> 'answers' from english.artifact_versions av
             where av.attempt_id = t.id and av.kind = 'answers' order by av.version desc limit 1) as answers
-    from english.attempts t
+    from (select distinct r0.attempt_id from english.item_retries r0 where r0.learner_id in (select id from ls)) rr
+    join english.attempts t on t.id = rr.attempt_id
     join ls on ls.id = t.learner_id
     join english.activity_instances a on a.id = t.activity_instance_id
     join english.inquiry_instances i on i.id = a.inquiry_instance_id
-    where exists (select 1 from english.item_retries r where r.attempt_id = t.id)
   ),
   waiting as (
     select att.attempt_id, r.item_id, r.answer, r.created_at as at, q.x, q.o
