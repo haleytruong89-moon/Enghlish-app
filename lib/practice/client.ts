@@ -1,5 +1,5 @@
 /** Browser-side steps shared by the student's and the tutor's "send" screens. No server-only imports. */
-import { assignPage, practiceStudent } from "@/lib/copy/vi";
+import { assignPage, practiceStudent, workWeekCopy } from "@/lib/copy/vi";
 import { postJson, type PostFail } from "@/lib/tutorwork/client";
 import { putToSignedUrl, type Prepared } from "@/lib/storage/clientUpload";
 
@@ -50,7 +50,7 @@ export function codeOf(r: PostFail): string {
 /** A friendly sentence for an error code. `student` speaks to the child ("bạn"), staff to an adult. */
 export function practiceErrorText(code: string, who: "student" | "staff"): string {
   const table = who === "student" ? (practiceStudent.errors as Record<string, unknown>) : (assignPage.errors as Record<string, unknown>);
-  const hit = table[code];
+  const hit = table[code] ?? (who === "staff" ? workWeekCopy.errors[code] : undefined);
   if (typeof hit === "string") return hit;
   return who === "student" ? practiceStudent.errors.generic : assignPage.errors.generic ?? "";
 }

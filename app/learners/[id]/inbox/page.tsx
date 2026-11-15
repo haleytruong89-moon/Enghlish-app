@@ -13,6 +13,7 @@ export default async function PendingPage({ params, searchParams }: { params: Pr
   const { id } = await params;
   const sp = await searchParams;
   const { member, learner } = await requireLearnerPage(id, "work:review");
+  await requireLearnerPage(id, "goals:read");
   const group = parseGroup(sp.f);
   const pending = await loadPendingRows(member.id, member.role === "parent" ? "parent" : "tutor", learner.id);
   const { rows, failed, more } = pending;

@@ -21,6 +21,10 @@ on:
           - family
           - throwaway
         default: family
+      goal_history:
+        description: 'Thêm 5 tuần nộp bài + mục tiêu tuần cho Nguyên (thử) để thấy chip "🔥 5 tuần liền" (chỉ mode = family)'
+        type: boolean
+        default: false
       confirm:
         description: 'Gõ SEED để xác nhận tạo gia đình THỬ'
         required: true
@@ -85,9 +89,12 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SEED_DEV_PASSWORD: ${{ secrets.SEED_DEV_PASSWORD }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          GOAL_HISTORY: ${{ inputs.goal_history }}
         run: |
           set -euo pipefail
-          npm run db:seed-dev | tee /tmp/seed.txt
+          extra=""
+          if [ "$GOAL_HISTORY" = "true" ]; then extra="-- --goal-history"; fi
+          npm run db:seed-dev $extra | tee /tmp/seed.txt
           {
             echo "## Gia đình THỬ"
             echo

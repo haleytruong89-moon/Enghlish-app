@@ -43,9 +43,10 @@ describe("child: week mini / card / chip", () => {
     expect(screen.getByTestId("week-pending")).toBeTruthy();
   });
   it("the card says a new goal starts next week, with the date in <time>", () => {
-    render(<WeekCard view={view({ upcoming: { pieces: 5, from: "2026-11-16" } })} />);
+    render(<WeekCard view={view({ upcoming: { pieces: 5, from: "2026-11-16", kind: "adjust" as const } })} />);
     const tag = screen.getByTestId("week-upcoming");
     expect(tag.querySelector("time")?.getAttribute("datetime")).toBe("2026-11-16");
+    expect(tag.textContent).toContain("đã chỉnh");
   });
   it("the chip: nothing without a streak; with one it has text and an aria-label and is a 44px target", () => {
     const { container, rerender } = render(<GoalChip streak={0} />);

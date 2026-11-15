@@ -96,7 +96,7 @@ describe("Chờ duyệt rows", () => {
   });
   it("filters, counts, parses the group", () => {
     const rows = buildPendingRows(input());
-    expect(countGroups(rows)).toEqual({ all: 6, work: 1, check: 1, ai: 2, skills: 2, roadmap: 0 });
+    expect(countGroups(rows)).toEqual({ all: 6, work: 1, check: 1, ai: 2, skills: 2, roadmap: 0, goals: 0 });
     expect(filterRows(rows, "ai").map((r) => r.kind)).toEqual(["studio_draft", "curriculum_draft"]);
     expect(filterRows(rows, "all")).toHaveLength(6);
     expect(parseGroup("skills")).toBe("skills");

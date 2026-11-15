@@ -328,4 +328,6 @@ Bốn khối trong `lib/copy/vi.ts`: `weeklyGoalCopy` (con), `streakCopy` (con),
 | Luật nói với con | "Một tuần “đạt” khi bạn nộp đủ số bài đã chọn. Chuỗi tuần là các tuần đạt liên tiếp. Mục tiêu mới áp dụng từ tuần sau. Lỡ một tuần thì chuỗi tính lại từ tuần sau, không sao cả." (không phạt, không "mất chuỗi") |
 | Người lớn | Bàn làm việc: hộp "Mục tiêu tuần" · "Tuần này 2/4 bài · chuỗi 3 tuần" · đề xuất: "Con đề xuất n bài mỗi tuần" + "Nếu đồng ý, mục tiêu bắt đầu thứ Hai dd/mm. Tuần đang chạy giữ mục tiêu cũ." · nút **Đồng ý n bài/tuần** / **Điều chỉnh** (thầy/cô); phụ huynh: "Đang chờ {thầy/cô} của con đồng ý. Phụ huynh chỉ xem." · Chờ duyệt: loại "Mục tiêu tuần" |
 
+Bổ sung (sau review): sau khi thầy/cô **điều chỉnh** số bài, con thấy "{Thầy/cô} đã chỉnh: n bài/tuần. Áp dụng từ tuần sau." (không phải "đã đồng ý"). Chờ duyệt có nhóm riêng "Mục tiêu tuần". Khối `workWeekCopy` (người lớn nộp thay): ô "Tuần làm bài" · "Tuần này" (mặc định) / "Tuần trước" (chỉ hiện thứ Hai–thứ Ba) · "Con làm bài vào tuần nào? Thứ Hai và thứ Ba bạn chọn được “Tuần trước” nếu con làm bài hôm Chủ nhật hay những ngày trước. Bài chỉ tính vào một tuần, theo mục tiêu tuần của con." · hộp mục tiêu sau khi lưu: "Đã lưu. Mục tiêu mới bắt đầu thứ Hai dd/mm."
+
 Khác với kế hoạch: bỏ chữ "điểm thưởng" (e2e cấm chữ "điểm" trên trang của con) → "không có thưởng".

@@ -28,6 +28,8 @@ export function GoalBox({ learnerId, alias, canDecide, view }: { learnerId: stri
   const [pieces, setPieces] = useState(view.pending ? String(view.pending.pieces) : "");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  // The Monday the database really set (the page's own guess can be stale if it stayed open over a Sunday night).
+  const [startedOn, setStartedOn] = useState<string | null>(null);
   const book = useRef(clientIdBook());
 
   async function decide(action: "accept" | "adjust") {
@@ -44,7 +46,7 @@ export function GoalBox({ learnerId, alias, canDecide, view }: { learnerId: stri
       const res = await fetch(`/api/learners/${learnerId}/goals/${view.pending.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...body, client_id: book.current.idFor(body) }),
+        body: JSON.stringify({ ...body, client_id: book.current.idFor({ goal: view.pending.id, ...body }) }),
       });
       book.current.settle({ ok: res.ok, status: res.status });
       if (!res.ok) {
@@ -52,6 +54,8 @@ export function GoalBox({ learnerId, alias, canDecide, view }: { learnerId: stri
         setProblem(c.errors[err?.error ?? ""] ?? c.errors.generic ?? "");
         return;
       }
+      const ok = (await res.json().catch(() => null)) as { applies_from?: string } | null;
+      if (ok?.applies_from) setStartedOn(ok.applies_from);
       setAdjusting(false);
       router.refresh();
     } catch {
@@ -68,6 +72,7 @@ export function GoalBox({ learnerId, alias, canDecide, view }: { learnerId: stri
       <p className="mt-1 text-sm" data-testid="goal-box-line">
         {view.goal === null ? c.thisWeekNoGoal(view.count) : c.thisWeek(view.count, view.goal, view.streak)}
       </p>
+      {startedOn ? <p className="mt-1 text-sm font-semibold" role="status" data-testid="goal-box-saved">{c.savedFrom(ddmm(startedOn))}</p> : null}
       {view.upcoming ? <p className="mt-1 text-sm text-muted" data-testid="goal-box-upcoming">{c.upcoming(view.upcoming.pieces, ddmm(view.upcoming.from))}</p> : null}
       {view.pending ? (
         <div className="mt-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-3" data-testid="goal-box-pending">

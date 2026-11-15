@@ -20,16 +20,6 @@ export async function loadMyWeek(): Promise<WeekFacts | null> {
   }
 }
 
-/** True when the function is missing (migration 0035 not applied): the child's page then says so softly instead of failing. */
-export async function weekFunctionMissing(): Promise<boolean> {
-  try {
-    const { error } = await (await createUserClient()).rpc("eng_my_week");
-    return !!error && !!error.code && MISSING.has(error.code);
-  } catch {
-    return false;
-  }
-}
-
 /**
  * The week facts of one child for an adult (eng_week_facts, service role). Call ONLY after the page gate of that child
  * ("goals:read" / "tutorwork:read"). Never throws: null = not applied / unreadable.

@@ -13,6 +13,8 @@ export function goalError(err: unknown): HandlerResult {
   if (err instanceof ReviewDbError) {
     if (err.code === "goal_unavailable") return { status: 409, body: { error: "goal_unavailable", message: apiErrors[409] } };
     const tag = TAGS.find((t) => err.detail.includes(`(${t})`));
+    // An untagged 23505 can only come from the unique index on responds_to (a second answer to one proposal): the same message as the tagged case.
+    if (!tag && err.code === "23505") return { status: 409, body: { error: "already_answered", message: apiErrors[409] } };
     if (tag) {
       const status = err.code === "23505" ? 409 : err.code === "42501" ? 403 : 400;
       return { status, body: { error: tag, message: apiErrors[status] } };

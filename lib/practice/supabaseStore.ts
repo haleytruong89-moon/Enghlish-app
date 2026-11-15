@@ -99,6 +99,13 @@ export function createSupabasePracticeStore(): PracticeStore {
         p_link_url: a.linkUrl,
         p_files: a.files.map((f) => ({ id: f.id, mime: f.mime, bytes: f.bytes })),
       };
+      // W4d: only the choice "Tuần trước" needs the v3 function (0035); every other submission goes the old way and counts in the week it was sent.
+      if (a.workWeek === "last") {
+        const v3 = await db().rpc("eng_submit_practice_v3", { ...args, p_work_week: "last" });
+        if (!v3.error) return v3.data;
+        if (v3.error.code === "PGRST202" || v3.error.code === "42883") throw new ReviewDbError("work_week_unavailable", "eng_submit_practice_v3 is missing: apply migration 0035");
+        dbError("eng_submit_practice_v3", v3.error);
+      }
       const v2 = await db().rpc("eng_submit_practice_v2", args);
       if (!v2.error) return v2.data;
       // Migration 0033 not applied yet: the old function takes up to 6 files and no hint answer for a PDF (it is dropped, not guessed).

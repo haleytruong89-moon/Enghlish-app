@@ -1680,16 +1680,27 @@ Nhánh `feature/w4d-weekly-goal` (từ `main` sau PR #39). Kế hoạch `docs/su
 4. `npm run db:seed-dev -- --goal-history` tạo 5 tuần nộp bài cho Nguyên (thử) để thấy chip.
 
 ### SQL phụ huynh cần áp (sau khi gộp)
+**KHÔNG áp 0035 từ bản `main` trước PR bổ sung W4d; chỉ áp sau khi PR bổ sung gộp** (0035 được sửa tại chỗ ở PR bổ sung vì chưa áp ở đâu).
 `db/migrations/0035_weekly_goals.sql` — workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". **Chưa áp:** mọi màn vẫn chạy; con không thấy chip / thẻ / `/goal` (báo "chưa mở"), hộp ở Bàn làm việc ẩn, số Chờ duyệt không đổi.
 
 ### Cách thử trên bản thử (sau khi áp 0035)
-- (Tùy chọn, chỉ gia đình THỬ) chạy workflow "Seed test family" kèm `--goal-history`, hoặc `npm run db:seed-dev -- --goal-history`: Nguyên (thử) thấy "🔥 5 tuần liền" ở Hôm nay.
+- (Tùy chọn, chỉ gia đình THỬ) chạy workflow "Seed test family" (mode = family) và tick ô "Thêm 5 tuần nộp bài…", hoặc `npm run db:seed-dev -- --goal-history`: Nguyên (thử) thấy "🔥 5 tuần liền" ở Hôm nay.
 - Nguyên (thử) → Hành trình → "Đặt mục tiêu tuần" → chọn 4 → "Gửi thầy/cô". Thầy/cô của Nguyên (thử): Bàn làm việc → hộp "Mục tiêu tuần" → **Điều chỉnh** 6 → Lưu. Nguyên (thử) mở lại: "đã đồng ý: 6 bài/tuần. Áp dụng từ tuần sau."
 - Phụ huynh mở Bàn làm việc của Nguyên (thử): thấy hộp, **không có nút**.
 - Con không thấy chữ "điểm", "%", "xếp hạng", tên em kia.
 
 ### Tiêu chí đạt
 `npm run typecheck && npm run lint && npm test` xanh (gồm `tests/db/weeklyGoals.test.ts`, `tests/unit/{week,goalEffective,streak,achievements,weekShape,goalHandlers,deployOrderWeeklyGoals,migrationWeeklyGoals,weeklyGoalCopy}.test.ts`, `tests/dom/weeklyGoal.test.tsx`); `npx playwright test --list` đủ test (mới `goal.spec.ts`; sửa `student-no-scores.spec.ts`). **Chưa kiểm:** e2e chỉ chạy được trên CI; iPad thật chưa thử; SQL chưa qua review Opus.
+
+### Phần bổ sung W4d (15/11, sau review của Opus; PR bổ sung)
+- **"Tuần làm bài" (phụ huynh quyết 15/11):** khi thầy/cô / phụ huynh nộp thay ảnh bài giấy / PDF vào **thứ Hai hoặc thứ Ba** (giờ Việt Nam), được chọn "Tuần này" (mặc định) hoặc "Tuần trước"; chỉ bài giao PDF, chỉ người lớn. Lưu ở bảng phụ chỉ thêm `submission_work_weeks` (khóa theo bài nộp; **không sửa `submissions` của 0016**), ghi qua `eng_submit_practice_v3` (bọc v2, cùng một giao dịch); `eng_week_work` dùng tuần đó thay cho giờ nộp. Máy chủ kiểm: chỉ thứ Hai của tuần trước, chỉ thứ Hai–thứ Ba, chỉ người lớn, không bài link (`work_week_closed` / `work_week_adults_only` / `work_week_not_counted` / `bad_work_week`); gửi lại cùng mã phải cùng lựa chọn. Chưa áp 0035 mà chọn "Tuần trước": báo "chưa dùng được", chọn "Tuần này" vẫn nộp như cũ. Bảng mới có trong xóa dữ liệu một em.
+- "Bài đầu tiên" chỉ tính **bài con tự nộp** (lần nộp trên app + bài nộp có vai học sinh); bài người lớn nộp thay không mở thành tích này.
+- Sau khi thầy/cô **điều chỉnh**, con thấy "đã chỉnh: n bài/tuần" (không còn "đã đồng ý"); hộp ở Bàn làm việc báo ngày bắt đầu thật do máy chủ trả về sau khi lưu; mã gửi lại của hộp có kèm mã đề xuất.
+- Đọc mục tiêu tuần qua cổng `goals:read` (Bàn làm việc, Chờ duyệt, số đếm); dòng mục tiêu ở Chờ duyệt có nhóm riêng "Mục tiêu tuần".
+- `eng_decide_goal` bắt buộc `p_learner`; khoảng gợi ý luôn là `{min,max}` hợp lệ (`eng_goal_range`, sai giá trị → mặc định 1–14, không lỗi 500); 23505 không gắn nhãn (chỉ mục `responds_to`) → "đã được trả lời"; có test hai kết nối quyết cùng lúc.
+- Seed `--goal-history`: mã gửi lại kèm ngày thứ Hai nên chạy lại tuần sau làm mới được; workflow "Seed test family" có ô tick.
+- Bỏ `weekFunctionMissing` (không dùng); khôi phục ca test "lỗi mạng → null" (lỗi trước là do `beforeEach` trả về giá trị của `mockReset`).
+- Lệch so với kế hoạch: thành tích "mốc" (`milestone`) chỉ tính cờ có **ít nhất một Unit trước nó** (kế hoạch ghi `k = 0`: cờ không có Unit nào trước sẽ "đạt" ngay, vô nghĩa).
 
 ### Câu hỏi mở / lệch so với kế hoạch (cần phụ huynh xem)
 - Kế hoạch **không nói** thầy/cô tự đặt mục tiêu khi con chưa đề xuất: v1 chỉ trả lời đề xuất của con (không có mục tiêu do thầy/cô khởi tạo).
@@ -1698,4 +1709,3 @@ Nhánh `feature/w4d-weekly-goal` (từ `main` sau PR #39). Kế hoạch `docs/su
 - Bài giao **link** do người lớn nộp thay **không** tính (chỉ lần con tự nộp link; ảnh / PDF người lớn nộp thay thì tính) — theo Q6 ("ảnh bài giấy").
 - `eng_decide_goal` có thêm tham số `p_learner` (không có trong kế hoạch) để một thầy/cô không quyết hộ đề xuất của em khác.
 - Chữ "điểm thưởng" trong kế hoạch đổi thành "thưởng" (e2e cấm "điểm" trên trang của con).
-- Một ca test (lỗi mạng khi tải tuần của con trả về `null`) bị bỏ vì bộ test báo lỗi lạ dù mã bắt đúng; hành vi vẫn được kiểm bằng ca "lỗi thật" và "thiếu hàm".

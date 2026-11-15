@@ -360,19 +360,19 @@ export async function seedGoalHistory(client: ClientBase, seeded: SeedResult): P
     const start = `(${"$1"}::date - ${(WEEKS + 1) * 7})`;
     await client.query(
       `insert into english.weekly_goals(learner_id, kind, pieces, by_member, by_role, client_id, created_at)
-       values ($2, 'propose', 3, $3, 'student', 'seed-goal-history-propose', ${start}::timestamptz) on conflict (learner_id, client_id) do nothing`,
-      [thisMonday, learner, seeded.members.studentNguyen],
+       values ($2, 'propose', 3, $3, 'student', $4, ${start}::timestamptz) on conflict (learner_id, client_id) do nothing`,
+      [thisMonday, learner, seeded.members.studentNguyen, `seed-goal-history-${thisMonday}-propose`],
     );
-    const prop = await client.query<{ id: string }>("select id from english.weekly_goals where learner_id = $1 and client_id = 'seed-goal-history-propose'", [learner]);
+    const prop = await client.query<{ id: string }>("select id from english.weekly_goals where learner_id = $1 and client_id = $2", [learner, `seed-goal-history-${thisMonday}-propose`]);
     const propId = (prop.rows[0] as { id: string }).id;
     await client.query(
       `insert into english.weekly_goals(learner_id, kind, pieces, applies_from, responds_to, by_member, by_role, client_id, created_at)
-       values ($2, 'accept', 3, ${start}, $4, $3, 'tutor', 'seed-goal-history-accept', ${start}::timestamptz + interval '1 hour') on conflict (learner_id, client_id) do nothing`,
-      [thisMonday, learner, seeded.members.tutorNguyen, propId],
+       values ($2, 'accept', 3, ${start}, $4, $3, 'tutor', $5, ${start}::timestamptz + interval '1 hour') on conflict (learner_id, client_id) do nothing`,
+      [thisMonday, learner, seeded.members.tutorNguyen, propId, `seed-goal-history-${thisMonday}-accept`],
     );
     for (let w = WEEKS; w >= 1; w--) {
       for (let n = 1; n <= 3; n++) {
-        const key = `seed-goal-history-${w}-${n}`;
+        const key = `seed-goal-history-${thisMonday}-${w}-${n}`;
         const at = `($1::date - ${w * 7})::timestamptz + interval '${10 + n} hours'`;
         await client.query(
           `insert into english.assignments(learner_id, kind, url, source_key, title, assigned_by_member, client_id, created_at)

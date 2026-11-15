@@ -42,7 +42,7 @@ export function WeekCard({ view }: { view: WeekView }) {
         <p className="mt-3 inline-flex rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-900" data-testid="week-pending">{c.pendingTag(view.pending.pieces)}</p>
       ) : view.upcoming ? (
         <p className="mt-3 inline-flex rounded-full bg-[#E3ECE8] px-3 py-1 text-sm font-semibold text-[#1F4439]" data-testid="week-upcoming">
-          {c.upcomingTag(view.upcoming.pieces)} (<time dateTime={view.upcoming.from}>{ddmm(view.upcoming.from)}</time>)
+          {c.upcomingTag(view.upcoming.pieces, view.upcoming.kind)} (<time dateTime={view.upcoming.from}>{ddmm(view.upcoming.from)}</time>)
         </p>
       ) : null}
       <p className="mt-4 font-semibold" data-testid="streak-line">

@@ -44,8 +44,16 @@ describe("the goal of a week (S-6: a decision counts from the next Monday)", () 
     const more = decided("adjust", 5, "2026-11-12T04:00:00Z");
     expect(upcomingGoal([old], "2026-11-09")).toBeNull();
     expect(upcomingGoal([old, same], "2026-11-09")).toBeNull();
-    expect(upcomingGoal([old, more], "2026-11-09")).toEqual({ pieces: 5, from: "2026-11-16" });
+    expect(upcomingGoal([old, more], "2026-11-09")).toEqual({ pieces: 5, from: "2026-11-16", kind: "adjust" });
     expect(upcomingGoal([old, more], "2026-11-16")).toBeNull(); // it has started
+  });
+  it("times are compared as instants: Postgres text with +00 and different fraction lengths still orders right", () => {
+    const first = decided("accept", 3, "2026-11-12 03:00:00.5+00");
+    const second = decided("adjust", 6, "2026-11-12T03:00:00.25Z");
+    const early = { ...first, appliesFrom: "2026-11-16" };
+    const late = { ...second, appliesFrom: "2026-11-16" };
+    // 03:00:00.50 is LATER than 03:00:00.25 although "…5+00" < "…25Z" as plain text compares the other way round
+    expect(goalForWeek([early, late], "2026-11-16")).toBe(3);
   });
 });
 

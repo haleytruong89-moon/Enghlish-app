@@ -106,7 +106,7 @@ describe("loadPendingRows · weekly goal (W4d)", () => {
     const r = await loadPendingRows("m1", "tutor", "L1");
     expect(m.loadWeekFactsResult).toHaveBeenCalledWith("L1");
     expect(r.rows).toHaveLength(1);
-    expect(r.rows[0]).toMatchObject({ key: "goal-g1", kind: "goal", group: "roadmap", href: "/?learner=L1#goal-box", waitingTutor: false });
+    expect(r.rows[0]).toMatchObject({ key: "goal-g1", kind: "goal", group: "goals", href: "/?learner=L1#goal-box", waitingTutor: false });
     expect((await loadPendingRows("m1", "parent", "L1")).rows[0]).toMatchObject({ waitingTutor: true });
   });
   it("an answered or withdrawn proposal is not a row", async () => {
