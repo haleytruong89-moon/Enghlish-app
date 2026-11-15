@@ -1181,6 +1181,7 @@ export const assignPage = {
     unreadable: "Không đọc được ảnh này. Bạn chọn ảnh khác nhé.",
     upload_limit: "Hôm nay đã tải lên quá nhiều file (tối đa 60 lần mỗi ngày cho mỗi em). Thử lại ngày mai.",
     units_unavailable: "Phần Giao theo Unit chưa sẵn sàng (cần cập nhật cơ sở dữ liệu). Bạn bỏ chọn Unit để giao bài như thường.",
+    test_flag_unavailable: "Loại “Bài kiểm tra” chưa sẵn sàng (cần cập nhật cơ sở dữ liệu). Bạn giao ở loại Luyện tập, hoặc nhờ phụ huynh áp 0034.",
     bad_units: "Có Unit không còn trong giáo trình đã duyệt của em. Bạn tải lại trang rồi chọn lại nhé.",
     generic: "Chưa lưu được. Bạn thử lại sau ít phút.",
   } as Record<string, string>,
@@ -1973,7 +1974,7 @@ export const resultCopy = {
   testNoteSub: "Bạn chưa cần làm gì thêm.",
   lookTitle: "Mấy câu bạn nên nhìn lại",
   lookTitleTest: `Mấy câu ${tutorHonorific} sẽ xem lại cùng bạn`,
-  lookIntro: `Mỗi câu bạn được thử lại một lần. ${tutorHonorificCap} sẽ xem lần thử của bạn và nhắn lại — app không cho biết đáp án đúng.`,
+  lookIntro: `Mỗi câu bạn được thử lại một lần. ${tutorHonorificCap} sẽ xem lần thử của bạn và nhắn lại. App không hiện đáp án.`,
   youAnswered: "Bạn trả lời",
   notAnswered: "Bạn chưa trả lời câu này.",
   openTitle: "Câu viết tự do",
@@ -2062,6 +2063,7 @@ export const aiSettingsCopy = {
 };
 
 export const studioErrors: Record<string, string> = {
+  needs_update: "Phần này cần migration 0034 (cờ Bài kiểm tra). Giao ở loại Luyện tập, hoặc nhờ phụ huynh áp 0034.",
   file_type: "Chỉ nhận PDF hoặc Word .docx (không nhận .doc hay ảnh).",
   file_too_big: "File lớn hơn 15 MB.",
   pages_too_long: `Đề và đáp án quá dài để AI đọc trong một lần (đề tối đa ${PAGE_LIMITS.studio.blockMain} trang, tổng tối đa ${PAGE_LIMITS.studio.blockTotal} trang). Chọn ít trang hơn hoặc chia làm hai lần.`,

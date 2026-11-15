@@ -25,6 +25,8 @@ export type Task = {
   /** Only "delayed_check" / "transfer_check" (the child sees them as "Ôn lại bài cũ"). */
   purpose: string[];
   offLabel: OffLabel | null;
+  /** W4c2: the work counts as a "Bài kiểm tra" (flag at assigning, or a self-check step). Only the label and the hint slot change. */
+  isTest?: boolean;
   hasDraft: boolean;
   draftAt: string | null;
   filled: number | null;

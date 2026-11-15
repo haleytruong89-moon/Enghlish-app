@@ -1,4 +1,4 @@
-import { activityLabels, concepts, fallbackLabels, modeLabels, studentDeskCopy as c, work } from "@/lib/copy/vi";
+import { activityLabels, concepts, fallbackLabels, modeLabels, playerCopy, studentDeskCopy as c, work } from "@/lib/copy/vi";
 import { dayParts } from "@/lib/student/today";
 import type { Task } from "@/lib/student/types";
 
@@ -20,7 +20,8 @@ export function dueText(dueOn: string | null): { text: string; iso: string | nul
 export const offLabelText = (t: Task): string | null => (t.offLabel ? work.statusLabels[t.offLabel] : null);
 
 /** "Luyện tập (có gợi ý)" / "Bài tự làm — lần này chưa có gợi ý": only for steps of the app (never a code like PRACTICE). */
-export const modeText = (t: Task): string | null => ((t.kind === "app" || t.kind === "topic") && t.doable && t.mode ? modeLabels[t.mode].student : null);
+export const modeText = (t: Task): string | null =>
+  t.isTest && t.doable ? playerCopy.testTag : (t.kind === "app" || t.kind === "topic") && t.doable && t.mode ? modeLabels[t.mode].student : null;
 
 /** "Ôn lại bài cũ" for a delayed / transfer check step. */
 export function purposeChip(t: Task): string | null {
@@ -30,4 +31,4 @@ export function purposeChip(t: Task): string | null {
 }
 
 /** The dimmed "Hỏi gia sư · Sắp có" slot: only for a practice item of the app, never a check, a revision or link / PDF work. */
-export const showAskTutor = (t: Task): boolean => t.practice && (t.kind === "app" || t.kind === "topic") && t.doable;
+export const showAskTutor = (t: Task): boolean => t.practice && !t.isTest && (t.kind === "app" || t.kind === "topic") && t.doable;

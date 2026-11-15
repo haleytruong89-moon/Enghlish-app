@@ -26,7 +26,7 @@ export const saveDraftBodySchema = z.strictObject({
   base_updated_at: base,
 });
 export const approveBodySchema = z.strictObject({ base_updated_at: base });
-export const assignStudioBodySchema = z.strictObject({ start_on: isoDate, due_on: isoDate, client_id: clientId });
+export const assignStudioBodySchema = z.strictObject({ start_on: isoDate, due_on: isoDate, client_id: clientId, is_test: z.boolean().optional() });
 export const editBodySchema = z.strictObject({ client_id: clientId });
 export const aiSettingsBodySchema = z.strictObject({ enabled: z.boolean() });
 export const decideBodySchema = z.strictObject({

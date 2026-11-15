@@ -1475,7 +1475,7 @@ Nhánh `feature/ux-round3a` (dựa trên `feature/ux-round2` = main + 2A + 2B; P
 
 Nhánh `feature/ux-round3b` (từ `main` đã gộp 2A, 2B, 3A). Kế hoạch `docs/superpowers/plans/2026-11-14-ux-round3.md` (Task B0–B5, B7; **không có B6 "chốt tháng"** và không có bảng `session_month_closes`: phụ huynh quyết 14/11). Phụ huynh duyệt 14/11: buổi nghỉ như U16 (ngày, bên báo nghỉ Con / Thầy-cô / Khác, **có tính phí chọn tay từng buổi nghỉ**, cửa sổ −120…+60 ngày), dấu loại buổi U17 (Thường / Học bù / Không tính, theo chuỗi sửa, dấu mới nhất thắng), cùng ngày U18, công thức buổi tính phí U19, người ghi U20 (thầy/cô của em hoặc phụ huynh), U22 (một hàm thuần ở máy chủ và trình duyệt). Luật đếm buổi do thầy/cô ghi: **phụ huynh đã xác nhận 14/11**. Không có số tiền ở đâu; học sinh không thấy gì.
 
-**ĐÃ GỘP (PR #34, 14/11) và `0030_session_billing.sql` ĐÃ ÁP 14/11** (workflow "Apply database migrations", run 43596825424; không sửa nữa; trước đó 0029 đã áp, run 43590186183). Chỉ thêm, idempotent, cần 0026 + 0029. Áp bằng workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". Chưa áp: trang Buổi học vẫn có phần 3A, Ghi buổi "Thường" chạy như cũ (v2/v3), và nút buổi nghỉ / đánh dấu / Học bù báo "chưa sẵn sàng (cần cập nhật cơ sở dữ liệu)". Số migration kế tiếp sau 0030 lúc đó là 0031 (nay đã dùng: 0031 = W4a, 0032 = W4b, 0033 = W4c1; kế tiếp **0034**).
+**ĐÃ GỘP (PR #34, 14/11) và `0030_session_billing.sql` ĐÃ ÁP 14/11** (workflow "Apply database migrations", run 43596825424; không sửa nữa; trước đó 0029 đã áp, run 43590186183). Chỉ thêm, idempotent, cần 0026 + 0029. Áp bằng workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". Chưa áp: trang Buổi học vẫn có phần 3A, Ghi buổi "Thường" chạy như cũ (v2/v3), và nút buổi nghỉ / đánh dấu / Học bù báo "chưa sẵn sàng (cần cập nhật cơ sở dữ liệu)". Số migration kế tiếp sau 0030 lúc đó là 0031 (nay đã dùng: 0031 = W4a, 0032 = W4b, 0033 = W4c1, 0034 = W4c2; kế tiếp **0035**).
 
 ### Làm gì
 1. **Migration `0030`:** bảng chỉ thêm `session_absences` (dòng "bỏ" = `cancels_id` + lý do) và `session_marks` (kind, `makeup_for`, lý do, `client_id`); RLS đọc cho thầy/cô của em + phụ huynh, học sinh không, không ai ghi trực tiếp (kể cả `service_role`); hàm `eng_record_absence`, `eng_cancel_absence`, `eng_mark_session`, `eng_write_lesson_note_v4` (= v3 + loại buổi cùng giao dịch); `eng_purge_learner` / `eng_purge_preview` chép nguyên bản 0029 + hai bảng (marks → absences, trước `lesson_notes`).
@@ -1624,3 +1624,32 @@ Nhánh `feature/w4c1-paper-link` (từ `main` sau PR #36). Kế hoạch `docs/su
 - **Giới hạn trang hỏi máy chủ:** 0033 thêm `eng_practice_limits()` (chỉ đọc, `{max_files: 12}`); màn nộp của con và của người lớn hỏi hàm này (nhớ vài phút trên máy chủ) để dừng trước khi tải lên khi 0033 chưa áp (6 trang). Chữ "Không rõ thì chọn Làm lại" nằm dưới câu "lần đầu" ở màn Nộp thay.
 - **Không làm:** chấm "Mới" của trang đầu tiên khi đã đọc hết (nit bỏ qua).
 
+## W4c1 — đã gộp (cập nhật 15/11)
+**ĐÃ GỘP (PR #37) và `0033_paper_link_submit.sql` ĐÃ ÁP** (workflow "Apply database migrations", run 43682048631, 15/11; không sửa nữa).
+
+## W4c2 — Làm bài từng câu · màn sau khi nộp (S-10) · "Thử lại câu này" · "Bài kiểm tra" (15/11)
+
+Nhánh `feature/w4c2-player-result` (từ `main` sau PR #37). Kế hoạch `docs/superpowers/plans/2026-11-14-w4-student-desk.md` mục "PR W4c2". Phụ huynh duyệt "như đề xuất" (14/11): S-10 không điểm / số đúng / đáp án / giải thích; bài luyện thử lại một lần mỗi câu; bài kiểm tra không thử lại, không gợi ý; **bỏ "Nên là / Vì sao"**; cờ "Bài kiểm tra" chỉ đổi giao diện (không đổi `INDEPENDENT_CHECK`, không đổi cách engine đếm).
+
+### Đã làm
+1. **`0034_result_view_retry.sql`** (chỉ thêm, idempotent; cần 0024 + 0033): bảng `work_test_marks`, `item_retries`; hàm `eng_set_test_mark`, `eng_assign_studio_v2`, `eng_create_assignment_v3`, `eng_my_result_view`, `eng_my_retry_item`, `eng_my_test_marks`, `eng_item_retries`; **thu quyền** `eng_my_studio_review`; xóa dữ liệu một em gồm 2 bảng mới (thân purge = bản 0033 + 2 bảng; có test so từng dòng).
+2. Con: làm bài **từng câu** (chấm tiến độ, Câu trước / Câu tiếp, "Xem lại và nộp" → khai báo gợi ý → "Nộp bài"), tự lưu "Đang lưu… / Đã lưu", mở lại đúng câu đầu tiên chưa trả lời; "Luyện tập" / "Bài kiểm tra"; ô mờ "Hỏi gia sư · Sắp có" chỉ ở bài luyện tập; màn sau khi nộp S-10; "Thử lại câu này" (một lần mỗi câu); Hôm nay ghi "Bài kiểm tra" ở bài có cờ.
+3. Người lớn: ô "Loại bài: Luyện tập · Bài kiểm tra" khi giao bài Studio và bài link / PDF.
+4. **Bỏ** `StudioReview`, route `studio-review`, `studioStudentCopy` ("Nên là" / "Vì sao").
+
+### SQL phụ huynh cần áp
+`db/migrations/0034_result_view_retry.sql` — workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". **Chưa áp:** giao bài **không** chọn "Bài kiểm tra" vẫn chạy; chọn "Bài kiểm tra" báo "cần migration 0034"; màn sau khi nộp chỉ hiện biên nhận ("Đã nộp lúc …"), không có danh sách câu / thử lại. Nên áp ngay sau khi gộp.
+
+### Cách thử trên bản thử (sau khi áp 0034; gia đình THỬ)
+- Thầy/cô của Nguyên (thử): Giao bài → Studio → giao một bài "Luyện tập" và một bài "Bài kiểm tra".
+- Nguyên (thử) làm bài luyện: đóng tab giữa chừng → Hôm nay "Làm tiếp · 7/20 câu" → mở lại đúng câu; nộp có vài câu sai → "Mấy câu bạn nên nhìn lại", **không** thấy đáp án; thử lại câu 4 → "Đã gửi lần thử lại cho thầy/cô"; nút thử lại câu 4 không còn.
+- Bài kiểm tra: không có "Hỏi gia sư", sau khi nộp không có nút thử lại, có "Bài kiểm tra: thầy/cô sẽ chữa cùng bạn".
+
+### Tiêu chí đạt
+`npm run typecheck && npm run lint && npm test` xanh (gồm `tests/db/resultRetry.test.ts`, `tests/unit/{player,resultView,playerUi,migrationResultRetry,deployOrderResultRetry}.test.ts`); `npx playwright test --list` đủ test (e2e sửa: `studio.spec.ts`, `studentWork.spec.ts`, `student-no-scores.spec.ts`). **Chưa kiểm:** e2e chỉ chạy được trên CI; iPad thật chưa thử; kiểm mạng "trình duyệt không nhận đáp án" bằng e2e chưa có (đã có DB test + parser nghiêm).
+
+### Câu hỏi mở / lệch so với kế hoạch (cần phụ huynh xem)
+- **Thầy/cô xem lần thử lại ở đâu?** Kế hoạch có "Chờ duyệt: Con thử lại 1 câu" + dòng "Con thử lại" ở màn duyệt, nhưng **không nói khi nào mục đó hết chờ** (không có "đã xem"). Chưa làm phần này (chờ quyết); dữ liệu đã có (`eng_item_retries`, test đủ). Đề xuất: thêm bảng "đã xem lần thử lại" chỉ thêm, hoặc gộp vào góp ý bài nộp.
+- Bảng cờ gộp một bảng `work_test_marks` (kế hoạch cho chọn một trong hai). `item_retries.item_id` không bắt buộc dạng `q<n>` (bài chủ đề có id riêng).
+- Giữ nút "Làm lại cả bài" (bài luyện) như trước W4c2; bài kiểm tra không có.
+- Bài **viết** (không có câu hỏi) vẫn dùng form cũ; chỉ bước có câu hỏi dùng Player.

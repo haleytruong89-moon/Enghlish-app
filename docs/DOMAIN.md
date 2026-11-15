@@ -329,3 +329,9 @@ Lớp / đợt, chứng chỉ, streak, bảng xếp hạng, video; chat tự do 
 | R6 | `CAM-WS-1` chưa thuộc lát nào | Vào **W5** (đổi từ W4, 14/11); bảng quy đổi 0–5 → 0–4 cố định ở §3 |
 | R7 | Nhãn dạng câu nghe chưa có chỗ | Nhãn hạt giống mới ở migration W2, `group_key` mảng Nghe |
 | R8 | Phụ huynh "nạp bài" vs D-W8 | Phụ huynh tải file; gia sư xác nhận kết quả |
+
+## Bản 0.4 · W4c2 (15/11/2026) — màn sau khi nộp, thử lại, "Bài kiểm tra" (sửa §2 và §6)
+
+- **§2 (con thấy gì):** sau khi nộp bài trên app, con thấy **câu nên nhìn lại** (đề + câu con viết / "chưa trả lời"), **câu viết tự do** ("{thầy/cô} sẽ đọc câu này") và một dòng "Các câu còn lại: ổn" (không số). **Không** đáp án, giải thích, danh sách câu đúng, số câu đúng / sai, điểm. (Thay cách cũ "Nên là / Vì sao".)
+- **§6 (bằng chứng):** **Lần thử lại một câu** (`item_retries`, một lần mỗi câu, chỉ bài luyện tập, chỉ lần làm mới nhất, chỉ câu sai / bỏ trống hoặc người lớn đã phán Sai) **không phải bằng chứng**: không engine S7a / điểm kiến thức đọc; đi tới thầy/cô để nhắn lại. **Cờ "Bài kiểm tra"** (`work_test_marks`, đặt khi giao, chỉ trước lần nộp đầu, dòng mới nhất thắng) **chỉ đổi giao diện**: không đổi `mode` (không chuyển sang `INDEPENDENT_CHECK`), không đổi cách đếm. Bước `INDEPENDENT_CHECK` của bài chủ đề vẫn coi là "kiểm tra" như trước.
+- **Mở (chờ phụ huynh):** thầy/cô thấy lần thử lại ở đâu và "đã xem" nghĩa là gì (xem `docs/PROGRESS.md` mục "W4c2").

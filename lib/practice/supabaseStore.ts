@@ -43,6 +43,18 @@ export function createSupabasePracticeStore(): PracticeStore {
     },
 
     async createAssignment(a) {
+      // "Bài kiểm tra" flag -> v3 (0034, wraps v2). Without the flag the older calls are unchanged, so the code also runs before 0034 is applied.
+      if (a.isTest) {
+        const { data, error } = await db().rpc("eng_create_assignment_v3", {
+          p_learner: a.learnerId, p_kind: a.kind, p_url: a.url, p_title: a.title, p_tag_keys: a.tags, p_due_on: a.dueOn, p_frame: a.frameId,
+          p_files: a.files ? { main: a.files.main, answer: a.files.answer } : null, p_by: a.byMemberId, p_client_id: a.clientId, p_units: a.units, p_is_test: true,
+        });
+        if (error) {
+          if (error.code === "PGRST202" || error.code === "42883") throw new ReviewDbError("test_flag_unavailable", "eng_create_assignment_v3 is missing: apply migration 0034");
+          dbError("eng_create_assignment_v3", error);
+        }
+        return data;
+      }
       // Units -> v2 (0029). Without units the v1 call is unchanged, so the code also runs before 0029 is applied.
       if (a.units.length > 0) {
         const { data, error } = await db().rpc("eng_create_assignment_v2", {

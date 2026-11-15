@@ -6,7 +6,7 @@ import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { BusyButton } from "@/components/ui/BusyButton";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { busyCopy, studioCopy } from "@/lib/copy/vi";
+import { busyCopy, studioCopy, testMarkCopy } from "@/lib/copy/vi";
 import { addDays } from "@/lib/inquiries/dates";
 import { sendJson } from "@/lib/studio/client";
 import { studioErrorText } from "@/lib/studio/view";
@@ -16,14 +16,15 @@ export function AssignStudioForm({ draftId, today }: { draftId: string; today: s
   const router = useRouter();
   const [start, setStart] = useState(today);
   const [due, setDue] = useState(addDays(today, 7));
+  const [isTest, setIsTest] = useState(false);
   const [busy, setBusy] = useState(false);
-  const { state: saveState, track } = useSaveStatus({ start, due });
+  const { state: saveState, track } = useSaveStatus({ start, due, isTest });
   const [msg, setMsg] = useState<string | null>(null);
   const clientId = useRef(crypto.randomUUID());
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const r = await track(() => sendJson(`/api/studio/drafts/${draftId}/assign`, "POST", { start_on: start, due_on: due, client_id: clientId.current }));
+    const r = await track(() => sendJson(`/api/studio/drafts/${draftId}/assign`, "POST", { start_on: start, due_on: due, client_id: clientId.current, ...(isTest ? { is_test: true } : {}) }));
     setBusy(false);
     if (!r.ok) return setMsg(studioErrorText(r.error));
     clientId.current = crypto.randomUUID();
@@ -40,6 +41,18 @@ export function AssignStudioForm({ draftId, today }: { draftId: string; today: s
         {studioCopy.dueOn}
         <input type="date" data-testid="assign-due" value={due} onChange={(e) => setDue(e.target.value)} className="min-h-11 rounded-lg border border-line px-3" />
       </label>
+      <fieldset className="m-0 flex flex-col border-0 p-0" data-testid="assign-kind">
+        <legend className="text-xs font-semibold">{testMarkCopy.label}</legend>
+        <div className="flex gap-2">
+          {([false, true] as const).map((t) => (
+            <label key={String(t)} className="flex min-h-11 items-center gap-2 rounded-lg border border-line px-3 text-sm has-[:checked]:border-accent has-[:checked]:bg-[#E3ECE8]">
+              <input type="radio" name="work-kind" data-testid={t ? "assign-kind-test" : "assign-kind-practice"} checked={isTest === t} onChange={() => setIsTest(t)} />
+              {t ? testMarkCopy.test : testMarkCopy.practice}
+            </label>
+          ))}
+        </div>
+        <span className="mt-1 max-w-xs text-xs text-muted">{isTest ? testMarkCopy.hintTest : testMarkCopy.hintPractice}</span>
+      </fieldset>
       <SaveStatus state={saveState} />
       <BusyButton busy={busy} busyLabel={busyCopy.saving} type="submit"  data-testid="assign-submit" className="min-h-12 rounded-xl bg-accent px-5 font-bold text-white">{studioCopy.assign}</BusyButton>
       {msg ? <p role="alert" className="w-full text-sm text-[#8A1C12]">{msg}</p> : null}

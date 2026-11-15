@@ -85,10 +85,10 @@ describe("migrations", () => {
         "accepted_additions", "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
         "ai_runs", "ai_settings", "app_errors", "app_feedback", "app_feedback_events", "artifact_versions", "assessment_policies", "assignment_events", "assignment_units", "assignments", "assistance_events", "attempt_auto_checks",
         "attempts", "audit_log", "catalogue_versions", "competency_state", "consents", "curricula", "curriculum_unit_events", "curriculum_unit_points", "curriculum_units", "curriculum_versions", "dimensions", "engine_policy_map", "episode_marks", "episodes", "error_tags", "exposure_log", "external_results",
-        "families", "feedback_notes", "files", "import_batches", "inquiry_instances", "inquiry_templates", "instance_item_keys", "item_decisions", "learner_intake", "learners", "lesson_note_units", "lesson_notes", "level_decisions", "login_names", "mastery_decisions", "members",
+        "families", "feedback_notes", "files", "import_batches", "inquiry_instances", "inquiry_templates", "instance_item_keys", "item_decisions", "item_retries", "learner_intake", "learners", "lesson_note_units", "lesson_notes", "level_decisions", "login_names", "mastery_decisions", "members",
         "observations", "point_decisions", "point_policies", "point_state", "reading_reports", "recheck_events", "relationships", "results", "revision_checks", "revision_marks", "roadmap_main_curriculum", "roadmap_milestones", "schema_migrations", "session_absences", "session_marks", "skill_domains", "skill_groups", "skill_leaves", "skill_maps", "source_transcripts", "sources", "studio_drafts", "studio_item_meta", "submission_feedback", "submissions", "tag_marks",
         "target_set_definitions", "target_sets", "targets", "teaching_notes", "template_item_keys", "template_step_sources", "test_frames", "track_settings", "tracks", "tutorwork_settings", "upload_tickets",
-        "validation_decisions", "working_drafts",
+        "validation_decisions", "work_test_marks", "working_drafts",
       ],
     );
     for (const r of rows) expect(r.relrowsecurity, r.relname).toBe(true);
@@ -118,10 +118,10 @@ describe("migrations", () => {
       "accepted_additions", "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
       "app_feedback", "app_feedback_events", "artifact_versions", "assessment_policies", "assignment_events", "assignment_units", "assignments", "assistance_events", "attempt_auto_checks", "attempts",
       "audit_log", "catalogue_versions", "competency_state", "consents", "curricula", "curriculum_unit_events", "curriculum_unit_points", "curriculum_units", "curriculum_versions", "dimensions", "episode_marks", "episodes", "error_tags", "exposure_log", "external_results", "families", "feedback_notes", "files",
-      "import_batches", "inquiry_instances", "inquiry_templates", "instance_item_keys", "item_decisions", "learner_intake", "learners", "lesson_note_units", "lesson_notes", "level_decisions", "mastery_decisions", "members", "observations",
+      "import_batches", "inquiry_instances", "inquiry_templates", "instance_item_keys", "item_decisions", "item_retries", "learner_intake", "learners", "lesson_note_units", "lesson_notes", "level_decisions", "mastery_decisions", "members", "observations",
       "point_decisions", "point_state", "reading_reports", "recheck_events", "relationships", "results", "revision_checks", "revision_marks", "roadmap_main_curriculum", "roadmap_milestones", "session_absences", "session_marks", "skill_domains", "skill_groups", "skill_leaves", "skill_maps", "source_transcripts", "sources", "studio_drafts", "studio_item_meta", "submission_feedback", "submissions", "tag_marks", "target_set_definitions",
       "target_sets", "targets", "teaching_notes", "template_item_keys", "template_step_sources", "test_frames", "tracks", "validation_decisions",
-      "working_drafts",
+      "work_test_marks", "working_drafts",
     ]);
     expect(rows.some((r) => r.w)).toBe(false);
   });
