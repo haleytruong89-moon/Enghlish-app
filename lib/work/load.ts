@@ -1,10 +1,10 @@
 import "server-only";
 import { getAuthUser } from "@/lib/auth/session";
 import type { MyActivityNote, MyFeedbackItem, MyRevisionView } from "@/lib/revision/types";
-import { handleStudentActivity, handleStudentActivityNote, handleStudentHome, handleStudentRevision, handleStudentStudioReview } from "./handlers";
+import { handleStudentActivity, handleStudentActivityNote, handleStudentHome, handleStudentResultView, handleStudentRevision, handleStudentTestMarks } from "./handlers";
 import { createSupabaseWorkStore } from "./supabaseStore";
 import type { ReviewItem } from "@/lib/levels/types";
-import type { StudioReviewView } from "@/lib/studio/types";
+import type { ResultView } from "@/lib/student/result";
 import type { ActivityView, HomeView } from "./types";
 
 export type StudentHomeData =
@@ -51,9 +51,17 @@ export async function loadRevisionPage(activityId: string): Promise<RevisionPage
   return { kind: "ok", revision: (res.body as { revision: MyRevisionView }).revision };
 }
 
-/** Board 20 data of a Studio step for the signed-in child; null for weekly topics, before the first submission, or on any error. */
-export async function loadStudioReview(activityId: string): Promise<StudioReviewView | null> {
+/** The screen after submitting (S-10) for the signed-in child; null before the first submission, for a step without auto-check, before 0034, or on any error. */
+export async function loadResultView(activityId: string): Promise<ResultView | null> {
   const user = await currentUser();
-  const res = await handleStudentStudioReview({ user, store: createSupabaseWorkStore() }, activityId).catch(() => null);
-  return (res?.body as { review?: StudioReviewView | null } | undefined)?.review ?? null;
+  const res = await handleStudentResultView({ user, store: createSupabaseWorkStore() }, activityId).catch(() => null);
+  return res?.body.result ?? null;
+}
+
+/** Is this work a "Bài kiểm tra" (flag at assigning, or a self-check step)? Unreadable / before 0034 → only the step's own mode decides. */
+export async function loadIsTest(activityId: string, mode: string): Promise<boolean> {
+  if (mode === "INDEPENDENT_CHECK") return true;
+  const user = await currentUser();
+  const res = await handleStudentTestMarks({ user, store: createSupabaseWorkStore() }).catch(() => null);
+  return !!res?.body.activityIds.includes(activityId);
 }

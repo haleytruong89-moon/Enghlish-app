@@ -129,3 +129,9 @@ export function parseSeen(input: unknown): SeenRow[] {
     closingNote: x.closing_note ?? null,
   }));
 }
+
+/** eng_my_test_marks(): ids of the child's own work that counts as a test. Anything else → refused (null from the caller's catch). */
+export function parseTestMarks(input: unknown): { activityIds: Set<string>; assignmentIds: Set<string> } {
+  const r = z.strictObject({ activity_ids: z.array(z.string()), assignment_ids: z.array(z.string()) }).parse(input);
+  return { activityIds: new Set(r.activity_ids), assignmentIds: new Set(r.assignment_ids) };
+}

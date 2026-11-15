@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
-import { messages, studentDeskCopy, work } from "@/lib/copy/vi";
-import { LEARNER_IDS, loginAs } from "./helpers";
+import { playerCopy, studentDeskCopy, work } from "@/lib/copy/vi";
+import { LEARNER_IDS, loginAs, studentVisibleText } from "./helpers";
 
 // S4: the child's side. The dev seed starts the test learners' week 3 days ago, so An has steps 1-7 of A-W1-VOLCANOES
 // released (step 3 = reading + questions, step 6 = writing, step 4 = canvas which is still on paper) and Nguyên has all of
@@ -47,46 +47,54 @@ test.describe("An (thử): reading step, writing step, receipts", () => {
 
     await row(page, AN_TITLE, 3).getByRole("link").click();
     await expect(page).toHaveURL(/\/activities\/[0-9a-f-]{36}$/);
-    await expect(page.getByTestId("mode-banner")).toContainText(messages.independentCheck);
+    // a one-time check is a test for the child: one question at a time, no hint slot
+    await expect(page.getByTestId("test-line")).toBeVisible();
+    await expect(page.getByTestId("ask-tutor")).toHaveCount(0);
     await expect(page.getByTestId("source-text")).toContainText("Deep under the ground");
+    const dotButtons = page.getByTestId("question-dots").getByRole("button");
 
     // answer: one multiple-choice, one short answer
     await page.getByTestId("question-W1-R1").getByLabel("b) why volcanoes erupt, and why eruptions are different", { exact: true }).check();
+    await page.getByTestId("player-next").click();
     const short = page.getByTestId("question-W1-R2").getByRole("textbox");
     await short.fill("Melted rock under the ground.");
     await short.press("Tab"); // leaving the field saves the draft
-    await expect(page.getByTestId("save-status")).toContainText("Đã tự lưu lúc");
+    await page.getByTestId("player-next").click(); // moving on saves too
+    await expect(page.getByTestId("save-status")).toContainText(playerCopy.saved);
 
-    // the draft survives a reload
+    // the draft survives a reload and the player opens on the first question without an answer (question 3)
     await page.reload();
+    await expect(page.getByTestId("question-W1-R3")).toBeVisible();
+    await dotButtons.nth(1).click();
     await expect(page.getByTestId("question-W1-R2").getByRole("textbox")).toHaveValue("Melted rock under the ground.");
+    await dotButtons.nth(0).click();
     await expect(page.getByTestId("question-W1-R1").getByLabel("b) why volcanoes erupt, and why eruptions are different", { exact: true })).toBeChecked();
 
     // help must be declared first
-    await page.getByRole("button", { name: work.submit, exact: true }).click();
+    await page.getByTestId("player-submit-top").click();
+    await expect(page.getByTestId("player-missing")).toBeVisible();
+    await page.getByTestId("player-submit").click();
     await expect(page.getByTestId("problem")).toHaveText(work.needHelp);
     await page.getByLabel(work.help.none).check();
     const [sent] = await Promise.all([
       page.waitForResponse((r) => r.url().includes("/api/attempts") && r.request().method() === "POST"),
-      page.getByRole("button", { name: work.submit, exact: true }).click(),
+      page.getByTestId("player-submit").click(),
     ]);
     expect(sent.status(), `POST /api/attempts answered: ${await sent.text()}`).toBe(201);
 
-    const receipt = page.getByTestId("receipt");
-    await expect(receipt).toBeVisible();
-    // the receipt stays on screen (no background refresh swaps the form away from under it)
-    await page.waitForLoadState("networkidle");
-    await expect(receipt).toBeVisible();
-    await expect(receipt.getByRole("status")).toHaveText(/^Đã nộp lúc \d{2}:\d{2}$/);
-    await expect(receipt).toContainText(messages.submitted);
-    // no right / wrong / score anywhere on the screen or in the markup
+    // S-10: the result screen (a test: no retry), never a score, an answer or a right / wrong count
+    const resultScreen = page.getByTestId("result-view");
+    await expect(resultScreen).toBeVisible();
+    await expect(resultScreen).toHaveAttribute("data-test", "yes");
+    await expect(page.getByTestId("result-test-note")).toBeVisible();
+    await expect(page.locator('[data-testid^="retry-open-"]')).toHaveCount(0);
     const html = await page.content();
     expectNoResults(html);
     expect(html).not.toMatch(/\d\s*\/\s*4\s*·/);
-    expect(await page.locator("body").innerText()).not.toMatch(/Đúng|Chưa đúng|Sai rồi|đáp án đúng/i);
+    expect(await studentVisibleText(page)).not.toMatch(/Đúng|Chưa đúng|Sai rồi|đáp án đúng|Nên là|Vì sao/i);
 
     // back on the home page the step is done and the next task moved on
-    await receipt.getByRole("link", { name: work.homeLink }).click();
+    await page.getByTestId("result-home").click();
     await expect(page).toHaveURL(/\/$/);
     await expect(row(page, AN_TITLE, 3)).toHaveCount(0); // a sent step is no longer a task…
     await page.reload();
@@ -212,7 +220,7 @@ test.describe("Nguyên (thử)", () => {
 
     await row(page, NGUYEN_TITLE, 1).getByRole("link").click();
     await expect(page.getByTestId("source-text").first()).toBeVisible();
-    await expect(page.getByTestId("mode-banner")).toBeVisible();
+    await expect(page.getByTestId("work-kind")).toBeVisible();
     // the technical code of the activity never shows
     expect(await page.locator("body").innerText()).not.toMatch(/ACT-|baseline|INDEPENDENT_CHECK/);
 

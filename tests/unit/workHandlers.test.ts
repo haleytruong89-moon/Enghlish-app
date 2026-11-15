@@ -5,7 +5,8 @@ import {
   handleSaveRevisionDraft,
   handleStudentActivity,
   handleStudentActivityNote,
-  handleStudentStudioReview,
+  handleStudentResultView,
+  handleRetryItem,
   handleStudentFeedback,
   handleStudentHome,
   handleStudentRevision,
@@ -80,7 +81,9 @@ function makeStore(over: Partial<WorkStore> = {}) {
     getMyFeedback: vi.fn(async (): Promise<unknown> => ({ items: [] })),
     getMyRevision: vi.fn(async (): Promise<unknown> => rpcRevision),
     getMyActivityNote: vi.fn(async (): Promise<unknown> => null),
-    getMyStudioReview: vi.fn(async (): Promise<unknown> => null),
+    getMyResultView: vi.fn(async (): Promise<unknown> => null),
+    retryItem: vi.fn(async (): Promise<unknown> => ({ id: "r1", replayed: false })),
+    getMyTestMarks: vi.fn(async (): Promise<unknown> => ({ activity_ids: [], assignment_ids: [] })),
     saveRevisionDraft: vi.fn(async (): Promise<unknown> => ({ revision: 1, saved_at: "2026-10-14T08:00:00Z", other_tab_changed: false })),
     submitRevision: vi.fn(async (): Promise<unknown> => rpcReceipt),
     getActivity: vi.fn(async (): Promise<unknown> => rpcActivity),
@@ -433,16 +436,27 @@ describe("S6: the child's revision routes", () => {
   });
 });
 
-describe("Studio B1: the child's review", () => {
-  it("Studio review: the child's own step only; a broken or empty answer shows nothing", async () => {
-    const store = makeStore({
-      getMyStudioReview: vi.fn(async (): Promise<unknown> => ({ attempt_no: 1, submitted_at: "2026-11-05T03:00:00Z", wrong: [{ n: 2, stem: "s", given: "B. can't", expected: "A. must", explanation_vi: "x" }], pending: [8] })),
-    });
-    const ok = await handleStudentStudioReview(deps("studentAn", store), ACT_AN);
-    expect(ok.body).toEqual({ review: { attemptNo: 1, submittedAt: "2026-11-05T03:00:00Z", wrong: [{ n: 2, stem: "s", given: "B. can't", expected: "A. must", explanationVi: "x" }], pending: [8] } });
-    const extra = makeStore({ getMyStudioReview: vi.fn(async (): Promise<unknown> => ({ attempt_no: 1, submitted_at: "x", wrong: [], pending: [], correct: 5 })) });
-    expect((await handleStudentStudioReview(deps("studentAn", extra), ACT_AN)).body).toEqual({ review: null });
-    expect((await handleStudentStudioReview(deps("studentNguyen", store), ACT_AN)).status).toBe(404);
-    expect((await handleStudentStudioReview(deps("parent", store), ACT_AN)).status).toBe(403);
+describe("W4c2: the child's result screen and retry", () => {
+  const view = { attempt_no: 1, submitted_at: "2026-11-05T03:00:00Z", is_test: false, others_fine: true, look: [{ id: "q2", n: 2, stem: "s", given: "B. can't", retry: null, can_retry: true }], open: [] };
+  it("result: the child's own step only; a broken or answer-carrying reply shows nothing", async () => {
+    const store = makeStore({ getMyResultView: vi.fn(async (): Promise<unknown> => view) });
+    const ok = await handleStudentResultView(deps("studentAn", store), ACT_AN);
+    expect(ok.body).toEqual({ result: { attemptNo: 1, submittedAt: "2026-11-05T03:00:00Z", isTest: false, othersFine: true, look: [{ id: "q2", n: 2, stem: "s", given: "B. can't", retryText: null, canRetry: true }], open: [] } });
+    const extra = makeStore({ getMyResultView: vi.fn(async (): Promise<unknown> => ({ ...view, look: [{ ...view.look[0], expected: "A. must" }] })) });
+    expect((await handleStudentResultView(deps("studentAn", extra), ACT_AN)).body).toEqual({ result: null });
+    expect((await handleStudentResultView(deps("studentNguyen", store), ACT_AN)).status).toBe(404);
+    expect((await handleStudentResultView(deps("parent", store), ACT_AN)).status).toBe(403);
+  });
+  it("retry: validates the body, maps the database tags, a replay is 200", async () => {
+    const good = { item_id: "q2", answer: "A. must", client_id: "0b0f6f1e-0000-4000-8000-000000000001" };
+    expect((await handleRetryItem(deps("studentAn", makeStore()), ACT_AN, good)).status).toBe(201);
+    expect((await handleRetryItem(deps("studentAn", makeStore({ retryItem: vi.fn(async (): Promise<unknown> => ({ id: "r", replayed: true })) })), ACT_AN, good)).status).toBe(200);
+    for (const bad of [{}, { ...good, answer: "  " }, { ...good, extra: 1 }, { ...good, client_id: "x" }]) expect((await handleRetryItem(deps("studentAn", makeStore()), ACT_AN, bad)).status, JSON.stringify(bad)).toBe(400);
+    const refuse = (tag: string, code = "23514") => makeStore({ retryItem: vi.fn(async () => { throw new WorkDbError(code, `x: ${tag}`); }) });
+    expect((await handleRetryItem(deps("studentAn", refuse("a test has no retry (test_no_retry)")), ACT_AN, good)).body).toMatchObject({ error: "test_no_retry" });
+    expect((await handleRetryItem(deps("studentAn", refuse("(already_retried)", "23505")), ACT_AN, good)).status).toBe(409);
+    expect((await handleRetryItem(deps("studentAn", refuse("(bad_item)", "22023")), ACT_AN, good)).status).toBe(400);
+    expect((await handleRetryItem(deps("studentNguyen", makeStore()), ACT_AN, good)).status).toBe(404);
+    expect((await handleRetryItem(deps("parent", makeStore()), ACT_AN, good)).status).toBe(403);
   });
 });

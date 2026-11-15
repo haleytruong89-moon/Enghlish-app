@@ -2,7 +2,7 @@
 /** Parse the jsonb of the Studio functions (0024). Anything unexpected throws (→ 500, logged) instead of showing a half-right screen. */
 import { z } from "zod";
 import { studioDraftSchema } from "./schema";
-import type { AiSettingsView, DraftFiles, DraftListItem, DraftView, PendingInbox, StudioReviewView } from "./types";
+import type { AiSettingsView, DraftFiles, DraftListItem, DraftView, PendingInbox, RetryInbox } from "./types";
 
 const num = z.union([z.number(), z.string()]).transform(Number);
 const status = z.enum(["extracting", "ai_failed", "draft", "approved", "discarded"]);
@@ -62,18 +62,25 @@ export function parsePending(raw: unknown): PendingInbox {
   };
 }
 
-/** null / {} → null (not a Studio step, nothing submitted). Strict keys: anything else the database might add never reaches the child. */
-export function parseStudioReview(raw: unknown): StudioReviewView | null {
-  if (raw === null || raw === undefined || (typeof raw === "object" && Object.keys(raw as object).length === 0)) return null;
-  const r = z
-    .strictObject({
-      attempt_no: z.number().int(),
-      submitted_at: z.string(),
-      wrong: z.array(z.strictObject({ n: z.number().int(), stem: z.string(), given: z.string(), expected: z.string().nullable(), explanation_vi: z.string().nullable() })),
-      pending: z.array(z.number().int()),
+export function parseRetryPending(raw: unknown): RetryInbox {
+  const p = z
+    .object({
+      count: num,
+      items: z.array(z.object({
+        attempt_id: z.string(), learner_id: z.string(), alias: z.string(), is_test: z.boolean(), activity_id: z.string(), title: z.string(),
+        submitted_at: z.string(), since: z.string(),
+        retries: z.array(z.object({ item_id: z.string(), n: z.number().int(), stem: z.string(), given: z.string(), retry: z.string(), at: z.string() })),
+      })),
     })
     .parse(raw);
-  return { attemptNo: r.attempt_no, submittedAt: r.submitted_at, wrong: r.wrong.map((w) => ({ n: w.n, stem: w.stem, given: w.given, expected: w.expected, explanationVi: w.explanation_vi })), pending: r.pending };
+  return {
+    count: p.count,
+    attempts: p.items.map((a) => ({
+      attemptId: a.attempt_id, learnerId: a.learner_id, alias: a.alias, isTest: a.is_test, activityId: a.activity_id, title: a.title,
+      submittedAt: a.submitted_at, since: a.since,
+      retries: a.retries.map((r) => ({ itemId: r.item_id, n: r.n, stem: r.stem, given: r.given, retry: r.retry, at: r.at })),
+    })),
+  };
 }
 
 export function parseAiSettings(raw: unknown): AiSettingsView {

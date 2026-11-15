@@ -46,7 +46,7 @@ export interface StudioStore {
   failExtraction(a: { draftId: string; errorCode: string; runId: string | null }): Promise<unknown>;
   discardDraft(a: { draftId: string; byMemberId: string }): Promise<unknown>;
   approveDraft(a: { draftId: string; base: string; build: unknown; byMemberId: string }): Promise<unknown>;
-  assign(a: { draftId: string; startOn: string; dueOn: string; byMemberId: string; clientId: string }): Promise<unknown>;
+  assign(a: { draftId: string; startOn: string; dueOn: string; byMemberId: string; clientId: string; isTest: boolean }): Promise<unknown>;
   pending(a: { byMemberId: string; allowReal: boolean }): Promise<unknown>;
   /** Writes the Kết quả bài of submitted Studio attempts that have no pending item and no result yet (idempotent; returns how many). */
   retryResults(a: { byMemberId: string; allowReal: boolean }): Promise<unknown>;
@@ -101,7 +101,7 @@ async function staff(deps: StudioDeps): Promise<{ ok: true; member: Member } | {
 }
 
 /** Database errors → HTTP. The "(tag)" at the end of a message becomes the error code the screens explain (lib/copy/vi.ts studioErrors). */
-export function fromStudioDbError(err: unknown): HandlerResult {
+export function fromStudioDbError(err: unknown, opts: { v2?: boolean } = {}): HandlerResult {
   if (err instanceof ReviewDbError) {
     const tag = /\(([a-z_]+)\)\s*$/.exec(err.detail)?.[1] ?? null;
     switch (err.code) {
@@ -113,6 +113,11 @@ export function fromStudioDbError(err: unknown): HandlerResult {
         return fail(409, tag ?? "conflict");
       case "54000":
         return fail(429, "upload_limit");
+      case "PGRST202":
+      case "42883":
+        // Only the v2 assign call (the "Bài kiểm tra" flag) needs 0034; a missing function elsewhere is a real fault (rethrown below).
+        if (opts.v2) return fail(409, "needs_update");
+        break;
       case "23514":
       case "22023":
       case "22004":
@@ -277,10 +282,10 @@ export async function handleAssign(deps: StudioDeps, draftId: string, raw: unkno
   const p = assignStudioBodySchema.safeParse(raw);
   if (!p.success) return fail(400, "invalid_body");
   try {
-    const r = (await deps.store.assign({ draftId, startOn: p.data.start_on, dueOn: p.data.due_on, byMemberId: g.grant.member.id, clientId: p.data.client_id })) as { instance_id: string; activity_id: string; replayed: boolean };
+    const r = (await deps.store.assign({ draftId, startOn: p.data.start_on, dueOn: p.data.due_on, byMemberId: g.grant.member.id, clientId: p.data.client_id, isTest: p.data.is_test === true })) as { instance_id: string; activity_id: string; replayed: boolean };
     return { status: r.replayed ? 200 : 201, body: r };
   } catch (err) {
-    return fromStudioDbError(err);
+    return fromStudioDbError(err, { v2: p.data.is_test === true });
   }
 }
 

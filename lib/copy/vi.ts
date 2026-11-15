@@ -736,6 +736,8 @@ export const purgePage = {
     roadmap_milestones: "Mốc lộ trình",
     roadmap_main_curriculum: "Giáo trình chính của Hành trình",
     submission_feedback: "Góp ý cho bài nộp",
+    item_retries: "Lần thử lại câu",
+    work_test_marks: "Dấu bài kiểm tra",
     login_names: "Tên đăng nhập ngắn",
     learners: "Hồ sơ của em",
     members: "Tài khoản của em trong app",
@@ -1179,6 +1181,7 @@ export const assignPage = {
     unreadable: "Không đọc được ảnh này. Bạn chọn ảnh khác nhé.",
     upload_limit: "Hôm nay đã tải lên quá nhiều file (tối đa 60 lần mỗi ngày cho mỗi em). Thử lại ngày mai.",
     units_unavailable: "Phần Giao theo Unit chưa sẵn sàng (cần cập nhật cơ sở dữ liệu). Bạn bỏ chọn Unit để giao bài như thường.",
+    test_flag_unavailable: "Loại “Bài kiểm tra” chưa sẵn sàng (cần cập nhật cơ sở dữ liệu). Bạn giao ở loại Luyện tập, hoặc nhờ phụ huynh áp 0034.",
     bad_units: "Có Unit không còn trong giáo trình đã duyệt của em. Bạn tải lại trang rồi chọn lại nhé.",
     generic: "Chưa lưu được. Bạn thử lại sau ít phút.",
   } as Record<string, string>,
@@ -1931,19 +1934,85 @@ export const studioCopy = {
   assignedLine: (start: string, due: string) => `Đã giao: làm từ ${start}, hạn ${due}`,
 };
 
-// Studio B1 — "Câu cần xem lại" (board 20). The child: no score, no count of right items, no ratio, no tag, no skill.
-export const studioStudentCopy = {
-  title: "Câu cần xem lại",
-  intro: "Xem lại các câu dưới đây, rồi làm lại nếu bạn muốn.",
+// W4c2 — làm bài từng câu trên app (S-3). Xưng "bạn"; người dạy là tutorHonorific. Không điểm, không đáp án.
+export const playerCopy = {
+  practiceTag: "Luyện tập",
+  testTag: "Bài kiểm tra",
+  testLineBold: "Bài kiểm tra: tự làm, không có gợi ý.",
+  testLineRest: ` Cứ làm hết sức mình — ${tutorHonorific} cần thấy bạn tự làm được đến đâu.`,
+  exit: "Thoát",
+  exitSaved: "Thoát · bài đã được lưu",
+  exitAnyway: "Thoát, bài chưa được lưu",
+  progress: (a: number, b: number) => `${a}/${b} câu`,
+  progressLabel: "Số câu đã trả lời",
+  questionOf: (n: number) => `Câu ${n}`,
+  prev: "Câu trước",
+  next: "Câu tiếp",
+  review: "Xem lại và nộp",
+  dotsLabel: "Các câu của bài",
+  dotAnswered: (n: number) => `Câu ${n}: đã trả lời`,
+  dotEmpty: (n: number) => `Câu ${n}: chưa trả lời`,
+  gotoQuestion: (n: number) => `Đến câu ${n}`,
+  saving: "Đang lưu…",
+  saved: "Đã lưu",
+  notSaved: "Chưa lưu được. Bài vẫn còn trên màn hình, bạn đừng đóng trang nhé.",
+  beforeSubmit: "Trước khi nộp",
+  missing: (ns: number[]) => `Bạn chưa trả lời câu ${ns.join(", ")}. Bạn vẫn nộp được, hoặc quay lại làm tiếp.`,
+  allAnswered: "Bạn đã trả lời hết các câu.",
+  backToQuestions: "Quay lại làm tiếp",
+  submit: "Nộp bài",
+  gap: "Điền vào chỗ trống",
+  choice: "Chọn đáp án",
+  short: "Trả lời ngắn",
+  askTutor: "Hỏi gia sư",
+  askTutorSoon: "Sắp có",
+  askTutorNote: "Sắp có — gia sư sẽ gợi ý từng bước, không làm hộ. Chỉ có ở bài luyện tập, không có ở bài kiểm tra.",
+};
+
+// W4c2 — màn sau khi nộp (S-10). Không điểm, không số câu đúng, không đáp án, không giải thích.
+export const resultCopy = {
+  title: `Bạn đã nộp bài · ${tutorHonorific} sẽ xem`,
+  testNote: `Bài kiểm tra: ${tutorHonorific} sẽ chữa cùng bạn.`,
+  testNoteSub: "Bạn chưa cần làm gì thêm.",
+  lookTitle: "Mấy câu bạn nên nhìn lại",
+  lookTitleTest: `Mấy câu ${tutorHonorific} sẽ xem lại cùng bạn`,
+  lookIntro: `Mỗi câu bạn được thử lại một lần. ${tutorHonorificCap} sẽ thấy lần thử của bạn. App không hiện đáp án.`,
+  youAnswered: "Bạn trả lời",
+  notAnswered: "Bạn chưa trả lời câu này.",
+  openTitle: `Câu ${tutorHonorific} sẽ đọc`,
+  openNote: `${tutorHonorificCap} sẽ đọc câu này`,
   youWrote: "Bạn viết",
-  blank: "Bạn để trống câu này",
-  shouldBe: "Nên là",
-  why: "Vì sao",
-  pending: (n: number) => `${tutorHonorificCap} sẽ xem ${n === 1 ? "câu" : `${n} câu`} này`,
-  pendingList: (ns: number[]) => `Câu ${ns.join(", ")}`,
-  nothingToReview: "Không có câu nào cần xem lại lúc này.",
-  home: "Về Việc tiếp theo",
-  retry: "Làm lại",
+  othersFine: "Các câu còn lại: ổn",
+  nothing: `Không có câu nào cần nhìn lại. ${tutorHonorificCap} vẫn sẽ đọc cả bài của bạn.`,
+  home: "Về Hôm nay",
+  done: "Xem trong Đã làm",
+  again: "Làm lại cả bài",
+  footnote: `${tutorHonorificCap} xem bài và nhắn lại cho bạn.`,
+  questionLabel: (n: number) => `Câu ${n}`,
+};
+
+// W4c2 — "Thử lại câu này" (một lần mỗi câu, chỉ bài luyện tập).
+export const retryCopy = {
+  open: "Thử lại câu này",
+  inputLabel: (n: number) => `Câu trả lời mới cho câu ${n}`,
+  placeholder: "Viết lại câu trả lời của bạn",
+  send: `Gửi cho ${tutorHonorific}`,
+  later: "Để sau",
+  sending: "Đang gửi…",
+  sent: `Đã gửi lần thử lại cho ${tutorHonorific}`,
+  yourRetry: "Lần thử lại của bạn",
+  failed: "Chưa gửi được. Bạn thử lại nhé.",
+  refused: "Câu này đã thử lại rồi, hoặc bài này không có thử lại.",
+};
+
+// W4c2 — cờ "Bài kiểm tra" khi giao bài (người lớn). Chỉ đổi giao diện của con; không đổi cách app đếm bằng chứng.
+export const testMarkCopy = {
+  label: "Loại bài",
+  practice: "Luyện tập",
+  test: "Bài kiểm tra",
+  hintPractice: "Con có thể thử lại từng câu một lần và sẽ thấy ô “Hỏi gia sư · Sắp có”.",
+  hintTest: `Con tự làm, không thử lại, không có ô hỏi gia sư. Cách app đếm bằng chứng không đổi.`,
+  tag: "Bài kiểm tra",
 };
 
 // Studio B1 — Hộp duyệt → "Cần thầy/cô xem" (board 21). Adults only: "đúng x/y câu" is allowed here (spec §7).
@@ -1968,6 +2037,12 @@ export const studioInboxCopy = {
   doneLine: (alias: string, correct: number, inApp: number) =>
     `Đã xong bài này của ${alias}: đúng ${correct}/${inApp} câu làm trên app. Đã ghi Kết quả bài và mục kiến thức của câu sai vào Mục cần chú ý; kỹ năng của em đang được tính lại (vài giây).`,
   partialLine: (n: number) => `Đã lưu. Còn ${n} câu chờ.`,
+  // Retries of the child (W4c2): shown beside the original answer; the row clears itself when an adult acts on that attempt afterwards.
+  retryTitle: "Con thử lại",
+  retryIntro: `Các câu con làm lại một lần sau khi nộp. Đây không phải bằng chứng và không đổi mức nào. Mục này tự hết chờ khi ${tutorHonorific} góp ý, chấm một câu, ghi kết quả hoặc duyệt bài đó.`,
+  retryHeading: (alias: string, title: string, n: number) => `${alias} · ${title} · thử lại ${n} câu`,
+  retryFirst: "Lần đầu",
+  retryNow: "Thử lại",
 };
 
 // Studio B1 — Cài đặt AI (parent only; spec §3 step 0, §5.5).
@@ -1996,6 +2071,7 @@ export const aiSettingsCopy = {
 };
 
 export const studioErrors: Record<string, string> = {
+  needs_update: "Phần này cần migration 0034 (cờ Bài kiểm tra). Giao ở loại Luyện tập, hoặc nhờ phụ huynh áp 0034.",
   file_type: "Chỉ nhận PDF hoặc Word .docx (không nhận .doc hay ảnh).",
   file_too_big: "File lớn hơn 15 MB.",
   pages_too_long: `Đề và đáp án quá dài để AI đọc trong một lần (đề tối đa ${PAGE_LIMITS.studio.blockMain} trang, tổng tối đa ${PAGE_LIMITS.studio.blockTotal} trang). Chọn ít trang hơn hoặc chia làm hai lần.`,
@@ -2312,6 +2388,7 @@ export const pendingCopy = {
   kinds: {
     work: "Bài nộp",
     studioCheck: `Cần ${tutorHonorific} xem`,
+    retry: "Thử lại",
     studioDraft: "Nháp AI · đề",
     curriculumDraft: "Nháp AI · giáo trình",
     skill: "Đề xuất kỹ năng",
@@ -2322,6 +2399,7 @@ export const pendingCopy = {
   },
   need: {
     studioCheck: (n: number) => `${n} câu cần xem`,
+    retry: (n: number) => `Con thử lại ${n} câu`,
     studioDraft: "Xem nháp, sửa rồi duyệt",
     curriculumDraft: "Duyệt Unit và bảng nối",
     aiFailed: "AI chưa đọc được · soạn tay",
@@ -2339,7 +2417,7 @@ export const pendingCopy = {
   empty: "Không có gì chờ duyệt.",
   emptyGroup: "Không có mục nào ở nhóm này.",
   failed: (what: string) => `Chưa đọc được phần “${what}”. Các phần khác vẫn đúng.`,
-  sources: { work: "Bài làm", studio: `Cần ${tutorHonorific} xem`, skills: "Kỹ năng", points: "Mục kiến thức", drafts: "Nháp đề", curricula: "Giáo trình", imports: "Bài nạp", roadmap: "Lộ trình" },
+  sources: { work: "Bài làm", studio: `Cần ${tutorHonorific} xem`, retries: "Con thử lại", skills: "Kỹ năng", points: "Mục kiến thức", drafts: "Nháp đề", curricula: "Giáo trình", imports: "Bài nạp", roadmap: "Lộ trình" },
   more: "Có thể còn bài cũ hơn chưa hiện ở đây.",
   fullInbox: "Mở danh sách đầy đủ",
   deskTitle: (n: number | string) => `Chờ duyệt · ${n}`,

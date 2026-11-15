@@ -24,12 +24,11 @@ export type PendingAttempt = {
   attemptId: string; learnerId: string; alias: string; isTest: boolean; activityId: string; title: string; submittedAt: string; attemptNo: number;
   waitingDays: number; items: PendingItem[];
 };
+/** A child's retries (W4c2) that no adult has acted on since: one attempt, the retried items beside the original answer. */
+export type RetryItem = { itemId: string; n: number; stem: string; given: string; retry: string; at: string };
+export type RetryAttempt = { attemptId: string; learnerId: string; alias: string; isTest: boolean; activityId: string; title: string; submittedAt: string; since: string; retries: RetryItem[] };
+export type RetryInbox = { count: number; attempts: RetryAttempt[] };
 export type PendingInbox = { count: number; attempts: PendingAttempt[] };
-export type StudioReviewView = {
-  attemptNo: number; submittedAt: string;
-  wrong: { n: number; stem: string; given: string; expected: string | null; explanationVi: string | null }[];
-  pending: number[];
-};
 export type AiSettingsView = {
   enabled: boolean; monthlyCapUsd: number; softCapUsd: number; spentUsd: number; runsMonth: number; softReached: boolean; updatedAt: string | null;
   learners: { id: string; alias: string; isTest: boolean; aiText: boolean | null }[];

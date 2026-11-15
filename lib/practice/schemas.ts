@@ -58,6 +58,8 @@ export const createAssignmentBodySchema = z
       .refine((xs) => new Set(xs.map((x) => `${x.curriculum_id}/${x.unit_code}`)).size === xs.length, { message: "each unit once" }),
     due_on: isoDate.nullable().optional(),
     frame_id: uuid.nullable().optional(),
+    /** W4c2: "Bài kiểm tra" flag (0034). UI only; the engines count evidence the same way. */
+    is_test: z.boolean().optional(),
     file: fileMetaSchema.optional(),
     answer_file: fileMetaSchema.nullable().optional(),
   })

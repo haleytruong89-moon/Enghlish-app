@@ -111,7 +111,7 @@ Hiển thị bằng **thang 4 ô có chữ**, không dùng màu đơn thuần ("
 
 ### 3.5. Studio (đề PDF/Word → bài trong app, Studio B1)
 
-Mọi chữ lấy từ `studioCopy` / `studioStudentCopy` / `studioInboxCopy` / `aiSettingsCopy` / `studioErrors` / `studioIssueText` trong `lib/copy/vi.ts`. Chữ cho con đi qua `studioStudentCopy`; test `studioCopy.test.ts` quét điểm / x/y / %.
+Mọi chữ lấy từ `studioCopy` / `resultCopy` / `studioInboxCopy` / `aiSettingsCopy` / `studioErrors` / `studioIssueText` trong `lib/copy/vi.ts`. Chữ cho con đi qua `resultCopy`; test `studioCopy.test.ts` quét điểm / x/y / %.
 
 | Ngữ cảnh | Chữ | Ai thấy |
 |---|---|---|
@@ -121,7 +121,7 @@ Mọi chữ lấy từ `studioCopy` / `studioStudentCopy` / `studioInboxCopy` / 
 | Màn Duyệt | Duyệt đề · Chỉ câu cần xem · Kỹ năng cả phần · Đáp án (theo file của thầy/cô) · Đáp án chấp nhận · Nhãn · Kỹ năng · Không có kỹ năng phù hợp · Thiếu đáp án | Phụ huynh, gia sư |
 | Khung bên phải | Bài sẽ tạo: App tự chấm · Có thể cần thầy/cô xem · Tính bậc kỹ năng · Chỉ tín hiệu (nhãn) · Khung đề giấy | Phụ huynh, gia sư |
 | Giao bài | Giao bài · Ngày làm · Hạn nộp | Phụ huynh, gia sư |
-| Con xem lại bài | Câu cần xem lại · Bạn viết · Bạn để trống câu này · Nên là · Vì sao · Thầy/cô sẽ xem n câu này · Về Việc tiếp theo · Làm lại. **Không bao giờ** điểm, x/y, số câu đúng | Học sinh |
+| Con xem lại bài | **Đã thay ở W4c2** (xem mục "W4c2" cuối tệp): "Nên là" / "Vì sao" **không còn** hiện cho con. **Không bao giờ** điểm, x/y, số câu đúng | Học sinh |
 | Hộp duyệt, tab mới | Cần thầy/cô xem · chờ n ngày · Đúng · Sai · "Đã xong bài này của …: đúng x/y câu làm trên app…" | Phụ huynh, gia sư |
 | Cài đặt AI | Cài đặt AI · Đồng ý và bật · Tắt AI · chi phí tháng | Chỉ phụ huynh |
 
@@ -292,3 +292,22 @@ Bốn khối trong `lib/copy/vi.ts`: `submitScreenCopy` (khung chung: các bư�
 
 Luật: xưng "bạn"; người dạy là `tutorHonorific`; không điểm / đúng / sai / % / kỹ năng trên màn của con (test `submitCopy.test.ts` quét); nút chạm ≥ 44 px; câu hỏi chính là "Bạn làm lần đầu?" và câu gợi ý (hỏi cả bài PDF); màn "Nộp thay" của người lớn có thêm "Không rõ" cho câu gợi ý; nút **Nộp** tắt cho đến khi đủ ảnh và 2 câu trả lời, dòng "Còn thiếu" nói rõ thiếu gì; đổi thứ tự bằng nút **Lên / Xuống** (không kéo thả); lỗi mạng dùng một dòng "gửi lại không mất ảnh". Góp ý của người lớn: lời khen ≤ 400 chữ, tối đa 3 điều cần sửa ≤ 300 chữ mỗi điều, không từ chấm điểm.
 
+---
+## W4c2 (15/11/2026) — Làm bài từng câu · màn sau khi nộp (S-10) · "Thử lại câu này" · cờ "Bài kiểm tra"
+
+Bốn khối trong `lib/copy/vi.ts`: `playerCopy` (làm bài), `resultCopy` (sau khi nộp), `retryCopy` (thử lại một câu), `testMarkCopy` (cờ khi giao, người lớn). Đã **bỏ** `studioStudentCopy` (Nên là / Vì sao / Câu cần xem lại / Làm lại). Xưng "bạn"; người dạy là `tutorHonorific`; không điểm, không đáp án, không giải thích, không số câu đúng.
+
+| Chỗ | Chữ |
+|---|---|
+| Làm bài | "Luyện tập" / "Bài kiểm tra" · "Thoát" (hiện "Thoát · bài đã được lưu" chỉ khi đã lưu xong; chưa lưu được: "Thoát, bài chưa được lưu") · "a/b câu" (trong `data-count="work"`) · "Câu n · Điền vào chỗ trống / Chọn đáp án / Trả lời ngắn" · "Câu trước" · "Câu tiếp" · "Xem lại và nộp" · "Đang lưu…" · "Đã lưu" · "Trước khi nộp" · "Bạn chưa trả lời câu 3, 5. Bạn vẫn nộp được, hoặc quay lại làm tiếp." · "Nộp bài" |
+| Bài kiểm tra | "Bài kiểm tra: tự làm, không có gợi ý. Cứ làm hết sức mình — {thầy/cô} cần thấy bạn tự làm được đến đâu." |
+| Bài luyện tập | ô mờ "Hỏi gia sư · Sắp có" (không bấm được) + "Sắp có — gia sư sẽ gợi ý từng bước, không làm hộ. Chỉ có ở bài luyện tập, không có ở bài kiểm tra." (không có ở bài kiểm tra) |
+| Sau khi nộp | "Bạn đã nộp bài · {thầy/cô} sẽ xem" · "Mấy câu bạn nên nhìn lại" (bài kiểm tra: "Mấy câu {thầy/cô} sẽ xem lại cùng bạn") · "Bạn trả lời: “…”" / "Bạn chưa trả lời câu này." · "Câu viết tự do" + "{Thầy/cô} sẽ đọc câu này" · "Các câu còn lại: ổn" (một dòng, **không số**) · "Về Hôm nay" · "Xem trong Đã làm" · "Làm lại cả bài" (chỉ bài luyện tập) |
+| Bài kiểm tra, sau khi nộp | "Bài kiểm tra: {thầy/cô} sẽ chữa cùng bạn." + "Bạn chưa cần làm gì thêm." (không thử lại) |
+| Thử lại | "Thử lại câu này" → ô nhập → "Gửi cho {thầy/cô}" · "Để sau"; gửi rồi: "Lần thử lại của bạn: “…”" + "Đã gửi lần thử lại cho {thầy/cô}" (app **không** nói đúng hay sai) |
+| Giao bài (người lớn) | Ô "Loại bài": Luyện tập · Bài kiểm tra + một dòng giải thích ("Cách app đếm bằng chứng không đổi") |
+
+| Người lớn thấy lần thử lại | Chờ duyệt: "Thử lại" · "Con thử lại n câu"; trang "Cần thầy/cô xem" có mục "Con thử lại": "Lần đầu: …" · "Thử lại: …". Tự hết chờ khi thầy/cô góp ý, chấm một câu hoặc duyệt bài đó |
+| Con (S4, S5) | "Mỗi câu bạn được thử lại một lần. {Thầy/cô} sẽ thấy lần thử của bạn. App không hiện đáp án." · tiêu đề câu viết tự do: "Câu {thầy/cô} sẽ đọc" |
+
+Luật: cờ "Bài kiểm tra" **chỉ đổi giao diện** (không thử lại, không ô hỏi gia sư, chữ khác); không đổi `mode`, không đổi cách S7a / điểm kiến thức đếm. Lần thử lại **không phải bằng chứng** (không engine nào đọc).

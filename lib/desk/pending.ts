@@ -11,17 +11,19 @@ import { pointTitle } from "@/lib/points/view";
 import type { InboxItem } from "@/lib/review/types";
 import type { SkillInboxItem } from "@/lib/skills/types";
 import { proposalTitle } from "@/lib/skills/view";
-import type { DraftListItem, PendingAttempt } from "@/lib/studio/types";
+import type { DraftListItem, PendingAttempt, RetryAttempt } from "@/lib/studio/types";
 
 export const PENDING_GROUPS = ["all", "work", "check", "ai", "skills", "roadmap"] as const;
 export type PendingGroup = (typeof PENDING_GROUPS)[number];
-export type PendingKind = "work" | "studio_check" | "studio_draft" | "curriculum_draft" | "skill" | "point" | "flag" | "import" | "milestone";
+export type PendingKind = "work" | "studio_check" | "retry" | "studio_draft" | "curriculum_draft" | "skill" | "point" | "flag" | "import" | "milestone";
 export type PendingRow = { key: string; kind: PendingKind; group: Exclude<PendingGroup, "all">; label: string; title: string; since: string | null; need: string; href: string; waitingTutor: boolean };
 export type PendingInput = {
   learnerId: string;
   role: "tutor" | "parent";
   work: readonly InboxItem[];
   studio: readonly PendingAttempt[];
+  /** Retries (W4c2) no adult has acted on since; the row links to the section on "Cần thầy/cô xem". */
+  retries?: readonly RetryAttempt[];
   skills: readonly SkillInboxItem[];
   /** Knowledge-point proposals and ⚑ (W3); they only LINK to the "Kỹ năng" tab, where the child's tutor confirms one by one. */
   points?: readonly PointInboxItem[];
@@ -62,7 +64,7 @@ export function pendingView(p: { rows: readonly unknown[]; failed: readonly unkn
   };
 }
 
-const GROUP_OF: Record<PendingKind, Exclude<PendingGroup, "all">> = { work: "work", studio_check: "check", studio_draft: "ai", curriculum_draft: "ai", skill: "skills", point: "skills", flag: "skills", import: "check", milestone: "roadmap" };
+const GROUP_OF: Record<PendingKind, Exclude<PendingGroup, "all">> = { work: "work", studio_check: "check", retry: "check", studio_draft: "ai", curriculum_draft: "ai", skill: "skills", point: "skills", flag: "skills", import: "check", milestone: "roadmap" };
 const WAITING = ["draft", "ai_failed"] as const;
 const isWaiting = (s: string) => (WAITING as readonly string[]).includes(s);
 
@@ -88,6 +90,10 @@ export function buildPendingRows(i: PendingInput): PendingRow[] {
   for (const a of i.studio) {
     if (a.learnerId !== i.learnerId) continue;
     push({ key: `studio-${a.attemptId}`, kind: "studio_check", label: pendingCopy.kinds.studioCheck, title: a.title, since: a.submittedAt, need: pendingCopy.need.studioCheck(a.items.length), href: `/review/studio#studio-${a.attemptId}`, waitingTutor: false });
+  }
+  for (const a of i.retries ?? []) {
+    if (a.learnerId !== i.learnerId) continue;
+    push({ key: `retry-${a.attemptId}`, kind: "retry", label: pendingCopy.kinds.retry, title: a.title, since: a.since, need: pendingCopy.need.retry(a.retries.length), href: `/review/studio?learner=${a.learnerId}#retry-${a.attemptId}`, waitingTutor: false });
   }
   for (const s of i.skills) {
     if (s.learnerId !== i.learnerId) continue;

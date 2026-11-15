@@ -4,10 +4,12 @@ import { AppHeader } from "@/components/AppHeader";
 import { RevisionForm } from "@/components/revision/RevisionForm";
 import { ActivityNote } from "@/components/student/ActivityNote";
 import { SourceReader } from "@/components/student/SourceReader";
-import { StudioReview } from "@/components/student/StudioReview";
+import { Player } from "@/components/student/player/Player";
+import { StudentDeskShell } from "@/components/student/desk/StudentDeskShell";
 import { WorkForm } from "@/components/student/WorkForm";
 import { concepts, messages, modeLabels, revisionCopy, work } from "@/lib/copy/vi";
-import { loadActivityPage, loadRevisionPage, loadStudioReview } from "@/lib/work/load";
+import { loadDeskBase } from "@/lib/student/desk";
+import { loadActivityPage, loadIsTest, loadResultView, loadRevisionPage } from "@/lib/work/load";
 import { formatHm, stepTitle } from "@/lib/work/view";
 
 export const dynamic = "force-dynamic";
@@ -78,8 +80,6 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
     );
   }
   const last = a.attempts[a.attempts.length - 1];
-  // Studio B1: "Câu cần xem lại" (board 20) once something is submitted; null for weekly topics.
-  const studio = a.attempts.length > 0 ? await loadStudioReview(id) : null;
   // P12: reading text beside the questions on wide screens.
   const sideBySide = a.shape === "answers" && a.sources.some((s) => s.modality === "text" && !!s.text);
   const chip = a.purpose.includes("delayed_check")
@@ -88,6 +88,48 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
       ? concepts.transferCheck.student
       : null;
 
+  // W4c2: questions are done one at a time in the Player; writing steps keep the plain form below.
+  if (a.shape === "answers" && a.step.items.length > 0) {
+    const [base, isTest, result] = await Promise.all([loadDeskBase(), loadIsTest(id, a.mode), a.attempts.length > 0 ? loadResultView(id) : Promise.resolve(null)]);
+    if (base.kind === "login") redirect("/login");
+    if (base.kind === "ok") {
+      const aside = (
+        <div className="flex flex-col gap-3.5">
+          <ActivityNote note={data.note} />
+          <section aria-labelledby="task" className="flex flex-col gap-1.5 rounded-2xl border border-line bg-white p-4">
+            <h2 id="task" className="text-sm font-semibold text-muted">
+              {work.taskTitle}
+            </h2>
+            <p lang="en" className="text-[17px] font-semibold leading-snug">
+              {a.step.promptEn}
+            </p>
+            <p className="text-sm text-muted">
+              <span lang="en">{a.bigQuestionEn}</span>
+              {a.step.timeMin ? ` · ${work.minutes(a.step.timeMin)}` : ""}
+              {chip ? ` · ${chip}` : ""}
+            </p>
+          </section>
+          <SourceReader sources={a.sources} />
+        </div>
+      );
+      return (
+        <StudentDeskShell active="today" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest}>
+          {result || a.canSubmit ? (
+            <Player key={id} activity={a} isTest={isTest} initialResult={result} sentAt={!result && last ? last.submittedAt : null} aside={aside} />
+          ) : (
+            <section data-testid="already-submitted" className="mx-auto flex max-w-2xl flex-col gap-2 rounded-2xl border border-line bg-white p-4">
+              <p role="status" className="text-[15px] font-semibold text-accent">
+                {last ? (last.provenance === "offline" ? work.doneOffline : work.alreadySubmitted(formatHm(last.submittedAt))) : ""}
+              </p>
+              <Link href="/" className="flex min-h-12 items-center self-start rounded-xl bg-accent px-5 text-base font-bold text-white">
+                {work.homeLink}
+              </Link>
+            </section>
+          )}
+        </StudentDeskShell>
+      );
+    }
+  }
   return (
     <>
       <AppHeader />
@@ -125,9 +167,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
             <SourceReader sources={a.sources} />
           </div>
           <div className="flex flex-col gap-3.5">
-            {studio ? (
-              <StudioReview review={studio}>{a.canSubmit ? <WorkForm activity={a} /> : null}</StudioReview>
-            ) : a.canSubmit ? (
+            {a.canSubmit ? (
               <WorkForm activity={a} />
             ) : (
               <section data-testid="already-submitted" className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-4">

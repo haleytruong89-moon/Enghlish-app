@@ -41,7 +41,11 @@ export function createSupabaseStudioStore(): StudioStore {
     failExtraction: (a) => call("eng_fail_studio_extraction", { p_draft: a.draftId, p_error: a.errorCode, p_run: a.runId }),
     discardDraft: (a) => call("eng_discard_studio_draft", { p_draft: a.draftId, p_by: a.byMemberId }),
     approveDraft: (a) => call("eng_approve_studio_draft", { p_draft: a.draftId, p_base: a.base, p_build: a.build, p_by: a.byMemberId }),
-    assign: (a) => call("eng_assign_studio", { p_draft: a.draftId, p_start: a.startOn, p_due: a.dueOn, p_by: a.byMemberId, p_client_id: a.clientId }),
+    // The "Bài kiểm tra" flag (0034) goes through v2; without the flag the old function is used, so assigning keeps working before 0034 is applied.
+    assign: (a) =>
+      a.isTest
+        ? call("eng_assign_studio_v2", { p_draft: a.draftId, p_start: a.startOn, p_due: a.dueOn, p_is_test: true, p_by: a.byMemberId, p_client_id: a.clientId })
+        : call("eng_assign_studio", { p_draft: a.draftId, p_start: a.startOn, p_due: a.dueOn, p_by: a.byMemberId, p_client_id: a.clientId }),
     retryResults: (a) => call("eng_studio_retry_results", { p_by: a.byMemberId, p_allow_real: a.allowReal }),
     pending: (a) => call("eng_studio_pending", { p_by: a.byMemberId, p_allow_real: a.allowReal }),
     decide: (a) => call("eng_decide_studio_items", { p_attempt: a.attemptId, p_items: a.items, p_by: a.byMemberId, p_client_id: a.clientId }),

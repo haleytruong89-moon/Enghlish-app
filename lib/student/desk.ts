@@ -9,7 +9,7 @@ import type { ReviewPoints, StudentPracticeItem } from "@/lib/practice/types";
 import { parseReviewPoints, parseStudentPractice } from "@/lib/practice/shape";
 import { createSupabasePracticeStore } from "@/lib/practice/supabaseStore";
 import { createUserClient } from "@/lib/supabase/server";
-import { parseHistory, parseSeen, parseToday } from "./shape";
+import { parseHistory, parseSeen, parseTestMarks, parseToday } from "./shape";
 import type { HistoryPage, SeenRow, Task } from "./types";
 
 /** W4b · loaders of the child's desk. Every read goes through the USER client and an eng_my_* function (auth.uid() decides; no service role). */
@@ -65,7 +65,12 @@ export type TodayData = {
 export type TodayResult = ({ kind: "ok" } & TodayData) | { kind: "login" } | { kind: "not-found" };
 
 export async function loadToday(): Promise<TodayResult> {
-  const [tasks, practice] = await Promise.all([rpcOrNull("eng_my_today", undefined, parseToday), loadStudentPractice()]);
+  const [rawTasks, practice, marks] = await Promise.all([
+    rpcOrNull("eng_my_today", undefined, parseToday),
+    loadStudentPractice(),
+    rpcOrNull("eng_my_test_marks", undefined, parseTestMarks).catch(() => null), // before 0034: no flagged work
+  ]);
+  const tasks = rawTasks && marks ? rawTasks.map((t) => ({ ...t, isTest: (t.activityId !== null && marks.activityIds.has(t.activityId)) || (t.assignmentId !== null && marks.assignmentIds.has(t.assignmentId)) })) : rawTasks;
   if (practice.kind === "login") return { kind: "login" };
   if (practice.kind === "not-found") return { kind: "not-found" };
   return { kind: "ok", tasks, practice: practice.items, review: practice.review };

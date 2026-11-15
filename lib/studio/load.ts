@@ -10,9 +10,9 @@ import { loadTags } from "@/lib/tutorwork/load";
 import { buildStudioContext, type StudioContext } from "./context";
 import { docxToText } from "./docx";
 import { handleGetDraft, type StudioDeps } from "./handlers";
-import { parseAiSettings, parseDraftList, parsePending } from "./shape";
+import { parseAiSettings, parseDraftList, parsePending, parseRetryPending } from "./shape";
 import { createSupabaseStudioStore } from "./supabaseStore";
-import type { AiSettingsView, DraftListItem, DraftPageData, PendingInbox } from "./types";
+import type { AiSettingsView, DraftListItem, DraftPageData, PendingInbox, RetryInbox } from "./types";
 
 /** Review context of one child (call only after requireAccess / authorizeLearnerPage): the map + current levels, the track's tags, the Studio skills. */
 export async function loadStudioContext(learnerId: string, trackId: string): Promise<StudioContext> {
@@ -81,4 +81,14 @@ export async function loadStudioPending(memberId: string): Promise<PendingInbox 
   const { data, error } = await createAdminClient().rpc("eng_studio_pending", { p_by: memberId, p_allow_real: allowRealLearners() });
   if (error) return null;
   return parsePending(data);
+}
+
+/**
+ * Retries of the child's work that no adult has acted on since (W4c2, migration 0034). Before 0034 the function does not exist: that is
+ * "nothing waiting", not an error. null = unreadable for another reason.
+ */
+export async function loadRetryPending(memberId: string): Promise<RetryInbox | null> {
+  const { data, error } = await createAdminClient().rpc("eng_retry_pending", { p_by: memberId, p_allow_real: allowRealLearners() });
+  if (error) return error.code === "PGRST202" || error.code === "42883" ? { count: 0, attempts: [] } : null;
+  return parseRetryPending(data);
 }

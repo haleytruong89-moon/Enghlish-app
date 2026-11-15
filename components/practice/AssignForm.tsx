@@ -9,7 +9,7 @@ import { useRef, useState } from "react";
 import { UnitPicker } from "@/components/curriculum/UnitPicker";
 import { TagChips } from "@/components/tutor/TagChips";
 import { useTags } from "@/components/tutor/useTags";
-import { assignPage, prefillCopy, sourceLabels, unitPickerCopy } from "@/lib/copy/vi";
+import { assignPage, prefillCopy, sourceLabels, testMarkCopy, unitPickerCopy } from "@/lib/copy/vi";
 import { autoTitle, emptyPicker, selectedUnits, stateFromCodes, type PickerState, type UnitChoice } from "@/lib/curriculum/unitPicker";
 import { formatRange, type Prefill } from "@/lib/prefill";
 import { codeOf, nextAttempt, practiceErrorText, uploadAll, type SendAttempt, type UploadCache } from "@/lib/practice/client";
@@ -69,11 +69,12 @@ export function AssignForm({
   }
   const [due, setDue] = useState("");
   const [frameId, setFrameId] = useState("");
+  const [isTest, setIsTest] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState<"upload" | "save" | null>(null);
   const [round, setRound] = useState(0);
-  const { state: saveState, track } = useSaveStatus({ kind, url, title, picked, units: units.units.map((u) => `${u.curriculumId}/${u.code}`), due, frameId, pdf: pdf?.name ?? null, answer: answer?.name ?? null }, { resetKey: round });
+  const { state: saveState, track } = useSaveStatus({ kind, url, title, picked, units: units.units.map((u) => `${u.curriculumId}/${u.code}`), due, frameId, isTest, pdf: pdf?.name ?? null, answer: answer?.name ?? null }, { resetKey: round });
   const attempt = useRef<SendAttempt | null>(null);
   const uploaded = useRef<UploadCache>(new Map());
 
@@ -101,6 +102,7 @@ export function AssignForm({
     setTitleTouched(false);
     setDue("");
     setFrameId("");
+    setIsTest(false);
     setError(null);
     setDone(false);
     attempt.current = null;
@@ -122,6 +124,7 @@ export function AssignForm({
       units: selectedUnits(unitChoices, units),
       due_on: due || null,
       frame_id: frameId || null,
+      ...(isTest ? { is_test: true } : {}),
     };
     if (kind === "link") {
       body.url = url.trim();
@@ -256,6 +259,18 @@ export function AssignForm({
             {assignPage.dueLabel}
             <input type="date" min={today} max={addDays(today, 365)} value={due} onChange={(e) => setDue(e.target.value)} data-testid="assign-due" className={`${field} font-normal`} />
           </label>
+          <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0 text-sm font-medium" data-testid="assign-kind-field">
+            <legend>{testMarkCopy.label}</legend>
+            <span className="flex gap-2">
+              {([false, true] as const).map((t) => (
+                <label key={String(t)} className="flex min-h-11 items-center gap-2 rounded-lg border border-line px-3 font-normal has-[:checked]:border-accent has-[:checked]:bg-[#E3ECE8]">
+                  <input type="radio" name="work-kind" data-testid={t ? "assign-kind-test" : "assign-kind-practice"} checked={isTest === t} onChange={() => setIsTest(t)} />
+                  {t ? testMarkCopy.test : testMarkCopy.practice}
+                </label>
+              ))}
+            </span>
+            <span className="max-w-xs text-xs font-normal text-muted">{isTest ? testMarkCopy.hintTest : testMarkCopy.hintPractice}</span>
+          </fieldset>
           {frames.length > 0 ? (
             <label className="flex flex-col gap-1.5 text-sm font-medium">
               {assignPage.frameLabel}
