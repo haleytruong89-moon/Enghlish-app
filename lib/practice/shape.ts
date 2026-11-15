@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 import { SOURCE_KEYS } from "./link";
-import type { AssignmentUnitGroup, AssignmentView, ReviewPoints, StoredFile, StudentPracticeItem } from "./types";
+import type { AssignmentUnitGroup, AssignmentView, ReviewPoints, StoredFile, StudentPracticeItem, SubmissionFeedbackView } from "./types";
 
 const text = z.string();
 const nullableText = z
@@ -83,6 +83,7 @@ export function parseAssignments(raw: unknown): AssignmentView[] {
           }
         : null,
       resultId: a.result_id,
+      feedback: [],
     }));
 }
 
@@ -189,4 +190,44 @@ export function attachAssignmentUnits(assignments: AssignmentView[], rawUnits: u
     }
     return { ...a, units: groups, unitItems: items };
   });
+}
+
+// ---------- 0033: feedback on a submission ---------------------------------------------------------------------------------------
+
+const feedbackRow = z.object({
+  id: text,
+  submission_id: text,
+  assignment_id: text,
+  praise: nullableText,
+  items: z.array(z.object({ n: z.number().int(), text })).default([]),
+  author_member: text,
+  author_role: z.enum(["tutor", "parent"]),
+  author_name: nullableText,
+  created_at: text,
+  live: z.boolean(),
+});
+
+export function parseSubmissionFeedback(raw: unknown): SubmissionFeedbackView[] {
+  return z
+    .array(feedbackRow)
+    .parse(raw ?? [])
+    .map((f) => ({
+      id: f.id,
+      submissionId: f.submission_id,
+      assignmentId: f.assignment_id,
+      praise: f.praise,
+      items: f.items,
+      authorMember: f.author_member,
+      authorRole: f.author_role,
+      authorName: f.author_name,
+      createdAt: f.created_at,
+      live: f.live,
+    }));
+}
+
+/** Put each feedback on its assignment (newest first, as the database returns them). Feedback of an assignment that is not in the list is ignored. */
+export function attachSubmissionFeedback(assignments: AssignmentView[], raw: unknown): AssignmentView[] {
+  const all = parseSubmissionFeedback(raw);
+  if (all.length === 0) return assignments;
+  return assignments.map((a) => ({ ...a, feedback: all.filter((f) => f.assignmentId === a.id) }));
 }

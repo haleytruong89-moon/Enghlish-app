@@ -70,7 +70,8 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
   const [itemTags, setItemTags] = useState<ItemTags>(edit && edit.mode === "quick" ? Object.fromEntries(edit.itemTags.map((t) => [tagId(0, t.n), t.tagKey])) : {});
   const [source, setSource] = useState<ResultSource>(edit?.source ?? "practice");
   const [attempt, setAttempt] = useState<ResultAttempt>(edit ? edit.attempt : initialRetry ? "retry" : (initial?.submission?.attempt ?? "first"));
-  const [usedHint, setUsedHint] = useState(edit ? edit.usedHint : (initial?.submission?.usedHint ?? false));
+  // null = a submission whose support is unknown (grown-up sent it without knowing): not pre-filled, must be chosen before saving.
+  const [usedHint, setUsedHint] = useState<boolean | null>(edit ? edit.usedHint : initial?.submission ? initial.submission.usedHint : false);
   const [context, setContext] = useState<ResultContext>(edit?.context ?? "home");
   const [date, setDate] = useState(edit?.takenOn ?? today);
   const [superseding, setSuperseding] = useState<string | null>(edit?.id ?? null);
@@ -110,7 +111,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
     }
     if (a.submission) {
       setAttempt(a.submission.attempt);
-      setUsedHint(a.submission.usedHint ?? false); // null = a PDF, no Hint question: stays "no" unless the grown-up says otherwise
+      setUsedHint(a.submission.usedHint); // null = unknown: left empty, the grown-up must choose
     }
     if (a.frameId && frames.some((f) => f.id === a.frameId)) {
       setMode("frame");
@@ -151,6 +152,7 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
     e.preventDefault();
     setError(null);
     setSaved(null);
+    if (usedHint === null) return setError(resultPage.needHint);
     let payload: Record<string, unknown>;
     const common = {
       client_id: clientId.current,
@@ -478,10 +480,10 @@ export function ResultForm({ learnerId, frames, tags: initialTags, map, canClass
           <fieldset className="flex flex-col gap-2">
             <legend className="text-sm text-muted">{resultPage.hint}</legend>
             <div className="flex gap-2">
-              <button type="button" aria-pressed={usedHint} data-testid="hint-yes" onClick={() => setUsedHint(true)} className={seg(usedHint)}>
+              <button type="button" aria-pressed={usedHint === true} data-testid="hint-yes" onClick={() => setUsedHint(true)} className={seg(usedHint === true)}>
                 {resultPage.hintYes}
               </button>
-              <button type="button" aria-pressed={!usedHint} data-testid="hint-no" onClick={() => setUsedHint(false)} className={seg(!usedHint)}>
+              <button type="button" aria-pressed={usedHint === false} data-testid="hint-no" onClick={() => setUsedHint(false)} className={seg(usedHint === false)}>
                 {resultPage.hintNo}
               </button>
             </div>

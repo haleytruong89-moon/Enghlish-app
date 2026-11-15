@@ -11,6 +11,7 @@ import {
   handleStudentPractice,
   handleStudentSubmit,
   handleStudentUploadUrl,
+  handleWriteSubmissionFeedback,
   type PracticeDeps,
   type PracticeStore,
 } from "@/lib/practice/handlers";
@@ -68,6 +69,7 @@ function makeStore(over: Partial<PracticeStore> = {}) {
     createAssignment: vi.fn(async () => ({ id: A_LINK, replayed: false })),
     retractAssignment: vi.fn(async () => ({ replayed: false })),
     submit: vi.fn(async () => ({ id: "s1", replayed: false })),
+    writeSubmissionFeedback: vi.fn(async () => ({ id: "f1", replayed: false })),
     myPractice: vi.fn(async (_assignmentId?: string) => [studentRow({}), studentRow({ assignment_id: A_PDF, kind: "pdf", url: null, has_file: true, source_key: null, title: "Đề 3" })]),
     myPracticeFile: vi.fn(async (a: string) => (a === A_PDF ? { file_id: FILE_OTHER, path: pathOf(AN, FILE_OTHER, "pdf"), mime: "application/pdf", title: "Đề 3" } : null)),
     myReviewPoints: vi.fn(async () => ({ session_date: "2026-10-15", message: "Cố lên", labels: ["Câu điều kiện"] })),
@@ -238,14 +240,41 @@ describe("upload links: daily limit, ids come from the session", () => {
   });
 });
 
-describe("the Hint question: link assignments only", () => {
-  it("a link needs true / false; a PDF needs null (the database refuses the other way round too)", async () => {
-    const d = deps("parent", makeStore(), makeStorage());
-    expect((await handleStaffSubmit(d, AN, A_LINK, { ...goodSubmit, used_hint: null })).body).toMatchObject({ error: "invalid_body" });
-    expect((await handleStaffSubmit(d, AN, A_LINK, { ...goodSubmit, used_hint: true })).status).toBe(201);
+describe("the hint question (0033): asked for a link AND a PDF", () => {
+  it("the child must answer true / false for both kinds; null is refused", async () => {
+    const d = deps("studentAn", makeStore(), makeStorage());
     const pdfFile = { id: FILE_OTHER, mime: "application/pdf", bytes: 100 };
-    expect((await handleStaffSubmit(d, AN, A_PDF, { ...goodSubmit, used_hint: false, files: [pdfFile] })).body).toMatchObject({ error: "invalid_body" });
+    expect((await handleStudentSubmit(d, { assignment_id: A_LINK, ...goodSubmit, used_hint: null })).body).toMatchObject({ error: "invalid_body" });
+    expect((await handleStudentSubmit(d, { assignment_id: A_PDF, ...goodSubmit, used_hint: null, files: [pdfFile] })).body).toMatchObject({ error: "invalid_body" });
+    expect((await handleStudentSubmit(d, { assignment_id: A_PDF, ...goodSubmit, used_hint: true, files: [pdfFile] })).status).toBe(201);
+    expect((await handleStudentSubmit(d, { assignment_id: A_LINK, ...goodSubmit, used_hint: false })).status).toBe(201);
+  });
+
+  it("an adult sending on the child's behalf may answer or leave it empty, for both kinds", async () => {
+    const s = makeStore();
+    const d = deps("parent", s, makeStorage());
+    const pdfFile = { id: FILE_OTHER, mime: "application/pdf", bytes: 100 };
+    expect((await handleStaffSubmit(d, AN, A_LINK, { ...goodSubmit, used_hint: null })).status).toBe(201);
+    expect((await handleStaffSubmit(d, AN, A_LINK, { ...goodSubmit, used_hint: true })).status).toBe(201);
+    expect((await handleStaffSubmit(d, AN, A_PDF, { ...goodSubmit, used_hint: false, files: [pdfFile] })).status).toBe(201);
     expect((await handleStaffSubmit(d, AN, A_PDF, { ...goodSubmit, used_hint: null, files: [pdfFile] })).status).toBe(201);
+    expect(s.submit).toHaveBeenCalledWith(expect.objectContaining({ assignmentId: A_PDF, kind: "pdf", usedHint: false }));
+  });
+
+  it("up to 12 files in one submission, 13 are refused before anything is checked in storage", async () => {
+    const many = (n: number) => Array.from({ length: n }, () => png);
+    const st = makeStorage();
+    const d = deps("studentAn", makeStore(), st);
+    expect((await handleStudentSubmit(d, { assignment_id: A_LINK, ...goodSubmit, files: many(13) })).status).toBe(400);
+    expect(st.stat).not.toHaveBeenCalled();
+    expect((await handleStudentSubmit(d, { assignment_id: A_LINK, ...goodSubmit, files: many(12) })).status).toBe(201);
+  });
+
+  it("pages sent before migration 0033 is applied get a clear 409, not a 500", async () => {
+    const s = makeStore({ submit: vi.fn(async () => { throw new ReviewDbError("pages_unavailable", "x"); }) });
+    const r = await handleStudentSubmit(deps("studentAn", s, makeStorage()), { assignment_id: A_LINK, ...goodSubmit });
+    expect(r.status).toBe(409);
+    expect(r.body).toMatchObject({ error: "pages_unavailable" });
   });
 });
 
@@ -400,5 +429,77 @@ describe("SM-2: exam sheets (kind external_result)", () => {
     const st2 = makeStorage();
     await handleStaffFile(deps("parent", sheet, st2), FILE_KEY);
     expect(st2.createDownload).toHaveBeenCalledWith(pathOf(AN, FILE_KEY, "pdf"), { downloadName: "ket-qua-thi-ngoai.pdf" });
+  });
+});
+
+describe("feedback on a submission (W4c1)", () => {
+  const SUB = "e0000000-0000-4000-8000-000000000001";
+  const withSub = (id = SUB) => vi.fn(async (_l: string, a: string | null) =>
+    [assignmentRow({ submission: { id, created_at: "2026-10-16T09:00:00Z", attempt: "first", used_hint: false, link_url: null, by_role: "student", files: [] } })].filter((r) => !a || r.id === a));
+  const body = { client_id: "client-fb-01", praise: "Bạn trình bày rõ.", items: [{ text: "Xem lại câu 38." }] };
+  const call = (user: string | null, store: PracticeStore, b: unknown = body, sid = SUB, aid = A_LINK, learner = AN) =>
+    handleWriteSubmissionFeedback(deps(user, store, makeStorage()), learner, aid, sid, b);
+
+  it("the child's tutor and a parent write it; the call carries the member from the session, never from the body", async () => {
+    const s = makeStore({ overview: withSub() });
+    const r = await call("tutorAn", s);
+    expect(r.status).toBe(201);
+    expect(s.writeSubmissionFeedback).toHaveBeenCalledWith({
+      submissionId: SUB, praise: "Bạn trình bày rõ.", items: [{ text: "Xem lại câu 38." }], supersedesId: null, byMemberId: "m-tutorAn", clientId: "client-fb-01",
+    });
+    expect((await call("parent", s)).status).toBe(201);
+    expect((await call("parent", s, { ...body, by_member: "x" })).status).toBe(400);
+  });
+
+  it("401 without a session, 403 for the student, 404 for the other child's tutor; nothing is written", async () => {
+    const s = makeStore({ overview: withSub() });
+    expect((await call(null, s)).status).toBe(401);
+    expect((await call("studentAn", s)).status).toBe(403);
+    expect((await call("tutorNguyen", s)).status).toBe(404);
+    expect(s.writeSubmissionFeedback).not.toHaveBeenCalled();
+  });
+
+  it("the submission must be the CURRENT one: an older id says 'replaced' (409); a retracted assignment, no submission or a bad id look like 'not found'", async () => {
+    const s = makeStore({ overview: withSub() });
+    const stale = await call("tutorAn", s, body, "e0000000-0000-4000-8000-000000000099");
+    expect(stale.status).toBe(409);
+    expect(stale.body).toMatchObject({ error: "submission_replaced" });
+    expect((await call("tutorAn", s, body, "nope")).status).toBe(404);
+    expect((await call("tutorAn", makeStore())).status).toBe(404); // no submission on the assignment
+    const gone = makeStore({ overview: vi.fn(async () => [assignmentRow({ retracted_at: "2026-10-16T05:00:00Z", submission: { id: SUB, created_at: "2026-10-16T09:00:00Z", attempt: "first", used_hint: false, link_url: null, by_role: "student", files: [] } })]) });
+    expect((await call("tutorAn", gone)).status).toBe(404);
+    expect((await call("tutorAn", s, body, SUB, A_NGUYEN)).status).toBe(404); // an assignment of another child
+    expect(s.writeSubmissionFeedback).not.toHaveBeenCalled();
+  });
+
+  it("score-like words, an empty note, too many or too long items are refused with a code the form can explain", async () => {
+    const s = makeStore({ overview: withSub() });
+    for (const bad of [{ praise: "Được 8 điểm" }, { items: [{ text: "3/4 câu" }] }, { praise: "Đạt yêu cầu" }]) {
+      expect((await call("tutorAn", s, { ...body, ...bad })).body).toMatchObject({ error: "score_words" });
+    }
+    expect((await call("tutorAn", s, { client_id: "client-fb-01", items: [] })).body).toMatchObject({ error: "empty_feedback" });
+    expect((await call("tutorAn", s, { client_id: "client-fb-01", praise: "   ", items: [] })).body).toMatchObject({ error: "empty_feedback" });
+    expect((await call("tutorAn", s, { ...body, praise: "x".repeat(401) })).body).toMatchObject({ error: "praise_too_long" });
+    expect((await call("tutorAn", s, { ...body, items: [{ text: "a" }, { text: "b" }, { text: "c" }, { text: "d" }] })).body).toMatchObject({ error: "items_invalid" });
+    expect((await call("tutorAn", s, { ...body, items: [{ text: "x".repeat(301) }] })).body).toMatchObject({ error: "item_too_long" });
+    expect(s.writeSubmissionFeedback).not.toHaveBeenCalled();
+    // a praise alone, or items alone, is enough
+    expect((await call("tutorAn", s, { client_id: "client-fb-02", praise: "Chỉ khen." })).status).toBe(201);
+    expect((await call("tutorAn", s, { client_id: "client-fb-03", items: [{ text: "Chỉ sửa." }] })).status).toBe(201);
+  });
+
+  it("an edit names the version it replaces; the database's answers become clear codes (replay 200, already_given / already_superseded / author_only / replaced)", async () => {
+    const s = makeStore({ overview: withSub() });
+    await call("tutorAn", s, { ...body, supersedes_id: "f0000000-0000-4000-8000-000000000001" });
+    expect(s.writeSubmissionFeedback).toHaveBeenCalledWith(expect.objectContaining({ supersedesId: "f0000000-0000-4000-8000-000000000001" }));
+    const replay = makeStore({ overview: withSub(), writeSubmissionFeedback: vi.fn(async () => ({ id: "f1", replayed: true })) });
+    expect((await call("tutorAn", replay)).status).toBe(200);
+    const err = (code: string, tag: string) => makeStore({ overview: withSub(), writeSubmissionFeedback: vi.fn(async () => { throw new ReviewDbError(code, `eng_write_submission_feedback: x (${tag})`); }) });
+    expect((await call("tutorAn", err("23505", "already_given"))).body).toMatchObject({ error: "already_given" });
+    expect((await call("tutorAn", err("23505", "already_superseded"))).body).toMatchObject({ error: "already_superseded" });
+    expect((await call("tutorAn", err("23505", "submission_replaced"))).body).toMatchObject({ error: "submission_replaced" });
+    expect((await call("tutorAn", err("42501", "author_only"))).status).toBe(403);
+    expect((await call("tutorAn", err("23514", "score_words"))).body).toMatchObject({ error: "score_words" });
+    expect((await call("tutorAn", err("PGRST202", "x"))).body).toMatchObject({ error: "feedback_unavailable" });
   });
 });

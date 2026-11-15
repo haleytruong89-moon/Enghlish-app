@@ -16,6 +16,7 @@ import { fromDbError, ReviewDbError, type HandlerResult } from "@/lib/review/han
 import { checkFile, buildPath, safeDownloadName, type AllowedMime, type FileKind } from "@/lib/storage/rules";
 import { FILE_ERRORS, verifyStoredFile } from "@/lib/storage/verify";
 import type { FileStorage } from "@/lib/storage/types";
+import { hasScoreWords } from "@/lib/revision/scoreWords";
 import { parseHttpsUrl } from "./link";
 import {
   createAssignmentBodySchema,
@@ -23,6 +24,7 @@ import {
   staffSubmitBodySchema,
   staffUploadBodySchema,
   studentSubmitBodySchema,
+  submissionFeedbackBodySchema,
   studentUploadBodySchema,
   type FileMeta,
   type SubmitCore,
@@ -45,7 +47,11 @@ export interface PracticeStore {
   }): Promise<unknown>;
   retractAssignment(args: { assignmentId: string; reason: string | null; byMemberId: string }): Promise<unknown>;
   submit(args: {
-    assignmentId: string; byMemberId: string; clientId: string; attempt: string; usedHint: boolean | null; linkUrl: string | null; files: FileMeta[];
+    assignmentId: string; kind: "link" | "pdf"; byMemberId: string; clientId: string; attempt: string; usedHint: boolean | null; linkUrl: string | null; files: FileMeta[];
+  }): Promise<unknown>;
+  /** english.eng_write_submission_feedback (0033; service role, after requireAccess; the SQL checks the actor again). */
+  writeSubmissionFeedback(args: {
+    submissionId: string; praise: string | null; items: { text: string }[]; supersedesId: string | null; byMemberId: string; clientId: string;
   }): Promise<unknown>;
   /** english.eng_issue_upload_ticket: counts the upload links of the last 24 hours for this learner and refuses past the daily limit (54000). */
   issueUploadTicket(args: { learnerId: string; byMemberId: string }): Promise<unknown>;
@@ -136,8 +142,6 @@ async function submitCore(
     if (!link) return fail(400, "invalid_link");
   }
   if (assignment.kind === "pdf" && link) return fail(400, "invalid");
-  // "Did you press Hint?" exists only for link assignments; a PDF sends null.
-  if ((assignment.kind === "link") === (body.used_hint === null)) return fail(400, "invalid_body");
   if (!link && body.files.length === 0) return fail(400, "empty_submission");
   const kind = fileKindOf(assignment.kind);
   for (const f of body.files) {
@@ -147,6 +151,7 @@ async function submitCore(
   try {
     const r = (await deps.store.submit({
       assignmentId: assignment.id,
+      kind: assignment.kind,
       byMemberId: grant.member.id,
       clientId: body.client_id,
       attempt: body.attempt,
@@ -157,6 +162,8 @@ async function submitCore(
     return { status: r.replayed ? 200 : 201, body: { id: r.id, replayed: r.replayed } };
   } catch (err) {
     if (err instanceof ReviewDbError && err.code === "23505" && /\(already_reviewed\)/.test(err.detail)) return fail(409, "already_reviewed");
+    // More than 6 pages before migration 0033 is applied: say so (the old function still takes up to 6).
+    if (err instanceof ReviewDbError && err.code === "pages_unavailable") return fail(409, "pages_unavailable");
     return fromDbError(err);
   }
 }
@@ -285,6 +292,57 @@ export async function handleAssignmentsList(deps: PracticeDeps, learnerId: strin
   const g = await guard(deps, learnerId, "practice:read");
   if (!g.ok) return g.result;
   return { status: 200, body: { assignments: await loadOverview(deps, g.grant.learner.id, null) } };
+}
+
+/** The first problem of a feedback body the form can explain; anything else is "invalid_body". */
+function feedbackProblem(issues: readonly { path: readonly PropertyKey[] }[]): string {
+  const p = issues[0]?.path ?? [];
+  if (p[0] === "praise") return (issues[0] as { code?: string }).code === "too_big" ? "praise_too_long" : "empty_feedback";
+  if (p[0] === "items") return p.length > 1 && (issues[0] as { code?: string }).code === "too_big" ? "item_too_long" : "items_invalid";
+  return "invalid_body";
+}
+
+/** The "(tag)" at the end of a database message of the feedback writer → status + code the form can explain. */
+const FEEDBACK_TAGS: [RegExp, 400 | 403 | 404 | 409, string][] = [
+  [/\(score_words\)/, 400, "score_words"],
+  [/\(empty_feedback\)/, 400, "empty_feedback"],
+  [/\(bad_items\)/, 400, "items_invalid"],
+  [/\(bad_praise\)/, 400, "praise_too_long"],
+  [/\(author_only\)/, 403, "author_only"],
+  [/\(not_found\)/, 404, "not_found"],
+  [/\(already_given\)/, 409, "already_given"],
+  [/\(already_superseded\)/, 409, "already_superseded"],
+  [/\(submission_replaced\)/, 409, "submission_replaced"],
+  [/\(client_id_reused\)/, 409, "conflict"],
+];
+
+/**
+ * POST /api/learners/:id/assignments/:aid/submissions/:sid/feedback - the child's tutor or a parent of the family writes (or edits) feedback on the
+ * CURRENT submission of an assignment. The child sees it in "Đã xem" at once. It never asks the child to send again.
+ */
+export async function handleWriteSubmissionFeedback(deps: PracticeDeps, learnerId: string, assignmentId: string, submissionId: string, rawBody: unknown): Promise<HandlerResult> {
+  const g = await guardAssignment(deps, learnerId, assignmentId, "practice:write");
+  if (!g.ok) return g.result;
+  if (!UUID_RE.test(submissionId)) return fail(404, "not_found");
+  const parsed = submissionFeedbackBodySchema.safeParse(rawBody);
+  if (!parsed.success) return fail(400, feedbackProblem(parsed.error.issues));
+  const b = parsed.data;
+  if (hasScoreWords(b.praise) || b.items.some((i) => hasScoreWords(i.text))) return fail(400, "score_words");
+  // The submission must be the CURRENT one of this assignment (not retracted): anything else looks like "does not exist".
+  const [a] = await loadOverview(deps, g.grant.learner.id, assignmentId);
+  if (!a || a.retractedAt || !a.submission) return fail(404, "not_found");
+  // The child sent again after the grown-up opened the page: say so (the screen asks to reload) instead of "not found".
+  if (a.submission.id !== submissionId) return fail(409, "submission_replaced");
+  try {
+    const r = (await deps.store.writeSubmissionFeedback({
+      submissionId, praise: b.praise ? b.praise : null, items: b.items, supersedesId: b.supersedes_id ?? null, byMemberId: g.grant.member.id, clientId: b.client_id,
+    })) as { id: string; replayed: boolean };
+    return { status: r.replayed ? 200 : 201, body: { id: r.id, replayed: r.replayed } };
+  } catch (err) {
+    if (err instanceof ReviewDbError) for (const [re, status, code] of FEEDBACK_TAGS) if (re.test(err.detail)) return fail(status, code);
+    if (err instanceof ReviewDbError && (err.code === "PGRST202" || err.code === "42883")) return fail(409, "feedback_unavailable");
+    return fromDbError(err);
+  }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------------------

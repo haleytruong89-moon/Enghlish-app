@@ -19,7 +19,7 @@ export default async function SeenPage({ searchParams }: { searchParams: Promise
   const last = rows?.at(-1);
   const olderHref = rows && rows.length >= DESK_PAGE.seen && last ? `/seen?before=${encodeURIComponent(last.seenAt)}&ref=${last.ref}` : null;
   return (
-    <StudentDeskShell active="seen" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.seenAt)} showTestBadge={base.isTest}>
+    <StudentDeskShell active="seen" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest}>
       <div className="mx-auto flex max-w-3xl flex-col gap-4" data-testid="seen-page">
         <div>
           <h1 className="text-3xl font-bold">{c.seenTitle}</h1>

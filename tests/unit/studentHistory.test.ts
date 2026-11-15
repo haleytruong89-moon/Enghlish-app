@@ -31,6 +31,14 @@ describe("parsers keep only what the child may see", () => {
     expect(hasMessage(s)).toBe(false);
     expect(s.notes).toEqual([]);
   });
+  it("seen: newsAt is the later of seen_at and fb_at; seenAt stays the paging cursor", () => {
+    const base = { src: "submission", ref: "r", assignment_id: "x", title: "Link", kind: "link", submitted_at: "2026-11-10T00:00:00Z", seen_at: "2026-11-11T00:00:00Z", praise: "Rõ.", notes: null, fb_state: "note" };
+    const [a, b, c] = [...parseSeen({ items: [{ ...base, fb_at: "2026-11-13T00:00:00Z" }, { ...base, fb_at: "2026-11-09T00:00:00Z" }, base] })] as [SeenRow, SeenRow, SeenRow];
+    expect(a.newsAt).toBe("2026-11-13T00:00:00Z");
+    expect(a.seenAt).toBe("2026-11-11T00:00:00Z");
+    expect(b.newsAt).toBe("2026-11-11T00:00:00Z");
+    expect(c.newsAt).toBe("2026-11-11T00:00:00Z");
+  });
   it("seen: praise, items with excerpts, the revision step to open", () => {
     const [s] = parseSeen({ items: [{ src: "attempt", ref: "r", activity_id: "a", title: "Viết", kind: "app", submitted_at: "2026-11-10T00:00:00Z", seen_at: "2026-11-11T00:00:00Z", praise: "Rõ ý.", notes: [{ n: 1, text: "Thêm câu kết.", excerpt: "x" }], fb_state: "todo", revision_activity_id: "rev", closing_note: null }] }) as [SeenRow];
     expect(hasMessage(s)).toBe(true);

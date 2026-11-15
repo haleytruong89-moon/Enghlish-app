@@ -17,6 +17,7 @@ const KID = "kid-1";
 const seen = (o: Partial<SeenRow>): SeenRow => ({
   ref: "r1", activityId: "a1", assignmentId: null, title: "Đoạn viết: Núi lửa", kind: "app", stepNo: 6, activityType: "ACT-WRITE", submittedAt: "2026-11-10T03:00:00Z",
   seenAt: "2026-11-14T03:00:00Z", praise: "Câu mở đoạn rõ.", notes: [{ n: 1, text: "Thêm câu kết.", excerpt: "the magma" }], state: "todo", revisionActivityId: "rev1", closingNote: null, ...o,
+  newsAt: o.newsAt ?? o.seenAt ?? "2026-11-14T03:00:00Z",
 });
 
 describe("Đã xem", () => {
@@ -52,6 +53,12 @@ describe("Đã xem", () => {
     expect(window.localStorage.getItem(seenMemoKey(KID))).toBe("2026-11-12T00:00:00Z"); // still the old time during the visit
     unmount();
     expect(Date.parse(window.localStorage.getItem(seenMemoKey(KID))!)).toBeGreaterThan(Date.parse("2026-11-14T03:00:00Z"));
+  });
+
+  it("a feedback written after the first look is news again ('Mới' follows newsAt, the row keeps its place by seenAt)", () => {
+    window.localStorage.setItem(seenMemoKey(KID), "2026-11-12T00:00:00Z");
+    render(<SeenList rows={[seen({ ref: "e", seenAt: "2026-11-11T03:00:00Z", newsAt: "2026-11-13T03:00:00Z" })]} learnerId={KID} olderHref={null} />);
+    expect(screen.getByTestId("seen-card").getAttribute("data-new")).toBe("yes");
   });
 
   it("empty: the polite line", () => {

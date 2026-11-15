@@ -220,6 +220,7 @@ cách ④ (trong buổi / nói): gia sư nhập kết quả khi ghi buổi → �
 ```
 Cách: ① đề + đáp án → bài trong app · ② giao file Word/PDF, con nộp ảnh/file · ③ link ngoài, con nộp ảnh trang kết quả · ④ trong buổi / nói. Cả 4 cách gia sư đều dùng ✅ 08/11; ưu tiên làm ① (đã có) rồi ② ③.
 Cách ③ chỉ ghi **điểm theo phần** nếu trang kết quả không ghi câu sai; không bịa câu.
+**Phía con (W4c1):** cách ② con nộp tối đa 12 trang (chụp hoặc chọn file; xếp thứ tự, xoay, xóa; 2 câu hỏi nhanh); cách ③ con làm trên trang ngoài rồi nộp ảnh trang kết quả + 2 câu hỏi. Người lớn (gia sư hoặc phụ huynh) có thể góp ý một bài nộp (khen + tối đa 3 điều cần sửa, không điểm); con thấy ngay ở "Đã xem" và bài tính là "đã xem". Góp ý này không phải bằng chứng và không đổi mức nào.
 
 **Nháp AI (mọi việc):** `đang soạn` → `chờ duyệt` → `duyệt` · `bỏ`. Chờ duyệt mở ra màn xem; **câu AI không chắc phải xử lý xong** nút Duyệt mới bật ✅ 07/11. AI lỗi → `lỗi` + "Soạn tay".
 
@@ -242,6 +243,7 @@ Cách ③ chỉ ghi **điểm theo phần** nếu trang kết quả không ghi c
 10. Không có gì ghi vào schema `public`.
 11. **Số buổi học là dẫn xuất** (mục 5.6): tính lại từ ghi chú hiện hành, buổi nghỉ và dấu loại buổi, không lưu; thầy/cô và phụ huynh thấy cùng số; học sinh không thấy.
 12. **Buổi nghỉ và dấu loại buổi chỉ thêm** (3B, §5.6): `session_absences` và `session_marks` có `eng_forbid_mutation` + chặn TRUNCATE; sửa = dòng mới ("Bỏ ghi nghỉ", dấu mới nhất thắng); chỉ thầy/cô của em hoặc phụ huynh ghi (hàm SQL tự kiểm lại); học sinh không đọc; không có số tiền trong bất cứ bảng nào.
+13. **Góp ý bài nộp chỉ thêm** (W4c1): `submission_feedback` có `eng_forbid_mutation` + chặn TRUNCATE; sửa = góp ý mới của chính người viết; nằm trong `eng_purge_learner` / `eng_purge_preview`.
 
 ## 8. Ca biên bắt buộc xét
 - Giáo trình dùng cho cả 2 em (vd sách ngữ pháp chung) → tạo riêng cho từng em (khác track, nhãn khác); không chia sẻ trạng thái.

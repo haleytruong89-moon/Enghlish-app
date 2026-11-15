@@ -90,12 +90,18 @@ export function parseHistory(input: unknown): HistoryPage {
   return { rows, total: r.total ?? rows.length, waiting: r.waiting ?? rows.filter((x) => !x.seen).length };
 }
 
+/** The later of two ISO timestamps (a missing one loses). */
+function laterOf(a: string, b: string | null): string {
+  return b && Date.parse(b) > Date.parse(a) ? b : a;
+}
+
 export function parseSeen(input: unknown): SeenRow[] {
   const r = z
     .object({
       items: z.array(
         rawRow.extend({
           seen_at: z.string(),
+          fb_at: nullableStr,
           praise: nullableStr,
           notes: z.array(z.object({ n: z.number().int(), text: z.string(), excerpt: nullableStr })).nullable().optional(),
           fb_state: z.enum(["note", "todo", "closed", "revised"]).nullable().optional(),
@@ -115,6 +121,7 @@ export function parseSeen(input: unknown): SeenRow[] {
     activityType: x.activity_type ?? null,
     submittedAt: x.submitted_at,
     seenAt: x.seen_at,
+    newsAt: laterOf(x.seen_at, x.fb_at ?? null),
     praise: x.praise ?? null,
     notes: (x.notes ?? []).map((n) => ({ n: n.n, text: n.text, excerpt: n.excerpt ?? null })),
     state: (x.fb_state ?? null) as FeedbackState | null,

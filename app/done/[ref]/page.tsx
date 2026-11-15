@@ -14,7 +14,7 @@ export default async function DoneItemPage({ params }: { params: Promise<{ ref: 
   if (base.kind === "login") redirect("/login");
   if (base.kind !== "ok" || !item) notFound();
   return (
-    <StudentDeskShell active="done" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.seenAt)} showTestBadge={base.isTest}>
+    <StudentDeskShell active="done" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest}>
       <div className="mx-auto flex max-w-3xl flex-col gap-4" data-testid="done-item-page">
         <Link href="/done" className="inline-flex min-h-11 items-center text-sm font-medium text-accent underline">{c.back}</Link>
         <PracticeCard item={item} />

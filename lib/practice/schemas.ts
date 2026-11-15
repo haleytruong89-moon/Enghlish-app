@@ -72,11 +72,24 @@ export const retractBodySchema = z.strictObject({ reason: z.string().trim().max(
 const submissionCore = {
   client_id: clientId,
   attempt: z.enum(["first", "retry"]),
-  /** Link assignments ask "did you press Hint?"; a PDF has no such question and sends null. */
+  /** "Did you look at a hint or the answers?" (0033: asked for a link AND a PDF). The child must answer; an adult sending on the child's behalf may send null. */
   used_hint: z.boolean().nullable(),
   link_url: httpsUrl.nullable().optional(),
   files: z.array(fileMetaSchema).max(MAX_FILES_PER_SUBMISSION).default([]),
 };
-export const studentSubmitBodySchema = z.strictObject({ assignment_id: uuid, ...submissionCore });
+export const studentSubmitBodySchema = z.strictObject({ assignment_id: uuid, ...submissionCore, used_hint: z.boolean() });
 export const staffSubmitBodySchema = z.strictObject(submissionCore);
 export type SubmitCore = z.infer<typeof staffSubmitBodySchema>;
+
+/** W4c1 · feedback on a submission: a praise (<= 400) and up to 3 things to fix (<= 300 each), at least one of the two. The database checks it again. */
+export const MAX_FEEDBACK_PRAISE = 400;
+export const MAX_FEEDBACK_ITEM = 300;
+export const submissionFeedbackBodySchema = z
+  .strictObject({
+    client_id: clientId,
+    praise: z.string().trim().max(MAX_FEEDBACK_PRAISE).optional(),
+    items: z.array(z.strictObject({ text: z.string().trim().min(1).max(MAX_FEEDBACK_ITEM) })).max(3).default([]),
+    supersedes_id: uuid.optional(),
+  })
+  .refine((b) => (b.praise ?? "") !== "" || b.items.length > 0, { path: ["praise"], message: "a praise or one thing to fix" });
+export type SubmissionFeedbackBody = z.infer<typeof submissionFeedbackBodySchema>;

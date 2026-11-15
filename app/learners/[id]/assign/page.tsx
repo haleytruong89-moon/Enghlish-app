@@ -5,6 +5,7 @@ import { WayCards } from "@/components/assign/WayCards";
 import { WaysStrip } from "@/components/assign/WaysStrip";
 import { parseWay, wayHref } from "@/lib/assign/ways";
 import { AssignForm } from "@/components/practice/AssignForm";
+import { maxPagesPerSubmission } from "@/lib/practice/capabilities";
 import { AssignmentTable } from "@/components/practice/AssignmentTable";
 import { readPrefill } from "@/lib/prefill";
 import { assignPage, assignWaysCopy, learnerWithTrack } from "@/lib/copy/vi";
@@ -23,7 +24,7 @@ export default async function AssignPracticePage({ params, searchParams }: { par
   const sp = await searchParams;
   const prefill = readPrefill(sp);
   const way = parseWay(sp.way);
-  const { learner } = await requireLearnerPage(id, "practice:write");
+  const { learner, member } = await requireLearnerPage(id, "practice:write");
   // The other two ways live on their own pages (the forms are not copied); this page only points there.
   if (way === "studio" || way === "topic") redirect(wayHref(learner.id, way, prefill));
   const kind = way === "link" || way === "pdf" ? way : null;
@@ -47,7 +48,7 @@ export default async function AssignPracticePage({ params, searchParams }: { par
   const list = (
     <section className="flex flex-col gap-3" aria-label={assignWaysCopy.listTitle} id="assigned-list" data-testid="assigned-list">
       <h2 className="text-lg font-semibold">{assignWaysCopy.listTitle}</h2>
-      <AssignmentTable learnerId={learner.id} assignments={assignments} tagLabels={tagLabels} today={todayVn()} />
+      <AssignmentTable learnerId={learner.id} assignments={assignments} tagLabels={tagLabels} viewerMemberId={member.id} maxFiles={await maxPagesPerSubmission()} today={todayVn()} />
     </section>
   );
   return (

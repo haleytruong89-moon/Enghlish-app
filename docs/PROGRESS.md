@@ -1475,7 +1475,7 @@ Nhánh `feature/ux-round3a` (dựa trên `feature/ux-round2` = main + 2A + 2B; P
 
 Nhánh `feature/ux-round3b` (từ `main` đã gộp 2A, 2B, 3A). Kế hoạch `docs/superpowers/plans/2026-11-14-ux-round3.md` (Task B0–B5, B7; **không có B6 "chốt tháng"** và không có bảng `session_month_closes`: phụ huynh quyết 14/11). Phụ huynh duyệt 14/11: buổi nghỉ như U16 (ngày, bên báo nghỉ Con / Thầy-cô / Khác, **có tính phí chọn tay từng buổi nghỉ**, cửa sổ −120…+60 ngày), dấu loại buổi U17 (Thường / Học bù / Không tính, theo chuỗi sửa, dấu mới nhất thắng), cùng ngày U18, công thức buổi tính phí U19, người ghi U20 (thầy/cô của em hoặc phụ huynh), U22 (một hàm thuần ở máy chủ và trình duyệt). Luật đếm buổi do thầy/cô ghi: **phụ huynh đã xác nhận 14/11**. Không có số tiền ở đâu; học sinh không thấy gì.
 
-**ĐÃ GỘP (PR #34, 14/11) và `0030_session_billing.sql` ĐÃ ÁP 14/11** (workflow "Apply database migrations", run 43596825424; không sửa nữa; trước đó 0029 đã áp, run 43590186183). Chỉ thêm, idempotent, cần 0026 + 0029. Áp bằng workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". Chưa áp: trang Buổi học vẫn có phần 3A, Ghi buổi "Thường" chạy như cũ (v2/v3), và nút buổi nghỉ / đánh dấu / Học bù báo "chưa sẵn sàng (cần cập nhật cơ sở dữ liệu)". Số migration kế tiếp sau 0030 lúc đó là 0031 (nay đã dùng: 0031 = W4a, 0032 = W4b; kế tiếp **0033**).
+**ĐÃ GỘP (PR #34, 14/11) và `0030_session_billing.sql` ĐÃ ÁP 14/11** (workflow "Apply database migrations", run 43596825424; không sửa nữa; trước đó 0029 đã áp, run 43590186183). Chỉ thêm, idempotent, cần 0026 + 0029. Áp bằng workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". Chưa áp: trang Buổi học vẫn có phần 3A, Ghi buổi "Thường" chạy như cũ (v2/v3), và nút buổi nghỉ / đánh dấu / Học bù báo "chưa sẵn sàng (cần cập nhật cơ sở dữ liệu)". Số migration kế tiếp sau 0030 lúc đó là 0031 (nay đã dùng: 0031 = W4a, 0032 = W4b, 0033 = W4c1; kế tiếp **0034**).
 
 ### Làm gì
 1. **Migration `0030`:** bảng chỉ thêm `session_absences` (dòng "bỏ" = `cancels_id` + lý do) và `session_marks` (kind, `makeup_for`, lý do, `client_id`); RLS đọc cho thầy/cô của em + phụ huynh, học sinh không, không ai ghi trực tiếp (kể cả `service_role`); hàm `eng_record_absence`, `eng_cancel_absence`, `eng_mark_session`, `eng_write_lesson_note_v4` (= v3 + loại buổi cùng giao dịch); `eng_purge_learner` / `eng_purge_preview` chép nguyên bản 0029 + hai bảng (marks → absences, trước `lesson_notes`).
@@ -1542,6 +1542,8 @@ Nhánh `feature/w4a-roadmap` (từ `main` + các commit kế hoạch W4). Kế h
 
 ## W4b — Bàn học của con: Hôm nay · Đã xem · Đã làm · Hành trình (15/11)
 
+**Cập nhật: ĐÃ GỘP (PR #36, 15/11) và `0032_student_desk_reads.sql` ĐÃ ÁP** (workflow "Apply database migrations", run 43674450287; không sửa nữa).
+
 Nhánh `feature/w4b-student-desk` (từ `main` sau PR #35). Kế hoạch `docs/superpowers/plans/2026-11-14-w4-student-desk.md` mục "PR W4b". Phụ huynh đã duyệt Q1–Q22 "như đề xuất" (14/11); Q5 = (i) chỉ đếm bài đã nộp (W4b không có phút làm bài); Q14 (Launcher đếm việc) và Q21 (dấu "Mới" nhớ trên máy) theo đề xuất, đúng PR này.
 
 **SQL cần phụ huynh áp: `0032_student_desk_reads.sql` (sau khi gộp).** Chỉ **hàm đọc**, không bảng, không đụng xóa dữ liệu, không đổi hàm cũ; idempotent. Áp bằng workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". **Nên áp ngay khi gộp:** chưa áp thì Hôm nay / Đã xem / Đã làm của con hiện một dòng "Bàn học chưa mở được" (không lỗi; Hành trình và làm bài vẫn chạy).
@@ -1574,3 +1576,51 @@ Nhánh `feature/w4b-student-desk` (từ `main` sau PR #35). Kế hoạch `docs/s
 - Không có lát SQL review riêng trước code app: Opus review diff cuối (kể cả SQL) rồi sửa.
 - Ô "Hỏi gia sư · Sắp có" chỉ hiện cho bước luyện của app (`practice` và loại app / chủ đề, làm được); bài link / PDF, bước kiểm tra, bài sửa không có ô này.
 - Con trỏ phân trang là cặp `(thời điểm, mã)`, truyền nguyên văn (không qua `Date`) nên không mất / lặp dòng khi nhiều dòng cùng thời điểm.
+
+## W4c1 — Nộp bài giấy · Nộp bài link · góp ý bài nộp (15/11)
+
+Nhánh `feature/w4c1-paper-link` (từ `main` sau PR #36). Kế hoạch `docs/superpowers/plans/2026-11-14-w4-student-desk.md` mục "PR W4c1". Phụ huynh đã duyệt "như đề xuất" (14/11): Q12 = tối đa 12 trang, xoay + nén trên máy, câu hỏi gợi ý cũng hỏi với PDF; Q15 = thầy/cô (và phụ huynh) góp ý được bài giấy / link.
+
+**SQL cần phụ huynh áp: `0033_paper_link_submit.sql` (sau khi gộp).** Idempotent, cần 0016 + 0021 + 0031 + 0032. Áp bằng workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". Số migration kế tiếp: **0034**.
+- Nâng giới hạn file của một bài nộp từ 6 lên 12 (ràng buộc `submissions_file_ids_max12`).
+- Hàm `eng_practice_limits` (chỉ đọc, giới hạn file) và `eng_submit_practice_v2` (nộp giấy / link; học sinh bắt buộc trả lời câu gợi ý; chạy lại cùng mã thì không nộp trùng; bị chặn khi người lớn đã xem / góp ý).
+- Bảng chỉ thêm `submission_feedback` (+ RLS, chặn sửa / xóa / TRUNCATE), hàm `eng_write_submission_feedback`, `eng_submission_feedback`.
+- Thay (create or replace) `eng_student_done`, `eng_my_seen`, `eng_my_practice` (góp ý bài nộp cũng tính là "đã xem"), và `eng_purge_learner` / `eng_purge_preview` (thêm `submission_feedback`).
+- **Chưa áp 0033:** nộp ảnh vẫn chạy như cũ (app tự dùng hàm cũ, tối đa 6 trang; trang hết chỗ báo nhẹ), form góp ý bài nộp báo "chưa sẵn sàng", Đã xem không có thẻ góp ý bài nộp. Không lỗi trắng trang.
+
+### Làm gì
+1. **Nộp bài giấy** (`/submit/[assignmentId]`): chụp bằng camera iPad (mỗi lần chụp thêm một trang) hoặc chọn file trên laptop; tối đa 12 trang; lưới trang có nút **Lên / Xuống** để đổi thứ tự (không kéo thả), **Xoay** 90°, **Xóa**; ảnh được xoay + thu nhỏ (cạnh dài ≤ 2400 px, JPEG 0.85) ngay trên máy, PDF giữ nguyên; 2 câu hỏi nhanh ("Bạn làm lần đầu?" · "Bạn có xem gợi ý hoặc đáp án không?"); nút **Nộp** tắt cho đến khi đủ ảnh + 2 câu trả lời, dòng "Còn thiếu" chỉ rõ chỗ chưa trả lời; gửi lại khi lỗi mạng không nộp trùng, không tải lại file đã lên.
+2. **Nộp bài link:** 3 bước (mở link làm bài → chụp / chọn ảnh trang kết quả → 2 câu hỏi → gửi). Bài link vẫn nằm ở "Hôm nay" cho đến khi con nộp.
+3. **Góp ý bài nộp (người lớn):** trong bảng Giao bài, mỗi bài đã nộp mở ra xem các trang đúng thứ tự con sắp, rồi gửi lời khen và tối đa 3 điều cần sửa (không điểm / đúng / sai / %). Chỉ một góp ý đầu; sửa = góp ý mới thay (chỉ người viết). Con thấy ngay ở Đã xem; bài chuyển sang "Đã xem".
+4. **Luật con:** không điểm, không đúng / sai, không %, không nhãn kỹ năng; số chỉ ở `data-count="work"`.
+5. **Xóa dữ liệu một em** gồm `submission_feedback` ("Góp ý cho bài nộp").
+
+### Cách thử trên bản thử (sau khi áp 0033; gia đình THỬ)
+- Giao cho Nguyên (thử) một bài PDF / giấy. Trên iPad đăng nhập Nguyên: Hôm nay → mở bài → chụp 3 trang; bấm "Lên" ở trang 3, "Xoay" một trang, "Xóa" một trang; trả lời 2 câu → Nộp. Bài sang "Vừa gửi".
+- Đăng nhập thầy/cô: Giao bài → bài vừa nộp → mở xem: các trang đúng thứ tự đã sắp. Bấm gửi góp ý: một lời khen + 1 điều cần sửa. Đăng nhập lại Nguyên: tab Đã xem có thẻ mới, Đã làm báo "Đã xem". Con không còn "Sửa lại" sau khi đã được xem.
+- Bài link: làm trên trang ngoài, chụp ảnh kết quả, nộp. Trước khi nộp, bài còn ở Hôm nay ("Chưa").
+- Laptop: chọn 2 ảnh + 1 PDF, đổi chỗ, nộp.
+- An (thử) không thấy gì của Nguyên.
+
+### Tiêu chí đạt
+`npm run typecheck && npm run lint && npm test` xanh (gồm `tests/db/paperLinkSubmit.test.ts`, `tests/dom/paperSubmit.test.tsx`, `tests/dom/submissionFeedback.test.tsx`, `tests/unit/{pageOrder,imageResize,twoQuestions,submitCopy,migrationPaperLink,deployOrderPaperLink}.test.ts`); `npx playwright test --list` đủ test (e2e mới: "W4c1: paper pages, link result pictures, feedback on a submission"). **Chưa đạt / chưa kiểm:** e2e chỉ chạy được trên CI (cần Docker); camera, ảnh HEIC, bộ nhớ khi chụp 12 trang và xoay dọc / ngang trên iPad thật **chưa thử** — cần thử khi có iPad.
+
+### Giả định và lệch so với kế hoạch
+- Ảnh HEIC: thử đọc bằng `createImageBitmap` trong trình duyệt; nếu không đọc được thì báo "ảnh này chưa đọc được, thử chụp lại" (không có thư viện HEIC bên thứ ba).
+- PDF không xoay / nén; một PDF chiếm một trang trong giới hạn 12.
+- Hàm cũ `eng_submit_practice` giữ nguyên làm đường lùi khi chưa áp 0033; app thử v2 trước.
+- Người lớn cũng nộp thay (SubmitPanel) được và không bắt buộc trả lời câu gợi ý; học sinh bắt buộc.
+- Góp ý bài nộp không đổi trạng thái bài, không ghi bằng chứng / điểm; chỉ là lời nhắn và dấu "đã xem".
+
+### Sau review Opus (15/11): đã sửa trên cùng nhánh (0033 chưa áp ở đâu nên sửa thẳng trong tệp)
+- **Nộp thay không còn ghi bừa:** ô "Nộp thay" của thầy/cô / phụ huynh bắt đầu trống: "lần đầu / làm lại" phải chọn (cột `attempt` bắt buộc nên không dùng NULL), câu gợi ý có thêm "Không rõ" (gửi NULL, không bao giờ thành "không xem gợi ý"). Form Ghi kết quả không điền sẵn từ NULL: hai nút trống và phải chọn Có / Không mới lưu. Chữ cho bài không có câu trả lời: "Không có câu trả lời về gợi ý".
+- **Riêng tư ảnh / PDF:** mọi ảnh người lớn nộp thay được vẽ lại bằng canvas dù nhỏ (mất GPS / máy ảnh / giờ chụp). PDF được **dựng lại** bằng `pdf-lib` ghim bản: tài liệu mới chỉ nhận các trang chép sang, nên Info (kể cả khóa tự đặt như /Company), luồng XMP, ngày tạo / sửa và **đối tượng mồ côi** không đi theo (test dùng tệp có cả bốn thứ và lưu không dùng object stream để kiểm thật). PDF của con cũng qua bước này; PDF mã hóa / hỏng bị từ chối bằng câu riêng cho PDF; sau khi dựng lại vẫn kiểm ≤ 15 MB. **Rủi ro còn lại:** /Metadata ở mức từng trang và ảnh NẰM TRONG PDF giữ siêu dữ liệu riêng; chữ ký số của PDF không còn. **Phiếu điểm bên ngoài** (`ExternalResultForm`): ảnh được vẽ lại, PDF để NGUYÊN (giữ chữ ký số của phiếu chính thức). `AssignForm` (đề thầy/cô giao) không đụng. **Không làm** kiểm Exif ở máy chủ: `FileStorage` chỉ có `stat`; thay vào đó e2e tải lại tệp đã lưu và khẳng định không có đoạn `Exif` (CI).
+- **"Mới" cho góp ý đến sau:** `eng_my_seen` trả thêm `fb_at` (lúc viết bản góp ý đang hiện); dấu "Mới" và số trên tab dùng `max(seen_at, fb_at)`; thứ tự vẫn theo `seen_at`.
+- **Khóa:** `eng_write_submission_feedback` khóa dòng `learners` của em (`for no key update`, cùng kiểu với `eng_submit_practice_v2`) trước mọi kiểm tra; ghép góp ý với bài nộp theo `submission_id` (không còn so `assignment_id` + giờ).
+- **Hiệu năng / máy yếu:** bảng Giao bài chỉ nạp ảnh khi mở dòng (và `loading="lazy"`); `renderPaperImage` trả bộ nhớ canvas, nhờ trình duyệt thu nhỏ ngay lúc giải mã (`createImageBitmap` với `resizeWidth/Height`) khi hỗ trợ. **Không làm (chấp nhận):** ảnh nén ở bước chọn rồi vẽ lại một lần nữa khi gửi (xoay), tức nén JPEG 0.85 hai lần; chữ viết tay vẫn đọc được ở cạnh dài 2400 px.
+- **Chưa áp 0033:** màn nộp biết trước giới hạn (6 trang) và không cho thêm quá, thay vì chờ máy chủ từ chối sau khi đã tải lên. Góp ý với bài nộp đã bị thay trả 409 "Con vừa nộp lại bài" (không còn 404).
+- **Trần tải lên:** mỗi em tối đa 60 đường tải lên mỗi ngày (`UPLOAD_LINKS_PER_DAY`); mỗi trang là một đường, nên 12 trang ≈ 5 lần nộp đầy một ngày (gồm cả lần thử lại).
+- **Lệch nhỏ:** form góp ý bài nộp không dùng lại `FeedbackFields` của S6 vì cái đó gắn với bài trên app (tên người viết, trích đoạn); cùng luật chữ (khen ≤ 400, ≤ 3 điều, không điểm).
+- **Giới hạn trang hỏi máy chủ:** 0033 thêm `eng_practice_limits()` (chỉ đọc, `{max_files: 12}`); màn nộp của con và của người lớn hỏi hàm này (nhớ vài phút trên máy chủ) để dừng trước khi tải lên khi 0033 chưa áp (6 trang). Chữ "Không rõ thì chọn Làm lại" nằm dưới câu "lần đầu" ở màn Nộp thay.
+- **Không làm:** chấm "Mới" của trang đầu tiên khi đã đọc hết (nit bỏ qua).
+

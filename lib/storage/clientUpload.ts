@@ -6,7 +6,7 @@
 import { MAX_FILE_BYTES, MAX_IMAGE_SIDE, isAllowedMime, isImageMime, type AllowedMime } from "./rules";
 
 export type Prepared = { blob: Blob; mime: AllowedMime; bytes: number; name: string };
-export type PrepareResult = { ok: true; file: Prepared } | { ok: false; reason: "type" | "too_big" | "unreadable" };
+export type PrepareResult = { ok: true; file: Prepared } | { ok: false; reason: "type" | "too_big" | "unreadable" | "pdf" };
 
 /** Size after shrinking so the longest side is at most `max` (never enlarges). `scaled` tells whether anything changed. */
 export function fitWithin(width: number, height: number, max: number = MAX_IMAGE_SIDE): { width: number; height: number; scaled: boolean } {
@@ -25,12 +25,19 @@ export function outputMime(mime: string): "image/png" | "image/jpeg" {
  * Check a picked / pasted file and shrink an image to at most MAX_IMAGE_SIDE pixels on the longest side. PDFs pass through unchanged.
  * An image that is already small enough and under the size limit is sent as it is.
  */
-export async function prepareFile(file: File | Blob, nameHint = "anh"): Promise<PrepareResult> {
+export async function prepareFile(file: File | Blob, nameHint = "anh", opts: { stripMetadata?: boolean; keepPdf?: boolean } = {}): Promise<PrepareResult> {
   const mime = file.type;
   if (!isAllowedMime(mime)) return { ok: false, reason: "type" };
   const name = "name" in file && typeof file.name === "string" && file.name ? file.name : nameHint;
   if (!isImageMime(mime)) {
-    return file.size > MAX_FILE_BYTES ? { ok: false, reason: "too_big" } : { ok: true, file: { blob: file, mime, bytes: file.size, name } };
+    if (file.size > MAX_FILE_BYTES) return { ok: false, reason: "too_big" };
+    // keepPdf: official documents (score reports) stay byte for byte, so a digital signature on them still verifies.
+    if (!opts.stripMetadata || opts.keepPdf) return { ok: true, file: { blob: file, mime, bytes: file.size, name } };
+    // A grown-up's PDF leaves the device rebuilt, without its document details (see scrubPdf).
+    const { scrubPdf } = await import("../pdf/cut");
+    const clean = await scrubPdf(file);
+    if (!clean) return { ok: false, reason: "pdf" };
+    return clean.size > MAX_FILE_BYTES ? { ok: false, reason: "too_big" } : { ok: true, file: { blob: clean, mime, bytes: clean.size, name } };
   }
   let bitmap: ImageBitmap;
   try {
@@ -38,10 +45,12 @@ export async function prepareFile(file: File | Blob, nameHint = "anh"): Promise<
   } catch {
     return { ok: false, reason: "unreadable" };
   }
+  let canvas: HTMLCanvasElement | null = null;
   try {
     const fit = fitWithin(bitmap.width, bitmap.height);
-    if (!fit.scaled && file.size <= MAX_FILE_BYTES) return { ok: true, file: { blob: file, mime, bytes: file.size, name } };
-    const canvas = document.createElement("canvas");
+    // With stripMetadata every picture is drawn again, whatever its size: a photo's location / camera / time live in the file, not in the pixels.
+    if (!opts.stripMetadata && !fit.scaled && file.size <= MAX_FILE_BYTES) return { ok: true, file: { blob: file, mime, bytes: file.size, name } };
+    canvas = document.createElement("canvas");
     canvas.width = fit.width;
     canvas.height = fit.height;
     const ctx = canvas.getContext("2d");
@@ -53,12 +62,17 @@ export async function prepareFile(file: File | Blob, nameHint = "anh"): Promise<
       ctx.fillRect(0, 0, fit.width, fit.height);
     }
     ctx.drawImage(bitmap, 0, 0, fit.width, fit.height);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, out, 0.85));
+    const blob = await new Promise<Blob | null>((resolve) => canvas!.toBlob(resolve, out, 0.85));
     if (!blob) return { ok: false, reason: "unreadable" };
     if (blob.size > MAX_FILE_BYTES) return { ok: false, reason: "too_big" };
     return { ok: true, file: { blob, mime: out, bytes: blob.size, name } };
   } finally {
     bitmap.close();
+    // Give the pixel memory back now (iPad Safari keeps big canvases alive otherwise).
+    if (canvas) {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
   }
 }
 

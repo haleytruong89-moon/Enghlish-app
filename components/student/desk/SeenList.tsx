@@ -88,7 +88,7 @@ export function SeenList({ rows, learnerId, olderHref }: { rows: SeenRow[]; lear
       ) : (
         <div className="flex flex-col gap-3" data-testid="seen-list">
           {rows.map((r) => (
-            <SeenCard key={r.ref} row={r} fresh={last !== undefined && isNew(r.seenAt, last)} />
+            <SeenCard key={r.ref} row={r} fresh={last !== undefined && isNew(r.newsAt, last)} />
           ))}
         </div>
       )}
