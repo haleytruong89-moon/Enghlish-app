@@ -33,6 +33,7 @@ Ký hiệu: ✅ đã chốt (ghi ngày) · ❓ cần phụ huynh quyết · 🕓
 | **Phụ huynh** | Xem mọi thứ của con mình; bật AI, trần chi phí, đồng ý `ai_text`; xem "Tổng hợp góp ý"; sửa công thức AI (tạo phiên bản mới); trả lời góp ý về app; tải file bài đã làm (gia sư xác nhận kết quả, R8), ghi buổi (như hiện nay) | Xác nhận mức 3–4, cấp, bài kiểm tra trong buổi (D14/D15, chỉ gia sư); duyệt nháp chuyên môn của AI thay gia sư (chỉ được **bỏ** nháp) ✅ D-W8 08/11 |
 | **AI** | Đọc tài liệu được đưa vào, soạn nháp theo công thức | Ghi thẳng vào bằng chứng, mức, cấp; tự giao bài; tự đổi công thức; chấm bài viết/nói thay người |
 
+- **Bàn học của con (W4b, 15/11):** "Đã xem" một bài = có **một hành động của người lớn** trên chính bài đó (góp ý S6, "Chỉ góp ý", Đúng/Sai cho câu cần xem, kết quả đã ghi, quyết định duyệt, đánh giá bài sửa); **tự chấm của app không phải "đã xem"**. Con thấy "Hôm nay còn n việc · khoảng m phút" (số việc của mình) và "a/b câu" (câu **đã trả lời**), không bao giờ số câu đúng. Dấu "Mới" nhớ trên máy của con (không ghi lên máy chủ — không thêm nhật ký hành vi).
 - Tiến độ, điểm, mức **do server tính**. Trình duyệt chỉ gửi sự kiện (nộp, chọn, duyệt); không gửi "đã hoàn thành" hay "đạt mức".
 - Đáp án đúng **không bao giờ** gửi xuống máy của con trước khi nộp (như hiện nay).
 - **Góp ý của phụ huynh cho gia sư vẫn qua Zalo** ✅ 08/11. App không làm kênh nhắn phụ huynh → gia sư. Ô "Phụ huynh góp ý" trong "Chờ duyệt" của bản bấm thử **bỏ**.
