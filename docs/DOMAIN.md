@@ -1,4 +1,4 @@
-# Luật và dữ liệu nghiệp vụ · Bàn làm việc gia sư (bản 0.5 · thêm Lộ trình mốc W4a 14/11/2026; trước đó 0.4 thêm §5.6 "Đếm buổi học")
+# Luật và dữ liệu nghiệp vụ · Bàn làm việc gia sư (bản 0.6 · thêm W4c2 15/11/2026: màn sau khi nộp, thử lại, "Bài kiểm tra"; trước đó 0.5 thêm Lộ trình mốc W4a 14/11/2026; 0.4 thêm §5.6 "Đếm buổi học")
 
 Trạng thái: **0.3 — phụ huynh duyệt 08/11** (D-W1…D-W8 + 8 điểm rà soát R1–R8, mục 14). Đổi sau này = bản 0.5 có ghi lý do. **Bản 0.4 (14/11/2026):** thêm §5.6 "Đếm buổi học" (UX vòng 3A) và dòng "thống kê buổi học dẫn xuất" ở tầng C và §7; phụ huynh xem lại luật đếm trên bản thử. Viết trước spec `docs/superpowers/specs/2026-11-08-tutor-workdesk-design.md` để chốt phần khó đổi về sau (dữ liệu, phiên bản, cách tính, trạng thái, quyền) trước khi code.
 Nguồn: bản bấm thử + trang luồng (07/11), `TUTOR_WORKDESK_REVIEW_2026-11-07.md`, `AI_QUALITY_PLAN_2026-11-07.md`, câu trả lời thay gia sư của phụ huynh (08/11, mục 12), hiện trạng code đến migration `0024`.
@@ -330,8 +330,8 @@ Lớp / đợt, chứng chỉ, streak, bảng xếp hạng, video; chat tự do 
 | R7 | Nhãn dạng câu nghe chưa có chỗ | Nhãn hạt giống mới ở migration W2, `group_key` mảng Nghe |
 | R8 | Phụ huynh "nạp bài" vs D-W8 | Phụ huynh tải file; gia sư xác nhận kết quả |
 
-## Bản 0.4 · W4c2 (15/11/2026) — màn sau khi nộp, thử lại, "Bài kiểm tra" (sửa §2 và §6)
+## Bản 0.6 · W4c2 (15/11/2026) — màn sau khi nộp, thử lại, "Bài kiểm tra" (sửa §2 và §6)
 
 - **§2 (con thấy gì):** sau khi nộp bài trên app, con thấy **câu nên nhìn lại** (đề + câu con viết / "chưa trả lời"), **câu viết tự do** ("{thầy/cô} sẽ đọc câu này") và một dòng "Các câu còn lại: ổn" (không số). **Không** đáp án, giải thích, danh sách câu đúng, số câu đúng / sai, điểm. (Thay cách cũ "Nên là / Vì sao".)
 - **§6 (bằng chứng):** **Lần thử lại một câu** (`item_retries`, một lần mỗi câu, chỉ bài luyện tập, chỉ lần làm mới nhất, chỉ câu sai / bỏ trống hoặc người lớn đã phán Sai) **không phải bằng chứng**: không engine S7a / điểm kiến thức đọc; đi tới thầy/cô để nhắn lại. **Cờ "Bài kiểm tra"** (`work_test_marks`, đặt khi giao, chỉ trước lần nộp đầu, dòng mới nhất thắng) **chỉ đổi giao diện**: không đổi `mode` (không chuyển sang `INDEPENDENT_CHECK`), không đổi cách đếm. Bước `INDEPENDENT_CHECK` của bài chủ đề vẫn coi là "kiểm tra" như trước.
-- **Mở (chờ phụ huynh):** thầy/cô thấy lần thử lại ở đâu và "đã xem" nghĩa là gì (xem `docs/PROGRESS.md` mục "W4c2").
+- **Thầy/cô thấy lần thử lại (phụ huynh quyết 15/11):** cạnh câu con đã viết ở "Cần thầy/cô xem" và một dòng ở Chờ duyệt; dòng tự hết chờ khi người lớn làm một việc muộn hơn trên lần làm đó (góp ý, quyết định một câu, kết quả, quyết định duyệt). Không có "đã xem" riêng.

@@ -129,7 +129,7 @@ describe("result view, retry and test flag (migration 0034)", () => {
       await fail(retry(practice, "q7", "x"), "23514", /\(not_retryable\)/); // waiting for a person: not a wrong item yet
       await fail(retry(practice, "q99", "x"), "22023", /\(bad_item\)/);
       await fail(retry(practice, "q6", "   "), "22023", /\(bad_answer\)/);
-      await fail(retry(practice, "q6", "x".repeat(501)), "22023", /\(bad_answer\)/);
+      await fail(retry(practice, "q6", "x".repeat(2001)), "22023", /\(bad_answer\)/);
       await fail(retry(practice, "q6", "happiness", randomUUID(), s.users.studentAn), "P0002");
       const fresh = await newWork(false);
       await fail(retry(fresh, "q2", "A. must"), "23514", /\(not_sent\)/);

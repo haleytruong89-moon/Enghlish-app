@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { messages, playerCopy as c, work } from "@/lib/copy/vi";
+import { messages, playerCopy as c, resultCopy, work } from "@/lib/copy/vi";
 import {
   clampIndex, dots, initialSaveFlow, isLast, nextIndex, onEdit, onSaveDone, onSaveStart, prevIndex, progress, saveLabel, shouldSave, startIndex, unansweredIndexes, type SaveFlow,
 } from "@/lib/student/player";
@@ -23,13 +23,13 @@ type Phase = "questions" | "review" | "receipt" | "result";
  * for the same content), the help declaration is required, the draft is the child's own. The reply is a receipt: nothing here says whether an answer was right.
  * A practice work shows the dimmed "Hỏi gia sư · Sắp có" slot; a test does not (and has no retry).
  */
-export function Player({ activity, isTest, initialResult, aside }: { activity: SupportedActivityView; isTest: boolean; initialResult: ResultData | null; aside?: ReactNode }) {
+export function Player({ activity, isTest, initialResult, sentAt, aside }: { activity: SupportedActivityView; isTest: boolean; initialResult: ResultData | null; /** Work sent before but no result view to show (before migration 0034): start at the receipt, never at an empty player. */ sentAt?: string | null; aside?: ReactNode }) {
   const { step, draft } = activity;
   const items = step.items;
   const initial: DraftContent = draft?.content ?? {};
   const [answers, setAnswers] = useState<Record<string, string>>(initial.answers ?? {});
   const [idx, setIdx] = useState(() => startIndex(items, initial.answers ?? {}));
-  const [phase, setPhase] = useState<Phase>(initialResult ? "result" : "questions");
+  const [phase, setPhase] = useState<Phase>(initialResult ? "result" : sentAt ? "receipt" : "questions");
   const [result, setResult] = useState<ResultData | null>(initialResult);
   const [pasted, setPasted] = useState(initial.pasted ?? false);
   const [pasteSeen, setPasteSeen] = useState(initial.pasted ?? false);
@@ -39,7 +39,9 @@ export function Player({ activity, isTest, initialResult, aside }: { activity: S
   const [otherTab, setOtherTab] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [receipt, setReceipt] = useState<Receipt | null>(sentAt ? { attemptId: "", attemptNo: 0, submittedAt: sentAt, hash: "", replayed: true } : null);
+  const [early, setEarly] = useState(!!sentAt);
+  const [leaveWarn, setLeaveWarn] = useState(false);
 
   const flowRef = useRef(flow);
   const closed = useRef(false);
@@ -58,6 +60,8 @@ export function Player({ activity, isTest, initialResult, aside }: { activity: S
 
   function touch(next: (s: SaveFlow) => SaveFlow = onEdit) {
     setProblem(null);
+    setLeaveWarn(false);
+    flowRef.current = next(flowRef.current); // the refs are read by a save that may run before the next render
     setFlow((s) => next(s));
   }
 
@@ -100,6 +104,47 @@ export function Player({ activity, isTest, initialResult, aside }: { activity: S
     return () => window.removeEventListener("beforeunload", warn);
   }, []);
 
+  // Leaving by anything other than the exit button (tab switch, iPad Safari, closing): a keepalive save of the unsaved draft.
+  useEffect(() => {
+    const flush = () => {
+      if (closed.current || !flowRef.current.dirty) return;
+      void fetch(`/api/drafts/${activity.activityId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: contentRef.current, base_revision: revision.current }),
+        keepalive: true,
+      }).catch(() => undefined);
+    };
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, [activity.activityId]);
+
+  /** Waits for a running save, saves what is left, and says whether everything is stored. */
+  async function flushAll(): Promise<boolean> {
+    for (let i = 0; i < 3; i += 1) {
+      while (flowRef.current.inflight) await new Promise((r) => setTimeout(r, 50));
+      if (!flowRef.current.dirty) break;
+      await saveNow();
+    }
+    return !flowRef.current.dirty && !flowRef.current.inflight && !flowRef.current.failed;
+  }
+
+  async function leave() {
+    if (leaveWarn) { window.location.href = "/"; return; }
+    setBusy(true);
+    const ok = await flushAll();
+    setBusy(false);
+    if (ok) { window.location.href = "/"; return; }
+    setLeaveWarn(true);
+  }
+
   function go(i: number) {
     setIdx(clampIndex(i, total));
     setPhase("questions");
@@ -125,9 +170,11 @@ export function Player({ activity, isTest, initialResult, aside }: { activity: S
     const body = { activity_id: activity.activityId, content: { answers: nonEmptyAnswers(answers) }, assistance: assist, provenance: pasted ? "pasted" : "in_app" };
     const sig = JSON.stringify(body);
     if (!pending.current || pending.current.sig !== sig) pending.current = { id: crypto.randomUUID(), sig };
+    closed.current = true; // no autosave may recreate a draft from here on; reset below when the send fails
     try {
       const res = await fetch("/api/attempts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, client_submission_id: pending.current.id }) });
       if (res.status === 409) {
+        closed.current = false;
         setProblem(work.submitConflict);
         pending.current = null;
         return;
@@ -144,6 +191,7 @@ export function Player({ activity, isTest, initialResult, aside }: { activity: S
       setResult(r);
       setPhase(r ? "result" : "receipt");
     } catch {
+      closed.current = false;
       setProblem(work.submitError);
     } finally {
       setBusy(false);
@@ -151,6 +199,7 @@ export function Player({ activity, isTest, initialResult, aside }: { activity: S
   }
 
   function redo() {
+    setEarly(false);
     closed.current = false;
     revision.current = baseRevisionOf(null);
     pending.current = null;
@@ -164,15 +213,23 @@ export function Player({ activity, isTest, initialResult, aside }: { activity: S
   }
 
   if (phase === "result" && result) {
-    return <ResultView activityId={activity.activityId} title={activity.titleVi} result={result} canRedo={!isTest && activity.canSubmit} onRedo={redo} />;
+    return <ResultView activityId={activity.activityId} title={activity.titleVi} result={result} items={items.map((i) => ({ id: i.id, kind: i.kind, options: i.options }))} canRedo={!isTest && activity.canSubmit} onRedo={redo} />;
   }
   if (phase === "receipt" && receipt) {
     return (
       <section aria-live="polite" data-testid="receipt" className="mx-auto flex max-w-2xl flex-col gap-3 rounded-2xl border border-line bg-white p-5">
         <h2 role="status" className="text-xl font-bold text-accent">
-          {work.submittedAt(formatHm(receipt.submittedAt))}
+          {early ? work.alreadySubmitted(formatHm(receipt.submittedAt)) : work.submittedAt(formatHm(receipt.submittedAt))}
         </h2>
         <p className="text-[15px]">{messages.submitted}</p>
+        {early && !isTest && activity.canSubmit ? (
+          <>
+            <p className="text-sm text-muted">{work.mayRetry}</p>
+            <button type="button" onClick={redo} data-testid="receipt-redo" className="min-h-12 self-start rounded-xl border border-line bg-white px-5 text-base font-semibold">
+              {resultCopy.again}
+            </button>
+          </>
+        ) : null}
         <Link href="/" className="flex min-h-12 items-center self-start rounded-xl bg-accent px-5 text-base font-bold text-white">
           {work.homeLink}
         </Link>
@@ -187,9 +244,14 @@ export function Player({ activity, isTest, initialResult, aside }: { activity: S
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-3.5" data-testid="player" data-test={isTest ? "yes" : "no"} onPasteCapture={() => { setPasted(true); setPasteSeen(true); touch(); }}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link href="/" className="flex min-h-11 items-center text-sm font-semibold text-accent">
-          ‹ {c.exit}
-        </Link>
+        <button type="button" onClick={() => void leave()} disabled={busy} data-testid="player-exit" className="flex min-h-11 items-center text-sm font-semibold text-accent">
+          ‹ {leaveWarn ? c.exitAnyway : flow.dirty || flow.inflight || flow.failed ? c.exit : c.exitSaved}
+        </button>
+        {leaveWarn ? (
+          <span role="alert" data-testid="leave-warn" className="text-sm text-[#6B4600]">
+            {c.notSaved}
+          </span>
+        ) : null}
         <span aria-live="polite" data-testid="save-status" className={`text-sm ${label === "error" ? "text-[#6B4600]" : "text-muted"}`}>
           {savedLine}
         </span>
@@ -279,8 +341,11 @@ export function Player({ activity, isTest, initialResult, aside }: { activity: S
                 value={answers[item.id] ?? ""}
                 onChange={(v) => {
                   touch();
-                  setAnswers((a) => ({ ...a, [item.id]: v }));
+                  const next = { ...answers, [item.id]: v };
+                  contentRef.current = { ...contentRef.current, answers: nonEmptyAnswers(next) };
+                  setAnswers(next);
                 }}
+                onCommit={() => void saveRef.current()}
               >
                 {!isTest ? <AskTutorSlot /> : null}
               </QuestionCard>

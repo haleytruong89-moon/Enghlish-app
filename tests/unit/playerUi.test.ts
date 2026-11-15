@@ -17,7 +17,7 @@ const result = (over: Partial<ResultData> = {}): ResultData => ({
   open: [{ id: "q7", n: 7, stem: "Write one sentence", given: "I wish I could" }],
   ...over,
 });
-const html = (r: ResultData, canRedo = true) => renderToStaticMarkup(createElement(ResultView, { activityId: "a1", title: "Unit 5", result: r, canRedo, onRedo: () => {} }));
+const html = (r: ResultData, canRedo = true) => renderToStaticMarkup(createElement(ResultView, { activityId: "a1", title: "Unit 5", result: r, items: [{ id: "q2", kind: "mcq", options: ["A. must", "B. can't"] }], canRedo, onRedo: () => {} }));
 const text = (h: string) => h.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 
 describe("the result screen (S-10)", () => {

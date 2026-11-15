@@ -7,11 +7,18 @@ import { playerCopy } from "@/lib/copy/vi";
 import { groupResult, type ResultView as ResultData } from "@/lib/student/result";
 import { RetryBox } from "./RetryBox";
 
+const itemOf = (items: { id: string; kind: string; options: string[] }[], id: string) => items.find((i) => i.id === id);
+const choicesOf = (items: { id: string; kind: string; options: string[] }[], id: string): string[] => {
+  const it = itemOf(items, id);
+  return it && it.options.length > 0 && ["mcq", "gap", "word_form"].includes(it.kind) ? it.options : [];
+};
+const isLong = (items: { id: string; kind: string; options: string[] }[], id: string): boolean => ["open", "transform"].includes(itemOf(items, id)?.kind ?? "");
+
 /**
  * After submitting (S-10). Which questions to look at again: what the child wrote, never the right answer, an explanation, a count or a score.
  * Practice: one "Thử lại câu này" per question. Test: no retry; "{thầy/cô} sẽ chữa cùng bạn".
  */
-export function ResultView({ activityId, title, result, canRedo, onRedo }: { activityId: string; title: string; result: ResultData; canRedo: boolean; onRedo: () => void }) {
+export function ResultView({ activityId, title, result, items, canRedo, onRedo }: { activityId: string; title: string; result: ResultData; /** The step items (kind and choices only; the key never reaches the browser). */ items: { id: string; kind: string; options: string[] }[]; canRedo: boolean; onRedo: () => void }) {
   const g = groupResult(result);
   const [sent, setSent] = useState<Record<string, string>>({});
   return (
@@ -61,7 +68,7 @@ export function ResultView({ activityId, title, result, canRedo, onRedo }: { act
                       <span className="self-start rounded-full bg-[#E3ECE8] px-3 py-1 text-sm font-semibold text-[#1F4439]">{retryCopy.sent}</span>
                     </div>
                   ) : g.retryAllowed && x.canRetry ? (
-                    <RetryBox activityId={activityId} itemId={x.id} number={x.n} onSent={(t) => setSent((s) => ({ ...s, [x.id]: t }))} />
+                    <RetryBox activityId={activityId} itemId={x.id} number={x.n} options={choicesOf(items, x.id)} long={isLong(items, x.id)} onSent={(t) => setSent((s) => ({ ...s, [x.id]: t }))} />
                   ) : null}
                 </li>
               );

@@ -299,12 +299,15 @@ Bốn khối trong `lib/copy/vi.ts`: `playerCopy` (làm bài), `resultCopy` (sau
 
 | Chỗ | Chữ |
 |---|---|
-| Làm bài | "Luyện tập" / "Bài kiểm tra" · "Thoát · bài đã được lưu" · "a/b câu" (trong `data-count="work"`) · "Câu n · Điền vào chỗ trống / Chọn đáp án / Trả lời ngắn" · "Câu trước" · "Câu tiếp" · "Xem lại và nộp" · "Đang lưu…" · "Đã lưu" · "Trước khi nộp" · "Bạn chưa trả lời câu 3, 5. Bạn vẫn nộp được, hoặc quay lại làm tiếp." · "Nộp bài" |
+| Làm bài | "Luyện tập" / "Bài kiểm tra" · "Thoát" (hiện "Thoát · bài đã được lưu" chỉ khi đã lưu xong; chưa lưu được: "Thoát, bài chưa được lưu") · "a/b câu" (trong `data-count="work"`) · "Câu n · Điền vào chỗ trống / Chọn đáp án / Trả lời ngắn" · "Câu trước" · "Câu tiếp" · "Xem lại và nộp" · "Đang lưu…" · "Đã lưu" · "Trước khi nộp" · "Bạn chưa trả lời câu 3, 5. Bạn vẫn nộp được, hoặc quay lại làm tiếp." · "Nộp bài" |
 | Bài kiểm tra | "Bài kiểm tra: tự làm, không có gợi ý. Cứ làm hết sức mình — {thầy/cô} cần thấy bạn tự làm được đến đâu." |
 | Bài luyện tập | ô mờ "Hỏi gia sư · Sắp có" (không bấm được) + "Sắp có — gia sư sẽ gợi ý từng bước, không làm hộ. Chỉ có ở bài luyện tập, không có ở bài kiểm tra." (không có ở bài kiểm tra) |
 | Sau khi nộp | "Bạn đã nộp bài · {thầy/cô} sẽ xem" · "Mấy câu bạn nên nhìn lại" (bài kiểm tra: "Mấy câu {thầy/cô} sẽ xem lại cùng bạn") · "Bạn trả lời: “…”" / "Bạn chưa trả lời câu này." · "Câu viết tự do" + "{Thầy/cô} sẽ đọc câu này" · "Các câu còn lại: ổn" (một dòng, **không số**) · "Về Hôm nay" · "Xem trong Đã làm" · "Làm lại cả bài" (chỉ bài luyện tập) |
 | Bài kiểm tra, sau khi nộp | "Bài kiểm tra: {thầy/cô} sẽ chữa cùng bạn." + "Bạn chưa cần làm gì thêm." (không thử lại) |
 | Thử lại | "Thử lại câu này" → ô nhập → "Gửi cho {thầy/cô}" · "Để sau"; gửi rồi: "Lần thử lại của bạn: “…”" + "Đã gửi lần thử lại cho {thầy/cô}" (app **không** nói đúng hay sai) |
 | Giao bài (người lớn) | Ô "Loại bài": Luyện tập · Bài kiểm tra + một dòng giải thích ("Cách app đếm bằng chứng không đổi") |
+
+| Người lớn thấy lần thử lại | Chờ duyệt: "Thử lại" · "Con thử lại n câu"; trang "Cần thầy/cô xem" có mục "Con thử lại": "Lần đầu: …" · "Thử lại: …". Tự hết chờ khi thầy/cô góp ý, chấm một câu, ghi kết quả hoặc duyệt bài đó |
+| Con (S4, S5) | "Mỗi câu bạn được thử lại một lần. {Thầy/cô} sẽ thấy lần thử của bạn. App không hiện đáp án." · tiêu đề câu viết tự do: "Câu {thầy/cô} sẽ đọc" |
 
 Luật: cờ "Bài kiểm tra" **chỉ đổi giao diện** (không thử lại, không ô hỏi gia sư, chữ khác); không đổi `mode`, không đổi cách S7a / điểm kiến thức đếm. Lần thử lại **không phải bằng chứng** (không engine nào đọc).

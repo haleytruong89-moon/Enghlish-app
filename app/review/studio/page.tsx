@@ -5,13 +5,14 @@ import { StaffShell } from "@/components/shell/StaffShell";
 import { requireShell } from "@/lib/shell/load";
 import { firstParam } from "@/lib/shell/shell";
 import { ReviewTabs } from "@/components/review/ReviewTabs";
+import { RetryPendingCard } from "@/components/review/RetryPendingCard";
 import { StudioPendingCard } from "@/components/review/StudioPendingCard";
 import { reviewPage, studioInboxCopy } from "@/lib/copy/vi";
 import { authorizeStaffPage } from "@/lib/review/access";
 import { loadSkillInbox } from "@/lib/skills/load";
 import { loadPointInbox } from "@/lib/points/load";
 import { combinedTabCount } from "@/lib/points/view";
-import { loadStudioPending } from "@/lib/studio/load";
+import { loadRetryPending, loadStudioPending } from "@/lib/studio/load";
 import { getAuthUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
@@ -23,8 +24,9 @@ export default async function ReviewStudioPage({ searchParams }: { searchParams:
   const [access, shell] = await Promise.all([authorizeStaffPage(user), requireShell(firstParam(sp.learner))]);
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();
-  const [pending, skillInbox, pointInbox] = await Promise.all([
+  const [pending, retries, skillInbox, pointInbox] = await Promise.all([
     loadStudioPending(access.member.id),
+    loadRetryPending(access.member.id).catch(() => null),
     loadSkillInbox(access.member.id).catch(() => null),
     loadPointInbox(access.member.id).catch(() => null),
   ]);
@@ -48,6 +50,17 @@ export default async function ReviewStudioPage({ searchParams }: { searchParams:
             ))}
           </ul>
         )}
+        {retries && retries.attempts.length > 0 ? (
+          <section className="mt-8" data-testid="retry-section" aria-labelledby="retry-heading">
+            <h2 id="retry-heading" className="text-xl font-bold">{studioInboxCopy.retryTitle}</h2>
+            <p className="mt-1 text-sm text-muted">{studioInboxCopy.retryIntro}</p>
+            <ul className="mt-4 flex flex-col gap-4">
+              {retries.attempts.map((a) => (
+                <RetryPendingCard key={a.attemptId} attempt={a} />
+              ))}
+            </ul>
+          </section>
+        ) : null}
       </div>
     </StaffShell>
   );

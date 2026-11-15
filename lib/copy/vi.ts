@@ -1940,7 +1940,9 @@ export const playerCopy = {
   testTag: "Bài kiểm tra",
   testLineBold: "Bài kiểm tra: tự làm, không có gợi ý.",
   testLineRest: ` Cứ làm hết sức mình — ${tutorHonorific} cần thấy bạn tự làm được đến đâu.`,
-  exit: "Thoát · bài đã được lưu",
+  exit: "Thoát",
+  exitSaved: "Thoát · bài đã được lưu",
+  exitAnyway: "Thoát, bài chưa được lưu",
   progress: (a: number, b: number) => `${a}/${b} câu`,
   progressLabel: "Số câu đã trả lời",
   questionOf: (n: number) => `Câu ${n}`,
@@ -1974,10 +1976,10 @@ export const resultCopy = {
   testNoteSub: "Bạn chưa cần làm gì thêm.",
   lookTitle: "Mấy câu bạn nên nhìn lại",
   lookTitleTest: `Mấy câu ${tutorHonorific} sẽ xem lại cùng bạn`,
-  lookIntro: `Mỗi câu bạn được thử lại một lần. ${tutorHonorificCap} sẽ xem lần thử của bạn và nhắn lại. App không hiện đáp án.`,
+  lookIntro: `Mỗi câu bạn được thử lại một lần. ${tutorHonorificCap} sẽ thấy lần thử của bạn. App không hiện đáp án.`,
   youAnswered: "Bạn trả lời",
   notAnswered: "Bạn chưa trả lời câu này.",
-  openTitle: "Câu viết tự do",
+  openTitle: `Câu ${tutorHonorific} sẽ đọc`,
   openNote: `${tutorHonorificCap} sẽ đọc câu này`,
   youWrote: "Bạn viết",
   othersFine: "Các câu còn lại: ổn",
@@ -2035,6 +2037,12 @@ export const studioInboxCopy = {
   doneLine: (alias: string, correct: number, inApp: number) =>
     `Đã xong bài này của ${alias}: đúng ${correct}/${inApp} câu làm trên app. Đã ghi Kết quả bài và mục kiến thức của câu sai vào Mục cần chú ý; kỹ năng của em đang được tính lại (vài giây).`,
   partialLine: (n: number) => `Đã lưu. Còn ${n} câu chờ.`,
+  // Retries of the child (W4c2): shown beside the original answer; the row clears itself when an adult acts on that attempt afterwards.
+  retryTitle: "Con thử lại",
+  retryIntro: `Các câu con làm lại một lần sau khi nộp. Đây không phải bằng chứng và không đổi mức nào. Mục này tự hết chờ khi ${tutorHonorific} góp ý, chấm một câu, ghi kết quả hoặc duyệt bài đó.`,
+  retryHeading: (alias: string, title: string, n: number) => `${alias} · ${title} · thử lại ${n} câu`,
+  retryFirst: "Lần đầu",
+  retryNow: "Thử lại",
 };
 
 // Studio B1 — Cài đặt AI (parent only; spec §3 step 0, §5.5).
@@ -2380,6 +2388,7 @@ export const pendingCopy = {
   kinds: {
     work: "Bài nộp",
     studioCheck: `Cần ${tutorHonorific} xem`,
+    retry: "Thử lại",
     studioDraft: "Nháp AI · đề",
     curriculumDraft: "Nháp AI · giáo trình",
     skill: "Đề xuất kỹ năng",
@@ -2390,6 +2399,7 @@ export const pendingCopy = {
   },
   need: {
     studioCheck: (n: number) => `${n} câu cần xem`,
+    retry: (n: number) => `Con thử lại ${n} câu`,
     studioDraft: "Xem nháp, sửa rồi duyệt",
     curriculumDraft: "Duyệt Unit và bảng nối",
     aiFailed: "AI chưa đọc được · soạn tay",
@@ -2407,7 +2417,7 @@ export const pendingCopy = {
   empty: "Không có gì chờ duyệt.",
   emptyGroup: "Không có mục nào ở nhóm này.",
   failed: (what: string) => `Chưa đọc được phần “${what}”. Các phần khác vẫn đúng.`,
-  sources: { work: "Bài làm", studio: `Cần ${tutorHonorific} xem`, skills: "Kỹ năng", points: "Mục kiến thức", drafts: "Nháp đề", curricula: "Giáo trình", imports: "Bài nạp", roadmap: "Lộ trình" },
+  sources: { work: "Bài làm", studio: `Cần ${tutorHonorific} xem`, retries: "Con thử lại", skills: "Kỹ năng", points: "Mục kiến thức", drafts: "Nháp đề", curricula: "Giáo trình", imports: "Bài nạp", roadmap: "Lộ trình" },
   more: "Có thể còn bài cũ hơn chưa hiện ở đây.",
   fullInbox: "Mở danh sách đầy đủ",
   deskTitle: (n: number | string) => `Chờ duyệt · ${n}`,

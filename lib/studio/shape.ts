@@ -2,7 +2,7 @@
 /** Parse the jsonb of the Studio functions (0024). Anything unexpected throws (→ 500, logged) instead of showing a half-right screen. */
 import { z } from "zod";
 import { studioDraftSchema } from "./schema";
-import type { AiSettingsView, DraftFiles, DraftListItem, DraftView, PendingInbox } from "./types";
+import type { AiSettingsView, DraftFiles, DraftListItem, DraftView, PendingInbox, RetryInbox } from "./types";
 
 const num = z.union([z.number(), z.string()]).transform(Number);
 const status = z.enum(["extracting", "ai_failed", "draft", "approved", "discarded"]);
@@ -58,6 +58,27 @@ export function parsePending(raw: unknown): PendingInbox {
       attemptId: a.attempt_id, learnerId: a.learner_id, alias: a.alias, isTest: a.is_test, activityId: a.activity_id, title: a.title, submittedAt: a.submitted_at,
       attemptNo: a.attempt_no, waitingDays: a.waiting_days,
       items: a.items.map((i) => ({ itemId: i.item_id, n: i.n, kind: i.kind, stem: i.stem, expected: i.expected, accepted: i.accepted, given: i.given })),
+    })),
+  };
+}
+
+export function parseRetryPending(raw: unknown): RetryInbox {
+  const p = z
+    .object({
+      count: num,
+      items: z.array(z.object({
+        attempt_id: z.string(), learner_id: z.string(), alias: z.string(), is_test: z.boolean(), activity_id: z.string(), title: z.string(),
+        submitted_at: z.string(), since: z.string(),
+        retries: z.array(z.object({ item_id: z.string(), n: z.number().int(), stem: z.string(), given: z.string(), retry: z.string(), at: z.string() })),
+      })),
+    })
+    .parse(raw);
+  return {
+    count: p.count,
+    attempts: p.items.map((a) => ({
+      attemptId: a.attempt_id, learnerId: a.learner_id, alias: a.alias, isTest: a.is_test, activityId: a.activity_id, title: a.title,
+      submittedAt: a.submitted_at, since: a.since,
+      retries: a.retries.map((r) => ({ itemId: r.item_id, n: r.n, stem: r.stem, given: r.given, retry: r.retry, at: r.at })),
     })),
   };
 }

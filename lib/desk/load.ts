@@ -15,13 +15,13 @@ import { loadSessionFacts } from "@/lib/sessions/load";
 import type { SessionDay } from "@/lib/sessions/types";
 import { loadSkillInbox } from "@/lib/skills/load";
 import type { ShellData } from "@/lib/shell/shell";
-import { loadAiSettings, loadDraftList, loadStudioPending } from "@/lib/studio/load";
+import { loadAiSettings, loadDraftList, loadRetryPending, loadStudioPending } from "@/lib/studio/load";
 import type { AiSettingsView } from "@/lib/studio/types";
 import { loadToday, type TodayData } from "@/lib/tutorwork/load";
 import { loadIntake } from "@/lib/workdesk/load";
 import { buildPendingRows, PENDING_MAX_PAGES, PENDING_PAGE_SIZE, type PendingRow } from "./pending";
 
-export type PendingSource = "work" | "studio" | "skills" | "points" | "drafts" | "curricula" | "imports" | "roadmap";
+export type PendingSource = "work" | "studio" | "retries" | "skills" | "points" | "drafts" | "curricula" | "imports" | "roadmap";
 export type PendingRowsResult = { rows: PendingRow[]; failed: PendingSource[]; more: boolean };
 
 async function settle<T>(p: Promise<T | null>): Promise<T | null> {
@@ -50,9 +50,10 @@ export async function loadWorkPages(): Promise<{ items: InboxItem[]; more: boole
  * that cannot be read (error, or null before its migration) is listed in `failed` and the others still show.
  */
 export async function loadPendingRows(memberId: string, role: "tutor" | "parent", learnerId: string, roadmapLoad?: Promise<RoadmapLoad | null>): Promise<PendingRowsResult> {
-  const [work, studio, skills, points, drafts, curricula, imports, roadmap] = await Promise.all([
+  const [work, studio, retries, skills, points, drafts, curricula, imports, roadmap] = await Promise.all([
     settle(loadWorkPages()),
     settle(loadStudioPending(memberId)),
+    settle(loadRetryPending(memberId)),
     settle(loadSkillInbox(memberId)),
     settle(loadPointInbox(memberId)),
     settle(loadDraftList(learnerId)),
@@ -63,6 +64,7 @@ export async function loadPendingRows(memberId: string, role: "tutor" | "parent"
   const failed: PendingSource[] = [];
   if (work === null) failed.push("work");
   if (studio === null) failed.push("studio");
+  if (retries === null) failed.push("retries");
   if (skills === null) failed.push("skills");
   if (points === null) failed.push("points");
   if (drafts === null) failed.push("drafts");
@@ -70,7 +72,7 @@ export async function loadPendingRows(memberId: string, role: "tutor" | "parent"
   if (imports === null) failed.push("imports");
   if (roadmap === null) failed.push("roadmap");
   return {
-    rows: buildPendingRows({ learnerId, role, work: work?.items ?? [], studio: studio?.attempts ?? [], skills: skills?.items ?? [], points: points?.items ?? [], drafts: drafts ?? [], curricula: curricula ?? [], imports: imports ?? [], roadmapDrafts: roadmap && roadmap.kind === "ok" ? draftCount(roadmap.view) : 0 }),
+    rows: buildPendingRows({ learnerId, role, work: work?.items ?? [], studio: studio?.attempts ?? [], retries: retries?.attempts ?? [], skills: skills?.items ?? [], points: points?.items ?? [], drafts: drafts ?? [], curricula: curricula ?? [], imports: imports ?? [], roadmapDrafts: roadmap && roadmap.kind === "ok" ? draftCount(roadmap.view) : 0 }),
     failed,
     more: work?.more ?? false,
   };

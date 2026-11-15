@@ -21,8 +21,15 @@ export function AssignStudioForm({ draftId, today }: { draftId: string; today: s
   const { state: saveState, track } = useSaveStatus({ start, due, isTest });
   const [msg, setMsg] = useState<string | null>(null);
   const clientId = useRef(crypto.randomUUID());
+  const sigRef = useRef("");
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    // One client id per (dates, kind): a changed kind or date is another request, never a replay of the first one.
+    const sig = `${start}|${due}|${isTest}`;
+    if (sigRef.current !== sig) {
+      sigRef.current = sig;
+      clientId.current = crypto.randomUUID();
+    }
     setBusy(true);
     const r = await track(() => sendJson(`/api/studio/drafts/${draftId}/assign`, "POST", { start_on: start, due_on: due, client_id: clientId.current, ...(isTest ? { is_test: true } : {}) }));
     setBusy(false);

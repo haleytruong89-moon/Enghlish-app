@@ -36,7 +36,7 @@ create table if not exists english.item_retries (
   attempt_id uuid not null references english.attempts(id),
   activity_id uuid not null references english.activity_instances(id),
   item_id text not null check (pg_catalog.length(item_id) between 1 and 40),
-  answer text not null check (pg_catalog.length(pg_catalog.btrim(answer)) between 1 and 500),
+  answer text not null check (pg_catalog.length(pg_catalog.btrim(answer)) between 1 and 2000),
   client_id text not null check (pg_catalog.length(pg_catalog.btrim(client_id)) between 8 and 100),
   created_at timestamptz not null default clock_timestamp(),
   unique (attempt_id, item_id),
@@ -309,8 +309,8 @@ begin
   if not found or not english.eng_activity_released(p_activity) then
     raise exception 'eng_my_retry_item: activity not found (not_found)' using errcode = 'P0002';
   end if;
-  if pg_catalog.length(v_text) not between 1 and 500 then
-    raise exception 'eng_my_retry_item: the new answer is 1 to 500 characters (bad_answer)' using errcode = '22023';
+  if pg_catalog.length(v_text) not between 1 and 2000 then
+    raise exception 'eng_my_retry_item: the new answer is 1 to 2000 characters (bad_answer)' using errcode = '22023';
   end if;
 
   -- Gửi lại cùng client_id: cùng biên nhận; khác nội dung → 23505.

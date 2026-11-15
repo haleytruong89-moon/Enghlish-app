@@ -39,7 +39,7 @@ export type AttemptBody = z.infer<typeof attemptBodySchema>;
 /** One retry of one item (W4c2). The database checks the item against the step. */
 export const retryBodySchema = z.strictObject({
   item_id: z.string().min(1).max(40),
-  answer: z.string().trim().min(1).max(500),
+  answer: z.string().trim().min(1).max(2000),
   client_id: uuid,
 });
 export type RetryBody = z.infer<typeof retryBodySchema>;

@@ -38,7 +38,7 @@ describe("*_result_view_retry.sql (found by suffix)", () => {
       expect(code, f).toContain(`grant execute on function english.${f} to authenticated;`);
       expect(code).not.toMatch(new RegExp(`grant execute on function english\\.${name}\\([^)]*\\) to service_role`));
     }
-    for (const f of ["eng_set_test_mark(text, uuid, boolean, uuid, text)", "eng_assign_studio_v2(uuid, date, date, boolean, uuid, text)", "eng_item_retries(uuid)"]) {
+    for (const f of ["eng_set_test_mark(text, uuid, boolean, uuid, text)", "eng_assign_studio_v2(uuid, date, date, boolean, uuid, text)", "eng_item_retries(uuid)", "eng_retry_pending(uuid, boolean)"]) {
       expect(code, f).toContain(`revoke execute on function english.${f} from public, anon, authenticated;`);
       expect(code, f).toContain(`grant execute on function english.${f} to service_role;`);
     }

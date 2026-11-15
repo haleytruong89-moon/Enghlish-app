@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-const m = { loadInbox: vi.fn(), loadStudioPending: vi.fn(), loadSkillInbox: vi.fn(), loadPointInbox: vi.fn(), loadDraftList: vi.fn(), loadCurriculumCards: vi.fn(), loadImportPending: vi.fn(), loadSessionFacts: vi.fn() };
+const m = { loadInbox: vi.fn(), loadStudioPending: vi.fn(), loadRetryPending: vi.fn(), loadSkillInbox: vi.fn(), loadPointInbox: vi.fn(), loadDraftList: vi.fn(), loadCurriculumCards: vi.fn(), loadImportPending: vi.fn(), loadSessionFacts: vi.fn() };
 vi.mock("@/lib/review/load", () => ({ loadInbox: (...a: unknown[]) => m.loadInbox(...a) }));
-vi.mock("@/lib/studio/load", () => ({ loadStudioPending: (...a: unknown[]) => m.loadStudioPending(...a), loadDraftList: (...a: unknown[]) => m.loadDraftList(...a), loadAiSettings: vi.fn() }));
+vi.mock("@/lib/studio/load", () => ({ loadStudioPending: (...a: unknown[]) => m.loadStudioPending(...a), loadRetryPending: (...a: unknown[]) => m.loadRetryPending(...a), loadDraftList: (...a: unknown[]) => m.loadDraftList(...a), loadAiSettings: vi.fn() }));
 vi.mock("@/lib/skills/load", () => ({ loadSkillInbox: (...a: unknown[]) => m.loadSkillInbox(...a) }));
 vi.mock("@/lib/points/load", () => ({ loadPointInbox: (...a: unknown[]) => m.loadPointInbox(...a) }));
 vi.mock("@/lib/curriculum/load", () => ({ loadCurriculumCards: (...a: unknown[]) => m.loadCurriculumCards(...a) }));
@@ -20,6 +20,7 @@ import { PENDING_MAX_PAGES, PENDING_PAGE_SIZE } from "@/lib/desk/pending";
 beforeEach(() => {
   m.loadInbox.mockResolvedValue({ items: [], next: null, counts: {} });
   m.loadStudioPending.mockResolvedValue({ count: 0, attempts: [] });
+  m.loadRetryPending.mockResolvedValue({ count: 0, attempts: [] });
   m.loadSkillInbox.mockResolvedValue({ open: 0, decidable: 0, items: [] });
   m.loadPointInbox.mockResolvedValue({ open: 0, decidable: 0, items: [] });
   m.loadDraftList.mockResolvedValue([]);
@@ -32,6 +33,7 @@ describe("loadPendingRows", () => {
     await loadPendingRows("m1", "tutor", "L1");
     expect(m.loadInbox).toHaveBeenCalledWith("todo", null, PENDING_PAGE_SIZE);
     expect(m.loadStudioPending).toHaveBeenCalledWith("m1");
+    expect(m.loadRetryPending).toHaveBeenCalledWith("m1");
     expect(m.loadSkillInbox).toHaveBeenCalledWith("m1");
     expect(m.loadPointInbox).toHaveBeenCalledWith("m1");
     expect(m.loadDraftList).toHaveBeenCalledWith("L1");

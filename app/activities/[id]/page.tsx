@@ -115,7 +115,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
       return (
         <StudentDeskShell active="today" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest}>
           {result || a.canSubmit ? (
-            <Player key={id} activity={a} isTest={isTest} initialResult={result} aside={aside} />
+            <Player key={id} activity={a} isTest={isTest} initialResult={result} sentAt={!result && last ? last.submittedAt : null} aside={aside} />
           ) : (
             <section data-testid="already-submitted" className="mx-auto flex max-w-2xl flex-col gap-2 rounded-2xl border border-line bg-white p-4">
               <p role="status" className="text-[15px] font-semibold text-accent">

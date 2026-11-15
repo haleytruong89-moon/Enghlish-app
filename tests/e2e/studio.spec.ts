@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { Client } from "pg";
-import { aiSettingsCopy, levelLabels, pdfPickCopy, resultCopy, studioInboxCopy, work } from "@/lib/copy/vi";
+import { aiSettingsCopy, levelLabels, pdfPickCopy, pendingCopy, playerCopy, resultCopy, retryCopy, studioInboxCopy, work } from "@/lib/copy/vi";
 import { KEY_RECOMMEND, PAGE_LIMITS } from "@/lib/pdf/limits";
 import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { makeDocx } from "../unit/fixtures/docx";
@@ -103,6 +103,31 @@ test("Nguyên does the test one question at a time: he sees which ones to look a
   expect(text).not.toMatch(/đúng\s+\d/);
 });
 
+test("Nguyên retries one question once; he is told it went to the tutor, no score; the tutor sees the retry beside the first answer", async ({ page, browser }) => {
+  await loginAs(page, "studentNguyen");
+  await page.goto(`/activities/${activityId}`);
+  await page.getByTestId("retry-open-q2").click();
+  await page.getByTestId("retry-box-q2").getByLabel("A. must", { exact: true }).check(); // a multiple-choice item retries with the choices
+  await page.getByTestId("retry-send-q2").click();
+  await expect(page.getByTestId("retry-sent-q2")).toContainText(retryCopy.sent);
+  await expect(page.getByTestId("retry-open-q2")).toHaveCount(0); // one retry per question
+  const text = await studentVisibleText(page, "result-view");
+  expect(text).not.toMatch(SCORE);
+  expect(text).not.toMatch(/đúng\s+\d|Nên là|Vì sao|đáp án đúng/i);
+  await page.reload();
+  await expect(page.getByTestId("retry-sent-q2")).toBeVisible();
+  await expect(page.getByTestId("retry-open-q2")).toHaveCount(0);
+
+  const tutor = await (await browser.newContext()).newPage();
+  await loginAs(tutor, "tutorNguyen");
+  await tutor.goto(`/learners/${NGUYEN}/inbox`);
+  await expect(tutor.locator('[data-testid^="pending-row-retry-"]')).toContainText(pendingCopy.need.retry(1));
+  await tutor.locator('[data-testid^="pending-open-retry-"]').click();
+  const card = tutor.locator('[data-testid^="retry-card-"]').first();
+  await expect(card.getByTestId("retry-given")).toHaveText("B. can't");
+  await expect(card.getByTestId("retry-text")).toHaveText("A. must");
+});
+
 test("the tutor decides the two waiting items; the result, the tag marks and the skills are updated", async ({ page }) => {
   await loginAs(page, "tutorNguyen");
   await page.goto("/review/studio");
@@ -115,6 +140,10 @@ test("the tutor decides the two waiting items; the result, the tag marks and the
   await expect(page.getByTestId(`studio-line-${attemptId}`)).toContainText(studioInboxCopy.doneLine("Nguyên (thử)", 5, 8));
   const marks = await q<{ tag_key: string }>("select tag_key from english.tag_marks where learner_id = $1 and source = 'practice' order by item_no", [NGUYEN]);
   expect(marks.map((m) => m.tag_key)).toEqual(expect.arrayContaining(["modal-suy-doan", "doc-inference", "dang-tu"]));
+  // An item decision after the retry clears the "Con thử lại" row by itself.
+  await page.goto(`/learners/${NGUYEN}/inbox`);
+  await expect(page.getByTestId("pending-table")).toBeVisible();
+  await expect(page.locator('[data-testid^="pending-row-retry-"]')).toHaveCount(0);
   // Điểm cần chú ý shows the new tag; the skill page shows a level reached through the app's own checks (route 2)
   const label = (await q<{ label_vi: string }>("select label_vi from english.error_tags where key = 'dang-tu' and track_id = 'B'"))[0]!.label_vi;
   await page.goto(`/learners/${NGUYEN}/weak`);
@@ -135,4 +164,29 @@ test("after the verdicts the child sees no waiting box; the parent sees the AI c
   await loginAs(parent, "parent");
   await parent.goto(draftUrl);
   await expect(parent.getByTestId("side-ai-cost")).toBeVisible();
+});
+
+test("a Studio work given as Bài kiểm tra: no hint slot, no retry, and the child is told the tutor will go through it with him", async ({ page, browser }) => {
+  const tutor = await (await browser.newContext()).newPage();
+  await loginAs(tutor, "tutorNguyen");
+  await tutor.goto(draftUrl);
+  await tutor.getByTestId("assign-kind-test").check();
+  await tutor.getByTestId("assign-submit").click();
+  await expect(tutor.getByTestId("assigned-list").locator("li")).toHaveCount(2);
+  const row2 = await q<{ id: string }>(
+    `select a.id from english.activity_instances a join english.inquiry_instances i on i.id = a.inquiry_instance_id
+     join english.work_test_marks m on m.activity_id = a.id where a.learner_id = $1 order by i.assigned_at desc limit 1`, [NGUYEN]);
+  const testId = row2[0]!.id;
+
+  await loginAs(page, "studentNguyen");
+  await page.goto(`/activities/${testId}`);
+  await expect(page.getByTestId("work-kind")).toHaveText(playerCopy.testTag);
+  await expect(page.getByTestId("ask-tutor")).toHaveCount(0);
+  await doTheTest(page, { q1: { v: "B. had", choice: true }, q2: { v: "B. can't", choice: true }, q6: { v: "happyness" } });
+  await expect(page.getByTestId("result-view")).toHaveAttribute("data-test", "yes");
+  await expect(page.getByTestId("result-test-note")).toBeVisible();
+  await expect(page.locator('[data-testid^="retry-open-"]')).toHaveCount(0);
+  const text = await studentVisibleText(page, "result-view");
+  expect(text).not.toMatch(SCORE);
+  expect(text).not.toMatch(/đúng\s+\d|Nên là|Vì sao/i);
 });
