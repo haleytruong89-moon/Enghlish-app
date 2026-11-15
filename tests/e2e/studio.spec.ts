@@ -129,9 +129,9 @@ test("Nguyên retries one question once; he is told it went to the tutor, no sco
   await expect(page.getByTestId("retry-open-q6")).toHaveCount(0);
   // after any answer was shown there is no "Làm lại cả bài"
   await expect(page.getByTestId("result-redo")).toHaveCount(0);
-  // ... and the server refuses it too (the trigger answers_shown), with a tag the screen understands - never a generic 400
+  // ... and the server refuses it too: the SAME call the Player makes (route, all-valid answers, in_app, "none") reaches the trigger -> 409 answers_shown, never a generic 400
   const redo = await page.request.post("/api/attempts", {
-    data: { activity_id: activityId, client_submission_id: randomUUID(), content: { answers: { q1: "A. had" } }, assistance: ["none"], provenance: "in_app" },
+    data: { activity_id: activityId, client_submission_id: randomUUID(), content: { answers: { q1: "B. had", q2: "B. can't" } }, assistance: ["none"], provenance: "in_app" },
   });
   expect(redo.status()).toBe(409);
   expect(await redo.json()).toMatchObject({ error: "answers_shown" });
