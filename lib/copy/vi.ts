@@ -3221,7 +3221,7 @@ export const weeklyGoalCopy = {
   words: ["nhẹ nhàng", "vừa phải", "đều đặn", "chăm hơn"] as readonly string[],
   suggest: "Gợi ý:",
   suggestRange: (low: number, high: number) => (low === high ? `Mấy tuần gần đây bạn nộp ${low} bài mỗi tuần.` : `Mấy tuần gần đây bạn nộp ${low}–${high} bài mỗi tuần.`),
-  rules: "Chỉ tính bài bạn đã nộp — mở app không tính. Một tuần “đạt” khi bạn nộp đủ số bài đã chọn; chuỗi tuần là các tuần liên tiếp đạt. Mục tiêu mới áp dụng từ tuần sau. Lỡ một tuần thì chuỗi tính lại từ tuần sau, không sao cả.",
+  rules: "Chỉ tính bài bạn đã nộp — mở app không tính. Một tuần “đạt” khi bạn nộp đủ số bài đã chọn. Chuỗi tuần là các tuần đạt liên tiếp. Mục tiêu mới áp dụng từ tuần sau. Lỡ một tuần thì chuỗi tính lại từ tuần sau, không sao cả.",
   oneIsOne: "Một bài là một bài đã nộp, dù dài hay ngắn.",
   send: `Gửi ${tutorHonorific}`,
   sending: "Đang gửi…",

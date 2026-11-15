@@ -6,6 +6,9 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { CONTENT_DIR } from "../../lib/config/content";
 import type { InquiryTemplate } from "../../lib/config/schemas";
+import { seedGoalHistory, type SeedResult } from "../../scripts/lib/seed";
+import { buildWeekView } from "../../lib/student/weekView";
+import { parseWeekFacts } from "../../lib/student/weekShape";
 import { as, asCommit, createTestDb, migrate, rowsAs, seed, type Seeded, type TestDb } from "./helpers";
 
 const TODAY = todayVn();
@@ -328,6 +331,19 @@ describe("weekly goals (migration 0035)", () => {
     expect(f.range).toEqual({ min: 3, max: 6 });
   });
 
+  it("seed-dev --goal-history: five met weeks → a streak of 5 for Nguyên (thử), twice the same (idempotent); nothing for An", async () => {
+    const seeded = { learners: s.learners, members: s.members, familyId: "", loginWarnings: [] } as unknown as SeedResult;
+    await db.client.query("update english.learners set is_test = true where id = $1", [NG()]);
+    const first = await seedGoalHistory(db.client, seeded);
+    expect(first.skipped ?? "").toBe("");
+    expect(first.weeks).toBe(5);
+    await seedGoalHistory(db.client, seeded);
+    const view = buildWeekView(parseWeekFacts(await factsOf(NG()))!);
+    expect(view.streak).toBe(5);
+    expect(view.goal).toBe(3);
+    expect(buildWeekView(parseWeekFacts(await factsOf(AN()))!).streak).toBe(0);
+  });
+
   it("purge: the preview counts weekly_goals, the receipt deletes them (self-references included) and nothing of the other child", async () => {
     const before = await count("select count(*)::int as n from english.weekly_goals where learner_id = $1", [NG()]);
     expect(before).toBeGreaterThan(0);
@@ -353,4 +369,5 @@ describe("weekly goals (migration 0035)", () => {
     expect(await q1("select track_id, key, value from english.track_settings where key = 'weekly_goal_range' order by 1")).toEqual(rangesBefore);
     expect(await count("select count(*)::int as n from english.schema_migrations where version = $1", [file.slice(0, 4)])).toBe(1);
   });
+
 });

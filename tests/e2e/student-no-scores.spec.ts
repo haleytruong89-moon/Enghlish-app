@@ -36,7 +36,7 @@ for (const key of ["studentAn", "studentNguyen"] as AccountKey[]) {
     expect(await page.locator('[data-testid^="mt-"]').evaluateAll((els) => els.every((e) => !/\d\s*\/\s*4\s*·/.test(e.getAttribute("aria-label") ?? "")))).toBe(true);
     // W4b (PRD D35): on every page of the child's desk a number like a/b may only sit inside [data-count="work"] (the child's own work: tasks, answered
     // questions, sent work); dates are <time> (or a weekday line) and are set aside. No %, no "đúng n" / "sai n".
-    for (const path of ["/", "/seen", "/done", "/journey"]) {
+    for (const path of ["/", "/seen", "/done", "/journey", "/goal"]) {
       await page.goto(path);
       await expect(page.getByTestId("student-nav")).toBeVisible();
       const text = await studentVisibleText(page);

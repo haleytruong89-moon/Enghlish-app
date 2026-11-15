@@ -13,7 +13,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Client } from "pg";
 import { DESTINATION_FRAME_FILE, importFrameFile } from "./lib/frameImport";
 import { pgConfigFromUrl, requireEnv } from "./lib/pg";
-import { assignDevInquiries, SEED_ACCOUNTS, seedDevReviewWork, seedTestFamily, type SeedUsers } from "./lib/seed";
+import { assignDevInquiries, SEED_ACCOUNTS, seedDevReviewWork, seedGoalHistory, seedTestFamily, type SeedUsers } from "./lib/seed";
 
 const domain = process.env.SEED_EMAIL_DOMAIN || "example.com";
 const emailFor = (local: string) => `eng-test-${local}@${domain}`;
@@ -105,6 +105,10 @@ async function main() {
       console.log(`  Khung đề mẫu cho Nguyên (thử): ${frame.title} (${frame.action === "unchanged" ? "đã có" : "đã nhập"})`);
     } catch (err) {
       console.log(`  Chưa nhập khung đề mẫu (${(err as Error).message.split("\n")[0]})`);
+    }
+    if (process.argv.includes("--goal-history")) {
+      const h = await seedGoalHistory(db, result);
+      console.log(h.skipped ? `  Chưa tạo lịch sử mục tiêu tuần (${h.skipped})` : `  Đã tạo ${h.weeks} tuần nộp bài + mục tiêu 3 bài/tuần cho Nguyên (thử): chip "🔥 ${h.weeks} tuần liền"`);
     }
     for (const key of keys) {
       console.log(
