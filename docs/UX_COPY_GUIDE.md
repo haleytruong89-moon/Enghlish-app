@@ -263,3 +263,10 @@ Khóa mới trong `lib/copy/vi.ts` (chữ theo bảng kế hoạch 14/11, phụ 
 | `purgePage.countLabels.session_marks` · `session_absences` | Đánh dấu loại buổi học · Buổi nghỉ |
 
 Không có chữ về số tiền, đơn giá hay chốt tháng.
+
+## W4a (14/11/2026) — Lộ trình mốc và Hành trình
+
+Khóa mới trong `lib/copy/vi.ts`: `roadmapCopy.*` (trang Lộ trình của thầy/cô: mốc, đỉnh, đề xuất, giáo trình chính, lỗi theo mã SQL), `journeyCopy.*` (trang của con: tiêu đề, tóm tắt "Còn N Unit tới …", đỉnh chưa đặt tên "Đỉnh của bạn — {thầy/cô} sẽ đặt tên", danh sách thay thế), `monthLabel`, `practiceStudent.navJourney` ("Hành trình"), `pendingCopy.kinds.milestone` / `need.milestone` / `groups.roadmap`, `deskCopy.roadmapLine`, `deskCopy.alerts.orphanTitle` / `orphanLine`, `purgePage.countLabels` cho hai bảng mới.
+
+Quy tắc: xưng "bạn" với con; "thầy/cô" qua `tutorHonorific`, không viết cứng; con không thấy chữ điểm, mức, x/y, %, nhãn kỹ năng.
+

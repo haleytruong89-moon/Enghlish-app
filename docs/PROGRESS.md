@@ -1510,3 +1510,33 @@ Nhánh `feature/ux-round3b` (từ `main` đã gộp 2A, 2B, 3A). Kế hoạch `d
 - Buổi bù tính theo tháng của ngày học bù; buổi nghỉ theo tháng của ngày nghỉ (nghỉ và bù khác tháng thì trừ ở tháng của buổi bù).
 - Ghi chú đã có bản mới hơn không đánh dấu được (đánh dấu bản mới nhất); dấu vẫn áp cho cả chuỗi.
 - Đọc `session_marks` / `session_absences` bằng quyền máy chủ sau cổng của trang (cùng cách 3A); lỗi đọc 2 bảng chỉ tắt phần 3B, số buổi 3A vẫn đúng.
+
+## W4a — Lộ trình mốc (thầy/cô) + Hành trình (con) (14/11)
+
+Nhánh `feature/w4a-roadmap` (từ `main` + các commit kế hoạch W4). Kế hoạch `docs/superpowers/plans/2026-11-14-w4-student-desk.md` mục "PR W4a". Phụ huynh đã duyệt Q1–Q22 như đề xuất (14/11).
+
+**SQL cần phụ huynh áp: `0031_roadmap_milestones.sql` (sau khi gộp).** Chỉ thêm, idempotent. Cần 0026 (giáo trình) và **0030 đã áp trước** (thân hàm xóa dữ liệu chép từ 0030, gọi các bảng của 0030). Chưa áp thì trang Lộ trình báo nhẹ "chưa sẵn sàng" và trang Hành trình của con hiện trống, phần còn lại vẫn chạy.
+
+### Làm gì
+1. **Migration `0031`:** bảng chỉ thêm `roadmap_milestones` (mỗi lần ghi = bản mới; trạng thái nháp / đã xác nhận / đã bỏ) và `roadmap_main_curriculum`; `track_settings.roadmap_goal_label` (A "Lên B1", B "Lên C1"); hàm `eng_roadmap_write`, `eng_roadmap_set_main` (chỉ thầy/cô của em), `eng_roadmap` (người lớn), `eng_my_roadmap()` (con; không trả điểm, mức, nhãn); purge gồm hai bảng mới.
+2. **Trang `/learners/[id]/roadmap`:** thầy/cô đặt mốc / đỉnh, xác nhận, sửa, bỏ (cần lý do), chọn giáo trình chính; đề xuất của app (Progress Test, mục tiêu đầu vào, mục tiêu của track) chỉ lưu khi thầy/cô bấm; phụ huynh chỉ xem.
+3. **Trang `/journey` của con:** núi SVG tĩnh + danh sách thay thế, người leo ở Unit đang học, tóm tắt "còn N Unit tới …", đỉnh chưa xác nhận hiện "Đỉnh của bạn — {thầy/cô} sẽ đặt tên"; nút thứ ba "Hành trình" ở đầu trang của con.
+4. **Bàn làm việc / Chờ duyệt:** dòng mốc nháp chờ xác nhận, dòng cho phụ huynh, cảnh báo mốc mồ côi (Unit không còn).
+5. **Đổi tên lát (Q1):** W4→W5, W5→W6, W6→W7 trong spec, DOMAIN R6, DESIGN; mục Lộ trình ở cột trái sáng lên.
+
+### Cách thử trên bản thử (sau khi áp 0031; gia đình THỬ)
+- Thầy/cô của Nguyên (thử) → Giáo trình đã duyệt có Unit đánh dấu → **Lộ trình**: thấy đề xuất "Progress Test 1" (sau Unit 12) và đỉnh từ Hồ sơ đầu vào → Xác nhận; thêm "Thi thử vào 10 · 03/2027 · sau Unit 18" → Lưu và xác nhận.
+- Đăng nhập Nguyên (thử) → Hành trình: núi, người leo đúng Unit đang học, "còn N Unit tới Progress Test 1". Không có điểm / mức.
+- Thầy/cô sửa một mốc thành nháp → con vẫn thấy bản cũ. Bỏ mốc (lý do) → con không thấy.
+- Phụ huynh: thấy trang Lộ trình, không có nút ghi. Em kia không thấy mốc của em này.
+- Xóa dữ liệu em thử: biên nhận có hai mục mới.
+
+### Tiêu chí đạt
+`npm run typecheck && npm run lint && npm test` xanh; `npx playwright test --list` có `roadmap.spec.ts`; **e2e chưa chạy ở máy dev (không Docker), chỉ CI**; `0031` áp được hai lần; Opus `reviewer` đã soát SQL + diff hai vòng (14/11): không lỗi chặn; mọi điểm nên sửa đã sửa.
+
+### Giả định và lệch so với kế hoạch
+- Phát lại `client_id` được tra TRƯỚC mọi thứ khác (kể cả khi không gửi trường); thêm chốt `already_removed` (không sửa mốc đã bỏ).
+- Sau review Opus (14/11): `eng_roadmap` trả thêm `used_keys` và `visible_ids` (không bị cắt 20 dòng); "Chờ duyệt" chỉ đếm mốc nháp, đề xuất của app hiện ở trang Lộ trình + một dòng nhẹ ở Bàn làm việc; mã `client_id` giữ khi lỗi mạng / 5xx, đổi khi thành công, 4xx rõ ràng hoặc nội dung đổi; có đỉnh rồi thì app đề xuất mục tiêu là "sau đỉnh"; trang Lộ trình có dải "Đường lên đỉnh" (chỉ xem).
+- Q2(d) = PRD **D38**; luật số đếm của con (Q2e) = PRD **D35**, đưa vào W4a (DOMAIN §2, §7 mục 6, test DOM + e2e).
+- Khóa đề xuất "Không phải Unit" theo tên chuẩn hóa: đổi tên dòng ở bản mới ⇒ đề xuất mới hiện lại (chấp nhận).
+

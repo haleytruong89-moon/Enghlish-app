@@ -42,6 +42,8 @@ export type Action =
   | "curriculum:write" //  add a curriculum, upload its contents, edit / discard a draft, set a unit's status (W2) - tutor and parent
   | "curriculum:approve" // approve a curriculum version (W2, D-W8) - the child's tutor only; the database checks it again
   | "sessions:mark" //     record / cancel an absence, mark a lesson note Thường / Học bù / Không tính (UX 3B) - the child's tutor or the parent; the database checks it again
+  | "roadmap:read" //      the roadmap of milestones and the main curriculum (W4a) - the child's tutor and the parent; never students
+  | "roadmap:write" //     place / confirm / edit / remove a milestone, choose the main curriculum (W4a) - the child's tutor only; the database checks it again
   | "targets:read" //        tracked-skills page (target set) — parent and tutor only
   | "inquiries:read" //     assigned inquiries + assignable templates — parent and tutor only
   | "inquiries:assign" //   assign an inquiry template — parent and tutor only
@@ -63,6 +65,8 @@ export const ACTIONS_BY_ROLE: Record<Role, readonly Action[]> = {
     "tutorwork:read",
     "tutorwork:write",
     "sessions:mark",
+    "roadmap:read",
+    "roadmap:write",
     "practice:read",
     "practice:write",
     "levels:decide",
@@ -92,6 +96,7 @@ export const ACTIONS_BY_ROLE: Record<Role, readonly Action[]> = {
     "tutorwork:read",
     "tutorwork:write",
     "sessions:mark",
+    "roadmap:read",
     "practice:read",
     "practice:write",
     "consent:read",

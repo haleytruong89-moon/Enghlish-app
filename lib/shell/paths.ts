@@ -1,6 +1,6 @@
 /**
  * Which sidebar entry a URL belongs to, and the screen name sent with "Góp ý về app" (pure, unit-tested). One table: the order
- * matters (specific paths before /review/[id]). Paths of later slices (W3 knowledge / imports, W5 roadmap) are registered already
+ * matters (specific paths before /review/[id]). Paths of later slices (W3 knowledge / imports, W4a roadmap) are registered already
  * so their pages light up the right entry as soon as they exist.
  */
 import { appFeedback, curriculumCopy, shellCopy } from "@/lib/copy/vi";
@@ -71,6 +71,9 @@ export function switchHref(pathname: string, to: string): string {
 export function feedbackHref(pathname: string, learnerId: string | null): string {
   return `/feedback?screen=${encodeURIComponent(activeFor(pathname).screen)}${learnerId ? `&learner=${learnerId}` : ""}`;
 }
+
+/** The roadmap (Lộ trình) page of one child. */
+export const roadmapHref = (learnerId: string): string => `/learners/${learnerId}/roadmap`;
 
 /** Link to the desk of one child. A bare "/" opens the parent's default child, so per-child pages must use this. */
 export const deskHref = (learnerId: string): string => `/${learnerQuery(learnerId)}`;

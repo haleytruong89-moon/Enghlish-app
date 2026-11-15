@@ -2,6 +2,7 @@
  * "Chờ duyệt" of one child as one compact list (spec §3, §5 rule 4): every source that already waits for an adult, oldest first.
  * Pure. A row only LINKS to the page where the decision is made (DOMAIN R1, spec §3: no one-click approval) — it decides nothing.
  */
+import { roadmapHref } from "@/lib/shell/paths";
 import { activityLabels, curriculumCopy, fallbackLabels, pendingCopy, reviewPage, revisionReviewCopy } from "@/lib/copy/vi";
 import type { CurriculumCard } from "@/lib/curriculum/shape";
 import type { ImportPendingItem } from "@/lib/import/pending";
@@ -12,9 +13,9 @@ import type { SkillInboxItem } from "@/lib/skills/types";
 import { proposalTitle } from "@/lib/skills/view";
 import type { DraftListItem, PendingAttempt } from "@/lib/studio/types";
 
-export const PENDING_GROUPS = ["all", "work", "check", "ai", "skills"] as const;
+export const PENDING_GROUPS = ["all", "work", "check", "ai", "skills", "roadmap"] as const;
 export type PendingGroup = (typeof PENDING_GROUPS)[number];
-export type PendingKind = "work" | "studio_check" | "studio_draft" | "curriculum_draft" | "skill" | "point" | "flag" | "import";
+export type PendingKind = "work" | "studio_check" | "studio_draft" | "curriculum_draft" | "skill" | "point" | "flag" | "import" | "milestone";
 export type PendingRow = { key: string; kind: PendingKind; group: Exclude<PendingGroup, "all">; label: string; title: string; since: string | null; need: string; href: string; waitingTutor: boolean };
 export type PendingInput = {
   learnerId: string;
@@ -30,6 +31,8 @@ export type PendingInput = {
   curricula: readonly CurriculumCard[];
   /** Unfinished imports (W3): reading / draft / ai_failed. They only LINK to /imports/<id>; the child's tutor confirms there (R8). */
   imports?: readonly ImportPendingItem[];
+  /** Roadmap (W4a): milestones whose current version is a draft (proposals of the app are NOT counted: they show on the Lộ trình page and as a soft line on the desk). 0 / undefined = none. */
+  roadmapDrafts?: number;
 };
 /**
  * The S5 inbox RPC has no learner filter and returns at most 100 rows (oldest first) across ALL the caller's children, so one
@@ -59,7 +62,7 @@ export function pendingView(p: { rows: readonly unknown[]; failed: readonly unkn
   };
 }
 
-const GROUP_OF: Record<PendingKind, Exclude<PendingGroup, "all">> = { work: "work", studio_check: "check", studio_draft: "ai", curriculum_draft: "ai", skill: "skills", point: "skills", flag: "skills", import: "check" };
+const GROUP_OF: Record<PendingKind, Exclude<PendingGroup, "all">> = { work: "work", studio_check: "check", studio_draft: "ai", curriculum_draft: "ai", skill: "skills", point: "skills", flag: "skills", import: "check", milestone: "roadmap" };
 const WAITING = ["draft", "ai_failed"] as const;
 const isWaiting = (s: string) => (WAITING as readonly string[]).includes(s);
 
@@ -119,6 +122,12 @@ export function buildPendingRows(i: PendingInput): PendingRow[] {
       href: `/imports/${m.id}`, waitingTutor: i.role !== "tutor" && m.status === "draft",
     });
   }
+  if ((i.roadmapDrafts ?? 0) > 0) {
+    push({
+      key: "roadmap-waiting", kind: "milestone", label: pendingCopy.kinds.milestone, title: pendingCopy.need.milestone(i.roadmapDrafts as number), since: null,
+      need: pendingCopy.need.milestoneNeed, href: roadmapHref(i.learnerId), waitingTutor: i.role !== "tutor",
+    });
+  }
   return rows.sort(byOldest);
 }
 
@@ -127,7 +136,7 @@ export function filterRows(rows: readonly PendingRow[], g: PendingGroup): Pendin
 }
 
 export function countGroups(rows: readonly PendingRow[]): Record<PendingGroup, number> {
-  const out: Record<PendingGroup, number> = { all: rows.length, work: 0, check: 0, ai: 0, skills: 0 };
+  const out: Record<PendingGroup, number> = { all: rows.length, work: 0, check: 0, ai: 0, skills: 0, roadmap: 0 };
   for (const r of rows) out[r.group] += 1;
   return out;
 }

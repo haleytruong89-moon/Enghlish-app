@@ -38,7 +38,7 @@ export const SECTIONS: readonly SectionDef[] = [
     ],
   },
   { key: "knowledge", status: "live", lane: null, root: (id) => `${L(id)}/knowledge`, children: () => [] },
-  { key: "roadmap", status: "soon", lane: "W5", root: (id) => `${L(id)}/roadmap`, children: () => [] },
+  { key: "roadmap", status: "live", lane: null, root: (id) => `${L(id)}/roadmap`, children: () => [] },
   {
     key: "sessions", status: "live", lane: null, root: (id) => `${L(id)}/notes`,
     children: (id) => [
