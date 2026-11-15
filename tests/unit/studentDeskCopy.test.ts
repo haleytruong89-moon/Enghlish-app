@@ -18,7 +18,7 @@ describe("studentDeskCopy (what the child reads on Hôm nay / Đã xem / Đã l�
     expect(all.length).toBeGreaterThan(60);
     for (const s of all) {
       expect(s, s).not.toMatch(/đúng|sai\b|%|streak|chuỗi|xếp hạng|thắng|chính xác|quá hạn|kỹ năng/i);
-      expect(s.replace(/Không có điểm( số)?/g, ""), s).not.toMatch(/điểm/i);
+      expect(s, s).not.toMatch(/điểm/i);
       expect(s.replace(/thầy\/cô/gi, ""), s).not.toMatch(/(^|[^\p{L}])(cô|thầy)(?!\p{L})/iu);
     }
   });

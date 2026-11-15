@@ -69,7 +69,7 @@ describe("link / PDF cards (inside Hôm nay and /done/[ref])", () => {
   it("shows the tutor's message on Hôm nay without score, counts or tags", () => {
     const today = render(createElement(TodayView, { alias: "An (thử)", color: "#9A4A15", tasks: [], practice: [], review }));
     expect(today).toContain("Nhớ đọc kỹ đề nhé");
-    const text = today.replace(/<[^>]+>/g, " ").replace(/(Thứ \S+|Chủ nhật) \d{2}\/\d{2}/, "").replace(/Không có điểm(?: số)?/g, ""); // the footnote says there are no scores
+    const text = today.replace(/<[^>]+>/g, " ").replace(/(Thứ \S+|Chủ nhật) \d{2}\/\d{2}/, "");
     expect(text).not.toMatch(SCORE_WORDS);
     expect(html).toContain(`data-testid="sent-${pdf.assignmentId}"`); // the PDF one was already sent
   });
@@ -270,7 +270,7 @@ describe("'Quá hạn' (D4): only a label for the tutor and the parent", () => {
     expect(box).toContain(deskCopy.practiceCounts(2, 0, 1));
   });
   it("the student's practice page never shows it, even for a late item", () => {
-    const task = { kind: "link" as const, activityId: null, assignmentId: link.assignmentId, stepNo: null, activityType: null, title: link.title, dueOn: "2020-01-01", opensOn: "2019-12-01", timeMin: null, doable: true, practice: true, offLabel: null, hasDraft: false, draftAt: null, filled: null, total: null };
+    const task = { kind: "link" as const, activityId: null, assignmentId: link.assignmentId, stepNo: null, activityType: null, title: link.title, dueOn: "2020-01-01", opensOn: "2019-12-01", timeMin: null, doable: true, practice: true, offLabel: null, hasDraft: false, draftAt: null, filled: null, total: null, mode: null, purpose: [] };
     const html = render(createElement(TodayView, { alias: "An", color: "#9A4A15", tasks: [task], practice: [{ ...link, dueOn: "2020-01-01" }], review }));
     expect(html).not.toContain(assignPage.overdue);
     expect(html).not.toContain(todayPage.practiceOverdue);

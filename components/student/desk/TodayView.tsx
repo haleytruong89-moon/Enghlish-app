@@ -41,7 +41,7 @@ export function TodayView({
           )}
         </p>
       </header>
-      {pick ? <ContinueCard pick={pick} /> : null}
+      {pick ? <ContinueCard pick={pick} hasCard={Boolean(pick.task.assignmentId && practice.some((p) => p.assignmentId === pick.task.assignmentId))} /> : null}
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_17rem]">
         <TaskList tasks={tasks} practice={practice} />
         {review?.message ? (

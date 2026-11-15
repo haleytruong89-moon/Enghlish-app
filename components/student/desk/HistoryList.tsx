@@ -14,7 +14,7 @@ function title(r: HistoryRow): string {
 }
 
 function Item({ r }: { r: HistoryRow }) {
-  const href = r.assignmentId ? `/done/${r.assignmentId}` : r.activityId ? `/activities/${r.activityId}` : null;
+  const href = r.assignmentId ? (r.retracted ? null : `/done/${r.assignmentId}`) : r.activityId ? `/activities/${r.activityId}` : null;
   const day = todayVn(new Date(r.submittedAt));
   const parts: (string | null)[] = [
     c.kinds[r.kind],
@@ -46,9 +46,9 @@ function Item({ r }: { r: HistoryRow }) {
 }
 
 /** "Đã làm": everything the child sent, with a filter (the numbers are counts of the child's own sent work, never of right answers). */
-export function HistoryList({ rows, olderHref }: { rows: HistoryRow[]; olderHref: string | null }) {
+export function HistoryList({ rows, total, waiting, olderHref }: { rows: HistoryRow[]; total: number; waiting: number; olderHref: string | null }) {
   const [filter, setFilter] = useState<HistoryFilter>("all");
-  const counts = historyCounts(rows);
+  const counts = historyCounts(total, waiting);
   const shown = filterHistory(rows, filter);
   const tabs: { key: HistoryFilter; label: string; count: boolean }[] = [
     { key: "all", label: c.filterAll(counts.all), count: true },

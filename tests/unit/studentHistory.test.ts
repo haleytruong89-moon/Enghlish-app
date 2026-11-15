@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { filterHistory, hasMessage, historyCounts, mergeRows } from "@/lib/student/history";
+import { filterHistory, hasMessage, historyCounts } from "@/lib/student/history";
 import { parseHistory, parseSeen } from "@/lib/student/shape";
 import type { HistoryRow, SeenRow } from "@/lib/student/types";
 
 const row = (ref: string, seen: boolean): HistoryRow => ({
   src: "attempt", ref, activityId: ref, assignmentId: null, title: ref, kind: "app", stepNo: 1, activityType: "ACT-SOURCE-QA",
-  submittedAt: "2026-11-10T00:00:00Z", first: true, usedHint: null, offline: false, seen,
+  submittedAt: "2026-11-10T00:00:00Z", first: true, usedHint: null, offline: false, retracted: false, seen,
 });
 
 describe("Đã làm filters", () => {
@@ -14,16 +14,14 @@ describe("Đã làm filters", () => {
     expect(filterHistory(rows, "all").map((r) => r.ref)).toEqual(["a", "b", "c"]);
     expect(filterHistory(rows, "waiting").map((r) => r.ref)).toEqual(["a", "c"]);
     expect(filterHistory(rows, "seen").map((r) => r.ref)).toEqual(["b"]);
-    expect(historyCounts(rows)).toEqual({ all: 3, waiting: 2, seen: 1 });
-  });
-  it("merging a next page never duplicates a row", () => {
-    expect(mergeRows(rows, [row("c", false), row("d", true)]).map((r) => r.ref)).toEqual(["a", "b", "c", "d"]);
+    expect(historyCounts(120, 7)).toEqual({ all: 120, waiting: 7 }); // totals of the whole list, not of the page
+    expect(historyCounts(3, 9)).toEqual({ all: 3, waiting: 3 });
   });
 });
 
 describe("parsers keep only what the child may see", () => {
   it("history: seen is a flag, never a time, a mark or a result", () => {
-    const [h] = parseHistory({ items: [{ src: "submission", ref: "r", assignment_id: "x", title: "Link", kind: "link", submitted_at: "2026-11-10T00:00:00Z", first: false, used_hint: true, offline: false, seen: true, correct: 8, score: 4 }] });
+    const [h] = parseHistory({ items: [{ src: "submission", ref: "r", assignment_id: "x", title: "Link", kind: "link", submitted_at: "2026-11-10T00:00:00Z", first: false, used_hint: true, offline: false, seen: true, correct: 8, score: 4 }] }).rows;
     expect(h).toMatchObject({ kind: "link", first: false, usedHint: true, seen: true });
     expect(Object.keys(h!)).not.toContain("correct");
     expect(Object.keys(h!)).not.toContain("score");

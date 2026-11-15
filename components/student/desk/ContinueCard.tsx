@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { studentDeskCopy as c } from "@/lib/copy/vi";
 import { taskHref, type Continue } from "@/lib/student/today";
-import { kindLabel, taskTitle } from "./taskText";
+import { kindLabel, modeText, purposeChip, showAskTutor, taskTitle } from "./taskText";
 
 /** "Làm tiếp" (a draft exists: progress bar of the questions ANSWERED so far) or "Việc tiếp theo". The dimmed "Hỏi gia sư · Sắp có" slot only in practice items. */
-export function ContinueCard({ pick }: { pick: Continue }) {
+export function ContinueCard({ pick, hasCard = true }: { pick: Continue; hasCard?: boolean }) {
   const { task, resume } = pick;
-  const href = taskHref(task);
+  const href = taskHref(task, hasCard);
+  const mode = modeText(task);
+  const chip = purposeChip(task);
   const showBar = resume && task.filled !== null && task.total !== null && task.total > 0;
   return (
     <section aria-labelledby="continue-title" data-testid="continue-card" data-resume={resume ? "yes" : "no"} className="flex flex-col gap-3 rounded-2xl bg-accent p-5 text-white">
@@ -32,13 +34,18 @@ export function ContinueCard({ pick }: { pick: Continue }) {
       ) : task.timeMin ? (
         <p className="text-sm text-[#DCE8E3]">{c.minutes(task.timeMin)}</p>
       ) : null}
+      {mode || chip ? (
+        <p className="text-sm text-[#DCE8E3]" data-testid="continue-mode">
+          {[mode, chip].filter(Boolean).join(" · ")}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-3">
         {href ? (
           <Link href={href} className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-6 text-base font-bold text-accent no-underline">
             {task.assignmentId ? c.openWork : resume ? c.resume : c.start}
           </Link>
         ) : null}
-        {task.practice ? (
+        {showAskTutor(task) ? (
           <span className="flex flex-col gap-0.5">
             <button
               type="button"

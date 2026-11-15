@@ -136,6 +136,13 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     await card.getByTestId(`submit-${assignmentId}-send`).click();
     await expect(page.getByTestId(`sent-${assignmentId}`)).toBeVisible();
 
+    // W4b: after a reload the sent card is still in "Vừa gửi" (the tutor has not looked yet), and the work is in Đã làm as "Chờ xem"
+    await page.reload();
+    await expect(page.getByTestId("sent-title")).toBeVisible();
+    await expect(page.locator(`[data-assignment="${assignmentId}"]`)).toContainText(title);
+    await page.goto("/done");
+    await expect(page.getByTestId("history-list")).toContainText(title);
+
     expect(await page.locator("body").innerText()).not.toMatch(SCORE_PATTERN);
   });
 

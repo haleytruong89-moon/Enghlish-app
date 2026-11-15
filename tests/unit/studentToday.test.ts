@@ -5,7 +5,7 @@ import type { Task } from "@/lib/student/types";
 
 const task = (o: Partial<Task>): Task => ({
   kind: "topic", activityId: "a", assignmentId: null, stepNo: 1, activityType: "ACT-SOURCE-QA", title: "T", dueOn: null, opensOn: "2026-11-10",
-  timeMin: null, doable: true, practice: true, offLabel: null, hasDraft: false, draftAt: null, filled: null, total: null, ...o,
+  timeMin: null, doable: true, practice: true, offLabel: null, hasDraft: false, draftAt: null, filled: null, total: null, mode: null, purpose: [], ...o,
 });
 
 describe("Hôm nay order (plan 3.1)", () => {

@@ -11,7 +11,7 @@ vi.mock("next/link", () => ({ default: (p: { href: string; children: React.React
 afterEach(cleanup);
 const task = (o: Partial<Task>): Task => ({
   kind: "topic", activityId: "a", assignmentId: null, stepNo: 2, activityType: "ACT-SOURCE-QA", title: "Núi lửa", dueOn: "2026-11-20", opensOn: "2026-11-10", timeMin: 10,
-  doable: true, practice: false, offLabel: null, hasDraft: false, draftAt: null, filled: null, total: null, ...o,
+  doable: true, practice: false, offLabel: null, hasDraft: false, draftAt: null, filled: null, total: null, mode: null, purpose: [], ...o,
 });
 const studio = task({ kind: "app", activityId: "u5", activityType: "ACT-SOURCE-QA", title: "Unit 5 luyện tập", practice: true, hasDraft: true, draftAt: "2026-11-14T10:00:00Z", filled: 12, total: 30, timeMin: 25 });
 const show = (tasks: Task[], review = null as null | { sessionDate: string; message: string | null; labels: string[] }) =>
@@ -21,8 +21,8 @@ describe("Hôm nay", () => {
   it("'còn n việc · khoảng m phút' with the numbers inside data-count=work; a resumed draft shows the answered count in the same way", () => {
     show([studio, task({ activityId: "b", timeMin: 10 }), task({ activityId: "c", doable: false, offLabel: "with_tutor", timeMin: null })]);
     const lead = screen.getByTestId("today-lead");
-    expect(lead.textContent).toBe(`${studentDeskCopy.leadStart}${studentDeskCopy.leadCount(3)}${studentDeskCopy.leadMinutes(35)}`);
-    expect(lead.querySelector('[data-count="work"]')?.textContent).toBe("3 việc");
+    expect(lead.textContent).toBe(`${studentDeskCopy.leadStart}${studentDeskCopy.leadCount(2)}${studentDeskCopy.leadMinutes(35)}`);
+    expect(lead.querySelector('[data-count="work"]')?.textContent).toBe("2 việc");
     const card = screen.getByTestId("continue-card");
     expect(card.getAttribute("data-resume")).toBe("yes");
     expect(within(card).getByTestId("continue-eyebrow").textContent).toBe(studentDeskCopy.resume);
@@ -65,7 +65,7 @@ describe("Hôm nay", () => {
     const { container } = show([studio, task({ activityId: "b", dueOn: "2020-01-01" })], { sessionDate: "2026-11-10", message: "Nhớ đọc kỹ đề nhé", labels: [] });
     const clone = container.cloneNode(true) as HTMLElement;
     clone.querySelectorAll('[data-count="work"], time').forEach((e) => e.remove());
-    const text = (clone.textContent ?? "").replace(/(Thứ \S+|Chủ nhật) \d{2}\/\d{2}/, "").replace(/Không có điểm số/g, "");
+    const text = (clone.textContent ?? "").replace(/(Thứ \S+|Chủ nhật) \d{2}\/\d{2}/, "");
     expect(text).not.toMatch(/(?<![\d/])\d{1,3}\s*\/\s*\d{1,3}(?![\d/])|%|điểm|đúng|sai\b|quá hạn|trễ|muộn|streak|xếp hạng/i);
     expect(screen.getByTestId("tutor-note").textContent).toContain("Nhớ đọc kỹ đề nhé");
   });

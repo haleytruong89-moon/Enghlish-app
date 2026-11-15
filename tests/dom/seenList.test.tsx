@@ -78,10 +78,10 @@ describe("tab badge", () => {
 describe("Đã làm", () => {
   const row = (ref: string, seenFlag: boolean, o: Partial<HistoryRow> = {}): HistoryRow => ({
     src: "attempt", ref, activityId: ref, assignmentId: null, title: `Bài ${ref}`, kind: "app", stepNo: 2, activityType: "ACT-SOURCE-QA", submittedAt: "2026-11-10T03:00:00Z",
-    first: true, usedHint: null, offline: false, seen: seenFlag, ...o,
+    first: true, usedHint: null, offline: false, retracted: false, seen: seenFlag, ...o,
   });
   it("filters wait / seen; counts only of the child's own sent work; status in words", () => {
-    render(<HistoryList rows={[row("a", false), row("b", true), row("c", false, { kind: "link", src: "submission", assignmentId: "x", activityId: null, usedHint: true, first: false, offline: true })]} olderHref={null} />);
+    render(<HistoryList rows={[row("a", false), row("b", true), row("c", false, { kind: "link", src: "submission", assignmentId: "x", activityId: null, usedHint: true, first: false, offline: true })]} olderHref={null} total={3} waiting={2} />);
     expect(screen.getByTestId("filter-all").textContent).toBe(studentDeskCopy.filterAll(3));
     expect(screen.getByTestId("filter-waiting").textContent).toBe(studentDeskCopy.filterWaiting(2));
     expect(screen.getAllByTestId("history-row")).toHaveLength(3);
@@ -99,10 +99,10 @@ describe("Đã làm", () => {
     expect(screen.getAllByTestId("history-status").every((s) => s.textContent === studentDeskCopy.statusWaiting)).toBe(true);
   });
   it("empty states", () => {
-    const { unmount } = render(<HistoryList rows={[]} olderHref={null} />);
+    const { unmount } = render(<HistoryList rows={[]} olderHref={null} total={0} waiting={0} />);
     expect(screen.getByTestId("history-empty").textContent).toBe(studentDeskCopy.doneEmpty);
     unmount();
-    render(<HistoryList rows={[row("a", false)]} olderHref={null} />);
+    render(<HistoryList rows={[row("a", false)]} olderHref={null} total={1} waiting={1} />);
     fireEvent.click(screen.getByTestId("filter-seen"));
     expect(screen.getByTestId("history-filter-empty").textContent).toBe(studentDeskCopy.filterNone);
   });
