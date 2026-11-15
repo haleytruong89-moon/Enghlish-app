@@ -42,6 +42,7 @@ Giữ nguyên **kiến trúc** và **hợp đồng đo lường** (PRD §6). C�
 | D32 | **"Hỏi lại điểm yếu" (theo nhãn lỗi) ≠ kiểm tra trễ/delayed check (theo kỹ năng):** hai khái niệm, hai cài đặt. Số ngày của "Hỏi lại điểm yếu" nằm ở `tutorwork_settings.recheck_days` (mặc định 14); **không** đọc từ `assessment_policies`. Kết quả "hỏi lại" là tín hiệu, **không** là bằng chứng cho engine (S7) | 18/10 | Làm rõ D22 |
 | D33 | **File/PDF nằm trong phạm vi** qua S5b: gia sư tải đề PDF lên, em gửi ảnh kết quả, lưu trong bucket riêng tư `english-work` (không policy, link ký 5 phút). Không có audio (D13). Nội dung đề của sách có bản quyền: chỉ lưu khung số câu/phần/nhãn, không lưu chữ của đề — từ Studio (E5, duyệt 18/10) được lưu nội dung đề có bản quyền **chỉ để dùng riêng trong gia đình**, không chia sẻ | 17–18/10 | FR-06 ("PDF → ○") |
 | D35 | **Số đếm việc của chính con** (W4a, phụ huynh duyệt Q2e 14/11): con được thấy số đếm **việc của mình** — bài đã nộp, Unit đã xong, câu đã trả lời ("Còn 3 Unit tới …", "4/26 Unit"). **Không bao giờ**: số câu đúng / sai, %, điểm, x/4, mức, so với em kia. Ở giao diện, dạng `a/b` chỉ nằm trong phần tử đánh dấu `data-count="work"` (có test DOM + e2e). Sửa DOMAIN §2 và §7 mục 6. |
+| D37 | **Study Launcher đọc đúng một con số của English OS** (W4b, Q14 14/11): English OS có hàm `eng_my_today_count()` — chỉ trả **số việc còn phải làm trên app** của chính con đang đăng nhập (việc làm cùng thầy/cô hoặc trên giấy không đếm; `NULL` nếu người gọi không phải học sinh; cùng project Supabase, phiên của con) — để Launcher hiện số này và mở thẳng `/` (Hôm nay). **Không** dữ liệu nào khác, không ghi gì vào `public`. Hai app khác tên miền nên con vẫn đăng nhập riêng từng app. Sửa §6.2. |
 | D38 | **Con thấy Unit + trạng thái của giáo trình chính** (W4a, Q2d 14/11): trang "Hành trình" của con hiện các Unit (xong / đang học / chưa / bỏ qua) của **giáo trình chính** và các **mốc đã xác nhận** (tên + tháng). Mốc nháp, đã bỏ, lý do và điểm / mức / nhãn kỹ năng **không** hiện. Sửa so với UX W2 ("học sinh không thấy gì ở W2"). |
 
 ---
@@ -177,7 +178,7 @@ Mỗi inquiry Track A thường gồm: SOURCE-QA → CANVAS-BASIC → SPEAK-MONO
 ### 6.2. Study Launcher (FX-03)
 - English OS là một **app slot `internal`** của Launcher (domain vào allowlist).
 - Việc tiếng Anh hằng ngày của An = một "kỹ năng" Phần 2 trong Launcher, deep link tới Home của English OS; thời gian tối thiểu của Launcher (20') khớp với 25–30'/ngày của English OS.
-- Hai app **không** gọi dữ liệu của nhau trong v1.
+- Hai app **không** gọi dữ liệu của nhau trong v1, **trừ một con số** (D37, W4b): Launcher có thể hiện "còn n việc tiếng Anh hôm nay" bằng hàm `eng_my_today_count()` của English OS (phiên của con; không dữ liệu khác) + link mở thẳng Hôm nay. Phần hiển thị làm ở repo Launcher.
 
 ### 6.3. Nguồn video (mở — cần phụ huynh xác nhận)
 Launcher khi khóa chặn YouTube. **Mặc định đề xuất:** English OS chỉ lưu **link** video; An xem video trong buổi gia sư hoặc ngoài giờ khóa; **không nhúng** video để lách luật khóa. Hoạt động hằng ngày ưu tiên bài đọc + audio đã duyệt.

@@ -8,7 +8,7 @@ import { PathList } from "./PathList";
 /** The student's Hành trình page body (W4a: the mountain, the list, the summary, other curricula). Counts of Units only; no score anywhere. */
 export function JourneyView({ journey }: { journey: Journey }) {
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6" data-testid="journey-page">
+    <div className="mx-auto max-w-5xl" data-testid="journey-page">
       <h1 className="text-3xl font-bold">{journeyCopy.title}</h1>
       <p className="mt-1 text-muted">{journeyCopy.intro}</p>
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
@@ -41,6 +41,6 @@ export function JourneyView({ journey }: { journey: Journey }) {
         </div>
       </div>
       <p className="mt-6 text-sm text-muted">{journeyCopy.footnote}</p>
-    </main>
+    </div>
   );
 }

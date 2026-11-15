@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { expect, test, type Page } from "@playwright/test";
-import { assignPage, practiceStudent, resultPage, tagPicker, unitPickerCopy } from "@/lib/copy/vi";
+import { assignPage, resultPage, tagPicker, unitPickerCopy } from "@/lib/copy/vi";
 import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { todayVn } from "@/lib/inquiries/dates";
-import { LEARNER_IDS, loginAs } from "./helpers";
+import { LEARNER_IDS, loginAs, studentVisibleText } from "./helpers";
 
 // S5b-1 PR B: the tutor gives a PDF, the child downloads it and sends a picture, the tutor reads the picture beside "Nhập nhanh",
 // records the result with tags, and the weak point appears - while the child never sees a score. Needs Supabase STORAGE in the local
@@ -121,7 +121,7 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
 
   test("the child downloads the PDF through the app, sends a picture, and sees no score", async ({ page }) => {
     await loginAs(page, "studentNguyen");
-    await page.goto("/practice");
+    await page.goto("/"); // W4b: link / PDF work is listed in Hôm nay (the old /practice page redirects here)
     const card = page.locator(`[data-assignment="${assignmentId}"]`);
     await expect(card).toContainText(title);
     const href = await card.getByTestId("download-pdf").getAttribute("href");
@@ -136,7 +136,25 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     await card.getByTestId(`submit-${assignmentId}-send`).click();
     await expect(page.getByTestId(`sent-${assignmentId}`)).toBeVisible();
 
-    expect(await page.locator("body").innerText()).not.toMatch(SCORE_PATTERN);
+    // W4b: after a reload the sent card is still in "Vừa gửi" (the tutor has not looked yet), and the work is in Đã làm as "Chờ xem"
+    await page.reload();
+    await expect(page.getByTestId("sent-title")).toBeVisible();
+    await expect(page.locator(`[data-assignment="${assignmentId}"]`)).toContainText(title);
+    await page.goto("/done");
+    await expect(page.getByTestId("history-list")).toContainText(title);
+
+    // resend before the tutor looks: the new picture replaces the old one, so Đã làm still lists the work once
+    await page.goto(`/done/${assignmentId}`);
+    const again = page.locator(`[data-assignment="${assignmentId}"]`);
+    await again.getByTestId(`resend-${assignmentId}`).click();
+    await again.getByTestId(`submit-${assignmentId}-picker-input`).setInputFiles({ name: "bai-lam-2.png", mimeType: "image/png", buffer: PNG });
+    await expect(again.getByTestId(`submit-${assignmentId}-picker-item`)).toHaveCount(1);
+    await again.getByTestId(`submit-${assignmentId}-send`).click();
+    await expect(page.getByTestId(`sent-${assignmentId}`)).toBeVisible();
+    await page.goto("/done");
+    await expect(page.getByTestId("history-row").filter({ hasText: title })).toHaveCount(1);
+
+    expect(await studentVisibleText(page)).not.toMatch(SCORE_PATTERN);
   });
 
   test("the tutor sees 'Em đã gửi', opens Nhập nhanh from it, reads the picture and records the result with a tag", async ({ page }) => {
@@ -219,8 +237,19 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
 
   test("the child still sees no score, no tags - and cannot open the staff file route", async ({ page }) => {
     await loginAs(page, "studentNguyen");
+    // after the tutor recorded the result: the sent card is closed ("seen"), nothing can be resent, and no score or tag leaks on any page of the desk
+    await page.goto(`/done/${assignmentId}`);
+    await expect(page.getByTestId(`reviewed-${assignmentId}`)).toBeVisible();
+    await expect(page.getByTestId(`resend-${assignmentId}`)).toHaveCount(0);
+    for (const path of [`/done/${assignmentId}`, "/done", "/seen"]) {
+      await page.goto(path);
+      const t = await studentVisibleText(page);
+      expect(t, path).not.toMatch(SCORE_PATTERN);
+      expect(t, path).not.toMatch(/Thành ngữ/);
+    }
     await page.goto("/practice");
-    const text = await page.locator("body").innerText();
+    await expect(page).toHaveURL(/\/$/); // the old page now only redirects to Hôm nay
+    const text = await studentVisibleText(page);
     expect(text).not.toMatch(SCORE_PATTERN);
     expect(text).not.toMatch(/Thành ngữ/); // the tag name is for the grown-ups; the child gets only what the tutor writes as "Việc cần ôn"
     expect((await page.request.get(`/api/files/${fileId}`, { maxRedirects: 0 })).status()).toBe(403);
@@ -261,14 +290,13 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
 
     await page.context().clearCookies();
     await loginAs(page, "studentAn");
-    await page.goto("/practice");
-    await expect(page.getByTestId("practice-page")).toBeVisible();
+    await page.goto("/");
+    await expect(page.getByTestId("today-view")).toBeVisible();
     await expect(page.getByText(gone)).toHaveCount(0);
     const send = await page.request.post("/api/student/submissions", {
       data: { assignment_id: id, client_id: randomUUID(), attempt: "first", used_hint: false, link_url: "https://example.com/r", files: [] },
     });
     expect(send.status()).toBe(404);
-    await expect(page.getByText(practiceStudent.title)).toBeVisible();
   });
 });
 
@@ -278,14 +306,16 @@ test.describe("no sideways scrolling on a phone", () => {
   test.use({ viewport: { width: 390, height: 844 } });
   const fits = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
 
-  test("the student's home and 'Bài luyện' page, with the two-link navigation", async ({ page }) => {
+  test("the student's four tabs fit a phone: Hôm nay, Đã xem, Đã làm, Hành trình", async ({ page }) => {
     await loginAs(page, "studentNguyen");
     await expect(page.getByTestId("student-nav")).toBeVisible();
     expect(await fits(page)).toBe(true);
-    await page.getByTestId("nav-practice").click();
-    await expect(page.getByTestId("practice-page")).toBeVisible();
-    await expect(page.getByTestId("student-nav")).toBeVisible();
-    expect(await fits(page)).toBe(true);
+    for (const [tab, view] of [["seen", "seen-page"], ["done", "done-page"], ["journey", "journey-page"], ["today", "today-view"]] as const) {
+      await page.getByTestId(`nav-${tab}`).click();
+      await expect(page.getByTestId(view)).toBeVisible();
+      await expect(page.getByTestId("student-nav")).toBeVisible();
+      expect(await fits(page), tab).toBe(true);
+    }
   });
 
   test("the tutor's 'Giao bài luyện' page", async ({ page }) => {

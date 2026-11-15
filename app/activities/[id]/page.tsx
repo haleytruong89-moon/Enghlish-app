@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { RevisionForm } from "@/components/revision/RevisionForm";
-import { ActivityNote } from "@/components/student/FeedbackBox";
+import { ActivityNote } from "@/components/student/ActivityNote";
 import { SourceReader } from "@/components/student/SourceReader";
 import { StudioReview } from "@/components/student/StudioReview";
 import { WorkForm } from "@/components/student/WorkForm";

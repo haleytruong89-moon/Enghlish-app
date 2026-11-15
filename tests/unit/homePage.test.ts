@@ -13,7 +13,10 @@ const requireLearnerPage = vi.fn(async (..._a: unknown[]) => ({}));
 vi.mock("@/lib/tutorwork/page", () => ({ requireLearnerPage: (...a: unknown[]) => requireLearnerPage(...a) }));
 const loadDesk = vi.fn();
 vi.mock("@/lib/desk/load", () => ({ loadDesk: (...a: unknown[]) => loadDesk(...a) }));
-vi.mock("@/lib/work/load", () => ({ loadStudentHome: async () => ({ kind: "empty" }) }));
+vi.mock("@/lib/student/desk", () => ({
+  loadDeskBase: async () => ({ kind: "ok", learnerId: "a0000000-0000-4000-8000-000000000001", alias: "An (thử)", color: "#2B5D4F", isTest: true, seenFirst: [] }),
+  loadToday: async () => ({ kind: "ok", tasks: [], practice: [], review: null }),
+}));
 
 import HomePage from "@/app/page";
 

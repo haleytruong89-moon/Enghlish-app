@@ -1475,7 +1475,7 @@ Nhánh `feature/ux-round3a` (dựa trên `feature/ux-round2` = main + 2A + 2B; P
 
 Nhánh `feature/ux-round3b` (từ `main` đã gộp 2A, 2B, 3A). Kế hoạch `docs/superpowers/plans/2026-11-14-ux-round3.md` (Task B0–B5, B7; **không có B6 "chốt tháng"** và không có bảng `session_month_closes`: phụ huynh quyết 14/11). Phụ huynh duyệt 14/11: buổi nghỉ như U16 (ngày, bên báo nghỉ Con / Thầy-cô / Khác, **có tính phí chọn tay từng buổi nghỉ**, cửa sổ −120…+60 ngày), dấu loại buổi U17 (Thường / Học bù / Không tính, theo chuỗi sửa, dấu mới nhất thắng), cùng ngày U18, công thức buổi tính phí U19, người ghi U20 (thầy/cô của em hoặc phụ huynh), U22 (một hàm thuần ở máy chủ và trình duyệt). Luật đếm buổi do thầy/cô ghi: **phụ huynh đã xác nhận 14/11**. Không có số tiền ở đâu; học sinh không thấy gì.
 
-**SQL cần phụ huynh áp: `0030_session_billing.sql` (sau khi gộp).** Chỉ thêm, idempotent, cần 0026 + 0029 đã áp (0029 đã áp 14/11, workflow "Apply database migrations" run 43590186183). Áp bằng workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". Chưa áp: trang Buổi học vẫn có phần 3A, Ghi buổi "Thường" chạy như cũ (v2/v3), và nút buổi nghỉ / đánh dấu / Học bù báo "chưa sẵn sàng (cần cập nhật cơ sở dữ liệu)". Số migration kế tiếp sau 0030: **0031** (mục 7 "Destination" lấy số sau).
+**ĐÃ GỘP (PR #34, 14/11) và `0030_session_billing.sql` ĐÃ ÁP 14/11** (workflow "Apply database migrations", run 43596825424; không sửa nữa; trước đó 0029 đã áp, run 43590186183). Chỉ thêm, idempotent, cần 0026 + 0029. Áp bằng workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". Chưa áp: trang Buổi học vẫn có phần 3A, Ghi buổi "Thường" chạy như cũ (v2/v3), và nút buổi nghỉ / đánh dấu / Học bù báo "chưa sẵn sàng (cần cập nhật cơ sở dữ liệu)". Số migration kế tiếp sau 0030 lúc đó là 0031 (nay đã dùng: 0031 = W4a, 0032 = W4b; kế tiếp **0033**).
 
 ### Làm gì
 1. **Migration `0030`:** bảng chỉ thêm `session_absences` (dòng "bỏ" = `cancels_id` + lý do) và `session_marks` (kind, `makeup_for`, lý do, `client_id`); RLS đọc cho thầy/cô của em + phụ huynh, học sinh không, không ai ghi trực tiếp (kể cả `service_role`); hàm `eng_record_absence`, `eng_cancel_absence`, `eng_mark_session`, `eng_write_lesson_note_v4` (= v3 + loại buổi cùng giao dịch); `eng_purge_learner` / `eng_purge_preview` chép nguyên bản 0029 + hai bảng (marks → absences, trước `lesson_notes`).
@@ -1515,7 +1515,7 @@ Nhánh `feature/ux-round3b` (từ `main` đã gộp 2A, 2B, 3A). Kế hoạch `d
 
 Nhánh `feature/w4a-roadmap` (từ `main` + các commit kế hoạch W4). Kế hoạch `docs/superpowers/plans/2026-11-14-w4-student-desk.md` mục "PR W4a". Phụ huynh đã duyệt Q1–Q22 như đề xuất (14/11).
 
-**SQL cần phụ huynh áp: `0031_roadmap_milestones.sql` (sau khi gộp).** Chỉ thêm, idempotent. Cần 0026 (giáo trình) và **0030 đã áp trước** (thân hàm xóa dữ liệu chép từ 0030, gọi các bảng của 0030). Chưa áp thì trang Lộ trình báo nhẹ "chưa sẵn sàng" và trang Hành trình của con hiện trống, phần còn lại vẫn chạy.
+**ĐÃ GỘP (PR #35, 14/11) và `0031_roadmap_milestones.sql` ĐÃ ÁP 15/11** (run 43667979662; không sửa nữa). Chỉ thêm, idempotent. Cần 0026 (giáo trình) và 0030 đã áp trước (thân hàm xóa dữ liệu chép từ 0030, gọi các bảng của 0030). Chưa áp thì trang Lộ trình báo nhẹ "chưa sẵn sàng" và trang Hành trình của con hiện trống, phần còn lại vẫn chạy.
 
 ### Làm gì
 1. **Migration `0031`:** bảng chỉ thêm `roadmap_milestones` (mỗi lần ghi = bản mới; trạng thái nháp / đã xác nhận / đã bỏ) và `roadmap_main_curriculum`; `track_settings.roadmap_goal_label` (A "Lên B1", B "Lên C1"); hàm `eng_roadmap_write`, `eng_roadmap_set_main` (chỉ thầy/cô của em), `eng_roadmap` (người lớn), `eng_my_roadmap()` (con; không trả điểm, mức, nhãn); purge gồm hai bảng mới.
@@ -1540,3 +1540,37 @@ Nhánh `feature/w4a-roadmap` (từ `main` + các commit kế hoạch W4). Kế h
 - Q2(d) = PRD **D38**; luật số đếm của con (Q2e) = PRD **D35**, đưa vào W4a (DOMAIN §2, §7 mục 6, test DOM + e2e).
 - Khóa đề xuất "Không phải Unit" theo tên chuẩn hóa: đổi tên dòng ở bản mới ⇒ đề xuất mới hiện lại (chấp nhận).
 
+## W4b — Bàn học của con: Hôm nay · Đã xem · Đã làm · Hành trình (15/11)
+
+Nhánh `feature/w4b-student-desk` (từ `main` sau PR #35). Kế hoạch `docs/superpowers/plans/2026-11-14-w4-student-desk.md` mục "PR W4b". Phụ huynh đã duyệt Q1–Q22 "như đề xuất" (14/11); Q5 = (i) chỉ đếm bài đã nộp (W4b không có phút làm bài); Q14 (Launcher đếm việc) và Q21 (dấu "Mới" nhớ trên máy) theo đề xuất, đúng PR này.
+
+**SQL cần phụ huynh áp: `0032_student_desk_reads.sql` (sau khi gộp).** Chỉ **hàm đọc**, không bảng, không đụng xóa dữ liệu, không đổi hàm cũ; idempotent. Áp bằng workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". **Nên áp ngay khi gộp:** chưa áp thì Hôm nay / Đã xem / Đã làm của con hiện một dòng "Bàn học chưa mở được" (không lỗi; Hành trình và làm bài vẫn chạy).
+
+### Làm gì
+1. **Migration `0032`:** `eng_my_today()` (việc con cần làm: bước bài trên app đã mở chưa nộp, bài link / PDF chưa nộp, bài sửa S6; kèm số câu ĐÃ TRẢ LỜI trong nháp / số câu), `eng_my_today_count()` (đúng một con số = số việc LÀM ĐƯỢC TRÊN APP, cho Study Launcher; NULL nếu người gọi không phải học sinh), `eng_my_history(p_before, p_before_ref, p_limit)` (mọi bài đã nộp + "đã được người lớn xem chưa" + tổng số / số chờ xem của cả em), `eng_my_seen(p_before, p_before_ref, p_limit)` (con trỏ keyset `(thời điểm, mã)`) (bài đã xem + lời khen + ≤ 3 điều cần sửa + trạng thái bài sửa + nhận xét kết); hàm nội bộ `eng_student_done`. Chỉ `authenticated`, nhận diện bằng `auth.uid()`; không điểm, kết quả, %, đáp án, nhãn kỹ năng, quyết định, ai duyệt; bài nạp (`imported`) không hiện.
+2. **Khung bàn học của con** (`components/student/desk/*`): bốn mục Hôm nay · Đã xem · Đã làm · Hành trình; thanh tab dưới (điện thoại / iPad dọc) hoặc cột trái (từ `md`); không dùng khung của thầy/cô.
+3. **Hôm nay:** "Chào {tên}!", "Còn n việc · khoảng m phút", thẻ **Làm tiếp** (có nháp: thanh tiến độ "12/30 câu") hoặc **Việc tiếp theo**, ô mờ "Hỏi gia sư · Sắp có" chỉ ở bước luyện của app (không ở bài link / PDF, bước kiểm tra, bài sửa; bấm không được), nhãn chế độ ("Luyện tập (có gợi ý)" / "Bài tự làm") và "Ôn lại bài cũ" cho bước kiểm tra sau, danh sách việc theo hạn, nhóm "Làm cùng {thầy/cô}" (làm trên giấy / trong buổi; không đếm), nhóm "Vừa gửi" (thẻ vừa gửi hôm nay còn hiện tới khi người lớn xem, để "Sửa lại" còn đó), "{Thầy/cô} nhắn". Bài link / PDF vẫn gửi bằng đúng thẻ cũ (mở bài, tải đề, gửi ảnh) ngay trong Hôm nay.
+4. **Đã xem:** lời khen / cần sửa của thầy/cô (có nút "Sửa bài"), dấu "Mới" + số trên tab **nhớ trên máy này** (`localStorage`), không ghi lên máy chủ; "Ôn lại mấy mục này" + "Việc cần ôn" theo mảng ở đầu trang.
+5. **Đã làm:** lọc Tất cả / Chờ {thầy/cô} xem / {Thầy/cô} đã xem (số trên nhãn là của cả em, không chỉ trang này; bài giao đã rút nhưng con đã gửi vẫn hiện, không mở lại thẻ); "Nộp {ngày} · làm lần đầu / làm lại · có / không xem gợi ý"; bài link / PDF mở lại ở `/done/[mã bài giao]` (thẻ cũ, còn gửi lại được tới khi {thầy/cô} xem).
+6. **`/practice` chuyển về `/`.** Đã bỏ `StudentHome`, `StudentPractice`, `RevisionRows`, hộp góp ý 14 ngày cũ (nay là tab Đã xem); `ActivityNote` giữ ở trang bài.
+7. **Luật số đếm (PRD D35):** con thấy số việc / câu đã trả lời / bài đã nộp, chỉ trong phần tử `data-count="work"`; không bao giờ số câu đúng, %, điểm (test DOM + e2e quét 4 trang).
+
+### Cách thử trên bản thử (sau khi áp 0032; gia đình THỬ)
+- Nguyên (thử): Hôm nay có bài Studio / bài chủ đề; mở một bài, trả lời vài câu, quay về → thẻ "Làm tiếp · a/b câu"; nộp ảnh bài PDF → chuyển xuống nhóm "Vừa gửi" của Hôm nay (còn "Sửa lại"), và hiện ở Đã làm "Chờ {thầy/cô} xem".
+- {Thầy/cô} ghi điểm nhanh (không góp ý) → Đã làm "{Thầy/cô} đã xem"; tab Đã xem có thẻ "{Thầy/cô} đã xem bài này" (không điểm).
+- {Thầy/cô} gửi góp ý S6 cho bài viết → ngay ở Đã xem (số "Mới" ở tab) và Hôm nay có "Sửa bài" ở đầu danh sách.
+- Mở `/practice` → về Hôm nay. iPad dọc / điện thoại: thanh tab dưới; laptop: cột trái. An (thử) không thấy gì của Nguyên.
+
+### Tiêu chí đạt
+`npm run typecheck && npm run lint && npm test` xanh (gồm `tests/db/studentDesk.test.ts`, `tests/dom/todayView.test.tsx`, `tests/dom/seenList.test.tsx`, `tests/unit/student{Today,History,DeskCopy}.test.ts`, `seenMemo.test.ts`); `npx playwright test --list` đủ test; e2e sửa theo màn mới (`studentWork`, `practice`, `review`, `student-no-scores`) — **e2e chưa chạy ở máy dev (không Docker), chỉ CI**; `0032` áp được hai lần; Opus `reviewer` đã soát (2 lỗi chặn + 9 mục nên sửa, đã sửa trên cùng nhánh; `0032` chưa áp ở đâu nên sửa tại chỗ).
+
+### Giả định và lệch so với kế hoạch
+- Không làm `app/api/student/today/route.ts`: Launcher gọi thẳng `eng_my_today_count()` bằng phiên của con (kế hoạch nói đây là đường chính); trang tự đọc lại khi con quay lại tab (`RefreshOnFocus`). Phần hiển thị bên Launcher thuộc repo Launcher.
+- Danh sách "Việc cần làm" là **một danh sách** theo hạn (kế hoạch 3.1); không tách "Hôm nay / Sắp tới" như bản bấm thử vì SQL chỉ trả bước đã mở.
+- `/done/[ref]` dùng mã **bài giao** (link / PDF) và giữ thẻ gửi lại như cũ; bài làm trên app mở lại ở `/activities/[id]`. Không có trang "xem lại bài đã nộp" chỉ-đọc riêng (đợi W4c2).
+- Bài kiểm tra / luyện tập chưa có cờ (Q4 ở W4c2): ô "Hỏi gia sư · Sắp có" hiện cho bước PRACTICE, bài link / PDF và không hiện cho bước kiểm tra tự làm (`INDEPENDENT_CHECK`) và bài sửa.
+- Quy tắc "không điểm" (xử lý sau review): chữ giao diện của con **không còn** chữ "điểm" ở bất kỳ đâu (đã viết lại chân trang Hôm nay và lời giới thiệu Đã xem); các test không còn ngoại lệ.
+- Máy mới chưa từng mở "Đã xem": chỉ 14 ngày gần nhất tính là "Mới" (để iPad mới không hiện 40 dấu).
+- Không có lát SQL review riêng trước code app: Opus review diff cuối (kể cả SQL) rồi sửa.
+- Ô "Hỏi gia sư · Sắp có" chỉ hiện cho bước luyện của app (`practice` và loại app / chủ đề, làm được); bài link / PDF, bước kiểm tra, bài sửa không có ô này.
+- Con trỏ phân trang là cặp `(thời điểm, mã)`, truyền nguyên văn (không qua `Date`) nên không mất / lặp dòng khi nhiều dòng cùng thời điểm.
