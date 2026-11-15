@@ -39,7 +39,7 @@ describe("*_weekly_goals.sql (found by suffix)", () => {
       expect(code, f).toContain(`revoke execute on function english.${f} from public, anon, service_role;`);
       expect(code, f).toContain(`grant execute on function english.${f} to authenticated;`);
     }
-    for (const f of ["eng_decide_goal(uuid, text, int, uuid, text)", "eng_week_facts(uuid)"]) {
+    for (const f of ["eng_decide_goal(uuid, text, int, uuid, text, uuid)", "eng_week_facts(uuid)"]) {
       expect(code, f).toContain(`revoke execute on function english.${f} from public, anon, authenticated;`);
       expect(code, f).toContain(`grant execute on function english.${f} to service_role;`);
     }
@@ -56,7 +56,7 @@ describe("*_weekly_goals.sql (found by suffix)", () => {
   });
   it("the start of a decision is set by the function (no parameter for it) and is next Monday in Vietnam", () => {
     const body = fnBody(code, "eng_decide_goal");
-    expect(code).toContain("create or replace function english.eng_decide_goal(p_goal uuid, p_action text, p_pieces int, p_by uuid, p_client_id text)");
+    expect(code).toContain("create or replace function english.eng_decide_goal(p_goal uuid, p_action text, p_pieces int, p_by uuid, p_client_id text, p_learner uuid default null)");
     expect(body).toContain("v_from := english.eng_week_start(pg_catalog.now()) + 7;");
     expect(code).toContain("date_trunc('week', p_at at time zone 'Asia/Ho_Chi_Minh')");
   });

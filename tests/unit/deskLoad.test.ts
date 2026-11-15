@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-const m = { loadInbox: vi.fn(), loadStudioPending: vi.fn(), loadRetryPending: vi.fn(), loadSkillInbox: vi.fn(), loadPointInbox: vi.fn(), loadDraftList: vi.fn(), loadCurriculumCards: vi.fn(), loadImportPending: vi.fn(), loadSessionFacts: vi.fn() };
+const m = { loadWeekFactsResult: vi.fn(), loadInbox: vi.fn(), loadStudioPending: vi.fn(), loadRetryPending: vi.fn(), loadSkillInbox: vi.fn(), loadPointInbox: vi.fn(), loadDraftList: vi.fn(), loadCurriculumCards: vi.fn(), loadImportPending: vi.fn(), loadSessionFacts: vi.fn() };
 vi.mock("@/lib/review/load", () => ({ loadInbox: (...a: unknown[]) => m.loadInbox(...a) }));
 vi.mock("@/lib/studio/load", () => ({ loadStudioPending: (...a: unknown[]) => m.loadStudioPending(...a), loadRetryPending: (...a: unknown[]) => m.loadRetryPending(...a), loadDraftList: (...a: unknown[]) => m.loadDraftList(...a), loadAiSettings: vi.fn() }));
 vi.mock("@/lib/skills/load", () => ({ loadSkillInbox: (...a: unknown[]) => m.loadSkillInbox(...a) }));
@@ -12,6 +12,7 @@ vi.mock("@/lib/tutorwork/load", () => ({ loadToday: vi.fn() }));
 vi.mock("@/lib/workdesk/load", () => ({ loadIntake: vi.fn() }));
 vi.mock("@/lib/sessions/load", () => ({ loadSessionFacts: (...a: unknown[]) => m.loadSessionFacts(...a) }));
 vi.mock("@/lib/roadmap/load", () => ({ loadRoadmap: vi.fn().mockResolvedValue({ kind: "unavailable" }) }));
+vi.mock("@/lib/student/weekLoad", () => ({ loadWeekFactsResult: (...a: unknown[]) => m.loadWeekFactsResult(...a) }));
 vi.mock("@/lib/levels/load", () => ({ loadLevelProfile: vi.fn(), loadRecentLevelChanges: vi.fn() }));
 
 import { loadDesk, loadPendingRows } from "@/lib/desk/load";
@@ -26,6 +27,7 @@ beforeEach(() => {
   m.loadDraftList.mockResolvedValue([]);
   m.loadCurriculumCards.mockResolvedValue([]);
   m.loadImportPending.mockResolvedValue([]);
+  m.loadWeekFactsResult.mockResolvedValue({ kind: "unavailable" }); // 0035 not applied: not a fault
 });
 
 describe("loadPendingRows", () => {
@@ -88,5 +90,41 @@ describe("loadDesk: session days", () => {
     expect((await loadDesk(shell, learner)).sessions).toBeNull();
     m.loadSessionFacts.mockResolvedValue(null);
     expect((await loadDesk(shell, learner)).sessions).toBeNull();
+  });
+});
+
+describe("loadPendingRows · weekly goal (W4d)", () => {
+  const facts = (goals: unknown[]) => ({ kind: "ok", facts: { now: "2026-11-12T03:00:00Z", range: { min: 3, max: 6 }, goals, works: [], firstWorkAt: null, writes: [], firstTopicAt: null, firstRevisionAt: null, unitEvents: [] } });
+  const proposal = { id: "g1", kind: "propose", pieces: 5, appliesFrom: null, respondsTo: null, byRole: "student", createdAt: "2026-11-11T03:00:00Z" };
+  it("migration 0035 not applied is NOT a failure (the count stays known)", async () => {
+    const r = await loadPendingRows("m1", "tutor", "L1");
+    expect(r.failed).toEqual([]);
+    expect(r.rows).toEqual([]);
+  });
+  it("a proposal nobody answered becomes one row that only LINKS to the goal box of the desk", async () => {
+    m.loadWeekFactsResult.mockResolvedValue(facts([proposal]));
+    const r = await loadPendingRows("m1", "tutor", "L1");
+    expect(m.loadWeekFactsResult).toHaveBeenCalledWith("L1");
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0]).toMatchObject({ key: "goal-g1", kind: "goal", group: "roadmap", href: "/?learner=L1#goal-box", waitingTutor: false });
+    expect((await loadPendingRows("m1", "parent", "L1")).rows[0]).toMatchObject({ waitingTutor: true });
+  });
+  it("an answered or withdrawn proposal is not a row", async () => {
+    m.loadWeekFactsResult.mockResolvedValue(facts([proposal, { ...proposal, id: "g2", kind: "withdraw", pieces: null, respondsTo: "g1", createdAt: "2026-11-11T04:00:00Z" }]));
+    expect((await loadPendingRows("m1", "tutor", "L1")).rows).toEqual([]);
+  });
+  it("a real fault is named `goals`; the other sources still show", async () => {
+    m.loadWeekFactsResult.mockRejectedValue(new Error("eng_week_facts failed: 500"));
+    const r = await loadPendingRows("m1", "tutor", "L1");
+    expect(r.failed).toEqual(["goals"]);
+  });
+  it("loadDesk gives the goal box its numbers (null when not applied)", async () => {
+    const learner = { id: "L1", alias: "Nguyên (thử)", trackId: "B", status: "active", isTest: true, color: null } as never;
+    const shell = { displayName: "X", role: "tutor", memberId: "m1", learners: [learner], current: learner, revisionsReady: true } as never;
+    expect((await loadDesk(shell, learner)).goal).toBeNull();
+    m.loadWeekFactsResult.mockResolvedValue(facts([proposal]));
+    const d = await loadDesk(shell, learner);
+    expect(d.goal).toMatchObject({ goal: null, pending: { id: "g1", pieces: 5 }, streak: 0 });
+    expect(m.loadWeekFactsResult).toHaveBeenCalledTimes(2); // once per desk load (shared by the inbox row and the box)
   });
 });

@@ -1,10 +1,11 @@
 import "server-only";
 import { getAuthUser, getMemberByUserId } from "@/lib/auth/session";
 import { buildJourney, type Journey } from "@/lib/journey/path";
+import type { UnitInfo } from "@/lib/student/achievements";
 import { parseMyRoadmap } from "@/lib/journey/shape";
 import { createUserClient } from "@/lib/supabase/server";
 
-export type JourneyPageData = { kind: "ok"; journey: Journey } | { kind: "unavailable" } | { kind: "login" } | { kind: "not-found" };
+export type JourneyPageData = { kind: "ok"; journey: Journey; /** Units of the version in use (for the achievements that count Units). */ units: UnitInfo[] } | { kind: "unavailable" } | { kind: "login" } | { kind: "not-found" };
 
 /**
  * The child's own Hành trình. Reads through the USER client (eng_my_roadmap identifies the child by auth.uid()); staff and anyone who is not
@@ -20,5 +21,6 @@ export async function loadJourneyPage(): Promise<JourneyPageData> {
     if (error.code === "PGRST202" || error.code === "42883") return { kind: "unavailable" };
     throw new Error(`eng_my_roadmap failed: ${error.code ?? "error"}`);
   }
-  return { kind: "ok", journey: buildJourney(parseMyRoadmap(data)) };
+  const input = parseMyRoadmap(data);
+  return { kind: "ok", journey: buildJourney(input), units: input.units.map((u) => ({ code: u.code, ord: u.ord, skipped: u.skipped })) };
 }

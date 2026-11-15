@@ -163,7 +163,7 @@ grant execute on function english.eng_my_withdraw_goal(uuid, text) to authentica
 
 -- 5c. THẦY/CÔ của em đồng ý (giữ số) hoặc điều chỉnh (số khác, 1–14). Quyền của người thao tác TRƯỚC mọi kiểm khác; phụ huynh → 42501 (tutor_only).
 --     applies_from = thứ Hai của tuần sau (giờ Việt Nam) — do hàm đặt, client không gửi được.
-create or replace function english.eng_decide_goal(p_goal uuid, p_action text, p_pieces int, p_by uuid, p_client_id text) returns jsonb
+create or replace function english.eng_decide_goal(p_goal uuid, p_action text, p_pieces int, p_by uuid, p_client_id text, p_learner uuid default null) returns jsonb
 language plpgsql volatile security definer set search_path = ''
 as $$
 declare
@@ -183,7 +183,8 @@ begin
     raise exception 'eng_decide_goal: only the tutor of this learner decides a weekly goal (tutor_only)' using errcode = '42501';
   end if;
   select * into v_g from english.weekly_goals g where g.id = p_goal;
-  if not found or not english.eng_actor_may_manage(p_by, v_g.learner_id) then
+  -- p_learner = the child of the page the route passed the access gate for: a goal of ANOTHER child is refused like an unknown one.
+  if not found or not english.eng_actor_may_manage(p_by, v_g.learner_id) or (p_learner is not null and p_learner <> v_g.learner_id) then
     raise exception 'eng_decide_goal: only the tutor of this learner decides a weekly goal (tutor_only)' using errcode = '42501';
   end if;
   if pg_catalog.length(pg_catalog.btrim(p_client_id)) not between 8 and 100 then
@@ -231,8 +232,8 @@ begin
   return pg_catalog.jsonb_build_object('id', v_id, 'pieces', v_pieces, 'applies_from', v_from, 'replayed', false);
 end
 $$;
-revoke execute on function english.eng_decide_goal(uuid, text, int, uuid, text) from public, anon, authenticated;
-grant execute on function english.eng_decide_goal(uuid, text, int, uuid, text) to service_role;
+revoke execute on function english.eng_decide_goal(uuid, text, int, uuid, text, uuid) from public, anon, authenticated;
+grant execute on function english.eng_decide_goal(uuid, text, int, uuid, text, uuid) to service_role;
 
 -- 6. Việc làm thật của một em: (việc, lúc nộp). Không ai gọi trực tiếp. --------------------------------------------------------------
 -- Tính: lần nộp của CON trên app (in_app / pasted, bài chủ đề / Studio, kể cả bài sửa) · bài nộp link / PDF của con · ảnh bài giấy / PDF người lớn NỘP THAY (Q6).

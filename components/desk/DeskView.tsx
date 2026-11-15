@@ -11,6 +11,7 @@ import type { ShellData } from "@/lib/shell/shell";
 import { CurriculumBox } from "./CurriculumBox";
 import { DeskAlerts } from "./DeskAlerts";
 import { DeskInbox } from "./DeskInbox";
+import { GoalBox } from "./GoalBox";
 import { ProfileBox } from "./ProfileBox";
 import { SessionsBox } from "./SessionsBox";
 
@@ -43,6 +44,14 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
       </div>
       <DeskInbox learnerId={id} pending={data.pending} />
       <DeskAlerts learnerId={id} items={alerts} />
+      {data.goal ? (
+        <GoalBox
+          learnerId={id}
+          alias={learner.alias}
+          canDecide={shell.role === "tutor"}
+          view={{ goal: data.goal.goal, count: data.goal.count, streak: data.goal.streak, upcoming: data.goal.upcoming, pending: data.goal.pending, nextMonday: data.goal.nextMonday }}
+        />
+      ) : null}
       {parent && data.roadmap?.recentTitle ? (
         <p className="rounded-xl border border-line bg-white px-4 py-3 text-sm" data-testid="desk-roadmap-line">
           {deskCopy.roadmapLine.parentNew(data.roadmap.recentTitle)}{" "}

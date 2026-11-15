@@ -4,6 +4,9 @@ import { pickContinue, summarize } from "@/lib/student/today";
 import type { Task } from "@/lib/student/types";
 import { todayVn } from "@/lib/inquiries/dates";
 import { todayLine } from "@/lib/work/view";
+import type { WeekView } from "@/lib/student/weekView";
+import { GoalChip } from "../goal/GoalChip";
+import { WeekMini } from "../goal/WeekMini";
 import { ContinueCard } from "./ContinueCard";
 import { RefreshOnFocus } from "./RefreshOnFocus";
 import { TaskList } from "./TaskList";
@@ -15,12 +18,15 @@ export function TodayView({
   tasks,
   practice,
   review,
+  week = null,
 }: {
   alias: string;
   color: string;
   tasks: Task[];
   practice: StudentPracticeItem[];
   review: ReviewPoints | null;
+  /** W4d: this week's goal and the soft streak (null = not available: nothing is drawn). */
+  week?: WeekView | null;
 }) {
   const sum = summarize(tasks);
   const pick = pickContinue(tasks);
@@ -28,8 +34,13 @@ export function TodayView({
     <div className="mx-auto flex max-w-4xl flex-col gap-5" data-testid="today-view">
       <RefreshOnFocus />
       <header className="flex flex-col gap-1">
-        <time dateTime={todayVn()} className="text-[13px] text-muted">{todayLine()}</time>
-        <h1 className="text-3xl font-bold" style={{ color }}>{c.greeting(alias)}</h1>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex flex-col gap-1">
+            <time dateTime={todayVn()} className="text-[13px] text-muted">{todayLine()}</time>
+            <h1 className="text-3xl font-bold" style={{ color }}>{c.greeting(alias)}</h1>
+          </div>
+          {week ? <GoalChip streak={week.streak} /> : null}
+        </div>
         <p className="text-lg" data-testid="today-lead">
           {sum.count > 0 ? (
             <>
@@ -45,12 +56,15 @@ export function TodayView({
       {pick ? <ContinueCard pick={pick} hasCard={Boolean(pick.task.assignmentId && practice.some((p) => p.assignmentId === pick.task.assignmentId))} /> : null}
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_17rem]">
         <TaskList tasks={tasks} practice={practice} />
-        {review?.message ? (
-          <aside aria-label={c.noteTitle} className="h-fit rounded-2xl border border-line bg-white p-4" data-testid="tutor-note">
-            <h2 className="text-[15px] font-bold">{c.noteTitle}</h2>
-            <p className="mt-2">“{review.message}”</p>
-          </aside>
-        ) : null}
+        <div className="flex h-fit flex-col gap-4">
+          {review?.message ? (
+            <aside aria-label={c.noteTitle} className="h-fit rounded-2xl border border-line bg-white p-4" data-testid="tutor-note">
+              <h2 className="text-[15px] font-bold">{c.noteTitle}</h2>
+              <p className="mt-2">“{review.message}”</p>
+            </aside>
+          ) : null}
+          {week ? <WeekMini view={week} /> : null}
+        </div>
       </div>
       <p className="text-sm text-muted">{c.footnote}</p>
     </div>

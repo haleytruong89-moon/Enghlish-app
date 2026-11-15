@@ -18,10 +18,13 @@ import type { ShellData } from "@/lib/shell/shell";
 import { loadAiSettings, loadDraftList, loadRetryPending, loadStudioPending } from "@/lib/studio/load";
 import type { AiSettingsView } from "@/lib/studio/types";
 import { loadToday, type TodayData } from "@/lib/tutorwork/load";
+import { pendingProposal } from "@/lib/student/goal";
+import { loadWeekFactsResult, type WeekFactsResult } from "@/lib/student/weekLoad";
+import { buildWeekView, type WeekView } from "@/lib/student/weekView";
 import { loadIntake } from "@/lib/workdesk/load";
 import { buildPendingRows, PENDING_MAX_PAGES, PENDING_PAGE_SIZE, type PendingRow } from "./pending";
 
-export type PendingSource = "work" | "studio" | "retries" | "skills" | "points" | "drafts" | "curricula" | "imports" | "roadmap";
+export type PendingSource = "work" | "studio" | "retries" | "skills" | "points" | "drafts" | "curricula" | "imports" | "roadmap" | "goals";
 export type PendingRowsResult = { rows: PendingRow[]; failed: PendingSource[]; more: boolean };
 
 async function settle<T>(p: Promise<T | null>): Promise<T | null> {
@@ -49,8 +52,8 @@ export async function loadWorkPages(): Promise<{ items: InboxItem[]; more: boole
  * "Chờ duyệt" of one child. Call ONLY after the page gate of that child (loadDraftList uses the admin client). Never throws: a source
  * that cannot be read (error, or null before its migration) is listed in `failed` and the others still show.
  */
-export async function loadPendingRows(memberId: string, role: "tutor" | "parent", learnerId: string, roadmapLoad?: Promise<RoadmapLoad | null>): Promise<PendingRowsResult> {
-  const [work, studio, retries, skills, points, drafts, curricula, imports, roadmap] = await Promise.all([
+export async function loadPendingRows(memberId: string, role: "tutor" | "parent", learnerId: string, roadmapLoad?: Promise<RoadmapLoad | null>, goalLoad?: Promise<WeekFactsResult | null>): Promise<PendingRowsResult> {
+  const [work, studio, retries, skills, points, drafts, curricula, imports, roadmap, goal] = await Promise.all([
     settle(loadWorkPages()),
     settle(loadStudioPending(memberId)),
     settle(loadRetryPending(memberId)),
@@ -60,6 +63,7 @@ export async function loadPendingRows(memberId: string, role: "tutor" | "parent"
     settle(loadCurriculumCards(learnerId)),
     settle(loadImportPending(memberId)),
     roadmapLoad ?? settle(loadRoadmap(learnerId)),
+    goalLoad ?? settle(loadWeekFactsResult(learnerId)),
   ]);
   const failed: PendingSource[] = [];
   if (work === null) failed.push("work");
@@ -71,11 +75,19 @@ export async function loadPendingRows(memberId: string, role: "tutor" | "parent"
   if (curricula === null) failed.push("curricula");
   if (imports === null) failed.push("imports");
   if (roadmap === null) failed.push("roadmap");
+  if (goal === null) failed.push("goals"); // only a real fault: migration 0035 not applied is { kind: "unavailable" }
   return {
-    rows: buildPendingRows({ learnerId, role, work: work?.items ?? [], studio: studio?.attempts ?? [], retries: retries?.attempts ?? [], skills: skills?.items ?? [], points: points?.items ?? [], drafts: drafts ?? [], curricula: curricula ?? [], imports: imports ?? [], roadmapDrafts: roadmap && roadmap.kind === "ok" ? draftCount(roadmap.view) : 0 }),
+    rows: buildPendingRows({ learnerId, role, work: work?.items ?? [], studio: studio?.attempts ?? [], retries: retries?.attempts ?? [], skills: skills?.items ?? [], points: points?.items ?? [], drafts: drafts ?? [], curricula: curricula ?? [], imports: imports ?? [], roadmapDrafts: roadmap && roadmap.kind === "ok" ? draftCount(roadmap.view) : 0, goal: goalProposal(goal) }),
     failed,
     more: work?.more ?? false,
   };
+}
+
+/** The proposal of the child that nobody answered yet (W4d), as "Chờ duyệt" needs it. */
+function goalProposal(r: WeekFactsResult | null): { id: string; pieces: number; since: string } | null {
+  if (!r || r.kind !== "ok") return null;
+  const p = pendingProposal(r.facts.goals);
+  return p && p.pieces !== null ? { id: p.id, pieces: p.pieces, since: p.createdAt } : null;
 }
 
 export type DeskData = {
@@ -90,6 +102,8 @@ export type DeskData = {
   sessions: SessionDay[] | null;
   /** Roadmap facts for the desk (W4a): milestones after a vanished Unit, and the newest milestone confirmed this week. null = unknown / not applied. */
   roadmap: { orphans: number; recentTitle: string | null; proposals: number } | null;
+  /** The weekly goal of the child (W4d): this week, the streak, the proposal waiting. null = not applied / unreadable (the box is left out). */
+  goal?: WeekView | null;
 };
 
 function roadmapFacts(r: Awaited<ReturnType<typeof loadRoadmap>> | null): DeskData["roadmap"] {
@@ -101,9 +115,10 @@ function roadmapFacts(r: Awaited<ReturnType<typeof loadRoadmap>> | null): DeskDa
 export async function loadDesk(shell: ShellData, learner: LearnerSummary): Promise<DeskData> {
   const parent = shell.role === "parent";
   const roadmapLoad = settle(loadRoadmap(learner.id)); // ONE eng_roadmap call per desk load, shared by the inbox rows and the desk facts
-  const [today, pending, intake, curricula, profile, recent, aiSettings, facts, roadmap] = await Promise.all([
+  const goalLoad = settle(loadWeekFactsResult(learner.id)); // ONE eng_week_facts call, shared by the inbox row and the goal box
+  const [today, pending, intake, curricula, profile, recent, aiSettings, facts, roadmap, goal] = await Promise.all([
     settle(loadToday(learner.id, learner.trackId, { role: shell.role, memberId: shell.memberId })),
-    loadPendingRows(shell.memberId, shell.role, learner.id, roadmapLoad),
+    loadPendingRows(shell.memberId, shell.role, learner.id, roadmapLoad, goalLoad),
     settle(loadIntake(learner.id)),
     settle(loadCurriculumCards(learner.id)),
     settle(loadLevelProfile(learner.id)),
@@ -111,6 +126,7 @@ export async function loadDesk(shell: ShellData, learner: LearnerSummary): Promi
     parent ? settle(loadAiSettings(shell.memberId)) : Promise.resolve(null),
     settle(loadSessionFacts(learner.id)),
     roadmapLoad,
+    goalLoad,
   ]);
-  return { today, pending, intakeMissing: intake && intake.available ? intake.data === null : null, curricula, profile, recent, aiSettings, roadmap: roadmapFacts(roadmap), sessions: facts ? sessionDays(facts.notes, [], () => null, facts.marks) : null };
+  return { today, pending, intakeMissing: intake && intake.available ? intake.data === null : null, curricula, profile, recent, aiSettings, roadmap: roadmapFacts(roadmap), goal: goal && goal.kind === "ok" ? buildWeekView(goal.facts) : null, sessions: facts ? sessionDays(facts.notes, [], () => null, facts.marks) : null };
 }

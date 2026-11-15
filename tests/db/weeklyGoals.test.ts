@@ -65,8 +65,8 @@ describe("weekly goals (migration 0035)", () => {
   };
   const propose = (user: string, pieces: number, clientId: string = randomUUID()) => student<G>(user, "select english.eng_my_propose_goal($1, $2) as r", [pieces, clientId]);
   const withdraw = (user: string, goal: string, clientId: string = randomUUID()) => student<G>(user, "select english.eng_my_withdraw_goal($1, $2) as r", [goal, clientId]);
-  const decide = (goal: string, action: string, pieces: number | null, by: string, clientId: string = randomUUID()) =>
-    svc<G>("select english.eng_decide_goal($1, $2, $3, $4, $5) as r", [goal, action, pieces, by, clientId]);
+  const decide = (goal: string, action: string, pieces: number | null, by: string, clientId: string = randomUUID(), learner: string | null = null) =>
+    svc<G>("select english.eng_decide_goal($1, $2, $3, $4, $5, $6) as r", [goal, action, pieces, by, clientId, learner]);
   const myWeek = (user: string) => read<Facts | null>(user, "select english.eng_my_week() as r");
   const factsOf = (learner: string) => svc<Facts>("select english.eng_week_facts($1) as r", [learner]);
   const count = async (sql: string, params: unknown[] = []) => ((await q1<{ n: number }>(sql, params))[0] as { n: number }).n;
@@ -97,7 +97,7 @@ describe("weekly goals (migration 0035)", () => {
       await fail(as(db.client, "anon", null, async (q) => q(sql)), "42501");
       await fail(as(db.client, "service_role", null, async (q) => q(sql)), "42501");
     }
-    for (const sql of ["select english.eng_decide_goal(gen_random_uuid(), 'accept', null, gen_random_uuid(), 'abcdefgh1')", "select english.eng_week_facts(gen_random_uuid())"]) {
+    for (const sql of ["select english.eng_decide_goal(gen_random_uuid(), 'accept', null, gen_random_uuid(), 'abcdefgh1', null)", "select english.eng_week_facts(gen_random_uuid())"]) {
       await fail(as(db.client, "anon", null, async (q) => q(sql)), "42501");
       await fail(as(db.client, "authenticated", U().studentNguyen, async (q) => q(sql)), "42501");
       await fail(as(db.client, "authenticated", U().tutorNguyen, async (q) => q(sql)), "42501");
@@ -162,6 +162,8 @@ describe("weekly goals (migration 0035)", () => {
     await fail(decide(p.id, "accept", null, M().tutorAn), "42501", /tutor_only/);
     await fail(decide(p.id, "accept", null, M().studentNguyen), "42501", /tutor_only/);
     await fail(decide(randomUUID(), "accept", null, M().tutorNguyen), "42501", /tutor_only/); // an unknown goal is not told apart
+    // the page's child must be the goal's child: a goal of another child is refused like an unknown one
+    await fail(decide(p.id, "accept", null, M().tutorNguyen, randomUUID(), AN()), "42501", /tutor_only/);
     expect(await count("select count(*)::int as n from english.weekly_goals where responds_to = $1", [p.id])).toBe(0);
     await withdraw(U().studentNguyen, p.id);
   });
