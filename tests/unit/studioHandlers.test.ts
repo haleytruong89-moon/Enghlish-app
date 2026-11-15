@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AccessStore, Learner, Member, Relationship } from "@/lib/auth/requireAccess";
 import { ReviewDbError } from "@/lib/review/handlers";
 import {
-  handleApprove, handleCreateDraft, handleDecide, handleGetDraft, handlePending, handleSetAiSettings, handleAiSettings, handleStudioUploadUrl,
+  handleApprove, handleCreateDraft, handleDecide, handleMarkRetrySeen, handleGetDraft, handlePending, handleSetAiSettings, handleAiSettings, handleStudioUploadUrl,
   type StudioDeps, type StudioStore,
 } from "@/lib/studio/handlers";
 import { normalizeExtract } from "@/lib/studio/normalize";
@@ -61,6 +61,7 @@ function store(over: Partial<StudioStore> = {}): StudioStore {
     assign: vi.fn(async () => ({ instance_id: "i", activity_id: "a", replayed: false })),
     pending: vi.fn(async () => ({ count: 0, items: [] })),
     retryResults: vi.fn(async () => 0),
+    markRetrySeen: vi.fn(async () => ({ id: "seen-1", replayed: false })),
     decide: vi.fn(async () => ({ decided: 1, pending: 0, result: { recorded: true, correct: 5, in_app: 8 } })),
     ...over,
   };
@@ -188,5 +189,23 @@ describe("Studio API (requireAccess first; tutor or parent of the child)", () =>
     expect(s.pending).toHaveBeenCalledWith({ byMemberId: "m-parent", allowReal: false });
     expect(s.retryResults).toHaveBeenCalledWith({ byMemberId: "m-parent", allowReal: false }); // a result that failed to write once is retried when the inbox opens
     expect((await handlePending(deps("studentNguyen"))).status).toBe(403);
+  });
+});
+
+describe("handleMarkRetrySeen (Đã xem on the child's retries)", () => {
+  const body = { note: "Ổn rồi", client_id: "client-0020" };
+  it("needs a login; the child's own tutor and parent may; another child's tutor gets 404; a bad body is 400", async () => {
+    expect((await handleMarkRetrySeen(deps(null), ATTEMPT, body)).status).toBe(401);
+    expect((await handleMarkRetrySeen(deps("tutorNguyen"), ATTEMPT, body)).status).toBe(201);
+    expect((await handleMarkRetrySeen(deps("parent"), ATTEMPT, body)).status).toBe(201);
+    expect((await handleMarkRetrySeen(deps("tutorAn"), ATTEMPT, body)).status).toBe(404);
+    expect((await handleMarkRetrySeen(deps("tutorNguyen"), ATTEMPT, { note: "x".repeat(301), client_id: "client-0021" })).status).toBe(400);
+    expect((await handleMarkRetrySeen(deps("tutorNguyen"), ATTEMPT, { extra: 1, client_id: "client-0022" })).status).toBe(400);
+  });
+  it("passes an empty note as null and a replay is 200", async () => {
+    const markRetrySeen = vi.fn(async () => ({ id: "seen-1", replayed: true }));
+    const r = await handleMarkRetrySeen(deps("tutorNguyen", store({ markRetrySeen })), ATTEMPT, { client_id: "client-0023" });
+    expect(r.status).toBe(200);
+    expect(markRetrySeen).toHaveBeenCalledWith(expect.objectContaining({ attemptId: ATTEMPT, note: null, clientId: "client-0023" }));
   });
 });

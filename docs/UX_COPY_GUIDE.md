@@ -307,7 +307,7 @@ Bốn khối trong `lib/copy/vi.ts`: `playerCopy` (làm bài), `resultCopy` (sau
 | Thử lại | "Thử lại câu này" → ô nhập → "Gửi cho {thầy/cô}" · "Để sau"; gửi rồi: "Lần thử lại của bạn: “…”" + "Đã gửi lần thử lại cho {thầy/cô}" (app **không** nói đúng hay sai) |
 | Giao bài (người lớn) | Ô "Loại bài": Luyện tập · Bài kiểm tra + một dòng giải thích ("Cách app đếm bằng chứng không đổi") |
 
-| Người lớn thấy lần thử lại | Chờ duyệt: "Thử lại" · "Con thử lại n câu"; trang "Cần thầy/cô xem" có mục "Con thử lại": "Lần đầu: …" · "Thử lại: …". Tự hết chờ khi thầy/cô góp ý, chấm một câu hoặc duyệt bài đó |
+| Người lớn thấy lần thử lại | Chờ duyệt: "Thử lại" · "Con thử lại n câu"; trang "Cần thầy/cô xem" có mục "Con thử lại": "Đọc lần thử lại của con rồi bấm Đã xem." · "Lần đầu: …" · "Thử lại: …" · ô "Ghi chú (không bắt buộc, chỉ người lớn thấy)" · "Con không thấy ghi chú này." · nút **Đã xem** (chỉ nút này làm dòng hết chờ) |
 | Con (S4, S5) | "Mỗi câu bạn được thử lại một lần. {Thầy/cô} sẽ thấy lần thử của bạn. App không hiện đáp án." · tiêu đề câu viết tự do: "Câu {thầy/cô} sẽ đọc" |
 
 Luật: cờ "Bài kiểm tra" **chỉ đổi giao diện** (không thử lại, không ô hỏi gia sư, chữ khác); không đổi `mode`, không đổi cách S7a / điểm kiến thức đếm. Lần thử lại **không phải bằng chứng** (không engine nào đọc).

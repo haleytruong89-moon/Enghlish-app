@@ -48,6 +48,7 @@ export function createSupabaseStudioStore(): StudioStore {
         : call("eng_assign_studio", { p_draft: a.draftId, p_start: a.startOn, p_due: a.dueOn, p_by: a.byMemberId, p_client_id: a.clientId }),
     retryResults: (a) => call("eng_studio_retry_results", { p_by: a.byMemberId, p_allow_real: a.allowReal }),
     pending: (a) => call("eng_studio_pending", { p_by: a.byMemberId, p_allow_real: a.allowReal }),
+    markRetrySeen: (a) => call("eng_mark_retry_seen", { p_attempt: a.attemptId, p_note: a.note, p_by: a.byMemberId, p_client_id: a.clientId }),
     decide: (a) => call("eng_decide_studio_items", { p_attempt: a.attemptId, p_items: a.items, p_by: a.byMemberId, p_client_id: a.clientId }),
   };
 }

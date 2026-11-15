@@ -2039,7 +2039,11 @@ export const studioInboxCopy = {
   partialLine: (n: number) => `Đã lưu. Còn ${n} câu chờ.`,
   // Retries of the child (W4c2): shown beside the original answer; the row clears itself when an adult acts on that attempt afterwards.
   retryTitle: "Con thử lại",
-  retryIntro: `Các câu con làm lại một lần sau khi nộp. Đây không phải bằng chứng và không đổi mức nào. Mục này tự hết chờ khi ${tutorHonorific} góp ý, chấm một câu, ghi kết quả hoặc duyệt bài đó.`,
+  retryIntro: "Đọc lần thử lại của con rồi bấm Đã xem.",
+  retrySeen: "Đã xem",
+  retrySeenSaving: "Đang lưu…",
+  retryNoteLabel: "Ghi chú (không bắt buộc, chỉ người lớn thấy)",
+  retryNoteHint: "Con không thấy ghi chú này.",
   retryHeading: (alias: string, title: string, n: number) => `${alias} · ${title} · thử lại ${n} câu`,
   retryFirst: "Lần đầu",
   retryNow: "Thử lại",
@@ -2071,6 +2075,8 @@ export const aiSettingsCopy = {
 };
 
 export const studioErrors: Record<string, string> = {
+  bad_note: "Ghi chú tối đa 300 chữ, không có chữ kiểu điểm số.",
+  no_retry: "Lần làm này không có lần thử lại nào.",
   needs_update: "Phần này cần migration 0034 (cờ Bài kiểm tra). Giao ở loại Luyện tập, hoặc nhờ phụ huynh áp 0034.",
   file_type: "Chỉ nhận PDF hoặc Word .docx (không nhận .doc hay ảnh).",
   file_too_big: "File lớn hơn 15 MB.",
