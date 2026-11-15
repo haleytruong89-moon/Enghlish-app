@@ -25,11 +25,6 @@ export type PendingAttempt = {
   waitingDays: number; items: PendingItem[];
 };
 export type PendingInbox = { count: number; attempts: PendingAttempt[] };
-export type StudioReviewView = {
-  attemptNo: number; submittedAt: string;
-  wrong: { n: number; stem: string; given: string; expected: string | null; explanationVi: string | null }[];
-  pending: number[];
-};
 export type AiSettingsView = {
   enabled: boolean; monthlyCapUsd: number; softCapUsd: number; spentUsd: number; runsMonth: number; softReached: boolean; updatedAt: string | null;
   learners: { id: string; alias: string; isTest: boolean; aiText: boolean | null }[];

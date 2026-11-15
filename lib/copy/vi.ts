@@ -736,6 +736,8 @@ export const purgePage = {
     roadmap_milestones: "Mốc lộ trình",
     roadmap_main_curriculum: "Giáo trình chính của Hành trình",
     submission_feedback: "Góp ý cho bài nộp",
+    item_retries: "Lần thử lại câu",
+    work_test_marks: "Dấu bài kiểm tra",
     login_names: "Tên đăng nhập ngắn",
     learners: "Hồ sơ của em",
     members: "Tài khoản của em trong app",
@@ -1931,19 +1933,83 @@ export const studioCopy = {
   assignedLine: (start: string, due: string) => `Đã giao: làm từ ${start}, hạn ${due}`,
 };
 
-// Studio B1 — "Câu cần xem lại" (board 20). The child: no score, no count of right items, no ratio, no tag, no skill.
-export const studioStudentCopy = {
-  title: "Câu cần xem lại",
-  intro: "Xem lại các câu dưới đây, rồi làm lại nếu bạn muốn.",
+// W4c2 — làm bài từng câu trên app (S-3). Xưng "bạn"; người dạy là tutorHonorific. Không điểm, không đáp án.
+export const playerCopy = {
+  practiceTag: "Luyện tập",
+  testTag: "Bài kiểm tra",
+  testLineBold: "Bài kiểm tra: tự làm, không có gợi ý.",
+  testLineRest: ` Cứ làm hết sức mình — ${tutorHonorific} cần thấy bạn tự làm được đến đâu.`,
+  exit: "Thoát · bài đã được lưu",
+  progress: (a: number, b: number) => `${a}/${b} câu`,
+  progressLabel: "Số câu đã trả lời",
+  questionOf: (n: number) => `Câu ${n}`,
+  prev: "Câu trước",
+  next: "Câu tiếp",
+  review: "Xem lại và nộp",
+  dotsLabel: "Các câu của bài",
+  dotAnswered: (n: number) => `Câu ${n}: đã trả lời`,
+  dotEmpty: (n: number) => `Câu ${n}: chưa trả lời`,
+  gotoQuestion: (n: number) => `Đến câu ${n}`,
+  saving: "Đang lưu…",
+  saved: "Đã lưu",
+  notSaved: "Chưa lưu được. Bài vẫn còn trên màn hình, bạn đừng đóng trang nhé.",
+  beforeSubmit: "Trước khi nộp",
+  missing: (ns: number[]) => `Bạn chưa trả lời câu ${ns.join(", ")}. Bạn vẫn nộp được, hoặc quay lại làm tiếp.`,
+  allAnswered: "Bạn đã trả lời hết các câu.",
+  backToQuestions: "Quay lại làm tiếp",
+  submit: "Nộp bài",
+  gap: "Điền vào chỗ trống",
+  choice: "Chọn đáp án",
+  short: "Trả lời ngắn",
+  askTutor: "Hỏi gia sư",
+  askTutorSoon: "Sắp có",
+  askTutorNote: "Sắp có — gia sư sẽ gợi ý từng bước, không làm hộ. Chỉ có ở bài luyện tập, không có ở bài kiểm tra.",
+};
+
+// W4c2 — màn sau khi nộp (S-10). Không điểm, không số câu đúng, không đáp án, không giải thích.
+export const resultCopy = {
+  title: `Bạn đã nộp bài · ${tutorHonorific} sẽ xem`,
+  testNote: `Bài kiểm tra: ${tutorHonorific} sẽ chữa cùng bạn.`,
+  testNoteSub: "Bạn chưa cần làm gì thêm.",
+  lookTitle: "Mấy câu bạn nên nhìn lại",
+  lookTitleTest: `Mấy câu ${tutorHonorific} sẽ xem lại cùng bạn`,
+  lookIntro: `Mỗi câu bạn được thử lại một lần. ${tutorHonorificCap} sẽ xem lần thử của bạn và nhắn lại — app không cho biết đáp án đúng.`,
+  youAnswered: "Bạn trả lời",
+  notAnswered: "Bạn chưa trả lời câu này.",
+  openTitle: "Câu viết tự do",
+  openNote: `${tutorHonorificCap} sẽ đọc câu này`,
   youWrote: "Bạn viết",
-  blank: "Bạn để trống câu này",
-  shouldBe: "Nên là",
-  why: "Vì sao",
-  pending: (n: number) => `${tutorHonorificCap} sẽ xem ${n === 1 ? "câu" : `${n} câu`} này`,
-  pendingList: (ns: number[]) => `Câu ${ns.join(", ")}`,
-  nothingToReview: "Không có câu nào cần xem lại lúc này.",
-  home: "Về Việc tiếp theo",
-  retry: "Làm lại",
+  othersFine: "Các câu còn lại: ổn",
+  nothing: `Không có câu nào cần nhìn lại. ${tutorHonorificCap} vẫn sẽ đọc cả bài của bạn.`,
+  home: "Về Hôm nay",
+  done: "Xem trong Đã làm",
+  again: "Làm lại cả bài",
+  footnote: `${tutorHonorificCap} xem bài và nhắn lại cho bạn.`,
+  questionLabel: (n: number) => `Câu ${n}`,
+};
+
+// W4c2 — "Thử lại câu này" (một lần mỗi câu, chỉ bài luyện tập).
+export const retryCopy = {
+  open: "Thử lại câu này",
+  inputLabel: (n: number) => `Câu trả lời mới cho câu ${n}`,
+  placeholder: "Viết lại câu trả lời của bạn",
+  send: `Gửi cho ${tutorHonorific}`,
+  later: "Để sau",
+  sending: "Đang gửi…",
+  sent: `Đã gửi lần thử lại cho ${tutorHonorific}`,
+  yourRetry: "Lần thử lại của bạn",
+  failed: "Chưa gửi được. Bạn thử lại nhé.",
+  refused: "Câu này đã thử lại rồi, hoặc bài này không có thử lại.",
+};
+
+// W4c2 — cờ "Bài kiểm tra" khi giao bài (người lớn). Chỉ đổi giao diện của con; không đổi cách app đếm bằng chứng.
+export const testMarkCopy = {
+  label: "Loại bài",
+  practice: "Luyện tập",
+  test: "Bài kiểm tra",
+  hintPractice: "Con có thể thử lại từng câu một lần và sẽ thấy ô “Hỏi gia sư · Sắp có”.",
+  hintTest: `Con tự làm, không thử lại, không có ô hỏi gia sư. Cách app đếm bằng chứng không đổi.`,
+  tag: "Bài kiểm tra",
 };
 
 // Studio B1 — Hộp duyệt → "Cần thầy/cô xem" (board 21). Adults only: "đúng x/y câu" is allowed here (spec §7).

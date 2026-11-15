@@ -20,9 +20,9 @@ for (const key of ["studentAn", "studentNguyen"] as AccountKey[]) {
     expect(text).not.toContain(skillStateCopy.pending("").trim());
     expect(text).not.toContain(skillStateCopy.autoNote);
     expect(await page.locator('[data-testid="skill-scale"], [data-testid^="skill-row-"], [data-testid="review-tab-skills"], [data-testid^="transfer-mark"]').count()).toBe(0);
-    // Studio B1: the child's review block, when present, never shows a ratio, a percentage or a count of right items.
-    const review = page.locator('[data-testid="studio-review"]');
-    if (await review.count()) expect(await review.innerText()).not.toMatch(/\d+\s*\/\s*\d+|%|đúng\s+\d/i);
+    // W4c2: the child's result screen, when present, never shows a ratio, a percentage, a count of right items or an answer.
+    const review = page.locator('[data-testid="result-view"]');
+    if (await review.count()) expect(await review.innerText()).not.toMatch(/\d+\s*\/\s*\d+|%|đúng\s+\d|nên là|vì sao/i);
     // W4a: Hành trình shows counts of Units only: no %, no score, no level, no "đúng n".
     await page.goto("/journey");
     // PRD D35: a/b may appear only inside [data-count="work"] (counts of the child's own work); everything else is checked without them.

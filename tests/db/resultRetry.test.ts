@@ -51,7 +51,7 @@ describe("result view, retry and test flag (migration 0034)", () => {
     asUser<{ attempt_id: string }>(user, "select english.eng_submit_attempt($1, $2, $3::jsonb, $4::text[], 'in_app') as r", [activity, randomUUID(), JSON.stringify({ answers }), ["none"]]);
   type View = { attempt_no: number; is_test: boolean; others_fine: boolean; look: { id: string; n: number; stem: string; given: string; retry: { text: string } | null; can_retry: boolean }[]; open: { n: number }[] };
   const view = (activity: string, user = s.users.studentNguyen) => asUser<View | null>(user, "select english.eng_my_result_view($1) as r", [activity]);
-  const retry = (activity: string, item: string, answer: string, clientId = randomUUID(), user = s.users.studentNguyen) =>
+  const retry = (activity: string, item: string, answer: string, clientId: string = randomUUID(), user = s.users.studentNguyen) =>
     asUser<{ id: string; replayed: boolean }>(user, "select english.eng_my_retry_item($1, $2, $3, $4) as r", [activity, item, answer, clientId]);
   const noNow = (x: unknown) => ({ ...(x as object), now: undefined });
   const inputs = async () => ({

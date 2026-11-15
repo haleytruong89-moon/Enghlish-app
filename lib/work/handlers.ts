@@ -6,7 +6,7 @@
  *   3. validates the body (400) and talks to an injectable WorkStore.
  * Answers go through the allowlist parsers in ./shape: no key, auto-check result, transcript or note can leave here.
  */
-import { parseStudioReview } from "@/lib/studio/shape";
+import { parseResultView, type ResultView } from "@/lib/student/result";
 import type { EngineHook } from "@/lib/engine/runner";
 import {
   AccessError,
@@ -20,7 +20,7 @@ import { apiErrors } from "@/lib/copy/vi";
 import { parseReviewByDomain } from "@/lib/levels/shape";
 import { revisionDraftBodySchema, revisionSubmitBodySchema } from "@/lib/revision/schemas";
 import { parseMyActivityNote, parseMyFeedback, parseMyRevision } from "@/lib/revision/shape";
-import { attemptBodySchema, draftBodySchema, UUID_RE } from "./schemas";
+import { attemptBodySchema, draftBodySchema, retryBodySchema, retryMarksSchema, UUID_RE } from "./schemas";
 import { toActivityView, toDraftReceipt, toHomeView, toReceipt } from "./shape";
 
 export class WorkDbError extends Error {
@@ -46,8 +46,12 @@ export interface WorkStore {
   getMyFeedback(): Promise<unknown>;
   /** english.eng_my_activity_note(id) as the signed-in student (S6, G4): the "Chỉ góp ý" note of this activity, or null. */
   getMyActivityNote(activityId: string): Promise<unknown | null>;
-  /** english.eng_my_studio_review(id) as the signed-in student (Studio B1): wrong items + waiting numbers, never a count; null / {} = nothing to show. */
-  getMyStudioReview(activityId: string): Promise<unknown | null>;
+  /** english.eng_my_result_view(id) as the signed-in student (W4c2, S-10): items to look at again, never an answer or a count; null = nothing to show. */
+  getMyResultView(activityId: string): Promise<unknown | null>;
+  /** english.eng_my_retry_item as the signed-in student (W4c2): one retry of one item; it is not evidence. */
+  retryItem(args: { activityId: string; itemId: string; answer: string; clientId: string }): Promise<unknown>;
+  /** english.eng_my_test_marks() as the signed-in student (W4c2): ids of their own work that counts as a test. */
+  getMyTestMarks(): Promise<unknown>;
   /** english.eng_my_revision(id) as the signed-in student; null = not theirs / nothing to revise there. */
   getMyRevision(activityId: string): Promise<unknown | null>;
   /** english.eng_save_revision_draft as the signed-in student. */
@@ -271,10 +275,46 @@ export async function handleStudentActivityNote(deps: HandlerDeps, activityId: s
   return { status: 200, body: { note } };
 }
 
-/** "Câu cần xem lại" of a Studio step (board 20). Never fatal for the page: unreadable or not a Studio step → null. */
-export async function handleStudentStudioReview(deps: HandlerDeps, activityId: string): Promise<HandlerResult> {
+/** The screen after submitting (S-10). Never fatal for the page: unreadable, not submitted or no auto-check → null (the page shows the plain receipt). */
+export async function handleStudentResultView(deps: HandlerDeps, activityId: string): Promise<HandlerResult<{ result: ResultView | null }>> {
+  const g = await guardActivity(deps, activityId);
+  if (!g.ok) return g.result as HandlerResult<{ result: ResultView | null }>;
+  const result = await deps.store.getMyResultView(activityId).then(parseResultView).catch(() => null);
+  return { status: 200, body: { result } };
+}
+
+/** Whether the child's own work counts as a "Bài kiểm tra" (flag or self-check step). Before 0034 is applied: nothing is a flagged test. */
+export async function handleStudentTestMarks(deps: HandlerDeps): Promise<HandlerResult<{ activityIds: string[]; assignmentIds: string[] }>> {
+  const g = await ownLearner(deps);
+  if (!g.ok) return g.result as HandlerResult<{ activityIds: string[]; assignmentIds: string[] }>;
+  const raw = await deps.store.getMyTestMarks().catch(() => null);
+  const parsed = retryMarksSchema.safeParse(raw);
+  return { status: 200, body: parsed.success ? { activityIds: parsed.data.activity_ids, assignmentIds: parsed.data.assignment_ids } : { activityIds: [], assignmentIds: [] } };
+}
+
+/** Database refusals of eng_my_retry_item the screen can explain (the tag is at the end of the message). */
+const RETRY_TAGS: [RegExp, 400 | 409, string][] = [
+  [/\(bad_item\)/, 400, "bad_item"],
+  [/\(bad_answer\)/, 400, "bad_answer"],
+  [/\(test_no_retry\)/, 409, "test_no_retry"],
+  [/\(already_retried\)/, 409, "already_retried"],
+  [/\(not_retryable\)/, 409, "not_retryable"],
+  [/\(not_sent\)/, 409, "not_sent"],
+  [/\(client_id_reused\)/, 409, "conflict"],
+];
+
+/** POST /api/student/activities/:id/retry - one retry of one item. Goes to the tutor; no engine reads it. */
+export async function handleRetryItem(deps: HandlerDeps, activityId: string, rawBody: unknown): Promise<HandlerResult> {
   const g = await guardActivity(deps, activityId);
   if (!g.ok) return g.result;
-  const review = await deps.store.getMyStudioReview(activityId).then(parseStudioReview).catch(() => null);
-  return { status: 200, body: { review } };
+  const parsed = retryBodySchema.safeParse(rawBody);
+  if (!parsed.success) return fail(400, "invalid_body");
+  try {
+    const raw = await deps.store.retryItem({ activityId, itemId: parsed.data.item_id, answer: parsed.data.answer, clientId: parsed.data.client_id });
+    const replayed = !!raw && typeof raw === "object" && (raw as { replayed?: unknown }).replayed === true;
+    return { status: replayed ? 200 : 201, body: { ok: true, replayed } };
+  } catch (err) {
+    if (err instanceof WorkDbError) for (const [re, status, code] of RETRY_TAGS) if (re.test(err.message)) return fail(status, code);
+    return fromDbError(err);
+  }
 }

@@ -2,7 +2,7 @@
 /** Parse the jsonb of the Studio functions (0024). Anything unexpected throws (→ 500, logged) instead of showing a half-right screen. */
 import { z } from "zod";
 import { studioDraftSchema } from "./schema";
-import type { AiSettingsView, DraftFiles, DraftListItem, DraftView, PendingInbox, StudioReviewView } from "./types";
+import type { AiSettingsView, DraftFiles, DraftListItem, DraftView, PendingInbox } from "./types";
 
 const num = z.union([z.number(), z.string()]).transform(Number);
 const status = z.enum(["extracting", "ai_failed", "draft", "approved", "discarded"]);
@@ -60,20 +60,6 @@ export function parsePending(raw: unknown): PendingInbox {
       items: a.items.map((i) => ({ itemId: i.item_id, n: i.n, kind: i.kind, stem: i.stem, expected: i.expected, accepted: i.accepted, given: i.given })),
     })),
   };
-}
-
-/** null / {} → null (not a Studio step, nothing submitted). Strict keys: anything else the database might add never reaches the child. */
-export function parseStudioReview(raw: unknown): StudioReviewView | null {
-  if (raw === null || raw === undefined || (typeof raw === "object" && Object.keys(raw as object).length === 0)) return null;
-  const r = z
-    .strictObject({
-      attempt_no: z.number().int(),
-      submitted_at: z.string(),
-      wrong: z.array(z.strictObject({ n: z.number().int(), stem: z.string(), given: z.string(), expected: z.string().nullable(), explanation_vi: z.string().nullable() })),
-      pending: z.array(z.number().int()),
-    })
-    .parse(raw);
-  return { attemptNo: r.attempt_no, submittedAt: r.submitted_at, wrong: r.wrong.map((w) => ({ n: w.n, stem: w.stem, given: w.given, expected: w.expected, explanationVi: w.explanation_vi })), pending: r.pending };
 }
 
 export function parseAiSettings(raw: unknown): AiSettingsView {

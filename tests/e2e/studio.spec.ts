@@ -1,10 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import { Client } from "pg";
-import { aiSettingsCopy, levelLabels, pdfPickCopy, studioInboxCopy, studioStudentCopy, work } from "@/lib/copy/vi";
+import { aiSettingsCopy, levelLabels, pdfPickCopy, resultCopy, studioInboxCopy, work } from "@/lib/copy/vi";
 import { KEY_RECOMMEND, PAGE_LIMITS } from "@/lib/pdf/limits";
 import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { makeDocx } from "../unit/fixtures/docx";
-import { LEARNER_IDS, loginAs } from "./helpers";
+import { LEARNER_IDS, loginAs, studentVisibleText } from "./helpers";
 
 // Studio B1 end to end on the TEST family with AI_FAKE=1 (CI). Serial: each step builds on the previous one.
 test.describe.configure({ mode: "serial" });
@@ -71,25 +71,36 @@ async function answer(page: Page, id: string, value: string, choice = false) {
   else await box.getByRole("textbox").fill(value);
 }
 
-test("Nguyên does the test: closed items are checked, he sees the wrong ones with the right answer and the waiting ones — never a score", async ({ page }) => {
+/** W4c2: the questions come one at a time. Walk q1..q8, answer the ones given, then "Xem lại và nộp", declare no help and send. */
+async function doTheTest(page: Page, answers: Record<string, { v: string; choice?: boolean }>) {
+  for (const id of ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8"]) {
+    const a = answers[id];
+    if (a) await answer(page, id, a.v, a.choice);
+    if (id === "q8") await page.getByTestId("player-to-review").click();
+    else await page.getByTestId("player-next").click();
+  }
+  await page.getByTestId("help-declaration").getByLabel(work.help.none).check();
+  await page.getByTestId("player-submit").click();
+}
+
+test("Nguyên does the test one question at a time: he sees which ones to look at again and the ones his tutor will read - never a score, never the right answer", async ({ page }) => {
   await loginAs(page, "studentNguyen");
   await page.goto(`/activities/${activityId}`);
-  await answer(page, "q1", "B. had", true);
-  await answer(page, "q2", "B. can't", true);
-  await answer(page, "q3", "A. off", true);
-  await answer(page, "q4", "C. A visit that changed Lan's plans", true);
-  await answer(page, "q6", "happyness");
-  await answer(page, "q7", "I wish I could");
-  await answer(page, "q8", "is said to be a");
-  await page.getByTestId("help-declaration").getByLabel(work.help.none).check();
-  await page.getByRole("button", { name: work.submit }).click();
-  await expect(page.getByTestId("studio-review")).toBeVisible();
-  for (const n of [2, 5, 6]) await expect(page.getByTestId(`studio-wrong-${n}`)).toBeVisible();
-  await expect(page.getByTestId("studio-wrong-2")).toContainText("A. must");
-  await expect(page.getByTestId("studio-pending")).toContainText(studioStudentCopy.pending(2));
-  const text = await page.locator("main").innerText();
+  await expect(page.getByTestId("ask-tutor")).toBeVisible(); // practice work: the dimmed slot
+  await doTheTest(page, {
+    q1: { v: "B. had", choice: true }, q2: { v: "B. can't", choice: true }, q3: { v: "A. off", choice: true }, q4: { v: "C. A visit that changed Lan's plans", choice: true },
+    q6: { v: "happyness" }, q7: { v: "I wish I could" }, q8: { v: "is said to be a" },
+  });
+  await expect(page.getByTestId("result-view")).toBeVisible();
+  for (const id of ["q2", "q5", "q6"]) await expect(page.getByTestId(`result-look-${id}`)).toBeVisible();
+  for (const id of ["q7", "q8"]) await expect(page.getByTestId(`result-open-${id}`)).toBeVisible();
+  await expect(page.getByTestId("result-others-fine")).toContainText(resultCopy.othersFine);
+  const text = await studentVisibleText(page);
   expect(text).not.toMatch(SCORE);
-  expect(text).not.toContain("đúng ");
+  expect(text).not.toContain("A. must"); // the model answer
+  expect(text).not.toContain("happiness");
+  expect(text).not.toContain("Nên là");
+  expect(text).not.toMatch(/đúng\s+\d/);
 });
 
 test("the tutor decides the two waiting items; the result, the tag marks and the skills are updated", async ({ page }) => {
@@ -118,8 +129,8 @@ test("the tutor decides the two waiting items; the result, the tag marks and the
 test("after the verdicts the child sees no waiting box; the parent sees the AI cost on the approved test", async ({ page, browser }) => {
   await loginAs(page, "studentNguyen");
   await page.goto(`/activities/${activityId}`);
-  await expect(page.getByTestId("studio-review")).toBeVisible();
-  await expect(page.getByTestId("studio-pending")).toHaveCount(0);
+  await expect(page.getByTestId("result-view")).toBeVisible();
+  await expect(page.getByTestId("result-open-q7")).toHaveCount(0);
   const parent = await (await browser.newContext()).newPage();
   await loginAs(parent, "parent");
   await parent.goto(draftUrl);
