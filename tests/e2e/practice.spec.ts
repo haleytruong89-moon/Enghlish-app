@@ -158,8 +158,9 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     await expect(page.getByTestId("paper-resend-note")).toBeVisible();
     await page.getByTestId("paper-file-input").setInputFiles({ name: "bai-lam-2.png", mimeType: "image/png", buffer: PNG });
     await expect(page.getByTestId("paper-page")).toHaveCount(1);
-    await page.getByTestId("ask-first-no").click();
-    await page.getByTestId("ask-hint-yes").click();
+    // same answers as the first send: the tutor's test below reads them from the current submission
+    await page.getByTestId("ask-first-yes").click();
+    await page.getByTestId("ask-hint-no").click();
     await page.getByTestId("submit-send").click();
     await expect(page.getByTestId("submit-done")).toBeVisible();
     await page.goto("/done");
