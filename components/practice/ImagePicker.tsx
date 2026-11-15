@@ -20,6 +20,7 @@ export function ImagePicker({
   chooseLabel,
   help,
   testId,
+  max = MAX_FILES_PER_SUBMISSION,
 }: {
   items: PickedItem[];
   onChange: (next: PickedItem[]) => void;
@@ -28,6 +29,8 @@ export function ImagePicker({
   chooseLabel: string;
   help: React.ReactNode;
   testId: string;
+  /** At most this many files (12; 6 until migration 0033 is applied). */
+  max?: number;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -49,13 +52,13 @@ export function ImagePicker({
     setBusy(true);
     const next = [...latest.current];
     for (const f of files) {
-      if (next.length >= MAX_FILES_PER_SUBMISSION) {
-        onError(practiceStudent.errors.tooMany(MAX_FILES_PER_SUBMISSION));
+      if (next.length >= max) {
+        onError(practiceStudent.errors.tooMany(max));
         break;
       }
       const r = await prepareFile(f, `anh-${next.length + 1}`, { stripMetadata: true });
       if (!r.ok) {
-        onError(r.reason === "type" ? practiceStudent.errors.file_type : r.reason === "too_big" ? practiceStudent.errors.file_too_big : practiceStudent.errors.unreadable);
+        onError(r.reason === "type" ? practiceStudent.errors.file_type : r.reason === "too_big" ? practiceStudent.errors.file_too_big : r.reason === "pdf" ? practiceStudent.errors.pdf_unreadable : practiceStudent.errors.unreadable);
         continue;
       }
       const isImage = r.file.mime !== "application/pdf";

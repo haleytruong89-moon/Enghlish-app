@@ -38,6 +38,7 @@ export function AssignmentTable({
   assignments,
   tagLabels,
   viewerMemberId,
+  maxFiles,
   today = todayVn(),
 }: {
   learnerId: string;
@@ -45,6 +46,8 @@ export function AssignmentTable({
   tagLabels: Record<string, string>;
   /** The signed-in adult's member id: only the author of a feedback may edit it. */
   viewerMemberId: string;
+  /** Pages one submission may have: 12, or 6 until migration 0033 is applied. */
+  maxFiles?: number;
   /** Today in Vietnam (YYYY-MM-DD), from the server page; used only for the "Quá hạn" label. */
   today?: string;
 }) {
@@ -160,7 +163,7 @@ export function AssignmentTable({
                 <div className="mt-2 flex flex-col gap-2 rounded-xl bg-paper p-4">
                   <h3 className="font-semibold">{assignPage.submitForTitle(a.title)}</h3>
                   <p className="text-sm text-muted">{assignPage.submitForHelp}</p>
-                  <SubmitPanel learnerId={learnerId} assignmentId={a.id} kind={a.kind} onDone={() => setOpen(null)} />
+                  <SubmitPanel learnerId={learnerId} assignmentId={a.id} kind={a.kind} maxFiles={maxFiles} onDone={() => setOpen(null)} />
                 </div>
               ) : null}
             </li>

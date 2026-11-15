@@ -47,7 +47,7 @@ export function ExternalResultForm({
   async function pick(f: File | undefined) {
     setMsg(null);
     if (!f) return setFile(null);
-    const r = await prepareFile(f, "phieu-diem");
+    const r = await prepareFile(f, "phieu-diem", { stripMetadata: true, keepPdf: true }); // pictures are redrawn (no GPS); a PDF score report stays untouched (digital signature)
     if (!r.ok) {
       setFile(null);
       return setMsg(practiceErrorText(r.reason === "type" ? "file_type" : r.reason === "too_big" ? "file_too_big" : "unreadable", "staff"));

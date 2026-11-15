@@ -1243,6 +1243,7 @@ export const practiceStudent = {
   hintYes: "Có",
   hintNo: "Không",
   hintUnknown: "Không rõ",
+  firstUnknownHelp: "Không rõ thì chọn \"Làm lại\".",
   needFirstAnswer: "Bạn chọn lần đầu hay làm lại nhé.",
   send: `Gửi cho ${tutorHonorific}`,
   sending: "Đang gửi…",
@@ -1271,6 +1272,7 @@ export const practiceStudent = {
     file_missing: "Ảnh chưa tải lên xong. Bạn thử lại nhé.",
     file_mismatch: "Ảnh tải lên chưa khớp. Bạn thử lại nhé.",
     unreadable: "Không đọc được ảnh này. Bạn chọn ảnh khác nhé.",
+    pdf_unreadable: "File PDF này không mở được (có thể bị khóa hoặc hỏng). Bạn chọn file khác, hoặc chụp ảnh trang giấy nhé.",
     invalid_link: "Link cần bắt đầu bằng https:// nhé.",
     empty_submission: "Bạn thêm ít nhất một ảnh (hoặc dán link bài đã làm) nhé.",
     already_reviewed: `${tutorHonorificCap} đã xem bài này nên bạn không gửi lại được nữa.`,
@@ -1333,6 +1335,7 @@ export const submitScreenCopy = {
   reviewed: `${tutorHonorificCap} đã xem bài này nên bạn không gửi lại được nữa.`,
   errors: {
     unreadable: "Ảnh này chưa mở được, bạn chụp lại hoặc chọn ảnh khác.",
+    pdf_unreadable: "File PDF này chưa mở được (có thể bị khóa hoặc hỏng). Bạn chụp ảnh trang giấy hoặc chọn file khác nhé.",
     type: "Chỉ gửi được ảnh hoặc file PDF nhé.",
     pdfNotHere: "Màn này chỉ nhận ảnh. Bạn chụp ảnh trang kết quả nhé.",
     too_big: "Ảnh hoặc file lớn quá (tối đa 15 MB). Bạn chụp lại gần hơn một chút nhé.",

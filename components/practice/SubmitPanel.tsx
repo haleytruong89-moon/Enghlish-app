@@ -13,6 +13,8 @@ type Props = {
   assignmentId: string;
   kind: "link" | "pdf";
   onDone?: () => void;
+  /** From the server: 12, or 6 until migration 0033 is applied (so the grown-up is stopped before uploading). */
+  maxFiles?: number;
 };
 
 /**
@@ -20,7 +22,7 @@ type Props = {
  * time? looked at a hint or the answers? (asked for a PDF too since W4c1). The child sends from their own screens (components/student/submit).
  * Uploads each picture straight to storage through a one-time link, then registers the work in one call.
  */
-export function SubmitPanel({ learnerId, assignmentId, kind, onDone }: Props) {
+export function SubmitPanel({ learnerId, assignmentId, kind, onDone, maxFiles }: Props) {
   const router = useRouter();
   const [items, setItems] = useState<PickedItem[]>([]);
   const [link, setLink] = useState("");
@@ -97,6 +99,7 @@ export function SubmitPanel({ learnerId, assignmentId, kind, onDone }: Props) {
           )
         }
         testId={`${prefix}-picker`}
+        max={maxFiles}
       />
       {kind === "link" ? (
         <label className="flex flex-col gap-1 text-base">
@@ -114,6 +117,7 @@ export function SubmitPanel({ learnerId, assignmentId, kind, onDone }: Props) {
       ) : null}
       <div role="group" aria-label={practiceStudent.firstQ} className="flex flex-col gap-2">
         <span>{practiceStudent.firstQ}</span>
+        <span className="text-sm text-muted">{practiceStudent.firstUnknownHelp}</span>
         <span className="flex flex-wrap gap-2">
           <button type="button" aria-pressed={first === true} onClick={() => setFirst(true)} data-testid={`${prefix}-first-yes`} className={pill(first === true)}>
             {practiceStudent.firstYes}

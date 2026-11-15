@@ -184,6 +184,12 @@ describe("paper / link submission and feedback on a submission (migration 0033)"
         expect(err?.code, role).toBe("42501");
       }
     });
+
+    it("eng_practice_limits (read-only) says 12 files to the child and the server, and is closed to anon", async () => {
+      expect(await asUser<{ max_files: number }>(s.users.studentNguyen, "select english.eng_practice_limits() as r")).toEqual({ max_files: 12 });
+      expect(await svc<{ max_files: number }>("select english.eng_practice_limits() as r")).toEqual({ max_files: 12 });
+      expect((await errorAs(db.client, "anon", null, "select english.eng_practice_limits()", []))?.code).toBe("42501");
+    });
   });
 
   // ---------------------------------------------------------------------------------------------------------------

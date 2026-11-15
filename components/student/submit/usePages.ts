@@ -48,7 +48,7 @@ export function usePages({ allowPdf, maxPages = MAX_PAGES }: { allowPdf: boolean
       }
       const r = await preparePaperFile(f, `trang-${serial.current}`);
       if (!r.ok) {
-        problem = r.reason === "type" ? (copy.errors.type as string) : r.reason === "too_big" ? (copy.errors.too_big as string) : (copy.errors.unreadable as string);
+        problem = r.reason === "type" ? (copy.errors.type as string) : r.reason === "too_big" ? (copy.errors.too_big as string) : r.reason === "pdf" ? (copy.errors.pdf_unreadable as string) : (copy.errors.unreadable as string);
         continue;
       }
       const preview = r.file.mime === "application/pdf" ? null : URL.createObjectURL(r.file.blob);
@@ -89,7 +89,7 @@ export function usePages({ allowPdf, maxPages = MAX_PAGES }: { allowPdf: boolean
       let done = rendered.current.get(id);
       if (!done) {
         const r = await renderPaperImage(p.file.blob, p.quarter, p.file.name);
-        if (!r.ok) return { ok: false, error: r.reason === "too_big" ? (copy.errors.too_big as string) : (copy.errors.unreadable as string) };
+        if (!r.ok) return { ok: false, error: r.reason === "too_big" ? (copy.errors.too_big as string) : r.reason === "pdf" ? (copy.errors.pdf_unreadable as string) : (copy.errors.unreadable as string) };
         done = r.file;
         rendered.current.set(id, done);
       }

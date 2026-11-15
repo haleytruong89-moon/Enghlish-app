@@ -24,7 +24,7 @@ describe("*_paper_link_submit.sql (found by suffix)", () => {
   it("every function is security definer with an empty search_path", () => {
     const starts = [...code.matchAll(/create or replace function english\.(\w+)\(/g)].map((m) => m[1]!);
     expect(starts).toEqual(
-      expect.arrayContaining(["eng_submit_practice_v2", "eng_write_submission_feedback", "eng_submission_feedback", "eng_student_done", "eng_my_seen", "eng_my_practice", "eng_purge_learner", "eng_purge_preview"]),
+      expect.arrayContaining(["eng_submit_practice_v2", "eng_write_submission_feedback", "eng_submission_feedback", "eng_student_done", "eng_my_seen", "eng_my_practice", "eng_practice_limits", "eng_purge_learner", "eng_purge_preview"]),
     );
     for (const name of starts) {
       const body = fnBody(code, name);

@@ -1001,4 +1001,11 @@ grant execute on function english.eng_my_seen(timestamptz, uuid, int) to authent
 revoke execute on function english.eng_my_practice(uuid) from public, anon, service_role;
 grant execute on function english.eng_my_practice(uuid) to authenticated;
 
+-- 8. Giới hạn đang áp dụng (chỉ đọc): màn nộp hỏi hàm này để biết 0033 đã áp chưa và tối đa bao nhiêu file một bài nộp; chưa áp = hàm không có = 6 (hàm v1).
+create or replace function english.eng_practice_limits() returns jsonb
+language sql stable security definer set search_path = ''
+as $$ select pg_catalog.jsonb_build_object('max_files', 12) $$;
+revoke execute on function english.eng_practice_limits() from public, anon;
+grant execute on function english.eng_practice_limits() to authenticated, service_role;
+
 insert into english.schema_migrations(version) values ('0033') on conflict do nothing;

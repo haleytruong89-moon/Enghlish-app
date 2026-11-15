@@ -31,7 +31,7 @@ export function paperKind(type: string, name: string): PaperKind {
   return "other";
 }
 
-export type PageResult = { ok: true; file: Prepared } | { ok: false; reason: "type" | "too_big" | "unreadable" };
+export type PageResult = { ok: true; file: Prepared } | { ok: false; reason: "type" | "too_big" | "unreadable" | "pdf" };
 
 /** Width and height the browser reports for a picture (EXIF turn already applied), read without a full raster decode where the browser allows. Null when it cannot tell. */
 async function probeSize(source: Blob): Promise<{ width: number; height: number } | null> {
@@ -61,7 +61,11 @@ async function openBitmap(source: Blob, quarter: Quarter, max: number): Promise<
     const w = quarter % 2 === 1 ? out.height : out.width;
     const h = quarter % 2 === 1 ? out.width : out.height;
     try {
-      return await createImageBitmap(source, { imageOrientation: "from-image", resizeWidth: w, resizeHeight: h, resizeQuality: "high" });
+      const small = await createImageBitmap(source, { imageOrientation: "from-image", resizeWidth: w, resizeHeight: h, resizeQuality: "high" });
+      // A browser that ignores the turn recorded in the photo would give the wrong shape: then open it again the plain way (no resize).
+      const wanted = w / h;
+      if (Math.abs(small.width / small.height - wanted) / wanted <= 0.01) return small;
+      small.close();
     } catch {
       // The browser does not take these options: open it the plain way below.
     }
@@ -117,7 +121,8 @@ export async function preparePaperFile(file: File, nameHint: string): Promise<Pa
   if (kind === "pdf") {
     if (file.size > MAX_FILE_BYTES) return { ok: false, reason: "too_big" };
     const clean = await scrubPdf(file);
-    if (!clean) return { ok: false, reason: "unreadable" };
+    if (!clean) return { ok: false, reason: "pdf" };
+    if (clean.size > MAX_FILE_BYTES) return { ok: false, reason: "too_big" };
     return { ok: true, file: { blob: clean, mime: "application/pdf", bytes: clean.size, name } };
   }
   return renderPaperImage(file, 0, name);
