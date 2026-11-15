@@ -137,11 +137,14 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
   }
 
   async function leave() {
+    // A full page load on purpose: Hôm nay is read fresh, and no router context is needed (the player is also rendered in unit tests).
+    /* eslint-disable @next/next/no-location-assign-relative-destination */
     if (leaveWarn) { window.location.href = "/"; return; }
     setBusy(true);
     const ok = await flushAll();
     setBusy(false);
     if (ok) { window.location.href = "/"; return; }
+    /* eslint-enable @next/next/no-location-assign-relative-destination */
     setLeaveWarn(true);
   }
 
