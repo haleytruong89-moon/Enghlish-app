@@ -1,4 +1,4 @@
-# Luật và dữ liệu nghiệp vụ · Bàn làm việc gia sư (bản 0.6 · thêm W4c2 15/11/2026: màn sau khi nộp, thử lại, "Bài kiểm tra"; trước đó 0.5 thêm Lộ trình mốc W4a 14/11/2026; 0.4 thêm §5.6 "Đếm buổi học")
+# Luật và dữ liệu nghiệp vụ · Bàn làm việc gia sư (bản 0.7 · thêm W4d 15/11/2026: mục tiêu tuần, chuỗi tuần mềm (D34), thành tích v1; trước đó 0.6 thêm W4c2 15/11/2026: màn sau khi nộp, thử lại, "Bài kiểm tra"; trước đó 0.5 thêm Lộ trình mốc W4a 14/11/2026; 0.4 thêm §5.6 "Đếm buổi học")
 
 Trạng thái: **0.3 — phụ huynh duyệt 08/11** (D-W1…D-W8 + 8 điểm rà soát R1–R8, mục 14). Đổi sau này = bản 0.5 có ghi lý do. **Bản 0.4 (14/11/2026):** thêm §5.6 "Đếm buổi học" (UX vòng 3A) và dòng "thống kê buổi học dẫn xuất" ở tầng C và §7; phụ huynh xem lại luật đếm trên bản thử. Viết trước spec `docs/superpowers/specs/2026-11-08-tutor-workdesk-design.md` để chốt phần khó đổi về sau (dữ liệu, phiên bản, cách tính, trạng thái, quyền) trước khi code.
 Nguồn: bản bấm thử + trang luồng (07/11), `TUTOR_WORKDESK_REVIEW_2026-11-07.md`, `AI_QUALITY_PLAN_2026-11-07.md`, câu trả lời thay gia sư của phụ huynh (08/11, mục 12), hiện trạng code đến migration `0024`.
@@ -19,7 +19,8 @@ Ký hiệu: ✅ đã chốt (ghi ngày) · ❓ cần phụ huynh quyết · 🕓
 | Hạn nộp, nộp muộn | **Có, nhẹ** | Ngày lịch Việt Nam; muộn không trừ điểm, chỉ ghi |
 | AI trong app | **Có** | Chỉ soạn nháp; 3 lớp (mục 9) |
 | Lớp/đợt (cohort), ghi danh | **Không** | Một gia đình, 2 em, mỗi em có giáo trình riêng |
-| Chuỗi ngày học (streak), bảng xếp hạng | **Không** | Cấm (CLAUDE.md) |
+| Chuỗi tuần mềm (các tuần liền đạt mục tiêu tuần; W4d, PRD D34) | **Có** | Chỉ tính bài đã nộp; lỡ một tuần thì tính lại, không phạt; không tuần nghỉ; chỉ thầy/cô của em đồng ý mục tiêu |
+| Chuỗi theo ngày, bảng xếp hạng, so sánh hai em | **Không** | Cấm (CLAUDE.md) |
 | Chứng chỉ | **Không** | Kết quả thi ngoài (KET, PET…) chỉ là mốc, đã có `external_results` |
 | Video, theo dõi xem video | **Không** | |
 | Nhật ký hành vi (event log) | **Không** thêm mới | Đã có `audit_log`; đủ cho thống kê góp ý |
@@ -288,7 +289,7 @@ Cách ③ chỉ ghi **điểm theo phần** nếu trang kết quả không ghi c
 Trần $10/tháng (đã có). Gia sư dành **~30 phút/tuần/em** ✅ 08/11 → đủ cho: chuẩn bị buổi (~5'), ghi buổi (~1'/buổi), xem kết quả và duyệt nháp (~15'), phần tháng chia đều.
 
 ## 11. Không làm trong việc này
-Lớp / đợt, chứng chỉ, streak, bảng xếp hạng, video; chat tự do với AI; AI chấm viết / nói; kênh nhắn phụ huynh → gia sư (dùng Zalo); nối bài giao sang Study Launcher (để sau); Clarifier / Challenger Track B (hè 2027).
+Lớp / đợt, chứng chỉ, chuỗi theo ngày (chuỗi **tuần** mềm thì có, D34), bảng xếp hạng, video; chat tự do với AI; AI chấm viết / nói; kênh nhắn phụ huynh → gia sư (dùng Zalo); nối bài giao sang Study Launcher (để sau); Clarifier / Challenger Track B (hè 2027).
 
 ## 12. Câu trả lời thay gia sư (phụ huynh, 08/11)
 | Câu | Trả lời | Ảnh hưởng |

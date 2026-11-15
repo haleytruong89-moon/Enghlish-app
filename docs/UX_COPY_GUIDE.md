@@ -315,3 +315,17 @@ Luật: cờ "Bài kiểm tra" **chỉ đổi giao diện** (không thử lại,
 ### D39 (15/11) — đáp án sau lần thử lại, chỉ bài luyện tập của bộ Studio
 - **Con:** "Từng câu" · "✓ Đúng" / "✗ Chưa đúng" / "{Thầy/cô} sẽ đọc câu này" (hộp xanh / đỏ / cam: màu **và** chữ) · câu ✗: "Thử lại câu này" hoặc "Xem đáp án" · sau lần thử: "Lần thử lại: ✓ đúng / ✗ chưa đúng" rồi "Đáp án: …" và "Vì sao: …" · câu ✓: "Vì sao" thu gọn · không "Các câu còn lại: ổn", không tổng / % / điểm · không "Làm lại cả bài" khi đã hiện đáp án (nếu vẫn nộp được từ tab khác: "Bạn đã xem đáp án của bài này nên không làm lại cả bài được. Bạn mở lại trang chủ nhé."). Dòng "Bạn đã nộp bài này lúc 15:05 ngày 15/11/2026." có cả ngày. Bài kiểm tra: như cũ ("{thầy/cô} sẽ chữa cùng bạn").
 - **Thầy/cô:** màn bài làm: chip "✓ Đúng" (xanh) · "✗ Sai" / "✗ Để trống" (đỏ) · "⏳ Chờ thầy/cô xem" (cam); bộ lọc "Tất cả" / "Chỉ câu sai và cần xem"; thẻ "Con thử lại" ghi "Con chọn Xem đáp án, không thử lại" khi không thử lại; dòng Chờ duyệt "Con thử lại n câu · Con xem đáp án m câu".
+
+## W4d (15/11/2026) — Mục tiêu tuần · chuỗi tuần mềm · thành tích
+
+Bốn khối trong `lib/copy/vi.ts`: `weeklyGoalCopy` (con), `streakCopy` (con), `achievementsCopy` (con), `goalDeskCopy` (người lớn). Xưng "bạn"; người dạy là `tutorHonorific`; test canh chữ (`tests/unit/weeklyGoalCopy.test.ts`): không "điểm", "xếp hạng", "streak", "%", "quá hạn"; không gọi cứng "cô" / "thầy"; mỗi câu ≤ 15 chữ.
+
+| Chỗ | Chữ |
+|---|---|
+| Hôm nay | chip "🔥 n tuần liền" (chỉ từ tuần thứ nhất của chuỗi; có `aria-label` "Chuỗi n tuần liền đạt mục tiêu. Mở Hành trình") · thẻ "Mục tiêu tuần" 09/11 – 15/11 · "a/b bài" (trong `data-count="work"`) · "Chỉ tính bài bạn đã nộp — mở app không tính." · chưa có mục tiêu: "Bạn chưa có mục tiêu tuần" + "Đặt mục tiêu tuần" |
+| Đặt mục tiêu tuần | "Mỗi tuần bạn muốn nộp bao nhiêu bài?" · các ô số (nhẹ nhàng / vừa phải / đều đặn / chăm hơn) · "Gợi ý: Mấy tuần gần đây bạn nộp 2–3 bài mỗi tuần." (không có câu này khi chưa có tuần nào) · "Gửi {thầy/cô}" · đang chờ: "Chờ {thầy/cô} đồng ý" + "Rút lại" · đã đồng ý: "{Thầy/cô} đã đồng ý: n bài/tuần. Áp dụng từ tuần sau." |
+| Hành trình | thẻ "Mục tiêu tuần" (tuần này, "Còn n bài nữa" / "Bạn đã đạt mục tiêu tuần này", "Chờ … đồng ý" hoặc "… · từ tuần sau", dòng chuỗi "🔥 Chuỗi: n tuần liền đạt mục tiêu" hoặc "Chưa có chuỗi. Nộp đủ bài của tuần này để bắt đầu.") · "Bộ sưu tập thành tích": "Chỉ có cột mốc thật — không có xu, không có thưởng." · "Đã đạt" (có ngày) · "Sắp đạt" (3 mục gần nhất, ghi còn thiếu gì) |
+| Luật nói với con | "Một tuần “đạt” khi bạn nộp đủ số bài đã chọn. Chuỗi tuần là các tuần đạt liên tiếp. Mục tiêu mới áp dụng từ tuần sau. Lỡ một tuần thì chuỗi tính lại từ tuần sau, không sao cả." (không phạt, không "mất chuỗi") |
+| Người lớn | Bàn làm việc: hộp "Mục tiêu tuần" · "Tuần này 2/4 bài · chuỗi 3 tuần" · đề xuất: "Con đề xuất n bài mỗi tuần" + "Nếu đồng ý, mục tiêu bắt đầu thứ Hai dd/mm. Tuần đang chạy giữ mục tiêu cũ." · nút **Đồng ý n bài/tuần** / **Điều chỉnh** (thầy/cô); phụ huynh: "Đang chờ {thầy/cô} của con đồng ý. Phụ huynh chỉ xem." · Chờ duyệt: loại "Mục tiêu tuần" |
+
+Khác với kế hoạch: bỏ chữ "điểm thưởng" (e2e cấm chữ "điểm" trên trang của con) → "không có thưởng".
