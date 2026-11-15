@@ -161,3 +161,20 @@ describe("what is shown: everything earned + the 3 closest", () => {
     expect(Object.keys(item).sort()).toEqual(["date", "earned", "have", "key", "kind", "n", "need", "title"]);
   });
 });
+
+describe("cando_n — n điều tự làm được (W4e)", () => {
+  const times = (n: number) => Array.from({ length: n }, (_, i) => `2026-11-${String(i + 1).padStart(2, "0")}T03:00:00Z`);
+  it("rungs 5, 10, 20; only the next rung of the unmet ones; the date is the n-th oldest card", () => {
+    const items = allAchievements(facts({ cando: times(7) }));
+    expect(find(items, "cando_5")).toMatchObject({ earned: true, date: "2026-11-05", have: 5, need: 5 });
+    expect(find(items, "cando_10")).toMatchObject({ earned: false, date: null, have: 7, need: 10 });
+    expect(find(items, "cando_20")).toBeUndefined();
+  });
+  it("no cards (or no cando facts at all) → only the first rung, with have 0", () => {
+    expect(find(allAchievements(facts()), "cando_5")).toMatchObject({ earned: false, have: 0, need: 5 });
+    expect(find(allAchievements(facts({ cando: [] })), "cando_10")).toBeUndefined();
+  });
+  it("a card that is hidden later (the skill fell back) just lowers the count: the item is not earned any more", () => {
+    expect(find(allAchievements(facts({ cando: times(4) })), "cando_5")).toMatchObject({ earned: false, have: 4 });
+  });
+});

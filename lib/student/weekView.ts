@@ -70,7 +70,7 @@ export function buildWeekView(f: WeekFacts): WeekView {
 /** The week the first agreed goal starts (null = never agreed). Exposed for the adult desk line. */
 export const firstAgreedWeek = firstGoalWeek;
 
-export function buildAchievementFacts(f: WeekFacts, units: readonly UnitInfo[], flags: readonly FlagInfo[]): AchievementFacts {
+export function buildAchievementFacts(f: WeekFacts, units: readonly UnitInfo[], flags: readonly FlagInfo[], cando: readonly string[] = []): AchievementFacts {
   const week = weekStartVn(f.now);
   return {
     today: dayVn(f.now),
@@ -82,10 +82,11 @@ export function buildAchievementFacts(f: WeekFacts, units: readonly UnitInfo[], 
     units,
     flags,
     history: weekHistory(f.goals, countsByWeek(f.works), week),
+    cando,
   };
 }
 
 export type ShownAchievements = { earned: AchievementItem[]; nearly: AchievementItem[] };
-export function buildAchievements(f: WeekFacts, units: readonly UnitInfo[], flags: readonly FlagInfo[]): ShownAchievements {
-  return achievementsFor(buildAchievementFacts(f, units, flags));
+export function buildAchievements(f: WeekFacts, units: readonly UnitInfo[], flags: readonly FlagInfo[], cando: readonly string[] = []): ShownAchievements {
+  return achievementsFor(buildAchievementFacts(f, units, flags, cando));
 }
