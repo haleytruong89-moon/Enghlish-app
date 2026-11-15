@@ -12,7 +12,7 @@ import { WritingTags } from "@/components/tutor/WritingTags";
 import { activityLabels, app, fallbackLabels, inquiriesPage, learnerWithTrack, modeLabels, provenanceLabels, purposeLabels, reviewPage, revisionReviewCopy, type Mode } from "@/lib/copy/vi";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { formatWhen, skillLabel } from "@/lib/review/format";
-import { findEpisodeLearner, loadEpisode, loadTransferMark } from "@/lib/review/load";
+import { findEpisodeLearner, loadEpisode, loadItemDecisions, loadTransferMark } from "@/lib/review/load";
 import { transferMarkMode } from "@/lib/review/transferMark";
 import { loadFeedbackPanel, loadRevisionView } from "@/lib/revision/load";
 import { loadPickerMap } from "@/lib/skillmap/load";
@@ -57,6 +57,8 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
   // G4 / S1: "Bài này ở chủ đề / nguồn mới (vận dụng)" - only the child's tutor (never the parent), only on a first attempt that is not a revision.
   // N4: a template step that already is a transfer check shows the box ticked and read-only.
   const transferMode = transferMarkMode(view);
+  // The adult's Đúng/Sai on items the app could not mark: those items show their decision colour instead of "waiting". A failed lookup = still waiting.
+  const decisions = view.autoChecks && Object.values(view.autoChecks.items).some((i) => i.result === "needs_person") ? await loadItemDecisions(view.attempt.id).catch(() => null) : null;
   const transferMark = transferMode === "tickable" ? await loadTransferMark(view.episode.id).catch(() => null) : null;
   const map = writing ? writing[2] : null;
   const revision = view.attempt.mode === "REVISION" ? await loadRevisionView(view.attempt.id, member.id).catch(() => null) : null;
@@ -103,7 +105,7 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <div className="flex flex-col gap-4">
-            {revision ? <RevisionReview view={revision} map={map} /> : <WorkPanel view={view} />}
+            {revision ? <RevisionReview view={revision} map={map} /> : <WorkPanel view={view} decisions={decisions} />}
             {feedback && feedback.eligible && (view.attempt.mode !== "REVISION" || feedback.live) ? (
               <FeedbackPanel attemptId={view.attempt.id} panel={feedback} map={map} />
             ) : null}

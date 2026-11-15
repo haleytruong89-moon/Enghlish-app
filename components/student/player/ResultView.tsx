@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { resultCopy as c, retryCopy, work } from "@/lib/copy/vi";
 import { playerCopy } from "@/lib/copy/vi";
+import { STATUS_TONE } from "@/lib/review/itemStatus";
 import { groupResult, type MarkKind, type ResultMark, type ResultView as ResultData } from "@/lib/student/result";
-import { formatHm } from "@/lib/work/view";
+import { formatDmy, formatHm } from "@/lib/work/view";
 import { RetryBox } from "./RetryBox";
 
 const itemOf = (items: { id: string; kind: string; options: string[] }[], id: string) => items.find((i) => i.id === id);
@@ -19,7 +20,7 @@ const isLong = (items: { id: string; kind: string; options: string[] }[], id: st
  * After submitting (S-10). Which questions to look at again: what the child wrote, never the right answer, an explanation, a count or a score.
  * Practice: one "Thử lại câu này" per question. Test: no retry; "{thầy/cô} sẽ chữa cùng bạn".
  */
-export function ResultView({ activityId, title, result, items, canRedo, onRedo, onRefresh }: { activityId: string; title: string; result: ResultData; /** Re-reads the result after a retry / reveal (practice of a Studio set shows the answer from the server). */ onRefresh?: () => Promise<void> | void; /** The step items (kind and choices only; the key never reaches the browser). */ items: { id: string; kind: string; options: string[] }[]; canRedo: boolean; onRedo: () => void }) {
+export function ResultView({ activityId, title, result, items, canRedo, onRedo, onRefresh }: { activityId: string; title: string; result: ResultData; /** Re-reads the result after a retry / reveal (practice of a Studio set shows the answer from the server). false = could not read it. */ onRefresh?: () => Promise<boolean | void> | boolean | void; /** The step items (kind and choices only; the key never reaches the browser). */ items: { id: string; kind: string; options: string[] }[]; canRedo: boolean; onRedo: () => void }) {
   const g = groupResult(result);
   const [sent, setSent] = useState<Record<string, string>>({});
   return (
@@ -30,8 +31,8 @@ export function ResultView({ activityId, title, result, items, canRedo, onRedo, 
         </h1>
         <p className="text-muted">{title}</p>
         {/* Reopening a sent work must say so plainly: it was already sent, and there is no form here. */}
-        <p data-testid="already-submitted" className="text-sm text-muted">
-          {work.alreadySubmitted(formatHm(result.submittedAt))}
+        <p data-testid="already-submitted" data-date className="text-sm text-muted">
+          {work.alreadySubmitted(formatHm(result.submittedAt), formatDmy(result.submittedAt))}
         </p>
         <span className="rounded-full bg-[#E3ECE8] px-3 py-1 text-sm font-semibold text-[#1F4439]">{result.isTest ? playerCopy.testTag : playerCopy.practiceTag}</span>
       </section>
@@ -148,18 +149,16 @@ export function ResultView({ activityId, title, result, items, canRedo, onRedo, 
   );
 }
 
-const TONE: Record<MarkKind, { box: string; chip: string }> = {
-  right: { box: "border-[#2B6B47] bg-[#F3FAF6]", chip: "bg-[#DDF0E4] text-[#1B4D31]" },
-  wrong: { box: "border-[#B3261E] bg-[#FFF6F4]", chip: "bg-[#FADBD6] text-[#8A1C12]" },
-  waiting: { box: "border-[#B26A00] bg-[#FFFAF0]", chip: "bg-[#FBF1DC] text-[#6B4600]" },
-};
+const TONE = STATUS_TONE; // one set of colours for the child's marks and the tutor's screens (right / wrong / waiting)
 const markText = (k: MarkKind) => (k === "right" ? c.markRight : k === "wrong" ? c.markWrong : c.markWaiting);
 const retryText = (k: MarkKind) => (k === "right" ? c.retryRight : k === "wrong" ? c.retryWrong : c.retryWaiting);
 
 /** One item of a practice work: colour + icon + words (never colour alone), the retry, and the answer only once the server sends it. */
-function MarkItem({ m, activityId, choices, long, onRefresh }: { m: ResultMark; activityId: string; choices: string[]; long: boolean; onRefresh?: () => Promise<void> | void }) {
+function MarkItem({ m, activityId, choices, long, onRefresh }: { m: ResultMark; activityId: string; choices: string[]; long: boolean; onRefresh?: () => Promise<boolean | void> | boolean | void }) {
   const tone = TONE[m.mark];
   const [busy, setBusy] = useState(false);
+  // A retry the server took but the re-read of the result failed: the child still sees that it was sent (never a silent nothing).
+  const [localRetry, setLocalRetry] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const clientId = useRef<string>(crypto.randomUUID());
   async function reveal() {
@@ -172,7 +171,7 @@ function MarkItem({ m, activityId, choices, long, onRefresh }: { m: ResultMark; 
         body: JSON.stringify({ item_id: m.id, client_id: clientId.current }),
       });
       if (!res.ok && res.status !== 409) throw new Error(String(res.status));
-      await onRefresh?.();
+      if ((await onRefresh?.()) === false) setProblem(c.revealReload); // the answer was opened but the page could not re-read it
     } catch {
       setProblem(c.revealFailed);
     } finally {
@@ -199,6 +198,14 @@ function MarkItem({ m, activityId, choices, long, onRefresh }: { m: ResultMark; 
           c.notAnswered
         )}
       </p>
+      {!m.retry && localRetry ? (
+        <div className="flex flex-col gap-1" data-testid={`retry-sent-${m.id}`}>
+          <p className="text-[15px]">
+            <b>{retryCopy.yourRetry}:</b> <span lang="en">“{localRetry}”</span>
+          </p>
+          <span className="self-start rounded-full bg-[#E3ECE8] px-3 py-1 text-sm font-semibold text-[#1F4439]">{retryCopy.sent}</span>
+        </div>
+      ) : null}
       {m.retry ? (
         <div className="flex flex-col gap-1" data-testid={`retry-sent-${m.id}`}>
           <p className="text-[15px]">
@@ -209,7 +216,7 @@ function MarkItem({ m, activityId, choices, long, onRefresh }: { m: ResultMark; 
           </span>
         </div>
       ) : null}
-      {m.canRetry || m.canReveal ? (
+      {(m.canRetry || m.canReveal) && !localRetry ? (
         <div className="flex flex-col gap-2">
           {m.canRetry ? (
             <RetryBox
@@ -218,7 +225,11 @@ function MarkItem({ m, activityId, choices, long, onRefresh }: { m: ResultMark; 
               number={m.n}
               options={choices}
               long={long}
-              onSent={() => void onRefresh?.()}
+              onSent={(text) => {
+                setLocalRetry(text);
+                void Promise.resolve(onRefresh?.()).then((ok) => { if (ok === false) setProblem(c.revealReload); });
+              }}
+              onConflict={onRefresh}
               extra={
                 m.canReveal ? (
                   <button type="button" disabled={busy} onClick={() => void reveal()} data-testid={`reveal-${m.id}`} className="min-h-11 self-start rounded-xl border border-line bg-white px-4 text-sm font-semibold disabled:opacity-60">
@@ -228,12 +239,12 @@ function MarkItem({ m, activityId, choices, long, onRefresh }: { m: ResultMark; 
               }
             />
           ) : null}
-          {problem ? (
-            <p role="alert" className="text-sm text-[#6B4600]">
-              {problem}
-            </p>
-          ) : null}
         </div>
+      ) : null}
+      {problem ? (
+        <p role="alert" data-testid={`mark-problem-${m.id}`} className="text-sm text-[#6B4600]">
+          {problem}
+        </p>
       ) : null}
       {m.answer ? (
         <p className="text-[15px]" data-testid={`answer-${m.id}`}>

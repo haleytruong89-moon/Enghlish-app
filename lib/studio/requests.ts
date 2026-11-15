@@ -33,5 +33,6 @@ export const decideBodySchema = z.strictObject({
   items: z.array(z.strictObject({ item_id: z.string().regex(/^q[1-9][0-9]{0,2}$/), result: z.enum(["correct", "incorrect"]) })).min(1).max(300),
   client_id: clientId,
 });
-export const retrySeenBodySchema = z.strictObject({ note: z.string().trim().max(300).optional(), client_id: clientId });
+/** `seen_through` = the newest retry time the adult's card showed (the string the server sent, never re-formatted): a later retry stays pending. */
+export const retrySeenBodySchema = z.strictObject({ note: z.string().trim().max(300).optional(), seen_through: z.string().datetime({ offset: true }), client_id: clientId });
 export type FileMetaBody = z.infer<typeof fileMeta>;

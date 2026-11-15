@@ -320,6 +320,13 @@ describe("S4 route handlers: submit", () => {
     expect(again.status).toBe(200);
   });
 
+  it("D39: a redo of a work whose answers were shown is 409 answers_shown; other 23514 stay 400", async () => {
+    const refuse = (msg: string) => makeStore({ submit: vi.fn(async () => { throw new WorkDbError("23514", msg); }) });
+    const r = await handleSubmit(deps("studentAn", refuse("eng_submit_attempt: the answers of this work were already shown (answers_shown)")), goodAttempt);
+    expect(r).toMatchObject({ status: 409, body: { error: "answers_shown" } });
+    expect((await handleSubmit(deps("studentAn", refuse("eng_submit_attempt: something else")), goodAttempt)).status).toBe(400);
+  });
+
   it("the receipt carries no result of any kind", async () => {
     const s = makeStore({ submit: vi.fn(async () => ({ ...rpcReceipt, checks: { correct: 3 }, score: 4, auto_checks: {} })) });
     const r = await handleSubmit(deps("studentAn", s), goodAttempt);

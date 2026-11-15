@@ -12,3 +12,21 @@ export const studioErrorText = (code: string | null | undefined): string => (cod
 
 /** A Studio step has only q<n> items (ids made at Duyệt). Used only to refresh the page after a submission. */
 export const isStudioStep = (items: { id: string }[]) => items.length > 0 && items.every((i) => /^q[1-9][0-9]{0,2}$/.test(i.id));
+
+/** Sub-millisecond part of an ISO time ("…:00.123456+00:00" → 456) so two retries in the same millisecond still order. */
+function micros(iso: string): number {
+  const m = /\.(\d+)/.exec(iso);
+  return m ? Number((m[1]! + "000000").slice(3, 6)) : 0;
+}
+
+/** The newest of the server's time strings, returned UNCHANGED (the database compares it with microsecond precision). null for an empty list. */
+export function newestAt(times: string[]): string | null {
+  let best: string | null = null;
+  for (const t of times) {
+    if (best === null) { best = t; continue; }
+    const a = Date.parse(t);
+    const b = Date.parse(best);
+    if (a > b || (a === b && micros(t) > micros(best))) best = t;
+  }
+  return best;
+}

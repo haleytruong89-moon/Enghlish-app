@@ -1,6 +1,7 @@
 import { assistanceLabels, fallbackLabels, reviewPage, supportKindLabels, verificationLabels } from "@/lib/copy/vi";
 import { WorkItems, type WorkItemRow } from "@/components/review/WorkItems";
 import { itemStatus } from "@/lib/review/itemStatus";
+import { questionNumber } from "@/lib/studio/view";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { formatWhen } from "@/lib/review/format";
 import type { ReviewEpisodeView } from "@/lib/review/types";
@@ -9,7 +10,7 @@ const text = (v: unknown): string | null => (typeof v === "string" ? v : null);
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
 /** The work itself, beside the keys and the machine check (staff only): answers per question, or the text, and the help used. */
-export function WorkPanel({ view }: { view: ReviewEpisodeView }) {
+export function WorkPanel({ view, decisions }: { view: ReviewEpisodeView; /** The adult's Đúng/Sai on items the app could not mark (by item id); null / absent = unknown, those items stay "waiting". */ decisions?: Record<string, "correct" | "incorrect"> | null }) {
   const alias = view.learner.alias;
   const content = view.artifact?.content ?? {};
   const answers = content.answers && typeof content.answers === "object" ? (content.answers as Record<string, unknown>) : null;
@@ -18,7 +19,8 @@ export function WorkPanel({ view }: { view: ReviewEpisodeView }) {
   const dw = reviewPage.durationWords(num(content.duration_sec), num(content.word_count));
   const keyByItem = new Map(view.keys.map((k) => [k.itemId, k]));
   const auto = view.autoChecks;
-  const needsPerson = auto ? Object.values(auto.items).filter((i) => i.result === "needs_person").length : 0;
+  const decided = (id: string) => decisions?.[id] ?? null;
+  const needsPerson = auto ? Object.entries(auto.items).filter(([id, i]) => i.result === "needs_person" && !decided(id)).length : 0;
 
   return (
     <section aria-labelledby="work-title" className="flex flex-col gap-3 rounded-xl border border-line bg-white p-4" data-testid="work-panel">
@@ -53,13 +55,14 @@ export function WorkPanel({ view }: { view: ReviewEpisodeView }) {
             blankLabel={reviewPage.itemBlank}
             rows={view.step.items.map((it, i): WorkItemRow => {
               const res = auto?.items[it.id]?.result;
+              const decision = res === "needs_person" ? decided(it.id) : null;
               const key = keyByItem.get(it.id);
               return {
                 id: it.id,
-                n: Number(/^q([1-9][0-9]{0,2})$/.exec(it.id)?.[1] ?? i + 1),
+                n: questionNumber(it.id, i),
                 stem: it.stem,
                 given: text(answers[it.id]) ?? "",
-                status: itemStatus(res),
+                status: itemStatus(decision ?? res),
                 blank: res === "blank",
                 keyLine: key && (key.answer || key.explanationVi) ? `${reviewPage.keyKinds[key.kind] ?? fallbackLabels.keyKind}: ${key.answer ?? ""}${key.explanationVi ? ` · ${key.explanationVi}` : ""}` : null,
               };

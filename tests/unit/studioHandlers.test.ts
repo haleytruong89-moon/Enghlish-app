@@ -193,19 +193,29 @@ describe("Studio API (requireAccess first; tutor or parent of the child)", () =>
 });
 
 describe("handleMarkRetrySeen (Đã xem on the child's retries)", () => {
-  const body = { note: "Ổn rồi", client_id: "client-0020" };
+  const through = "2026-11-15T10:00:00.123456+00:00";
+  const body = { note: "Ổn rồi", seen_through: through, client_id: "client-0020" };
   it("needs a login; the child's own tutor and parent may; another child's tutor gets 404; a bad body is 400", async () => {
     expect((await handleMarkRetrySeen(deps(null), ATTEMPT, body)).status).toBe(401);
     expect((await handleMarkRetrySeen(deps("tutorNguyen"), ATTEMPT, body)).status).toBe(201);
     expect((await handleMarkRetrySeen(deps("parent"), ATTEMPT, body)).status).toBe(201);
     expect((await handleMarkRetrySeen(deps("tutorAn"), ATTEMPT, body)).status).toBe(404);
-    expect((await handleMarkRetrySeen(deps("tutorNguyen"), ATTEMPT, { note: "x".repeat(301), client_id: "client-0021" })).status).toBe(400);
-    expect((await handleMarkRetrySeen(deps("tutorNguyen"), ATTEMPT, { extra: 1, client_id: "client-0022" })).status).toBe(400);
+    expect((await handleMarkRetrySeen(deps("tutorNguyen"), ATTEMPT, { note: "x".repeat(301), seen_through: through, client_id: "client-0021" })).status).toBe(400);
+    expect((await handleMarkRetrySeen(deps("tutorNguyen"), ATTEMPT, { extra: 1, seen_through: through, client_id: "client-0022" })).status).toBe(400);
   });
   it("passes an empty note as null and a replay is 200", async () => {
     const markRetrySeen = vi.fn(async () => ({ id: "seen-1", replayed: true }));
-    const r = await handleMarkRetrySeen(deps("tutorNguyen", store({ markRetrySeen })), ATTEMPT, { client_id: "client-0023" });
+    const r = await handleMarkRetrySeen(deps("tutorNguyen", store({ markRetrySeen })), ATTEMPT, { seen_through: through, client_id: "client-0023" });
     expect(r.status).toBe(200);
-    expect(markRetrySeen).toHaveBeenCalledWith(expect.objectContaining({ attemptId: ATTEMPT, note: null, clientId: "client-0023" }));
+    // the time the card showed goes to the database as the server's own string (microseconds kept)
+    expect(markRetrySeen).toHaveBeenCalledWith(expect.objectContaining({ attemptId: ATTEMPT, note: null, clientId: "client-0023", seenThrough: through, allowReal: expect.any(Boolean) }));
+  });
+  it("seen_through is required and must be a time; a missing function (0034 not applied) gets its own tag, other faults are not hidden", async () => {
+    expect((await handleMarkRetrySeen(deps("tutorNguyen"), ATTEMPT, { client_id: "client-0024" })).status).toBe(400);
+    expect((await handleMarkRetrySeen(deps("tutorNguyen"), ATTEMPT, { seen_through: "yesterday", client_id: "client-0025" })).status).toBe(400);
+    const missing = vi.fn(async () => { throw new ReviewDbError("PGRST202", "eng_mark_retry_seen: not found"); });
+    expect(await handleMarkRetrySeen(deps("tutorNguyen", store({ markRetrySeen: missing })), ATTEMPT, { seen_through: through, client_id: "client-0026" })).toMatchObject({ status: 409, body: { error: "retry_needs_update" } });
+    const bad = vi.fn(async () => { throw new ReviewDbError("23514", "eng_mark_retry_seen: this attempt has no retry (no_retry)"); });
+    expect(await handleMarkRetrySeen(deps("tutorNguyen", store({ markRetrySeen: bad })), ATTEMPT, { seen_through: through, client_id: "client-0027" })).toMatchObject({ status: 400, body: { error: "no_retry" } });
   });
 });

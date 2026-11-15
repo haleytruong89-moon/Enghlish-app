@@ -5,10 +5,12 @@
 --   2. eng_set_test_mark · eng_assign_studio_v2 (bọc v1 + cờ) · eng_create_assignment_v3 (bọc v2 + cờ): service_role sau requireAccess.
 --   3. item_retries (chỉ thêm): MỘT lần thử lại cho mỗi câu (chỉ bài luyện tập, lần làm mới nhất, câu sai / bỏ trống). KHÔNG là bằng chứng.
 --      eng_my_retry_item (con ghi); eng_item_retries (người lớn đọc, service_role).
---   4. eng_my_result_view (con đọc): câu nên nhìn lại + câu viết tự do + "các câu còn lại ổn" (một cờ, không số). KHÔNG đáp án, giải thích, số đúng.
+--   4. eng_my_result_view (con đọc): câu nên nhìn lại + câu viết tự do + "các câu còn lại ổn" (một cờ, không số). KHÔNG số đúng / tổng / %.
+--      Đáp án + "Vì sao" chỉ ở bài LUYỆN TẬP của bộ Studio và chỉ cho câu đã thử lại / đã xem đáp án (D39, mục 4' dưới).
 --      eng_my_test_marks (con đọc): mã bài của chính con được coi là bài kiểm tra.
 --   5. Thu quyền eng_my_studio_review khỏi authenticated (Q3): trình duyệt của con không lấy được "Nên là / Vì sao" nữa.
 --   6. eng_purge_learner / eng_purge_preview: chép NGUYÊN thân 0033 + 4 bảng (item_retries, item_reveals, retry_seen, work_test_marks) (trước submissions / attempts).
+--   7. Trigger trên attempts: đã hiện đáp án của bài luyện tập Studio thì KHÔNG nộp lại cả bài (answers_shown, 23514).
 --   4'. D39: eng_my_result_view có ✓ / ✗ cho bài LUYỆN TẬP của bộ Studio; "Xem đáp án" (item_reveals + eng_my_reveal_item) và đáp án + "Vì sao" chỉ cho câu đã thử lại / đã xem đáp án.
 --   5'. retry_seen (chỉ thêm) + eng_mark_retry_seen: người lớn bấm "Đã xem" lần thử lại (phụ huynh quyết 15/11); eng_retry_pending chỉ dựa vào đó.
 -- Idempotent; chỉ thêm. Không đụng schema public. Cần 0024 + 0033 đã áp.
@@ -63,12 +65,14 @@ create table if not exists english.item_reveals (
 create index if not exists item_reveals_learner_idx on english.item_reveals(learner_id, created_at desc);
 
 -- 3a'. "Đã xem lần thử lại" (chỉ thêm): người lớn đọc các lần thử lại của một lần làm rồi bấm Đã xem (ghi chú ngắn không bắt buộc).
---      Một dòng phủ MỌI lần thử lại của lần làm đó tạo trước nó; lần thử lại tạo sau (câu khác, hay lần làm mới) chờ lại. Ghi chú CHỈ người lớn thấy.
+--      Một dòng phủ các lần thử lại của lần làm đó có created_at <= seen_through (mốc thời gian người lớn đã thấy trên thẻ); lần thử lại tạo sau mốc
+--      đó (câu khác, hay lần làm mới, kể cả khi thẻ đang mở) chờ lại. Ghi chú CHỈ người lớn thấy.
 create table if not exists english.retry_seen (
   id uuid primary key default gen_random_uuid(),
   learner_id uuid not null references english.learners(id),
   attempt_id uuid not null references english.attempts(id),
   note text check (note is null or (pg_catalog.length(pg_catalog.btrim(note)) between 1 and 300 and not english.eng_has_score_words(note))),
+  seen_through timestamptz not null,             -- the newest retry the adult's card showed: a retry made after the card was opened stays pending
   seen_by uuid not null,                         -- english.members.id, no FK (like session_marks.by_member)
   seen_role text not null check (seen_role in ('tutor', 'parent')),
   client_id text not null check (pg_catalog.length(pg_catalog.btrim(client_id)) between 8 and 100),
@@ -241,8 +245,8 @@ revoke execute on function english.eng_my_test_marks() from public, anon, servic
 grant execute on function english.eng_my_test_marks() to authenticated;
 
 -- 3b. Màn sau khi nộp (S-10). Lần làm MỚI NHẤT của con trên bước đó. Chỉ: câu nên nhìn lại (đề, câu con viết / bỏ trống, lần thử lại đã gửi,
---     còn thử được không), câu cần người đọc (viết tự do / chưa chấm), cờ "các câu còn lại ổn". KHÔNG đáp án, giải thích, danh sách
---     câu đúng, số câu đúng / sai. Chưa nộp / bước viết (không có tự chấm) / không phải bài của con / chưa mở: null.
+--     còn thử được không), câu cần người đọc (viết tự do / chưa chấm), cờ "các câu còn lại ổn". KHÔNG
+--     số câu đúng / sai. Đáp án + "Vì sao": xem mục 4' (chỉ bài luyện tập Studio, chỉ câu đã thử lại / xem đáp án; "Vì sao" của câu ĐÚNG cũng hiện). Chưa nộp / bước viết (không có tự chấm) / không phải bài của con / chưa mở: null.
 create or replace function english.eng_my_result_view(p_activity uuid) returns jsonb
 language plpgsql stable security definer set search_path = ''
 as $$
@@ -404,7 +408,8 @@ begin
   if english.eng_work_is_test(p_activity) then
     raise exception 'eng_my_retry_item: a test has no retry (test_no_retry)' using errcode = '23514';
   end if;
-  select t.* into v_t from english.attempts t where t.activity_instance_id = p_activity order by t.attempt_no desc limit 1;
+  -- Lock the attempt row (no key update): a retry and a "Xem đáp án" of one item, or a redo, cannot both pass the checks below at once.
+  select t.* into v_t from english.attempts t where t.activity_instance_id = p_activity order by t.attempt_no desc limit 1 for no key update;
   if not found then
     raise exception 'eng_my_retry_item: send the work first (not_sent)' using errcode = '23514';
   end if;
@@ -481,7 +486,8 @@ begin
   if v_kind is distinct from 'studio' or english.eng_work_is_test(p_activity) then
     raise exception 'eng_my_reveal_item: the answer is not shown for this work (not_revealable)' using errcode = '23514';
   end if;
-  select t.* into v_t from english.attempts t where t.activity_instance_id = p_activity order by t.attempt_no desc limit 1;
+  -- Lock the attempt row (no key update): a retry and a "Xem đáp án" of one item, or a redo, cannot both pass the checks below at once.
+  select t.* into v_t from english.attempts t where t.activity_instance_id = p_activity order by t.attempt_no desc limit 1 for no key update;
   if not found then
     raise exception 'eng_my_reveal_item: send the work first (not_sent)' using errcode = '23514';
   end if;
@@ -514,14 +520,50 @@ $$;
 revoke execute on function english.eng_my_reveal_item(uuid, text, text) from public, anon, service_role;
 grant execute on function english.eng_my_reveal_item(uuid, text, text) to authenticated;
 
--- 3d. Người lớn đọc các lần thử lại của một em (mới nhất trước): đề, câu con viết, lần thử lại. Chỉ đọc; chưa có "đã xem" (xem PROGRESS: câu hỏi mở).
+-- 3c''. Đã hiện đáp án của bài luyện tập Studio (con đã thử lại hoặc bấm "Xem đáp án" một câu nào đó) thì KHÔNG nộp lại cả bài (phụ huynh quyết 15/11).
+--       Chặn ở cơ sở dữ liệu (không chỉ ở màn hình): lần làm mới của con (in_app / pasted) vào bài đó báo answers_shown (23514).
+--       Khóa dòng lần làm mới nhất (cùng khóa với eng_my_retry_item / eng_my_reveal_item) để "nộp lại" và "xem đáp án" không thắng cùng lúc.
+create or replace function english.eng_answers_shown(p_activity uuid) returns boolean
+language sql stable security definer set search_path = ''
+as $$
+  select coalesce((
+    select (t.kind = 'studio' and not english.eng_work_is_test(p_activity))
+           and (exists (select 1 from english.item_retries r where r.activity_id = p_activity)
+                or exists (select 1 from english.item_reveals r where r.activity_id = p_activity))
+    from english.activity_instances a
+    join english.inquiry_instances i on i.id = a.inquiry_instance_id
+    join english.inquiry_templates t on t.id = i.template_id and t.version = i.template_version
+    where a.id = p_activity
+  ), false)
+$$;
+revoke execute on function english.eng_answers_shown(uuid) from public, anon, authenticated, service_role;
+
+create or replace function english.eng_attempts_no_redo_after_reveal() returns trigger
+language plpgsql security definer set search_path = ''
+as $$
+begin
+  if new.provenance in ('in_app', 'pasted') then
+    perform 1 from english.attempts t where t.activity_instance_id = new.activity_instance_id order by t.attempt_no desc limit 1 for no key update;
+    if english.eng_answers_shown(new.activity_instance_id) then
+      raise exception 'eng_submit_attempt: the answers of this work were already shown, so it cannot be redone (answers_shown)' using errcode = '23514';
+    end if;
+  end if;
+  return new;
+end
+$$;
+revoke execute on function english.eng_attempts_no_redo_after_reveal() from public, anon, authenticated, service_role;
+drop trigger if exists attempts_no_redo_after_reveal on english.attempts;
+create trigger attempts_no_redo_after_reveal before insert on english.attempts
+  for each row execute function english.eng_attempts_no_redo_after_reveal();
+
+-- 3d. Người lớn đọc các lần thử lại của một em (mới nhất trước): đề, câu con viết, lần thử lại. Chỉ đọc; kèm "seen" (lần "Đã xem" đầu tiên sau lần thử lại đó, nếu có).
 create or replace function english.eng_item_retries(p_learner uuid) returns jsonb
 language sql stable security definer set search_path = ''
 as $$
   select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
            'id', r.id, 'activity_id', r.activity_id, 'attempt_id', r.attempt_id, 'item_id', r.item_id, 'retry', r.answer, 'at', r.created_at,
            'seen', (select pg_catalog.jsonb_build_object('at', z.created_at, 'note', z.note) from english.retry_seen z
-                    where z.attempt_id = r.attempt_id and z.created_at > r.created_at order by z.created_at limit 1),
+                    where z.attempt_id = r.attempt_id and z.seen_through >= r.created_at order by z.created_at limit 1),
            'title', i.snapshot -> 'template' ->> 'title_vi',
            'stem', (select it ->> 'stem' from pg_catalog.jsonb_array_elements(coalesce(
                       (select x -> 'items' from pg_catalog.jsonb_array_elements(i.snapshot -> 'steps') x where (x ->> 'step_no')::int = a.step_no), '[]'::jsonb)) it
@@ -539,7 +581,7 @@ grant execute on function english.eng_item_retries(uuid) to service_role;
 
 -- 3e. Người lớn: lần thử lại CHƯA được bấm "Đã xem" (cho Chờ duyệt "Con thử lại n câu" và màn xem). Cùng kiểu eng_studio_pending:
 --     người thao tác (p_by) là phụ huynh của gia đình / gia sư còn hiệu lực của em; em thật chỉ khi p_allow_real.
---     Một lần thử lại chờ cho tới khi có dòng retry_seen của đúng lần làm đó TẠO SAU nó. Không suy ra từ việc khác (góp ý, chấm câu, duyệt).
+--     Một lần thử lại chờ cho tới khi có dòng retry_seen của đúng lần làm đó có seen_through >= thời điểm của nó. Không suy ra từ việc khác (góp ý, chấm câu, duyệt).
 create or replace function english.eng_retry_pending(p_by uuid, p_allow_real boolean default false) returns jsonb
 language sql stable security definer set search_path = ''
 as $$
@@ -567,7 +609,7 @@ as $$
     from att
     join (select x.attempt_id, x.item_id, x.answer, x.created_at, 'retry' as kind from english.item_retries x
           union all select y.attempt_id, y.item_id, null, y.created_at, 'revealed' from english.item_reveals y) r on r.attempt_id = att.attempt_id
-      and not exists (select 1 from english.retry_seen z where z.attempt_id = r.attempt_id and z.created_at > r.created_at)
+      and not exists (select 1 from english.retry_seen z where z.attempt_id = r.attempt_id and z.seen_through >= r.created_at)
     cross join lateral (
       select st.s from pg_catalog.jsonb_array_elements(att.snapshot -> 'steps') as st(s) where (st.s ->> 'step_no')::int = att.step_no
     ) step
@@ -596,7 +638,7 @@ grant execute on function english.eng_retry_pending(uuid, boolean) to service_ro
 
 -- 3f. Người lớn bấm "Đã xem" cho các lần thử lại của một lần làm. Cùng luật với việc chấm câu Studio (eng_decide_studio_items):
 --     phụ huynh của gia đình / gia sư còn hiệu lực của em. Gửi lại cùng client_id = cùng biên nhận; khác nội dung → 23505.
-create or replace function english.eng_mark_retry_seen(p_attempt uuid, p_note text, p_by uuid, p_client_id text) returns jsonb
+create or replace function english.eng_mark_retry_seen(p_attempt uuid, p_note text, p_by uuid, p_client_id text, p_seen_through timestamptz, p_allow_real boolean default false) returns jsonb
 language plpgsql volatile security definer set search_path = ''
 as $$
 declare
@@ -606,8 +648,11 @@ declare
   v_old english.retry_seen%rowtype;
   v_id uuid;
 begin
-  if p_attempt is null or p_by is null or p_client_id is null then
-    raise exception 'eng_mark_retry_seen: attempt, actor and client id are required' using errcode = '22004';
+  if p_attempt is null or p_by is null or p_client_id is null or p_seen_through is null then
+    raise exception 'eng_mark_retry_seen: attempt, actor, client id and the time the card showed are required' using errcode = '22004';
+  end if;
+  if p_seen_through > pg_catalog.clock_timestamp() then
+    raise exception 'eng_mark_retry_seen: the time the card showed is in the future (bad_seen_through)' using errcode = '22023';
   end if;
   if pg_catalog.length(pg_catalog.btrim(p_client_id)) not between 8 and 100 then
     raise exception 'eng_mark_retry_seen: client_id must be 8..100 characters' using errcode = '22023';
@@ -623,9 +668,12 @@ begin
   if not found or not english.eng_actor_may_manage(p_by, v_t.learner_id) then
     raise exception 'eng_mark_retry_seen: this member may not check work of this learner (staff_only)' using errcode = '42501';
   end if;
+  if not p_allow_real and not exists (select 1 from english.learners l where l.id = v_t.learner_id and l.is_test) then
+    raise exception 'eng_mark_retry_seen: real learners are not enabled here (staff_only)' using errcode = '42501';
+  end if;
   select * into v_old from english.retry_seen z where z.learner_id = v_t.learner_id and z.client_id = p_client_id;
   if found then
-    if v_old.attempt_id <> p_attempt or v_old.note is distinct from v_note then
+    if v_old.attempt_id <> p_attempt or v_old.note is distinct from v_note or v_old.seen_through <> p_seen_through then
       raise exception 'eng_mark_retry_seen: client_id was already used for another mark (client_id_reused)' using errcode = '23505';
     end if;
     return pg_catalog.jsonb_build_object('id', v_old.id, 'replayed', true);
@@ -634,20 +682,21 @@ begin
      and not exists (select 1 from english.item_reveals r where r.attempt_id = p_attempt) then
     raise exception 'eng_mark_retry_seen: this attempt has no retry (no_retry)' using errcode = '23514';
   end if;
-  insert into english.retry_seen(learner_id, attempt_id, note, seen_by, seen_role, client_id)
-  values (v_t.learner_id, p_attempt, v_note, p_by, v_role, p_client_id)
+  insert into english.retry_seen(learner_id, attempt_id, note, seen_through, seen_by, seen_role, client_id)
+  values (v_t.learner_id, p_attempt, v_note, p_seen_through, p_by, v_role, p_client_id)
   returning id into v_id;
   return pg_catalog.jsonb_build_object('id', v_id, 'replayed', false);
 end
 $$;
-revoke execute on function english.eng_mark_retry_seen(uuid, text, uuid, text) from public, anon, authenticated;
-grant execute on function english.eng_mark_retry_seen(uuid, text, uuid, text) to service_role;
+revoke execute on function english.eng_mark_retry_seen(uuid, text, uuid, text, timestamptz, boolean) from public, anon, authenticated;
+grant execute on function english.eng_mark_retry_seen(uuid, text, uuid, text, timestamptz, boolean) to service_role;
 
--- 5. Q3: con không còn lấy được "Nên là / Vì sao". Hàm giữ nguyên thân (0024) cho người xem lại; không ai gọi được từ trình duyệt.
+-- 5. Q3: con không còn lấy được "Nên là / Vì sao" TRỌN BỘ qua eng_my_studio_review. Hàm giữ nguyên thân (0024); không ai gọi được từ trình duyệt.
+--    (D39: đáp án + "Vì sao" từng câu chỉ qua eng_my_result_view, sau khi con thử lại / xem đáp án câu đó.)
 revoke execute on function english.eng_my_studio_review(uuid) from public, anon, authenticated, service_role;
 
 
--- 6. Xóa dữ liệu một em: = bản 0033 + item_retries, work_test_marks (xóa TRƯỚC attempts / submissions / activity_instances / assignments).
+-- 6. Xóa dữ liệu một em: = bản 0033 + item_retries, item_reveals, retry_seen, work_test_marks (xóa TRƯỚC attempts / submissions / activity_instances / assignments).
 create or replace function english.eng_purge_learner(
   p_learner_id uuid,
   p_actor_user_id uuid default null
@@ -1085,7 +1134,7 @@ $$;
 revoke execute on function english.eng_purge_learner(uuid, uuid) from public, anon, authenticated;
 grant execute on function english.eng_purge_learner(uuid, uuid) to service_role;
 
--- Đếm trước khi xóa = bản 0033 + 2 bảng (cùng khóa với biên nhận).
+-- Đếm trước khi xóa = bản 0033 + 4 bảng (cùng khóa với biên nhận).
 create or replace function english.eng_purge_preview(p_learner uuid) returns jsonb
 language plpgsql stable security definer set search_path = ''
 as $$

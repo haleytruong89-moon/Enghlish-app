@@ -608,8 +608,9 @@ export const work = {
   needHelp: "Bạn chọn một mục về gợi ý trước khi nộp nhé.",
   submitError: "Chưa nộp được. Bài của bạn vẫn còn đây, bạn bấm nộp lại nhé.",
   submitConflict: "Bài này đã được nộp rồi. Bạn mở lại trang chủ để xem nhé.",
+  answersShown: "Bạn đã xem đáp án của bài này nên không làm lại cả bài được. Bạn mở lại trang chủ nhé.",
   submittedAt: (hhmm: string) => `Đã nộp lúc ${hhmm}`,
-  alreadySubmitted: (hhmm: string) => `Bạn đã nộp bài này lúc ${hhmm}.`,
+  alreadySubmitted: (hhmm: string, date?: string) => (date ? `Bạn đã nộp bài này lúc ${hhmm} ngày ${date}.` : `Bạn đã nộp bài này lúc ${hhmm}.`),
   /** Bài do người lớn ghi giúp (làm cùng thầy/cô hoặc trên giấy): chỉ một dòng trạng thái, không có nội dung. */
   doneOffline: `Bài này bạn đã làm cùng ${tutorHonorific} hoặc trên giấy, và đã được ghi lại rồi.`,
   mayRetry: "Bạn có thể làm lại để luyện thêm.",
@@ -1969,7 +1970,7 @@ export const playerCopy = {
   askTutorNote: "Sắp có — gia sư sẽ gợi ý từng bước, không làm hộ. Chỉ có ở bài luyện tập, không có ở bài kiểm tra.",
 };
 
-// W4c2 — màn sau khi nộp (S-10). Không điểm, không số câu đúng, không đáp án, không giải thích.
+// W4c2 — màn sau khi nộp (S-10). Không điểm, không số câu đúng, không %. Bài luyện tập của bộ Studio (D39): ✓ / ✗ từng câu; đáp án + "Vì sao" chỉ cho câu đã thử lại / đã xem đáp án. Bài kiểm tra: không dấu, không đáp án.
 export const resultCopy = {
   title: `Bạn đã nộp bài · ${tutorHonorific} sẽ xem`,
   testNote: `Bài kiểm tra: ${tutorHonorific} sẽ chữa cùng bạn.`,
@@ -1995,6 +1996,7 @@ export const resultCopy = {
   reveal: "Xem đáp án",
   revealing: "Đang mở…",
   revealFailed: "Chưa mở được đáp án. Bạn thử lại nhé.",
+  revealReload: "Đã ghi lại rồi, nhưng chưa tải được trang. Bạn tải lại trang để xem nhé.",
   answerLabel: "Đáp án",
   whyLabel: "Vì sao",
   nothing: `Không có câu nào cần nhìn lại. ${tutorHonorificCap} vẫn sẽ đọc cả bài của bạn.`,
@@ -2105,6 +2107,7 @@ export const aiSettingsCopy = {
 export const studioErrors: Record<string, string> = {
   bad_note: "Ghi chú tối đa 300 chữ, không có chữ kiểu điểm số.",
   no_retry: "Lần làm này không có lần thử lại nào.",
+  retry_needs_update: "Nút \"Đã xem\" cần migration 0034. Nhờ phụ huynh áp 0034 rồi thử lại.",
   needs_update: "Phần này cần migration 0034 (cờ Bài kiểm tra). Giao ở loại Luyện tập, hoặc nhờ phụ huynh áp 0034.",
   file_type: "Chỉ nhận PDF hoặc Word .docx (không nhận .doc hay ảnh).",
   file_too_big: "File lớn hơn 15 MB.",

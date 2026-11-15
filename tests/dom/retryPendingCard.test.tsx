@@ -37,6 +37,18 @@ describe("the retry card (Đã xem)", () => {
     expect(screen.getByTestId("retry-seen-att-1").textContent).toContain(studioInboxCopy.retrySeen);
   });
 
+  it("sends seen_through = the newest retry the card showed, exactly as the server wrote it (a later retry stays pending)", async () => {
+    const f = fetchMock(201, { id: "s", replayed: false });
+    const withMicros: RetryAttempt = { ...attempt, retries: [
+      { ...attempt.retries[0]!, at: "2026-11-15T04:00:00.123456+00:00" },
+      { ...attempt.retries[1]!, at: "2026-11-15T04:00:00.123789+00:00" }, // same millisecond, later microseconds
+    ] };
+    render(<RetryPendingCard attempt={withMicros} />);
+    fireEvent.click(screen.getByTestId("retry-seen-att-1"));
+    await waitFor(() => expect(f).toHaveBeenCalled());
+    expect(sent(f).body.seen_through).toBe("2026-11-15T04:00:00.123789+00:00");
+  });
+
   it("posts the note (trimmed; none = omitted), then leaves the list and refreshes", async () => {
     const f = fetchMock(201, { id: "s", replayed: false });
     render(<RetryPendingCard attempt={attempt} />);

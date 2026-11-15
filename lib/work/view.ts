@@ -1,5 +1,6 @@
 import { activityLabels, fallbackLabels, weekdayNames, work } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
+import { formatDateVi } from "@/lib/inquiries/format";
 import { isDoneInApp } from "./types";
 
 /** "2026-10-14T08:05:00Z" → "15:05" in Vietnam time (the app's one clock). */
@@ -9,6 +10,12 @@ export function formatHm(iso: string): string {
   return new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Ho_Chi_Minh" })
     .format(d)
     .replace(/ | /g, " ");
+}
+
+/** "2026-10-14T08:05:00Z" → "14/10/2026" (Vietnam date), "" when unreadable. */
+export function formatDmy(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "" : formatDateVi(todayVn(d));
 }
 
 /** "Thứ Tư 14/10" for today in Vietnam. */

@@ -41,7 +41,9 @@ describe("the result screen (S-10)", () => {
     expect(t).toContain(retryCopy.sent);
     expect(t).toContain(resultCopy.openNote);
     expect(t).toContain(resultCopy.othersFine);
-    expect(t).not.toMatch(/\d+\s*\/\s*\d+|%|điểm|đúng\s+\d|nên là|vì sao|đáp án đúng/i);
+    // the "Bạn đã nộp bài này lúc 10:00 ngày 15/11/2026." line is a date, not a ratio
+    expect(t.replace(/Bạn đã nộp bài này lúc[^.]*\./, "")).not.toMatch(/\d+\s*\/\s*\d+|%|điểm|đúng\s+\d|nên là|vì sao|đáp án đúng/i);
+    expect(t).toMatch(/Bạn đã nộp bài này lúc \d{2}:\d{2} ngày \d{2}\/\d{2}\/\d{4}\./); // the date AND the time
     expect(t).toContain(resultCopy.again);
   });
   it("test: its own heading and note, no retry button, no 'again'", () => {
@@ -128,7 +130,7 @@ describe("the result screen of a practice work (D39): marks, retry or the answer
   });
   it("a right item keeps its 'Vì sao' collapsed; no total, count, percentage or score anywhere", () => {
     expect(h).toMatch(/<details[^>]*data-testid="why-q5"/);
-    expect(h).not.toMatch(/\d+\s*\/\s*\d+|%|đúng\s+\d|điểm/i);
+    expect(h.replace(/<p data-testid="already-submitted"[^>]*>[^<]*<\/p>/, "")).not.toMatch(/\d+\s*\/\s*\d+|%|đúng\s+\d|điểm/i);
     expect(h).not.toContain("result-others-fine");
   });
   it("a test (no marks) shows none of this", () => {

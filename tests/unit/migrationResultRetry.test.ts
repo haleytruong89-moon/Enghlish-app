@@ -38,7 +38,7 @@ describe("*_result_view_retry.sql (found by suffix)", () => {
       expect(code, f).toContain(`grant execute on function english.${f} to authenticated;`);
       expect(code).not.toMatch(new RegExp(`grant execute on function english\\.${name}\\([^)]*\\) to service_role`));
     }
-    for (const f of ["eng_set_test_mark(text, uuid, boolean, uuid, text)", "eng_assign_studio_v2(uuid, date, date, boolean, uuid, text)", "eng_item_retries(uuid)", "eng_retry_pending(uuid, boolean)", "eng_mark_retry_seen(uuid, text, uuid, text)"]) {
+    for (const f of ["eng_set_test_mark(text, uuid, boolean, uuid, text)", "eng_assign_studio_v2(uuid, date, date, boolean, uuid, text)", "eng_item_retries(uuid)", "eng_retry_pending(uuid, boolean)", "eng_mark_retry_seen(uuid, text, uuid, text, timestamptz, boolean)"]) {
       expect(code, f).toContain(`revoke execute on function english.${f} from public, anon, authenticated;`);
       expect(code, f).toContain(`grant execute on function english.${f} to service_role;`);
     }
@@ -94,5 +94,23 @@ describe("*_result_view_retry.sql (found by suffix)", () => {
       now = now.replace(squash(added), "");
     }
     expect(now).toBe(before);
+  });
+  it("D39: a trigger on attempts refuses a redo after answers were shown; nobody can call its functions; the view locks nothing (stable)", () => {
+    expect(code).toContain("create trigger attempts_no_redo_after_reveal before insert on english.attempts");
+    expect(code).toContain("(answers_shown)");
+    expect(code).toContain("revoke execute on function english.eng_answers_shown(uuid) from public, anon, authenticated, service_role;");
+    expect(code).toContain("revoke execute on function english.eng_attempts_no_redo_after_reveal() from public, anon, authenticated, service_role;");
+    // only the child's own submissions (in_app / pasted); adult-recorded work is never blocked
+    expect(fnBody(code, "eng_attempts_no_redo_after_reveal")).toContain("new.provenance in ('in_app', 'pasted')");
+    // one lock on the newest attempt shared by retry, reveal and the trigger
+    for (const f of ["eng_my_retry_item", "eng_my_reveal_item"]) expect(fnBody(code, f), f).toContain("limit 1 for no key update;");
+    expect(fnBody(code, "eng_my_result_view")).not.toContain("for no key update");
+  });
+  it("retry_seen carries seen_through; pending and the adult read use it; the writer takes allow_real", () => {
+    expect(code).toMatch(/seen_through timestamptz not null/);
+    expect(fnBody(code, "eng_retry_pending")).toContain("z.seen_through >= r.created_at");
+    expect(fnBody(code, "eng_item_retries")).toContain("z.seen_through >= r.created_at");
+    expect(fnBody(code, "eng_mark_retry_seen")).toContain("p_allow_real");
+    expect(fnBody(code, "eng_mark_retry_seen")).toContain("(bad_seen_through)");
   });
 });

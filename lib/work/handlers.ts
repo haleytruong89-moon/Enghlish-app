@@ -46,11 +46,11 @@ export interface WorkStore {
   getMyFeedback(): Promise<unknown>;
   /** english.eng_my_activity_note(id) as the signed-in student (S6, G4): the "Chỉ góp ý" note of this activity, or null. */
   getMyActivityNote(activityId: string): Promise<unknown | null>;
-  /** english.eng_my_result_view(id) as the signed-in student (W4c2, S-10): items to look at again, never an answer or a count; null = nothing to show. */
+  /** english.eng_my_result_view(id) as the signed-in student (W4c2, S-10, D39): marks, never a count; an answer only for items retried / given up in a practice Studio work; null = nothing to show. */
   getMyResultView(activityId: string): Promise<unknown | null>;
-  /** english.eng_my_retry_item as the signed-in student (W4c2): one retry of one item; it is not evidence. */
   /** english.eng_my_reveal_item as the signed-in student (D39): give up the retry of one wrong item and see its answer. */
   revealItem(args: { activityId: string; itemId: string; clientId: string }): Promise<unknown>;
+  /** english.eng_my_retry_item as the signed-in student (W4c2): one retry of one item; it is not evidence. */
   retryItem(args: { activityId: string; itemId: string; answer: string; clientId: string }): Promise<unknown>;
   /** english.eng_my_test_marks() as the signed-in student (W4c2): ids of their own work that counts as a test. */
   getMyTestMarks(): Promise<unknown>;
@@ -201,6 +201,8 @@ export async function handleSubmit(deps: HandlerDeps, rawBody: unknown): Promise
     if (!receipt.replayed) await deps.afterWrite?.(g.grant.learner.id, null);
     return { status: receipt.replayed ? 200 : 201, body: { receipt } };
   } catch (err) {
+    // D39: after the answers of a practice work were shown the whole work is not redone (the database refuses it; the screen says why).
+    if (err instanceof WorkDbError && /\(answers_shown\)/.test(err.message)) return fail(409, "answers_shown");
     return fromDbError(err);
   }
 }

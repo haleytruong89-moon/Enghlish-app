@@ -10,7 +10,7 @@ import { busyCopy, studioCopy, studioInboxCopy } from "@/lib/copy/vi";
 import { clientIdBook } from "@/lib/roadmap/clientId";
 import { sendJson } from "@/lib/studio/client";
 import type { RetryAttempt } from "@/lib/studio/types";
-import { studioErrorText } from "@/lib/studio/view";
+import { newestAt, studioErrorText } from "@/lib/studio/view";
 
 /**
  * One attempt whose retries nobody has marked "Đã xem": the retry text beside the original answer, an optional note (adult-only: the child
@@ -28,7 +28,8 @@ export function RetryPendingCard({ attempt }: { attempt: RetryAttempt }) {
   async function markSeen() {
     setBusy(true);
     setMsg(null);
-    const body = { note: note.trim() === "" ? undefined : note.trim() };
+    // The newest retry this card showed: a retry made after the card was opened is not covered and stays pending.
+    const body = { note: note.trim() === "" ? undefined : note.trim(), seen_through: newestAt(attempt.retries.map((r) => r.at)) ?? attempt.since };
     const r = await track(() => sendJson(`/api/review/studio/attempts/${attempt.attemptId}/retry-seen`, "POST", { ...body, client_id: book.current.idFor(body) }));
     book.current.settle(r);
     setBusy(false);

@@ -24,6 +24,8 @@ async function q<R extends Record<string, unknown>>(sql: string, params: unknown
 let draftUrl = "";
 let activityId = "";
 const SCORE = /\d+\s*\/\s*\d+|%/;
+/** D35 / D39: a Studio practice result (marks present) never shows a/b, a percentage, "điểm" or "đúng n" / "sai n" (dates are <time> and set aside). */
+const NO_TOTALS = /(?<![\d/])\d{1,3}\s*\/\s*\d{1,3}(?![\d/])|%|(^|[^\p{L}])điểm(?!\p{L})|đúng\s+\d|\bsai\s+\d/iu;
 
 test("the parent turns AI on (one ai_text consent per child)", async ({ page }) => {
   await loginAs(page, "parent");
@@ -99,9 +101,12 @@ test("Nguyên does the test one question at a time: he sees which ones to look a
   await expect(page.getByTestId("mark-chip-q2")).toContainText(resultCopy.markWrong);
   await expect(page.getByTestId("mark-chip-q1")).toContainText(resultCopy.markRight);
   await expect(page.getByTestId("reveal-q2")).toBeVisible();
-  const text = await studentVisibleText(page);
-  expect(text).not.toMatch(SCORE);
-  expect(text).not.toMatch(/điểm|đúng\s+\d/i);
+  // the marks are really there, and the visible text of the result still has no a/b, %, "điểm", "đúng n"
+  await expect(page.locator('[data-testid^="mark-chip-"]')).toHaveCount(8);
+  const text = await studentVisibleText(page, "result-view");
+  expect(text).toContain(resultCopy.markRight);
+  expect(text).toContain(resultCopy.markWrong);
+  expect(text).not.toMatch(NO_TOTALS);
   expect(text).not.toContain("A. must"); // the model answer: not before a retry or "Xem đáp án"
   expect(text).not.toContain("happiness");
   expect(text).not.toContain("Nên là");
@@ -124,8 +129,8 @@ test("Nguyên retries one question once; he is told it went to the tutor, no sco
   // after any answer was shown there is no "Làm lại cả bài"
   await expect(page.getByTestId("result-redo")).toHaveCount(0);
   const text = await studentVisibleText(page, "result-view");
-  expect(text).not.toMatch(SCORE);
-  expect(text).not.toMatch(/điểm|đúng\s+\d/i);
+  expect(text).toContain(resultCopy.markWrong);
+  expect(text).not.toMatch(NO_TOTALS); // answers and "Vì sao" are now shown for q2 / q6, still no totals
   await page.reload();
   await expect(page.getByTestId("retry-sent-q2")).toBeVisible();
   await expect(page.getByTestId("answer-q6")).toContainText("happiness");

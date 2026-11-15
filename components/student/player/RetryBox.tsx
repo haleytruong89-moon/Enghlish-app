@@ -3,8 +3,8 @@
 import { useRef, useState } from "react";
 import { retryCopy as c } from "@/lib/copy/vi";
 
-/** "Thử lại câu này": one retry per item. It goes to the tutor, never marked here, and the child is never told whether it is right. */
-export function RetryBox({ activityId, itemId, number, options, long, extra, onSent }: { /** Another button beside "Thử lại câu này" while the box is closed (the "Xem đáp án" of a practice work). */ extra?: React.ReactNode; activityId: string; itemId: string; number: number; /** Choices of a multiple-choice item (radios); empty = free text. */ options: string[]; /** An open / transform item: a larger box and limit. */ long: boolean; onSent: (text: string) => void }) {
+/** "Thử lại câu này": one retry per item. It goes to the tutor and is not evidence. In a practice work of a Studio set the screen then shows whether the retry matches the key and reveals the answer (D39); in other work the child is never told whether it is right. */
+export function RetryBox({ activityId, itemId, number, options, long, extra, onSent, onConflict }: { /** Practice of a Studio set: on a 409 (retried / answer shown elsewhere) re-read the result instead of looking for the old "look" list. false = could not re-read. */ onConflict?: () => Promise<boolean | void> | boolean | void; /** Another button beside "Thử lại câu này" while the box is closed (the "Xem đáp án" of a practice work). */ extra?: React.ReactNode; activityId: string; itemId: string; number: number; /** Choices of a multiple-choice item (radios); empty = free text. */ options: string[]; /** An open / transform item: a larger box and limit. */ long: boolean; onSent: (text: string) => void }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -22,6 +22,10 @@ export function RetryBox({ activityId, itemId, number, options, long, extra, onS
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ item_id: itemId, answer, client_id: clientId.current }),
       });
+      if (res.status === 409 && onConflict) {
+        if ((await onConflict()) === false) setProblem(c.refused);
+        return;
+      }
       if (res.status === 409) {
         // Already retried (another tab, a lost reply): show what is stored as sent instead of an error.
         const stored = await fetch(`/api/student/activities/${activityId}/result`, { cache: "no-store" })

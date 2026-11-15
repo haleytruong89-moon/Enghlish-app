@@ -59,6 +59,13 @@ export function parseResultView(raw: unknown): ResultView | null {
   const v = r.data;
   // A test never carries marks or answers; if the database ever sent them the whole reply is refused.
   if (v.is_test && v.marks) return null;
+  // D39 consistency: an answer / explanation only for what the child revealed (a right item keeps its "Vì sao"), and only a wrong item has a button.
+  // Anything else means the database and this screen disagree: refuse the whole reply instead of showing it.
+  for (const m of v.marks ?? []) {
+    if (!m.revealed && (m.answer !== null || (m.why !== null && m.mark !== "right"))) return null;
+    if (m.mark !== "wrong" && (m.can_retry || m.can_reveal)) return null;
+    if (m.revealed && (m.can_retry || m.can_reveal)) return null;
+  }
   return {
     marks: v.marks ? v.marks.map((m) => ({ id: m.id, n: m.n, stem: m.stem, given: m.given, mark: m.mark, retry: m.retry, revealed: m.revealed, canRetry: m.can_retry, canReveal: m.can_reveal, answer: m.answer, why: m.why })) : null,
     attemptNo: v.attempt_no,
