@@ -5,6 +5,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CONTENT_DIR } from "../../lib/config/content";
 import type { InquiryTemplate } from "../../lib/config/schemas";
 import { addDays, daysBetween, todayVn } from "../../lib/inquiries/dates";
+import { buildStudioBuild } from "../../lib/studio/buildTemplate";
+import type { StudioContext } from "../../lib/studio/context";
+import { normalizeExtract } from "../../lib/studio/normalize";
+import { aiExtractSchema, type StudioDraft } from "../../lib/studio/schema";
+import { FAKE_EXTRACT } from "../unit/fixtures/studio";
 import { as, asCommit, createTestDb, migrate, seed, type Seeded, type TestDb } from "./helpers";
 
 const TODAY = todayVn();
@@ -55,10 +60,11 @@ describe("student desk reads (migration 0032)", () => {
     expect(err?.code, err?.message).toBe(code);
   };
   const today = (user: string) => read<{ items: Item[] }>(user, "select english.eng_my_today() as r").then((r) => r.items);
-  const history = (user: string, before: string | null = null, limit = 20) =>
-    read<{ items: Row[] }>(user, "select english.eng_my_history($1, $2) as r", [before, limit]).then((r) => r.items);
-  const seen = (user: string, before: string | null = null, limit = 20) =>
-    read<{ items: Row[] }>(user, "select english.eng_my_seen($1, $2) as r", [before, limit]).then((r) => r.items);
+  const historyPage = (user: string, before: string | null = null, limit = 20, ref: string | null = null) =>
+    read<{ items: Row[]; total: number; waiting: number }>(user, "select english.eng_my_history($1, $2, $3) as r", [before, ref, limit]);
+  const history = (user: string, before: string | null = null, limit = 20, ref: string | null = null) => historyPage(user, before, limit, ref).then((r) => r.items);
+  const seen = (user: string, before: string | null = null, limit = 20, ref: string | null = null) =>
+    read<{ items: Row[] }>(user, "select english.eng_my_seen($1, $2, $3) as r", [before, ref, limit]).then((r) => r.items);
   const count = (user: string) => read<number>(user, "select english.eng_my_today_count() as r");
 
   let reqSeq = 0;
@@ -93,7 +99,7 @@ describe("student desk reads (migration 0032)", () => {
   });
 
   it("only authenticated can call the four reads; the internal row function is closed to everyone", async () => {
-    for (const sql of ["select english.eng_my_today()", "select english.eng_my_today_count()", "select english.eng_my_history(null, 5)", "select english.eng_my_seen(null, 5)"]) {
+    for (const sql of ["select english.eng_my_today()", "select english.eng_my_today_count()", "select english.eng_my_history(null, null, 5)", "select english.eng_my_seen(null, null, 5)"]) {
       await fail(as(db.client, "anon", null, async (q) => q(sql)), "42501");
       await fail(as(db.client, "service_role", null, async (q) => q(sql)), "42501");
     }
@@ -102,7 +108,8 @@ describe("student desk reads (migration 0032)", () => {
 
   it("a signed-in adult (not a student) gets nothing", async () => {
     expect(await today(U().parent)).toEqual([]);
-    expect(await count(U().tutorAn)).toBe(0);
+    expect(await count(U().tutorAn)).toBeNull(); // not a student: Launcher shows "not linked", never 0
+    expect(await historyPage(U().parent)).toEqual({ items: [], total: 0, waiting: 0 });
     expect(await history(U().parent)).toEqual([]);
     expect(await seen(U().tutorNguyen)).toEqual([]);
   });
@@ -118,7 +125,9 @@ describe("student desk reads (migration 0032)", () => {
     const qa = items.find((i) => i.step_no === 2)!;
     expect(qa).toMatchObject({ doable: true, practice: false, off_label: null, time_min: 10, items_total: 6, items_filled: 0, has_draft: false });
     expect(items.some((i) => i.step_no === 13)).toBe(false);
-    expect(await count(U().studentAn)).toBe(items.length);
+    // the count is what the child can do in the app: the with-tutor step is listed but not counted
+    expect(await count(U().studentAn)).toBe(items.filter((i) => i.doable).length);
+    expect(items.some((i) => !i.doable)).toBe(true);
     // the other child sees only theirs (B-W1 step 1-2 released), never An's
     const ng = await today(U().studentNguyen);
     expect(ng.length).toBeGreaterThan(0);
@@ -173,6 +182,12 @@ describe("student desk reads (migration 0032)", () => {
     const retracted = await makeLink("Retracted");
     await svc("select english.eng_retract_assignment($1, 'oops', $2) as r", [retracted.id, M().tutorNguyen]);
     expect((await today(U().studentNguyen)).some((i) => i.assignment_id === retracted.id)).toBe(false);
+    // a retracted assignment that was already sent stays in Đã làm (it is the child's work), flagged so the card is not reopened
+    const sentThenRetracted = await makeLink("Sent then retracted");
+    await sendLink(sentThenRetracted.id);
+    await svc("select english.eng_retract_assignment($1, 'oops', $2) as r", [sentThenRetracted.id, M().tutorNguyen]);
+    expect((await today(U().studentNguyen)).some((i) => i.assignment_id === sentThenRetracted.id)).toBe(false);
+    expect((await history(U().studentNguyen)).find((r) => r.assignment_id === sentThenRetracted.id)).toMatchObject({ retracted: true, kind: "link" });
     // resubmit: only the current submission shows (the replaced one never appears on its own)
     const l2 = await makeLink("Twice");
     await sendLink(l2.id);
@@ -212,21 +227,101 @@ describe("student desk reads (migration 0032)", () => {
     expect(sn3).toMatchObject({ kind: "revision", closing_note: "Cô thấy con đã sửa rất tốt.", fb_state: null });
   });
 
-  it("paging: p_before moves to older rows, p_limit is clamped to 1..50, newest first", async () => {
+  it("paging: the cursor (time, ref) walks every row once, newest first; p_limit is clamped to 1..50; total / waiting cover the whole history", async () => {
     const all = await history(U().studentNguyen, null, 50);
     expect(all.length).toBeGreaterThanOrEqual(2);
-    const first = await history(U().studentNguyen, null, 1);
-    expect(first).toHaveLength(1);
-    expect(first[0]!.ref).toBe(all[0]!.ref);
-    const submittedAt = (first[0] as unknown as { submitted_at: string }).submitted_at;
-    const next = await history(U().studentNguyen, submittedAt, 1);
-    expect(next[0]!.ref).toBe(all[1]!.ref);
+    const page = await historyPage(U().studentNguyen, null, 1);
+    expect(page.items).toHaveLength(1);
+    expect(page.total).toBe(all.length);
+    expect(page.waiting).toBe(all.filter((r) => !r.seen).length);
     expect(await history(U().studentNguyen, null, 0)).toHaveLength(1); // clamped up to 1
     expect(await history(U().studentNguyen, null, 9999)).toHaveLength(all.length);
-    const s1 = await seen(U().studentAn, null, 1);
-    expect(s1).toHaveLength(1);
-    const s2 = await seen(U().studentAn, s1[0]!.seen_at as string, 5);
-    expect(s2.every((r) => r.ref !== s1[0]!.ref)).toBe(true);
+    const walked: string[] = [];
+    let cur = page.items;
+    while (cur.length > 0) {
+      walked.push(cur[0]!.ref);
+      const at = (cur[0] as unknown as { submitted_at: string }).submitted_at;
+      cur = await history(U().studentNguyen, at, 1, cur[0]!.ref);
+    }
+    expect(walked).toEqual(all.map((r) => r.ref));
+    // seen: same walk by (seen_at, ref)
+    const allSeen = await seen(U().studentAn, null, 50);
+    expect(allSeen.length).toBeGreaterThanOrEqual(2);
+    const walkedSeen: string[] = [];
+    let c2 = await seen(U().studentAn, null, 1);
+    while (c2.length > 0) {
+      walkedSeen.push(c2[0]!.ref);
+      c2 = await seen(U().studentAn, c2[0]!.seen_at as string, 1, c2[0]!.ref);
+    }
+    expect(walkedSeen).toEqual(allSeen.map((r) => r.ref));
+  });
+
+  it("another child's rows never appear, in any of the reads", async () => {
+    const an = new Set([...(await today(U().studentAn)).map((i) => i.activity_id), ...(await history(U().studentAn, null, 50)).map((r) => r.ref), ...(await seen(U().studentAn, null, 50)).map((r) => r.ref)]);
+    const ng = [...(await today(U().studentNguyen)).map((i) => i.activity_id ?? i.assignment_id), ...(await history(U().studentNguyen, null, 50)).map((r) => r.ref), ...(await seen(U().studentNguyen, null, 50)).map((r) => r.ref)];
+    for (const x of ng) expect(an.has(x as string)).toBe(false);
+  });
+
+  describe("Studio (app) work", () => {
+    const ctxOf = async (learner: string): Promise<StudioContext> => {
+      const tags = await q1<{ key: string; label: string; group_vi: string | null; related: string[] | null }>(
+        `select t.key, t.label_vi as label, t.group_vi,
+                (select sl.related from english.skill_leaves sl where sl.kind = 'tag' and sl.track_id = t.track_id and sl.ref_key = t.key limit 1) as related
+         from english.error_tags t join english.learners l on l.track_id = t.track_id where l.id = $1 and t.retired_at is null`,
+        [learner],
+      );
+      const skills = (await q1<{ s: { id: string; title_vi: string }[] }>("select english.eng_studio_skills($1) as s", [learner]))[0]!.s;
+      return {
+        tags: tags.map((t) => ({ key: t.key, label: t.label, reading: t.group_vi === "Kỹ năng đọc", near: true, related: t.related ?? [], group: t.group_vi })),
+        skills: skills.map((x) => ({ id: x.id, label: x.title_vi })),
+      };
+    };
+    const studioDraft = async (mutate: (d: StudioDraft) => StudioDraft) => {
+      const made = await svc<{ id: string }>("select english.eng_create_studio_draft($1, $2, null, null, false, $3, $4) as r", [NG(), "Unit thử", M().tutorNguyen, `w4b-st-${randomUUID().slice(0, 8)}`]);
+      const base = normalizeExtract(aiExtractSchema.parse(FAKE_EXTRACT), await ctxOf(NG()));
+      const payload = mutate({ ...base, items: base.items.map((i) => (i.n === 8 ? { ...i, key: "is said to be" } : i)) });
+      const cur = await svc<{ updated_at: string }>("select english.eng_studio_draft($1) as r", [made.id]);
+      const saved = await svc<{ updated_at: string }>("select english.eng_save_studio_draft($1, $2, $3::jsonb, $4, $5) as r", [made.id, "Unit thử", JSON.stringify(payload), cur.updated_at, M().tutorNguyen]);
+      await svc("select english.eng_approve_studio_draft($1, $2, $3::jsonb, $4) as r", [made.id, saved.updated_at, JSON.stringify(buildStudioBuild(payload)), M().tutorNguyen]);
+      return svc<{ activity_id: string }>("select english.eng_assign_studio($1, current_date, current_date + 3, $2, $3) as r", [made.id, M().parent, `as-${randomUUID()}`]);
+    };
+    const answers = { q1: "B. had", q2: "A. must", q3: "A. off", q4: "C. A visit that changed Lan's plans", q5: "B. The robot room was interesting", q6: "happiness", q7: "I wish I could", q8: "is said to be" };
+
+    it("the auto-check result written at submit is not 'seen' (Studio without an open item)", async () => {
+      const a = await studioDraft((x) => ({ ...x, items: x.items.filter((i) => i.n <= 4) }));
+      const sub = await student<{ attempt_id: string }>(U().studentNguyen, "select english.eng_submit_attempt($1, $2, $3::jsonb, $4::text[], 'in_app') as r", [a.activity_id, randomUUID(), JSON.stringify({ answers: { q1: answers.q1, q2: answers.q2, q3: answers.q3, q4: answers.q4 } }), ["none"]]);
+      expect((await q1("select 1 from english.results where attempt_id = $1", [sub.attempt_id])).length).toBeGreaterThan(0);
+      expect((await history(U().studentNguyen, null, 50)).find((r) => r.ref === sub.attempt_id)).toMatchObject({ kind: "app", seen: false });
+      expect((await seen(U().studentNguyen, null, 50)).some((r) => r.ref === sub.attempt_id)).toBe(false);
+    });
+
+    it("a Studio step is a 'app' task; the app's own marking is NOT 'seen'; an adult's Đúng/Sai on an open item IS seen (and shows no verdict)", async () => {
+      const a = await studioDraft((x) => ({ ...x, items: x.items.map((i) => (i.n === 9 ? { ...i, out_of_app: false, kind: "open", key: "A MODEL ANSWER", explanation_vi: "Viết một câu." } : i)) }));
+      const task = (await today(U().studentNguyen)).find((i) => i.activity_id === a.activity_id)!;
+      expect(task).toMatchObject({ kind: "app", doable: true });
+      const sub = await student<{ attempt_id: string }>(U().studentNguyen, "select english.eng_submit_attempt($1, $2, $3::jsonb, $4::text[], 'in_app') as r", [
+        a.activity_id, randomUUID(), JSON.stringify({ answers: { ...answers, q9: "I see a cat" } }), ["none"],
+      ]);
+      let h = (await history(U().studentNguyen, null, 50)).find((r) => r.ref === sub.attempt_id)!;
+      expect(h).toMatchObject({ kind: "app", seen: false });
+      expect((await seen(U().studentNguyen, null, 50)).some((r) => r.ref === sub.attempt_id)).toBe(false);
+      // the adult marks the open item → seen, and the child still gets no verdict
+      await svc("select english.eng_decide_studio_items($1, $2::jsonb, $3, $4) as r", [sub.attempt_id, JSON.stringify([{ item_id: "q9", result: "incorrect" }]), M().tutorNguyen, `dc-${randomUUID()}`]);
+      h = (await history(U().studentNguyen, null, 50)).find((r) => r.ref === sub.attempt_id)!;
+      expect(h.seen).toBe(true);
+      const sn = (await seen(U().studentNguyen, null, 50)).find((r) => r.ref === sub.attempt_id)!;
+      expect(sn).toMatchObject({ kind: "app", fb_state: null, praise: null, notes: null });
+      expect(JSON.stringify(sn)).not.toMatch(/incorrect|correct|A MODEL ANSWER/);
+    });
+  });
+
+  it("the imported (Nạp bài) template kind is excluded from both internal reads", async () => {
+    const { MIGRATIONS_DIR } = await import("../../scripts/lib/migrate");
+    const { readdirSync } = await import("node:fs");
+    const f = readdirSync(MIGRATIONS_DIR).find((x) => x.endsWith("_student_desk_reads.sql"))!;
+    const code = readFileSync(path.join(MIGRATIONS_DIR, f), "utf8").split("\n").filter((l) => !l.trim().startsWith("--")).join("\n");
+    expect(code.match(/tp\.kind in \('topic', 'studio'\)/g)?.length).toBe(2); // eng_student_done + eng_my_today
+    expect(code).not.toMatch(/'imported'\s*\)/);
   });
 
   it("no forbidden key anywhere in what the child gets back", async () => {

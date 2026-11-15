@@ -1212,8 +1212,6 @@ export const assignPage = {
 
 /** Phần dùng chung giữa em và người lớn khi gửi ảnh / file (chữ về nút, ảnh, lỗi). Xưng "bạn" với em. */
 export const practiceStudent = {
-  title: "Bài luyện của bạn",
-  empty: `Chưa có bài luyện nào. ${tutorHonorificCap} sẽ giao bài sớm thôi.`,
   linkKind: (source: string, due: string | null) => `Bài link · ${source}${due ? ` · hạn ${due}` : ""}`,
   pdfKind: (assigned: string, due: string | null) => `Đề PDF · giao ${assigned}${due ? ` · hạn ${due}` : ""}`,
   openLink: "Mở bài",
@@ -1252,10 +1250,6 @@ export const practiceStudent = {
   resend: "Sửa lại",
   reviewed: `${tutorHonorificCap} đã xem bài này.`,
   // cột bên
-  reviewTitle: "Việc cần ôn",
-  reviewNone: "Chưa có việc cần ôn nào.",
-  messageTitle: `Lời nhắn của ${tutorHonorific}`,
-  messageNone: "Chưa có lời nhắn.",
   // lỗi (câu ngắn, xưng "bạn")
   needImage: "Bạn thêm ít nhất một ảnh (hoặc dán link bài đã làm) nhé.",
   errors: {
@@ -2858,10 +2852,10 @@ export const studentDeskCopy = {
   newCountAria: (n: number) => `${n} lời nhắn mới`,
   greeting: (alias: string) => `Chào ${alias}!`,
   // Hôm nay
-  leadStart: "Hôm nay còn ",
+  leadStart: "Còn ",
   leadCount: (n: number) => `${n} việc`,
   leadMinutes: (m: number) => ` · khoảng ${m} phút`,
-  allDone: "Xong hết việc hôm nay rồi 🎉 Nghỉ ngơi, hoặc làm trước một việc sắp tới nếu bạn muốn.",
+  allDone: `Xong hết việc rồi 🎉 Nghỉ ngơi nhé. ${tutorHonorificCap} sẽ giao thêm bài sớm thôi.`,
   noTasks: `Chưa có việc nào. ${tutorHonorificCap} sẽ giao bài mới sau buổi học.`,
   resume: "Làm tiếp",
   next: "Việc tiếp theo",
@@ -2870,6 +2864,10 @@ export const studentDeskCopy = {
   progressBar: "Tiến độ bài",
   filled: (a: number, b: number) => `${a}/${b} câu`,
   tasksTitle: "Việc cần làm",
+  offAppTitle: `Làm cùng ${tutorHonorific}`,
+  offAppNote: "Những việc này làm trên giấy hoặc trong buổi học, không làm trong app.",
+  sentTitle: "Vừa gửi",
+  sentNote: `Bạn đã gửi hôm nay. ${tutorHonorificCap} chưa xem, nên bạn vẫn sửa lại được.`,
   kinds: { app: "Bài trên app", topic: "Bài chủ đề", paper: "Đề giấy", link: "Bài link", revision: "Sửa bài" },
   minutes: (m: number) => `khoảng ${m} phút`,
   due: (weekday: string, ddmm: string) => `Hạn ${weekday} ${ddmm}`,
@@ -2879,11 +2877,11 @@ export const studentDeskCopy = {
   askTutorNote: "Sắp có — gia sư sẽ gợi ý từng bước, không làm hộ. Chỉ có ở bài luyện tập, không có ở bài kiểm tra.",
   noteTitle: `${tutorHonorificCap} nhắn`,
   noteReview: "Ôn lại mấy mục này",
-  footnote: `Không có điểm số ở đây — ${tutorHonorific} xem bài và nhắn lại cho bạn.`,
+  footnote: `${tutorHonorificCap} xem bài và nhắn lại cho bạn: điều bạn làm tốt và điều cần sửa.`,
   unavailable: `Bàn học chưa mở được. ${tutorHonorificCap} sẽ báo khi sẵn sàng.`,
   // Đã xem
   seenTitle: "Đã xem",
-  seenIntro: `${tutorHonorificCap} xem bài xong là lời nhắn hiện ngay ở đây. Không có điểm — chỉ có điều bạn làm tốt và điều cần sửa.`,
+  seenIntro: `${tutorHonorificCap} xem bài xong là lời nhắn hiện ngay ở đây: điều bạn làm tốt và điều cần sửa.`,
   seenEmpty: `Chưa có bài nào được ${tutorHonorific} xem. Khi ${tutorHonorific} xem, lời nhắn hiện ở đây.`,
   seenOn: (when: string) => `${tutorHonorificCap} xem ${when}`,
   praise: `${tutorHonorificCap} khen`,
@@ -2913,7 +2911,6 @@ export const studentDeskCopy = {
   hint: { yes: "có xem gợi ý", no: "không xem gợi ý" },
   offline: `${tutorHonorificCap} ghi lại bài này`,
   openSubmitted: "Xem lại",
-  reviewOnly: "Chỉ xem lại — bài đã nộp thì không sửa ở đây.",
   back: "‹ Về Đã làm",
   filterNone: "Không có bài nào ở mục này.",
 } as const;

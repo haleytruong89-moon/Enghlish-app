@@ -2,7 +2,8 @@
 -- W4b · Bàn học của con: bốn hàm ĐỌC cho màn Hôm nay / Đã xem / Đã làm (kế hoạch docs/superpowers/plans/2026-11-14-w4-student-desk.md, mục 3.1, 3.2, 3.9).
 -- Chỉ thêm hàm: KHÔNG bảng, KHÔNG đổi purge, KHÔNG đổi hàm cũ (eng_my_home / eng_my_practice / eng_my_feedback giữ nguyên).
 --  * eng_my_today()          việc con cần làm (bước bài trên app đã mở chưa nộp · bài link / PDF chưa nộp · bài sửa S6).
---  * eng_my_today_count()    đúng MỘT con số = số việc của eng_my_today() (cho Study Launcher, PRD D37).
+--  * eng_my_today_count()    đúng MỘT con số = số việc CÒN MỞ TRÊN APP của eng_my_today() (bước làm cùng thầy/cô / trên giấy không đếm; cho Study Launcher, PRD D37).
+--                            NULL nếu người gọi không phải học sinh (Launcher hiện "chưa liên kết").
 --  * eng_my_history(...)     mọi bài con đã nộp, mới nhất trước, có "đã được người lớn xem chưa".
 --  * eng_my_seen(...)        các bài mà người lớn đã làm gì đó, kèm lời góp ý (câu khen + điều cần sửa), mới xem nhất trước.
 -- Học sinh được nhận diện bằng auth.uid(); chỉ `authenticated` gọi được. Không bao giờ trả: điểm, kết quả đúng/sai, %, đáp án, giải thích, nhãn kỹ năng,
@@ -10,12 +11,13 @@
 
 -- 1. Nội bộ: các "dòng đã làm" của một em (attempt + bài nộp link/PDF hiện hành), kèm lúc người lớn xem đầu tiên. Không ai gọi trực tiếp. --------
 -- "Người lớn đã xem" = có MỘT hành động của người lớn trên chính bài đó: góp ý (S6, kể cả "Chỉ góp ý" và nhận xét kết), Đúng/Sai cho câu "cần xem" (Studio),
--- kết quả đã ghi cho lần làm Studio, quyết định duyệt S5 trên episode của nó, đánh giá bài sửa; với bài link / PDF: kết quả đã ghi cho bài giao.
--- Tự chấm của app KHÔNG phải "đã xem".
+-- quyết định duyệt S5 trên episode của nó, đánh giá bài sửa; với bài link / PDF: kết quả người lớn ghi cho bài giao SAU lúc em nộp.
+-- Tự chấm của app KHÔNG phải "đã xem": kết quả Studio do trigger ghi lúc nộp (eng_record_studio_result) KHÔNG tính; Đúng/Sai của người lớn (item_decisions) thì tính.
+-- Bài link / PDF đã nộp vẫn hiện ở Đã làm kể cả khi gia sư rút bài giao sau đó (đó là bài của em); cờ `retracted` để giao diện không mở lại thẻ.
 create or replace function english.eng_student_done(p_learner uuid)
 returns table (
   src text, ref uuid, activity_id uuid, assignment_id uuid, title text, kind text, step_no int, activity_type text,
-  submitted_at timestamptz, is_first boolean, used_hint boolean, offline boolean, seen_at timestamptz)
+  submitted_at timestamptz, is_first boolean, used_hint boolean, offline boolean, seen_at timestamptz, retracted boolean)
 language sql stable security definer set search_path = ''
 as $$
   select 'attempt'::text, t.id, a.id, null::uuid,
@@ -29,10 +31,10 @@ as $$
     (select pg_catalog.min(x.at) from (
        select f.created_at as at from english.feedback_notes f where f.source_attempt_id = t.id
        union all select d.at from english.item_decisions d where d.attempt_id = t.id
-       union all select r.created_at from english.results r where r.attempt_id = t.id
        union all select v.created_at from english.validation_decisions v join english.episodes e on e.id = v.episode_id where e.attempt_id = t.id
        union all select c.created_at from english.revision_checks c where c.attempt_id = t.id
-     ) x)
+     ) x),
+    false
   from english.attempts t
   join english.activity_instances a on a.id = t.activity_instance_id
   join english.inquiry_instances i on i.id = a.inquiry_instance_id
@@ -45,19 +47,19 @@ as $$
     s.attempt = 'first',
     s.used_hint,
     s.submitted_by_role <> 'student',
-    (select pg_catalog.min(r.created_at) from english.results r where r.assignment_id = g.id)
+    (select pg_catalog.min(r.created_at) from english.results r where r.assignment_id = g.id and r.created_at >= s.created_at),
+    exists (select 1 from english.assignment_events e where e.assignment_id = g.id and e.kind = 'retracted')
   from english.submissions s
   join english.assignments g on g.id = s.assignment_id
   where s.learner_id = p_learner
     and not exists (select 1 from english.submissions s2 where s2.supersedes_id = s.id)
-    and not exists (select 1 from english.assignment_events e where e.assignment_id = g.id and e.kind = 'retracted')
 $$;
 revoke execute on function english.eng_student_done(uuid) from public, anon, authenticated, service_role;
 
 -- 2. Hôm nay -------------------------------------------------------------------------------------------------------------------------
 -- Một việc = bước bài trên app đã mở chưa có lần nộp nào (bài Studio = 'app', bài chủ đề = 'topic'; bước app chưa làm được vẫn là việc, có nhãn `off_label`,
 -- không mở bài) · bài link / PDF chưa rút, chưa có bài nộp, chưa được ghi kết quả · bài sửa S6 đang chờ em sửa. Bước chưa đến ngày không trả.
--- practice = bài luyện (không phải bước kiểm tra tự làm): chỗ ô "Hỏi gia sư · Sắp có" mờ được hiện. Số câu: items_filled / items_total = số câu ĐÃ TRẢ LỜI trong nháp / số câu của bước (không bao giờ số câu đúng). Không "quá hạn".
+-- mode + purpose (chỉ delayed_check / transfer_check, như eng_my_home) để hiện nhãn Luyện tập / Kiểm tra và "Ôn lại bài cũ". practice = bài luyện (không phải bước kiểm tra tự làm): chỗ ô "Hỏi gia sư · Sắp có" mờ được hiện. Số câu: items_filled / items_total = số câu ĐÃ TRẢ LỜI trong nháp / số câu của bước (không bao giờ số câu đúng). Không "quá hạn".
 create or replace function english.eng_my_today() returns jsonb
 language sql stable security definer set search_path = ''
 as $$
@@ -66,7 +68,7 @@ as $$
     where m.user_id = auth.uid() and m.role = 'student'
   ),
   steps as (
-    select a.id as activity_id, a.step_no, a.activity_type, a.mode, i.id as instance_id, i.due_on, i.assigned_at,
+    select a.id as activity_id, a.step_no, a.activity_type, a.mode, a.purpose, i.id as instance_id, i.due_on, i.assigned_at,
            i.snapshot -> 'template' ->> 'title_vi' as title_vi, tp.kind as tkind,
            english.eng_step_supported(a.activity_type, a.mode) as doable,
            english.eng_step_effective_date(a.id) as opens_on,
@@ -104,6 +106,8 @@ as $$
         'time_min', (s.step ->> 'time_min')::int,
         'doable', s.doable,
         'practice', s.mode = 'PRACTICE',
+        'mode', s.mode,
+        'purpose', (select coalesce(pg_catalog.jsonb_agg(p order by p), '[]'::jsonb) from (select pg_catalog.unnest(s.purpose) as p) q where p in ('delayed_check', 'transfer_check')),
         'off_label', case when s.doable then null else english.eng_step_status_label(s.activity_type, s.mode) end,
         'has_draft', s.doable and (s.n_filled > 0 or pg_catalog.btrim(coalesce(s.draft ->> 'text', '')) <> ''),
         'draft_at', case when s.doable and (s.n_filled > 0 or pg_catalog.btrim(coalesce(s.draft ->> 'text', '')) <> '') then s.draft_at end,
@@ -154,16 +158,20 @@ as $$
   from parts p
 $$;
 
--- Đúng MỘT con số: số việc của Hôm nay (Study Launcher hiện số này + mở thẳng `/`). 0 nếu không phải học sinh.
+-- Đúng MỘT con số: số việc CÒN MỞ TRÊN APP (doable) của Hôm nay; bước làm cùng thầy/cô / trên giấy được liệt kê nhưng không đếm.
+-- NULL nếu người gọi không phải học sinh (đăng nhập cùng auth user với english.members.user_id; service_role bị từ chối).
 create or replace function english.eng_my_today_count() returns int
 language sql stable security definer set search_path = ''
 as $$
-  select coalesce(pg_catalog.jsonb_array_length(english.eng_my_today() -> 'items'), 0)
+  select case when exists (select 1 from english.members m where m.user_id = auth.uid() and m.role = 'student') then
+    (select pg_catalog.count(*)::int from pg_catalog.jsonb_array_elements(english.eng_my_today() -> 'items') x where (x ->> 'doable')::boolean)
+  end
 $$;
 
 -- 3. Đã làm --------------------------------------------------------------------------------------------------------------------------
--- p_before: chỉ lấy bài nộp TRƯỚC giờ này (trang sau). p_limit 1..50.
-create or replace function english.eng_my_history(p_before timestamptz default null, p_limit int default 20) returns jsonb
+-- Phân trang keyset: p_before + p_before_ref = con trỏ (submitted_at, ref) của dòng cuối trang trước; lấy các dòng (submitted_at, ref) < con trỏ, mới nhất trước.
+-- p_limit 1..50. `total` / `waiting` = số bài đã nộp / chưa được xem của CẢ em (không chỉ trang này), cho nhãn bộ lọc.
+create or replace function english.eng_my_history(p_before timestamptz default null, p_before_ref uuid default null, p_limit int default 20) returns jsonb
 language plpgsql stable security definer set search_path = ''
 as $$
 declare
@@ -172,26 +180,29 @@ declare
 begin
   select l.id into v_learner from english.members m join english.learners l on l.member_id = m.id
   where m.user_id = auth.uid() and m.role = 'student';
-  if v_learner is null then return pg_catalog.jsonb_build_object('items', '[]'::jsonb); end if;
-  return pg_catalog.jsonb_build_object('items', coalesce((
-    select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
-      'src', h.src, 'ref', h.ref, 'activity_id', h.activity_id, 'assignment_id', h.assignment_id,
-      'title', h.title, 'kind', h.kind, 'step_no', h.step_no, 'activity_type', h.activity_type,
-      'submitted_at', h.submitted_at, 'first', h.is_first, 'used_hint', h.used_hint, 'offline', h.offline,
-      'seen', h.seen_at is not null) order by h.submitted_at desc, h.ref)
-    from (
-      select d.* from english.eng_student_done(v_learner) d
-      where p_before is null or d.submitted_at < p_before
-      order by d.submitted_at desc, d.ref
-      limit v_limit) h), '[]'::jsonb));
+  if v_learner is null then return pg_catalog.jsonb_build_object('items', '[]'::jsonb, 'total', 0, 'waiting', 0); end if;
+  return pg_catalog.jsonb_build_object(
+    'total', (select pg_catalog.count(*)::int from english.eng_student_done(v_learner)),
+    'waiting', (select pg_catalog.count(*)::int from english.eng_student_done(v_learner) d where d.seen_at is null),
+    'items', coalesce((
+      select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+        'src', h.src, 'ref', h.ref, 'activity_id', h.activity_id, 'assignment_id', h.assignment_id,
+        'title', h.title, 'kind', h.kind, 'step_no', h.step_no, 'activity_type', h.activity_type,
+        'submitted_at', h.submitted_at, 'first', h.is_first, 'used_hint', h.used_hint, 'offline', h.offline,
+        'retracted', h.retracted, 'seen', h.seen_at is not null) order by h.submitted_at desc, h.ref desc)
+      from (
+        select d.* from english.eng_student_done(v_learner) d
+        where p_before is null or (d.submitted_at, d.ref) < (p_before, coalesce(p_before_ref, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid))
+        order by d.submitted_at desc, d.ref desc
+        limit v_limit) h), '[]'::jsonb));
 end
 $$;
 
 -- 4. Đã xem --------------------------------------------------------------------------------------------------------------------------
 -- Mỗi bài người lớn đã xem: lúc xem đầu tiên (seen_at), câu khen + tối đa 3 điều cần sửa (kèm trích đoạn) nếu có góp ý còn hiệu lực, trạng thái bài sửa,
 -- nhận xét kết (cho bài sửa). Không có góp ý → chỉ "đã xem". fb_state: note (chỉ góp ý) · todo (cần sửa, chưa sửa) · closed (đã xong ngoài app)
--- · revised (đã gửi bản sửa). Không trả điểm, kết quả, quyết định, ai xem.
-create or replace function english.eng_my_seen(p_before timestamptz default null, p_limit int default 20) returns jsonb
+-- · revised (đã gửi bản sửa). Con trỏ keyset (seen_at, ref) như trên. Không trả điểm, kết quả, quyết định, ai xem.
+create or replace function english.eng_my_seen(p_before timestamptz default null, p_before_ref uuid default null, p_limit int default 20) returns jsonb
 language plpgsql stable security definer set search_path = ''
 as $$
 declare
@@ -224,11 +235,12 @@ begin
             and not english.eng_revision_offline_answered(fb.id)
             and english.eng_activity_released(fb.revision_activity_id) then fb.revision_activity_id end,
         'closing_note', (select c.praise from english.feedback_notes c where c.source_attempt_id = h.ref and c.kind = 'closing')
-      ) order by h.seen_at desc, h.ref)
+      ) order by h.seen_at desc, h.ref desc)
     from (
       select d.* from english.eng_student_done(v_learner) d
-      where d.seen_at is not null and (p_before is null or d.seen_at < p_before)
-      order by d.seen_at desc, d.ref
+      where d.seen_at is not null
+        and (p_before is null or (d.seen_at, d.ref) < (p_before, coalesce(p_before_ref, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid)))
+      order by d.seen_at desc, d.ref desc
       limit v_limit) h
     left join lateral (
       select f.* from english.feedback_notes f
@@ -240,11 +252,11 @@ $$;
 -- 5. Quyền thực thi: CHỈ authenticated (người gọi nhận diện bằng auth.uid() bên trong hàm); không anon, không public, không service_role. -----------
 revoke execute on function english.eng_my_today() from public, anon, service_role;
 revoke execute on function english.eng_my_today_count() from public, anon, service_role;
-revoke execute on function english.eng_my_history(timestamptz, int) from public, anon, service_role;
-revoke execute on function english.eng_my_seen(timestamptz, int) from public, anon, service_role;
+revoke execute on function english.eng_my_history(timestamptz, uuid, int) from public, anon, service_role;
+revoke execute on function english.eng_my_seen(timestamptz, uuid, int) from public, anon, service_role;
 grant execute on function english.eng_my_today() to authenticated;
 grant execute on function english.eng_my_today_count() to authenticated;
-grant execute on function english.eng_my_history(timestamptz, int) to authenticated;
-grant execute on function english.eng_my_seen(timestamptz, int) to authenticated;
+grant execute on function english.eng_my_history(timestamptz, uuid, int) to authenticated;
+grant execute on function english.eng_my_seen(timestamptz, uuid, int) to authenticated;
 
 insert into english.schema_migrations(version) values ('0032') on conflict do nothing;

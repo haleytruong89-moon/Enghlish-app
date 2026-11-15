@@ -40,16 +40,23 @@ export function pickContinue(tasks: readonly Task[]): Continue | null {
   return next ? { task: next, resume: false } : null;
 }
 
-/** "Hôm nay còn n việc · khoảng m phút": n = every task; m = the minutes that are known (link / PDF work has none); null = no minutes known. */
+/**
+ * "Còn n việc · khoảng m phút": n = the tasks the child can do in the app (a step with the tutor / on paper is listed apart and not counted — the same
+ * number as eng_my_today_count); m = the minutes that are known (link / PDF work has none); null = no minutes known.
+ */
 export function summarize(tasks: readonly Task[]): { count: number; minutes: number | null } {
-  const known = tasks.map((t) => t.timeMin).filter((m): m is number => typeof m === "number" && m > 0);
-  return { count: tasks.length, minutes: known.length > 0 ? known.reduce((a, b) => a + b, 0) : null };
+  const open = tasks.filter((t) => t.doable);
+  const known = open.map((t) => t.timeMin).filter((m): m is number => typeof m === "number" && m > 0);
+  return { count: open.length, minutes: known.length > 0 ? known.reduce((a, b) => a + b, 0) : null };
 }
 
-/** Where a task opens. Link / PDF work opens in its own card on the same page (anchor). */
-export function taskHref(t: Task): string | null {
+/**
+ * Where a task opens. Link / PDF work opens in its own card on the same page (anchor); when the page has no card for it (the card list holds the
+ * newest 40 only) it opens its own page /done/[id].
+ */
+export function taskHref(t: Task, hasCard = true): string | null {
   if (!t.doable) return null;
-  if (t.assignmentId) return `#task-${t.assignmentId}`;
+  if (t.assignmentId) return hasCard ? `#task-${t.assignmentId}` : `/done/${t.assignmentId}`;
   return t.activityId ? `/activities/${t.activityId}` : null;
 }
 

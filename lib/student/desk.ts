@@ -10,7 +10,7 @@ import { parseReviewPoints, parseStudentPractice } from "@/lib/practice/shape";
 import { createSupabasePracticeStore } from "@/lib/practice/supabaseStore";
 import { createUserClient } from "@/lib/supabase/server";
 import { parseHistory, parseSeen, parseToday } from "./shape";
-import type { HistoryRow, SeenRow, Task } from "./types";
+import type { HistoryPage, SeenRow, Task } from "./types";
 
 /** W4b · loaders of the child's desk. Every read goes through the USER client and an eng_my_* function (auth.uid() decides; no service role). */
 
@@ -50,7 +50,7 @@ export async function loadDeskBase(): Promise<DeskBaseResult> {
   if (home.kind !== "student") return { kind: "not-found" };
   const me = home.learners[0];
   if (!me) return { kind: "not-found" };
-  const seenFirst = await rpcOrNull("eng_my_seen", { p_before: null, p_limit: DESK_PAGE.seen }, parseSeen);
+  const seenFirst = await rpcOrNull("eng_my_seen", { p_before: null, p_before_ref: null, p_limit: DESK_PAGE.seen }, parseSeen);
   return { kind: "ok", learnerId: me.id, alias: me.alias, color: safeColor(me.color), isTest: me.isTest, seenFirst };
 }
 
@@ -71,12 +71,22 @@ export async function loadToday(): Promise<TodayResult> {
   return { kind: "ok", tasks, practice: practice.items, review: practice.review };
 }
 
-export async function loadHistory(before: string | null): Promise<HistoryRow[] | null> {
-  return rpcOrNull("eng_my_history", { p_before: before, p_limit: DESK_PAGE.done }, parseHistory);
+/** The paging cursor of "Đã xem" / "Đã làm": the raw (timestamp, id) of the last row of the previous page. Checked by shape, never re-parsed as a date. */
+export type Cursor = { before: string; ref: string };
+
+const TS_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}(:?\d{2})?)$/;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function parseCursor(before: string | null | undefined, ref: string | null | undefined): Cursor | null {
+  return before && ref && TS_RE.test(before) && UUID_RE.test(ref) ? { before, ref } : null;
 }
 
-export async function loadSeen(before: string | null): Promise<SeenRow[] | null> {
-  return rpcOrNull("eng_my_seen", { p_before: before, p_limit: DESK_PAGE.seen }, parseSeen);
+export async function loadHistory(cursor: Cursor | null): Promise<HistoryPage | null> {
+  return rpcOrNull("eng_my_history", { p_before: cursor?.before ?? null, p_before_ref: cursor?.ref ?? null, p_limit: DESK_PAGE.done }, parseHistory);
+}
+
+export async function loadSeen(cursor: Cursor | null): Promise<SeenRow[] | null> {
+  return rpcOrNull("eng_my_seen", { p_before: cursor?.before ?? null, p_before_ref: cursor?.ref ?? null, p_limit: DESK_PAGE.seen }, parseSeen);
 }
 
 /** "Việc cần ôn" grouped by domain (SM-2): labels and domain names only. A failed read leaves it out. */

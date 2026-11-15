@@ -1,6 +1,6 @@
 /** Parsers for the desk reads (zod): the functions already return only what the child may see; strict picks drop anything else here as well. */
 import { z } from "zod";
-import type { FeedbackState, HistoryKind, HistoryRow, SeenRow, Task, TaskKind } from "./types";
+import type { FeedbackState, HistoryKind, HistoryPage, SeenRow, Task, TaskKind } from "./types";
 
 const kind = z.enum(["app", "topic", "link", "paper", "revision"]);
 const nullableStr = z.string().nullable().optional();
@@ -18,6 +18,8 @@ const rawTask = z.object({
   time_min: nullableInt,
   doable: z.boolean(),
   practice: z.boolean().optional(),
+  mode: z.enum(["PRACTICE", "INDEPENDENT_CHECK"]).nullable().optional(),
+  purpose: z.array(z.string()).optional(),
   off_label: z.enum(["with_tutor", "on_paper"]).nullable().optional(),
   has_draft: z.boolean(),
   draft_at: nullableStr,
@@ -39,6 +41,8 @@ export function parseToday(input: unknown): Task[] {
     timeMin: t.time_min ?? null,
     doable: t.doable,
     practice: t.practice ?? false,
+    mode: t.mode ?? null,
+    purpose: (t.purpose ?? []).filter((p) => p === "delayed_check" || p === "transfer_check"),
     offLabel: t.off_label ?? null,
     hasDraft: t.has_draft,
     draftAt: t.draft_at ?? null,
@@ -59,11 +63,15 @@ const rawRow = z.object({
   submitted_at: z.string(),
 });
 
-export function parseHistory(input: unknown): HistoryRow[] {
+export function parseHistory(input: unknown): HistoryPage {
   const r = z
-    .object({ items: z.array(rawRow.extend({ first: z.boolean().nullable().optional(), used_hint: z.boolean().nullable().optional(), offline: z.boolean().nullable().optional(), seen: z.boolean() })) })
+    .object({
+      total: z.number().int().optional(),
+      waiting: z.number().int().optional(),
+      items: z.array(rawRow.extend({ first: z.boolean().nullable().optional(), used_hint: z.boolean().nullable().optional(), offline: z.boolean().nullable().optional(), retracted: z.boolean().optional(), seen: z.boolean() })),
+    })
     .parse(input);
-  return r.items.map((x) => ({
+  const rows = r.items.map((x) => ({
     src: x.src,
     ref: x.ref,
     activityId: x.activity_id ?? null,
@@ -76,8 +84,10 @@ export function parseHistory(input: unknown): HistoryRow[] {
     first: x.first ?? true,
     usedHint: x.used_hint ?? null,
     offline: x.offline ?? false,
+    retracted: x.retracted ?? false,
     seen: x.seen,
   }));
+  return { rows, total: r.total ?? rows.length, waiting: r.waiting ?? rows.filter((x) => !x.seen).length };
 }
 
 export function parseSeen(input: unknown): SeenRow[] {
