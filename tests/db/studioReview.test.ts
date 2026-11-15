@@ -87,7 +87,7 @@ describe("Studio B1 review findings (migration 0024)", () => {
     await fail(approve(d, bad), "22023", /\(bad_skill\)/);
   });
 
-  it("the child never sees the model answer of an open item marked Sai; the explanation stays", async () => {
+  it("the child never sees the model answer or the explanation of an open item marked Sai", async () => {
     const d = await newDraft((x) => ({
       ...x,
       items: x.items.map((i) => (i.n === 9 ? { ...i, out_of_app: false, kind: "open", key: "A MODEL ANSWER", explanation_vi: "Viết một câu về bức tranh." } : i)),
@@ -96,9 +96,10 @@ describe("Studio B1 review findings (migration 0024)", () => {
     const act = await assign(d.id);
     const att = await submit(act.activity_id, { q1: "B. had", q2: "A. must", q3: "A. off", q4: "C. A visit that changed Lan's plans", q5: "B. The robot room was interesting", q6: "happiness", q7: "I wish I could", q8: "is said to be", q9: "I see a cat" });
     await svc("select english.eng_decide_studio_items($1, $2::jsonb, $3, $4) as r", [att.attempt_id, JSON.stringify([{ item_id: "q9", result: "incorrect" }]), s.members.tutorNguyen, `dc-${randomUUID()}`]);
-    const review = await asStudent<{ wrong: { n: number; expected: string | null; explanation_vi: string | null }[] }>(s.users.studentNguyen, "select english.eng_my_studio_review($1) as r", [act.activity_id]);
-    expect(review.wrong).toEqual([expect.objectContaining({ n: 9, expected: null, explanation_vi: "Viết một câu về bức tranh." })]);
+    const review = await asStudent<{ look: { n: number }[] }>(s.users.studentNguyen, "select english.eng_my_result_view($1) as r", [act.activity_id]);
+    expect(review.look.map((w) => w.n)).toContain(9);
     expect(JSON.stringify(review)).not.toContain("A MODEL ANSWER");
+    expect(JSON.stringify(review)).not.toContain("Viết một câu về bức tranh.");
   });
 
   it("'correct' is counted from correct results only: an app item with no check result is not counted correct", async () => {

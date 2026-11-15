@@ -271,16 +271,17 @@ describe("Studio B1 (migration 0024)", () => {
         q1: "correct", q2: "incorrect", q3: "correct", q4: "correct", q5: "blank", q6: "incorrect", q7: "needs_person", q8: "needs_person",
       });
       expect(await q1("select 1 from english.results where attempt_id = $1", [attempt1])).toEqual([]);
-      const review = await asStudent<{ wrong: { n: number; given: string; expected: string | null }[]; pending: number[] }>(s.users.studentNguyen, "select english.eng_my_studio_review($1) as r", [activityId]);
-      expect(review.wrong.map((w) => w.n)).toEqual([2, 5, 6]);
-      expect(review.wrong[0]).toMatchObject({ given: "B. can't", expected: "A. must" });
-      expect(review.wrong.find((w) => w.n === 6)?.expected).toBe("happiness");
-      expect(review.pending).toEqual([7, 8]);
-      expect(JSON.stringify(review)).not.toMatch(/"(correct|total|checked|score|tag_key|target_id)"/);
-      expect(await asStudent(s.users.studentAn, "select english.eng_my_studio_review($1) as r", [activityId])).toBeNull();
-      // a weekly-topic step gives {}
+      // W4c2 (0034): the child's screen after submitting has no model answer and no explanation (the old eng_my_studio_review is revoked)
+      const review = await asStudent<{ look: { n: number; given: string }[]; open: { n: number }[]; others_fine: boolean }>(s.users.studentNguyen, "select english.eng_my_result_view($1) as r", [activityId]);
+      expect(review.look.map((w) => w.n)).toEqual([2, 5, 6]);
+      expect(review.look[0]).toMatchObject({ given: "B. can't" });
+      expect(review.open.map((w) => w.n)).toEqual([7, 8]);
+      expect(review.others_fine).toBe(true);
+      expect(JSON.stringify(review)).not.toMatch(/"(correct|total|checked|score|tag_key|target_id|expected|explanation_vi|answer)"/);
+      expect(await asStudent(s.users.studentAn, "select english.eng_my_result_view($1) as r", [activityId])).toBeNull();
+      // a weekly-topic step with nothing submitted gives null
       const topicStep = (await q1<{ id: string }>("select a.id from english.activity_instances a join english.inquiry_instances i on i.id = a.inquiry_instance_id where a.learner_id = $1 and i.template_id not like '%-ST-%' limit 1", [s.learners.nguyen]))[0];
-      if (topicStep) expect(await asStudent(s.users.studentNguyen, "select english.eng_my_studio_review($1) as r", [topicStep.id])).toEqual({});
+      if (topicStep) expect(await asStudent(s.users.studentNguyen, "select english.eng_my_result_view($1) as r", [topicStep.id])).toBeNull();
     });
 
     it("Hộp duyệt lists the waiting items for Nguyên's tutor and the parent, not for An's tutor", async () => {
@@ -315,9 +316,9 @@ describe("Studio B1 (migration 0024)", () => {
       const r = await recomputeLearner(pgEngineStore(db.client), s.learners.nguyen, null);
       expect(r.results.length).toBeGreaterThan(0);
       // the child now sees only the wrong items, nothing waits
-      const review = await asStudent<{ wrong: { n: number }[]; pending: number[] }>(s.users.studentNguyen, "select english.eng_my_studio_review($1) as r", [activityId]);
-      expect(review).toMatchObject({ pending: [] });
-      expect(review.wrong.map((w) => w.n)).toEqual([2, 5, 6]);
+      const review = await asStudent<{ look: { n: number }[]; open: { n: number }[] }>(s.users.studentNguyen, "select english.eng_my_result_view($1) as r", [activityId]);
+      expect(review.open).toEqual([]);
+      expect(review.look.map((w) => w.n)).toEqual([2, 5, 6]);
     });
 
     it("retry: accepted answers check the next attempt at once; the result is written at submit, as a retry that does not count", async () => {
