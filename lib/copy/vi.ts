@@ -739,6 +739,7 @@ export const purgePage = {
     submission_feedback: "Góp ý cho bài nộp",
     item_retries: "Lần thử lại câu",
     work_test_marks: "Dấu bài kiểm tra",
+    weekly_goals: "Mục tiêu tuần",
     login_names: "Tên đăng nhập ngắn",
     learners: "Hồ sơ của em",
     members: "Tài khoản của em trong app",
