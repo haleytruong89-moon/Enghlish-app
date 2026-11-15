@@ -24,8 +24,9 @@ export function SubmitPanel({ learnerId, assignmentId, kind, onDone }: Props) {
   const router = useRouter();
   const [items, setItems] = useState<PickedItem[]>([]);
   const [link, setLink] = useState("");
-  const [first, setFirst] = useState(true);
-  const [hint, setHint] = useState(false);
+  // Unknown stays unknown: nothing is pre-chosen. "first or retry" must be picked (the column is not null); the hint answer may stay "Không rõ" (sent as null).
+  const [first, setFirst] = useState<boolean | null>(null);
+  const [hint, setHint] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<"upload" | "send" | null>(null);
   // Kept across retries: a lost answer is retried with the same id and only the files that failed are sent again.
@@ -39,6 +40,7 @@ export function SubmitPanel({ learnerId, assignmentId, kind, onDone }: Props) {
     const linkClean = link.trim();
     if (kind === "link" && linkClean && !parseHttpsUrl(linkClean)) return setError(practiceErrorText("invalid_link", who));
     if (items.length === 0 && !linkClean) return setError(practiceStudent.needImage);
+    if (first === null) return setError(practiceStudent.needFirstAnswer);
 
     setBusy("upload");
     const files = items.map((i) => i.file);
@@ -50,7 +52,7 @@ export function SubmitPanel({ learnerId, assignmentId, kind, onDone }: Props) {
     setBusy("send");
     const body = {
       attempt: first ? "first" : "retry",
-      used_hint: hint,
+      used_hint: hint, // null = the grown-up does not know
       link_url: kind === "link" && linkClean ? linkClean : null,
       files: up.files,
     };
@@ -113,10 +115,10 @@ export function SubmitPanel({ learnerId, assignmentId, kind, onDone }: Props) {
       <div role="group" aria-label={practiceStudent.firstQ} className="flex flex-col gap-2">
         <span>{practiceStudent.firstQ}</span>
         <span className="flex flex-wrap gap-2">
-          <button type="button" aria-pressed={first} onClick={() => setFirst(true)} data-testid={`${prefix}-first-yes`} className={pill(first)}>
+          <button type="button" aria-pressed={first === true} onClick={() => setFirst(true)} data-testid={`${prefix}-first-yes`} className={pill(first === true)}>
             {practiceStudent.firstYes}
           </button>
-          <button type="button" aria-pressed={!first} onClick={() => setFirst(false)} data-testid={`${prefix}-first-no`} className={pill(!first)}>
+          <button type="button" aria-pressed={first === false} onClick={() => setFirst(false)} data-testid={`${prefix}-first-no`} className={pill(first === false)}>
             {practiceStudent.firstNo}
           </button>
         </span>
@@ -124,11 +126,14 @@ export function SubmitPanel({ learnerId, assignmentId, kind, onDone }: Props) {
       <div role="group" aria-label={hintQuestion} className="flex flex-col gap-2">
         <span>{hintQuestion}</span>
         <span className="flex flex-wrap gap-2">
-          <button type="button" aria-pressed={hint} onClick={() => setHint(true)} data-testid={`${prefix}-hint-yes`} className={pill(hint)}>
+          <button type="button" aria-pressed={hint === true} onClick={() => setHint(true)} data-testid={`${prefix}-hint-yes`} className={pill(hint === true)}>
             {practiceStudent.hintYes}
           </button>
-          <button type="button" aria-pressed={!hint} onClick={() => setHint(false)} data-testid={`${prefix}-hint-no`} className={pill(!hint)}>
+          <button type="button" aria-pressed={hint === false} onClick={() => setHint(false)} data-testid={`${prefix}-hint-no`} className={pill(hint === false)}>
             {practiceStudent.hintNo}
+          </button>
+          <button type="button" aria-pressed={hint === null} onClick={() => setHint(null)} data-testid={`${prefix}-hint-unknown`} className={pill(hint === null)}>
+            {practiceStudent.hintUnknown}
           </button>
         </span>
       </div>

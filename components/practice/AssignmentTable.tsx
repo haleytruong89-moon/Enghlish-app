@@ -149,12 +149,9 @@ export function AssignmentTable({
                 ) : null}
               </div>
               {sub && status !== "retracted" ? (
-                <details className="rounded-xl bg-paper px-3" data-testid={`work-${a.id}`}>
-                  <summary className="min-h-11 cursor-pointer py-2.5 text-sm font-medium text-accent">{submissionFeedbackCopy.viewWork(sub.files.length)}</summary>
-                  <div className="pb-3">
-                    <SubmissionPreview assignment={a} />
-                  </div>
-                </details>
+                <LazyWork testId={`work-${a.id}`} label={submissionFeedbackCopy.viewWork(sub.files.length)}>
+                  <SubmissionPreview assignment={a} />
+                </LazyWork>
               ) : null}
               {sub && status !== "retracted" ? (
                 <SubmissionFeedbackForm learnerId={learnerId} assignmentId={a.id} submissionId={sub.id} feedback={a.feedback} viewerMemberId={viewerMemberId} />
@@ -171,5 +168,16 @@ export function AssignmentTable({
         })}
       </ul>
     </div>
+  );
+}
+
+/** The pages of a submission are only asked for once the grown-up opens the row (up to 12 pictures per bài, many bài per page). */
+function LazyWork({ testId, label, children }: { testId: string; label: string; children: React.ReactNode }) {
+  const [opened, setOpened] = useState(false);
+  return (
+    <details className="rounded-xl bg-paper px-3" data-testid={testId} onToggle={(e) => setOpened((e.currentTarget as HTMLDetailsElement).open)}>
+      <summary className="min-h-11 cursor-pointer py-2.5 text-sm font-medium text-accent">{label}</summary>
+      <div className="pb-3">{opened ? children : null}</div>
+    </details>
   );
 }

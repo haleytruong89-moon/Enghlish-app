@@ -481,7 +481,11 @@ test.describe.serial("W4c1: paper pages, link result pictures, feedback on a sub
     const again = await page.request.post("/api/student/submissions", {
       data: { assignment_id: paperId, client_id: randomUUID(), attempt: "first", used_hint: false, link_url: null, files: [] },
     });
-    expect(again.status()).toBe(400); // no files and no link; and a real send would be 409 already_reviewed
+    expect(again.status()).toBe(400); // no files and no link
+    // the real upload path (what the screen calls first) is closed too: 409 already_reviewed, no ticket is made
+    const ticket = await page.request.post("/api/student/files", { data: { assignment_id: paperId, mime: "image/png", bytes: 100 } });
+    expect(ticket.status()).toBe(409);
+    expect(await ticket.json()).toMatchObject({ error: "already_reviewed" });
   });
 
   test("a link: 'Chưa, làm tiếp sau' keeps it in Hôm nay; 'Xong rồi' opens the result pictures; two pictures + two answers send it", async ({ page }) => {
@@ -520,5 +524,64 @@ test.describe.serial("W4c1: paper pages, link result pictures, feedback on a sub
       data: { assignment_id: paperId, client_id: randomUUID(), attempt: "first", used_hint: false, link_url: null, files: [] },
     });
     expect(send.status()).toBe(404);
+  });
+
+  test("a grown-up has no send screen: a tutor opening /submit/[id] gets a plain 404", async ({ page }) => {
+    await loginAs(page, "tutorNguyen");
+    const res = await page.goto(`/submit/${paperId}`);
+    expect(res?.status()).toBe(404);
+  });
+
+  test("a photo with a GPS block leaves the device without it: the stored page has no Exif segment", async ({ page }) => {
+    const title = `Đề giấy Exif ${Date.now()}`;
+    await loginAs(page, "tutorNguyen");
+    await page.goto(`/learners/${NG}/assign?way=pdf`);
+    await page.getByTestId("pdf-input").setInputFiles({ name: "exif.pdf", mimeType: "application/pdf", buffer: PDF });
+    await page.getByTestId("assign-title").fill(title);
+    await page.getByTestId("assign-submit").click();
+    await expect(page.getByTestId("assign-done")).toContainText(assignPage.done);
+    const exifId = await assignmentIdOf(page, title);
+
+    await page.context().clearCookies();
+    await loginAs(page, "studentNguyen");
+    await page.goto(`/submit/${exifId}`);
+    // a real JPEG made by the browser, then an APP1 "Exif" segment with a GPS marker spliced in right after the start-of-image bytes
+    const b64 = await page.evaluate(async () => {
+      const c = document.createElement("canvas");
+      c.width = 64;
+      c.height = 48;
+      const x = c.getContext("2d")!;
+      x.fillStyle = "#777777";
+      x.fillRect(0, 0, 64, 48);
+      const blob = await new Promise<Blob>((resolve) => c.toBlob((b) => resolve(b!), "image/jpeg"));
+      let out = "";
+      new Uint8Array(await blob.arrayBuffer()).forEach((v) => (out += String.fromCharCode(v)));
+      return btoa(out);
+    });
+    const plain = Buffer.from(b64, "base64");
+    const tiff = Buffer.from([0x4d, 0x4d, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    const payload = Buffer.concat([Buffer.from("Exif\0\0", "latin1"), tiff, Buffer.from("GPSLatitude 21.0285 GPSLongitude 105.8542", "latin1")]);
+    const app1 = Buffer.concat([Buffer.from([0xff, 0xe1, (payload.length + 2) >> 8, (payload.length + 2) & 0xff]), payload]);
+    const withGps = Buffer.concat([plain.subarray(0, 2), app1, plain.subarray(2)]);
+    expect(withGps.includes(Buffer.from("Exif\0\0", "latin1"))).toBe(true);
+    await page.getByTestId("paper-file-input").setInputFiles({ name: "gps.jpg", mimeType: "image/jpeg", buffer: withGps });
+    await expect(page.getByTestId("paper-page")).toHaveCount(1);
+    await page.getByTestId("ask-first-yes").click();
+    await page.getByTestId("ask-hint-no").click();
+    await page.getByTestId("submit-send").click();
+    await expect(page.getByTestId("submit-done")).toBeVisible();
+
+    await page.context().clearCookies();
+    await loginAs(page, "tutorNguyen");
+    await page.goto(`/learners/${NG}/assign`);
+    const work = page.getByTestId(`work-${exifId}`);
+    await work.locator("summary").click();
+    const src = await work.locator('[data-testid="submission-image"]').first().getAttribute("src");
+    const stored = await page.request.get(src!); // follows the 5-minute link to the stored object
+    expect(stored.status()).toBe(200);
+    const bytes = await stored.body();
+    expect(bytes.subarray(0, 2).toString("hex")).toBe("ffd8");
+    expect(bytes.includes(Buffer.from("Exif\0\0", "latin1"))).toBe(false);
+    expect(bytes.includes(Buffer.from("GPS", "latin1"))).toBe(false);
   });
 });

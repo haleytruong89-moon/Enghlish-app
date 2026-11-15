@@ -25,12 +25,17 @@ export function outputMime(mime: string): "image/png" | "image/jpeg" {
  * Check a picked / pasted file and shrink an image to at most MAX_IMAGE_SIDE pixels on the longest side. PDFs pass through unchanged.
  * An image that is already small enough and under the size limit is sent as it is.
  */
-export async function prepareFile(file: File | Blob, nameHint = "anh"): Promise<PrepareResult> {
+export async function prepareFile(file: File | Blob, nameHint = "anh", opts: { stripMetadata?: boolean } = {}): Promise<PrepareResult> {
   const mime = file.type;
   if (!isAllowedMime(mime)) return { ok: false, reason: "type" };
   const name = "name" in file && typeof file.name === "string" && file.name ? file.name : nameHint;
   if (!isImageMime(mime)) {
-    return file.size > MAX_FILE_BYTES ? { ok: false, reason: "too_big" } : { ok: true, file: { blob: file, mime, bytes: file.size, name } };
+    if (file.size > MAX_FILE_BYTES) return { ok: false, reason: "too_big" };
+    if (!opts.stripMetadata) return { ok: true, file: { blob: file, mime, bytes: file.size, name } };
+    // A grown-up's PDF leaves the device with its document details blanked (title, author, creator, XMP).
+    const { scrubPdf } = await import("../pdf/cut");
+    const clean = await scrubPdf(file);
+    return clean ? { ok: true, file: { blob: clean, mime, bytes: clean.size, name } } : { ok: false, reason: "unreadable" };
   }
   let bitmap: ImageBitmap;
   try {
@@ -40,7 +45,8 @@ export async function prepareFile(file: File | Blob, nameHint = "anh"): Promise<
   }
   try {
     const fit = fitWithin(bitmap.width, bitmap.height);
-    if (!fit.scaled && file.size <= MAX_FILE_BYTES) return { ok: true, file: { blob: file, mime, bytes: file.size, name } };
+    // With stripMetadata every picture is drawn again, whatever its size: a photo's location / camera / time live in the file, not in the pixels.
+    if (!opts.stripMetadata && !fit.scaled && file.size <= MAX_FILE_BYTES) return { ok: true, file: { blob: file, mime, bytes: file.size, name } };
     const canvas = document.createElement("canvas");
     canvas.width = fit.width;
     canvas.height = fit.height;

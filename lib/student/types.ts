@@ -70,6 +70,8 @@ export type SeenRow = {
   submittedAt: string;
   /** The raw timestamp from the database: it is the paging cursor, so it is never reformatted. */
   seenAt: string;
+  /** When the row last had news for the child: the later of seenAt and the time the shown feedback was written (a feedback written or edited after the first look is news again). Drives the "Mới" marks; sorting stays on seenAt. */
+  newsAt: string;
   praise: string | null;
   notes: FeedbackNote[];
   state: FeedbackState | null;

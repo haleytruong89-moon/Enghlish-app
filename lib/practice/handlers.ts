@@ -330,7 +330,9 @@ export async function handleWriteSubmissionFeedback(deps: PracticeDeps, learnerI
   if (hasScoreWords(b.praise) || b.items.some((i) => hasScoreWords(i.text))) return fail(400, "score_words");
   // The submission must be the CURRENT one of this assignment (not retracted): anything else looks like "does not exist".
   const [a] = await loadOverview(deps, g.grant.learner.id, assignmentId);
-  if (!a || a.retractedAt || a.submission?.id !== submissionId) return fail(404, "not_found");
+  if (!a || a.retractedAt || !a.submission) return fail(404, "not_found");
+  // The child sent again after the grown-up opened the page: say so (the screen asks to reload) instead of "not found".
+  if (a.submission.id !== submissionId) return fail(409, "submission_replaced");
   try {
     const r = (await deps.store.writeSubmissionFeedback({
       submissionId, praise: b.praise ? b.praise : null, items: b.items, supersedesId: b.supersedes_id ?? null, byMemberId: g.grant.member.id, clientId: b.client_id,

@@ -145,6 +145,19 @@ describe("paper / link submission and feedback on a submission (migration 0033)"
       await fail(submit2(a.id, { clientId, files: sent, hint: true }), "23505");
     });
 
+    it("a file id that already belongs to someone else (another child's page, or a file the tutor registered) cannot be attached: 23505, nothing written", async () => {
+      const an = await svc<Svc>("select english.eng_create_assignment($1, 'link', $2, $3, '{}'::text[], null, null, null, $4, $5) as r", [AN(), "https://www.test-english.com/y", "An's link", M().tutorAn, randomUUID()]);
+      const anFile = jpg();
+      await submit2(an.id, { by: M().studentAn, files: [anFile] });
+      const mineA = await makeLink("steals a file id");
+      const before = await count("select count(*)::int as n from english.submissions");
+      await fail(submit2(mineA.id, { files: [anFile] }), "23505", /only be used once/);
+      const pdfMain = pdfFile();
+      const withPdf = await svc<Svc>("select english.eng_create_assignment($1, 'pdf', null, $2, '{}'::text[], null, null, $3::jsonb, $4, $5) as r", [NG(), "Có file của thầy/cô", JSON.stringify({ main: pdfMain }), M().tutorNguyen, randomUUID()]);
+      await fail(submit2(withPdf.id, { files: [{ ...pdfMain, mime: "application/pdf" }] }), "23505", /only be used once/);
+      expect(await count("select count(*)::int as n from english.submissions")).toBe(before);
+    });
+
     it("the other child's student gets 'not found'; a retracted assignment too", async () => {
       const a = await makePdf("An's", AN(), M().tutorAn);
       await fail(submit2(a.id, { by: M().studentNguyen }), "P0002");
@@ -338,6 +351,8 @@ describe("paper / link submission and feedback on a submission (migration 0033)"
       const row = (await seen(s.users.studentNguyen)).find((r) => r.ref === sub.id)!;
       expect(row.praise).toBeNull();
       expect(row.notes).toEqual([{ n: 1, text: "Mới 1", excerpt: null }]);
+      // seen_at stays the first look; fb_at is when the SHOWN version was written, so an edit is news again ("Mới")
+      expect(Date.parse(row.fb_at as string)).toBeGreaterThan(Date.parse(row.seen_at as string));
       const b = await makeLink("praise only");
       const sb = await submit2(b.id);
       await feedback(sb.id, { praise: "Chỉ khen.", items: [] });

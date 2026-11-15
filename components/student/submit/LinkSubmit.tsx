@@ -19,8 +19,8 @@ import { useSendWork } from "./useSendWork";
  * "Nộp bài link": open the exercise (new tab) → "Làm xong chưa?" (Chưa = it stays in Hôm nay) → photos / screenshots of the result page → two quick
  * questions → Nộp. The result pictures are pictures only (no PDF), up to 12.
  */
-export function LinkSubmit({ item }: { item: StudentPracticeItem }) {
-  const pagesApi = usePages({ allowPdf: false });
+export function LinkSubmit({ item, maxPages }: { item: StudentPracticeItem; maxPages?: number }) {
+  const pagesApi = usePages({ allowPdf: false, maxPages });
   const [opened, setOpened] = useState(false);
   const [finished, setFinished] = useState<"yes" | "no" | null>(null);
   const [answers, setAnswers] = useState<TwoAnswers>({ first: null, hint: null });

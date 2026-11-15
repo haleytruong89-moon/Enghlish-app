@@ -459,9 +459,11 @@ describe("feedback on a submission (W4c1)", () => {
     expect(s.writeSubmissionFeedback).not.toHaveBeenCalled();
   });
 
-  it("the submission must be the CURRENT one of this assignment: another id, a retracted assignment or no submission look like 'not found'", async () => {
+  it("the submission must be the CURRENT one: an older id says 'replaced' (409); a retracted assignment, no submission or a bad id look like 'not found'", async () => {
     const s = makeStore({ overview: withSub() });
-    expect((await call("tutorAn", s, body, "e0000000-0000-4000-8000-000000000099")).status).toBe(404);
+    const stale = await call("tutorAn", s, body, "e0000000-0000-4000-8000-000000000099");
+    expect(stale.status).toBe(409);
+    expect(stale.body).toMatchObject({ error: "submission_replaced" });
     expect((await call("tutorAn", s, body, "nope")).status).toBe(404);
     expect((await call("tutorAn", makeStore())).status).toBe(404); // no submission on the assignment
     const gone = makeStore({ overview: vi.fn(async () => [assignmentRow({ retracted_at: "2026-10-16T05:00:00Z", submission: { id: SUB, created_at: "2026-10-16T09:00:00Z", attempt: "first", used_hint: false, link_url: null, by_role: "student", files: [] } })]) });

@@ -40,7 +40,7 @@ create table if not exists english.submission_feedback (
   submission_id uuid not null references english.submissions(id),
   assignment_id uuid not null references english.assignments(id),
   praise text check (praise is null or (pg_catalog.length(pg_catalog.btrim(praise)) between 1 and 400 and not english.eng_has_score_words(praise))),
-  -- [{n: 1..3, text}]: chữ ≤ 300; chữ dạng điểm bị từ chối (chỉ kiểm text, như S6).
+  -- [{n: 1..3, text}]: bảng chỉ chặn số phần tử (≤ 3) và chữ dạng điểm (như S6); độ dài chữ 1..300 và việc đánh số lại do eng_write_submission_feedback giữ (người ghi duy nhất).
   items jsonb not null default '[]'::jsonb
     check (pg_catalog.jsonb_typeof(items) = 'array' and pg_catalog.jsonb_array_length(items) <= 3 and english.eng_feedback_texts_ok(items)),
   supersedes_id uuid references english.submission_feedback(id),
@@ -115,7 +115,8 @@ begin
   if not found then
     raise exception 'eng_submit_practice_v2: assignment not found' using errcode = 'P0002';
   end if;
-  select * into v_learner from english.learners l where l.id = v_a.learner_id for update;
+  -- Cùng một khóa với eng_write_submission_feedback: nộp bài và góp ý của một em xếp hàng với nhau.
+  select * into v_learner from english.learners l where l.id = v_a.learner_id for no key update;
   select * into v_member from english.members m where m.id = p_by;
   if v_member.id is null then
     raise exception 'eng_submit_practice_v2: assignment not found' using errcode = 'P0002';
@@ -235,6 +236,9 @@ begin
     raise exception 'eng_write_submission_feedback: this member may not give feedback for this learner' using errcode = '42501';
   end if;
 
+  -- Khóa dòng của em (cùng kiểu khóa với eng_submit_practice_v2): nộp bài mới và góp ý, hay hai góp ý cùng lúc, xếp hàng; mọi câu hỏi "còn hiện hành không" bên dưới đọc SAU khóa.
+  perform 1 from english.learners l where l.id = v_sub.learner_id for no key update;
+
   -- Hình dạng: mảng ≤ 3 phần tử, mỗi phần tử là object có "text" 1..300 ký tự sau khi cắt khoảng trắng; đánh số lại.
   if pg_catalog.jsonb_typeof(p_items) <> 'array' or pg_catalog.jsonb_array_length(p_items) > 3 then
     raise exception 'eng_write_submission_feedback: items must be a list of at most 3 (bad_items)' using errcode = '22023';
@@ -270,8 +274,6 @@ begin
     raise exception 'eng_write_submission_feedback: this client id was already used for other feedback (client_id_reused)' using errcode = '23505';
   end if;
 
-  -- Khóa bài giao: hai người góp ý cùng lúc xếp hàng; rồi mới hỏi "bài nộp này còn hiện hành không".
-  perform 1 from english.assignments a where a.id = v_sub.assignment_id for no key update;
   if exists (select 1 from english.assignment_events e where e.assignment_id = v_sub.assignment_id and e.kind = 'retracted') then
     raise exception 'eng_write_submission_feedback: assignment not found (not_found)' using errcode = 'P0002';
   end if;
@@ -360,7 +362,7 @@ as $$
     s.submitted_by_role <> 'student',
     (select pg_catalog.min(x.at) from (
        select r.created_at as at from english.results r where r.assignment_id = g.id and r.created_at >= s.created_at
-       union all select sf.created_at from english.submission_feedback sf where sf.assignment_id = g.id and sf.created_at >= s.created_at) x),
+       union all select sf.created_at from english.submission_feedback sf where sf.submission_id = s.id) x),
     exists (select 1 from english.assignment_events e where e.assignment_id = g.id and e.kind = 'retracted')
   from english.submissions s
   join english.assignments g on g.id = s.assignment_id
@@ -385,6 +387,8 @@ begin
         'src', h.src, 'ref', h.ref, 'activity_id', h.activity_id, 'assignment_id', h.assignment_id,
         'title', h.title, 'kind', h.kind, 'step_no', h.step_no, 'activity_type', h.activity_type,
         'submitted_at', h.submitted_at, 'seen_at', h.seen_at,
+        -- when the shown feedback was written (a later edit of the feedback is news even though seen_at is the first look)
+        'fb_at', coalesce(fb.created_at, sf.created_at),
         'praise', coalesce(fb.praise, sf.praise),
         'notes', case when fb.id is null and sf.id is null then null else (
           select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('n', (x ->> 'n')::int, 'text', x ->> 'text', 'excerpt', x ->> 'excerpt')
@@ -415,7 +419,7 @@ begin
       order by f.created_at desc limit 1) fb on true
     left join lateral (
       select f.* from english.submission_feedback f
-      where h.src = 'submission' and f.assignment_id = h.assignment_id and f.created_at >= h.submitted_at
+      where h.src = 'submission' and f.submission_id = h.ref
         and not exists (select 1 from english.submission_feedback f2 where f2.supersedes_id = f.id)
       order by f.created_at desc limit 1) sf on true), '[]'::jsonb));
 end

@@ -3,6 +3,7 @@
  * 2400 px and JPEG at quality 0.85. The pure part (sizes, kinds) is unit-tested; the canvas part runs in the browser only.
  * Nothing here talks to a server: the prepared pages are uploaded afterwards through one-time links (lib/practice/client.ts).
  */
+import { scrubPdf } from "@/lib/pdf/cut";
 import { fitWithin, type Prepared } from "@/lib/storage/clientUpload";
 import { MAX_FILE_BYTES, type AllowedMime } from "@/lib/storage/rules";
 import type { Quarter } from "./pageOrder";
@@ -32,18 +33,58 @@ export function paperKind(type: string, name: string): PaperKind {
 
 export type PageResult = { ok: true; file: Prepared } | { ok: false; reason: "type" | "too_big" | "unreadable" };
 
-/** Draw the picture turned by `quarter` onto a canvas no larger than `max` and encode it as JPEG. Browser only. */
+/** Width and height the browser reports for a picture (EXIF turn already applied), read without a full raster decode where the browser allows. Null when it cannot tell. */
+async function probeSize(source: Blob): Promise<{ width: number; height: number } | null> {
+  if (typeof Image === "undefined" || typeof URL === "undefined" || typeof URL.createObjectURL !== "function") return null;
+  const url = URL.createObjectURL(source);
+  try {
+    const img = new Image();
+    const ready = new Promise<boolean>((resolve) => {
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+    });
+    img.src = url;
+    if (!(await ready) || !(img.naturalWidth > 0) || !(img.naturalHeight > 0)) return null;
+    return { width: img.naturalWidth, height: img.naturalHeight };
+  } catch {
+    return null;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/** Open the picture, asking the browser to shrink while decoding when it supports that (a 12 MP photo is then never held at full size). */
+async function openBitmap(source: Blob, quarter: Quarter, max: number): Promise<ImageBitmap> {
+  const dims = await probeSize(source);
+  if (dims) {
+    const out = paperTargetSize(dims.width, dims.height, quarter, max);
+    const w = quarter % 2 === 1 ? out.height : out.width;
+    const h = quarter % 2 === 1 ? out.width : out.height;
+    try {
+      return await createImageBitmap(source, { imageOrientation: "from-image", resizeWidth: w, resizeHeight: h, resizeQuality: "high" });
+    } catch {
+      // The browser does not take these options: open it the plain way below.
+    }
+  }
+  try {
+    return await createImageBitmap(source, { imageOrientation: "from-image" });
+  } catch {
+    return await createImageBitmap(source);
+  }
+}
+
+/** Draw the picture turned by `quarter` onto a canvas no larger than `max` and encode it as JPEG. Browser only. Re-drawing drops every piece of photo metadata (location, camera, time). */
 export async function renderPaperImage(source: Blob, quarter: Quarter, name: string, max: number = PAPER_MAX_SIDE): Promise<PageResult> {
   let bitmap: ImageBitmap;
   try {
     // The browser applies the photo's own orientation (EXIF) when it opens the picture; the quarter turns are on top of that.
-    bitmap = await createImageBitmap(source);
+    bitmap = await openBitmap(source, quarter, max);
   } catch {
     return { ok: false, reason: "unreadable" };
   }
+  const canvas = document.createElement("canvas");
   try {
     const size = paperTargetSize(bitmap.width, bitmap.height, quarter, max);
-    const canvas = document.createElement("canvas");
     canvas.width = size.width;
     canvas.height = size.height;
     const ctx = canvas.getContext("2d");
@@ -62,16 +103,22 @@ export async function renderPaperImage(source: Blob, quarter: Quarter, name: str
     return { ok: true, file: { blob, mime: "image/jpeg" as AllowedMime, bytes: blob.size, name } };
   } finally {
     bitmap.close();
+    // Give the pixel memory back now (iPad Safari keeps big canvases alive otherwise).
+    canvas.width = 0;
+    canvas.height = 0;
   }
 }
 
-/** A picked file → a page: a PDF passes through unchanged (size-checked), an image is shrunk to JPEG now (rotation 0). */
+/** A picked file → a page: a PDF is size-checked and has its document details blanked (scrubPdf), an image is shrunk to JPEG now (rotation 0). */
 export async function preparePaperFile(file: File, nameHint: string): Promise<PageResult> {
   const kind = paperKind(file.type, file.name);
   if (kind === "other") return { ok: false, reason: "type" };
   const name = file.name || nameHint;
   if (kind === "pdf") {
-    return file.size > MAX_FILE_BYTES ? { ok: false, reason: "too_big" } : { ok: true, file: { blob: file, mime: "application/pdf", bytes: file.size, name } };
+    if (file.size > MAX_FILE_BYTES) return { ok: false, reason: "too_big" };
+    const clean = await scrubPdf(file);
+    if (!clean) return { ok: false, reason: "unreadable" };
+    return { ok: true, file: { blob: clean, mime: "application/pdf", bytes: clean.size, name } };
   }
   return renderPaperImage(file, 0, name);
 }

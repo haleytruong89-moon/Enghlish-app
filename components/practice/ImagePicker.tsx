@@ -53,7 +53,7 @@ export function ImagePicker({
         onError(practiceStudent.errors.tooMany(MAX_FILES_PER_SUBMISSION));
         break;
       }
-      const r = await prepareFile(f, `anh-${next.length + 1}`);
+      const r = await prepareFile(f, `anh-${next.length + 1}`, { stripMetadata: true });
       if (!r.ok) {
         onError(r.reason === "type" ? practiceStudent.errors.file_type : r.reason === "too_big" ? practiceStudent.errors.file_too_big : practiceStudent.errors.unreadable);
         continue;

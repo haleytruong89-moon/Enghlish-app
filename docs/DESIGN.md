@@ -507,5 +507,9 @@ Trang `/learners/<id>/delete` (chỉ phụ huynh; gia sư/học sinh 403, em ngo
 - **Giao diện.** Trang con `app/submit/[assignmentId]/page.tsx`; `components/student/submit/*` (`PaperSubmit`, `LinkSubmit`, `PageGrid`, `TwoQuestions`, `MissingRow`, `SubmitShell`, hook `usePages` / `useSendWork`). Gửi lại dùng cùng `client_id` và không tải lại file đã lên (`UploadCache`). `PracticeSubmitArea` chỉ còn lối vào `/submit`. Người lớn: `SubmissionFeedbackForm` trong dòng mở của `AssignmentTable` (xem trang theo thứ tự con sắp).
 - **API.** `POST /api/learners/[id]/assignments/[aid]/submissions/[sid]/feedback` (`practice:write`); lỗi `pages_unavailable` → 409.
 - **Thứ tự triển khai.** Mã app chạy được cả khi chưa áp 0033 (lùi về hàm v1; bộ đọc góp ý chấp nhận hàm thiếu PGRST202 / 42883). Nên áp 0033 ngay sau gộp.
+- **Riêng tư tệp (người lớn và con):** ảnh được vẽ lại bằng canvas (mất GPS / máy ảnh / giờ chụp), PDF qua `scrubPdf` (`lib/pdf/cut.ts`: tên tài liệu, tác giả, chủ đề, từ khóa, creator, producer trống; bỏ luồng XMP và đối tượng của nó). Rủi ro còn lại: ảnh nhúng TRONG PDF giữ siêu dữ liệu riêng. Máy chủ không đọc byte đầu để từ chối Exif (`FileStorage` chỉ có `stat`); e2e tải lại tệp đã lưu để chắc chắn.
+- **"Mới":** `eng_my_seen` trả `fb_at`; dấu "Mới" theo `max(seen_at, fb_at)`, thứ tự theo `seen_at`. Góp ý ghép với bài nộp qua `submission_id`.
+- **Khóa:** nộp bài và góp ý của một em cùng khóa dòng `learners` (`for no key update`).
+- **Trần tải lên:** 60 đường tải lên / em / ngày (một trang = một đường).
 - **Chưa kiểm trên máy thật:** camera iPad, HEIC, bộ nhớ khi 12 trang.
 

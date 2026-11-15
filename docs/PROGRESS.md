@@ -1581,7 +1581,7 @@ Nhánh `feature/w4b-student-desk` (từ `main` sau PR #35). Kế hoạch `docs/s
 
 Nhánh `feature/w4c1-paper-link` (từ `main` sau PR #36). Kế hoạch `docs/superpowers/plans/2026-11-14-w4-student-desk.md` mục "PR W4c1". Phụ huynh đã duyệt "như đề xuất" (14/11): Q12 = tối đa 12 trang, xoay + nén trên máy, câu hỏi gợi ý cũng hỏi với PDF; Q15 = thầy/cô (và phụ huynh) góp ý được bài giấy / link.
 
-**SQL cần phụ huynh áp: `0033_paper_link_submit.sql` (sau khi gộp).** Idempotent, cần 0016 + 0032. Áp bằng workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". Số migration kế tiếp: **0034**.
+**SQL cần phụ huynh áp: `0033_paper_link_submit.sql` (sau khi gộp).** Idempotent, cần 0016 + 0021 + 0031 + 0032. Áp bằng workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". Số migration kế tiếp: **0034**.
 - Nâng giới hạn file của một bài nộp từ 6 lên 12 (ràng buộc `submissions_file_ids_max12`).
 - Hàm `eng_submit_practice_v2` (nộp giấy / link; học sinh bắt buộc trả lời câu gợi ý; chạy lại cùng mã thì không nộp trùng; bị chặn khi người lớn đã xem / góp ý).
 - Bảng chỉ thêm `submission_feedback` (+ RLS, chặn sửa / xóa / TRUNCATE), hàm `eng_write_submission_feedback`, `eng_submission_feedback`.
@@ -1589,15 +1589,15 @@ Nhánh `feature/w4c1-paper-link` (từ `main` sau PR #36). Kế hoạch `docs/su
 - **Chưa áp 0033:** nộp ảnh vẫn chạy như cũ (app tự dùng hàm cũ, tối đa 6 trang; trang hết chỗ báo nhẹ), form góp ý bài nộp báo "chưa sẵn sàng", Đã xem không có thẻ góp ý bài nộp. Không lỗi trắng trang.
 
 ### Làm gì
-1. **Nộp bài giấy** (`/submit/[assignmentId]`): chụp bằng camera iPad (mỗi lần chụp thêm một trang) hoặc chọn file trên laptop; tối đa 12 trang; lưới trang có kéo / nút lên-xuống để đổi thứ tự, xoay 90°, xóa; ảnh được xoay + thu nhỏ (cạnh dài ≤ 2400 px, JPEG 0.85) ngay trên máy, PDF giữ nguyên; 2 câu hỏi nhanh (có làm một mình không / có xem gợi ý không) và dòng "Còn thiếu" chỉ rõ chỗ chưa trả lời; gửi lại khi lỗi mạng không nộp trùng, không tải lại file đã lên.
+1. **Nộp bài giấy** (`/submit/[assignmentId]`): chụp bằng camera iPad (mỗi lần chụp thêm một trang) hoặc chọn file trên laptop; tối đa 12 trang; lưới trang có nút **Lên / Xuống** để đổi thứ tự (không kéo thả), **Xoay** 90°, **Xóa**; ảnh được xoay + thu nhỏ (cạnh dài ≤ 2400 px, JPEG 0.85) ngay trên máy, PDF giữ nguyên; 2 câu hỏi nhanh ("Bạn làm lần đầu?" · "Bạn có xem gợi ý hoặc đáp án không?"); nút **Nộp** tắt cho đến khi đủ ảnh + 2 câu trả lời, dòng "Còn thiếu" chỉ rõ chỗ chưa trả lời; gửi lại khi lỗi mạng không nộp trùng, không tải lại file đã lên.
 2. **Nộp bài link:** 3 bước (mở link làm bài → chụp / chọn ảnh trang kết quả → 2 câu hỏi → gửi). Bài link vẫn nằm ở "Hôm nay" cho đến khi con nộp.
 3. **Góp ý bài nộp (người lớn):** trong bảng Giao bài, mỗi bài đã nộp mở ra xem các trang đúng thứ tự con sắp, rồi gửi lời khen và tối đa 3 điều cần sửa (không điểm / đúng / sai / %). Chỉ một góp ý đầu; sửa = góp ý mới thay (chỉ người viết). Con thấy ngay ở Đã xem; bài chuyển sang "Đã xem".
 4. **Luật con:** không điểm, không đúng / sai, không %, không nhãn kỹ năng; số chỉ ở `data-count="work"`.
 5. **Xóa dữ liệu một em** gồm `submission_feedback` ("Góp ý cho bài nộp").
 
 ### Cách thử trên bản thử (sau khi áp 0033; gia đình THỬ)
-- Giao cho Nguyên (thử) một bài PDF / giấy. Trên iPad đăng nhập Nguyên: Hôm nay → mở bài → chụp 3 trang; kéo trang 3 lên đầu, xoay một trang, xóa một trang; trả lời 2 câu → Gửi. Bài sang "Vừa gửi".
-- Đăng nhập thầy/cô: Giao bài → bài vừa nộp → mở xem: các trang đúng thứ tự đã sắp. Gửi một lời khen + 1 điều cần sửa. Đăng nhập lại Nguyên: tab Đã xem có thẻ mới, Đã làm báo "Đã xem". Con không còn "Sửa lại" sau khi đã được xem.
+- Giao cho Nguyên (thử) một bài PDF / giấy. Trên iPad đăng nhập Nguyên: Hôm nay → mở bài → chụp 3 trang; bấm "Lên" ở trang 3, "Xoay" một trang, "Xóa" một trang; trả lời 2 câu → Nộp. Bài sang "Vừa gửi".
+- Đăng nhập thầy/cô: Giao bài → bài vừa nộp → mở xem: các trang đúng thứ tự đã sắp. Bấm gửi góp ý: một lời khen + 1 điều cần sửa. Đăng nhập lại Nguyên: tab Đã xem có thẻ mới, Đã làm báo "Đã xem". Con không còn "Sửa lại" sau khi đã được xem.
 - Bài link: làm trên trang ngoài, chụp ảnh kết quả, nộp. Trước khi nộp, bài còn ở Hôm nay ("Chưa").
 - Laptop: chọn 2 ảnh + 1 PDF, đổi chỗ, nộp.
 - An (thử) không thấy gì của Nguyên.
@@ -1611,4 +1611,14 @@ Nhánh `feature/w4c1-paper-link` (từ `main` sau PR #36). Kế hoạch `docs/su
 - Hàm cũ `eng_submit_practice` giữ nguyên làm đường lùi khi chưa áp 0033; app thử v2 trước.
 - Người lớn cũng nộp thay (SubmitPanel) được và không bắt buộc trả lời câu gợi ý; học sinh bắt buộc.
 - Góp ý bài nộp không đổi trạng thái bài, không ghi bằng chứng / điểm; chỉ là lời nhắn và dấu "đã xem".
+
+### Sau review Opus (15/11): đã sửa trên cùng nhánh (0033 chưa áp ở đâu nên sửa thẳng trong tệp)
+- **Nộp thay không còn ghi bừa:** ô "Nộp thay" của thầy/cô / phụ huynh bắt đầu trống: "lần đầu / làm lại" phải chọn (cột `attempt` bắt buộc nên không dùng NULL), câu gợi ý có thêm "Không rõ" (gửi NULL, không bao giờ thành "không xem gợi ý"). Form Ghi kết quả không điền sẵn từ NULL: hai nút trống và phải chọn Có / Không mới lưu. Chữ cho bài không có câu trả lời: "Không có câu trả lời về gợi ý".
+- **Riêng tư ảnh / PDF của người lớn:** mọi ảnh người lớn nộp thay được vẽ lại bằng canvas dù nhỏ (mất GPS / máy ảnh / giờ chụp), PDF qua `pdf-lib` ghim bản (`updateMetadata:false`): tên tài liệu, tác giả, chủ đề, từ khóa, creator, producer để trống và bỏ luôn luồng XMP (kể cả đối tượng mồ côi); PDF của con cũng qua bước này. **Còn lại:** ảnh NẰM TRONG PDF giữ nguyên siêu dữ liệu của chính nó; PDF mã hóa / hỏng bị từ chối. **Không làm** kiểm Exif ở máy chủ: `FileStorage` chỉ có `stat`, đọc byte đầu cần thêm hàm + bản giả; thay vào đó e2e tải lại tệp đã lưu và khẳng định không có đoạn `Exif` (CI). Các nơi khác dùng `prepareFile` (phiếu điểm, nhập đề) chưa bật tùy chọn này.
+- **"Mới" cho góp ý đến sau:** `eng_my_seen` trả thêm `fb_at` (lúc viết bản góp ý đang hiện); dấu "Mới" và số trên tab dùng `max(seen_at, fb_at)`; thứ tự vẫn theo `seen_at`.
+- **Khóa:** `eng_write_submission_feedback` khóa dòng `learners` của em (`for no key update`, cùng kiểu với `eng_submit_practice_v2`) trước mọi kiểm tra; ghép góp ý với bài nộp theo `submission_id` (không còn so `assignment_id` + giờ).
+- **Hiệu năng / máy yếu:** bảng Giao bài chỉ nạp ảnh khi mở dòng (và `loading="lazy"`); `renderPaperImage` trả bộ nhớ canvas, nhờ trình duyệt thu nhỏ ngay lúc giải mã (`createImageBitmap` với `resizeWidth/Height`) khi hỗ trợ. **Không làm (chấp nhận):** ảnh nén ở bước chọn rồi vẽ lại một lần nữa khi gửi (xoay), tức nén JPEG 0.85 hai lần; chữ viết tay vẫn đọc được ở cạnh dài 2400 px.
+- **Chưa áp 0033:** màn nộp biết trước giới hạn (6 trang) và không cho thêm quá, thay vì chờ máy chủ từ chối sau khi đã tải lên. Góp ý với bài nộp đã bị thay trả 409 "Con vừa nộp lại bài" (không còn 404).
+- **Trần tải lên:** mỗi em tối đa 60 đường tải lên mỗi ngày (`UPLOAD_LINKS_PER_DAY`); mỗi trang là một đường, nên 12 trang ≈ 5 lần nộp đầy một ngày (gồm cả lần thử lại).
+- **Lệch nhỏ:** nút chọn trong `FeedbackFields` (form góp ý bài nộp) tự viết riêng thay vì dùng lại khối của S6 vì S6 gắn với bài làm trong app (tên người viết, ví dụ trích đoạn); cùng luật chữ (khen ≤ 400, ≤ 3 điều, không điểm).
 

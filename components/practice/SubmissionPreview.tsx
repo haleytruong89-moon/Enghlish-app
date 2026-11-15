@@ -47,7 +47,7 @@ export function SubmissionPreview({ assignment }: { assignment: AssignmentView }
               return f.mime.startsWith("image/") ? (
                 <li key={f.id} className="flex flex-col gap-1" data-testid={`submission-file-${i + 1}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element -- a private, short-lived redirect, not an optimisable static image */}
-                  <img src={href} alt={resultPage.sentImage(i + 1)} className="max-h-[70vh] w-full rounded-lg border border-line object-contain" data-testid="submission-image" />
+                  <img src={href} loading="lazy" alt={resultPage.sentImage(i + 1)} className="max-h-[70vh] w-full rounded-lg border border-line object-contain" data-testid="submission-image" />
                   <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-medium text-accent underline">
                     {resultPage.sentBig}
                   </a>

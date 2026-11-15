@@ -19,8 +19,8 @@ import { useSendWork } from "./useSendWork";
  * "Nộp bài giấy" (PDF assignment): download the sheet → take the pages of the paper work (camera on an iPad, upload on a laptop; up to 12; move, turn,
  * delete) → two quick questions → Nộp. Pictures are shrunk and turned on this device; only the final pages are uploaded.
  */
-export function PaperSubmit({ item }: { item: StudentPracticeItem }) {
-  const pagesApi = usePages({ allowPdf: true });
+export function PaperSubmit({ item, maxPages }: { item: StudentPracticeItem; maxPages?: number }) {
+  const pagesApi = usePages({ allowPdf: true, maxPages });
   const [answers, setAnswers] = useState<TwoAnswers>({ first: null, hint: null });
   const [downloaded, setDownloaded] = useState(false);
   const { send, busy, error, done } = useSendWork(item.assignmentId, pagesApi, answers);

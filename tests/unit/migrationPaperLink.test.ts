@@ -64,4 +64,45 @@ describe("*_paper_link_submit.sql (found by suffix)", () => {
     for (const k of keys(fnBody(read("0031_roadmap_milestones.sql"), "eng_purge_preview"))) expect(keys(fnBody(code, "eng_purge_preview")), k).toContain(k);
     expect(fnBody(code, "eng_purge_preview")).toContain("'submission_feedback'");
   });
+
+  // The three child reads are copies of their last earlier body (0032 / 0016) with ONLY the listed edits: each pair is [text in 0033, text it replaces].
+  const squash = (t: string) => t.replace(/--[^\n]*/g, "").replace(/\s+/g, "");
+  const undo = (now: string, edits: [string, string][]) => edits.reduce((acc, [added, original]) => {
+    expect(acc, `edit not found: ${added}`).toContain(squash(added));
+    return acc.replace(squash(added), squash(original));
+  }, squash(now));
+  const SEEN_SF_JOIN = `left join lateral (select f.* from english.submission_feedback f where h.src = 'submission' and f.submission_id = h.ref and not exists (select 1 from english.submission_feedback f2 where f2.supersedes_id = f.id) order by f.created_at desc limit 1) sf on true`;
+
+  it("eng_student_done = the 0032 body, except the 'seen' time of a submission also counts feedback on that submission", () => {
+    const before = fnBody(read("0032_student_desk_reads.sql"), "eng_student_done");
+    const now = fnBody(code, "eng_student_done");
+    expect(
+      undo(now, [
+        [
+          `(select pg_catalog.min(x.at) from (select r.created_at as at from english.results r where r.assignment_id = g.id and r.created_at >= s.created_at union all select sf.created_at from english.submission_feedback sf where sf.submission_id = s.id) x)`,
+          `(select pg_catalog.min(r.created_at) from english.results r where r.assignment_id = g.id and r.created_at >= s.created_at)`,
+        ],
+      ]),
+    ).toBe(squash(before));
+  });
+  it("eng_my_seen = the 0032 body, except fb_at, the feedback-on-submission join and its praise / notes / 'note' state", () => {
+    const before = fnBody(read("0032_student_desk_reads.sql"), "eng_my_seen");
+    const now = fnBody(code, "eng_my_seen");
+    expect(
+      undo(now, [
+        [`'seen_at', h.seen_at, 'fb_at', coalesce(fb.created_at, sf.created_at), 'praise', coalesce(fb.praise, sf.praise),`, `'seen_at', h.seen_at, 'praise', fb.praise,`],
+        [`case when fb.id is null and sf.id is null then null else (`, `case when fb.id is null then null else (`],
+        [`pg_catalog.jsonb_array_elements(case when fb.id is not null then fb.items else sf.items end)`, `pg_catalog.jsonb_array_elements(fb.items)`],
+        [`when fb.id is null then case when sf.id is not null then 'note' end`, `when fb.id is null then null`],
+        [SEEN_SF_JOIN, ``],
+      ]),
+    ).toBe(squash(before));
+  });
+  it("eng_my_practice = the 0016 body, except 'reviewed' is also true once feedback exists", () => {
+    const before = fnBody(read("0016_practice_files.sql"), "eng_my_practice");
+    const now = fnBody(code, "eng_my_practice");
+    expect(
+      undo(now, [[`or exists (select 1 from english.submission_feedback sf where sf.assignment_id = a.id)`, ``]]),
+    ).toBe(squash(before));
+  });
 });

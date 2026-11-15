@@ -12,7 +12,7 @@ export type SubmitPage = Paged & { file: Prepared; preview: string | null };
  * The pages the child has taken so far, on this device: pick / take (each picture is shrunk to JPEG first), move, turn, delete. Nothing is sent from
  * here. `finalFiles()` renders the turns (once per page + turn, so a retry sends the very same files) in the order of the list.
  */
-export function usePages({ allowPdf }: { allowPdf: boolean }) {
+export function usePages({ allowPdf, maxPages = MAX_PAGES }: { allowPdf: boolean; maxPages?: number }) {
   const [pages, setPages] = useState<SubmitPage[]>([]);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -54,12 +54,12 @@ export function usePages({ allowPdf }: { allowPdf: boolean }) {
       const preview = r.file.mime === "application/pdf" ? null : URL.createObjectURL(r.file.blob);
       incoming.push({ key: crypto.randomUUID(), quarter: 0, file: r.file, preview });
     }
-    const { pages: next, dropped } = addPages(latest.current, incoming);
+    const { pages: next, dropped } = addPages(latest.current, incoming, maxPages);
     if (dropped > 0) for (const p of incoming.slice(incoming.length - dropped)) if (p.preview) URL.revokeObjectURL(p.preview);
     commit(next);
     setBusy(false);
     const added = incoming.length - dropped;
-    const tooMany = dropped === 0 ? null : added === 0 ? (copy.errors.tooMany as (m: number) => string)(MAX_PAGES) : (copy.errors.dropped as (a: number, m: number) => string)(added, MAX_PAGES);
+    const tooMany = dropped === 0 ? null : added === 0 ? (copy.errors.tooMany as (m: number) => string)(maxPages) : (copy.errors.dropped as (a: number, m: number) => string)(added, maxPages);
     setNotice(tooMany ?? problem);
   }
 
