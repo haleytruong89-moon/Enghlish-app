@@ -285,3 +285,10 @@ Khối `studentDeskCopy` trong `lib/copy/vi.ts`. Xưng "bạn"; người dạy l
 
 Đã bỏ khóa `practiceStudent.navNext` / `navPractice` / `navJourney` (thay bằng `studentDeskCopy.tabs`).
 
+---
+## W4c1 (15/11/2026) — Nộp bài giấy, bài link, góp ý bài nộp
+
+Bốn khối trong `lib/copy/vi.ts`: `submitScreenCopy` (khung chung: các bước, "Gửi", "Còn thiếu", báo lỗi), `paperSubmitCopy` (chụp / chọn file, lưới trang, xoay · xóa · lên · xuống, "Tối đa 12 trang"), `linkSubmitCopy` (3 bước, ảnh trang kết quả), `submissionFeedbackCopy` (form của người lớn: khen · điều cần sửa · báo lỗi). Thêm `practiceStudent.goSubmit` / `goSubmitPdf` / `errors.pages_unavailable`, `resultPage.sentHintPdf` / `sentNoHintPdf`, `assignPage.sentLine(kind)`, `purgePage.countLabels.submission_feedback` ("Góp ý cho bài nộp").
+
+Luật: xưng "bạn"; người dạy là `tutorHonorific`; không điểm / đúng / sai / % / kỹ năng trên màn của con (test `submitCopy.test.ts` quét); nút chạm ≥ 44 px; câu hỏi gợi ý hỏi cả bài PDF; nút Gửi luôn bấm được và dòng "Còn thiếu" nói rõ thiếu gì; lỗi mạng dùng một dòng "gửi lại không mất ảnh". Góp ý của người lớn: lời khen ≤ 400 chữ, tối đa 3 điều cần sửa ≤ 300 chữ mỗi điều, không từ chấm điểm.
+
