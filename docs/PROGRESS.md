@@ -1556,7 +1556,7 @@ Nhánh `feature/w4b-student-desk` (từ `main` sau PR #35). Kế hoạch `docs/s
 7. **Luật số đếm (PRD D35):** con thấy số việc / câu đã trả lời / bài đã nộp, chỉ trong phần tử `data-count="work"`; không bao giờ số câu đúng, %, điểm (test DOM + e2e quét 4 trang).
 
 ### Cách thử trên bản thử (sau khi áp 0032; gia đình THỬ)
-- Nguyên (thử): Hôm nay có bài Studio / bài chủ đề; mở một bài, trả lời vài câu, quay về → thẻ "Làm tiếp · a/b câu"; nộp ảnh bài PDF → biến khỏi Hôm nay, hiện ở Đã làm "Chờ {thầy/cô} xem".
+- Nguyên (thử): Hôm nay có bài Studio / bài chủ đề; mở một bài, trả lời vài câu, quay về → thẻ "Làm tiếp · a/b câu"; nộp ảnh bài PDF → chuyển xuống nhóm "Vừa gửi" của Hôm nay (còn "Sửa lại"), và hiện ở Đã làm "Chờ {thầy/cô} xem".
 - {Thầy/cô} ghi điểm nhanh (không góp ý) → Đã làm "{Thầy/cô} đã xem"; tab Đã xem có thẻ "{Thầy/cô} đã xem bài này" (không điểm).
 - {Thầy/cô} gửi góp ý S6 cho bài viết → ngay ở Đã xem (số "Mới" ở tab) và Hôm nay có "Sửa bài" ở đầu danh sách.
 - Mở `/practice` → về Hôm nay. iPad dọc / điện thoại: thanh tab dưới; laptop: cột trái. An (thử) không thấy gì của Nguyên.
