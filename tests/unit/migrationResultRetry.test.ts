@@ -32,7 +32,7 @@ describe("*_result_view_retry.sql (found by suffix)", () => {
     }
   });
   it("child functions are for authenticated only; adult writers / readers for service_role only; old studio review is revoked from everyone", () => {
-    for (const f of ["eng_my_result_view(uuid)", "eng_my_retry_item(uuid, text, text, text)", "eng_my_test_marks()"]) {
+    for (const f of ["eng_my_result_view(uuid)", "eng_my_retry_item(uuid, text, text, text)", "eng_my_reveal_item(uuid, text, text)", "eng_my_test_marks()"]) {
       const name = f.split("(")[0]!;
       expect(code, f).toContain(`revoke execute on function english.${f} from public, anon, service_role;`);
       expect(code, f).toContain(`grant execute on function english.${f} to authenticated;`);
@@ -54,18 +54,24 @@ describe("*_result_view_retry.sql (found by suffix)", () => {
   });
   it("the result view never selects a key, an explanation or a count of right items", () => {
     const body = fnBody(code, "eng_my_result_view");
-    expect(body).not.toMatch(/instance_item_keys|explanation|template_item_keys|count\(/);
+    expect(body).not.toMatch(/template_item_keys|count\(/);
+    // D39: the keys are read only for a PRACTICE work of a Studio set, and an answer / "why" leave only for a retried / given-up item (a right item: why only)
+    expect(body).toContain("v_reveal := v_kind = 'studio' and not v_test;");
+    expect(body).toContain("if v_reveal then");
+    expect(body).toContain("'answer', case when f.revealed then ans.expected end");
+    expect(body).toContain("'why', case when f.revealed or r ->> 'res' = 'correct' then k.explanation_vi end");
+    expect(body.indexOf("instance_item_keys")).toBeGreaterThan(body.indexOf("if v_reveal then"));
   });
   it("the retry function never reads like evidence: no write to the engine / evidence tables", () => {
     const body = fnBody(code, "eng_my_retry_item");
     expect(body).not.toMatch(/insert into english\.(attempts|artifact_versions|episodes|exposure_log|results|tag_marks)/);
   });
-  it("purge keeps everything 0033 removed, plus the three tables, before attempts / submissions / assignments / activity_instances", () => {
+  it("purge keeps everything 0033 removed, plus the four tables, before attempts / submissions / assignments / activity_instances", () => {
     const old = deletes(fnBody(read("0033_paper_link_submit.sql"), "eng_purge_learner"));
     const now = deletes(fnBody(code, "eng_purge_learner"));
     for (const t of old) expect(now, t).toContain(t);
-    expect(now.length).toBe(old.length + 3);
-    for (const t of ["english.retry_seen", "english.item_retries", "english.work_test_marks"]) {
+    expect(now.length).toBe(old.length + 4);
+    for (const t of ["english.item_reveals", "english.retry_seen", "english.item_retries", "english.work_test_marks"]) {
       for (const parent of ["english.attempts", "english.submissions", "english.assignments", "english.activity_instances"]) {
         expect(now.indexOf(t), `${t} before ${parent}`).toBeLessThan(now.indexOf(parent));
       }
@@ -80,9 +86,9 @@ describe("*_result_view_retry.sql (found by suffix)", () => {
     const before = squash(fnBody(read("0033_paper_link_submit.sql"), "eng_purge_learner"));
     let now = squash(fnBody(code, "eng_purge_learner"));
     for (const added of [
-      "n_item_retries int := 0; n_retry_seen int := 0; n_work_test_marks int := 0;",
-      "delete from english.retry_seen rs where rs.learner_id = p_learner_id; get diagnostics n_retry_seen = row_count; delete from english.item_retries ir where ir.learner_id = p_learner_id; get diagnostics n_item_retries = row_count; delete from english.work_test_marks wtm where wtm.learner_id = p_learner_id; get diagnostics n_work_test_marks = row_count;",
-      "|| pg_catalog.jsonb_build_object( 'item_retries', n_item_retries, 'retry_seen', n_retry_seen, 'work_test_marks', n_work_test_marks )",
+      "n_item_retries int := 0; n_retry_seen int := 0; n_item_reveals int := 0; n_work_test_marks int := 0;",
+      "delete from english.item_reveals ivl where ivl.learner_id = p_learner_id; get diagnostics n_item_reveals = row_count; delete from english.retry_seen rs where rs.learner_id = p_learner_id; get diagnostics n_retry_seen = row_count; delete from english.item_retries ir where ir.learner_id = p_learner_id; get diagnostics n_item_retries = row_count; delete from english.work_test_marks wtm where wtm.learner_id = p_learner_id; get diagnostics n_work_test_marks = row_count;",
+      "|| pg_catalog.jsonb_build_object( 'item_retries', n_item_retries, 'retry_seen', n_retry_seen, 'item_reveals', n_item_reveals, 'work_test_marks', n_work_test_marks )",
     ]) {
       expect(now, added).toContain(squash(added));
       now = now.replace(squash(added), "");

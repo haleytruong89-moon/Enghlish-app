@@ -8,7 +8,8 @@
 --   4. eng_my_result_view (con đọc): câu nên nhìn lại + câu viết tự do + "các câu còn lại ổn" (một cờ, không số). KHÔNG đáp án, giải thích, số đúng.
 --      eng_my_test_marks (con đọc): mã bài của chính con được coi là bài kiểm tra.
 --   5. Thu quyền eng_my_studio_review khỏi authenticated (Q3): trình duyệt của con không lấy được "Nên là / Vì sao" nữa.
---   6. eng_purge_learner / eng_purge_preview: chép NGUYÊN thân 0033 + 3 bảng (item_retries, retry_seen, work_test_marks) (trước submissions / attempts).
+--   6. eng_purge_learner / eng_purge_preview: chép NGUYÊN thân 0033 + 4 bảng (item_retries, item_reveals, retry_seen, work_test_marks) (trước submissions / attempts).
+--   4'. D39: eng_my_result_view có ✓ / ✗ cho bài LUYỆN TẬP của bộ Studio; "Xem đáp án" (item_reveals + eng_my_reveal_item) và đáp án + "Vì sao" chỉ cho câu đã thử lại / đã xem đáp án.
 --   5'. retry_seen (chỉ thêm) + eng_mark_retry_seen: người lớn bấm "Đã xem" lần thử lại (phụ huynh quyết 15/11); eng_retry_pending chỉ dựa vào đó.
 -- Idempotent; chỉ thêm. Không đụng schema public. Cần 0024 + 0033 đã áp.
 
@@ -46,6 +47,21 @@ create table if not exists english.item_retries (
 create index if not exists item_retries_learner_idx on english.item_retries(learner_id, created_at desc);
 create index if not exists item_retries_activity_idx on english.item_retries(activity_id);
 
+-- 3a''. "Xem đáp án" (chỉ thêm, D39): con bỏ lần thử lại của MỘT câu sai để xem đáp án của thầy/cô. Một dòng mỗi (lần làm, câu).
+--       KHÔNG là bằng chứng; engine không đọc.
+create table if not exists english.item_reveals (
+  id uuid primary key default gen_random_uuid(),
+  learner_id uuid not null references english.learners(id),
+  attempt_id uuid not null references english.attempts(id),
+  activity_id uuid not null references english.activity_instances(id),
+  item_id text not null check (pg_catalog.length(item_id) between 1 and 40),
+  client_id text not null check (pg_catalog.length(pg_catalog.btrim(client_id)) between 8 and 100),
+  created_at timestamptz not null default clock_timestamp(),
+  unique (attempt_id, item_id),
+  unique (learner_id, client_id)
+);
+create index if not exists item_reveals_learner_idx on english.item_reveals(learner_id, created_at desc);
+
 -- 3a'. "Đã xem lần thử lại" (chỉ thêm): người lớn đọc các lần thử lại của một lần làm rồi bấm Đã xem (ghi chú ngắn không bắt buộc).
 --      Một dòng phủ MỌI lần thử lại của lần làm đó tạo trước nó; lần thử lại tạo sau (câu khác, hay lần làm mới) chờ lại. Ghi chú CHỈ người lớn thấy.
 create table if not exists english.retry_seen (
@@ -66,7 +82,7 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['work_test_marks', 'item_retries', 'retry_seen'] loop
+  foreach t in array array['work_test_marks', 'item_retries', 'item_reveals', 'retry_seen'] loop
     execute pg_catalog.format('drop trigger if exists %I on english.%I', t || '_forbid_mutation', t);
     execute pg_catalog.format('create trigger %I before update or delete on english.%I for each row execute function english.eng_forbid_mutation(%L)', t || '_forbid_mutation', t, 'learner_id');
     execute pg_catalog.format('drop trigger if exists %I on english.%I', t || '_forbid_truncate', t);
@@ -234,15 +250,19 @@ declare
   v_member uuid;
   v_act english.activity_instances%rowtype;
   v_inst english.inquiry_instances%rowtype;
+  v_kind text;
   v_t english.attempts%rowtype;
   v_checks jsonb;
   v_answers jsonb;
   v_step jsonb;
   v_test boolean;
+  v_reveal boolean;
   v_look jsonb;
   v_open jsonb;
   v_others boolean;
   v_rows jsonb;
+  v_marks jsonb;
+  v_out jsonb;
 begin
   select m.id into v_member from english.members m where m.user_id = auth.uid() and m.role = 'student';
   if v_member is null then return null; end if;
@@ -251,6 +271,7 @@ begin
   where a.id = p_activity and l.member_id = v_member;
   if not found or not english.eng_activity_released(p_activity) then return null; end if;
   select * into v_inst from english.inquiry_instances i where i.id = v_act.inquiry_instance_id;
+  select t.kind into v_kind from english.inquiry_templates t where t.id = v_inst.template_id and t.version = v_inst.template_version;
   select t.* into v_t from english.attempts t where t.activity_instance_id = p_activity order by t.attempt_no desc limit 1;
   if not found then return null; end if;
   select c.checks into v_checks from english.attempt_auto_checks c where c.attempt_id = v_t.id;
@@ -259,10 +280,12 @@ begin
   where av.attempt_id = v_t.id and av.kind = 'answers' order by av.version desc limit 1;
   select x into v_step from pg_catalog.jsonb_array_elements(v_inst.snapshot -> 'steps') as x where (x ->> 'step_no')::int = v_act.step_no;
   v_test := english.eng_work_is_test(p_activity);
+  -- D39: marks and answers only for PRACTICE work of a Studio set (the keys are the tutor's own); never a test, never a weekly topic.
+  v_reveal := v_kind = 'studio' and not v_test;
 
-  -- Mỗi câu của bước: thứ tự, mã, đề, câu con viết, kết quả hiệu lực (câu 'needs_person' lấy Đúng/Sai của người lớn; chưa có = null).
+  -- Every item of the step: order, id, the item, what the child wrote, the effective result (a 'needs_person' item takes the adult's verdict; none yet = null).
   select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
-           'ord', o, 'id', it ->> 'id', 'stem', it ->> 'stem', 'given', coalesce(v_answers ->> (it ->> 'id'), ''),
+           'ord', o, 'id', it ->> 'id', 'it', it, 'stem', it ->> 'stem', 'given', coalesce(v_answers ->> (it ->> 'id'), ''),
            'res', case when v_checks -> 'items' -> (it ->> 'id') ->> 'result' = 'needs_person'
                        then (select d.result from english.item_decisions d where d.attempt_id = v_t.id and d.item_id = it ->> 'id')
                        else v_checks -> 'items' -> (it ->> 'id') ->> 'result' end) order by o)
@@ -275,7 +298,9 @@ begin
            'n', coalesce(nullif(pg_catalog.substring(r ->> 'id', '^q([1-9][0-9]{0,2})$'), '')::int, (r ->> 'ord')::int),
            'stem', r ->> 'stem', 'given', r ->> 'given',
            'retry', (select pg_catalog.jsonb_build_object('text', x.answer) from english.item_retries x where x.attempt_id = v_t.id and x.item_id = r ->> 'id'),
-           'can_retry', not v_test and not exists (select 1 from english.item_retries x where x.attempt_id = v_t.id and x.item_id = r ->> 'id'))
+           'can_retry', not v_test
+                        and not exists (select 1 from english.item_retries x where x.attempt_id = v_t.id and x.item_id = r ->> 'id')
+                        and not exists (select 1 from english.item_reveals x where x.attempt_id = v_t.id and x.item_id = r ->> 'id'))
          order by (r ->> 'ord')::int), '[]'::jsonb)
     into v_look
   from pg_catalog.jsonb_array_elements(v_rows) r where r ->> 'res' in ('incorrect', 'blank');
@@ -287,9 +312,47 @@ begin
   from pg_catalog.jsonb_array_elements(v_rows) r where r ->> 'res' is null;
   select exists (select 1 from pg_catalog.jsonb_array_elements(v_rows) r where r ->> 'res' = 'correct') into v_others;
 
-  return pg_catalog.jsonb_build_object(
+  v_out := pg_catalog.jsonb_build_object(
     'attempt_no', v_t.attempt_no, 'submitted_at', v_t.submitted_at, 'is_test', v_test,
     'look', v_look, 'open', v_open, 'others_fine', v_others);
+
+  if v_reveal then
+    -- One row per item: a ✓ / ✗ / waiting mark, the retry and whether it matches the key, and - ONLY for an item the child has given up the
+    -- retry for or has retried (answer + why), or a ✓ item (why only) - the model answer. Never a total or a count.
+    select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+             'id', r ->> 'id',
+             'n', coalesce(nullif(pg_catalog.substring(r ->> 'id', '^q([1-9][0-9]{0,2})$'), '')::int, (r ->> 'ord')::int),
+             'stem', r ->> 'stem', 'given', r ->> 'given',
+             'mark', case when r ->> 'res' = 'correct' then 'right' when r ->> 'res' in ('incorrect', 'blank') then 'wrong' else 'waiting' end,
+             'retry', case when rt.id is null then null else pg_catalog.jsonb_build_object('text', rt.answer,
+                        'mark', case rr.res when 'correct' then 'right' when 'needs_person' then 'waiting' else 'wrong' end) end,
+             'revealed', f.revealed,
+             'can_retry', f.wrong and not f.revealed,
+             'can_reveal', f.wrong and not f.revealed,
+             'answer', case when f.revealed then ans.expected end,
+             'why', case when f.revealed or r ->> 'res' = 'correct' then k.explanation_vi end)
+           order by (r ->> 'ord')::int), '[]'::jsonb)
+      into v_marks
+    from pg_catalog.jsonb_array_elements(v_rows) r
+    left join english.item_retries rt on rt.attempt_id = v_t.id and rt.item_id = r ->> 'id'
+    left join english.item_reveals rv on rv.attempt_id = v_t.id and rv.item_id = r ->> 'id'
+    left join english.instance_item_keys k on k.inquiry_instance_id = v_inst.id and k.item_id = r ->> 'id'
+    cross join lateral (select coalesce(r ->> 'res' in ('incorrect', 'blank'), false) as wrong) w
+    cross join lateral (select w.wrong as wrong, (w.wrong and (rt.id is not null or rv.id is not null)) as revealed) f
+    cross join lateral (
+      select case when rt.id is null then null
+                  else english.eng_compute_auto_checks(v_inst.id, pg_catalog.jsonb_build_object('items', pg_catalog.jsonb_build_array(r -> 'it')),
+                         pg_catalog.jsonb_build_object(r ->> 'id', rt.answer)) -> 'items' -> (r ->> 'id') ->> 'result' end as res) rr
+    cross join lateral (
+      select case
+               when k.kind is distinct from 'answer' then null
+               when r -> 'it' ->> 'kind' = 'mcq' then (
+                 select o.opt from pg_catalog.jsonb_array_elements_text(coalesce(r -> 'it' -> 'options', '[]'::jsonb)) with ordinality as o(opt, ord)
+                 where o.ord - 1 = english.eng_resolve_option(coalesce(r -> 'it' -> 'options', '[]'::jsonb), k.answer))
+               else nullif(pg_catalog.split_part(english.eng_clean_text(coalesce(k.answer, '')), ' / ', 1), '') end as expected) ans;
+    v_out := v_out || pg_catalog.jsonb_build_object('marks', v_marks);
+  end if;
+  return v_out;
 end
 $$;
 revoke execute on function english.eng_my_result_view(uuid) from public, anon, service_role;
@@ -362,6 +425,9 @@ begin
   if exists (select 1 from english.item_retries r where r.attempt_id = v_t.id and r.item_id = p_item) then
     raise exception 'eng_my_retry_item: this item was already retried (already_retried)' using errcode = '23505';
   end if;
+  if exists (select 1 from english.item_reveals r where r.attempt_id = v_t.id and r.item_id = p_item) then
+    raise exception 'eng_my_retry_item: the answer of this item was already shown (already_revealed)' using errcode = '23505';
+  end if;
 
   insert into english.item_retries(learner_id, attempt_id, activity_id, item_id, answer, client_id)
   values (v_learner, v_t.id, p_activity, p_item, v_text, p_client_id)
@@ -371,6 +437,82 @@ end
 $$;
 revoke execute on function english.eng_my_retry_item(uuid, text, text, text) from public, anon, service_role;
 grant execute on function english.eng_my_retry_item(uuid, text, text, text) to authenticated;
+
+-- 3c'. Con bấm "Xem đáp án" cho một câu sai: bỏ lần thử lại của câu đó. Chỉ bài LUYỆN TẬP của bộ Studio (đáp án do thầy/cô xác nhận), lần làm mới nhất,
+--      câu sai / bỏ trống (hoặc người lớn đã phán Sai), chưa thử lại. Gửi lại = cùng biên nhận. Không là bằng chứng.
+create or replace function english.eng_my_reveal_item(p_activity uuid, p_item text, p_client_id text) returns jsonb
+language plpgsql volatile security definer set search_path = ''
+as $$
+declare
+  v_member uuid;
+  v_learner uuid;
+  v_act english.activity_instances%rowtype;
+  v_inst english.inquiry_instances%rowtype;
+  v_kind text;
+  v_t english.attempts%rowtype;
+  v_checks jsonb;
+  v_step jsonb;
+  v_res text;
+  v_old english.item_reveals%rowtype;
+  v_id uuid;
+begin
+  select m.id, l.id into v_member, v_learner
+  from english.members m join english.learners l on l.member_id = m.id
+  where m.user_id = auth.uid() and m.role = 'student';
+  if v_member is null then
+    raise exception 'eng_my_reveal_item: only the learner may do this (not signed in as a student)' using errcode = '42501';
+  end if;
+  if p_activity is null or p_item is null or p_client_id is null or pg_catalog.length(pg_catalog.btrim(p_client_id)) not between 8 and 100 then
+    raise exception 'eng_my_reveal_item: activity, item and client id (8..100 characters) are required' using errcode = '22004';
+  end if;
+  select a.* into v_act from english.activity_instances a where a.id = p_activity and a.learner_id = v_learner;
+  if not found or not english.eng_activity_released(p_activity) then
+    raise exception 'eng_my_reveal_item: activity not found (not_found)' using errcode = 'P0002';
+  end if;
+  select * into v_old from english.item_reveals r where r.learner_id = v_learner and r.client_id = p_client_id;
+  if found then
+    if v_old.activity_id <> p_activity or v_old.item_id <> p_item then
+      raise exception 'eng_my_reveal_item: client_id was already used for another item (client_id_reused)' using errcode = '23505';
+    end if;
+    return pg_catalog.jsonb_build_object('id', v_old.id, 'replayed', true);
+  end if;
+  select * into v_inst from english.inquiry_instances i where i.id = v_act.inquiry_instance_id;
+  select t.kind into v_kind from english.inquiry_templates t where t.id = v_inst.template_id and t.version = v_inst.template_version;
+  if v_kind is distinct from 'studio' or english.eng_work_is_test(p_activity) then
+    raise exception 'eng_my_reveal_item: the answer is not shown for this work (not_revealable)' using errcode = '23514';
+  end if;
+  select t.* into v_t from english.attempts t where t.activity_instance_id = p_activity order by t.attempt_no desc limit 1;
+  if not found then
+    raise exception 'eng_my_reveal_item: send the work first (not_sent)' using errcode = '23514';
+  end if;
+  select c.checks into v_checks from english.attempt_auto_checks c where c.attempt_id = v_t.id;
+  select x into v_step from pg_catalog.jsonb_array_elements(v_inst.snapshot -> 'steps') as x where (x ->> 'step_no')::int = v_act.step_no;
+  if v_checks is null
+     or not exists (select 1 from pg_catalog.jsonb_array_elements(coalesce(v_step -> 'items', '[]'::jsonb)) it where it ->> 'id' = p_item) then
+    raise exception 'eng_my_reveal_item: this item is not part of the step (bad_item)' using errcode = '22023';
+  end if;
+  v_res := v_checks -> 'items' -> p_item ->> 'result';
+  if v_res = 'needs_person' then
+    v_res := (select d.result from english.item_decisions d where d.attempt_id = v_t.id and d.item_id = p_item);
+  end if;
+  if v_res is null or v_res not in ('incorrect', 'blank') then
+    raise exception 'eng_my_reveal_item: this item is not one to look at again (not_retryable)' using errcode = '23514';
+  end if;
+  if exists (select 1 from english.item_retries r where r.attempt_id = v_t.id and r.item_id = p_item) then
+    raise exception 'eng_my_reveal_item: this item was already retried (already_retried)' using errcode = '23505';
+  end if;
+  if exists (select 1 from english.item_reveals r where r.attempt_id = v_t.id and r.item_id = p_item) then
+    select * into v_old from english.item_reveals r where r.attempt_id = v_t.id and r.item_id = p_item;
+    return pg_catalog.jsonb_build_object('id', v_old.id, 'replayed', true);
+  end if;
+  insert into english.item_reveals(learner_id, attempt_id, activity_id, item_id, client_id)
+  values (v_learner, v_t.id, p_activity, p_item, p_client_id)
+  returning id into v_id;
+  return pg_catalog.jsonb_build_object('id', v_id, 'replayed', false);
+end
+$$;
+revoke execute on function english.eng_my_reveal_item(uuid, text, text) from public, anon, service_role;
+grant execute on function english.eng_my_reveal_item(uuid, text, text) to authenticated;
 
 -- 3d. Người lớn đọc các lần thử lại của một em (mới nhất trước): đề, câu con viết, lần thử lại. Chỉ đọc; chưa có "đã xem" (xem PROGRESS: câu hỏi mở).
 create or replace function english.eng_item_retries(p_learner uuid) returns jsonb
@@ -412,16 +554,19 @@ as $$
            i.snapshot, a.step_no,
            (select av.content -> 'answers' from english.artifact_versions av
             where av.attempt_id = t.id and av.kind = 'answers' order by av.version desc limit 1) as answers
-    from (select distinct r0.attempt_id from english.item_retries r0 where r0.learner_id in (select id from ls)) rr
+    from (select distinct e0.attempt_id from (select r0.attempt_id, r0.learner_id from english.item_retries r0
+                                            union all select v0.attempt_id, v0.learner_id from english.item_reveals v0) e0
+          where e0.learner_id in (select id from ls)) rr
     join english.attempts t on t.id = rr.attempt_id
     join ls on ls.id = t.learner_id
     join english.activity_instances a on a.id = t.activity_instance_id
     join english.inquiry_instances i on i.id = a.inquiry_instance_id
   ),
   waiting as (
-    select att.attempt_id, r.item_id, r.answer, r.created_at as at, q.x, q.o
+    select att.attempt_id, r.item_id, r.answer, r.created_at as at, r.kind, q.x, q.o
     from att
-    join english.item_retries r on r.attempt_id = att.attempt_id
+    join (select x.attempt_id, x.item_id, x.answer, x.created_at, 'retry' as kind from english.item_retries x
+          union all select y.attempt_id, y.item_id, null, y.created_at, 'revealed' from english.item_reveals y) r on r.attempt_id = att.attempt_id
       and not exists (select 1 from english.retry_seen z where z.attempt_id = r.attempt_id and z.created_at > r.created_at)
     cross join lateral (
       select st.s from pg_catalog.jsonb_array_elements(att.snapshot -> 'steps') as st(s) where (st.s ->> 'step_no')::int = att.step_no
@@ -439,7 +584,7 @@ as $$
         select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
                  'item_id', w.item_id,
                  'n', coalesce(nullif(pg_catalog.substring(w.item_id, '^q([1-9][0-9]{0,2})$'), '')::int, w.o::int),
-                 'stem', w.x ->> 'stem', 'given', coalesce(att.answers ->> w.item_id, ''), 'retry', w.answer, 'at', w.at)
+                 'stem', w.x ->> 'stem', 'given', coalesce(att.answers ->> w.item_id, ''), 'retry', w.answer, 'kind', w.kind, 'at', w.at)
                order by w.o)
         from waiting w where w.attempt_id = att.attempt_id))
       order by (select pg_catalog.min(w.at) from waiting w where w.attempt_id = att.attempt_id), att.attempt_id), '[]'::jsonb))
@@ -485,7 +630,8 @@ begin
     end if;
     return pg_catalog.jsonb_build_object('id', v_old.id, 'replayed', true);
   end if;
-  if not exists (select 1 from english.item_retries r where r.attempt_id = p_attempt) then
+  if not exists (select 1 from english.item_retries r where r.attempt_id = p_attempt)
+     and not exists (select 1 from english.item_reveals r where r.attempt_id = p_attempt) then
     raise exception 'eng_mark_retry_seen: this attempt has no retry (no_retry)' using errcode = '23514';
   end if;
   insert into english.retry_seen(learner_id, attempt_id, note, seen_by, seen_role, client_id)
@@ -550,6 +696,7 @@ declare
   n_submission_feedback int := 0;
   n_item_retries int := 0;
   n_retry_seen int := 0;
+  n_item_reveals int := 0;
   n_work_test_marks int := 0;
   n_files int := 0;
   n_upload_tickets int := 0;
@@ -661,6 +808,9 @@ begin
   get diagnostics n_curricula = row_count;
 
   -- 0034: lần thử lại của con (trỏ tới attempts) và cờ "Bài kiểm tra" (trỏ tới activity_instances / assignments): xóa trước các bảng đó.
+  delete from english.item_reveals ivl where ivl.learner_id = p_learner_id;
+  get diagnostics n_item_reveals = row_count;
+
   delete from english.retry_seen rs where rs.learner_id = p_learner_id;
   get diagnostics n_retry_seen = row_count;
 
@@ -919,6 +1069,7 @@ begin
     ) || pg_catalog.jsonb_build_object(
       'item_retries', n_item_retries,
       'retry_seen', n_retry_seen,
+      'item_reveals', n_item_reveals,
       'work_test_marks', n_work_test_marks
     ),
     'note', 'Backups expire after 30 days.'
@@ -1040,6 +1191,7 @@ begin
     || pg_catalog.jsonb_build_object(
       'item_retries', (select pg_catalog.count(*) from english.item_retries x where x.learner_id = p_learner),
       'retry_seen', (select pg_catalog.count(*) from english.retry_seen x where x.learner_id = p_learner),
+      'item_reveals', (select pg_catalog.count(*) from english.item_reveals x where x.learner_id = p_learner),
       'work_test_marks', (select pg_catalog.count(*) from english.work_test_marks x where x.learner_id = p_learner)));
 end
 $$;

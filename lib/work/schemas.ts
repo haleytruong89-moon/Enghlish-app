@@ -42,6 +42,8 @@ export const retryBodySchema = z.strictObject({
   answer: z.string().trim().min(1).max(2000),
   client_id: uuid,
 });
+/** "Xem đáp án" for one wrong item of a practice work (D39): gives up the retry of that item. */
+export const revealBodySchema = z.strictObject({ item_id: z.string().min(1).max(40), client_id: uuid });
 export type RetryBody = z.infer<typeof retryBodySchema>;
 
 /** What eng_my_test_marks() may return. */

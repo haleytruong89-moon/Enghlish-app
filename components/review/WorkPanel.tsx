@@ -1,4 +1,6 @@
 import { assistanceLabels, fallbackLabels, reviewPage, supportKindLabels, verificationLabels } from "@/lib/copy/vi";
+import { WorkItems, type WorkItemRow } from "@/components/review/WorkItems";
+import { itemStatus } from "@/lib/review/itemStatus";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { formatWhen } from "@/lib/review/format";
 import type { ReviewEpisodeView } from "@/lib/review/types";
@@ -46,32 +48,23 @@ export function WorkPanel({ view }: { view: ReviewEpisodeView }) {
               {needsPerson > 0 ? ` · ${reviewPage.autoNeedsPerson(needsPerson)}` : ""}
             </p>
           ) : null}
-          <ol className="flex flex-col gap-3">
-            {view.step.items.map((it) => {
-              const given = text(answers[it.id]);
+          <WorkItems
+            givenLabel={reviewPage.itemGiven(alias)}
+            blankLabel={reviewPage.itemBlank}
+            rows={view.step.items.map((it, i): WorkItemRow => {
               const res = auto?.items[it.id]?.result;
               const key = keyByItem.get(it.id);
-              return (
-                <li key={it.id} className="rounded-lg border border-line px-3 py-2" data-testid={`item-${it.id}`}>
-                  <p lang="en" className="text-sm font-medium">
-                    {it.stem}
-                  </p>
-                  <p lang="en" className="mt-1 text-sm">
-                    {reviewPage.itemGiven(alias)}: <b>{given && given.trim() ? given : reviewPage.itemBlank}</b>
-                    {res ? (
-                      <span className="ml-2 rounded-full border border-line px-2 py-0.5 text-xs">{reviewPage.autoResult[res] ?? fallbackLabels.autoResult}</span>
-                    ) : null}
-                  </p>
-                  {key && (key.answer || key.explanationVi) ? (
-                    <p lang="en" className="mt-1 text-xs text-muted">
-                      {reviewPage.keyKinds[key.kind] ?? fallbackLabels.keyKind}: {key.answer ?? ""}
-                      {key.explanationVi ? ` · ${key.explanationVi}` : ""}
-                    </p>
-                  ) : null}
-                </li>
-              );
+              return {
+                id: it.id,
+                n: Number(/^q([1-9][0-9]{0,2})$/.exec(it.id)?.[1] ?? i + 1),
+                stem: it.stem,
+                given: text(answers[it.id]) ?? "",
+                status: itemStatus(res),
+                blank: res === "blank",
+                keyLine: key && (key.answer || key.explanationVi) ? `${reviewPage.keyKinds[key.kind] ?? fallbackLabels.keyKind}: ${key.answer ?? ""}${key.explanationVi ? ` · ${key.explanationVi}` : ""}` : null,
+              };
             })}
-          </ol>
+          />
         </>
       ) : body !== null ? (
         <p lang="en" className="whitespace-pre-wrap text-[15px] leading-7" data-testid="work-text">

@@ -84,6 +84,13 @@ export function createSupabaseWorkStore(): WorkStore {
       return data ?? null;
     },
 
+    async revealItem({ activityId, itemId, clientId }) {
+      const db = await createUserClient();
+      const { data, error } = await db.rpc("eng_my_reveal_item", { p_activity: activityId, p_item: itemId, p_client_id: clientId });
+      if (error) dbErrorWithTag("eng_my_reveal_item", error);
+      return data;
+    },
+
     async retryItem({ activityId, itemId, answer, clientId }) {
       const db = await createUserClient();
       const { data, error } = await db.rpc("eng_my_retry_item", { p_activity: activityId, p_item: itemId, p_answer: answer, p_client_id: clientId });

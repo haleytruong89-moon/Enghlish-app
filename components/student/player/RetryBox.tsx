@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { retryCopy as c } from "@/lib/copy/vi";
 
 /** "Thử lại câu này": one retry per item. It goes to the tutor, never marked here, and the child is never told whether it is right. */
-export function RetryBox({ activityId, itemId, number, options, long, onSent }: { activityId: string; itemId: string; number: number; /** Choices of a multiple-choice item (radios); empty = free text. */ options: string[]; /** An open / transform item: a larger box and limit. */ long: boolean; onSent: (text: string) => void }) {
+export function RetryBox({ activityId, itemId, number, options, long, extra, onSent }: { /** Another button beside "Thử lại câu này" while the box is closed (the "Xem đáp án" of a practice work). */ extra?: React.ReactNode; activityId: string; itemId: string; number: number; /** Choices of a multiple-choice item (radios); empty = free text. */ options: string[]; /** An open / transform item: a larger box and limit. */ long: boolean; onSent: (text: string) => void }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -42,9 +42,12 @@ export function RetryBox({ activityId, itemId, number, options, long, onSent }: 
 
   if (!open) {
     return (
-      <button type="button" data-testid={`retry-open-${itemId}`} onClick={() => setOpen(true)} className="min-h-11 self-start rounded-xl border border-line bg-[#E3ECE8] px-4 text-sm font-semibold text-[#1F4439]">
-        {c.open}
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" data-testid={`retry-open-${itemId}`} onClick={() => setOpen(true)} className="min-h-11 self-start rounded-xl border border-line bg-[#E3ECE8] px-4 text-sm font-semibold text-[#1F4439]">
+          {c.open}
+        </button>
+        {extra}
+      </div>
     );
   }
   return (

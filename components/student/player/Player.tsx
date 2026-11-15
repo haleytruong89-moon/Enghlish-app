@@ -215,6 +215,15 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
     }
   }
 
+  /** Re-reads the result after a retry / "Xem đáp án": the server sends the answer only for items that were retried or given up. */
+  async function refreshResult() {
+    const r = await fetch(`/api/student/activities/${activity.activityId}/result`, { cache: "no-store" })
+      .then((x) => (x.ok ? x.json() : null))
+      .then((x: { result?: unknown } | null) => (x?.result ? (x.result as ResultData) : null))
+      .catch(() => null);
+    if (r) setResult(r);
+  }
+
   function redo() {
     setEarly(false);
     closed.current = false;
@@ -231,7 +240,7 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
   }
 
   if (phase === "result" && result) {
-    return <ResultView activityId={activity.activityId} title={activity.titleVi} result={result} items={items.map((i) => ({ id: i.id, kind: i.kind, options: i.options }))} canRedo={!isTest && activity.canSubmit} onRedo={redo} />;
+    return <ResultView activityId={activity.activityId} title={activity.titleVi} result={result} items={items.map((i) => ({ id: i.id, kind: i.kind, options: i.options }))} canRedo={!isTest && activity.canSubmit && !result.marks?.some((m) => m.revealed)} onRedo={redo} onRefresh={refreshResult} />;
   }
   if (phase === "receipt" && receipt) {
     return (

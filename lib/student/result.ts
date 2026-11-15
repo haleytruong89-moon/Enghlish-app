@@ -6,7 +6,15 @@ import { z } from "zod";
 
 export type ResultLook = { id: string; n: number; stem: string; given: string; retryText: string | null; canRetry: boolean };
 export type ResultOpen = { id: string; n: number; stem: string; given: string };
+export type MarkKind = "right" | "wrong" | "waiting";
+/** One item of a PRACTICE work of a Studio set (D39): a mark, the retry, and the model answer + why ONLY once revealed (a right item: why only). */
+export type ResultMark = {
+  id: string; n: number; stem: string; given: string; mark: MarkKind; retry: { text: string; mark: MarkKind } | null;
+  revealed: boolean; canRetry: boolean; canReveal: boolean; answer: string | null; why: string | null;
+};
 export type ResultView = {
+  /** null for a test / a weekly topic: no marks and no answers at all. */
+  marks?: ResultMark[] | null;
   attemptNo: number;
   submittedAt: string;
   isTest: boolean;
@@ -32,6 +40,15 @@ const schema = z.strictObject({
     }),
   ),
   open: z.array(z.strictObject({ id: z.string(), n: z.number().int(), stem: z.string(), given: z.string() })),
+  marks: z
+    .array(
+      z.strictObject({
+        id: z.string(), n: z.number().int(), stem: z.string(), given: z.string(), mark: z.enum(["right", "wrong", "waiting"]),
+        retry: z.strictObject({ text: z.string(), mark: z.enum(["right", "wrong", "waiting"]) }).nullable(),
+        revealed: z.boolean(), can_retry: z.boolean(), can_reveal: z.boolean(), answer: z.string().nullable(), why: z.string().nullable(),
+      }),
+    )
+    .optional(),
 });
 
 /** null / {} / anything unexpected → null (the page then shows the plain receipt). */
@@ -40,7 +57,10 @@ export function parseResultView(raw: unknown): ResultView | null {
   const r = schema.safeParse(raw);
   if (!r.success) return null;
   const v = r.data;
+  // A test never carries marks or answers; if the database ever sent them the whole reply is refused.
+  if (v.is_test && v.marks) return null;
   return {
+    marks: v.marks ? v.marks.map((m) => ({ id: m.id, n: m.n, stem: m.stem, given: m.given, mark: m.mark, retry: m.retry, revealed: m.revealed, canRetry: m.can_retry, canReveal: m.can_reveal, answer: m.answer, why: m.why })) : null,
     attemptNo: v.attempt_no,
     submittedAt: v.submitted_at,
     isTest: v.is_test,

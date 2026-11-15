@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { resultCopy as c, retryCopy, work } from "@/lib/copy/vi";
 import { playerCopy } from "@/lib/copy/vi";
-import { groupResult, type ResultView as ResultData } from "@/lib/student/result";
+import { groupResult, type MarkKind, type ResultMark, type ResultView as ResultData } from "@/lib/student/result";
 import { formatHm } from "@/lib/work/view";
 import { RetryBox } from "./RetryBox";
 
@@ -19,7 +19,7 @@ const isLong = (items: { id: string; kind: string; options: string[] }[], id: st
  * After submitting (S-10). Which questions to look at again: what the child wrote, never the right answer, an explanation, a count or a score.
  * Practice: one "Thử lại câu này" per question. Test: no retry; "{thầy/cô} sẽ chữa cùng bạn".
  */
-export function ResultView({ activityId, title, result, items, canRedo, onRedo }: { activityId: string; title: string; result: ResultData; /** The step items (kind and choices only; the key never reaches the browser). */ items: { id: string; kind: string; options: string[] }[]; canRedo: boolean; onRedo: () => void }) {
+export function ResultView({ activityId, title, result, items, canRedo, onRedo, onRefresh }: { activityId: string; title: string; result: ResultData; /** Re-reads the result after a retry / reveal (practice of a Studio set shows the answer from the server). */ onRefresh?: () => Promise<void> | void; /** The step items (kind and choices only; the key never reaches the browser). */ items: { id: string; kind: string; options: string[] }[]; canRedo: boolean; onRedo: () => void }) {
   const g = groupResult(result);
   const [sent, setSent] = useState<Record<string, string>>({});
   return (
@@ -41,7 +41,21 @@ export function ResultView({ activityId, title, result, items, canRedo, onRedo }
         </p>
       ) : null}
 
-      {g.look.length > 0 ? (
+      {result.marks ? (
+        <section aria-labelledby="rs-marks" className="flex flex-col gap-3" data-testid="result-marks">
+          <h2 id="rs-marks" className="text-lg font-bold">
+            {c.marksTitle}
+          </h2>
+          <p className="text-sm text-muted">{c.marksIntro}</p>
+          <ul className="m-0 flex list-none flex-col gap-3 p-0">
+            {result.marks.map((m) => (
+              <MarkItem key={m.id} m={m} activityId={activityId} choices={choicesOf(items, m.id)} long={isLong(items, m.id)} onRefresh={onRefresh} />
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {!result.marks && g.look.length > 0 ? (
         <section aria-labelledby="rs-look" className="flex flex-col gap-3">
           <h2 id="rs-look" className="text-lg font-bold">
             {result.isTest ? c.lookTitleTest : c.lookTitle}
@@ -82,7 +96,7 @@ export function ResultView({ activityId, title, result, items, canRedo, onRedo }
         </section>
       ) : null}
 
-      {g.open.length > 0 ? (
+      {!result.marks && g.open.length > 0 ? (
         <section aria-labelledby="rs-open" className="flex flex-col gap-3">
           <h2 id="rs-open" className="text-lg font-bold">
             {c.openTitle}
@@ -106,7 +120,7 @@ export function ResultView({ activityId, title, result, items, canRedo, onRedo }
         </section>
       ) : null}
 
-      {g.nothing ? (
+      {result.marks ? null : g.nothing ? (
         <p className="rounded-xl bg-[#E3ECE8] px-4 py-3 text-[15px] text-[#1F4439]" data-testid="result-nothing">
           {c.nothing}
         </p>
@@ -131,5 +145,113 @@ export function ResultView({ activityId, title, result, items, canRedo, onRedo }
       </div>
       <p className="text-center text-sm text-muted">{c.footnote}</p>
     </div>
+  );
+}
+
+const TONE: Record<MarkKind, { box: string; chip: string }> = {
+  right: { box: "border-[#2B6B47] bg-[#F3FAF6]", chip: "bg-[#DDF0E4] text-[#1B4D31]" },
+  wrong: { box: "border-[#B3261E] bg-[#FFF6F4]", chip: "bg-[#FADBD6] text-[#8A1C12]" },
+  waiting: { box: "border-[#B26A00] bg-[#FFFAF0]", chip: "bg-[#FBF1DC] text-[#6B4600]" },
+};
+const markText = (k: MarkKind) => (k === "right" ? c.markRight : k === "wrong" ? c.markWrong : c.markWaiting);
+const retryText = (k: MarkKind) => (k === "right" ? c.retryRight : k === "wrong" ? c.retryWrong : c.retryWaiting);
+
+/** One item of a practice work: colour + icon + words (never colour alone), the retry, and the answer only once the server sends it. */
+function MarkItem({ m, activityId, choices, long, onRefresh }: { m: ResultMark; activityId: string; choices: string[]; long: boolean; onRefresh?: () => Promise<void> | void }) {
+  const tone = TONE[m.mark];
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const clientId = useRef<string>(crypto.randomUUID());
+  async function reveal() {
+    setBusy(true);
+    setProblem(null);
+    try {
+      const res = await fetch(`/api/student/activities/${activityId}/reveal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item_id: m.id, client_id: clientId.current }),
+      });
+      if (!res.ok && res.status !== 409) throw new Error(String(res.status));
+      await onRefresh?.();
+    } catch {
+      setProblem(c.revealFailed);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <li data-testid={`result-mark-${m.id}`} data-mark={m.mark} className={`flex flex-col gap-2 rounded-xl border-2 p-4 ${tone.box}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-muted">{c.questionLabel(m.n)}</p>
+        <span data-testid={`mark-chip-${m.id}`} className={`rounded-full px-3 py-1 text-sm font-bold ${tone.chip}`}>
+          {markText(m.mark)}
+        </span>
+      </div>
+      <p lang="en" className="text-[16px] font-semibold">
+        {m.stem}
+      </p>
+      <p className="text-[15px]">
+        {m.given.trim() ? (
+          <>
+            <b>{c.youAnswered}:</b> <span lang="en">“{m.given}”</span>
+          </>
+        ) : (
+          c.notAnswered
+        )}
+      </p>
+      {m.retry ? (
+        <div className="flex flex-col gap-1" data-testid={`retry-sent-${m.id}`}>
+          <p className="text-[15px]">
+            <b>{retryCopy.yourRetry}:</b> <span lang="en">“{m.retry.text}”</span>
+          </p>
+          <span data-testid={`retry-mark-${m.id}`} className={`self-start rounded-full px-3 py-1 text-sm font-bold ${TONE[m.retry.mark].chip}`}>
+            {retryText(m.retry.mark)}
+          </span>
+        </div>
+      ) : null}
+      {m.canRetry || m.canReveal ? (
+        <div className="flex flex-col gap-2">
+          {m.canRetry ? (
+            <RetryBox
+              activityId={activityId}
+              itemId={m.id}
+              number={m.n}
+              options={choices}
+              long={long}
+              onSent={() => void onRefresh?.()}
+              extra={
+                m.canReveal ? (
+                  <button type="button" disabled={busy} onClick={() => void reveal()} data-testid={`reveal-${m.id}`} className="min-h-11 self-start rounded-xl border border-line bg-white px-4 text-sm font-semibold disabled:opacity-60">
+                    {busy ? c.revealing : c.reveal}
+                  </button>
+                ) : null
+              }
+            />
+          ) : null}
+          {problem ? (
+            <p role="alert" className="text-sm text-[#6B4600]">
+              {problem}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      {m.answer ? (
+        <p className="text-[15px]" data-testid={`answer-${m.id}`}>
+          <b>{c.answerLabel}:</b> <span lang="en">{m.answer}</span>
+        </p>
+      ) : null}
+      {m.why ? (
+        m.mark === "right" ? (
+          <details className="text-[15px]" data-testid={`why-${m.id}`}>
+            <summary className="min-h-11 cursor-pointer py-2 font-semibold">{c.whyLabel}</summary>
+            <p>{m.why}</p>
+          </details>
+        ) : (
+          <p className="text-[15px]" data-testid={`why-${m.id}`}>
+            <b>{c.whyLabel}:</b> {m.why}
+          </p>
+        )
+      ) : null}
+    </li>
   );
 }

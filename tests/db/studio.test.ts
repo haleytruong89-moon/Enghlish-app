@@ -277,7 +277,8 @@ describe("Studio B1 (migration 0024)", () => {
       expect(review.look[0]).toMatchObject({ given: "B. can't" });
       expect(review.open.map((w) => w.n)).toEqual([7, 8]);
       expect(review.others_fine).toBe(true);
-      expect(JSON.stringify(review)).not.toMatch(/"(correct|total|checked|score|tag_key|target_id|expected|explanation_vi|answer)"/);
+      expect(JSON.stringify(review)).not.toMatch(/"(correct|total|checked|score|tag_key|target_id|expected|explanation_vi)"/);
+      expect(JSON.stringify(review)).not.toMatch(/"answer":"/); // D39: the key "answer" exists on the marks but stays null until a retry or "Xem đáp án"
       expect(await asStudent(s.users.studentAn, "select english.eng_my_result_view($1) as r", [activityId])).toBeNull();
       // a weekly-topic step with nothing submitted gives null
       const topicStep = (await q1<{ id: string }>("select a.id from english.activity_instances a join english.inquiry_instances i on i.id = a.inquiry_instance_id where a.learner_id = $1 and i.template_id not like '%-ST-%' limit 1", [s.learners.nguyen]))[0];

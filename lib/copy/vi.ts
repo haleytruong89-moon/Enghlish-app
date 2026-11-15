@@ -1983,6 +1983,20 @@ export const resultCopy = {
   openNote: `${tutorHonorificCap} sẽ đọc câu này`,
   youWrote: "Bạn viết",
   othersFine: "Các câu còn lại: ổn",
+  // D39: practice work of a Studio set - a ✓ / ✗ on each question (never a total), a retry or the answer for a wrong one.
+  marksTitle: "Từng câu",
+  marksIntro: "Câu nào chưa đúng, bạn thử lại một lần hoặc xem đáp án. Bạn không thử lại câu đã xem đáp án.",
+  markRight: "✓ Đúng",
+  markWrong: "✗ Chưa đúng",
+  markWaiting: `${tutorHonorificCap} sẽ đọc câu này`,
+  retryRight: "Lần thử lại: ✓ đúng",
+  retryWrong: "Lần thử lại: ✗ chưa đúng",
+  retryWaiting: `Lần thử lại: ${tutorHonorific} sẽ đọc`,
+  reveal: "Xem đáp án",
+  revealing: "Đang mở…",
+  revealFailed: "Chưa mở được đáp án. Bạn thử lại nhé.",
+  answerLabel: "Đáp án",
+  whyLabel: "Vì sao",
   nothing: `Không có câu nào cần nhìn lại. ${tutorHonorificCap} vẫn sẽ đọc cả bài của bạn.`,
   home: "Về Hôm nay",
   done: "Xem trong Đã làm",
@@ -2016,6 +2030,19 @@ export const testMarkCopy = {
 };
 
 // Studio B1 — Hộp duyệt → "Cần thầy/cô xem" (board 21). Adults only: "đúng x/y câu" is allowed here (spec §7).
+// Tutor review screens (D39 B): colour AND words, never colour alone.
+export const reviewItemCopy = {
+  right: "✓ Đúng",
+  wrong: "✗ Sai",
+  blank: "✗ Để trống",
+  waiting: `⏳ Chờ ${tutorHonorific} xem`,
+  questionLabel: (n: number) => `Câu ${n}`,
+  filterLabel: "Lọc các câu",
+  filterAll: "Tất cả",
+  filterToCheck: "Chỉ câu sai và cần xem",
+  noneToCheck: "Không có câu sai hay cần xem.",
+};
+
 export const studioInboxCopy = {
   tab: `Cần ${tutorHonorific} xem`,
   title: `Cần ${tutorHonorific} xem`,
@@ -2044,7 +2071,8 @@ export const studioInboxCopy = {
   retrySeenSaving: "Đang lưu…",
   retryNoteLabel: "Ghi chú (không bắt buộc, chỉ người lớn thấy)",
   retryNoteHint: "Con không thấy ghi chú này.",
-  retryHeading: (alias: string, title: string, n: number) => `${alias} · ${title} · thử lại ${n} câu`,
+  retryHeading: (alias: string, title: string, n: number) => `${alias} · ${title} · ${n} câu`,
+  retryRevealed: "Con chọn Xem đáp án, không thử lại",
   retryFirst: "Lần đầu",
   retryNow: "Thử lại",
 };
@@ -2406,6 +2434,7 @@ export const pendingCopy = {
   need: {
     studioCheck: (n: number) => `${n} câu cần xem`,
     retry: (n: number) => `Con thử lại ${n} câu`,
+    reveal: (n: number) => `Con xem đáp án ${n} câu`,
     studioDraft: "Xem nháp, sửa rồi duyệt",
     curriculumDraft: "Duyệt Unit và bảng nối",
     aiFailed: "AI chưa đọc được · soạn tay",

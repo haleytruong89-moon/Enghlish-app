@@ -46,7 +46,11 @@ export function RetryPendingCard({ attempt }: { attempt: RetryAttempt }) {
           <li key={r.itemId} className="flex flex-col gap-1 rounded-xl border border-line p-3" data-testid={`retry-item-${attempt.attemptId}-${r.itemId}`}>
             <p className="font-semibold">{studioCopy.itemLabel(r.n)}. <span lang="en" className="font-normal">{r.stem}</span></p>
             <p className="text-sm">{studioInboxCopy.retryFirst}: <span lang="en" className="font-semibold" data-testid="retry-given">{r.given || studioInboxCopy.blankAnswer}</span></p>
-            <p className="text-sm">{studioInboxCopy.retryNow}: <span lang="en" className="font-semibold" data-testid="retry-text">{r.retry}</span></p>
+            {r.retry === null ? (
+              <p className="text-sm font-semibold" data-testid="retry-revealed">{studioInboxCopy.retryRevealed}</p>
+            ) : (
+              <p className="text-sm">{studioInboxCopy.retryNow}: <span lang="en" className="font-semibold" data-testid="retry-text">{r.retry}</span></p>
+            )}
           </li>
         ))}
       </ul>

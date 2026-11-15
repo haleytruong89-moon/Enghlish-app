@@ -311,3 +311,7 @@ Bốn khối trong `lib/copy/vi.ts`: `playerCopy` (làm bài), `resultCopy` (sau
 | Con (S4, S5) | "Mỗi câu bạn được thử lại một lần. {Thầy/cô} sẽ thấy lần thử của bạn. App không hiện đáp án." · tiêu đề câu viết tự do: "Câu {thầy/cô} sẽ đọc" |
 
 Luật: cờ "Bài kiểm tra" **chỉ đổi giao diện** (không thử lại, không ô hỏi gia sư, chữ khác); không đổi `mode`, không đổi cách S7a / điểm kiến thức đếm. Lần thử lại **không phải bằng chứng** (không engine nào đọc).
+
+### D39 (15/11) — đáp án sau lần thử lại, chỉ bài luyện tập của bộ Studio
+- **Con:** "Từng câu" · "✓ Đúng" / "✗ Chưa đúng" / "{Thầy/cô} sẽ đọc câu này" (hộp xanh / đỏ / cam: màu **và** chữ) · câu ✗: "Thử lại câu này" hoặc "Xem đáp án" · sau lần thử: "Lần thử lại: ✓ đúng / ✗ chưa đúng" rồi "Đáp án: …" và "Vì sao: …" · câu ✓: "Vì sao" thu gọn · không "Các câu còn lại: ổn", không tổng / % / điểm · không "Làm lại cả bài" khi đã hiện đáp án. Bài kiểm tra: như cũ ("{thầy/cô} sẽ chữa cùng bạn").
+- **Thầy/cô:** màn bài làm: chip "✓ Đúng" (xanh) · "✗ Sai" / "✗ Để trống" (đỏ) · "⏳ Chờ thầy/cô xem" (cam); bộ lọc "Tất cả" / "Chỉ câu sai và cần xem"; thẻ "Con thử lại" ghi "Con chọn Xem đáp án, không thử lại" khi không thử lại; dòng Chờ duyệt "Con thử lại n câu · Con xem đáp án m câu".

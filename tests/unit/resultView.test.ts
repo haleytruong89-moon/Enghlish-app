@@ -51,3 +51,18 @@ describe("groupResult", () => {
     expect(g.nothing).toBe(true);
   });
 });
+
+describe("parseResultView · marks of a practice work (D39)", () => {
+  const mark = (over: Record<string, unknown> = {}) => ({ id: "q2", n: 2, stem: "s", given: "B", mark: "wrong", retry: null, revealed: false, can_retry: true, can_reveal: true, answer: null, why: null, ...over });
+  it("reads marks; a work without marks gives null", () => {
+    expect(parseResultView(base)!.marks).toBeNull();
+    const v = parseResultView({ ...base, marks: [mark(), mark({ id: "q3", n: 3, mark: "right", can_retry: false, can_reveal: false, why: "Vì lý do" })] })!;
+    expect(v.marks!.map((m) => [m.n, m.mark, m.canReveal, m.answer, m.why])).toEqual([[2, "wrong", true, null, null], [3, "right", false, null, "Vì lý do"]]);
+  });
+  it("a test never carries marks (the whole reply is refused), and unknown keys / totals are refused", () => {
+    expect(parseResultView({ ...base, is_test: true, marks: [mark()] })).toBeNull();
+    expect(parseResultView({ ...base, marks: [mark({ correct: 1 })] })).toBeNull();
+    expect(parseResultView({ ...base, marks: [mark({ mark: "maybe" })] })).toBeNull();
+    expect(parseResultView({ ...base, marks: [mark()], total: 8 })).toBeNull();
+  });
+});

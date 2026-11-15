@@ -20,7 +20,7 @@ import { apiErrors } from "@/lib/copy/vi";
 import { parseReviewByDomain } from "@/lib/levels/shape";
 import { revisionDraftBodySchema, revisionSubmitBodySchema } from "@/lib/revision/schemas";
 import { parseMyActivityNote, parseMyFeedback, parseMyRevision } from "@/lib/revision/shape";
-import { attemptBodySchema, draftBodySchema, retryBodySchema, retryMarksSchema, UUID_RE } from "./schemas";
+import { attemptBodySchema, draftBodySchema, retryBodySchema, retryMarksSchema, revealBodySchema, UUID_RE } from "./schemas";
 import { toActivityView, toDraftReceipt, toHomeView, toReceipt } from "./shape";
 
 export class WorkDbError extends Error {
@@ -49,6 +49,8 @@ export interface WorkStore {
   /** english.eng_my_result_view(id) as the signed-in student (W4c2, S-10): items to look at again, never an answer or a count; null = nothing to show. */
   getMyResultView(activityId: string): Promise<unknown | null>;
   /** english.eng_my_retry_item as the signed-in student (W4c2): one retry of one item; it is not evidence. */
+  /** english.eng_my_reveal_item as the signed-in student (D39): give up the retry of one wrong item and see its answer. */
+  revealItem(args: { activityId: string; itemId: string; clientId: string }): Promise<unknown>;
   retryItem(args: { activityId: string; itemId: string; answer: string; clientId: string }): Promise<unknown>;
   /** english.eng_my_test_marks() as the signed-in student (W4c2): ids of their own work that counts as a test. */
   getMyTestMarks(): Promise<unknown>;
@@ -298,6 +300,8 @@ const RETRY_TAGS: [RegExp, 400 | 409, string][] = [
   [/\(bad_answer\)/, 400, "bad_answer"],
   [/\(test_no_retry\)/, 409, "test_no_retry"],
   [/\(already_retried\)/, 409, "already_retried"],
+  [/\(already_revealed\)/, 409, "already_revealed"],
+  [/\(not_revealable\)/, 409, "not_revealable"],
   [/\(not_retryable\)/, 409, "not_retryable"],
   [/\(not_sent\)/, 409, "not_sent"],
   [/\(client_id_reused\)/, 409, "conflict"],
@@ -311,6 +315,22 @@ export async function handleRetryItem(deps: HandlerDeps, activityId: string, raw
   if (!parsed.success) return fail(400, "invalid_body");
   try {
     const raw = await deps.store.retryItem({ activityId, itemId: parsed.data.item_id, answer: parsed.data.answer, clientId: parsed.data.client_id });
+    const replayed = !!raw && typeof raw === "object" && (raw as { replayed?: unknown }).replayed === true;
+    return { status: replayed ? 200 : 201, body: { ok: true, replayed } };
+  } catch (err) {
+    if (err instanceof WorkDbError) for (const [re, status, code] of RETRY_TAGS) if (re.test(err.message)) return fail(status, code);
+    return fromDbError(err);
+  }
+}
+
+/** POST /api/student/activities/:id/reveal - "Xem đáp án" for one wrong item of a practice work. Gives up that item's retry; no engine reads it. */
+export async function handleRevealItem(deps: HandlerDeps, activityId: string, rawBody: unknown): Promise<HandlerResult> {
+  const g = await guardActivity(deps, activityId);
+  if (!g.ok) return g.result;
+  const parsed = revealBodySchema.safeParse(rawBody);
+  if (!parsed.success) return fail(400, "invalid_body");
+  try {
+    const raw = await deps.store.revealItem({ activityId, itemId: parsed.data.item_id, clientId: parsed.data.client_id });
     const replayed = !!raw && typeof raw === "object" && (raw as { replayed?: unknown }).replayed === true;
     return { status: replayed ? 200 : 201, body: { ok: true, replayed } };
   } catch (err) {

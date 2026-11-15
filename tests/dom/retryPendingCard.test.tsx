@@ -14,7 +14,7 @@ afterEach(() => {
 
 const attempt: RetryAttempt = {
   attemptId: "att-1", learnerId: "L1", alias: "Nguyên (thử)", isTest: true, activityId: "act", title: "Unit 5", submittedAt: "2026-11-15T03:00:00Z", since: "2026-11-15T04:00:00Z",
-  retries: [{ itemId: "q2", n: 2, stem: "She ___ be at home.", given: "B. can't", retry: "A. must", at: "2026-11-15T04:00:00Z" }],
+  retries: [{ itemId: "q2", n: 2, stem: "She ___ be at home.", given: "B. can't", retry: "A. must", kind: "retry", at: "2026-11-15T04:00:00Z" }, { itemId: "q5", n: 5, stem: "Why?", given: "", retry: null, kind: "revealed", at: "2026-11-15T04:01:00Z" }],
 };
 const fetchMock = (status: number, body: unknown = {}) => {
   const f = vi.fn(async () => ({ ok: status < 300, status, json: async () => body }));
@@ -30,8 +30,9 @@ describe("the retry card (Đã xem)", () => {
   it("shows the first answer beside the retry, and the note says only adults see it", () => {
     fetchMock(201);
     render(<RetryPendingCard attempt={attempt} />);
-    expect(screen.getByTestId("retry-given").textContent).toBe("B. can't");
+    expect(screen.getAllByTestId("retry-given")[0]!.textContent).toBe("B. can't");
     expect(screen.getByTestId("retry-text").textContent).toBe("A. must");
+    expect(screen.getByTestId("retry-revealed").textContent).toBe(studioInboxCopy.retryRevealed); // chose Xem đáp án, no retry
     expect(screen.getByText(studioInboxCopy.retryNoteHint)).toBeTruthy();
     expect(screen.getByTestId("retry-seen-att-1").textContent).toContain(studioInboxCopy.retrySeen);
   });

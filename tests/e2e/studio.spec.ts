@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { Client } from "pg";
-import { aiSettingsCopy, levelLabels, pdfPickCopy, pendingCopy, playerCopy, resultCopy, retryCopy, studioInboxCopy, work } from "@/lib/copy/vi";
+import { aiSettingsCopy, levelLabels, pdfPickCopy, pendingCopy, playerCopy, resultCopy, studioInboxCopy, work } from "@/lib/copy/vi";
 import { KEY_RECOMMEND, PAGE_LIMITS } from "@/lib/pdf/limits";
 import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { makeDocx } from "../unit/fixtures/docx";
@@ -92,15 +92,19 @@ test("Nguyên does the test one question at a time: he sees which ones to look a
     q6: { v: "happyness" }, q7: { v: "I wish I could" }, q8: { v: "is said to be a" },
   });
   await expect(page.getByTestId("result-view")).toBeVisible();
-  for (const id of ["q2", "q5", "q6"]) await expect(page.getByTestId(`result-look-${id}`)).toBeVisible();
-  for (const id of ["q7", "q8"]) await expect(page.getByTestId(`result-open-${id}`)).toBeVisible();
-  await expect(page.getByTestId("result-others-fine")).toContainText(resultCopy.othersFine);
+  // D39: a practice work shows a ✓ / ✗ on each question (colour + words), never a total, and no answer before a retry / "Xem đáp án"
+  for (const id of ["q1", "q3", "q4"]) await expect(page.getByTestId(`result-mark-${id}`)).toHaveAttribute("data-mark", "right");
+  for (const id of ["q2", "q5", "q6"]) await expect(page.getByTestId(`result-mark-${id}`)).toHaveAttribute("data-mark", "wrong");
+  for (const id of ["q7", "q8"]) await expect(page.getByTestId(`result-mark-${id}`)).toHaveAttribute("data-mark", "waiting");
+  await expect(page.getByTestId("mark-chip-q2")).toContainText(resultCopy.markWrong);
+  await expect(page.getByTestId("mark-chip-q1")).toContainText(resultCopy.markRight);
+  await expect(page.getByTestId("reveal-q2")).toBeVisible();
   const text = await studentVisibleText(page);
   expect(text).not.toMatch(SCORE);
-  expect(text).not.toContain("A. must"); // the model answer
+  expect(text).not.toMatch(/điểm|đúng\s+\d/i);
+  expect(text).not.toContain("A. must"); // the model answer: not before a retry or "Xem đáp án"
   expect(text).not.toContain("happiness");
   expect(text).not.toContain("Nên là");
-  expect(text).not.toMatch(/đúng\s+\d/);
 });
 
 test("Nguyên retries one question once; he is told it went to the tutor, no score; the tutor sees the retry beside the first answer", async ({ page, browser }) => {
@@ -109,13 +113,22 @@ test("Nguyên retries one question once; he is told it went to the tutor, no sco
   await page.getByTestId("retry-open-q2").click();
   await page.getByTestId("retry-box-q2").getByLabel("A. must", { exact: true }).check(); // a multiple-choice item retries with the choices
   await page.getByTestId("retry-send-q2").click();
-  await expect(page.getByTestId("retry-sent-q2")).toContainText(retryCopy.sent);
+  await expect(page.getByTestId("retry-sent-q2")).toBeVisible();
+  await expect(page.getByTestId("retry-mark-q2")).toContainText(resultCopy.retryRight); // D39: whether the retry matches, then the answer
+  await expect(page.getByTestId("answer-q2")).toContainText("A. must");
   await expect(page.getByTestId("retry-open-q2")).toHaveCount(0); // one retry per question
+  // "Xem đáp án" on another wrong item gives up its retry and opens the answer
+  await page.getByTestId("reveal-q6").click();
+  await expect(page.getByTestId("answer-q6")).toContainText("happiness");
+  await expect(page.getByTestId("retry-open-q6")).toHaveCount(0);
+  // after any answer was shown there is no "Làm lại cả bài"
+  await expect(page.getByTestId("result-redo")).toHaveCount(0);
   const text = await studentVisibleText(page, "result-view");
   expect(text).not.toMatch(SCORE);
-  expect(text).not.toMatch(/đúng\s+\d|Nên là|Vì sao|đáp án đúng/i);
+  expect(text).not.toMatch(/điểm|đúng\s+\d/i);
   await page.reload();
   await expect(page.getByTestId("retry-sent-q2")).toBeVisible();
+  await expect(page.getByTestId("answer-q6")).toContainText("happiness");
   await expect(page.getByTestId("retry-open-q2")).toHaveCount(0);
 
   const tutor = await (await browser.newContext()).newPage();
@@ -123,10 +136,12 @@ test("Nguyên retries one question once; he is told it went to the tutor, no sco
   await tutor.goto(`/learners/${NGUYEN}/inbox`);
   const attemptId = (await q<{ id: string }>("select id from english.attempts where activity_instance_id = $1 order by attempt_no desc limit 1", [activityId]))[0]!.id;
   await expect(tutor.getByTestId(`pending-row-retry-${attemptId}`)).toContainText(pendingCopy.need.retry(1));
+  await expect(tutor.getByTestId(`pending-row-retry-${attemptId}`)).toContainText(pendingCopy.need.reveal(1));
   await tutor.getByTestId(`pending-open-retry-${attemptId}`).click();
   const card = tutor.getByTestId(`retry-card-${attemptId}`);
   await expect(card.getByTestId("retry-given")).toHaveText("B. can't");
   await expect(card.getByTestId("retry-text")).toHaveText("A. must");
+  await expect(card.getByTestId("retry-revealed")).toBeVisible(); // q6: the child chose Xem đáp án
   // Only "Đã xem" clears the row (with an optional note the child does not see).
   await card.getByTestId(`retry-note-${attemptId}`).fill("Câu 2 con tự sửa được.");
   await card.getByTestId(`retry-seen-${attemptId}`).click();
@@ -166,7 +181,7 @@ test("after the verdicts the child sees no waiting box; the parent sees the AI c
   await loginAs(page, "studentNguyen");
   await page.goto(`/activities/${activityId}`);
   await expect(page.getByTestId("result-view")).toBeVisible();
-  await expect(page.getByTestId("result-open-q7")).toHaveCount(0);
+  await expect(page.getByTestId("result-mark-q7")).not.toHaveAttribute("data-mark", "waiting");
   const parent = await (await browser.newContext()).newPage();
   await loginAs(parent, "parent");
   await parent.goto(draftUrl);
@@ -194,6 +209,8 @@ test.describe("the Bài kiểm tra flag on a Studio work", () => {
     await expect(page.getByTestId("result-view")).toHaveAttribute("data-test", "yes");
     await expect(page.getByTestId("result-test-note")).toBeVisible();
     await expect(page.locator('[data-testid^="retry-open-"]')).toHaveCount(0);
+    await expect(page.getByTestId("result-marks")).toHaveCount(0); // a test: no ✓ / ✗, no answers
+    await expect(page.locator('[data-testid^="reveal-"], [data-testid^="answer-"]')).toHaveCount(0);
     const text = await studentVisibleText(page, "result-view");
     expect(text).not.toMatch(SCORE);
     expect(text).not.toMatch(/đúng\s+\d|Nên là|Vì sao/i);

@@ -100,3 +100,40 @@ describe("the player", () => {
     expect(h).toContain(playerCopy.dotEmpty(2));
   });
 });
+
+describe("the result screen of a practice work (D39): marks, retry or the answer", () => {
+  const m = (over: Record<string, unknown>) => ({ id: "q1", n: 1, stem: "s1", given: "x", mark: "right", retry: null, revealed: false, canRetry: false, canReveal: false, answer: null, why: null, ...over });
+  const marks = [
+    m({}),
+    m({ id: "q2", n: 2, mark: "wrong", canRetry: true, canReveal: true, stem: "She ___ be at home." }),
+    m({ id: "q3", n: 3, mark: "wrong", revealed: true, answer: "A. must", why: "Vì đoán chắc chắn." , retry: { text: "A. must", mark: "right" } }),
+    m({ id: "q4", n: 4, mark: "waiting" }),
+    m({ id: "q5", n: 5, mark: "right", why: "Vì thế." }),
+  ];
+  const h = renderToStaticMarkup(createElement(ResultView, { activityId: "a1", title: "Unit 5", result: result({ marks: marks as never }), items: [], canRedo: true, onRedo: () => {} }));
+  it("each item has a coloured box AND words: ✓ Đúng / ✗ Chưa đúng / the tutor will read", () => {
+    expect(h).toContain('data-mark="right"');
+    expect(h).toContain('data-mark="wrong"');
+    expect(h).toContain('data-mark="waiting"');
+    for (const w of [resultCopy.markRight, resultCopy.markWrong, resultCopy.markWaiting]) expect(text(h)).toContain(w);
+  });
+  it("an unrevealed wrong item offers a retry and 'Xem đáp án'; the answer shows only where the server sent it", () => {
+    expect(h).toContain('data-testid="retry-open-q2"');
+    expect(h).toContain('data-testid="reveal-q2"');
+    expect(h).not.toContain('data-testid="answer-q2"');
+    expect(text(h)).toContain("Đáp án: A. must");
+    expect(h).toContain('data-testid="retry-mark-q3"');
+    expect(text(h)).toContain(resultCopy.retryRight);
+    expect(h).not.toContain('data-testid="reveal-q3"');
+  });
+  it("a right item keeps its 'Vì sao' collapsed; no total, count, percentage or score anywhere", () => {
+    expect(h).toMatch(/<details[^>]*data-testid="why-q5"/);
+    expect(h).not.toMatch(/\d+\s*\/\s*\d+|%|đúng\s+\d|điểm/i);
+    expect(h).not.toContain("result-others-fine");
+  });
+  it("a test (no marks) shows none of this", () => {
+    const t = renderToStaticMarkup(createElement(ResultView, { activityId: "a1", title: "Unit 5", result: result({ isTest: true, marks: null, look: [], open: [] }), items: [], canRedo: false, onRedo: () => {} }));
+    expect(t).not.toContain("result-marks");
+    expect(t).not.toContain("reveal-");
+  });
+});
