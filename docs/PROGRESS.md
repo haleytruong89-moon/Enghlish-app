@@ -1748,3 +1748,37 @@ Nhánh `feature/w4e-levels-cando` (từ `main` sau PR #41). Kế hoạch `docs/s
 - Chữ giới thiệu thẻ "đã làm được" và "Ngày ấy – bây giờ" tách thành hai câu để đủ ≤ 15 chữ (test canh chữ).
 - Bài "ngày ấy" và "bây giờ" phải khác ngày (giờ Việt Nam), không cần cách nhau 2 tháng; lời nhắn tùy chọn.
 - e2e không tạo được hai bài viết ở hai ngày khác nhau: luồng chọn đầy đủ được test ở DB + DOM; e2e kiểm màn, quyền và các lời từ chối.
+
+## Nhập bài soạn sẵn (.json) + "Đã xem ✓" (16/11)
+
+Nhánh `feature/studio-import-json` (từ `main` sau PR #42). Phụ huynh duyệt thiết kế ở chat 16/11 ("làm luôn all"). Kế hoạch `docs/superpowers/plans/2026-11-16-studio-import-json.md`; thiết kế `docs/DESIGN.md` §19.26; khuôn file `docs/STUDIO_IMPORT_FORMAT.md`.
+
+### Đã làm
+1. Thẻ **"Nhập bài soạn sẵn"** ở Tạo bài từ đề.
+   - Chọn một hay nhiều file `.json` → mỗi file thành **một bản nháp Studio**, mỗi file một dòng kết quả: ✓ tên bài · số câu · "n câu cần xem" · "n lỗi cần sửa trước khi Duyệt" · nút **Mở**, hoặc ✗ kèm lý do.
+   - Không dùng AI, không tốn hạn mức AI.
+2. Nhập lại cùng file → mở lại đúng bản nháp cũ ("Đã nhập trước đó"), không tạo bản trùng.
+   - Lần trước dừng giữa chừng thì lần sau làm nốt.
+   - Bản nháp đã bị bỏ thì tạo bản mới.
+3. File soạn cho Track khác → từ chối: "File soạn cho Track B, em này học Track A."
+4. Nút **"Đã xem ✓"** cạnh cờ "Cần xem" của từng câu ở Duyệt đề (xóa cờ; nhớ bấm Lưu nháp hoặc Duyệt).
+
+### SQL phụ huynh cần áp
+**Không có.** Dùng lại hàm của 0024.
+
+### Cách thử trên bản thử (Nguyên (thử))
+1. Bàn làm việc → Giao bài → Tạo bài từ đề → kéo xuống "Nhập bài soạn sẵn" → 📎 Chọn file → chọn 6 file trong `destination-unit14-import.zip` (giải nén trước) → "Nhập vào bản nháp" → 6 dòng ✓ (tổng 193 câu, 18 câu cần xem, 0 lỗi).
+2. Bấm **Mở** một bài → tick "Chỉ câu cần xem" → đọc lý do → sửa nếu cần → **Đã xem ✓** → Lưu nháp → Duyệt → Giao bài.
+3. Nhập lại cùng file → dòng ghi "Đã nhập trước đó"; danh sách "Bài đã tạo" không thêm bản trùng.
+4. Chọn em An (thử), nhập cùng file → báo "File soạn cho Track B, em này học Track A."
+
+### Tiêu chí đạt
+- `npm run typecheck && npm run lint && npm test` xanh. Test mới: `tests/unit/studioImport.test.ts`, `tests/dom/studioImportForm.test.tsx`, `tests/dom/studioItemCardSeen.test.tsx`.
+- Bước 1–4 ở trên chạy đúng trên preview.
+
+**Chưa kiểm:** chưa có e2e cho luồng nhập. Chưa thử trên iPad thật: chọn nhiều file từ ứng dụng Tệp.
+
+### Giới hạn / để sau
+- Bài Studio đã giao **chưa tính vào độ phủ Giáo trình** ("đang học đến" không tự nhảy): cần SQL. Tạm thời thầy/cô vẫn chọn Unit đã dạy ở Ghi buổi.
+- 6 bài vẫn giao 6 lần (mỗi bài chọn ngày riêng).
+- Cột "Giải thích" là chữ **con thấy khi làm sai**: thầy/cô đọc lại trước khi Duyệt.

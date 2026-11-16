@@ -9,6 +9,13 @@ function key(s: string): string | null {
   const ms = Date.parse(`${m[1]}T${m[2]}${off}`);
   return Number.isNaN(ms) ? null : `${ms / 1000}.${(m[3] ?? "").padEnd(6, "0").slice(0, 6)}`;
 }
+/** Milliseconds since the epoch (with the fraction) of a Postgres timestamp string; null when unreadable. */
+export function instantMs(s: string): number | null {
+  const k = key(s);
+  if (k === null) return null;
+  const [sec, frac] = k.split(".");
+  return Number(sec) * 1000 + Number(`0.${frac}`) * 1000;
+}
 export function sameInstant(a: string, b: string): boolean {
   const ka = key(a);
   const kb = key(b);

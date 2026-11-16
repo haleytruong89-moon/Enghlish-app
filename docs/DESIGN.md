@@ -546,3 +546,25 @@ Trang `/learners/<id>/delete` (chỉ phụ huynh; gia sư/học sinh 403, em ngo
 - **Màn.** Con: `/journey` thêm thẻ "Cấp hiện tại theo mảng" (cột phải, dưới "Mục tiêu tuần"), "Những điều mình đã làm được", "Bộ sưu tập thành tích" (thêm ✋), "Ngày ấy – bây giờ" (chỉ khi có cặp đang hiện). Người lớn: khối "Ngày ấy – bây giờ" ở Hồ sơ cấp (`/learners/[id]/levels`, `ThenNowPicker`): thầy/cô chọn 2 bài + lời nhắn + "Ẩn thẻ với em"; phụ huynh xem. Route `POST /api/learners/[id]/then-now` (`lib/thennow/*`).
 - **Thứ tự triển khai.** Mã chạy khi chưa áp 0036: ba hàm của con không có → thẻ ẩn (không lỗi); khối ở Hồ sơ cấp báo "chưa mở"; route trả 409 `thennow_unavailable`, không 500. Lỗi thật khi tải khối của người lớn: báo "chưa tải được", trang vẫn lên.
 - **Xóa dữ liệu một em** gồm `then_now_picks` (xóa trước `attempts`; thân `eng_purge_learner` / `eng_purge_preview` = bản 0035 + một bảng; có test so từng dòng).
+
+### 19.26. Nhập bài soạn sẵn (.json) + "Đã xem ✓" (16/11/2026, không migration, không AI)
+
+- **Mục đích.** Đề được soạn **ngoài app** (không tốn API của app), ví dụ sách Destination C1&C2, rồi nạp thành **bản nháp Studio** bình thường. Thầy/cô soát, sửa, bấm Duyệt rồi Giao ở "Duyệt đề" như bài AI đọc. Khuôn file: `docs/STUDIO_IMPORT_FORMAT.md` (`lib/studio/importFile.ts`).
+- **Đường đi.** Thẻ "Nhập bài soạn sẵn" ở `/studio/new` (`components/studio/ImportForm.tsx`): chọn nhiều file .json; trình duyệt đọc (≤ 1 MB), `JSON.parse`, gửi **từng file một** tới `POST /api/learners/[id]/studio/imports` → `handleImportDraft` (`lib/studio/handlers.ts`).
+- **Thứ tự trong handler.**
+  1. `requireAccess("studio:write")`.
+  2. Body `{ file }`.
+  3. `studioImportFileSchema` (vỏ + `studioDraftSchema` strict; sai → `import_bad_file`).
+  4. Track của file = track của em (khác → `import_wrong_track`).
+  5. `validateDraft` với nhãn của em: **chỉ báo** số lỗi chặn, không từ chối (thầy/cô sửa ở Duyệt đề).
+  6. `eng_create_studio_draft(p_extract=false)` với `client_id = imp-<sha256(file)[0..32]>`.
+  7. Đọc bản nháp; nếu còn trống thì `eng_save_studio_draft` với `updated_at` của chính nó.
+- **Lặp lại an toàn.**
+  - Nhập lại cùng nội dung → cùng bản nháp ("Đã nhập trước đó").
+  - Lần trước dừng giữa "tạo" và "lưu" (bản nháp trống **và chưa từng được lưu**: `updated_at` cách `created_at` < 1 giây) → lần sau lưu nốt. Bản nháp thầy/cô đã cố ý xóa hết câu thì không bị điền lại.
+  - Hai lần nhập cùng file cùng lúc: lần lưu thua (`draft_changed`) đọc lại và trả bản nháp lần kia đã điền.
+  - Bản nháp đó đã bị bỏ → tạo bản mới với `client_id` có số (`-2` … `-9`; quá 9 → `import_too_many`).
+  - Bản nháp đã đổi tên (hàm 0024 báo trùng `client_id` khác tên) → đọc trạng thái theo `client_id` (`StudioStore.draftByClientId`, chỉ đọc): đã bị bỏ thì thử số kế tiếp, còn dùng thì `import_renamed` (kèm `id`).
+- **Không** gọi cổng AI, không ghi `ai_runs`, không chạy việc nền; không bảng / hàm SQL mới.
+- **"Đã xem ✓"** (`ItemCard`): câu có cờ "Cần xem" có nút xóa cờ (`needs_review=false`, `review_reason=null`). Chỉ sửa nội dung bản nháp và được lưu khi bấm Lưu nháp hoặc Duyệt. Bộ lọc "Chỉ câu cần xem" bỏ câu đó.
+- **Giới hạn đã biết.** Bài Studio đã giao **chưa tính vào độ phủ Giáo trình** (cần SQL, để sau). Câu `gap` / `word_form` tự chấm theo đáp án + `accepted`, nên đáp án sai sẽ chấm sai cho con: thầy/cô soát kỹ trước khi Duyệt.

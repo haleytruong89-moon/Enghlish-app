@@ -35,4 +35,6 @@ export const decideBodySchema = z.strictObject({
 });
 /** `seen_through` = the newest retry time the adult's card showed (the string the server sent, never re-formatted): a later retry stays pending. */
 export const retrySeenBodySchema = z.strictObject({ note: z.string().trim().max(300).optional(), seen_through: z.string().datetime({ offset: true }), client_id: clientId });
+/** "Nhập bài soạn sẵn": one file per request; its content is parsed by the handler (studioImportFileSchema) to tell a bad file from a bad body. */
+export const importDraftBodySchema = z.strictObject({ file: z.unknown() });
 export type FileMetaBody = z.infer<typeof fileMeta>;

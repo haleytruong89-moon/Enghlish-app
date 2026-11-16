@@ -36,10 +36,20 @@ export function ItemCard({
           </span>
         ))}
         {item.needs_review ? (
-          <span className="rounded-full bg-[#FBF1DC] px-2 py-0.5 text-xs text-[#6B4600]" title={item.review_reason ?? undefined}>
-            {studioCopy.needsReview}
-            {item.review_reason ? `: ${item.review_reason}` : ""}
-          </span>
+          <>
+            <span className="rounded-full bg-[#FBF1DC] px-2 py-0.5 text-xs text-[#6B4600]" title={item.review_reason ?? undefined}>
+              {studioCopy.needsReview}
+              {item.review_reason ? `: ${item.review_reason}` : ""}
+            </span>
+            <button
+              type="button"
+              onClick={() => onChange({ needs_review: false, review_reason: null })}
+              data-testid={`item-${item.n}-seen`}
+              className="min-h-11 rounded-lg border border-line bg-white px-3 text-xs font-semibold"
+            >
+              {studioCopy.markSeen}
+            </button>
+          </>
         ) : null}
         <button type="button" onClick={onRemove} className="ml-auto min-h-11 text-sm text-muted underline">{studioCopy.removeItem}</button>
       </div>
