@@ -70,6 +70,7 @@ function store(over: Partial<StudioStore> = {}): StudioStore {
     getAttemptLearnerId: vi.fn(async () => null),
     issueUploadTicket: no(), aiGate: no(), aiReserve: no(), aiSettings: no(), setAiSettings: no(), logAiRun: no(),
     createDraft: vi.fn(async () => ({ id: DRAFT, status: "draft", replayed: false })),
+    draftByClientId: vi.fn(async () => null),
     editDraft: no(),
     draft: vi.fn(async () => EMPTY_ROW),
     drafts: vi.fn(async () => []),
@@ -131,8 +132,17 @@ describe("handleImportDraft (Nhập bài soạn sẵn)", () => {
 
   it("same file again: the same draft; a half import (empty draft) is finished, a full one is left alone", async () => {
     const half = store({ createDraft: vi.fn(async () => ({ id: DRAFT, status: "draft", replayed: true })) });
-    expect(await handleImportDraft(deps("tutorNguyen", half), NGUYEN, { file: FILE_B })).toMatchObject({ status: 200, body: { replayed: true, status: "draft" } });
+    // this request is the one that fills it: reported as a fresh import
+    expect(await handleImportDraft(deps("tutorNguyen", half), NGUYEN, { file: FILE_B })).toMatchObject({ status: 201, body: { replayed: false, status: "draft" } });
     expect(half.saveDraft).toHaveBeenCalledTimes(1);
+
+    // an empty draft that was saved since (the tutor removed every question) is never refilled
+    const emptied = store({
+      createDraft: vi.fn(async () => ({ id: DRAFT, status: "draft", replayed: true })),
+      draft: vi.fn(async () => ({ ...EMPTY_ROW, created_at: "2026-11-15T03:00:00Z" })),
+    });
+    expect(await handleImportDraft(deps("tutorNguyen", emptied), NGUYEN, { file: FILE_B })).toMatchObject({ status: 200, body: { replayed: true } });
+    expect(emptied.saveDraft).not.toHaveBeenCalled();
 
     const full = store({ createDraft: vi.fn(async () => ({ id: DRAFT, status: "draft", replayed: true })), draft: vi.fn(async () => FULL_ROW) });
     expect(await handleImportDraft(deps("tutorNguyen", full), NGUYEN, { file: FILE_B })).toMatchObject({ status: 200, body: { replayed: true, status: "draft" } });
@@ -156,12 +166,48 @@ describe("handleImportDraft (Nhập bài soạn sẵn)", () => {
   });
 
   it("renamed since the first import → import_renamed; blocking issues are reported, not refused", async () => {
-    const renamed = store({ createDraft: vi.fn(async () => { throw new ReviewDbError("23505", "eng_create_studio_draft: client_id was already used for another draft"); }) });
-    expect(await handleImportDraft(deps("tutorNguyen", renamed), NGUYEN, { file: FILE_B })).toMatchObject({ status: 409, body: { error: "import_renamed" } });
+    const clash = () => { throw new ReviewDbError("23505", "eng_create_studio_draft: client_id was already used for another draft"); };
+    const renamed = store({ createDraft: vi.fn(async () => clash()), draftByClientId: vi.fn(async () => ({ id: DRAFT, status: "draft" })) });
+    expect(await handleImportDraft(deps("tutorNguyen", renamed), NGUYEN, { file: FILE_B })).toMatchObject({ status: 409, body: { error: "import_renamed", id: DRAFT } });
+    expect(renamed.draftByClientId).toHaveBeenCalledWith({ learnerId: NGUYEN, clientId: `imp-${hashOf(FILE_B)}` });
+
+    // renamed and then discarded: the file can be imported again under the next id
+    const create = vi.fn().mockImplementationOnce(async () => clash()).mockResolvedValueOnce({ id: DRAFT, status: "draft", replayed: false });
+    const gone = store({ createDraft: create, draftByClientId: vi.fn(async () => ({ id: DRAFT, status: "discarded" })) });
+    expect((await handleImportDraft(deps("tutorNguyen", gone), NGUYEN, { file: FILE_B })).status).toBe(201);
+    expect((create.mock.calls[1]![0] as { clientId: string }).clientId).toBe(`imp-${hashOf(FILE_B)}-2`);
 
     const noKey = { ...FILE_B, payload: { ...CLEAN, items: [{ ...CLEAN.items[0]!, key: null }, CLEAN.items[1]!] } };
     const s = store();
     expect(await handleImportDraft(deps("tutorNguyen", s), NGUYEN, { file: noKey })).toMatchObject({ status: 201, body: { blocking: 1 } });
     expect(s.saveDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it("two imports of the same file at once: the loser of the save race answers with the draft the other filled", async () => {
+    const draft = vi.fn().mockResolvedValueOnce(EMPTY_ROW).mockResolvedValueOnce(FULL_ROW);
+    const s = store({
+      draft,
+      saveDraft: vi.fn(async () => { throw new ReviewDbError("23505", "eng_save_studio_draft: the draft changed in the meantime (draft_changed)"); }),
+    });
+    expect(await handleImportDraft(deps("tutorNguyen", s), NGUYEN, { file: FILE_B })).toMatchObject({ status: 200, body: { id: DRAFT, status: "draft", replayed: true } });
+  });
+
+  it("the client id depends on the content, not on the key order of the file", async () => {
+    const reordered = { payload: CLEAN, title: FILE_B.title, track: "B", version: 1, format: STUDIO_IMPORT_FORMAT };
+    const a = store();
+    const b = store();
+    await handleImportDraft(deps("tutorNguyen", a), NGUYEN, { file: FILE_B });
+    await handleImportDraft(deps("tutorNguyen", b), NGUYEN, { file: reordered });
+    const id = (s: StudioStore) => ((s.createDraft as ReturnType<typeof vi.fn>).mock.calls[0]![0] as { clientId: string }).clientId;
+    expect(id(a)).toBe(id(b));
+    const other = store();
+    await handleImportDraft(deps("tutorNguyen", other), NGUYEN, { file: { ...FILE_B, title: "Khác" } });
+    expect(id(other)).not.toBe(id(a));
+  });
+
+  it("a file without questions is imported with its blocking issue reported (fixed on Duyệt đề)", async () => {
+    const s = store();
+    const r = await handleImportDraft(deps("tutorNguyen", s), NGUYEN, { file: { ...FILE_B, payload: EMPTY_DRAFT } });
+    expect(r).toMatchObject({ status: 201, body: { items: 0, blocking: 1 } });
   });
 });

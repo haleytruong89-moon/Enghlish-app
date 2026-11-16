@@ -33,6 +33,16 @@ export function createSupabaseStudioStore(): StudioStore {
       ),
     createDraft: (a) =>
       call("eng_create_studio_draft", { p_learner: a.learnerId, p_title: a.title, p_test_file: a.testFile, p_key_file: a.keyFile, p_extract: a.extract, p_by: a.byMemberId, p_client_id: a.clientId }),
+    draftByClientId: async (a) => {
+      const { data, error } = await createAdminClient()
+        .from("studio_drafts")
+        .select("id, status")
+        .eq("learner_id", a.learnerId)
+        .eq("client_id", a.clientId)
+        .maybeSingle<{ id: string; status: string }>();
+      if (error) throw new ReviewDbError(error.code ?? "unknown", `studio_drafts by client id: ${error.message ?? error.code ?? "error"}`);
+      return data ?? null;
+    },
     editDraft: (a) => call("eng_edit_studio_draft", { p_draft: a.draftId, p_by: a.byMemberId, p_client_id: a.clientId }),
     draft: (id) => call("eng_studio_draft", { p_draft: id }),
     drafts: (l) => call("eng_studio_drafts", { p_learner: l }),

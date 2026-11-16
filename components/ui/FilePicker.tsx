@@ -6,31 +6,24 @@ import { filePickerCopy } from "@/lib/copy/vi";
  * One clear "📎 Chọn file" control for every adult file input. The native input stays in the DOM (visually hidden, inside
  * the label, so keyboard + screen readers + Playwright `setInputFiles` all keep working); the chosen name is shown beside it.
  */
-export function FilePicker({
-  testId,
-  nameTestId,
-  accept,
-  name,
-  onPick,
-  onPickMany,
-  multiple = false,
-  ariaLabel,
-  ariaDescribedBy,
-  disabled = false,
-}: {
+type FilePickerProps = {
   testId: string;
   nameTestId?: string;
   accept: string;
   /** Name of the file currently chosen (null = none). The caller owns the file itself. */
   name: string | null;
-  onPick?: (file: File | undefined) => void;
-  /** With `multiple`: every chosen file, in the order the browser gives them. */
-  onPickMany?: (files: File[]) => void;
-  multiple?: boolean;
   ariaLabel: string;
   ariaDescribedBy?: string;
   disabled?: boolean;
-}) {
+} & (
+  | { multiple?: false; onPick: (file: File | undefined) => void; onPickMany?: never }
+  /** Several files: every chosen file, in the order the browser gives them. */
+  | { multiple: true; onPickMany: (files: File[]) => void; onPick?: never }
+);
+
+export function FilePicker(props: FilePickerProps) {
+  const { testId, nameTestId, accept, name, ariaLabel, ariaDescribedBy, disabled = false } = props;
+  const multiple = props.multiple === true;
   return (
     <span className="flex flex-wrap items-center gap-3 font-normal">
       <label
@@ -49,8 +42,8 @@ export function FilePicker({
           data-testid={testId}
           aria-describedby={ariaDescribedBy}
           onChange={(e) => {
-            if (multiple) onPickMany?.(Array.from(e.target.files ?? []));
-            else onPick?.(e.target.files?.[0]);
+            if (props.multiple === true) props.onPickMany(Array.from(e.target.files ?? []));
+            else props.onPick(e.target.files?.[0]);
             e.target.value = "";
           }}
         />

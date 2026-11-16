@@ -50,6 +50,7 @@ function store(over: Partial<StudioStore> = {}): StudioStore {
     setAiSettings: vi.fn(async () => ({ enabled: false, monthly_cap_usd: 10, soft_cap_usd: 8, spent_usd: 1.5, runs_month: 2, soft_reached: false, updated_at: null, learners: [] })),
     logAiRun: vi.fn(async () => "run-1"),
     createDraft: vi.fn(async () => ({ id: DRAFT, status: "extracting", replayed: false })),
+    draftByClientId: vi.fn(async () => null),
     editDraft: vi.fn(async () => ({ id: DRAFT, replayed: false })),
     draft: vi.fn(async () => DRAFT_ROW),
     drafts: vi.fn(async () => []),

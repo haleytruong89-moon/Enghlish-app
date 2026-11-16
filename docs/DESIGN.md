@@ -561,9 +561,10 @@ Trang `/learners/<id>/delete` (chỉ phụ huynh; gia sư/học sinh 403, em ngo
   7. Đọc bản nháp; nếu còn trống thì `eng_save_studio_draft` với `updated_at` của chính nó.
 - **Lặp lại an toàn.**
   - Nhập lại cùng nội dung → cùng bản nháp ("Đã nhập trước đó").
-  - Lần trước dừng giữa "tạo" và "lưu" (bản nháp trống) → lần sau lưu nốt.
+  - Lần trước dừng giữa "tạo" và "lưu" (bản nháp trống **và chưa từng được lưu**: `updated_at` cách `created_at` < 1 giây) → lần sau lưu nốt. Bản nháp thầy/cô đã cố ý xóa hết câu thì không bị điền lại.
+  - Hai lần nhập cùng file cùng lúc: lần lưu thua (`draft_changed`) đọc lại và trả bản nháp lần kia đã điền.
   - Bản nháp đó đã bị bỏ → tạo bản mới với `client_id` có số (`-2` … `-9`; quá 9 → `import_too_many`).
-  - Bản nháp đã đổi tên → `import_renamed` (hàm 0024 báo trùng `client_id` khác tên).
+  - Bản nháp đã đổi tên (hàm 0024 báo trùng `client_id` khác tên) → đọc trạng thái theo `client_id` (`StudioStore.draftByClientId`, chỉ đọc): đã bị bỏ thì thử số kế tiếp, còn dùng thì `import_renamed` (kèm `id`).
 - **Không** gọi cổng AI, không ghi `ai_runs`, không chạy việc nền; không bảng / hàm SQL mới.
 - **"Đã xem ✓"** (`ItemCard`): câu có cờ "Cần xem" có nút xóa cờ (`needs_review=false`, `review_reason=null`). Chỉ sửa nội dung bản nháp và được lưu khi bấm Lưu nháp hoặc Duyệt. Bộ lọc "Chỉ câu cần xem" bỏ câu đó.
 - **Giới hạn đã biết.** Bài Studio đã giao **chưa tính vào độ phủ Giáo trình** (cần SQL, để sau). Câu `gap` / `word_form` tự chấm theo đáp án + `accepted`, nên đáp án sai sẽ chấm sai cho con: thầy/cô soát kỹ trước khi Duyệt.

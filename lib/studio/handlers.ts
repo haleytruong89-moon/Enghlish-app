@@ -4,7 +4,7 @@
  * receives AI cost or the month's spend (spec §7). Stored file paths never leave the server.
  */
 import { createHash } from "node:crypto";
-import { sameInstant } from "./instant";
+import { instantMs, sameInstant } from "./instant";
 import { AccessError, requireAccess, requireStaff, type AccessDeps, type AccessGrant, type AccessUser, type Action, type Member } from "@/lib/auth/requireAccess";
 import { parseGate, refusalStatus } from "@/lib/ai/cap";
 import { AI_NOTICE_VERSION } from "@/lib/ai/config";
@@ -40,6 +40,8 @@ export interface StudioStore {
   setAiSettings(a: { enabled: boolean; noticeVersion: string; byMemberId: string }): Promise<unknown>;
   logAiRun(r: RunLog): Promise<string>;
   createDraft(a: { learnerId: string; title: string; testFile: FileMetaBody | null; keyFile: FileMetaBody | null; extract: boolean; byMemberId: string; clientId: string }): Promise<unknown>;
+  /** The draft a client id made for this child (id + status), or null. Read-only; used by "Nhập bài soạn sẵn" after a title clash. */
+  draftByClientId(a: { learnerId: string; clientId: string }): Promise<{ id: string; status: string } | null>;
   editDraft(a: { draftId: string; byMemberId: string; clientId: string }): Promise<unknown>;
   draft(draftId: string): Promise<unknown>;
   drafts(learnerId: string): Promise<unknown>;
@@ -339,28 +341,60 @@ export async function handleImportDraft(deps: StudioDeps, learnerId: string, raw
   };
   // Same content → same client id → eng_create_studio_draft replays the same draft (double click, retry, a second import).
   const hash = createHash("sha256").update(JSON.stringify(file)).digest("hex").slice(0, 32);
+  const done = (id: string, status: string, replayed: boolean): HandlerResult => ({ status: replayed ? 200 : 201, body: { id, status, replayed, ...report } });
   try {
     for (let k = 1; k <= IMPORT_MAX_TRIES; k++) {
       const clientId = k === 1 ? `imp-${hash}` : `imp-${hash}-${k}`;
-      const made = (await deps.store.createDraft({
-        learnerId: learner.id, title: file.title, testFile: null, keyFile: null, extract: false, byMemberId: member.id, clientId,
-      })) as { id: string; status: string; replayed: boolean };
-      if (made.replayed && made.status === "discarded") continue;
-      const { view } = parseDraft(await deps.store.draft(made.id), { showCost: false });
-      // A new draft, or an earlier import that stopped between "create" and "save": fill it now.
-      if (view.status === "draft" && view.payload.items.length === 0) {
-        await deps.store.saveDraft({ draftId: made.id, title: file.title, payload: file.payload, base: view.updatedAt, byMemberId: member.id });
-        return { status: made.replayed ? 200 : 201, body: { id: made.id, status: "draft", replayed: made.replayed, ...report } };
+      let made: { id: string; status: string; replayed: boolean };
+      try {
+        made = (await deps.store.createDraft({
+          learnerId: learner.id, title: file.title, testFile: null, keyFile: null, extract: false, byMemberId: member.id, clientId,
+        })) as typeof made;
+      } catch (err) {
+        if (dbTag(err) !== "conflict") throw err;
+        // The same client id under another title: the draft of this file was renamed since. Discarded → try the next id; else say so.
+        const old = await deps.store.draftByClientId({ learnerId: learner.id, clientId });
+        if (old?.status === "discarded") continue;
+        return fail(409, "import_renamed", old ? { id: old.id } : {});
       }
-      return { status: 200, body: { id: made.id, status: view.status, replayed: true, ...report } };
+      if (made.replayed && made.status === "discarded") continue;
+      const raw = await deps.store.draft(made.id);
+      const { view } = parseDraft(raw, { showCost: false });
+      if (!(view.status === "draft" && view.payload.items.length === 0 && neverSaved(raw, view.updatedAt))) return done(made.id, view.status, true);
+      // A new draft, or an earlier import that stopped between "create" and "save": fill it now.
+      try {
+        await deps.store.saveDraft({ draftId: made.id, title: file.title, payload: file.payload, base: view.updatedAt, byMemberId: member.id });
+      } catch (err) {
+        if (dbTag(err) !== "draft_changed") throw err;
+        // The same file imported twice at once: the other request filled it first.
+        const again = parseDraft(await deps.store.draft(made.id), { showCost: false }).view;
+        return done(made.id, again.status, true);
+      }
+      return done(made.id, "draft", false);
     }
     return fail(409, "import_too_many");
   } catch (err) {
-    const r = fromStudioDbError(err);
-    // eng_create_studio_draft: the same client id with another title = the draft of this file was renamed since.
-    if (r.status === 409 && (r.body as { error?: string }).error === "conflict") return fail(409, "import_renamed");
-    return r;
+    return fromStudioDbError(err);
   }
+}
+
+/** The error code fromStudioDbError would give a database error ("conflict", "draft_changed", …); null for anything else. */
+function dbTag(err: unknown): string | null {
+  if (!(err instanceof ReviewDbError)) return null;
+  try {
+    return ((fromStudioDbError(err).body as { error?: string }).error ?? null);
+  } catch {
+    return null;
+  }
+}
+
+/** Created and never saved since (a save moves updated_at by far more than this). Guards a draft the tutor emptied on purpose. */
+function neverSaved(raw: unknown, updatedAt: string): boolean {
+  const created = (raw as { created_at?: unknown } | null)?.created_at;
+  if (typeof created !== "string") return false;
+  const a = instantMs(created);
+  const b = instantMs(updatedAt);
+  return a !== null && b !== null && Math.abs(b - a) < 1000;
 }
 
 // ---- AI settings (parent) ----------------------------------------------------------------------------------------------------
