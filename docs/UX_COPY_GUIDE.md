@@ -41,7 +41,7 @@
 
 **Luôn hiển thị dạng:** `3/4 · Đạt yêu cầu` (số + mẫu số + nhãn). Không bao giờ chỉ "3".
 
-### 3.2. Bậc năng lực (trạng thái) — phụ huynh, gia sư; học sinh chỉ thấy lời khen/việc tiếp theo
+### 3.2. Bậc năng lực (trạng thái) — phụ huynh, gia sư; học sinh chỉ thấy lời khen/việc tiếp theo (từ W4e: thêm **tên cấp CEFR đã xác nhận** và **tên điều đã làm được** ở Hành trình; **vẫn không** thấy thang này, bậc, ⚑)
 
 | Nội bộ | Nhãn | Bậc | Một câu giải thích |
 |---|---|---|---|
@@ -268,7 +268,7 @@ Không có chữ về số tiền, đơn giá hay chốt tháng.
 
 Khóa mới trong `lib/copy/vi.ts`: `roadmapCopy.*` (trang Lộ trình của thầy/cô: mốc, đỉnh, đề xuất, giáo trình chính, lỗi theo mã SQL), `journeyCopy.*` (trang của con: tiêu đề, tóm tắt "Còn N Unit tới …", đỉnh chưa đặt tên "Đỉnh của bạn — {thầy/cô} sẽ đặt tên", danh sách thay thế), `monthLabel`, `practiceStudent.navJourney` ("Hành trình"), `pendingCopy.kinds.milestone` / `need.milestone` / `groups.roadmap`, `deskCopy.roadmapLine`, `deskCopy.alerts.orphanTitle` / `orphanLine`, `purgePage.countLabels` cho hai bảng mới.
 
-Quy tắc: xưng "bạn" với con; "thầy/cô" qua `tutorHonorific`, không viết cứng; con không thấy chữ điểm, mức, x/y, %, nhãn kỹ năng.
+Quy tắc: xưng "bạn" với con; "thầy/cô" qua `tutorHonorific`, không viết cứng; con không thấy chữ điểm, mức dạng số, x/y, %, nhãn kỹ năng (ngoại lệ W4e: tên cấp đã xác nhận, tên điều đã làm được).
 
 ## W4b (15/11/2026) — Bàn học của con: Hôm nay · Đã xem · Đã làm
 
@@ -331,3 +331,17 @@ Bốn khối trong `lib/copy/vi.ts`: `weeklyGoalCopy` (con), `streakCopy` (con),
 Bổ sung (sau review): sau khi thầy/cô **điều chỉnh** số bài, con thấy "{Thầy/cô} đã chỉnh: n bài/tuần. Áp dụng từ tuần sau." (không phải "đã đồng ý"). Chờ duyệt có nhóm riêng "Mục tiêu tuần". Khối `workWeekCopy` (người lớn nộp thay): ô "Tuần làm bài" · "Tuần này" (mặc định) / "Tuần trước" (chỉ hiện thứ Hai–thứ Ba) · "Con làm bài vào tuần nào? Thứ Hai và thứ Ba bạn chọn được “Tuần trước” nếu con làm bài hôm Chủ nhật hay những ngày trước. Bài chỉ tính vào một tuần, theo mục tiêu tuần của con." · hộp mục tiêu sau khi lưu: "Đã lưu. Mục tiêu mới bắt đầu thứ Hai dd/mm."
 
 Khác với kế hoạch: bỏ chữ "điểm thưởng" (e2e cấm chữ "điểm" trên trang của con) → "không có thưởng".
+
+## W4e (16/11/2026) — Cấp theo mảng · Những điều mình đã làm được · Ngày ấy – bây giờ
+
+Ba khối cho con trong `lib/copy/vi.ts`: `levelsStudentCopy`, `candoCopy`, `thenNowCopy` (cộng `achievementsCopy` có thêm `cando_n`), và một khối cho người lớn `thenNowPickerCopy`. Xưng "bạn"; người dạy là `tutorHonorific`; test canh chữ (`tests/unit/growthCopy.test.ts`): không "điểm", "%", "đạt", "xếp hạng"; câu ≤ 15 chữ. Cấp là **tên** ("B2", "B1+"), không số, không so với em kia, không chữ "đạt" (rủi ro: "B1+" bị hiểu như điểm → chữ nói rõ "do {thầy/cô} xác nhận").
+
+| Chỗ | Chữ |
+|---|---|
+| Hành trình · thẻ cấp | "Cấp hiện tại theo mảng" · "Cấp do {thầy/cô} xác nhận · dd/mm" · mỗi ô: tên mảng + "B2" (hoặc "{Thầy/cô} chưa xác nhận") · chân thẻ "Tên cấp để bạn biết mình đang ở đâu. Không so với ai, không phải kết quả của một bài." · chưa mảng nào xác nhận: "{Thầy/cô} chưa xác nhận cấp nào. Khi xác nhận, cấp sẽ hiện ở đây." · **không có mảng Tư duy** |
+| Hành trình · điều đã làm được | "Những điều mình đã làm được" · "Mỗi điều là một việc {thầy/cô} đã thấy bạn tự làm được. Bài làm của bạn là bằng chứng." · "n điều" · mỗi thẻ kỹ năng "Mình đã tự làm được: {tên}", mục kiến thức "Mình đã nắm chắc: {tên}" + "Mới · {Thầy/cô} xác nhận dd/mm" (Mới = trong 7 ngày) · chưa có: "Chưa có điều nào. {Thầy/cô} sẽ xác nhận khi thấy bạn tự làm được một việc." |
+| Hành trình · Ngày ấy – bây giờ | "Ngày ấy – bây giờ" · "Hai đoạn viết của chính bạn. {Thầy/cô} chọn để bạn tự thấy mình đã đi xa." · "{Thầy/cô} chọn" · "Ngày ấy · dd/mm" / "Bây giờ · dd/mm" · "{Thầy/cô} nhắn: …" · chưa chọn hoặc đã ẩn: **không hiện thẻ** |
+| Thành tích mới | ✋ "n điều tự làm được" (n = 5, 10, 20) · chưa đạt: "Còn k điều nữa (đã có m)" |
+| Người lớn · Hồ sơ cấp · khối "Ngày ấy – bây giờ" | "Chọn hai bài viết của {em} trên app để em tự thấy mình đã tiến bộ. Bài "ngày ấy" phải nộp trước bài "bây giờ" ít nhất một ngày." · ô "Ngày ấy (bài cũ)" / "Bây giờ (bài mới)" · "Lời nhắn cho em (tối đa 200 ký tự, không ghi điểm)" · **Lưu lựa chọn** · **Ẩn thẻ với em** · phụ huynh: "Chỉ {thầy/cô} của em chọn. Phụ huynh chỉ xem." · lời nhắn ghi điểm: "Lời nhắn không được ghi điểm, phần trăm hay xếp loại." |
+
+Khác với kế hoạch: câu giới thiệu "Mỗi điều là một việc {t} đã thấy bạn tự làm được, có bài làm làm bằng chứng." (18 chữ) tách thành hai câu để đủ ≤ 15 chữ (test canh chữ); thẻ cấp **không có "Hướng tới"** (bỏ sau review; để sau nếu có cấp mục tiêu riêng). Ô chọn của người lớn gắn nhãn "bài giấy gõ lại" cho bài do thầy/cô gõ lại.

@@ -1671,6 +1671,8 @@ Nhánh `feature/w4c2-player-result` (từ `main` sau PR #37). Kế hoạch `docs
 
 ## W4d — Mục tiêu tuần · chuỗi tuần mềm · thành tích v1 (15/11)
 
+**Trạng thái (16/11): ĐÃ GỘP (PR #40 + #41); `0035_weekly_goals.sql` ĐÃ ÁP** (workflow "Apply database migrations", run 43742585241; không sửa nữa). Các lời dặn "KHÔNG áp 0035 từ bản `main` trước PR bổ sung" bên dưới chỉ còn là lịch sử.
+
 Nhánh `feature/w4d-weekly-goal` (từ `main` sau PR #39). Kế hoạch `docs/superpowers/plans/2026-11-14-w4-student-desk.md` mục "PR W4d". Phụ huynh duyệt "như đề xuất" (14/11): Q5 chọn (i) chỉ đếm bài đã nộp; Q6 bài con tự nộp + ảnh bài giấy người lớn nộp thay; Q7 không tuần nghỉ; Q8 An 2–5, Nguyên 3–6; Q19 chỉ thầy/cô của em đồng ý; Q20 danh sách thành tích v1. **Đổi luật:** "không streak" → chuỗi tuần mềm được phép (PRD D34; CLAUDE.md, DOMAIN bản 0.7 đã sửa).
 
 ### Đã làm
@@ -1713,3 +1715,36 @@ Nhánh `feature/w4d-weekly-goal` (từ `main` sau PR #39). Kế hoạch `docs/su
 - Bài giao **link** do người lớn nộp thay **không** tính (chỉ lần con tự nộp link; ảnh / PDF người lớn nộp thay thì tính) — theo Q6 ("ảnh bài giấy").
 - `eng_decide_goal` có thêm tham số `p_learner` (không có trong kế hoạch) để một thầy/cô không quyết hộ đề xuất của em khác.
 - Chữ "điểm thưởng" trong kế hoạch đổi thành "thưởng" (e2e cấm "điểm" trên trang của con).
+
+## W4e — Cấp theo mảng · "Những điều mình đã làm được" · "Ngày ấy – bây giờ" (16/11)
+
+Nhánh `feature/w4e-levels-cando` (từ `main` sau PR #41). Kế hoạch `docs/superpowers/plans/2026-11-14-w4-student-desk.md` mục "PR W4e". Phụ huynh duyệt "như đề xuất" (16/11): S-5 (con thấy **tên** cấp theo mảng do thầy/cô xác nhận, không điểm), Q18 (không hiện mảng Tư duy), Q17 (chữ "Mình đã tự làm được: …" từ tên có sẵn, không số), Q16 (v1 chỉ so bài viết trên app, thầy/cô chọn cặp), Q19 (chỉ thầy/cô của em ghi, phụ huynh xem). **Đổi luật:** "con không thấy mức" (P2-d của SM-2, DOMAIN §2, §7.6, UX §3.2) → con thấy **tên** cấp đã xác nhận và **tên** điều đã làm được (PRD D36 b, c; DOMAIN bản 0.8; CLAUDE.md đã sửa). Con **vẫn không** thấy điểm, mức / bậc dạng số, ⚑, đề xuất, bằng chứng.
+
+### Đã làm
+1. **`0036_then_now.sql`** (chỉ thêm, idempotent; cần 0035): bảng `then_now_picks` (chỉ thêm, RLS, chặn TRUNCATE), `eng_pick_then_now` (thầy/cô của em), `eng_then_now_candidates` (người lớn), `eng_my_levels` / `eng_my_cando` / `eng_my_then_now` (con, chỉ chữ + tên + ngày), hai hàm nội bộ `eng_attempt_text` / `eng_pickable_write`; `eng_purge_learner` / `eng_purge_preview` = bản 0035 + một bảng.
+2. Con (Hành trình): thẻ **"Cấp hiện tại theo mảng"** (6 mảng CEFR, mảng chưa xác nhận ghi "Thầy/cô chưa xác nhận", **không có Tư duy**, **không** có "Hướng tới"), thẻ **"Những điều mình đã làm được"** (kỹ năng: "Mình đã tự làm được: …"; mục kiến thức: "Mình đã nắm chắc: …"; "Mới" trong 7 ngày), thành tích ✋ **"n điều tự làm được"** (5 / 10 / 20), thẻ **"Ngày ấy – bây giờ"** (chỉ khi thầy/cô đã chọn).
+3. Người lớn: khối **"Ngày ấy – bây giờ"** ở Hồ sơ cấp (`/learners/[id]/levels`): thầy/cô của em chọn 2 bài viết + lời nhắn ≤ 200 ký tự (không chữ dạng điểm) + "Ẩn thẻ với em"; phụ huynh chỉ xem. Route `POST /api/learners/[id]/then-now`.
+
+### SQL phụ huynh cần áp (sau khi gộp)
+`db/migrations/0036_then_now.sql` — workflow "Apply database migrations"; chạy lần 2 phải báo "applied 0". **Chưa áp:** mọi màn vẫn chạy; con không thấy ba thẻ mới (thành tích ✋ cũng không có), khối ở Hồ sơ cấp báo "chưa mở", route trả 409 `thennow_unavailable`. Số migration kế tiếp sau PR này: **0037**.
+
+### Cách thử trên bản thử (sau khi áp 0036; gia đình THỬ)
+- Thầy/cô của Nguyên (thử): Hồ sơ cấp → "Xác nhận cấp khởi điểm" (chọn cấp cho vài mảng). Nguyên (thử) → Hành trình: thẻ "Cấp hiện tại theo mảng" có tên cấp (ví dụ **B2**) cho mảng đã xác nhận, "Thầy/cô chưa xác nhận" cho mảng còn lại, **không có Tư duy**, không số.
+- Thầy/cô xác nhận một đề xuất mức 3 ở tab "Kỹ năng" của Hộp duyệt → Nguyên (thử) thấy thẻ "Mình đã tự làm được: …" với "Mới · Thầy/cô xác nhận {hôm nay}". Thầy/cô hạ mức đó (⚑ → Sửa bậc) → thẻ biến mất, không báo gì.
+- Thầy/cô: Hồ sơ cấp → "Ngày ấy – bây giờ" → chọn bài cũ + bài mới (khác ngày; cần ≥ 2 bài viết trên app ở 2 ngày) + lời nhắn → Lưu → Nguyên (thử) thấy hai đoạn viết cạnh nhau. Thử lời nhắn "8/10" → bị từ chối ("Lời nhắn không được ghi điểm…"). "Ẩn thẻ với em" → con không thấy nữa.
+- Phụ huynh mở Hồ sơ cấp: thấy khối nhưng **không có nút**.
+
+### Tiêu chí đạt
+`npm run typecheck && npm run lint && npm test` xanh (mới: `tests/db/{thenNow,studentLevels}.test.ts`, `tests/unit/{studentLevels,cando,thenNow,thenNowHandlers,deployOrderThenNow,migrationThenNow,growthCopy}.test.ts`, `tests/dom/growthCards.test.tsx`; thêm ca `cando_n` ở `achievements.test.ts`); `npx playwright test --list` đủ test (mới `levels.spec.ts`; sửa `student-no-scores.spec.ts`). **Chưa kiểm:** e2e chỉ chạy được trên CI; SQL chưa qua review Opus; iPad thật chưa thử.
+
+### Câu hỏi mở / lệch so với kế hoạch (cần phụ huynh xem)
+- **"Hướng tới" đã bỏ khỏi thẻ cấp** (review Opus 16/11): hệ thống chưa có "cấp mục tiêu" riêng, tên đỉnh ở Hành trình dễ bị đọc như một mức CEFR. **Ý tưởng để sau:** một cấp CEFR mục tiêu theo từng em (cần bảng + quyết định mới).
+- **Kỹ năng Tư duy / tự chủ (T*, A*) vẫn có thể hiện thành thẻ "điều đã làm được"** khi thầy/cô xác nhận ở bậc 3–4: chỉ **cấp** của mảng Tư duy bị ẩn, không phải từng kỹ năng. **Phụ huynh xem có muốn ẩn luôn các kỹ năng này khỏi thẻ không.**
+- **Luật "xác nhận mới nhất" nằm ở SQL**, không ở TypeScript (kế hoạch F1 ghi test thuần cho luật này): hàm của con không được trả trạng thái / loại quyết định. TypeScript giữ phần tên, ngày, "Mới", bỏ trùng; luật được test ở `tests/db/studentLevels.test.ts`.
+- **Bài giấy gõ lại (`manual_import`)** chỉ được chọn làm bài **"ngày ấy"** (không bao giờ "bây giờ"), chỉ khi lần ghi chữ đầu do **thầy/cô** gõ (không phải học sinh / phụ huynh) và chữ không có dạng điểm; có nhãn "bài giấy gõ lại" ở ô chọn; hàm đọc của con kiểm lại cùng luật. Ngày của bài gõ lại = **ngày buổi học thầy/cô chọn khi ghi** (lùi tối đa 14 ngày trước ngày giao), **không** phải ngày viết trên giấy. Bài nạp `imported` và bài ghi trong buổi `tutor_live` vẫn bị loại.
+- **Danh sách chọn:** 20 bài cũ nhất + 40 bài mới nhất (bỏ trùng) + cặp đang chọn luôn có mặt.
+- **Thành tích "n điều tự làm được" không mất** khi sau đó một kỹ năng bị hạ: `eng_my_cando` trả thêm `ever` (lúc món thứ 5 / 10 / 20 lần đầu được xác nhận, đếm món khác nhau từ sổ quyết định).
+- **Tên điều đã làm được của mục kiến thức** là nhãn có sẵn (`error_tags.label_vi`; không nhãn đã nghỉ dùng, không nhãn riêng "x-" của gia đình); mở đầu "Mình đã nắm chắc: …" (kỹ năng vẫn "Mình đã tự làm được: …"). Câu can-do riêng do thầy/cô viết: để sau (Q17).
+- Chữ giới thiệu thẻ "đã làm được" và "Ngày ấy – bây giờ" tách thành hai câu để đủ ≤ 15 chữ (test canh chữ).
+- Bài "ngày ấy" và "bây giờ" phải khác ngày (giờ Việt Nam), không cần cách nhau 2 tháng; lời nhắn tùy chọn.
+- e2e không tạo được hai bài viết ở hai ngày khác nhau: luồng chọn đầy đủ được test ở DB + DOM; e2e kiểm màn, quyền và các lời từ chối.

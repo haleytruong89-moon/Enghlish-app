@@ -3,7 +3,7 @@
  * achievements: it was true once); its date is the start of the latest unbroken stretch in which the condition has been true, rebuilt from the
  * ledgers (submission times, Unit events, weeks that met the goal). Not earned yet → the work that is still missing (a count of the child's
  * own work, never a comparison). Shown: everything earned + the three closest to being earned. No coins, no points, no ranking.
- * `cando_n` ("n điều tự làm được") belongs to W4e.
+ * W4e: `cando_n` ("n điều tự làm được") counts the cards of "Những điều mình đã làm được".
  */
 import { dayVn, type IsoDate } from "./week";
 import { longestRun, streakEverDate, totalWeeksMet, weeksMetDate, type WeekResult } from "./streak";
@@ -31,9 +31,13 @@ export type AchievementFacts = {
   flags: readonly FlagInfo[];
   /** Weeks since the first agreed goal (streak.ts weekHistory). */
   history: readonly WeekResult[];
+  /** W4e: the times (oldest first) the tutor confirmed each "điều mình đã làm được" the child can see now. Missing = none. */
+  cando?: readonly string[];
+  /** W4e: rung n → when the n-th DIFFERENT item was first confirmed (ledgers). Once earned, the badge stays even if a skill is lowered later (like the streak and weeks badges). */
+  candoEver?: Readonly<Record<number, string>>;
 };
 
-export type AchievementKind = "first_work" | "units" | "units_all" | "streak" | "weeks" | "writing" | "topic_first" | "revision_first" | "milestone";
+export type AchievementKind = "first_work" | "units" | "units_all" | "streak" | "weeks" | "writing" | "topic_first" | "revision_first" | "milestone" | "cando";
 
 export type AchievementItem = {
   key: string;
@@ -54,6 +58,7 @@ export const UNIT_LADDER_FIXED = [2, 4, 8] as const;
 export const STREAK_LADDER = [4, 8, 12] as const;
 export const WEEKS_LADDER = [10, 20] as const;
 export const WRITING_LADDER = [10, 25] as const;
+export const CANDO_LADDER = [5, 10, 20] as const;
 export const NEARLY_SHOWN = 3;
 
 /** 2, 4, 8, 12, 16, 20, 24, … below the number of counted Units (the last rung is "Xong cả giáo trình"). */
@@ -167,6 +172,16 @@ export function allAchievements(f: AchievementFacts): AchievementItem[] {
     const dn = b.filter((u) => statusOf(now, u.code) === "done").length;
     const earned = pred(now);
     out.push({ key: `milestone:${flag.id}`, kind: "milestone", n: null, title: flag.title, earned, date: earned ? ymd(sinceTrue(f.unitEvents, inVersion, pred)) : null, have: dn, need: Math.max(1, b.length) });
+  }
+  // cando_n: the cards of "Những điều mình đã làm được" (date = when the n-th different item was first confirmed, from the ledgers; else the n-th oldest card shown)
+  const cando = [...(f.cando ?? [])].sort();
+  let firstC = true;
+  for (const n of CANDO_LADDER) {
+    const ever = f.candoEver?.[n] ?? null;
+    const earned = cando.length >= n || ever !== null;
+    if (!earned && !firstC) continue;
+    if (!earned) firstC = false;
+    out.push({ key: `cando_${n}`, kind: "cando", n, title: null, earned, date: earned ? ymd(ever ?? cando[n - 1] ?? null) : null, have: earned ? n : Math.min(cando.length, n), need: n });
   }
   return out;
 }

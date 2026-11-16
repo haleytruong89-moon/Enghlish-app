@@ -3261,7 +3261,7 @@ export const achievementsCopy = {
   gotNoDate: "Đã đạt",
   nearlyTitle: "Sắp đạt",
   earnedTitle: "Đã đạt",
-  emoji: { first_work: "✏️", units: "📘", units_all: "🏔️", streak: "🔥", weeks: "📅", writing: "✍️", topic_first: "🗂️", revision_first: "🔁", milestone: "🚩" } as const,
+  emoji: { first_work: "✏️", units: "📘", units_all: "🏔️", streak: "🔥", weeks: "📅", writing: "✍️", topic_first: "🗂️", revision_first: "🔁", milestone: "🚩", cando: "✋" } as const,
   name: {
     first_work: "Bài đầu tiên",
     units: (n: number) => `Xong ${n} Unit đầu`,
@@ -3271,6 +3271,7 @@ export const achievementsCopy = {
     writing: (n: number) => `${n} bài viết`,
     topic_first: "Bài chủ đề đầu tiên",
     revision_first: "Lần sửa bài đầu tiên",
+    cando: (n: number) => `${n} điều tự làm được`,
   },
   need: {
     first_work: "Nộp một bài",
@@ -3282,8 +3283,77 @@ export const achievementsCopy = {
     topic_first: "Làm xong mọi bước trên app của một bài chủ đề",
     revision_first: "Nộp một bài sửa",
     milestone: (k: number) => `Còn ${k} Unit tới mốc này`,
+    cando: (k: number, have: number) => `Còn ${k} điều nữa (đã có ${have})`,
   },
   unavailable: "Thành tích chưa mở được. Bạn quay lại sau nhé.",
+} as const;
+
+/** W4e · Hành trình của con: "Cấp hiện tại theo mảng". Tên cấp do thầy/cô xác nhận (S-5); không điểm, không số, không so với ai. Không có mảng Tư duy (Q18). */
+export const levelsStudentCopy = {
+  title: "Cấp hiện tại theo mảng",
+  note: `Cấp do ${tutorHonorific} xác nhận`,
+  noteDated: `Cấp do ${tutorHonorific} xác nhận ·`,
+  waiting: `${tutorHonorificCap} chưa xác nhận`,
+  noneYet: `${tutorHonorificCap} chưa xác nhận cấp nào. Khi xác nhận, cấp sẽ hiện ở đây.`,
+  foot: "Tên cấp để bạn biết mình đang ở đâu. Không so với ai, không phải kết quả của một bài.",
+} as const;
+
+/** W4e · "Những điều mình đã làm được" (Q17): tên có sẵn của kỹ năng / mục kiến thức đã được thầy/cô xác nhận. */
+export const candoCopy = {
+  title: "Những điều mình đã làm được",
+  note: `Mỗi điều là một việc ${tutorHonorific} đã thấy bạn tự làm được. Bài làm của bạn là bằng chứng.`,
+  count: (n: number) => `${n} điều`,
+  lead: "Mình đã tự làm được:",
+  leadKnowledge: "Mình đã nắm chắc:",
+  newTag: "Mới",
+  confirmedBy: `${tutorHonorificCap} xác nhận`,
+  empty: `Chưa có điều nào. ${tutorHonorificCap} sẽ xác nhận khi thấy bạn tự làm được một việc.`,
+} as const;
+
+/** W4e · "Ngày ấy – bây giờ" (Q16): hai đoạn viết của chính con trên app, do thầy/cô chọn. */
+export const thenNowCopy = {
+  title: "Ngày ấy – bây giờ",
+  note: `Hai đoạn viết của chính bạn. ${tutorHonorificCap} chọn để bạn tự thấy mình đã đi xa.`,
+  chosenBy: `${tutorHonorificCap} chọn`,
+  thenLabel: "Ngày ấy ·",
+  nowLabel: "Bây giờ ·",
+  message: `${tutorHonorificCap} nhắn:`,
+} as const;
+
+/** W4e · phía người lớn: chọn hai bài viết cho "Ngày ấy – bây giờ" (chỉ thầy/cô của em; phụ huynh xem). */
+export const thenNowPickerCopy = {
+  title: "Ngày ấy – bây giờ",
+  intro: (alias: string) => `Chọn hai bài viết của ${alias} trên app để em tự thấy mình đã tiến bộ. Bài "ngày ấy" phải nộp trước bài "bây giờ" ít nhất một ngày.`,
+  onlyApp: "Chỉ chọn được bài viết của em trên app. Bài giấy do thầy/cô gõ lại chỉ dùng làm bài ngày ấy. Bài ghi trong buổi, bài nạp và bài sửa không chọn được.",
+  thenField: "Ngày ấy (bài cũ)",
+  nowField: "Bây giờ (bài mới)",
+  choose: "Chọn một bài",
+  noteLabel: "Lời nhắn cho em (tối đa 200 ký tự, không ghi điểm)",
+  notePlaceholder: "Ví dụ: Câu dài hơn và có từ nối. Hai tháng đấy!",
+  save: "Lưu lựa chọn",
+  saving: "Đang lưu…",
+  saved: "Đã lưu. Em thấy ngay ở Hành trình.",
+  hide: "Ẩn thẻ với em",
+  hidden: "Đã ẩn thẻ. Em không còn thấy.",
+  hiddenNow: "Thẻ đang ẩn với em.",
+  shownNow: "Em đang thấy cặp bài này.",
+  current: "Đang chọn",
+  empty: "Chưa đủ bài viết trên app để chọn. Cần ít nhất hai bài viết ở hai ngày khác nhau.",
+  noneYet: "Chưa chọn cặp bài nào.",
+  noteShort: "Lời nhắn",
+  retyped: "bài giấy gõ lại",
+  parentReadOnly: `Chỉ ${tutorHonorific} của em chọn. Phụ huynh chỉ xem.`,
+  unavailable: "Ngày ấy – bây giờ chưa mở (cần áp migration 0036).",
+  loadFailed: "Chưa tải được phần Ngày ấy – bây giờ. Tải lại trang nhé.",
+  errors: {
+    tutor_only: `Chỉ ${tutorHonorific} của em chọn được.`,
+    bad_pick: "Cần hai bài viết trên app của em, bài cũ nộp trước bài mới ít nhất một ngày.",
+    score_words: "Lời nhắn không được ghi điểm, phần trăm hay xếp loại.",
+    too_long: "Lời nhắn tối đa 200 ký tự.",
+    client_id_reused: "Lựa chọn này đã gửi với nội dung khác. Tải lại trang.",
+    thennow_unavailable: "Ngày ấy – bây giờ chưa mở (cần áp migration 0036).",
+    generic: "Chưa lưu được. Thử lại nhé.",
+  } as Record<string, string>,
 } as const;
 
 /** Phía người lớn: hộp "Mục tiêu tuần" ở Bàn làm việc. Chỉ thầy/cô của em đồng ý hoặc điều chỉnh (Q19); phụ huynh xem. */
