@@ -6,6 +6,7 @@ import { StaffShell } from "@/components/shell/StaffShell";
 import { requireShell } from "@/lib/shell/load";
 import { WaysStrip } from "@/components/assign/WaysStrip";
 import { DraftList } from "@/components/studio/DraftList";
+import { ImportForm } from "@/components/studio/ImportForm";
 import { UploadForm } from "@/components/studio/UploadForm";
 import { learnerWithTrack, reviewPage, studioCopy } from "@/lib/copy/vi";
 import { authorizeLearnerPage } from "@/lib/review/access";
@@ -41,6 +42,7 @@ export default async function StudioNewPage({ searchParams }: { searchParams: Pr
         <WaysStrip learnerId={l.id} current="studio" prefill={prefill} />
         <p className="mt-3 text-[15px]">{studioCopy.newIntro}</p>
         <UploadForm learnerId={l.id} aiAllowed={gate.allowed} aiReason={gate.reason} prefill={prefill} unitChoices={unitChoices} />
+        <ImportForm learnerId={l.id} />
         <div id="drafts">
           <DraftList drafts={drafts} />
         </div>

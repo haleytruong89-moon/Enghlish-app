@@ -1907,6 +1907,7 @@ export const studioCopy = {
   passageOfItem: "Bài đọc của câu",
   noPassage: "Không có",
   needsReview: "Cần xem",
+  markSeen: "Đã xem ✓",
   addItem: "+ Câu",
   removeItem: "Xóa câu",
   save: "Lưu nháp",
@@ -1935,6 +1936,31 @@ export const studioCopy = {
   dueOn: "Hạn nộp",
   assign: "Giao bài",
   assignedLine: (start: string, due: string) => `Đã giao: làm từ ${start}, hạn ${due}`,
+};
+
+// Nhập bài soạn sẵn (16/11): a draft made outside the app → a normal Studio draft. Adults only; no AI.
+export const studioImportCopy = {
+  title: "Nhập bài soạn sẵn",
+  intro: `Chọn một hay nhiều file .json đã soạn sẵn. Mỗi file thành một bản nháp; ${tutorHonorific} vẫn xem và bấm Duyệt như bài khác. Không dùng AI.`,
+  fileLabel: "File bài soạn sẵn (.json)",
+  chosen: (n: number) => `Đã chọn ${n} file`,
+  start: "Nhập vào bản nháp",
+  importing: (k: number, n: number) => `Đang nhập ${k}/${n}…`,
+  rowOk: (title: string, items: number) => `✓ ${title} · ${items} câu`,
+  rowFlagged: (n: number) => `${n} câu cần xem`,
+  rowBlocking: (n: number) => `${n} lỗi cần sửa trước khi Duyệt`,
+  rowAgain: "Đã nhập trước đó",
+  rowApproved: "Đã duyệt trước đó",
+  open: "Mở",
+  rowFailed: (name: string) => `✗ ${name}`,
+  errors: {
+    not_json: "File không đọc được (không phải file .json).",
+    too_big: "File quá lớn (tối đa 1 MB).",
+    import_bad_file: "File không đúng khuôn bài soạn sẵn.",
+    import_renamed: "File này đã nhập trước đó và bản nháp đã được đổi tên. Mở bản nháp trong danh sách Bài đã tạo.",
+    import_too_many: "File này đã nhập và bỏ quá nhiều lần.",
+  } as Record<string, string>,
+  wrongTrack: (file: string, learner: string) => `File soạn cho Track ${file}, em này học Track ${learner}.`,
 };
 
 // W4c2 — làm bài từng câu trên app (S-3). Xưng "bạn"; người dạy là tutorHonorific. Không điểm, không đáp án.

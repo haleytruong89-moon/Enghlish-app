@@ -12,6 +12,8 @@ export function FilePicker({
   accept,
   name,
   onPick,
+  onPickMany,
+  multiple = false,
   ariaLabel,
   ariaDescribedBy,
   disabled = false,
@@ -21,7 +23,10 @@ export function FilePicker({
   accept: string;
   /** Name of the file currently chosen (null = none). The caller owns the file itself. */
   name: string | null;
-  onPick: (file: File | undefined) => void;
+  onPick?: (file: File | undefined) => void;
+  /** With `multiple`: every chosen file, in the order the browser gives them. */
+  onPickMany?: (files: File[]) => void;
+  multiple?: boolean;
   ariaLabel: string;
   ariaDescribedBy?: string;
   disabled?: boolean;
@@ -38,12 +43,14 @@ export function FilePicker({
         <input
           type="file"
           accept={accept}
+          multiple={multiple}
           disabled={disabled}
           className="sr-only"
           data-testid={testId}
           aria-describedby={ariaDescribedBy}
           onChange={(e) => {
-            onPick(e.target.files?.[0]);
+            if (multiple) onPickMany?.(Array.from(e.target.files ?? []));
+            else onPick?.(e.target.files?.[0]);
             e.target.value = "";
           }}
         />
