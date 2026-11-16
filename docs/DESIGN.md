@@ -567,4 +567,5 @@ Trang `/learners/<id>/delete` (chỉ phụ huynh; gia sư/học sinh 403, em ngo
   - Bản nháp đã đổi tên (hàm 0024 báo trùng `client_id` khác tên) → đọc trạng thái theo `client_id` (`StudioStore.draftByClientId`, chỉ đọc): đã bị bỏ thì thử số kế tiếp, còn dùng thì `import_renamed` (kèm `id`).
 - **Không** gọi cổng AI, không ghi `ai_runs`, không chạy việc nền; không bảng / hàm SQL mới.
 - **"Đã xem ✓"** (`ItemCard`): câu có cờ "Cần xem" có nút xóa cờ (`needs_review=false`, `review_reason=null`). Chỉ sửa nội dung bản nháp và được lưu khi bấm Lưu nháp hoặc Duyệt. Bộ lọc "Chỉ câu cần xem" bỏ câu đó.
+- **Bài đọc ↔ câu (16/11, sau PR #43).** Thẻ bài đọc ở Duyệt đề ghi các câu dùng nó (`lib/studio/passageUse.ts`, "Dùng cho câu 1–10"; chưa có câu nào thì nhắc). Câu có `passage_ref` mang nhãn "📖 Bài đọc P1". Chỉ hiển thị, không đổi dữ liệu. Màn của con vẫn hiện mọi bài đọc ở đầu bài (nguồn của bước, 0024).
 - **Giới hạn đã biết.** Bài Studio đã giao **chưa tính vào độ phủ Giáo trình** (cần SQL, để sau). Câu `gap` / `word_form` tự chấm theo đáp án + `accepted`, nên đáp án sai sẽ chấm sai cho con: thầy/cô soát kỹ trước khi Duyệt.

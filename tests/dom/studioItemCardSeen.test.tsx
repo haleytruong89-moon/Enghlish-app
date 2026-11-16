@@ -22,4 +22,12 @@ describe("ItemCard · Đã xem ✓", () => {
     rerender(<ul><ItemCard item={{ ...item, needs_review: false, review_reason: null }} parts={parts} passages={[]} context={CTX_B} issues={[]} onChange={onChange} onRemove={() => {}} /></ul>);
     expect(screen.queryByTestId("item-3-seen")).toBeNull();
   });
+
+  it("marks a question that uses a passage", () => {
+    render(<ul><ItemCard item={{ ...item, passage_ref: "P1" }} parts={parts} passages={[{ ref: "P1", title: "Credit card debt", text: "…" }]} context={CTX_B} issues={[]} onChange={() => {}} onRemove={() => {}} /></ul>);
+    expect(screen.getByTestId("item-3-passage").textContent).toBe("📖 Bài đọc P1");
+    cleanup();
+    render(<ul><ItemCard item={item} parts={parts} passages={[]} context={CTX_B} issues={[]} onChange={() => {}} onRemove={() => {}} /></ul>);
+    expect(screen.queryByTestId("item-3-passage")).toBeNull();
+  });
 });
