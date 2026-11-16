@@ -29,5 +29,9 @@ describe("ItemCard · Đã xem ✓", () => {
     cleanup();
     render(<ul><ItemCard item={item} parts={parts} passages={[]} context={CTX_B} issues={[]} onChange={() => {}} onRemove={() => {}} /></ul>);
     expect(screen.queryByTestId("item-3-passage")).toBeNull();
+    cleanup();
+    // a link to a passage that does not exist gets no badge (the blocking issue chip says what is wrong)
+    render(<ul><ItemCard item={{ ...item, passage_ref: "P9" }} parts={parts} passages={[]} context={CTX_B} issues={[]} onChange={() => {}} onRemove={() => {}} /></ul>);
+    expect(screen.queryByTestId("item-3-passage")).toBeNull();
   });
 });

@@ -30,8 +30,9 @@ export function ItemCard({
     <li data-testid={`item-${item.n}`} className="flex flex-col gap-2 rounded-xl border border-line bg-white p-4">
       <div className="flex flex-wrap items-center gap-2">
         <strong>{studioCopy.itemLabel(item.n)}</strong>
-        {item.passage_ref ? (
+        {item.passage_ref && passages.some((p) => p.ref === item.passage_ref) ? (
           <span data-testid={`item-${item.n}-passage`} className="rounded-full bg-[#eef3ef] px-2 py-0.5 text-xs font-semibold">
+            <span aria-hidden="true">{studioCopy.itemPassageIcon} </span>
             {studioCopy.itemPassage(item.passage_ref)}
           </span>
         ) : null}
