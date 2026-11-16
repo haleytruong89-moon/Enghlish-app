@@ -3,6 +3,7 @@
  * 403 wrong role), then the body (400), then the injectable stores (service-role functions that check the actor again). A tutor never
  * receives AI cost or the month's spend (spec §7). Stored file paths never leave the server.
  */
+import { createHash } from "node:crypto";
 import { sameInstant } from "./instant";
 import { AccessError, requireAccess, requireStaff, type AccessDeps, type AccessGrant, type AccessUser, type Action, type Member } from "@/lib/auth/requireAccess";
 import { parseGate, refusalStatus } from "@/lib/ai/cap";
@@ -20,9 +21,10 @@ import { buildStudioBuild } from "./buildTemplate";
 import type { StudioContext } from "./context";
 import { runExtraction, type ExtractStore, type RunLog } from "./extract";
 import {
-  aiSettingsBodySchema, approveBodySchema, assignStudioBodySchema, createDraftBodySchema, decideBodySchema, editBodySchema, retrySeenBodySchema, saveDraftBodySchema,
-  studioUploadBodySchema, type FileMetaBody,
+  aiSettingsBodySchema, approveBodySchema, assignStudioBodySchema, createDraftBodySchema, decideBodySchema, editBodySchema, importDraftBodySchema, retrySeenBodySchema,
+  saveDraftBodySchema, studioUploadBodySchema, type FileMetaBody,
 } from "./requests";
+import { studioImportFileSchema } from "./importFile";
 import type { StudioDraft } from "./schema";
 import { parseAiSettings, parseDraft, parseDraftList, parsePending } from "./shape";
 import { summarizeDraft } from "./summary";
@@ -311,6 +313,53 @@ export async function handleEditApproved(deps: StudioDeps, draftId: string, raw:
     return { status: r.replayed ? 200 : 201, body: { id: r.id } };
   } catch (err) {
     return fromStudioDbError(err);
+  }
+}
+
+// ---- Nhập bài soạn sẵn (a draft made outside the app; no AI, no SQL) -------------------------------------------------------
+/** A file imported, discarded and imported again gets a fresh draft under `imp-<hash>-<k>`; after this many the server stops. */
+export const IMPORT_MAX_TRIES = 9;
+
+export async function handleImportDraft(deps: StudioDeps, learnerId: string, raw: unknown): Promise<HandlerResult> {
+  const g = await guard(deps, learnerId, "studio:write");
+  if (!g.ok) return g.result;
+  const body = importDraftBodySchema.safeParse(raw);
+  if (!body.success) return fail(400, "invalid_body");
+  const parsed = studioImportFileSchema.safeParse(body.data.file);
+  if (!parsed.success) return fail(400, "import_bad_file");
+  const file = parsed.data;
+  const { learner, member } = g.grant;
+  if (file.track !== learner.trackId) return fail(400, "import_wrong_track", { file_track: file.track, learner_track: learner.trackId });
+  const issues = validateDraft(file.payload, await deps.loadContext(learner.id, learner.trackId));
+  const report = {
+    title: file.title,
+    items: file.payload.items.length,
+    needs_review: file.payload.items.filter((i) => i.needs_review).length,
+    blocking: blockingIssues(issues).length,
+  };
+  // Same content → same client id → eng_create_studio_draft replays the same draft (double click, retry, a second import).
+  const hash = createHash("sha256").update(JSON.stringify(file)).digest("hex").slice(0, 32);
+  try {
+    for (let k = 1; k <= IMPORT_MAX_TRIES; k++) {
+      const clientId = k === 1 ? `imp-${hash}` : `imp-${hash}-${k}`;
+      const made = (await deps.store.createDraft({
+        learnerId: learner.id, title: file.title, testFile: null, keyFile: null, extract: false, byMemberId: member.id, clientId,
+      })) as { id: string; status: string; replayed: boolean };
+      if (made.replayed && made.status === "discarded") continue;
+      const { view } = parseDraft(await deps.store.draft(made.id), { showCost: false });
+      // A new draft, or an earlier import that stopped between "create" and "save": fill it now.
+      if (view.status === "draft" && view.payload.items.length === 0) {
+        await deps.store.saveDraft({ draftId: made.id, title: file.title, payload: file.payload, base: view.updatedAt, byMemberId: member.id });
+        return { status: made.replayed ? 200 : 201, body: { id: made.id, status: "draft", replayed: made.replayed, ...report } };
+      }
+      return { status: 200, body: { id: made.id, status: view.status, replayed: true, ...report } };
+    }
+    return fail(409, "import_too_many");
+  } catch (err) {
+    const r = fromStudioDbError(err);
+    // eng_create_studio_draft: the same client id with another title = the draft of this file was renamed since.
+    if (r.status === 409 && (r.body as { error?: string }).error === "conflict") return fail(409, "import_renamed");
+    return r;
   }
 }
 
