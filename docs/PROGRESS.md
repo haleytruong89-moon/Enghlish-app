@@ -1782,3 +1782,18 @@ Nhánh `feature/studio-import-json` (từ `main` sau PR #42). Phụ huynh duyệ
 - Bài Studio đã giao **chưa tính vào độ phủ Giáo trình** ("đang học đến" không tự nhảy): cần SQL. Tạm thời thầy/cô vẫn chọn Unit đã dạy ở Ghi buổi.
 - 6 bài vẫn giao 6 lần (mỗi bài chọn ngày riêng).
 - Cột "Giải thích" là chữ **con thấy khi làm sai**: thầy/cô đọc lại trước khi Duyệt.
+
+## Duyệt đề: bài đọc ghi rõ câu dùng nó (16/11)
+
+Nhánh `feature/studio-passage-links` (sau PR #43). **Không có SQL**, không AI. Phụ huynh thấy thẻ bài đọc ở cuối trang Duyệt đề "trông như chưa có câu tương ứng" (dữ liệu đã nối đúng, chỉ không hiện ra). Phụ huynh chọn cách sửa nhỏ trong app.
+
+- Mỗi thẻ bài đọc ghi "P1 · Dùng cho câu 1–10". Nếu chưa có câu nào dùng thì nhắc chọn ở ô "Bài đọc của câu".
+- Câu dùng bài đọc có nhãn nhỏ "📖 Bài đọc P1" cạnh "Câu n".
+- Danh sách câu cập nhật ngay khi đổi ô "Bài đọc của câu".
+
+**Cách thử:** mở bài "Review 7" đã nhập ở Duyệt đề.
+- Kéo xuống "Bài đọc": thẻ ghi "P1 · Dùng cho câu 1–10".
+- Câu 1–10 có nhãn "📖 Bài đọc P1".
+- Đổi ô "Bài đọc của câu" của câu 11 sang P1: thẻ đổi thành "1–11". Đổi lại "Không có" rồi bấm Lưu nháp nếu muốn giữ như cũ.
+
+**Chưa đổi (để sau nếu cần):** khi con làm bài, mọi bài đọc vẫn hiện ở đầu bài (ví dụ bài Einstein của U14-5 hiện trên cả câu 1–13).

@@ -7,6 +7,7 @@ import { SaveStatus } from "@/components/ui/SaveStatus";
 import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { studioCopy, studioIssueText } from "@/lib/copy/vi";
 import { sendJson } from "@/lib/studio/client";
+import { passageItemRanges } from "@/lib/studio/passageUse";
 import type { DraftPageData } from "@/lib/studio/types";
 import type { StudioDraft, StudioItem } from "@/lib/studio/schema";
 import { sortForReview, summarizeDraft } from "@/lib/studio/summary";
@@ -129,12 +130,18 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
         <button type="button" onClick={addPart} className="self-start text-sm text-accent underline">{studioCopy.addPart}</button>
         <section aria-labelledby="passages" className="flex flex-col gap-3">
           <h2 id="passages" className="text-lg font-semibold">{studioCopy.passages}</h2>
-          {d.passages.map((p, k) => (
-            <div key={p.ref} className="flex flex-col gap-2 rounded-xl border border-line bg-white p-4">
+          {d.passages.map((p, k) => {
+            const used = passageItemRanges(d.items, p.ref);
+            return (
+            <div key={p.ref} data-testid={`passage-${p.ref}`} className="flex flex-col gap-2 rounded-xl border border-line bg-white p-4">
+              <p data-testid={`passage-${p.ref}-use`} className={`text-sm font-semibold ${used ? "" : "text-[#6B4600]"}`}>
+                {p.ref} · {used ? studioCopy.passageUsedBy(used) : studioCopy.passageUnused}
+              </p>
               <input aria-label={studioCopy.passageTitle} value={p.title} onChange={(e) => change({ ...d, passages: d.passages.map((x, j) => (j === k ? { ...x, title: e.target.value } : x)) })} className="min-h-11 rounded-lg border border-line px-3" />
               <textarea lang="en" aria-label={studioCopy.passageText} rows={6} value={p.text} onChange={(e) => change({ ...d, passages: d.passages.map((x, j) => (j === k ? { ...x, text: e.target.value } : x)) })} className="rounded-lg border border-line px-3 py-2 text-sm" />
             </div>
-          ))}
+            );
+          })}
           <button type="button" onClick={() => change({ ...d, passages: [...d.passages, { ref: `P${d.passages.length + 1}`, title: `P${d.passages.length + 1}`, text: " " }] })} className="self-start text-sm text-accent underline">{studioCopy.addPassage}</button>
         </section>
         {msg ? <p role="status" data-testid="studio-msg" className="text-sm">{msg}</p> : null}
