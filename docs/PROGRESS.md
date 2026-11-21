@@ -1797,3 +1797,48 @@ Nhánh `feature/studio-passage-links` (sau PR #43). **Không có SQL**, không A
 - Đổi ô "Bài đọc của câu" của câu 11 sang P1: thẻ đổi thành "1–11". Đổi lại "Không có" rồi bấm Lưu nháp nếu muốn giữ như cũ.
 
 **Chưa đổi (để sau nếu cần):** khi con làm bài, mọi bài đọc vẫn hiện ở đầu bài (ví dụ bài Einstein của U14-5 hiện trên cả câu 1–13).
+
+## Duyệt đề: xóa phần · tự đánh số lại · bỏ nháp có hỏi lại · lỗi chặn Duyệt ghi rõ (21/11)
+
+Nhánh `feature/studio-editor-fixes`. **SQL cần áp: không có.** Không AI. Phụ huynh duyệt 4 mục ở chat 21/11, sau góp ý của thầy/cô Nguyên (20/11). Kế hoạch `docs/superpowers/plans/2026-11-21-studio-editor-fixes.md`; thiết kế `docs/DESIGN.md` §19.27.
+
+### Thầy/cô gặp gì, vì sao
+| Gặp | Nguyên nhân | Đã sửa |
+|---|---|---|
+| Không xóa được đề mục (phần P) | Chưa có nút xóa phần | Nút **"Xóa phần"** (hỏi lại, ghi số câu sẽ xóa) |
+| Xóa câu xong bấm Duyệt báo lỗi | Số câu bị hụt, app cần 1..N | App **tự đánh số lại**; bỏ ô "Số câu"; bản nháp cũ bị hỏng số có nút "Đánh số lại" |
+| Bản nháp biến mất | Nhiều khả năng bấm "Bỏ bản nháp" (không hỏi lại, nằm cạnh Duyệt). **Chưa xác nhận được**: không đọc được dữ liệu máy chủ | Nút hỏi lại và nằm riêng ở cuối trang |
+| Không biết lỗi gì | Chỉ ghi "Còn n lỗi" | Hộp đỏ liệt kê "Câu n: lỗi gì", bấm để tới câu |
+
+Sửa kèm (cùng đoạn code): "+ Phần" không còn trùng mã; "+ Câu" ở phần giữa không còn làm hỏng thứ tự.
+
+### Cách thử trên bản thử (Nguyên (thử))
+1. Tạo bài từ đề → Nhập bài soạn sẵn → nhập `U14-5_word-formation.json` → Mở.
+2. Bấm **Xóa phần** ở phần O → hộp hỏi "Xóa phần O cùng 12 câu trong đó?" → OK. Làm tiếp với phần M. Đạt khi: còn N (câu 1–10) và P (câu 11–16), không có hộp đỏ, nút Duyệt bấm được.
+3. Xóa đáp án của một câu → hộp đỏ ghi "Câu n: Thiếu đáp án"; bấm dòng đó thì trang cuộn tới câu. Điền lại → hộp đỏ mất.
+4. Bấm **Bỏ bản nháp** (cuối trang) → hộp hỏi lại; bấm Hủy thì không mất gì.
+5. Duyệt → Giao bài → đăng nhập Nguyên (thử): bài có 16 câu, đánh số 1–16.
+
+### Đã kiểm
+- typecheck, lint, unit + dom + **database** (Postgres 16 cục bộ) xanh. Test mới: `tests/unit/studioEditOps.test.ts`, `tests/dom/studioDraftEditorOps.test.tsx`, `tests/db/studioEditOps.test.ts`.
+- Chạy thử bằng **đúng 6 file Destination** trên database cục bộ (không đưa vào repo): cả 6 bài duyệt → giao → con mở bài → nộp → app chấm. Trả lời đúng theo đáp án: 193/193 câu được chấm đúng. Trả lời viết hoa, thừa dấu cách, thừa dấu chấm cuối: vẫn 193/193. Với U14-5, giữ bất kỳ 2 trong 4 phần đều duyệt được.
+- **Chưa kiểm:** e2e (chạy trên CI); bấm thật trên trình duyệt / iPad.
+
+### Rà cả luồng giao → làm → nộp → xem → góp ý (21/11): điều cần cải thiện
+Xếp theo mức ảnh hưởng. **Chưa làm mục nào dưới đây**; chờ phụ huynh chọn.
+
+| # | Ai gặp | Vấn đề | Hướng sửa | SQL |
+|---|---|---|---|---|
+| 1 | Con | Lời dẫn của **mọi phần** (kèm hộp từ) dồn thành một đoạn ở đầu bài, xuống dòng bị nuốt; đang ở câu nào cũng không biết lời dẫn nào là của câu đó. Trên điện thoại / iPad dọc, đoạn này nằm trên câu hỏi, phải cuộn lên | Ghi lời dẫn theo khoảng câu ("Câu 1–8: …"), giữ xuống dòng, và hiện đúng lời dẫn của câu đang làm ngay trên câu | Không |
+| 2 | Thầy/cô | Bài Studio con nộp xong **không có chỗ xem cả bài** (con trả lời gì ở từng câu). Hộp duyệt chỉ hiện các câu chờ chấm tay; bài tự chấm hết thì không hiện ở đâu ngoài con số tổng và "Điểm cần chú ý" | Thêm "Xem cả bài làm" (trang xem bài đã có sẵn cho loại bài khác, cần kiểm với bài Studio) | Có thể không |
+| 3 | Thầy/cô, phụ huynh | Bài Studio đã giao **không nằm trong bảng "Bài đã giao"** và không có cảnh báo quá hạn (bảng và cảnh báo chỉ tính bài link / PDF). Không biết con làm chưa | Đưa bài Studio vào bảng + cảnh báo | Có |
+| 4 | Thầy/cô | **Không góp ý được** cho một bài Studio (lời khen + điều cần sửa chỉ có cho bài link / PDF và bài viết) | Mở góp ý cho bài Studio | Có |
+| 5 | Thầy/cô | Ở Duyệt đề, câu "cần xem" bị **đẩy lên đầu phần**, thứ tự lệch với sách nên khó đối chiếu | Giữ thứ tự sách; đã có ô lọc "Chỉ câu cần xem" | Không |
+| 6 | Thầy/cô | Bài 35–42 câu là dài; thầy/cô muốn giao ít hơn | Soạn mỗi bài tập của sách thành một file (8–13 câu) | Không (nội dung) |
+| 7 | Thầy/cô | Bản nháp đã bỏ không xem lại / khôi phục được | Mục "Đã bỏ" + nút khôi phục | Có |
+| 8 | Thầy/cô | Chưa đổi được thứ tự câu trong một phần (trước chỉ làm được qua ô "Số câu" đã bỏ) | Nút Lên / Xuống | Không |
+| 9 | Con | Câu điền từ có gạch nối ("fifty-fifty") mà con gõ không gạch thì bị chấm sai | Thầy/cô thêm cách viết khác vào "Đáp án chấp nhận thêm"; hoặc app bỏ qua gạch nối khi so | Không / Có |
+| 10 | Cả hai | Bài Studio đã giao chưa tính vào độ phủ Giáo trình (đã ghi 16/11) | Nối bài Studio với Unit | Có |
+
+Điều chạy tốt: nhập file, duyệt, giao; con làm từng câu, tự lưu nháp; chấm tự động chịu được viết hoa, dấu cách, dấu chấm cuối, dấu nháy cong của iPad; câu viết lại khác đáp án thì chờ thầy/cô, không tự chấm sai; con không thấy đáp án trước khi được phép.
+
