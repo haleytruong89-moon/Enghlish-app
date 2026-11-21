@@ -65,3 +65,13 @@ export function addPart(d: StudioDraft): StudioDraft {
 export function moveToPart(d: StudioDraft, item: StudioItem, part: string): StudioDraft {
   return renumber({ ...d, items: d.items.map((x) => (x === item ? { ...x, part, n: LAST } : x)) });
 }
+
+/** Lên (-1) / Xuống (+1): swaps the question with its neighbour in the same part. At the edge of its part nothing changes (same object). */
+export function moveWithinPart(d: StudioDraft, item: StudioItem, step: -1 | 1): StudioDraft {
+  const inPart = d.items.filter((i) => i.part === item.part).sort((a, b) => a.n - b.n);
+  const at = inPart.indexOf(item);
+  const other = inPart[at + step];
+  if (at < 0 || !other) return d;
+  return renumber({ ...d, items: d.items.map((i) => (i === item ? { ...i, n: other.n } : i === other ? { ...i, n: item.n } : i)) });
+}
+

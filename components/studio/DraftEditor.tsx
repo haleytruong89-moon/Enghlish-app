@@ -7,11 +7,11 @@ import { SaveStatus } from "@/components/ui/SaveStatus";
 import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { studioCopy, studioIssueText } from "@/lib/copy/vi";
 import { sendJson } from "@/lib/studio/client";
-import { addItem as addItemOp, addPart as addPartOp, moveToPart, numberingBroken, removeItem, removePart, renumber } from "@/lib/studio/editOps";
+import { addItem as addItemOp, addPart as addPartOp, moveToPart, moveWithinPart, numberingBroken, removeItem, removePart, renumber } from "@/lib/studio/editOps";
 import { passageItemRanges } from "@/lib/studio/passageUse";
 import type { DraftPageData } from "@/lib/studio/types";
 import { STUDIO_LIMITS, type StudioDraft, type StudioItem } from "@/lib/studio/schema";
-import { sortForReview, summarizeDraft } from "@/lib/studio/summary";
+import { summarizeDraft } from "@/lib/studio/summary";
 import { blockingIssues, validateDraft } from "@/lib/studio/validate";
 import { studioErrorText } from "@/lib/studio/view";
 import { ItemCard } from "./ItemCard";
@@ -97,7 +97,8 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
     else setMsg(studioErrorText(r.error));
   }
 
-  const ordered = sortForReview(d.items, issues).filter((i) => !onlyFlagged || flagged.has(i.n));
+  // Book order, always: a question never jumps while it is being fixed. "Chỉ câu cần xem" narrows the list instead.
+  const ordered = [...d.items].sort((a, b) => a.n - b.n).filter((i) => !onlyFlagged || flagged.has(i.n));
   return (
     <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_20rem]">
       <div className="flex flex-col gap-5">
@@ -142,9 +143,10 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
               </div>
               <textarea lang="en" aria-label={studioCopy.partInstructions} rows={2} value={p.instructions} onChange={(e) => change({ ...d, parts: d.parts.map((x, j) => (j === pi ? { ...x, instructions: e.target.value } : x)) })} className="rounded-lg border border-line px-3 py-2 text-sm" />
               <ul className="flex flex-col gap-3">
-                {items.map((i) => (
+                {items.map((i, k) => (
                   <ItemCard key={d.items.indexOf(i)} item={i} parts={d.parts} passages={d.passages} context={context} issues={issues.filter((x) => x.n === i.n)}
-                    onChange={(patch) => upd(i, patch)} onRemove={() => change(removeItem(d, i))} />
+                    onChange={(patch) => upd(i, patch)} onRemove={() => change(removeItem(d, i))}
+                    onMove={onlyFlagged ? undefined : (step) => change(moveWithinPart(d, i, step))} canUp={k > 0} canDown={k < items.length - 1} />
                 ))}
               </ul>
               <button type="button" disabled={itemsFull} onClick={() => change(addItemOp(d, p.key))} data-testid={`part-${p.key}-add`} className="inline-flex min-h-11 items-center self-start text-sm text-accent underline disabled:opacity-50">{studioCopy.addItem}</button>
