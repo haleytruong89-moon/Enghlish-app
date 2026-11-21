@@ -10,7 +10,7 @@ import { sendJson } from "@/lib/studio/client";
 import { addItem as addItemOp, addPart as addPartOp, moveToPart, numberingBroken, removeItem, removePart, renumber } from "@/lib/studio/editOps";
 import { passageItemRanges } from "@/lib/studio/passageUse";
 import type { DraftPageData } from "@/lib/studio/types";
-import type { StudioDraft, StudioItem } from "@/lib/studio/schema";
+import { STUDIO_LIMITS, type StudioDraft, type StudioItem } from "@/lib/studio/schema";
 import { sortForReview, summarizeDraft } from "@/lib/studio/summary";
 import { blockingIssues, validateDraft } from "@/lib/studio/validate";
 import { studioErrorText } from "@/lib/studio/view";
@@ -54,7 +54,14 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
     if (!window.confirm(studioCopy.removePartConfirm(key, n))) return;
     change(removePart(d, key));
   };
-  const goTo = (n: number) => document.getElementById(`studio-item-${n}`)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+  /** Scroll to the question and put the keyboard there too (its first field). */
+  const goTo = (n: number) => {
+    const card = document.getElementById(`studio-item-${n}`);
+    card?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    card?.querySelector<HTMLElement>("select, textarea, input")?.focus({ preventScroll: true });
+  };
+  const partsFull = d.parts.length >= STUDIO_LIMITS.parts;
+  const itemsFull = d.items.length >= STUDIO_LIMITS.items;
 
   async function save(): Promise<string | null> {
     setBusy(true);
@@ -123,7 +130,7 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
                 <input aria-label={studioCopy.partName} value={p.name} onChange={(e) => change({ ...d, parts: d.parts.map((x, j) => (j === pi ? { ...x, name: e.target.value } : x)) })} className="min-h-11 flex-1 rounded-lg border border-line px-3" />
                 <label className="flex flex-col text-xs font-semibold">
                   {studioCopy.partSkill}
-                  <select data-testid={`part-${p.key}-skill`} defaultValue="__" onChange={(e) => e.target.value !== "__" && partSkill(p.key, e.target.value || null)} className="min-h-11 rounded-lg border border-line px-3">
+                  <select data-testid={`part-${p.key}-skill`} value="__" onChange={(e) => e.target.value !== "__" && partSkill(p.key, e.target.value || null)} className="min-h-11 rounded-lg border border-line px-3">
                     <option value="__">{studioCopy.partSkillApply}</option>
                     <option value="">{studioCopy.noSkill}</option>
                     {context.skills.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
@@ -140,11 +147,11 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
                     onChange={(patch) => upd(i, patch)} onRemove={() => change(removeItem(d, i))} />
                 ))}
               </ul>
-              <button type="button" onClick={() => change(addItemOp(d, p.key))} data-testid={`part-${p.key}-add`} className="self-start text-sm text-accent underline">{studioCopy.addItem}</button>
+              <button type="button" disabled={itemsFull} onClick={() => change(addItemOp(d, p.key))} data-testid={`part-${p.key}-add`} className="inline-flex min-h-11 items-center self-start text-sm text-accent underline disabled:opacity-50">{studioCopy.addItem}</button>
             </section>
           );
         })}
-        <button type="button" onClick={() => change(addPartOp(d))} data-testid="studio-add-part" className="self-start text-sm text-accent underline">{studioCopy.addPart}</button>
+        <button type="button" disabled={partsFull} onClick={() => change(addPartOp(d))} data-testid="studio-add-part" className="inline-flex min-h-11 items-center self-start text-sm text-accent underline disabled:opacity-50">{studioCopy.addPart}</button>
         <section aria-labelledby="passages" className="flex flex-col gap-3">
           <h2 id="passages" className="text-lg font-semibold">{studioCopy.passages}</h2>
           {d.passages.map((p, k) => {

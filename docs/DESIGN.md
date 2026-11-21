@@ -573,7 +573,7 @@ Trang `/learners/<id>/delete` (chỉ phụ huynh; gia sư/học sinh 403, em ngo
 ### 19.27. Duyệt đề: xóa phần, tự đánh số lại, bỏ nháp có hỏi lại, lỗi chặn Duyệt ghi rõ (21/11/2026, không migration, không AI)
 
 - **Vì sao.** 20/11 thầy/cô của Nguyên muốn giữ 2 trong 4 bài của "Word formation (M–P)": không có nút xóa phần; xóa từng câu làm số câu hụt (`numbering`) nên Duyệt bị chặn; bản nháp sau đó mất (nhiều khả năng do "Bỏ bản nháp", một cú bấm, nằm cạnh Duyệt). Tái hiện trên database cục bộ bằng đúng file đó: giữ M + N thì duyệt được; giữ O + P hoặc M + O thì bị chặn, ép duyệt thì database từ chối khung đề ("a range outside 1..total_items").
-- **`lib/studio/editOps.ts`** (thuần, không đổi đầu vào): `renumber` (thứ tự = vị trí phần trong `parts`, rồi số cũ, rồi vị trí cũ; số mới 1..N), `removeItem`, `removePart`, `addItem` (cuối phần của nó), `addPart` (chữ cái trống đầu tiên), `moveToPart` (cuối phần mới), `numberingBroken`.
+- **`lib/studio/editOps.ts`** (thuần, không đổi đầu vào): `renumber` (thứ tự phần = theo **số câu hiện có** của phần, để đề có danh sách phần lệch thứ tự vẫn giữ số của bản giấy; phần chưa có câu đứng ngay sau phần liệt kê trước nó; trong phần: số cũ, rồi vị trí cũ; số mới 1..N), `removeItem`, `removePart`, `addItem` (cuối phần của nó), `addPart` (chữ cái trống đầu tiên), `moveToPart` (cuối phần mới), `numberingBroken` (chỉ đúng khi đánh số lại sẽ **đổi số** của một câu nào đó).
 - **Màn Duyệt đề** (`DraftEditor`, `ItemCard`):
   - Mỗi phần có **"Xóa phần"** (`window.confirm`, ghi mã phần và số câu).
   - Mọi thao tác cấu trúc đi qua `editOps`, nên số câu luôn 1..N. Bản nháp tới với số hỏng có nút **"Đánh số lại"**.

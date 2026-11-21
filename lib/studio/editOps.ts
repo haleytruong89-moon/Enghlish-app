@@ -8,21 +8,31 @@ import type { StudioDraft, StudioItem } from "./schema";
 /** Sorts after every real number: "at the end of its part". */
 const LAST = Number.MAX_SAFE_INTEGER;
 
-/** Questions in screen order, numbered 1..N. Unknown parts go last (the validator still flags them). */
+/**
+ * Questions numbered 1..N. The order of the parts is the one their current numbers give (so a test whose part list is not in number
+ * order keeps the numbers of the paper); a part without numbered questions (empty, or only a new question) comes right after the part
+ * listed before it. Inside a part: the old number, then the old position. Unknown parts go last (the validator still flags them).
+ */
 export function renumber(d: StudioDraft): StudioDraft {
-  const partAt = new Map(d.parts.map((p, k) => [p.key, k]));
-  const at = (i: StudioItem) => partAt.get(i.part) ?? d.parts.length;
+  const rank = new Map<string, [number, number]>();
+  let previous = 0;
+  d.parts.forEach((p, at) => {
+    const real = d.items.filter((i) => i.part === p.key && i.n < LAST).map((i) => i.n);
+    if (real.length > 0) previous = Math.min(...real);
+    rank.set(p.key, [previous, at]);
+  });
+  const of = (i: StudioItem) => rank.get(i.part) ?? [LAST, d.parts.length];
   const ordered = d.items
-    .map((item, pos) => ({ item, pos }))
-    .sort((a, b) => at(a.item) - at(b.item) || a.item.n - b.item.n || a.pos - b.pos)
+    .map((item, pos) => ({ item, pos, r: of(item) }))
+    .sort((a, b) => a.r[0] - b.r[0] || a.r[1] - b.r[1] || a.item.n - b.item.n || a.pos - b.pos)
     .map(({ item }, k) => (item.n === k + 1 ? item : { ...item, n: k + 1 }));
   return { ...d, items: ordered };
 }
 
-/** True when the numbers are not already 1..N in screen order. */
+/** True when renumbering would change the number of any question (the order of the array alone does not count). */
 export function numberingBroken(d: StudioDraft): boolean {
-  const r = renumber(d).items;
-  return r.some((item, k) => item !== d.items[k]);
+  const kept = new Set(d.items);
+  return renumber(d).items.some((item) => !kept.has(item));
 }
 
 export function removeItem(d: StudioDraft, item: StudioItem): StudioDraft {

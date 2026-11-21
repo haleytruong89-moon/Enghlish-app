@@ -94,6 +94,19 @@ describe("Duyệt đề · xóa phần, tự đánh số lại", () => {
     expect(stemsOnScreen()).toEqual(["1:Sentence 1 ____.", "2:changed", "3:the other two", "4:Sentence 9 ____."]);
   });
 
+  it("typing in a question keeps the keyboard in the field; + Phần and + Câu stop at the limits of a draft", () => {
+    open(FOUR);
+    const stem = within(screen.getByTestId("item-4")).getByLabelText(studioCopy.stem) as HTMLTextAreaElement;
+    stem.focus();
+    fireEvent.change(stem, { target: { value: "Sentence 4 changed" } });
+    expect(document.activeElement).toBe(stem);
+    expect(stem.isConnected).toBe(true);
+    cleanup();
+    open({ ...FOUR, parts: Array.from({ length: 30 }, (_, k) => ({ key: `K${k}`, name: "x", instructions: "" })), items: Array.from({ length: 300 }, (_, k) => q(k + 1, "K0")) });
+    expect((screen.getByTestId("studio-add-part") as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByTestId("part-K0-add") as HTMLButtonElement).disabled).toBe(true);
+  });
+
   it("+ Phần never reuses a letter", () => {
     open({ ...FOUR, parts: ["A", "B", "D"].map((key) => ({ key, name: key, instructions: "" })), items: [q(1, "A")] });
     fireEvent.click(screen.getByTestId("studio-add-part"));
@@ -110,7 +123,8 @@ describe("Duyệt đề · chặn Duyệt nói rõ lỗi, Bỏ bản nháp hỏi
     expect(screen.getByTestId("blocked-2-missing_key").textContent).toBe("Câu 2: Thiếu đáp án");
     expect(screen.getByTestId("blocked-3-no_tag").textContent).toBe("Câu 3: Chọn một nhãn cho câu này.");
     expect((screen.getByTestId("studio-approve") as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(screen.getByTestId("blocked-2-missing_key")); // scrolls; must not throw where scrollIntoView is missing
+    fireEvent.click(screen.getByTestId("blocked-2-missing_key")); // scrolls (must not throw where scrollIntoView is missing) and moves the keyboard to the question
+    expect(screen.getByTestId("item-2").contains(document.activeElement)).toBe(true);
     fireEvent.change(screen.getByTestId("item-2-key"), { target: { value: "height" } });
     fireEvent.change(screen.getByTestId("item-3-tag"), { target: { value: "dang-tu" } });
     expect(screen.queryByTestId("approve-blocked")).toBeNull();

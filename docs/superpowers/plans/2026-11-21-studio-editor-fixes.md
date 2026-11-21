@@ -24,9 +24,9 @@ Also fixed because the same code is touched:
 
 ## Rules of `editOps` (each has unit tests)
 
-- `renumber(d)`: order = position of the question's part in `d.parts` (unknown part last), then old `n`, then old array position; new `n` = 1..N. Parts, passages and every other field are untouched.
+- `renumber(d)`: parts are ordered by the numbers their questions have now (a part list that is not in number order keeps the paper's numbers); a part with no numbered question comes right after the part listed before it; unknown part last. Inside a part: old `n`, then old array position. New `n` = 1..N. Parts, passages and every other field are untouched. *(Changed after review: the first version ordered by the part list.)*
 - `removeItem(d, item)`, `removePart(d, key)`, `addItem(d, part)`, `addPart(d)`, `moveToPart(d, item, part)`: each returns a renumbered draft.
-- `numberingBroken(d)`: true when `renumber(d)` would change any `n` (drives "Đánh số lại").
+- `numberingBroken(d)`: true when `renumber(d)` would change any `n` (drives "Đánh số lại"); the order of the array alone does not count.
 - Renumbering only happens in a draft (status `draft`). An approved test is never touched; "Sửa đề đã duyệt" already makes a new draft and a new template version, and attempts keep their own snapshot.
 
 ## Not in this slice

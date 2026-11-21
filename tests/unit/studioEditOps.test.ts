@@ -85,4 +85,30 @@ describe("Studio draft edit operations", () => {
     expect(d.items[1]!.stem).toBe("second two"); // same number: the order in the file decides
     expect(numberingBroken(d)).toBe(false);
   });
+
+  it("numbers that are fine are never touched: an unsorted array, or parts listed out of number order", () => {
+    const shuffled: StudioDraft = { ...DRAFT, items: [...DRAFT.items].reverse() };
+    expect(numberingBroken(shuffled)).toBe(false);
+    expect(numbers(renumber(shuffled))).toBe("M1 M2 M3 N4 N5 O6 O7 O8 P9 P10");
+    // the part list says N before M, but the paper numbers M first: the paper wins
+    const listed: StudioDraft = { ...DRAFT, parts: [DRAFT.parts[1]!, DRAFT.parts[0]!, DRAFT.parts[2]!, DRAFT.parts[3]!] };
+    expect(numberingBroken(listed)).toBe(false);
+    expect(numbers(removeItem(listed, listed.items[9]!))).toBe("M1 M2 M3 N4 N5 O6 O7 O8 P9");
+    expect(numbers(addItem(listed, "M"))).toBe("M1 M2 M3 M4 N5 N6 O7 O8 O9 P10 P11");
+  });
+
+  it("an empty part in the middle gets its new question right after the part listed before it", () => {
+    const hole: StudioDraft = { ...DRAFT, items: DRAFT.items.filter((i) => i.part !== "N") };
+    const d = addItem(renumber(hole), "N");
+    expect(numbers(d)).toBe("M1 M2 M3 N4 O5 O6 O7 P8 P9");
+    const first = addItem({ ...DRAFT, items: DRAFT.items.filter((i) => i.part !== "M") }, "M");
+    expect(numbers(first).startsWith("M1 N2 N3")).toBe(true);
+  });
+
+  it("a new part after the 26 letters still gets a free key", () => {
+    const full: StudioDraft = { ...DRAFT, parts: Array.from({ length: 26 }, (_, k) => ({ key: String.fromCharCode(65 + k), name: "x", instructions: "" })), items: [] };
+    expect(addPart(full).parts[26]!.key).toBe("A2");
+    expect(addPart(addPart(full)).parts[27]!.key).toBe("A3");
+  });
 });
+

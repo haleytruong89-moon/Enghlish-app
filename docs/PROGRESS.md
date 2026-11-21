@@ -1822,6 +1822,7 @@ Sửa kèm (cùng đoạn code): "+ Phần" không còn trùng mã; "+ Câu" ở
 ### Đã kiểm
 - typecheck, lint, unit + dom + **database** (Postgres 16 cục bộ) xanh. Test mới: `tests/unit/studioEditOps.test.ts`, `tests/dom/studioDraftEditorOps.test.tsx`, `tests/db/studioEditOps.test.ts`.
 - Chạy thử bằng **đúng 6 file Destination** trên database cục bộ (không đưa vào repo): cả 6 bài duyệt → giao → con mở bài → nộp → app chấm. Trả lời đúng theo đáp án: 193/193 câu được chấm đúng. Trả lời viết hoa, thừa dấu cách, thừa dấu chấm cuối: vẫn 193/193. Với U14-5, giữ bất kỳ 2 trong 4 phần đều duyệt được.
+- Agent `reviewer`: 0 lỗi chặn. Đã sửa theo review: đánh số lại giữ thứ tự theo số trên bản giấy (không theo danh sách phần); nút "Đánh số lại" chỉ hiện khi số thật sự hỏng; "+ Phần" / "+ Câu" dừng ở giới hạn 30 phần / 300 câu; bấm dòng lỗi thì con trỏ nhảy vào câu đó.
 - **Chưa kiểm:** e2e (chạy trên CI); bấm thật trên trình duyệt / iPad.
 
 ### Rà cả luồng giao → làm → nộp → xem → góp ý (21/11): điều cần cải thiện
