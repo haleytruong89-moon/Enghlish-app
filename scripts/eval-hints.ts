@@ -2,7 +2,7 @@
  * npm run eval:hints -- [--runs 3] [--destination tests/eval/destination] [--max-usd 15] [--out eval/results]
  *
  * E1 test set of the AI tutor (hub BO_TEST_GIA_SU_TIENG_ANH v0.1 §2–§3, P-E1 decisions 21/11): runs the REAL turn (lib/tutor/turn.ts:
- * prompt tutor-hint.v1 on Sonnet, code check, Haiku check, one rewrite, safe sentence) with an in-memory store instead of the database,
+ * prompt tutor-hint.v2 on Sonnet, code check, Haiku check, one rewrite, safe sentence) with an in-memory store instead of the database,
  *   1. on the 24 BO_TEST cases (A.11, N.11 are E3), `--runs` times each;
  *   2. once on every question of the Destination files (if the folder is there), H1 → H2 → H3 ("Gợi ý tiếp" three times).
  * Measures (§3): (a) leaks — the code check on the final text + an independent audit (Haiku, another prompt) + a wider substring scan, every
@@ -35,7 +35,7 @@ type Case = {
 type Turn = {
   case: string; source: Case["source"]; run: number; step: number; childText: string | null; kind: string; level: number; text: string;
   guard: string; reasons: string[]; flags: string[]; fixed: string | null; cost: number; calls: { tool: string; model: string; in: number; out: number; usd: number; error?: string }[];
-  drafts: string[]; audit: { leak: boolean; confirms: boolean; note: string } | null; wide: string[]; form: ReturnType<typeof formOf> | null; ms: number;
+  drafts: string[]; audit: { leak: boolean; confirms: boolean; note: string; failed?: boolean } | null; wide: string[]; form: ReturnType<typeof formOf> | null; ms: number;
 };
 
 const arg = (name: string, dflt: string) => {
@@ -56,8 +56,9 @@ const AUDIT_MODEL = process.env.TUTOR_AUDIT_MODEL?.trim() || models.check;
 let spent = 0;
 const over = () => spent >= MAX_USD;
 
-/** The real API with two retries on overload / network (the product does not retry; the set should not fail on a 529). */
-async function callApi(c: ToolCall): Promise<ToolResult> {
+let retries = 0;
+/** The real API with the production timeout; two retries on overload only (429 / 5xx, counted in the report; the product does not retry). */
+async function callApi(c: ToolCall, timeoutMs = 45_000): Promise<ToolResult> {
   if (FAKE) {
     const file = c.tool.name === "audit_hint" ? null : fakeFixtureFor(c.tool.name);
     return { input: file ? JSON.parse(readFileSync(file, "utf8")) : { leak: false, confirms: false, note: "fake" }, usage: { inputTokens: 2000, outputTokens: 400 }, model: c.model };
@@ -65,10 +66,11 @@ async function callApi(c: ToolCall): Promise<ToolResult> {
   if (!KEY) throw new AiCallError("http_401");
   for (let i = 0; ; i++) {
     try {
-      return await postToolCall(c, { apiKey: KEY, timeoutMs: 90_000 });
+      return await postToolCall(c, { apiKey: KEY, timeoutMs });
     } catch (err) {
       const code = err instanceof AiCallError ? err.code : "network";
-      if (i >= 2 || !["http_429", "http_5xx", "network", "timeout"].includes(code)) throw err;
+      if (i >= 2 || !["http_429", "http_5xx"].includes(code)) throw err;
+      retries++;
       await new Promise((r) => setTimeout(r, 4000 * (i + 1)));
     }
   }
@@ -116,12 +118,18 @@ function auditCall(c: Case, childText: string | null, text: string): ToolCall {
   return {
     model: AUDIT_MODEL, documents: [], tool: auditTool, maxTokens: 1500, toolChoice: models.toolChoice,
     instructions: [
-      "You audit an AI tutor for children learning English. The tutor must help WITHOUT giving the answer away before the child answers.",
-      "leak = true if the message states the answer or an accepted answer, spells part of it (a word of a multi-word answer the question does not show,",
-      "the right prefix/suffix, the first letters), names the right option (its letter or its text) as the one to pick, or narrows the choice so far that",
-      "only the answer is left (for example 'it is the word with \"art\" in it'). Explaining what a word in the word bank MEANS is allowed, even the answer,",
-      "as long as the message does not say whether it fits the gap. Mentioning a WRONG option to rule it out is allowed.",
-      "confirms = true if the child guessed something and the message says or implies right / wrong / close (\"đúng rồi\", \"not quite\", \"good guess\").",
+      "You audit an AI tutor for children learning English against the app's written rules (G1–G4). A hint is SUPPOSED to narrow things",
+      "down by meaning and grammar; that alone is not a leak. Judge only by these rules.",
+      "leak = true ONLY if the message: (1) states the answer or an accepted answer; (2) shows a word of a multi-word answer that the",
+      "question does not show, or the first letters of the answer; (3) names the answer's own prefix / suffix / root, glued to the root or",
+      "through an example word that carries it (\"like in equivalent\" for equidistant); (4) names the right option (its letter or its text) as",
+      "the one to pick; (5) translates the answer into Vietnamese / gives its Vietnamese equivalent; (6) rules out choices until exactly one is",
+      "left (every other option ruled out, or one of two ruled out and \"the other one\" pointed to).",
+      "NOT a leak: describing the meaning needed, a definition-like clue, the word class, tense, singular / plural, a grammar rule, talking",
+      "about prefixes or suffixes in general (\"a negative prefix\"), ruling out ONE wrong option while two or more stay open, explaining",
+      "what a word means when the child asked (even the answer word) without saying whether it fits.",
+      "confirms = true ONLY if the child proposed a specific answer and the message says or implies it is right / wrong / close",
+      "(\"đúng rồi\", \"not quite\", \"good guess\"). Asking the child to check their own choice is not a verdict.",
       "",
       `QUESTION: ${c.item.stem}`,
       `OPTIONS: ${c.item.options.length ? c.item.options.join(" | ") : "(none)"}`,
@@ -135,16 +143,20 @@ function auditCall(c: Case, childText: string | null, text: string): ToolCall {
   };
 }
 
-/** Wider than the product check (for the report only): the answer as a plain substring, ≥ 4 letters, anywhere. */
+/** Wider than the product check (for the report only): the answer with a short ending added (inflections the code check would miss). */
 function wideScan(c: Case, text: string): string[] {
   const t = normText(text).replace(/[^\p{L}\p{N} ]/gu, "");
   const out: string[] = [];
   const answers = c.item.options.length
     ? c.item.options.filter((o) => o.trim().toUpperCase().startsWith(`${(c.answers[0] ?? "").trim().toUpperCase()}.`)).map((o) => o.trim().slice(2).trim())
     : c.answers;
+  // A word starting with the answer and at most 3 more letters (pocket → pockets, withdraw → withdrawn), answers of 5+ letters;
+  // shorter answers only as the whole word ("think" is not "thin").
   for (const a of answers) {
     const n = normText(a).replace(/[^\p{L}\p{N} ]/gu, "");
-    if (n.replace(/ /g, "").length >= 4 && t.includes(n) && !normText(c.item.stem).includes(n)) out.push(`substring:${a}`);
+    if (n.replace(/ /g, "").length < 4 || normText(c.item.stem).includes(n)) continue;
+    const tail = n.replace(/ /g, "").length >= 5 ? "\\p{L}{0,3}" : "";
+    if (new RegExp(`(?<![\\p{L}\\p{N}])${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}${tail}(?![\\p{L}\\p{N}])`, "u").test(t)) out.push(`word:${a}`);
   }
   return out;
 }
@@ -157,9 +169,9 @@ async function runCase(c: Case, run: number): Promise<Turn[]> {
     const step = c.turns[s]!;
     const calls: Turn["calls"] = [];
     const drafts: string[] = [];
-    const call = async (tc: ToolCall) => {
+    const call = async (tc: ToolCall, o?: { timeoutMs?: number }) => {
       try {
-        const r = await callApi(tc);
+        const r = await callApi(tc, o?.timeoutMs);
         const usd = estimateCostUsd(tc.model, r.usage.inputTokens, r.usage.outputTokens);
         spent += usd;
         calls.push({ tool: tc.tool.name, model: tc.model, in: r.usage.inputTokens, out: r.usage.outputTokens, usd });
@@ -192,7 +204,8 @@ async function runCase(c: Case, run: number): Promise<Turn[]> {
         const a = r.input as { leak?: boolean; confirms?: boolean; note?: string };
         audit = { leak: !!a.leak, confirms: !!a.confirms, note: String(a.note ?? "") };
       } catch (err) {
-        audit = { leak: false, confirms: false, note: `audit failed: ${err instanceof AiCallError ? err.code : String(err)}` };
+        // Unknown, not "no leak": counted apart and the run is not a pass while any audit failed.
+        audit = { leak: false, confirms: false, failed: true, note: `audit failed: ${err instanceof AiCallError ? err.code : String(err)}` };
       }
     }
     out.push({
@@ -260,6 +273,7 @@ function summarize(turns: Turn[], cases: Case[]) {
       turns: m.length,
       leaks_flagged: m.filter((t) => t.audit?.leak || t.wide.length > 0).length,
       confirms_flagged: m.filter((t) => t.audit?.confirms).length,
+      audit_failed: m.filter((t) => t.audit?.failed).length,
       length_and_ask_pct: pct(m.filter((t) => t.form?.lengthOk && t.form.endsWithAsk).length, m.length),
       length_pct: pct(m.filter((t) => t.form?.lengthOk).length, m.length),
       ask_pct: pct(m.filter((t) => t.form?.endsWithAsk).length, m.length),
@@ -271,7 +285,7 @@ function summarize(turns: Turn[], cases: Case[]) {
   };
   return {
     models: { hint: models.hint, check: models.check, audit: AUDIT_MODEL }, prompts: { hint: HINT_PROMPT.version, check: CHECK_PROMPT.version }, runs: RUNS,
-    spent_usd: Math.round(spent * 10000) / 10000, stopped_at_cap: over(),
+    spent_usd: Math.round(spent * 10000) / 10000, stopped_at_cap: over(), api_retries: retries,
     bo_test: group("bo_test"), destination: group("destination"),
     flags: { checks: flagChecks.length, ok: flagChecks.filter((f) => f.ok).length, misses: flagChecks.filter((f) => !f.ok) },
     cost_per_turn_usd: { mean: costs.length ? Math.round((costs.reduce((a, b) => a + b, 0) / costs.length) * 1e5) / 1e5 : 0, median: Math.round(median(costs) * 1e5) / 1e5, max: Math.round(Math.max(0, ...costs) * 1e5) / 1e5 },
@@ -306,7 +320,7 @@ async function main() {
     `| ${n} | ${x.turns} | ${x.leaks_flagged} | ${x.confirms_flagged} | ${x.length_and_ask_pct}% | ${x.language_pct}% | ${x.guard.pass}/${x.guard.rewritten}/${x.guard.safe} | ${x.ai_error} | $${x.cost_usd} |`;
   writeFileSync(path.join(dir, "summary.md"), [
     `# eval-hints ${stamp}`,
-    `models ${summary.models.hint} / check ${summary.models.check} / audit ${summary.models.audit} · prompts ${summary.prompts.hint}, ${summary.prompts.check} · spent $${summary.spent_usd}${summary.stopped_at_cap ? " (STOPPED AT CAP)" : ""}`,
+    `models ${summary.models.hint} / check ${summary.models.check} / audit ${summary.models.audit} · prompts ${summary.prompts.hint}, ${summary.prompts.check} · spent $${summary.spent_usd}${summary.stopped_at_cap ? " (STOPPED AT CAP)" : ""} · API retries ${summary.api_retries} · audits failed ${summary.bo_test.audit_failed + summary.destination.audit_failed}`,
     "",
     "| set | turns | leak flagged | confirm flagged | length+ask | language | pass/rewritten/safe | ai_error | cost |",
     "|---|---|---|---|---|---|---|---|---|",

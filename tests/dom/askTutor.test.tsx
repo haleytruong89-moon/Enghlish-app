@@ -18,13 +18,14 @@ const ACT: SupportedActivityView = {
 };
 const PARTS: TaskPart[] = [{ key: "A", name: "A", instructions: "Complete. Places: museum, art gallery, zoo", items: ["q1", "q2"] }];
 
-function stubFetch(turns: { text: string; level: number; kind: string }[]) {
+function stubFetch(turns: { text: string; level: number; kind: string; fixed?: string; fail?: boolean }[]) {
   const calls: { url: string; body: Record<string, unknown> }[] = [];
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: { body?: string }) => {
     if (String(url).includes("/hints")) {
       calls.push({ url: String(url), body: JSON.parse(init?.body ?? "{}") });
       const t = turns.shift()!;
-      return { ok: true, status: 201, json: async () => ({ ...t, fixed: null, replayed: false }) };
+      if (t.fail) throw new Error("offline");
+      return { ok: true, status: 201, json: async () => ({ ...t, fixed: t.fixed ?? null, replayed: false }) };
     }
     return { ok: true, status: 200, json: async () => ({ draft: { revision: 1, otherTabChanged: false } }) };
   }));
@@ -68,5 +69,22 @@ describe("E1 · Hỏi under a Studio practice question", () => {
     render(<Player activity={ACT} isTest={false} initialResult={null} parts={null} />);
     expect(screen.queryByTestId("tutor-ask")).toBeNull();
     expect(screen.getByTestId("ask-tutor")).toBeTruthy();
+  });
+
+  it("review 21/11: 'Gia sư đang nghỉ' does not end the question; a press retried after a network error keeps its client id", async () => {
+    const calls = stubFetch([
+      { text: "Gia sư đang nghỉ.", level: 0, kind: "fixed", fixed: "ai_off" },
+      { text: "", level: 0, kind: "hint", fail: true },
+      { text: "Hint one?", level: 1, kind: "hint" },
+    ]);
+    render(<Player activity={ACT} isTest={false} initialResult={null} parts={PARTS} />);
+    fireEvent.click(screen.getByTestId("tutor-ask"));
+    await waitFor(() => expect(screen.getAllByTestId("tutor-text")).toHaveLength(1));
+    fireEvent.click(screen.getByTestId("tutor-ask")); // still there
+    await waitFor(() => expect(screen.getByTestId("tutor-error")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("tutor-ask"));
+    await waitFor(() => expect(screen.getAllByTestId("tutor-text")).toHaveLength(2));
+    expect(calls[2]!.body.client_id).toBe(calls[1]!.body.client_id);
+    expect(calls[1]!.body.client_id).not.toBe(calls[0]!.body.client_id);
   });
 });

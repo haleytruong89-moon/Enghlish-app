@@ -57,12 +57,18 @@ export function leakReasons(text: string, it: LeakItem): LeakReason[] {
   const out = new Set<LeakReason>();
   const isChoice = it.kind === "mcq" || it.options.length > 0;
 
-  // G3: the letter of the right choice named as the answer ("đáp án B", "chọn B", "(B)", "option B", "the answer is B").
+  // G3: the letter of the right choice named as the answer ("đáp án B", "đáp án đúng là B", "(B)", "the answer is B", "B is correct").
+  // Matched on a copy where only a lone capital A–H keeps its case, so the article "a" ("answer with a verb") is never a letter.
   if (isChoice) {
-    const letter = it.answers[0]?.trim().toLowerCase();
-    if (letter && /^[a-h]$/.test(letter)) {
-      const cue = `(?:đáp án|chọn|câu|option|answer(?: is)?|letter|choice|pick)\\s*[:-]?\\s*\\(?${letter}\\)?(?![\\p{L}\\p{N}])`;
-      if (new RegExp(cue, "u").test(t) || new RegExp(`\\(${letter}\\)`, "u").test(t)) out.add("answer_letter");
+    const letter = it.answers[0]?.trim().toUpperCase();
+    if (letter && /^[A-H]$/.test(letter)) {
+      const tc = text.normalize("NFC").replace(/[‘’‛`]/g, "'").replace(/\s+/g, " ").replace(/\p{L}+/gu, (w) => (/^[A-H]$/.test(w) ? w : w.toLowerCase()));
+      const L = `\\(?${letter}\\)?(?![\\p{L}\\p{N}])`;
+      // Cue, up to two words ("đáp án đúng là", "the right answer is"), then the letter.
+      const cue = `(?:đáp án|chọn|câu|option|answer|letter|choice|pick|it's|it is|là)(?:\\s+[\\p{L}']+){0,2}?\\s*[:-]?\\s*${L}`;
+      // The letter first, then a verdict ("B đúng", "B is correct / right", "B nhé").
+      const after = `(?<![\\p{L}\\p{N}])${letter}\\)?\\s+(?:là\\s+)?(?:đúng|chính xác|is (?:the )?(?:correct|right)|is the answer|nhé)`;
+      if (new RegExp(cue, "u").test(tc) || new RegExp(after, "u").test(tc) || new RegExp(`\\(${letter}\\)`, "u").test(tc)) out.add("answer_letter");
     }
   }
   const answers = isChoice ? [correctOption(it)].filter((x): x is string => !!x) : [...it.answers];

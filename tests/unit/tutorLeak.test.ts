@@ -37,6 +37,14 @@ describe("S.7 short answers: only next to the blank's words", () => {
 
 describe("S.8 G3: the right letter named as the answer", () => {
   it.each(["đáp án B", "chọn B", "(B)", "option B", "the answer is B"])("%j leaks", (t) => expect(leakReasons(t, A8)).toContain("answer_letter"));
+  it.each(["đáp án đúng là B", "Đáp án là B nhé", "B đúng rồi", "it's B", "B is correct", "the right answer is B"])("%j leaks too (review 21/11)", (t) =>
+    expect(leakReasons(t, A8)).toContain("answer_letter"));
+  it("the article 'a' is never the letter A", () => {
+    const A5: LeakItem = { kind: "mcq", stem: "The government should take steps to ______ the effects of pollution.", options: ["A. mitigate", "B. militate", "C. migrate", "D. motivate"], answers: ["A"] };
+    expect(leakReasons("Your answer is a verb that means 'make less bad'. Which choice fits?", A5)).toEqual([]);
+    expect(leakReasons("Pick a word that means 'make less bad'.", A5)).toEqual([]);
+    expect(leakReasons("The answer is A.", A5)).toContain("answer_letter");
+  });
   it("'B2 level', option text of a wrong choice and the method are fine; the right option's word leaks", () => {
     expect(leakReasons("At B2 level, count the syllables and say each word aloud. Where is the stress in 'temple'?", A8)).toEqual([]);
     expect(leakReasons("Say museum aloud.", A8)).toContain("answer");

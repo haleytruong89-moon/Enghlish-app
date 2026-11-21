@@ -42,15 +42,16 @@ function setup(o: { ctx?: unknown; hints?: string[]; checks?: boolean[]; gateAll
 const input = { userId: "u1", activityId: "a1", itemId: "q1", clientId: "client-0001", childText: null };
 
 describe("one turn of Hỏi", () => {
-  it("a clean hint: Sonnet then Haiku, both calls in the ledger (the first releases the reservation), the turn recorded as pass", async () => {
+  it("a clean hint: Sonnet then Haiku, both calls in the ledger (the LAST releases the reservation), the turn recorded as pass", async () => {
     const { deps, store, calls } = setup();
     const r = await runTutorTurn(deps, input);
     expect(r).toMatchObject({ status: 201, body: { text: GOOD, kind: "hint", level: 1, fixed: null } });
     expect(calls.map((c) => c.tool.name)).toEqual(["give_hint", "check_hint"]);
     expect(calls[0]!.instructions).toContain("H1");
     expect(store.logRun).toHaveBeenCalledTimes(2); // S.4
-    expect(store.logRun.mock.calls[0]![0]).toMatchObject({ release: "res-1", purpose: "tutor_hint", model: "claude-sonnet-5-5", promptVersion: "tutor-hint.v1" });
-    expect(store.logRun.mock.calls[1]![0]).toMatchObject({ release: null, purpose: "tutor_check", model: "claude-haiku-5-5" });
+    expect(store.logRun.mock.calls[0]![0]).toMatchObject({ release: null, purpose: "tutor_hint", model: "claude-sonnet-5-5", promptVersion: "tutor-hint.v2" });
+    expect(store.logRun.mock.calls[1]![0]).toMatchObject({ release: "res-1", purpose: "tutor_check", model: "claude-haiku-5-5" });
+    expect((deps.call as ReturnType<typeof vi.fn>).mock.calls[0]![1]).toEqual({ timeoutMs: 45_000 });
     expect(store.record.mock.calls[0]![0]).toMatchObject({ kind: "hint", guard: "pass", shown: GOOD });
     expect(store.record.mock.calls[0]![0].cost).toBeGreaterThan(0);
   });
@@ -121,5 +122,48 @@ describe("one turn of Hỏi", () => {
     expect((await runTutorTurn(deps, input)).body).toMatchObject({ kind: "fixed", fixed: "ai_error" });
     expect(store.logRun.mock.calls[0]![0]).toMatchObject({ status: "error", error: "http_5xx", release: "res-1" });
     expect(store.record.mock.calls[0]![0]).toMatchObject({ kind: "fixed", fixedCode: "ai_error" });
+  });
+
+  it("review 21/11: an open question (no answer to guard) gets a fixed sentence, no model", async () => {
+    const { deps, calls } = setup({ ctx: { ...CTX, answers: [] } });
+    const r = await runTutorTurn(deps, input);
+    expect(r.body).toMatchObject({ kind: "fixed", fixed: "no_answer" });
+    expect(calls).toHaveLength(0);
+  });
+
+  it("review 21/11: a model without a price is never called (the ledger could not hold it)", async () => {
+    const { deps, store, calls } = setup();
+    const r = await runTutorTurn({ ...deps, models: { hint: "claude-unknown-9", check: "claude-haiku-5-5" } }, input);
+    expect(r.body).toMatchObject({ fixed: "ai_error" });
+    expect(calls).toHaveLength(0);
+    expect(store.gate).not.toHaveBeenCalled();
+  });
+
+  it("review 21/11: a timeout with no usage is priced at the estimate (it may have been billed)", async () => {
+    const { deps, store } = setup();
+    deps.call = vi.fn(async () => {
+      throw new AiCallError("timeout");
+    });
+    await runTutorTurn(deps, input);
+    const run = store.logRun.mock.calls[0]![0];
+    expect(run).toMatchObject({ status: "error", error: "timeout", release: "res-1" });
+    expect(run.cost).toBeGreaterThan(0);
+    expect(run.output).toBe(4000);
+  });
+
+  it("review 21/11: the turn has a time budget; with too little left no further call starts", async () => {
+    const { deps, calls } = setup({ hints: [LEAK, GOOD] });
+    let t = 0;
+    deps.now = () => t;
+    const call = deps.call;
+    deps.call = vi.fn(async (c: ToolCall, o?: { timeoutMs?: number }) => {
+      const r = await call(c, o);
+      t += 97_000; // the first call took almost the whole budget
+      return r;
+    });
+    const r = await runTutorTurn(deps, input);
+    expect(calls.map((c) => c.tool.name)).toEqual(["give_hint"]); // the rewrite never started
+    expect(r.body).toMatchObject({ kind: "hint" });
+    expect((r.body as { text: string }).text).not.toMatch(/art|gallery/i);
   });
 });

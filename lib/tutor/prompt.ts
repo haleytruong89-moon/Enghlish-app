@@ -1,13 +1,13 @@
 /**
- * E1 · the two model calls of one turn: Sonnet writes the hint (tutor-hint.v1), Haiku checks it (tutor-check.v1). Pure: builds the calls
+ * E1 · the two model calls of one turn: Sonnet writes the hint (tutor-hint.v2), Haiku checks it (tutor-check.v2). Pure: builds the calls
  * from the server's context; nothing here reads a key or the network. The answers go into the prompts ONLY so the model avoids them and
  * the checker can judge; they never reach the child (the code check + Haiku + safe sentence stand between).
  */
 import { leadOf } from "@/lib/studio/taskParts";
 import type { ToolCall, ToolSpec } from "@/lib/ai/request";
 
-export const HINT_PROMPT = { file: "tutor-hint.v1", version: "tutor-hint.v1" } as const;
-export const CHECK_PROMPT = { file: "tutor-check.v1", version: "tutor-check.v1" } as const;
+export const HINT_PROMPT = { file: "tutor-hint.v2", version: "tutor-hint.v2" } as const;
+export const CHECK_PROMPT = { file: "tutor-check.v2", version: "tutor-check.v2" } as const;
 export const DEFAULT_TUTOR_MODEL = "claude-sonnet-5-5";
 export const DEFAULT_CHECK_MODEL = "claude-haiku-5-5";
 /** Model 5.5 thinks before it answers: the limit must leave room for that (G0 lesson), the hint itself is short. */
