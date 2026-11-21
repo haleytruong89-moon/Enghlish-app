@@ -4,7 +4,7 @@ import type { ItemView } from "@/lib/work/types";
 const isChoice = (it: ItemView) => it.options.length > 0 && ["mcq", "gap", "word_form"].includes(it.kind);
 
 /** One question: the printed number, what to do, the stem and the answer control. The answer is a controlled value of the player. */
-export function QuestionCard({ item, number, value, onChange, onCommit, children }: { item: ItemView; number: number; value: string; onChange: (v: string) => void; onCommit?: () => void; children?: React.ReactNode }) {
+export function QuestionCard({ item, number, value, onChange, onCommit, lead, children }: { item: ItemView; number: number; value: string; onChange: (v: string) => void; onCommit?: () => void; /** The instruction of the question's part (Studio tests from 21/11), shown above the stem. */ lead?: string | null; children?: React.ReactNode }) {
   const type = isChoice(item) ? c.choice : item.kind === "open" || item.kind === "transform" || item.kind === "short" ? c.short : c.gap;
   return (
     <section aria-labelledby="qlabel" data-testid={`question-${item.id}`} className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-5">
@@ -14,7 +14,12 @@ export function QuestionCard({ item, number, value, onChange, onCommit, children
         </h2>
         {children}
       </div>
-      <p lang="en" className="text-[19px] font-semibold leading-snug">
+      {lead ? (
+        <p lang="en" data-testid={`question-lead-${item.id}`} className="rounded-xl bg-[#F4F1EA] px-3.5 py-2.5 text-[15px] leading-snug">
+          {lead}
+        </p>
+      ) : null}
+      <p lang="en" className="whitespace-pre-line text-[19px] font-semibold leading-snug">
         {item.stem}
       </p>
       {isChoice(item) ? (
