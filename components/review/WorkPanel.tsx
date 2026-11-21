@@ -1,5 +1,6 @@
 import { assistanceLabels, fallbackLabels, reviewPage, supportKindLabels, verificationLabels } from "@/lib/copy/vi";
 import { WorkItems, type WorkItemRow } from "@/components/review/WorkItems";
+import { TaskLines } from "@/components/student/TaskLines";
 import { itemStatus } from "@/lib/review/itemStatus";
 import { questionNumber } from "@/lib/studio/view";
 import { formatDateVi } from "@/lib/inquiries/format";
@@ -37,9 +38,7 @@ export function WorkPanel({ view, decisions }: { view: ReviewEpisodeView; /** Th
       ) : null}
 
       {view.step.promptEn ? (
-        <p lang="en" className="text-sm text-muted">
-          {view.step.promptEn}
-        </p>
+        <TaskLines prompt={view.step.promptEn} className="text-sm text-muted" />
       ) : null}
 
       {answers ? (

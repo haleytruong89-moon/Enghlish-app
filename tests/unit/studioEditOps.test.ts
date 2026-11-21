@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildStudioBuild } from "@/lib/studio/buildTemplate";
-import { addItem, addPart, moveToPart, numberingBroken, removeItem, removePart, renumber } from "@/lib/studio/editOps";
+import { addItem, addPart, moveToPart, moveWithinPart, numberingBroken, removeItem, removePart, renumber } from "@/lib/studio/editOps";
 import type { StudioDraft, StudioItem } from "@/lib/studio/schema";
 import { blockingIssues, validateDraft } from "@/lib/studio/validate";
 import { CTX_B } from "./fixtures/studio";
@@ -109,6 +109,17 @@ describe("Studio draft edit operations", () => {
     const full: StudioDraft = { ...DRAFT, parts: Array.from({ length: 26 }, (_, k) => ({ key: String.fromCharCode(65 + k), name: "x", instructions: "" })), items: [] };
     expect(addPart(full).parts[26]!.key).toBe("A2");
     expect(addPart(addPart(full)).parts[27]!.key).toBe("A3");
+  });
+
+  it("Lên / Xuống swaps a question with its neighbour in the same part, never across parts", () => {
+    const up = moveWithinPart(DRAFT, DRAFT.items[2]!, -1);
+    expect(stems(up).slice(0, 3)).toEqual(["Sentence 1 ____.", "Sentence 3 ____.", "Sentence 2 ____."]);
+    expect(numbers(up)).toBe(numbers(DRAFT));
+    expect(moveWithinPart(DRAFT, DRAFT.items[0]!, -1)).toBe(DRAFT); // first of its part
+    expect(moveWithinPart(DRAFT, DRAFT.items[2]!, 1)).toBe(DRAFT); // last of M: does not jump into N
+    const down = moveWithinPart(DRAFT, DRAFT.items[3]!, 1);
+    expect(stems(down).slice(3, 5)).toEqual(["Sentence 5 ____.", "Sentence 4 ____."]);
+    fine(down);
   });
 });
 

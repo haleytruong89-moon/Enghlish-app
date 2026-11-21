@@ -8,6 +8,7 @@ import {
 } from "@/lib/student/player";
 import { type ResultView as ResultData } from "@/lib/student/result";
 import { questionNumber } from "@/lib/studio/view";
+import { instructionFor } from "@/lib/studio/promptParts";
 import { ASSISTANCE_VALUES, type Assistance, type DraftContent, type Receipt, type SupportedActivityView } from "@/lib/work/types";
 import { baseRevisionOf, formatDmy, formatHm, nonEmptyAnswers } from "@/lib/work/view";
 import { AskTutorSlot } from "./AskTutorSlot";
@@ -387,6 +388,7 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
                   setAnswers(next);
                 }}
                 onCommit={() => void saveRef.current()}
+                lead={instructionFor(step.promptEn, numbers[clampIndex(idx, total)]!)}
               >
                 {!isTest ? <AskTutorSlot /> : null}
               </QuestionCard>

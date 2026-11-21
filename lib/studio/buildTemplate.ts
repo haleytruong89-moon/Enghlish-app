@@ -5,6 +5,7 @@
  * per item), the reading texts used by in-app items, and the paper frame {total, parts with ranges, items with their tag}. Pure.
  */
 import { CLOSED_STUDIO_KINDS, type StudioDraft, type StudioItem, type StudioItemKind, type StudioPassage } from "./schema";
+import { rangeLabel } from "./promptParts";
 
 export type BuildItem = { id: string; kind: StudioItemKind; stem: string; options: string[]; target_id: string | null };
 export type BuildKey = { item_id: string; kind: "answer" | "sealed"; answer: string | null; explanation_vi: string | null };
@@ -22,6 +23,9 @@ const DEFAULT_PROMPT_EN = "Answer the questions.";
 export const itemIdOf = (n: number) => `q${n}`;
 const isClosed = (i: StudioItem) => (CLOSED_STUDIO_KINDS as readonly string[]).includes(i.kind);
 
+const PROMPT_MAX = 2000;
+const clip = (line: string, max: number) => (line.length <= max ? line : `${line.slice(0, Math.max(0, max - 1)).trimEnd()}…`);
+
 export function buildStudioBuild(d: StudioDraft): StudioBuild {
   const items = [...d.items].sort((a, b) => a.n - b.n);
   const app = items.filter((i) => !i.out_of_app);
@@ -30,7 +34,17 @@ export function buildStudioBuild(d: StudioDraft): StudioBuild {
   }
   const usedRefs = new Set(app.map((i) => i.passage_ref).filter((r): r is string => r !== null));
   const appParts = d.parts.filter((p) => app.some((i) => i.part === p.key));
-  const prompt = appParts.map((p) => (p.instructions.trim() ? `${p.name}: ${p.instructions.trim()}` : p.name)).join("\n").slice(0, 2000);
+  // One line per part, with the questions it holds, so the child's screen shows each question with its own instruction (promptParts.ts).
+  // Each line gets an equal share of the 2000-character field, so a long instruction never pushes a later part's line out.
+  const share = Math.floor((PROMPT_MAX - appParts.length + 1) / Math.max(1, appParts.length));
+  const prompt = appParts
+    .map((p) => {
+      const ns = app.filter((i) => i.part === p.key).map((i) => i.n);
+      const text = p.instructions.trim() ? `${p.name}: ${p.instructions.trim().replace(/\s*\n\s*/g, " ")}` : p.name;
+      return clip(`${rangeLabel(Math.min(...ns), Math.max(...ns))} · ${text}`, share);
+    })
+    .join("\n")
+    .slice(0, PROMPT_MAX);
   const explanation = (i: StudioItem) => i.explanation_vi.trim() || null;
 
   return {
@@ -52,7 +66,11 @@ export function buildStudioBuild(d: StudioDraft): StudioBuild {
         : {
             item_id: itemIdOf(i.n),
             kind: "answer" as const,
-            answer: i.kind === "mcq" ? (i.key ?? "").trim().toUpperCase() : [(i.key ?? "").trim(), ...i.accepted].join(" / "),
+            answer:
+              i.kind === "mcq"
+                ? (i.key ?? "").trim().toUpperCase()
+                : // In "word form" the hyphen can be the point of the question ("self-confident"), so no spaced form is added there.
+                  (i.kind === "word_form" ? [(i.key ?? "").trim(), ...i.accepted] : withSpacedHyphens([(i.key ?? "").trim(), ...i.accepted])).join(" / "),
             explanation_vi: explanation(i),
           },
     ),
@@ -70,3 +88,19 @@ export function buildStudioBuild(d: StudioDraft): StudioBuild {
     },
   };
 }
+
+/** "fifty-fifty" is also right typed as "fifty fifty" (a child on a phone keyboard). Added after the given answers, never twice. */
+function withSpacedHyphens(answers: string[]): string[] {
+  const out = [...answers];
+  const seen = new Set(answers.map((a) => a.toLowerCase()));
+  for (const a of answers) {
+    if (!/\w-\w/.test(a)) continue;
+    const spaced = a.replace(/(\w)-(?=\w)/g, "$1 ");
+    if (!seen.has(spaced.toLowerCase())) {
+      seen.add(spaced.toLowerCase());
+      out.push(spaced);
+    }
+  }
+  return out;
+}
+

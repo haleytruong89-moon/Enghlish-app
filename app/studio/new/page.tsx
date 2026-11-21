@@ -5,13 +5,17 @@ import { notFound, redirect } from "next/navigation";
 import { StaffShell } from "@/components/shell/StaffShell";
 import { requireShell } from "@/lib/shell/load";
 import { WaysStrip } from "@/components/assign/WaysStrip";
+import { DiscardedDrafts } from "@/components/studio/DiscardedDrafts";
 import { DraftList } from "@/components/studio/DraftList";
+import { StudioAssignedTable } from "@/components/studio/StudioAssignedTable";
+import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
+import { todayVn } from "@/lib/inquiries/dates";
 import { ImportForm } from "@/components/studio/ImportForm";
 import { UploadForm } from "@/components/studio/UploadForm";
 import { learnerWithTrack, reviewPage, studioCopy } from "@/lib/copy/vi";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { loadUnitChoices } from "@/lib/curriculum/load";
-import { loadDraftList, loadStudioGate } from "@/lib/studio/load";
+import { loadDiscardedDrafts, loadDraftList, loadStudioGate } from "@/lib/studio/load";
 import { readPrefill } from "@/lib/prefill";
 import { getAuthUser } from "@/lib/auth/session";
 
@@ -28,7 +32,7 @@ export default async function StudioNewPage({ searchParams }: { searchParams: Pr
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();
   const l = access.grant.learner;
-  const [gate, drafts, unitChoices] = await Promise.all([loadStudioGate(l.id), loadDraftList(l.id), loadUnitChoices(l.id)]);
+  const [gate, drafts, unitChoices, assigned, discarded] = await Promise.all([loadStudioGate(l.id), loadDraftList(l.id), loadUnitChoices(l.id), loadStudioAssigned(l.id, todayVn()).catch(() => null), loadDiscardedDrafts(l.id).catch(() => [])]);
   return (
     <StaffShell shell={shell}>
       <div className="mx-auto max-w-2xl" data-testid="studio-new">
@@ -45,6 +49,8 @@ export default async function StudioNewPage({ searchParams }: { searchParams: Pr
         <ImportForm learnerId={l.id} />
         <div id="drafts">
           <DraftList drafts={drafts} />
+          <DiscardedDrafts drafts={discarded} />
+          <div className="mt-8"><StudioAssignedTable rows={assigned} /></div>
         </div>
       </div>
     </StaffShell>

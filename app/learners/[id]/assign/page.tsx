@@ -7,6 +7,8 @@ import { parseWay, wayHref } from "@/lib/assign/ways";
 import { AssignForm } from "@/components/practice/AssignForm";
 import { maxPagesPerSubmission } from "@/lib/practice/capabilities";
 import { AssignmentTable } from "@/components/practice/AssignmentTable";
+import { StudioAssignedTable } from "@/components/studio/StudioAssignedTable";
+import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
 import { readPrefill } from "@/lib/prefill";
 import { assignPage, assignWaysCopy, learnerWithTrack } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
@@ -28,12 +30,13 @@ export default async function AssignPracticePage({ params, searchParams }: { par
   // The other two ways live on their own pages (the forms are not copied); this page only points there.
   if (way === "studio" || way === "topic") redirect(wayHref(learner.id, way, prefill));
   const kind = way === "link" || way === "pdf" ? way : null;
-  const [tags, frames, assignments, map, unitChoices] = await Promise.all([
+  const [tags, frames, assignments, map, unitChoices, studio] = await Promise.all([
     loadTags(learner.trackId),
     loadFrames(learner.trackId, learner.id),
     loadAssignments(learner.id),
     loadPickerMap(learner.id),
     loadUnitChoices(learner.id),
+    loadStudioAssigned(learner.id, todayVn()).catch(() => null),
   ]);
   const tagLabels = Object.fromEntries(tags.map((t) => [t.key, t.label]));
   const head = (
@@ -51,6 +54,7 @@ export default async function AssignPracticePage({ params, searchParams }: { par
       <AssignmentTable learnerId={learner.id} assignments={assignments} tagLabels={tagLabels} viewerMemberId={member.id} maxFiles={await maxPagesPerSubmission()} today={todayVn()} />
     </section>
   );
+  const studioList = <StudioAssignedTable rows={studio} />;
   return (
     <div className="mx-auto max-w-4xl" data-testid="assign-page">
       {head}
@@ -61,6 +65,7 @@ export default async function AssignPracticePage({ params, searchParams }: { par
           <div className="mt-6 flex flex-col gap-8">
             <AssignForm key={kind} learnerId={learner.id} alias={learner.alias} tags={tags} frames={frames} today={todayVn()} map={map} prefill={prefill} unitChoices={unitChoices} fixedKind={kind} />
             {list}
+            {studioList}
           </div>
         </>
       ) : (
@@ -68,6 +73,7 @@ export default async function AssignPracticePage({ params, searchParams }: { par
           <p className="mt-3 text-muted">{assignWaysCopy.intro}</p>
           <div className="mt-6 flex flex-col gap-8">
             <WayCards learnerId={learner.id} prefill={prefill} />
+            {studioList}
             {list}
             <p className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
               <Link href={`/studio/new?learner=${learner.id}#drafts`} data-testid="see-studio" className="inline-flex min-h-11 items-center text-accent underline">

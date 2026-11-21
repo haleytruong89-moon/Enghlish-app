@@ -5,6 +5,7 @@ import { allowRealLearners } from "@/lib/env";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { createFileStorage } from "@/lib/storage/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createUserClient } from "@/lib/supabase/server";
 import { getAuthUser, getMemberByUserId } from "@/lib/auth/session";
 import { loadTags } from "@/lib/tutorwork/load";
 import { buildStudioContext, type StudioContext } from "./context";
@@ -48,6 +49,22 @@ export async function loadDraftList(learnerId: string): Promise<DraftListItem[]>
   const { data, error } = await createAdminClient().rpc("eng_studio_drafts", { p_learner: learnerId });
   if (error) throw new Error(`eng_studio_drafts failed: ${error.code ?? "error"}`);
   return parseDraftList(data);
+}
+
+/** Discarded drafts of one child, newest first (Khôi phục). USER client: RLS lets only the child's tutor or parent read them. */
+export async function loadDiscardedDrafts(learnerId: string): Promise<{ id: string; title: string; updatedAt: string }[]> {
+  const db = await createUserClient();
+  const { data, error } = await db
+    .from("studio_drafts")
+    .select("id, title, updated_at")
+    .eq("learner_id", learnerId)
+    .eq("status", "discarded")
+    .is("supersedes_draft_id", null)
+    .order("updated_at", { ascending: false })
+    .limit(20)
+    .returns<{ id: string; title: string; updated_at: string }[]>();
+  if (error) throw new Error(`studio_drafts lookup: ${error.code ?? "error"}`);
+  return (data ?? []).map((d) => ({ id: d.id, title: d.title, updatedAt: d.updated_at }));
 }
 
 /** The page calls the same handler as GET /api/studio/drafts/:id (one access path). No AI and no background job from a page. */

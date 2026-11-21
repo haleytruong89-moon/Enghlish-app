@@ -87,4 +87,14 @@ describe("level baseline alert", () => {
     expect(deskAlerts(input({ levelsAssumed: null })).some((x) => x.key === "levels")).toBe(false);
     expect(deskAlerts(input({ role: "parent", levelsAssumed: true })).some((x) => x.key === "levels")).toBe(false);
   });
+
+  it("Studio tests overdue with nothing sent get one row that opens the Studio list; unknown or zero gives none", () => {
+    const base = { learnerId: "L1", role: "tutor" as const, todayIso: "2026-11-21", today: null, intakeMissing: null, curriculaCount: null, flagCount: 0 };
+    const rows = deskAlerts({ ...base, studioOverdue: 2 });
+    expect(rows.find((r) => r.key === "studio-overdue")).toMatchObject({ tone: "warn", href: "/learners/L1/assign#studio-assigned" });
+    expect(rows.find((r) => r.key === "studio-overdue")?.title).toContain("2 bài làm trên app quá hạn");
+    expect(deskAlerts({ ...base, studioOverdue: 0 }).some((r) => r.key === "studio-overdue")).toBe(false);
+    expect(deskAlerts({ ...base, studioOverdue: null }).some((r) => r.key === "studio-overdue")).toBe(false);
+  });
 });
+

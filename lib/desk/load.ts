@@ -16,6 +16,9 @@ import type { SessionDay } from "@/lib/sessions/types";
 import { loadSkillInbox } from "@/lib/skills/load";
 import type { ShellData } from "@/lib/shell/shell";
 import { loadAiSettings, loadDraftList, loadRetryPending, loadStudioPending } from "@/lib/studio/load";
+import { studioOverdueCount } from "@/lib/studio/assigned";
+import { todayVn } from "@/lib/inquiries/dates";
+import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
 import type { AiSettingsView } from "@/lib/studio/types";
 import { loadToday, type TodayData } from "@/lib/tutorwork/load";
 import { pendingProposal } from "@/lib/student/goal";
@@ -104,6 +107,8 @@ export type DeskData = {
   roadmap: { orphans: number; recentTitle: string | null; proposals: number } | null;
   /** The weekly goal of the child (W4d): this week, the streak, the proposal waiting. null = not applied / unreadable (the box is left out). */
   goal?: WeekView | null;
+  /** Studio tests overdue with nothing sent (21/11); null = unreadable. */
+  studioOverdue?: number | null;
 };
 
 function roadmapFacts(r: Awaited<ReturnType<typeof loadRoadmap>> | null): DeskData["roadmap"] {
@@ -116,7 +121,7 @@ export async function loadDesk(shell: ShellData, learner: LearnerSummary): Promi
   const parent = shell.role === "parent";
   const roadmapLoad = settle(loadRoadmap(learner.id)); // ONE eng_roadmap call per desk load, shared by the inbox rows and the desk facts
   const goalLoad = settle(loadWeekFactsResult(learner.id)); // ONE eng_week_facts call, shared by the inbox row and the goal box
-  const [today, pending, intake, curricula, profile, recent, aiSettings, facts, roadmap, goal] = await Promise.all([
+  const [today, pending, intake, curricula, profile, recent, aiSettings, facts, roadmap, goal, studio] = await Promise.all([
     settle(loadToday(learner.id, learner.trackId, { role: shell.role, memberId: shell.memberId })),
     loadPendingRows(shell.memberId, shell.role, learner.id, roadmapLoad, goalLoad),
     settle(loadIntake(learner.id)),
@@ -127,6 +132,7 @@ export async function loadDesk(shell: ShellData, learner: LearnerSummary): Promi
     settle(loadSessionFacts(learner.id)),
     roadmapLoad,
     goalLoad,
+    settle(loadStudioAssigned(learner.id, todayVn())),
   ]);
-  return { today, pending, intakeMissing: intake && intake.available ? intake.data === null : null, curricula, profile, recent, aiSettings, roadmap: roadmapFacts(roadmap), goal: goal && goal.kind === "ok" ? buildWeekView(goal.facts) : null, sessions: facts ? sessionDays(facts.notes, [], () => null, facts.marks) : null };
+  return { studioOverdue: studio ? studioOverdueCount(studio) : null, today, pending, intakeMissing: intake && intake.available ? intake.data === null : null, curricula, profile, recent, aiSettings, roadmap: roadmapFacts(roadmap), goal: goal && goal.kind === "ok" ? buildWeekView(goal.facts) : null, sessions: facts ? sessionDays(facts.notes, [], () => null, facts.marks) : null };
 }

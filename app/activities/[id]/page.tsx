@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { RevisionForm } from "@/components/revision/RevisionForm";
 import { ActivityNote } from "@/components/student/ActivityNote";
 import { SourceReader } from "@/components/student/SourceReader";
+import { TaskLines } from "@/components/student/TaskLines";
 import { Player } from "@/components/student/player/Player";
 import { StudentDeskShell } from "@/components/student/desk/StudentDeskShell";
 import { WorkForm } from "@/components/student/WorkForm";
@@ -100,9 +101,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
             <h2 id="task" className="text-sm font-semibold text-muted">
               {work.taskTitle}
             </h2>
-            <p lang="en" className="text-[17px] font-semibold leading-snug">
-              {a.step.promptEn}
-            </p>
+            <TaskLines prompt={a.step.promptEn} className="text-[16px] font-semibold leading-snug" />
             <p className="text-sm text-muted">
               <span lang="en">{a.bigQuestionEn}</span>
               {a.step.timeMin ? ` · ${work.minutes(a.step.timeMin)}` : ""}
@@ -153,9 +152,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
           <h2 id="task" className="text-sm font-semibold text-muted">
             {work.taskTitle}
           </h2>
-          <p lang="en" className="text-[17px] font-semibold leading-snug">
-            {a.step.promptEn}
-          </p>
+          <TaskLines prompt={a.step.promptEn} className="text-[17px] font-semibold leading-snug" />
           <p className="text-sm text-muted">
             <span lang="en">{a.bigQuestionEn}</span>
             {a.step.timeMin ? ` · ${work.minutes(a.step.timeMin)}` : ""}

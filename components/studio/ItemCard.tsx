@@ -10,10 +10,12 @@ const field = "min-h-11 rounded-lg border border-line bg-white px-3 text-[15px]"
 
 /** One item of board 19. `onChange` gets a patch; the editor keeps the draft. */
 export function ItemCard({
-  item, parts, passages, context, issues, onChange, onRemove,
+  item, parts, passages, context, issues, onChange, onRemove, onMove, canUp = false, canDown = false,
 }: {
   item: StudioItem; parts: StudioPart[]; passages: StudioPassage[]; context: StudioContext; issues: Issue[];
   onChange: (patch: Partial<StudioItem>) => void; onRemove: () => void;
+  /** Lên / Xuống inside the part; absent while the list is filtered (neighbours are hidden). */
+  onMove?: (step: -1 | 1) => void; canUp?: boolean; canDown?: boolean;
 }) {
   const tagValue = item.reading_skill_key ?? item.tag_key ?? "";
   const reading = context.tags.filter((t) => t.reading);
@@ -57,7 +59,19 @@ export function ItemCard({
             </button>
           </>
         ) : null}
-        <button type="button" onClick={onRemove} data-testid={`item-${item.n}-remove`} className="ml-auto min-h-11 text-sm text-muted underline">{studioCopy.removeItem}</button>
+        <span className="ml-auto flex items-center gap-1">
+          {onMove ? (
+            <>
+              <button type="button" disabled={!canUp} onClick={() => onMove(-1)} aria-label={studioCopy.moveUpLabel(item.n)} data-testid={`item-${item.n}-up`} className="min-h-11 min-w-11 rounded-lg border border-line bg-white px-2 text-sm disabled:opacity-40">
+                {studioCopy.moveUp}
+              </button>
+              <button type="button" disabled={!canDown} onClick={() => onMove(1)} aria-label={studioCopy.moveDownLabel(item.n)} data-testid={`item-${item.n}-down`} className="min-h-11 min-w-11 rounded-lg border border-line bg-white px-2 text-sm disabled:opacity-40">
+                {studioCopy.moveDown}
+              </button>
+            </>
+          ) : null}
+          <button type="button" onClick={onRemove} data-testid={`item-${item.n}-remove`} className="min-h-11 px-2 text-sm text-muted underline">{studioCopy.removeItem}</button>
+        </span>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="flex flex-col text-xs font-semibold">
