@@ -12,6 +12,7 @@ import { studioCopy } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { formatDay } from "@/lib/review/format";
 import { loadDraftPage } from "@/lib/studio/load";
+import { loadUnitChoices } from "@/lib/curriculum/load";
 import { aiFailedText } from "@/lib/studio/view";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,8 @@ export default async function DraftPage({ params }: { params: Promise<{ id: stri
   if (r.kind === "login") redirect("/login");
   if (r.kind === "not-found" || !shell) notFound();
   const { draft, summary, gate } = r.data;
+  // Units to give with the test (0037). Only once approved; a failed lookup = no Units offered (the test is still given as before).
+  const unitChoices = draft.status === "approved" ? await loadUnitChoices(draft.learnerId).catch(() => []) : [];
   return (
     <StaffShell shell={shell}>
       <div className="mx-auto max-w-6xl" data-testid="studio-draft" data-status={draft.status}>
@@ -48,7 +51,7 @@ export default async function DraftPage({ params }: { params: Promise<{ id: stri
                   <li key={a.instanceId}>{studioCopy.assignedLine(formatDay(a.startOn ?? a.dueOn), formatDay(a.dueOn))}</li>
                 ))}
               </ul>
-              <AssignStudioForm draftId={draft.id} today={todayVn()} />
+              <AssignStudioForm draftId={draft.id} today={todayVn()} learnerId={draft.learnerId} unitChoices={unitChoices} />
               {draft.supersededBy ? null : <EditApprovedButton draftId={draft.id} />}
             </section>
             <SidePanel summary={summary} aiCostUsd={draft.aiCostUsd} gate={gate} />

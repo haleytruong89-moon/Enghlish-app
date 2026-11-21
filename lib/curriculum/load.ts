@@ -4,6 +4,7 @@ import { loadPickerMap } from "@/lib/skillmap/load";
 import { createFileStorage } from "@/lib/storage/server";
 import { getAuthUser, getMemberByUserId } from "@/lib/auth/session";
 import { createUserClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { loadTags } from "@/lib/tutorwork/load";
 import { buildTocContext, type TocContext } from "./context";
 import { handleGetVersion, type CurriculumDeps } from "./handlers";
@@ -11,6 +12,7 @@ import { buildCards, taughtChoices, type CurriculumCard, type TaughtChoice, type
 import { createSupabaseCurriculumStore } from "./supabaseStore";
 import { buildUnitChoices } from "./unitChoices";
 import type { UnitChoice } from "./unitPicker";
+import type { SentWorkUnit } from "./workProposal";
 
 /** The closed list of one child (call only after requireAccess / requireLearnerPage). */
 export async function loadTocContext(learnerId: string, trackId: string): Promise<TocContext> {
@@ -81,4 +83,21 @@ export async function loadVersionPage(versionId: string): Promise<{ kind: "ok"; 
   if (res.status === 401) return { kind: "login" };
   if (res.status !== 200) return { kind: "not-found" };
   return { kind: "ok", data: res.body as VersionPageData };
+}
+
+/**
+ * Units of work the child has sent (Studio tests given with Units; link / PDF work given with Units, not retracted; Studio steps not
+ * skipped), for the "Đang học" proposal: english.eng_sent_work_units (0037), one SQL read (no row cap on whole tables).
+ * Service role: call ONLY after the page checked access. Before 0037 / on any error: no rows (the page still opens, with no proposal).
+ */
+export async function loadSentWorkUnits(learnerId: string): Promise<SentWorkUnit[]> {
+  try {
+    const { data, error } = await createAdminClient().rpc("eng_sent_work_units", { p_learner: learnerId });
+    if (error) return [];
+    return ((data ?? []) as { curriculum_id: string; unit_code: string; title: string; sent_at: string }[]).map((r) => ({
+      curriculumId: r.curriculum_id, unitCode: r.unit_code, title: r.title, sentAt: r.sent_at,
+    }));
+  } catch {
+    return [];
+  }
 }

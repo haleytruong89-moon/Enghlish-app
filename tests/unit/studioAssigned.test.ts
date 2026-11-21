@@ -73,6 +73,14 @@ describe("Studio tests assigned to a child: what the adults see", () => {
     expect(rows).toEqual([{ attempt_id: "t1", correct: 10, total_items: 12, not_in_app_items: [], attempt: "first" }]);
   });
 
+  it("the latest attempt's feedback and the Units of the test are shown (0037)", () => {
+    const rows = buildStudioAssigned(inquiries, attempts, episodes, results, TODAY, { feedbackAttempts: new Set(["t5b", "t5a"]), unitsOf: new Map([["a-5", ["U14", "U13"]]]) });
+    const by = Object.fromEntries(rows.map((r) => [r.instanceId, r]));
+    expect(by["5"]).toMatchObject({ feedbackGiven: true, feedbackReady: true, units: ["U14", "U13"] });
+    expect(by["4"]).toMatchObject({ feedbackGiven: false, units: [] });
+    expect(buildStudioAssigned(inquiries, attempts, episodes, results, TODAY).every((r) => !r.feedbackGiven && !r.feedbackReady && r.units.length === 0)).toBe(true);
+  });
+
   it("Studio template ids", () => {
     expect(isStudioTemplateId("B-ST-000123")).toBe(true);
     expect(isStudioTemplateId("A-ST-000001")).toBe(true);

@@ -37,12 +37,14 @@ export function StudioAssignedTable({ rows }: { rows: StudioAssignedRow[] | null
                 {c.dates(r.startOn ? formatDay(r.startOn) : null, formatDay(r.dueOn))} · {c.items(r.items)}
                 {r.lastSubmittedAt ? ` · ${c.sent(`${formatHm(r.lastSubmittedAt)} ${formatDay(todayVn(new Date(r.lastSubmittedAt)))}`, r.attempts)}` : ""}
                 {r.firstResult ? ` · ${c.firstResult(r.firstResult.correct, r.firstResult.total)}` : ""}
+                {r.units.length > 0 ? <span data-testid={`studio-assigned-units-${r.instanceId}`}>{` · ${c.units(r.units)}`}</span> : null}
+                {r.feedbackGiven ? <span data-testid={`studio-assigned-fb-${r.instanceId}`}>{` · ${c.feedbackGiven}`}</span> : null}
               </p>
               {r.lastAttemptId ? (
                 <p className="flex flex-wrap gap-x-5 text-sm">
                   {r.episodeId ? (
                     <Link href={`/review/${r.episodeId}`} data-testid={`studio-assigned-open-${r.instanceId}`} className="inline-flex min-h-11 items-center font-semibold text-accent underline">
-                      {c.openWork}
+                      {r.feedbackReady ? c.openWorkFeedback : c.openWork}
                     </Link>
                   ) : null}
                   {r.status === "waiting" ? (

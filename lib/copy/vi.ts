@@ -1426,6 +1426,18 @@ export const submissionFeedbackCopy = {
   } as Record<string, string>,
 } as const;
 
+/** 0037: the same form on one lần làm of a Studio test (review page). Only the lines that differ from submissionFeedbackCopy. */
+export const studioFeedbackCopy = {
+  intro: "Con thấy góp ý ở mục “Đã xem” ngay khi bạn gửi. Đây chỉ là lời nhắn: không yêu cầu con làm lại bài.",
+  /** Hub 21/11 (PR #47): kept even on a "Bài kiểm tra" step (S-2), with this reminder next to Gửi. */
+  sendNote: "Con sẽ thấy góp ý này ngay khi bạn gửi.",
+  errors: {
+    feedback_unavailable: "Góp ý cho bài làm trên app chưa dùng được: cần áp bản cập nhật cơ sở dữ liệu 0037 trước.",
+    not_found: "Không tìm thấy lần làm này. Bạn tải lại trang.",
+    attempt_replaced: "Con vừa làm lại bài này. Bạn mở lần làm mới nhất (Giao bài → Bài làm trên app đã giao) để góp ý.",
+  } as Record<string, string>,
+} as const;
+
 // ---------- SM-2: Hồ sơ cấp đang học (phụ huynh, gia sư). Cấp ghi "đang học B1", KHÔNG BAO GIỜ "đạt" (spec §1 "Cách gọi"). ----------
 // Người dạy luôn gọi bằng tutorHonorific ("thầy/cô"), không viết cứng "cô" (phụ huynh 22/10, A1); có test quét.
 export const levelCopy = {
@@ -1951,6 +1963,8 @@ export const studioCopy = {
   approvedNote: "Đề đã khóa. Muốn sửa thì tạo bản sửa — bài đã giao giữ bản cũ.",
   editApproved: "Sửa đề đã duyệt",
   assignTitle: "Giao bài",
+  assignUnits: (codes: string[]) => (codes.length > 0 ? `Unit của bài: ${codes.join(", ")}` : "Unit của bài (không bắt buộc)"),
+  assignUnitsHelp: "Chọn Unit mà bài này luyện. Khi con đã nộp bài, trang Giáo trình đề xuất đặt Unit đó là “Đang học” (bạn bấm mới đổi).",
   startOn: "Ngày làm",
   dueOn: "Hạn nộp",
   assign: "Giao bài",
@@ -1975,7 +1989,10 @@ export const studioAssignedCopy = {
   sent: (when: string, attempts: number) => (attempts > 1 ? `nộp lần ${attempts} lúc ${when}` : `nộp lúc ${when}`),
   firstResult: (correct: number, total: number) => `lần đầu đúng ${correct}/${total}`,
   openWork: "Xem cả bài làm",
+  openWorkFeedback: "Xem cả bài làm · góp ý",
   checkItems: "Chấm các câu đang chờ →",
+  units: (codes: string[]) => `Unit ${codes.join(", ")}`,
+  feedbackGiven: "Đã góp ý",
 };
 
 // Nhập bài soạn sẵn (16/11): a draft made outside the app → a normal Studio draft. Adults only; no AI.
@@ -2177,6 +2194,9 @@ export const studioErrors: Record<string, string> = {
   no_retry: "Lần làm này không có lần thử lại nào.",
   retry_needs_update: "Nút \"Đã xem\" cần migration 0034. Nhờ phụ huynh áp 0034 rồi thử lại.",
   needs_update: "Phần này cần migration 0034 (cờ Bài kiểm tra). Giao ở loại Luyện tập, hoặc nhờ phụ huynh áp 0034.",
+  client_id_reused: "Yêu cầu này đã được dùng cho việc khác. Bạn tải lại trang rồi thử lại.",
+  units_need_update: "Giao kèm Unit cần bản cập nhật cơ sở dữ liệu 0037. Bỏ chọn Unit để giao như thường, hoặc nhờ phụ huynh áp 0037.",
+  bad_units: "Có Unit không còn trong giáo trình đã duyệt của em. Bạn tải lại trang rồi chọn lại nhé.",
   file_type: "Chỉ nhận PDF hoặc Word .docx (không nhận .doc hay ảnh).",
   file_too_big: "File lớn hơn 15 MB.",
   pages_too_long: `Đề và đáp án quá dài để AI đọc trong một lần (đề tối đa ${PAGE_LIMITS.studio.blockMain} trang, tổng tối đa ${PAGE_LIMITS.studio.blockTotal} trang). Chọn ít trang hơn hoặc chia làm hai lần.`,
@@ -2461,6 +2481,10 @@ export const curriculumCopy = {
   proposeHelp: `App chỉ đề xuất; ${tutorHonorific} bấm thì mới đổi.`,
   proposeButton: (code: string) => `Đặt ${code} là “Đang học”`,
   proposeDone: (code: string) => `${code} đang học.`,
+  workProposeTitle: "Đã có bài nộp cho các Unit này",
+  workProposeHelp: "App chỉ đề xuất; bạn bấm thì Unit mới chuyển sang “Đang học”.",
+  workProposeLine: (code: string, titles: string[]) =>
+    titles.length === 0 ? code : `${code} · ${titles.slice(0, 2).join(", ")}${titles.length > 2 ? ` + ${titles.length - 2} bài` : ""}`,
 } as const;
 
 // ---------- Khung bàn làm việc (cột trái + thanh trên; lát "Khung bàn làm việc", 08/11/2026) ----------

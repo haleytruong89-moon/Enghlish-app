@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createUserClient } from "@/lib/supabase/server";
 import { ReviewDbError } from "@/lib/review/handlers";
+import { isStudioTemplateId } from "@/lib/studio/assigned";
 import { createSupabaseWorkStore } from "@/lib/work/supabaseStore";
 import type { PracticeStore } from "./handlers";
 
@@ -125,6 +126,31 @@ export function createSupabasePracticeStore(): PracticeStore {
         p_client_id: a.clientId,
       });
       if (error) dbError("eng_write_submission_feedback", error);
+      return data;
+    },
+
+    async getStudioAttemptLearnerId(attemptId) {
+      const att = await db().from("attempts").select("learner_id, activity_instance_id").eq("id", attemptId).maybeSingle<{ learner_id: string; activity_instance_id: string }>();
+      if (att.error) dbError("attempts lookup", att.error);
+      if (!att.data) return null;
+      const act = await db().from("activity_instances").select("inquiry_instance_id").eq("id", att.data.activity_instance_id).maybeSingle<{ inquiry_instance_id: string }>();
+      if (act.error) dbError("activity_instances lookup", act.error);
+      if (!act.data) return null;
+      const inq = await db().from("inquiry_instances").select("template_id").eq("id", act.data.inquiry_instance_id).maybeSingle<{ template_id: string }>();
+      if (inq.error) dbError("inquiry_instances lookup", inq.error);
+      return inq.data && isStudioTemplateId(inq.data.template_id) ? att.data.learner_id : null;
+    },
+
+    async writeStudioFeedback(a) {
+      const { data, error } = await db().rpc("eng_write_studio_feedback", {
+        p_attempt: a.attemptId,
+        p_praise: a.praise,
+        p_items: a.items,
+        p_supersedes: a.supersedesId,
+        p_by: a.byMemberId,
+        p_client_id: a.clientId,
+      });
+      if (error) dbError("eng_write_studio_feedback", error);
       return data;
     },
 

@@ -116,3 +116,25 @@ describe("Góp ý cho con (SubmissionFeedbackForm)", () => {
     expect(screen.queryByTestId("sfb-shown-praise")).toBeNull();
   });
 });
+
+describe("the same form on a Studio attempt (0037)", () => {
+  it("posts to the Studio endpoint with the attempt id and says it is only a note", async () => {
+    render(<SubmissionFeedbackForm studio learnerId={L} assignmentId={A} submissionId={S} feedback={[]} viewerMemberId="m-tutor" />);
+    fireEvent.click(screen.getByTestId(`sfb-open-${A}`));
+    expect(screen.getByText(/không yêu cầu con làm lại bài/)).toBeTruthy();
+    expect(screen.getByTestId("sfb-send-note").textContent).toBe("Con sẽ thấy góp ý này ngay khi bạn gửi.");
+    fireEvent.change(screen.getByTestId("sfb-praise"), { target: { value: "Bạn chia dạng từ chắc." } });
+    fireEvent.click(screen.getByTestId("sfb-send"));
+    await waitFor(() => expect(postJson).toHaveBeenCalledTimes(1));
+    expect(postJson.mock.calls[0]![0]).toBe(`/api/learners/${L}/studio/attempts/${S}/feedback`);
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+  });
+  it("before 0037 the error names the update to apply", async () => {
+    postJson.mockResolvedValue({ ok: false, status: 409, error: "feedback_unavailable" });
+    render(<SubmissionFeedbackForm studio learnerId={L} assignmentId={A} submissionId={S} feedback={[]} viewerMemberId="m-tutor" />);
+    fireEvent.click(screen.getByTestId(`sfb-open-${A}`));
+    fireEvent.change(screen.getByTestId("sfb-praise"), { target: { value: "Tốt." } });
+    fireEvent.click(screen.getByTestId("sfb-send"));
+    await waitFor(() => expect(screen.getByTestId("sfb-error").textContent).toMatch(/0037/));
+  });
+});

@@ -1888,3 +1888,36 @@ Nhánh `feature/studio-flow-fixes`, **dựa trên `feature/studio-editor-fixes` 
 | 4 | **Góp ý cho bài Studio** (lời khen + tối đa 3 điều cần sửa, như bài link / PDF) | Con xem góp ý ở đâu (mục "Đã xem" như bài link / PDF?), có cho con "sửa bài" như bài viết không, hay chỉ lời nhắn |
 | 10 | **Bài Studio tính vào độ phủ Giáo trình** | Nối theo Unit chọn lúc giao (như "Giao theo Unit") hay theo nhãn của câu; giao xong hay nộp xong mới tính |
 
+## Studio: góp ý cho con + Unit của bài (bản rà 21/11 #4, #10)
+
+Nhánh `feature/studio-feedback-units` (dựa trên `feature/studio-flow-fixes`, PR #46: **gộp #46 trước**). **SQL cần áp: `db/migrations/0037_studio_feedback_units.sql`** (chỉ thêm; cần 0036; áp sau khi gộp). Không AI. Phụ huynh duyệt 21/11 "ok đề xuất". Kế hoạch `docs/superpowers/plans/2026-11-21-studio-feedback-units.md`; thiết kế `docs/DESIGN.md` §19.29.
+
+| # | Đã làm |
+|---|---|
+| 4 | **Góp ý cho con trên bài làm trên app (Studio)**: trên trang "Xem cả bài làm", thầy/cô của em hoặc phụ huynh viết câu khen + tối đa 3 điều cần sửa (không điểm). Con thấy ngay ở **Đã xem**. Chỉ là lời nhắn: không yêu cầu con làm lại. Bảng "Bài làm trên app đã giao" ghi "Đã góp ý" |
+| 10 | **Unit của bài**: ở Giao bài (bản đã duyệt) có ô "Unit của bài (không bắt buộc)". Khi con đã nộp, trang **Giáo trình → Trạng thái Unit** hiện "Con đã nộp bài của các Unit này" với nút "Đặt U14 là “Đang học”" (bạn bấm mới đổi; không tự đổi, không tự đặt "Đã học"). Cũng áp cho bài link / PDF đã giao theo Unit. Bảng bài đã giao ghi Unit của bài |
+
+### Cách thử trên bản thử (sau khi áp 0037)
+1. Mở một đề Studio đã duyệt → Giao bài → mở "Unit của bài" → tick U14 → Giao bài.
+2. Đăng nhập Nguyên (thử) → làm và nộp bài đó.
+3. Người lớn: Giao bài → "Bài làm trên app đã giao" → dòng có "Unit U14" → "Xem cả bài làm · góp ý" → "Góp ý cho con" → viết câu khen + một điều cần sửa → Gửi. Thử gõ "8 điểm": bị chặn.
+4. Nguyên (thử) → Đã xem: thấy bài với lời khen + điều cần sửa, không thấy điểm.
+5. Giáo trình → mở giáo trình → Trạng thái Unit: khối "Con đã nộp bài của các Unit này" có U14 → bấm "Đặt U14 là “Đang học”" → "Đang học đến" đổi; khối không còn U14.
+
+### Đã kiểm
+- `tests/db/studioFeedbackUnits.test.ts` (ghi / sửa / quyền / RLS / con đọc / Unit / gửi lại / xóa dữ liệu / chạy lại migration), `tests/unit/migrationStudioFeedbackUnits.test.ts` (thân hàm = bản cũ + đúng phần thêm), `tests/unit/workProposal.test.ts`, mục mới trong `tests/unit/practiceHandlers.test.ts`, `tests/unit/studioHandlers.test.ts`, `tests/unit/studioAssigned.test.ts`, `tests/dom/submissionFeedback.test.tsx`, `tests/dom/studioAssignUnits.test.tsx`.
+- **Chưa kiểm:** e2e (CI); bấm thật trên iPad.
+
+### Sửa sau review (21/11)
+- Góp ý chỉ cho **lần làm mới nhất** (con làm lại trong lúc người lớn đang xem → báo "Con vừa làm lại bài này", như bài nộp đã thay ở 0033).
+- Đề xuất "Đang học" đọc bằng một hàm SQL (`eng_sent_work_units`): không bị giới hạn 1000 dòng, bỏ bài link / PDF đã rút, bỏ bước Studio đang bị bỏ qua, bỏ Unit bị đánh "bỏ qua" ở giáo trình.
+- Chỉ mục mới cho `studio_feedback(attempt_id)`; nhãn "Xem cả bài làm · góp ý" chỉ hiện khi đã áp 0037; vài chữ (xem `docs/UX_COPY_GUIDE.md` mục 0037).
+
+### Giả định (Claude chọn, phụ huynh xem lại)
+- Ai góp ý: thầy/cô của em **hoặc** phụ huynh (như bài link / PDF).
+- Góp ý chỉ người viết sửa được (như bài link / PDF). Nếu thầy/cô thôi dạy, không ai sửa được lời nhắn cũ (phụ huynh viết được góp ý cho lần làm sau).
+- Góp ý ở bài có cờ **Bài kiểm tra** tới con ngay — ✅ phụ huynh chọn **giữ** (21/11, theo S-2) và thêm dòng nhắc cạnh nút Gửi: "Con sẽ thấy góp ý này ngay khi bạn gửi."
+- Khối đề xuất không có nút "Không đổi": còn hiện tới khi Unit sang "Đang học" (hoặc bị bỏ qua).
+- Đề xuất "Đang học" gồm cả bài link / PDF giao theo Unit đã có bài nộp (cùng luật, không cần SQL thêm).
+- Unit chỉ chọn lúc giao (chưa tự điền theo tên bài).
+
