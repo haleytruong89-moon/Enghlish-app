@@ -53,6 +53,12 @@ export interface PracticeStore {
   writeSubmissionFeedback(args: {
     submissionId: string; praise: string | null; items: { text: string }[]; supersedesId: string | null; byMemberId: string; clientId: string;
   }): Promise<unknown>;
+  /** The learner of a lần làm of a Studio test (service role, read-only), or null (no such attempt, or not a Studio test). */
+  getStudioAttemptLearnerId(attemptId: string): Promise<string | null>;
+  /** english.eng_write_studio_feedback (0037; service role, after requireAccess; the SQL checks the actor and the kind of work again). */
+  writeStudioFeedback(args: {
+    attemptId: string; praise: string | null; items: { text: string }[]; supersedesId: string | null; byMemberId: string; clientId: string;
+  }): Promise<unknown>;
   /** english.eng_issue_upload_ticket: counts the upload links of the last 24 hours for this learner and refuses past the daily limit (54000). */
   issueUploadTicket(args: { learnerId: string; byMemberId: string }): Promise<unknown>;
   /**
@@ -324,6 +330,7 @@ const FEEDBACK_TAGS: [RegExp, 400 | 403 | 404 | 409, string][] = [
   [/\(already_superseded\)/, 409, "already_superseded"],
   [/\(submission_replaced\)/, 409, "submission_replaced"],
   [/\(client_id_reused\)/, 409, "conflict"],
+  [/\(not_studio\)/, 404, "not_found"],
 ];
 
 /**
@@ -351,6 +358,32 @@ export async function handleWriteSubmissionFeedback(deps: PracticeDeps, learnerI
   } catch (err) {
     if (err instanceof ReviewDbError) for (const [re, status, code] of FEEDBACK_TAGS) if (re.test(err.detail)) return fail(status, code);
     if (err instanceof ReviewDbError && (err.code === "PGRST202" || err.code === "42883")) return fail(409, "feedback_unavailable");
+    return fromDbError(err);
+  }
+}
+
+/**
+ * POST /api/learners/:id/studio/attempts/:attemptId/feedback (0037) - the child's tutor or a parent writes (or edits) feedback on one lần làm of a
+ * Studio test. Same body and rules as feedback on a submission; the child sees it in "Đã xem". It never asks the child to do the test again.
+ */
+export async function handleWriteStudioFeedback(deps: PracticeDeps, learnerId: string, attemptId: string, rawBody: unknown): Promise<HandlerResult> {
+  const g = await guard(deps, learnerId, "practice:write");
+  if (!g.ok) return g.result;
+  if (!UUID_RE.test(attemptId)) return fail(404, "not_found");
+  const parsed = submissionFeedbackBodySchema.safeParse(rawBody);
+  if (!parsed.success) return fail(400, feedbackProblem(parsed.error.issues));
+  const b = parsed.data;
+  if (hasScoreWords(b.praise) || b.items.some((i) => hasScoreWords(i.text))) return fail(400, "score_words");
+  // The attempt must be this learner's and of a Studio test: anything else looks like "does not exist".
+  try {
+    if ((await deps.store.getStudioAttemptLearnerId(attemptId)) !== g.grant.learner.id) return fail(404, "not_found");
+    const r = (await deps.store.writeStudioFeedback({
+      attemptId, praise: b.praise ? b.praise : null, items: b.items, supersedesId: b.supersedes_id ?? null, byMemberId: g.grant.member.id, clientId: b.client_id,
+    })) as { id: string; replayed: boolean };
+    return { status: r.replayed ? 200 : 201, body: { id: r.id, replayed: r.replayed } };
+  } catch (err) {
+    if (err instanceof ReviewDbError) for (const [re, status, code] of FEEDBACK_TAGS) if (re.test(err.detail)) return fail(status, code);
+    if (err instanceof ReviewDbError && (err.code === "PGRST202" || err.code === "42883" || err.code === "42P01")) return fail(409, "feedback_unavailable");
     return fromDbError(err);
   }
 }

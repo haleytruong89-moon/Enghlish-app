@@ -50,7 +50,8 @@ export interface StudioStore {
   failExtraction(a: { draftId: string; errorCode: string; runId: string | null }): Promise<unknown>;
   discardDraft(a: { draftId: string; byMemberId: string }): Promise<unknown>;
   approveDraft(a: { draftId: string; base: string; build: unknown; byMemberId: string }): Promise<unknown>;
-  assign(a: { draftId: string; startOn: string; dueOn: string; byMemberId: string; clientId: string; isTest: boolean }): Promise<unknown>;
+  /** With Units (0037) the call goes through eng_assign_studio_v3; without, as before (v2 for a test, v1 otherwise). */
+  assign(a: { draftId: string; startOn: string; dueOn: string; byMemberId: string; clientId: string; isTest: boolean; units?: { curriculum_id: string; unit_code: string }[] }): Promise<unknown>;
   pending(a: { byMemberId: string; allowReal: boolean }): Promise<unknown>;
   /** Writes the Kết quả bài of submitted Studio attempts that have no pending item and no result yet (idempotent; returns how many). */
   retryResults(a: { byMemberId: string; allowReal: boolean }): Promise<unknown>;
@@ -288,10 +289,15 @@ export async function handleAssign(deps: StudioDeps, draftId: string, raw: unkno
   const p = assignStudioBodySchema.safeParse(raw);
   if (!p.success) return fail(400, "invalid_body");
   try {
-    const r = (await deps.store.assign({ draftId, startOn: p.data.start_on, dueOn: p.data.due_on, byMemberId: g.grant.member.id, clientId: p.data.client_id, isTest: p.data.is_test === true })) as { instance_id: string; activity_id: string; replayed: boolean };
+    const units = p.data.units ?? [];
+    const r = (await deps.store.assign({
+      draftId, startOn: p.data.start_on, dueOn: p.data.due_on, byMemberId: g.grant.member.id, clientId: p.data.client_id, isTest: p.data.is_test === true,
+      ...(units.length > 0 ? { units } : {}),
+    })) as { instance_id: string; activity_id: string; replayed: boolean };
     return { status: r.replayed ? 200 : 201, body: r };
   } catch (err) {
-    return fromStudioDbError(err, p.data.is_test === true ? { missing: "needs_update" } : {});
+    // A missing function: v3 (Units, 0037) or v2 (the test flag, 0034) is not applied yet.
+    return fromStudioDbError(err, (p.data.units?.length ?? 0) > 0 ? { missing: "units_need_update" } : p.data.is_test === true ? { missing: "needs_update" } : {});
   }
 }
 

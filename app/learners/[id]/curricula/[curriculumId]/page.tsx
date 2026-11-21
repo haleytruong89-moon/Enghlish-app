@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CoverageBar } from "@/components/curriculum/CoverageBar";
 import { UnitStatusTable } from "@/components/curriculum/UnitStatusTable";
+import { WorkUnitProposal } from "@/components/curriculum/WorkUnitProposal";
 import { curriculumCopy } from "@/lib/copy/vi";
-import { loadCurriculumCards } from "@/lib/curriculum/load";
+import { loadCurriculumCards, loadSentWorkUnits } from "@/lib/curriculum/load";
+import { proposeFromSentWork } from "@/lib/curriculum/workProposal";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
@@ -13,8 +15,10 @@ export const dynamic = "force-dynamic";
 export default async function CurriculumUnitsPage({ params }: { params: Promise<{ id: string; curriculumId: string }> }) {
   const { id, curriculumId } = await params;
   const { learner } = await requireLearnerPage(id, "curriculum:read");
-  const card = (await loadCurriculumCards(learner.id)).find((c) => c.id === curriculumId);
+  const [cards, sent] = await Promise.all([loadCurriculumCards(learner.id), loadSentWorkUnits(learner.id).catch(() => [])]);
+  const card = cards.find((c) => c.id === curriculumId);
   if (!card || !card.current || !card.progress) notFound();
+  const proposals = proposeFromSentWork(card.id, sent, card.progress.statusOf);
   const recent = [...card.events].sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 10);
   return (
     <>
@@ -30,6 +34,7 @@ export default async function CurriculumUnitsPage({ params }: { params: Promise<
         <div className="mt-2">
           <CoverageBar done={card.progress.done} total={card.progress.total} pct={card.progress.pct} testId="units-coverage" />
         </div>
+        <WorkUnitProposal curriculumId={card.id} proposals={proposals} />
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <UnitStatusTable curriculumId={card.id} units={card.current.units} statusOf={card.progress.statusOf} />
           <aside className="mt-4 h-fit rounded-2xl border border-line bg-white p-4 text-sm lg:sticky lg:top-4">

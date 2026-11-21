@@ -7,6 +7,7 @@ import { SupportForm } from "@/components/review/SupportForm";
 import { TransferMark } from "@/components/review/TransferMark";
 import { WorkPanel } from "@/components/review/WorkPanel";
 import { FeedbackPanel } from "@/components/revision/FeedbackPanel";
+import { SubmissionFeedbackForm } from "@/components/practice/SubmissionFeedbackForm";
 import { RevisionReview } from "@/components/revision/RevisionReview";
 import { WritingTags } from "@/components/tutor/WritingTags";
 import { activityLabels, app, fallbackLabels, inquiriesPage, learnerWithTrack, modeLabels, provenanceLabels, purposeLabels, reviewPage, revisionReviewCopy, type Mode } from "@/lib/copy/vi";
@@ -18,6 +19,8 @@ import { loadFeedbackPanel, loadRevisionView } from "@/lib/revision/load";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { getAuthUser } from "@/lib/auth/session";
 import { loadTags, loadWritingTagKeys } from "@/lib/tutorwork/load";
+import { isStudioTemplateId } from "@/lib/studio/assigned";
+import { loadStudioFeedback } from "@/lib/studio/feedbackLoad";
 import { TAGGABLE_ACTIVITIES } from "@/lib/tutorwork/types";
 
 export const dynamic = "force-dynamic";
@@ -62,6 +65,8 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
   const transferMark = transferMode === "tickable" ? await loadTransferMark(view.episode.id).catch(() => null) : null;
   const map = writing ? writing[2] : null;
   const revision = view.attempt.mode === "REVISION" ? await loadRevisionView(view.attempt.id, member.id).catch(() => null) : null;
+  // 0037: "Góp ý cho con" on a lần làm of a Studio test (tutor or parent). A failed lookup (e.g. 0037 not applied yet) leaves the form out.
+  const studioFeedback = isStudioTemplateId(view.tech.templateId) ? await loadStudioFeedback(learner.id, view.attempt.id).catch(() => null) : null;
 
   return (
     <StaffShell shell={shell}>
@@ -108,6 +113,9 @@ export default async function ReviewEpisodePage({ params }: { params: Promise<{ 
             {revision ? <RevisionReview view={revision} map={map} /> : <WorkPanel view={view} decisions={decisions} />}
             {feedback && feedback.eligible && (view.attempt.mode !== "REVISION" || feedback.live) ? (
               <FeedbackPanel attemptId={view.attempt.id} panel={feedback} map={map} />
+            ) : null}
+            {studioFeedback ? (
+              <SubmissionFeedbackForm studio learnerId={learner.id} assignmentId={view.activity.id} submissionId={view.attempt.id} feedback={studioFeedback} viewerMemberId={member.id} />
             ) : null}
             {transferMode === "from_template" ? <TransferMark episodeId={view.episode.id} initial fromTemplate /> : null}
             {transferMark !== null ? <TransferMark episodeId={view.episode.id} initial={transferMark} /> : null}

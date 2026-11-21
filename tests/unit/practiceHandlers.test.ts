@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AccessStore, Learner, Member, Relationship } from "@/lib/auth/requireAccess";
 import {
+  handleWriteStudioFeedback,
   handleAssignmentsList,
   handleCreateAssignment,
   handleRetractAssignment,
@@ -56,6 +57,8 @@ const studentRow = (over: Record<string, unknown>) => ({
   assigned_on: "2026-10-16", reviewed: false, submission: null, ...over,
 });
 
+const ATT_AN = "a7000000-0000-4000-8000-000000000001";
+
 function makeStore(over: Partial<PracticeStore> = {}) {
   return {
     getOwnProfile: vi.fn(async (u: string) => (u === "u-studentAn" ? { role: "student" as const, learnerId: AN } : u === "u-parent" ? { role: "parent" as const, learnerId: null } : { role: "tutor" as const, learnerId: null })),
@@ -70,6 +73,8 @@ function makeStore(over: Partial<PracticeStore> = {}) {
     retractAssignment: vi.fn(async () => ({ replayed: false })),
     submit: vi.fn(async () => ({ id: "s1", replayed: false })),
     writeSubmissionFeedback: vi.fn(async () => ({ id: "f1", replayed: false })),
+    getStudioAttemptLearnerId: vi.fn(async (id: string) => (id === ATT_AN ? AN : null)),
+    writeStudioFeedback: vi.fn(async () => ({ id: "sf1", replayed: false })),
     myPractice: vi.fn(async (_assignmentId?: string) => [studentRow({}), studentRow({ assignment_id: A_PDF, kind: "pdf", url: null, has_file: true, source_key: null, title: "Đề 3" })]),
     myPracticeFile: vi.fn(async (a: string) => (a === A_PDF ? { file_id: FILE_OTHER, path: pathOf(AN, FILE_OTHER, "pdf"), mime: "application/pdf", title: "Đề 3" } : null)),
     myReviewPoints: vi.fn(async () => ({ session_date: "2026-10-15", message: "Cố lên", labels: ["Câu điều kiện"] })),
@@ -500,6 +505,39 @@ describe("feedback on a submission (W4c1)", () => {
     expect((await call("tutorAn", err("23505", "submission_replaced"))).body).toMatchObject({ error: "submission_replaced" });
     expect((await call("tutorAn", err("42501", "author_only"))).status).toBe(403);
     expect((await call("tutorAn", err("23514", "score_words"))).body).toMatchObject({ error: "score_words" });
+    expect((await call("tutorAn", err("PGRST202", "x"))).body).toMatchObject({ error: "feedback_unavailable" });
+  });
+});
+
+describe("feedback on a Studio attempt (0037)", () => {
+  const body = { client_id: "client-sfb-01", praise: "Bạn chia dạng từ chắc.", items: [{ text: "Xem lại câu 2." }] };
+  const call = (user: string | null, store: PracticeStore, b: unknown = body, att = ATT_AN, learner = AN) => handleWriteStudioFeedback(deps(user, store, makeStorage()), learner, att, b);
+
+  it("the child's tutor or a parent writes it with the member from the session", async () => {
+    const s = makeStore();
+    expect((await call("tutorAn", s)).status).toBe(201);
+    expect(s.writeStudioFeedback).toHaveBeenCalledWith({ attemptId: ATT_AN, praise: "Bạn chia dạng từ chắc.", items: [{ text: "Xem lại câu 2." }], supersedesId: null, byMemberId: "m-tutorAn", clientId: "client-sfb-01" });
+    expect((await call("parent", s)).status).toBe(201);
+  });
+
+  it("no session 401, the student 403, the other tutor 404; an attempt of another child, not of a Studio test, or a bad id: 404; nothing is written", async () => {
+    const s = makeStore();
+    expect((await call(null, s)).status).toBe(401);
+    expect((await call("studentAn", s)).status).toBe(403);
+    expect((await call("tutorNguyen", s, body, ATT_AN, NGUYEN)).status).toBe(404);
+    expect((await call("tutorAn", s, body, "a7000000-0000-4000-8000-000000000099")).status).toBe(404);
+    expect((await call("tutorAn", s, body, "nope")).status).toBe(404);
+    expect(s.writeStudioFeedback).not.toHaveBeenCalled();
+  });
+
+  it("score words are refused before the database; database tags become the same codes as for submissions; before 0037: feedback_unavailable", async () => {
+    const s = makeStore();
+    expect((await call("tutorAn", s, { ...body, praise: "8 điểm" })).body).toMatchObject({ error: "score_words" });
+    expect(s.writeStudioFeedback).not.toHaveBeenCalled();
+    const err = (code: string, tag: string) => makeStore({ writeStudioFeedback: vi.fn(async () => { throw new ReviewDbError(code, `eng_write_studio_feedback: x (${tag})`); }) });
+    expect((await call("tutorAn", err("23505", "already_given"))).body).toMatchObject({ error: "already_given" });
+    expect((await call("tutorAn", err("42501", "author_only"))).status).toBe(403);
+    expect((await call("tutorAn", err("23514", "not_studio"))).status).toBe(404);
     expect((await call("tutorAn", err("PGRST202", "x"))).body).toMatchObject({ error: "feedback_unavailable" });
   });
 });

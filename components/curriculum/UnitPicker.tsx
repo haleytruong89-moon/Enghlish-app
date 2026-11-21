@@ -20,6 +20,7 @@ export function UnitPicker({
   onChange,
   tagLabels = {},
   compact = false,
+  help,
   disabled,
   testId = "unit-picker",
 }: {
@@ -29,6 +30,8 @@ export function UnitPicker({
   onChange: (s: PickerState) => void;
   tagLabels?: Record<string, string>;
   compact?: boolean;
+  /** Replaces the help line (the Studio test: Units are saved, not only used for the title). */
+  help?: string;
   disabled?: boolean;
   testId?: string;
 }) {
@@ -46,7 +49,7 @@ export function UnitPicker({
   const shown = items.slice(0, SHOWN_ITEMS).map((k) => tagLabels[k] ?? fallbackLabels.tag);
   const body = (
     <div className="flex flex-col gap-3" data-testid={testId}>
-      <p className="text-sm text-muted">{compact ? unitPickerCopy.helpTitleOnly : unitPickerCopy.help}</p>
+      <p className="text-sm text-muted">{help ?? (compact ? unitPickerCopy.helpTitleOnly : unitPickerCopy.help)}</p>
       {choices.map((c) => {
         const Wrap = compact ? "section" : "details";
         return (

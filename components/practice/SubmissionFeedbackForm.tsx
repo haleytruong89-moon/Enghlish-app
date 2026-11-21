@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { submissionFeedbackCopy as copy } from "@/lib/copy/vi";
+import { studioFeedbackCopy, submissionFeedbackCopy } from "@/lib/copy/vi";
 import { MAX_FEEDBACK_ITEM, MAX_FEEDBACK_PRAISE } from "@/lib/practice/schemas";
 import type { SubmissionFeedbackView } from "@/lib/practice/types";
 import { formatWhen } from "@/lib/review/format";
@@ -10,6 +10,8 @@ import { hasScoreWords } from "@/lib/revision/scoreWords";
 import { postJson, failText } from "@/lib/tutorwork/client";
 
 /** What a form can say about a draft before it is sent (the server and the database check the same rules again). */
+const copy = submissionFeedbackCopy;
+
 export function checkSubmissionFeedback(praise: string, items: string[]): keyof typeof copy.errors | null {
   const p = praise.trim();
   const texts = items.map((t) => t.trim()).filter((t) => t !== "");
@@ -55,15 +57,25 @@ export function SubmissionFeedbackForm({
   submissionId,
   feedback,
   viewerMemberId,
+  studio = false,
 }: {
   learnerId: string;
+  /** For a Studio test (studio): the step (activity) id; it only names the test ids of the form. */
   assignmentId: string;
+  /** For a Studio test (studio): the lần làm (attempt) id. */
   submissionId: string;
+  /** 0037: the form on one lần làm of a Studio test (another endpoint, another intro). */
+  studio?: boolean;
   /** All versions of the feedback of this assignment, newest first. */
   feedback: SubmissionFeedbackView[];
   viewerMemberId: string;
 }) {
   const router = useRouter();
+  const intro = studio ? studioFeedbackCopy.intro : copy.intro;
+  const errors: Record<string, string> = studio ? { ...copy.errors, ...studioFeedbackCopy.errors } : copy.errors;
+  const endpoint = studio
+    ? `/api/learners/${learnerId}/studio/attempts/${submissionId}/feedback`
+    : `/api/learners/${learnerId}/assignments/${assignmentId}/submissions/${submissionId}/feedback`;
   // Only notes on the CURRENT submission can be edited / are "live"; older ones belong to a submission that was replaced.
   const live = feedback.find((f) => f.live && f.submissionId === submissionId) ?? null;
   const history = feedback.filter((f) => f.submissionId === submissionId && f !== live);
@@ -86,10 +98,10 @@ export function SubmissionFeedbackForm({
   async function send(e: React.FormEvent) {
     e.preventDefault();
     const p = checkSubmissionFeedback(praise, items);
-    if (p) return setProblem(copy.errors[p] ?? null);
+    if (p) return setProblem(errors[p] ?? null);
     setBusy(true);
     setProblem(null);
-    const r = await postJson(`/api/learners/${learnerId}/assignments/${assignmentId}/submissions/${submissionId}/feedback`, {
+    const r = await postJson(endpoint, {
       client_id: clientId.current,
       ...(praise.trim() ? { praise: praise.trim() } : {}),
       items: items.map((t) => t.trim()).filter((t) => t !== "").map((text) => ({ text })),
@@ -98,7 +110,7 @@ export function SubmissionFeedbackForm({
     setBusy(false);
     if (!r.ok) {
       if (r.status === 409) clientId.current = crypto.randomUUID();
-      return setProblem(copy.errors[r.error] ?? failText(r));
+      return setProblem(errors[r.error] ?? failText(r));
     }
     clientId.current = crypto.randomUUID();
     setOpen(false);
@@ -135,7 +147,7 @@ export function SubmissionFeedbackForm({
       ) : null}
       {open ? (
         <form onSubmit={send} className="flex flex-col gap-3" data-testid={`sfb-form-${assignmentId}`}>
-          <p className="text-sm text-muted">{copy.intro}</p>
+          <p className="text-sm text-muted">{intro}</p>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-semibold">{copy.praiseLabel}</span>
             <span className="text-muted">{copy.praiseHint}</span>

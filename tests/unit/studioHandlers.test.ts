@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AccessStore, Learner, Member, Relationship } from "@/lib/auth/requireAccess";
 import { ReviewDbError } from "@/lib/review/handlers";
 import {
-  handleApprove, handleCreateDraft, handleDecide, handleMarkRetrySeen, handleGetDraft, handlePending, handleSetAiSettings, handleAiSettings, handleStudioUploadUrl,
+  handleApprove, handleAssign, handleCreateDraft, handleDecide, handleMarkRetrySeen, handleGetDraft, handlePending, handleSetAiSettings, handleAiSettings, handleStudioUploadUrl,
   type StudioDeps, type StudioStore,
 } from "@/lib/studio/handlers";
 import { normalizeExtract } from "@/lib/studio/normalize";
@@ -218,5 +218,24 @@ describe("handleMarkRetrySeen (Đã xem on the child's retries)", () => {
     expect(await handleMarkRetrySeen(deps("tutorNguyen", store({ markRetrySeen: missing })), ATTEMPT, { seen_through: through, client_id: "client-0026" })).toMatchObject({ status: 409, body: { error: "retry_needs_update" } });
     const bad = vi.fn(async () => { throw new ReviewDbError("23514", "eng_mark_retry_seen: this attempt has no retry (no_retry)"); });
     expect(await handleMarkRetrySeen(deps("tutorNguyen", store({ markRetrySeen: bad })), ATTEMPT, { seen_through: through, client_id: "client-0027" })).toMatchObject({ status: 400, body: { error: "no_retry" } });
+  });
+});
+
+describe("handleAssign with Units (0037)", () => {
+  const CUR = "c1000000-0000-4000-8000-000000000001";
+  const base = { start_on: "2026-11-21", due_on: "2026-11-24", client_id: "client-as-0001" };
+  it("Units go to the store (v3); without Units the call is as before", async () => {
+    const s = store();
+    expect((await handleAssign(deps("tutorNguyen", s), DRAFT, { ...base, units: [{ curriculum_id: CUR, unit_code: "U14" }] })).status).toBe(201);
+    expect(s.assign).toHaveBeenLastCalledWith(expect.objectContaining({ units: [{ curriculum_id: CUR, unit_code: "U14" }], isTest: false }));
+    await handleAssign(deps("tutorNguyen", s), DRAFT, base);
+    expect(s.assign).toHaveBeenLastCalledWith(expect.not.objectContaining({ units: expect.anything() }));
+    expect((await handleAssign(deps("tutorNguyen", s), DRAFT, { ...base, units: Array.from({ length: 31 }, (_, i) => ({ curriculum_id: CUR, unit_code: `U${i}` })) })).status).toBe(400);
+  });
+  it("a missing v3 (0037 not applied) says so; a bad Unit is 400 bad_units", async () => {
+    const missing = store({ assign: vi.fn(async () => { throw new ReviewDbError("PGRST202", "eng_assign_studio_v3: missing"); }) });
+    expect((await handleAssign(deps("tutorNguyen", missing), DRAFT, { ...base, units: [{ curriculum_id: CUR, unit_code: "U14" }] })).body).toMatchObject({ error: "units_need_update" });
+    const bad = store({ assign: vi.fn(async () => { throw new ReviewDbError("22023", "eng_assign_studio_v3: a unit is not in an approved curriculum of this learner (bad_units)"); }) });
+    expect((await handleAssign(deps("tutorNguyen", bad), DRAFT, { ...base, units: [{ curriculum_id: CUR, unit_code: "U99" }] })).body).toMatchObject({ error: "bad_units" });
   });
 });
