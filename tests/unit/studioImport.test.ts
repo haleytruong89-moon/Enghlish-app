@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import type { AccessStore, Learner, Member, Relationship } from "@/lib/auth/requireAccess";
 import { ReviewDbError } from "@/lib/review/handlers";
-import { handleImportDraft, IMPORT_MAX_TRIES, type StudioDeps, type StudioStore } from "@/lib/studio/handlers";
+import { handleImportDraft, handleRestoreDraft, IMPORT_MAX_TRIES, type StudioDeps, type StudioStore } from "@/lib/studio/handlers";
 import { STUDIO_IMPORT_FORMAT, studioImportFileSchema } from "@/lib/studio/importFile";
 import { EMPTY_DRAFT, type StudioDraft } from "@/lib/studio/schema";
 import { CTX_B } from "./fixtures/studio";
@@ -211,3 +211,30 @@ describe("handleImportDraft (Nhập bài soạn sẵn)", () => {
     expect(r).toMatchObject({ status: 201, body: { items: 0, blocking: 1 } });
   });
 });
+
+describe("handleRestoreDraft (Khôi phục a discarded draft)", () => {
+  const GONE = { ...FULL_ROW, id: DRAFT, status: "discarded", title: "Unit 14 · Idioms" };
+  const COPY = "c0000000-0000-4000-8000-000000000001";
+
+  it("a new manual draft with the same title and questions; restoring again opens the same copy", async () => {
+    const draft = vi.fn(async (id: string) => (id === DRAFT ? GONE : { ...EMPTY_ROW, id: COPY }));
+    const s = store({ draft, createDraft: vi.fn(async () => ({ id: COPY, status: "draft", replayed: false })) });
+    const r = await handleRestoreDraft(deps("tutorNguyen", s), DRAFT);
+    expect(r).toMatchObject({ status: 201, body: { id: COPY, replayed: false } });
+    expect(s.createDraft).toHaveBeenCalledWith(expect.objectContaining({ title: "Unit 14 · Idioms", extract: false, clientId: `rs-${DRAFT}`, byMemberId: "m-tutorNguyen" }));
+    expect(s.saveDraft).toHaveBeenCalledWith(expect.objectContaining({ draftId: COPY, payload: CLEAN, title: "Unit 14 · Idioms" }));
+    const again = store({ draft: vi.fn(async (id: string) => (id === DRAFT ? GONE : { ...FULL_ROW, id: COPY })), createDraft: vi.fn(async () => ({ id: COPY, status: "draft", replayed: true })) });
+    expect(await handleRestoreDraft(deps("tutorNguyen", again), DRAFT)).toMatchObject({ status: 200, body: { id: COPY, replayed: true } });
+    expect(again.saveDraft).not.toHaveBeenCalled();
+  });
+
+  it("only a discarded draft; only the child's tutor or parent", async () => {
+    const live = store({ draft: vi.fn(async () => FULL_ROW) });
+    expect((await handleRestoreDraft(deps("tutorNguyen", live), DRAFT)).body).toMatchObject({ error: "not_discarded" });
+    const s = store({ draft: vi.fn(async () => GONE) });
+    expect((await handleRestoreDraft(deps("tutorAn", s), DRAFT)).status).toBe(404);
+    expect((await handleRestoreDraft(deps("studentNguyen", s), DRAFT)).status).toBe(403);
+    expect(s.createDraft).not.toHaveBeenCalled();
+  });
+});
+

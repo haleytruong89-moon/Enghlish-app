@@ -89,5 +89,20 @@ describe("Studio draft cut down by the tutor (edit operations + migration 0024)"
     expect(await rowsAs(db.client, "authenticated", s.users.studentNguyen, "select id from english.episodes where attempt_id = $1", [att.attempt_id])).toEqual([]);
     expect(await rowsAs(db.client, "authenticated", s.users.studentNguyen, "select id from english.results where attempt_id = $1", [att.attempt_id])).toEqual([]);
   });
+
+  it("Bản nháp đã bỏ: the child's tutor and the parent can read a discarded draft (title and questions) to restore it; the other tutor cannot", async () => {
+    const made = await svc<{ id: string }>("select english.eng_create_studio_draft($1, 'Bỏ thử', null, null, false, $2, 'gone-aaaaaaaa') as r", [s.learners.nguyen, s.members.tutorNguyen]);
+    const cur = await svc<{ updated_at: string }>("select english.eng_studio_draft($1) as r", [made.id]);
+    await svc("select english.eng_save_studio_draft($1, 'Bỏ thử', $2::jsonb, $3, $4) as r", [made.id, JSON.stringify(FOUR), cur.updated_at, s.members.tutorNguyen]);
+    await svc("select english.eng_discard_studio_draft($1, $2) as r", [made.id, s.members.tutorNguyen]);
+    const sql = "select id, title from english.studio_drafts where learner_id = $1 and status = 'discarded'";
+    expect(await rowsAs(db.client, "authenticated", s.users.tutorNguyen, sql, [s.learners.nguyen])).toEqual([{ id: made.id, title: "Bỏ thử" }]);
+    expect((await rowsAs(db.client, "authenticated", s.users.parent, sql, [s.learners.nguyen])).length).toBe(1);
+    expect(await rowsAs(db.client, "authenticated", s.users.tutorAn, sql, [s.learners.nguyen])).toEqual([]);
+    expect(await rowsAs(db.client, "authenticated", s.users.studentNguyen, sql, [s.learners.nguyen])).toEqual([]);
+    const back = await svc<{ status: string; payload: StudioDraft }>("select english.eng_studio_draft($1) as r", [made.id]);
+    expect(back.status).toBe("discarded");
+    expect(back.payload.items).toHaveLength(8);
+  });
 });
 

@@ -341,38 +341,71 @@ export async function handleImportDraft(deps: StudioDeps, learnerId: string, raw
   };
   // Same content → same client id → eng_create_studio_draft replays the same draft (double click, retry, a second import).
   const hash = createHash("sha256").update(JSON.stringify(file)).digest("hex").slice(0, 32);
-  const done = (id: string, status: string, replayed: boolean): HandlerResult => ({ status: replayed ? 200 : 201, body: { id, status, replayed, ...report } });
   try {
-    for (let k = 1; k <= IMPORT_MAX_TRIES; k++) {
-      const clientId = k === 1 ? `imp-${hash}` : `imp-${hash}-${k}`;
-      let made: { id: string; status: string; replayed: boolean };
-      try {
-        made = (await deps.store.createDraft({
-          learnerId: learner.id, title: file.title, testFile: null, keyFile: null, extract: false, byMemberId: member.id, clientId,
-        })) as typeof made;
-      } catch (err) {
-        if (dbTag(err) !== "conflict") throw err;
-        // The same client id under another title: the draft of this file was renamed since. Discarded → try the next id; else say so.
-        const old = await deps.store.draftByClientId({ learnerId: learner.id, clientId });
-        if (old?.status === "discarded") continue;
-        return fail(409, "import_renamed", old ? { id: old.id } : {});
-      }
-      if (made.replayed && made.status === "discarded") continue;
-      const raw = await deps.store.draft(made.id);
-      const { view } = parseDraft(raw, { showCost: false });
-      if (!(view.status === "draft" && view.payload.items.length === 0 && neverSaved(raw, view.updatedAt))) return done(made.id, view.status, true);
-      // A new draft, or an earlier import that stopped between "create" and "save": fill it now.
-      try {
-        await deps.store.saveDraft({ draftId: made.id, title: file.title, payload: file.payload, base: view.updatedAt, byMemberId: member.id });
-      } catch (err) {
-        if (dbTag(err) !== "draft_changed") throw err;
-        // The same file imported twice at once: the other request filled it first.
-        const again = parseDraft(await deps.store.draft(made.id), { showCost: false }).view;
-        return done(made.id, again.status, true);
-      }
-      return done(made.id, "draft", false);
+    const r = await createFilled(deps, { learnerId: learner.id, memberId: member.id, title: file.title, payload: file.payload, clientBase: `imp-${hash}` });
+    if (r.kind === "renamed") return fail(409, "import_renamed", r.id ? { id: r.id } : {});
+    if (r.kind === "too_many") return fail(409, "import_too_many");
+    return { status: r.replayed ? 200 : 201, body: { id: r.id, status: r.status, replayed: r.replayed, ...report } };
+  } catch (err) {
+    return fromStudioDbError(err);
+  }
+}
+
+type Filled = { kind: "done"; id: string; status: string; replayed: boolean } | { kind: "renamed"; id: string | null } | { kind: "too_many" };
+
+/**
+ * A manual draft (no AI) holding `payload`, under client id `<clientBase>` (then `-2` … `-9` when the earlier one was discarded): the same
+ * call twice gives the same draft; one that stopped between "create" and "save" is filled now; one the tutor emptied on purpose is left alone.
+ */
+async function createFilled(
+  deps: StudioDeps,
+  a: { learnerId: string; memberId: string; title: string; payload: StudioDraft; clientBase: string },
+): Promise<Filled> {
+  for (let k = 1; k <= IMPORT_MAX_TRIES; k++) {
+    const clientId = k === 1 ? a.clientBase : `${a.clientBase}-${k}`;
+    let made: { id: string; status: string; replayed: boolean };
+    try {
+      made = (await deps.store.createDraft({
+        learnerId: a.learnerId, title: a.title, testFile: null, keyFile: null, extract: false, byMemberId: a.memberId, clientId,
+      })) as typeof made;
+    } catch (err) {
+      if (dbTag(err) !== "conflict") throw err;
+      // The same client id under another title: that draft was renamed since. Discarded → try the next id; else it is the one.
+      const old = await deps.store.draftByClientId({ learnerId: a.learnerId, clientId });
+      if (old?.status === "discarded") continue;
+      return { kind: "renamed", id: old?.id ?? null };
     }
-    return fail(409, "import_too_many");
+    if (made.replayed && made.status === "discarded") continue;
+    const raw = await deps.store.draft(made.id);
+    const { view } = parseDraft(raw, { showCost: false });
+    if (!(view.status === "draft" && view.payload.items.length === 0 && neverSaved(raw, view.updatedAt))) return { kind: "done", id: made.id, status: view.status, replayed: true };
+    try {
+      await deps.store.saveDraft({ draftId: made.id, title: a.title, payload: a.payload, base: view.updatedAt, byMemberId: a.memberId });
+    } catch (err) {
+      if (dbTag(err) !== "draft_changed") throw err;
+      // The same call twice at once: the other request filled it first.
+      const again = parseDraft(await deps.store.draft(made.id), { showCost: false }).view;
+      return { kind: "done", id: made.id, status: again.status, replayed: true };
+    }
+    return { kind: "done", id: made.id, status: "draft", replayed: false };
+  }
+  return { kind: "too_many" };
+}
+
+/**
+ * "Khôi phục" a discarded draft (21/11): a NEW manual draft with the same title and questions (a discarded draft itself never comes back,
+ * 0024 has no way back). Restoring twice opens the same copy. The copy is a test of its own, even when the discarded one edited an approved test.
+ */
+export async function handleRestoreDraft(deps: StudioDeps, draftId: string): Promise<HandlerResult> {
+  const g = await guardDraft(deps, draftId, "studio:write");
+  if (!g.ok) return g.result;
+  const { view } = parseDraft(await deps.store.draft(draftId), { showCost: false });
+  if (view.status !== "discarded") return fail(400, "not_discarded");
+  try {
+    const r = await createFilled(deps, { learnerId: g.grant.learner.id, memberId: g.grant.member.id, title: view.title, payload: view.payload, clientBase: `rs-${draftId}` });
+    if (r.kind === "too_many") return fail(409, "restore_too_many");
+    if (r.kind === "renamed") return r.id ? { status: 200, body: { id: r.id, status: "draft", replayed: true } } : fail(409, "conflict");
+    return { status: r.replayed ? 200 : 201, body: { id: r.id, status: r.status, replayed: r.replayed } };
   } catch (err) {
     return fromStudioDbError(err);
   }
