@@ -1843,3 +1843,39 @@ Xếp theo mức ảnh hưởng. **Chưa làm mục nào dưới đây**; chờ 
 
 Điều chạy tốt: nhập file, duyệt, giao; con làm từng câu, tự lưu nháp; chấm tự động chịu được viết hoa, dấu cách, dấu chấm cuối, dấu nháy cong của iPad; câu viết lại khác đáp án thì chờ thầy/cô, không tự chấm sai; con không thấy đáp án trước khi được phép.
 
+## Luồng giao bài Studio: sửa các điểm của bản rà 21/11 (không SQL)
+
+Nhánh `feature/studio-flow-fixes`, **dựa trên `feature/studio-editor-fixes` (PR #45): gộp #45 trước**. **SQL cần áp: không có.** Không AI. Phụ huynh: "làm tiếp các phần cần fix" (21/11). Thiết kế `docs/DESIGN.md` §19.28.
+
+| # (bản rà) | Đã làm |
+|---|---|
+| 1 | Con thấy **lời dẫn của đúng phần** ngay trên câu đang làm; ô "Đề bài" liệt kê từng phần một dòng ("Questions 1–8 · A · …"). Áp cho bài **duyệt từ nay**; bài đã duyệt trước vẫn như cũ |
+| 2 | **"Xem cả bài làm"** (trang xem bài sẵn có, `/review/<episode>`): ở danh sách bài Studio đã giao và trên thẻ chấm câu ở Hộp duyệt |
+| 3 | Mục **"Bài làm trên app đã giao"** ở Giao bài và Tạo bài từ đề: mỗi bài một dòng, trạng thái Chưa tới ngày làm · Chưa làm · Quá hạn · Chờ thầy/cô chấm câu · Đã chấm (kèm "lần đầu đúng x/y" cho người lớn). Bàn làm việc có cảnh báo "n bài làm trên app quá hạn" |
+| 5 | Duyệt đề giữ **thứ tự của đề**; câu đang sửa không nhảy chỗ (lọc "Chỉ câu cần xem" vẫn có) |
+| 6 | Bộ Destination Unit 14 + Review 7 **tách thành 21 file, mỗi bài tập một file** (6–13 câu), zip `destination-unit14-tung-bai.zip` (ngoài repo). Kiểm: 0 lỗi; chạy trọn luồng trên database cục bộ: 193/193 câu chấm đúng |
+| 7 | **"Bản nháp đã bỏ"** (đóng sẵn) dưới "Bài đã tạo", nút **Khôi phục** = bản nháp mới cùng tên và câu hỏi (bấm hai lần vẫn một bản) |
+| 8 | Nút **↑ Lên / ↓ Xuống** đổi thứ tự câu trong một phần (ẩn khi đang lọc) |
+| 9 | Đáp án có gạch nối nhận cả cách viết có dấu cách ("fifty-fifty" = "fifty fifty"), áp cho bài duyệt từ nay |
+
+### Cách thử trên bản thử (Nguyên (thử))
+1. Tạo bài từ đề → Nhập bài soạn sẵn → chọn vài file trong `destination-unit14-tung-bai.zip` (ví dụ `U14-1-A`, `R7-C`) → Mở → Duyệt → Giao bài (hạn hôm qua cho một bài để thấy "Quá hạn").
+2. Trong một bản nháp: bấm ↑ Lên / ↓ Xuống; câu đổi chỗ, số câu vẫn liền.
+3. Bỏ một bản nháp → mở "Bản nháp đã bỏ" → Khôi phục → mở ra bản nháp mới đủ câu.
+4. Đăng nhập Nguyên (thử), mở `R7-C`: trên câu có khung lời dẫn kèm hộp từ; trong ô Đề bài mỗi phần một dòng.
+5. Con nộp → người lớn mở Giao bài: dòng của bài đổi sang "Chờ thầy/cô chấm câu" hoặc "Đã chấm"; bấm "Xem cả bài làm" ra trang xem bài.
+6. Bàn làm việc: có dòng "1 bài làm trên app quá hạn, con chưa nộp".
+
+### Đã kiểm
+- Test mới:
+  - `tests/unit/studioPromptParts.test.ts`, `tests/unit/studioAssigned.test.ts`, mục mới trong `tests/unit/studioEditOps.test.ts`, `tests/unit/studioImport.test.ts`, `tests/unit/deskAlerts.test.ts`
+  - `tests/dom/playerPartLead.test.tsx`, `tests/dom/studioDiscardedDrafts.test.tsx`, mục mới trong `tests/dom/studioDraftEditorOps.test.tsx`
+  - mục mới trong `tests/db/studioEditOps.test.ts`: ai đọc được các dòng của danh sách và của bản nháp đã bỏ
+- **Chưa kiểm:** e2e (CI); bấm thật trên iPad.
+
+### Còn lại của bản rà: cần SQL và cần phụ huynh chốt trước
+| # | Việc | Cần phụ huynh chốt |
+|---|---|---|
+| 4 | **Góp ý cho bài Studio** (lời khen + tối đa 3 điều cần sửa, như bài link / PDF) | Con xem góp ý ở đâu (mục "Đã xem" như bài link / PDF?), có cho con "sửa bài" như bài viết không, hay chỉ lời nhắn |
+| 10 | **Bài Studio tính vào độ phủ Giáo trình** | Nối theo Unit chọn lúc giao (như "Giao theo Unit") hay theo nhãn của câu; giao xong hay nộp xong mới tính |
+

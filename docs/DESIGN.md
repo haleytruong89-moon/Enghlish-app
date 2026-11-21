@@ -583,3 +583,11 @@ Trang `/learners/<id>/delete` (chỉ phụ huynh; gia sư/học sinh 403, em ngo
 - **Không đổi:** đề đã duyệt (bất biến; "Sửa đề đã duyệt" vẫn tạo bản nháp + phiên bản mẫu mới), máy chủ, database, màn của con. Bài đọc của phần đã xóa vẫn nằm trong bản nháp nhưng không gửi cho con (`buildStudioBuild` chỉ lấy bài đọc có câu dùng).
 - **Chưa có:** đổi thứ tự câu trong một phần; xem lại / khôi phục bản nháp đã bỏ.
 
+### 19.28. Luồng giao bài Studio sau bản rà 21/11 (không migration, không AI)
+
+- **Lời dẫn theo câu.** `buildStudioBuild` ghi `prompt_en` mỗi phần một dòng `Questions a–b · <tên phần>: <lời dẫn>` (xuống dòng trong lời dẫn đổi thành dấu cách; dải câu = câu làm trên app của phần). `lib/studio/promptParts.ts` đọc lại: `instructionFor(prompt, n)` cho khung trên câu (`QuestionCard` prop `lead`), `TaskLines` cho ô Đề bài (con) và `WorkPanel` (người lớn). Bài duyệt trước 21/11 không có dòng "Questions" nên hiện như cũ, không có khung trên câu.
+- **Gạch nối.** Với câu không phải trắc nghiệm, khóa đáp án thêm cách viết thay gạch nối giữa hai chữ bằng dấu cách (không trùng). Không đổi `eng_norm_answer` (hàm này nằm trong chỉ mục của `accepted_additions`).
+- **Bài làm trên app đã giao.** `lib/studio/assigned.ts` (thuần) + `assignedLoad.ts` (USER client, RLS chỉ người lớn của em): `inquiry_instances` mẫu `^[A-Z]-ST-\d{6}$` → bước, lịch (ngày bắt đầu = sự kiện `studio_start_chosen`), `attempts`, `episodes`, `results` (bỏ dòng đã bị thay). Trạng thái lấy theo lần nộp mới nhất; "lần đầu đúng x/y" lấy theo lần đầu (lần được tính). Bàn làm việc: `studioOverdue` → cảnh báo `studio-overdue`. Trang `/review/attempts/[attemptId]` tìm episode của lần nộp (RLS) rồi chuyển tới `/review/<episode>`.
+- **Duyệt đề.** Danh sách theo `n` (bỏ `sortForReview` ở màn này); `editOps.moveWithinPart` cho ↑ Lên / ↓ Xuống trong phần (ẩn khi lọc).
+- **Bản nháp đã bỏ.** Đọc qua RLS `studio_drafts` (status `discarded`, 20 bản mới nhất). `handleRestoreDraft` dùng chung `createFilled` với Nhập bài soạn sẵn: bản nháp thủ công mới, `client_id = rs-<id cũ>` (rồi `-2…-9`), cùng tên và nội dung; bản nháp đã bỏ không đổi (0024 không có đường quay lại). Bản sao là đề riêng, kể cả khi bản đã bỏ là bản sửa của đề đã duyệt.
+
