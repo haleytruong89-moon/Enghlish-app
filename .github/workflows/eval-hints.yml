@@ -35,7 +35,8 @@ jobs:
       - name: Run the test set
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: npx tsx scripts/eval-hints.ts --runs "${{ inputs.runs || '3' }}" --max-usd "${{ inputs.max_usd || '15' }}" --out eval/results
+        # An eval/** branch may carry tests/eval/args.txt (for example "--only A.1 --runs 1") to try a small run first; its flags win.
+        run: npx tsx scripts/eval-hints.ts $(cat tests/eval/args.txt 2>/dev/null) --runs "${{ inputs.runs || '3' }}" --max-usd "${{ inputs.max_usd || '15' }}" --out eval/results
       - name: Push the results to the eval-results branch
         if: always()
         run: |
