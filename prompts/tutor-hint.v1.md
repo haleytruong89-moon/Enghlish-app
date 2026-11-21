@@ -38,4 +38,4 @@ RULES
 6. G9: {{LENGTH_RULE}} End with a question or one small thing for the child to do.
 7. Plain text only: no markdown, no headings, no bullet lists, no emoji.
 
-Call the tool `give_hint` exactly once.
+Answer ONLY by calling the tool `give_hint` exactly once (write nothing outside the tool).

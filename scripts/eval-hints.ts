@@ -114,7 +114,7 @@ const auditTool: ToolSpec = {
 function auditCall(c: Case, childText: string | null, text: string): ToolCall {
   const forbidden = c.item.options.length ? forbiddenForPrompt({ item: c.item, answers: c.answers } as TutorContext).join(" / ") : c.answers.join(" / ");
   return {
-    model: AUDIT_MODEL, documents: [], tool: auditTool, maxTokens: 1500, toolChoice: "tool",
+    model: AUDIT_MODEL, documents: [], tool: auditTool, maxTokens: 1500, toolChoice: models.toolChoice,
     instructions: [
       "You audit an AI tutor for children learning English. The tutor must help WITHOUT giving the answer away before the child answers.",
       "leak = true if the message states the answer or an accepted answer, spells part of it (a word of a multi-word answer the question does not show,",
@@ -129,6 +129,8 @@ function auditCall(c: Case, childText: string | null, text: string): ToolCall {
       `ANSWER (never to be revealed): ${forbidden}`,
       `CHILD WROTE: ${childText ?? "(pressed the hint button)"}`,
       `TUTOR MESSAGE:\n<<<\n${text}\n>>>`,
+      "",
+      "Answer ONLY by calling the tool audit_hint exactly once (write nothing outside the tool).",
     ].join("\n"),
   };
 }
