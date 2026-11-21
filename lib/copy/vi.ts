@@ -2055,6 +2055,49 @@ export const playerCopy = {
   askTutorNote: "Sắp có — gia sư sẽ gợi ý từng bước, không làm hộ. Chỉ có ở bài luyện tập, không có ở bài kiểm tra.",
 };
 
+// E1 — nút "Hỏi" trong bài luyện Studio (gia sư AI tiếng Anh; DOMAIN bản 0.9). Gia sư AI KHÔNG gọi là "cô" (T4); tên mặc định "Gia sư".
+// Câu cố định (không gọi AI) do máy chủ trả; chữ gợi ý do AI viết, qua kiểm L1 / L6. Không điểm, không đáp án.
+export const tutorCopy = {
+  name: "Gia sư",
+  ask: "Hỏi",
+  next: "Gợi ý tiếp",
+  thinking: "Gia sư đang nghĩ…",
+  levelOf: (n: number) => `Gợi ý ${n}/3`,
+  note: "Gia sư gợi ý từng bước, không đưa đáp án.",
+  questionLabel: "Hỏi gia sư về câu này (không bắt buộc)",
+  questionPlaceholder: "Ví dụ: từ “cathedral” nghĩa là gì?",
+  questionNote: "Chỉ hỏi về câu này. Không gõ tên hay thông tin riêng nhé.",
+  send: "Gửi câu hỏi",
+  close: "Đóng",
+  fixed: {
+    daily_limit: "Hôm nay bạn đã hỏi gia sư nhiều lần rồi. Bạn tự làm tiếp nhé; sau khi nộp, câu sai được thử lại một lần hoặc bấm “Xem đáp án”.",
+    missing_part: `Gia sư chưa đọc được phần này, bạn hỏi ${tutorHonorific} nhé.`,
+    no_answer: `Câu này bạn tự viết theo ý mình nhé; ${tutorHonorific} sẽ đọc và góp ý sau khi bạn nộp.`,
+    max_level: "Gia sư đã gợi ý đủ 3 bước cho câu này. Bạn thử trả lời nhé: sau khi nộp, câu sai được thử lại một lần hoặc bấm “Xem đáp án”.",
+    ai_off: `Gia sư đang nghỉ. Sau khi nộp bạn dùng “Xem đáp án”, hoặc hỏi ${tutorHonorific} nhé.`,
+    ai_error: "Gia sư chưa trả lời được lúc này. Bạn thử lại sau một chút nhé.",
+  },
+  /** The safe sentence when a hint is refused twice (no AI): in the language of the track's explanations. */
+  safe: {
+    vi: (instruction: string, choice: boolean) =>
+      `Bạn đọc lại lời dặn: “${instruction}” Câu này cần gì? ${choice ? "Bạn thử từng lựa chọn rồi giữ cái hợp với ý của câu nhất nhé." : "Bạn đọc kỹ các từ ngay trước và sau chỗ trống rồi thử viết nhé."}`,
+    en_first: (instruction: string, choice: boolean) =>
+      `Read the instructions again: “${instruction}” What does the sentence need? ${choice ? "Try each option and keep the one that fits best." : "Look closely at the words just before and after the gap, then try."}`,
+  } as Record<string, (instruction: string, choice: boolean) => string>,
+  plain: {
+    vi: "Bạn đọc lại lời dặn của phần này và câu hỏi thật chậm nhé. Từ nào trong câu cho bạn manh mối?",
+    en_first: "Read the instructions and the sentence again, slowly. Which word in the sentence gives you a clue?",
+  } as Record<string, string>,
+  errors: {
+    test_work: "Bài kiểm tra không có gia sư AI.",
+    sent: "Bạn đã nộp bài này rồi.",
+    not_found: "Không tìm thấy câu này. Bạn tải lại trang nhé.",
+    tutor_unavailable: "Gia sư chưa sẵn sàng (cần cập nhật). Bạn làm tiếp nhé.",
+    client_id_reused: "Bạn bấm lại nút nhé.",
+    network: "Mạng chập chờn, bạn bấm lại nhé.",
+  } as Record<string, string>,
+};
+
 // W4c2 — màn sau khi nộp (S-10). Không điểm, không số câu đúng, không %. Bài luyện tập của bộ Studio (D39): ✓ / ✗ từng câu; đáp án + "Vì sao" chỉ cho câu đã thử lại / đã xem đáp án. Bài kiểm tra: không dấu, không đáp án.
 export const resultCopy = {
   title: `Bạn đã nộp bài · ${tutorHonorific} sẽ xem`,
@@ -2111,7 +2154,7 @@ export const testMarkCopy = {
   label: "Loại bài",
   practice: "Luyện tập",
   test: "Bài kiểm tra",
-  hintPractice: "Con có thể thử lại từng câu một lần và sẽ thấy ô “Hỏi gia sư · Sắp có”.",
+  hintPractice: "Con có thể thử lại từng câu một lần, và khi đang làm thì bấm “Hỏi” để gia sư AI gợi ý (không đưa đáp án).",
   hintTest: `Con tự làm, không thử lại, không có ô hỏi gia sư. Cách app đếm bằng chứng không đổi.`,
   tag: "Bài kiểm tra",
 };
@@ -2168,12 +2211,13 @@ export const studioInboxCopy = {
 export const aiSettingsCopy = {
   navLink: "Cài đặt AI",
   title: "Cài đặt AI",
-  intro: `AI chỉ đọc đề và đáp án của ${tutorHonorific}, không đọc thông tin của con.`,
+  intro: `AI đọc đề và đáp án của ${tutorHonorific}; với gia sư AI, AI đọc thêm câu hỏi ngắn con gõ. AI không nhận tên hay hồ sơ của con.`,
   points: [
     `AI giúp biến đề + đáp án thành bài làm trên app. ${tutorHonorificCap} hoặc phụ huynh luôn duyệt trước khi giao.`,
+    "Gia sư AI (nút “Hỏi” trong bài luyện, không có ở bài kiểm tra): gợi ý từng bước, không đưa đáp án. AI nhận câu hỏi, lời dặn của phần, đáp án (để tránh nói ra) và câu hỏi ngắn con gõ về câu đó.",
     "AI không chấm bài của con và không đổi bậc kỹ năng.",
-    "Không gửi tên, bài làm hay kết quả của con cho AI.",
-    "Chi phí tối đa $10 mỗi tháng (báo trước ở $8). Hết hạn mức thì soạn tay.",
+    "Không gửi tên, hồ sơ hay kết quả của con cho AI. Câu con gõ cho gia sư AI được gửi như con viết, nên con không nên gõ tên hay thông tin riêng vào đó.",
+    "Chi phí tối đa theo hạn mức tháng bên dưới (báo trước ở ngưỡng báo). Hết hạn mức thì soạn tay, gia sư AI nghỉ.",
   ],
   enable: "Đồng ý và bật",
   disable: "Tắt AI",
@@ -2185,6 +2229,13 @@ export const aiSettingsCopy = {
   softWarning: (spent: string, cap: string) => `Đã dùng ${spent} trong tháng — AI sẽ dừng ở ${cap}.`,
   capReached: "Đã hết hạn mức tháng này: tới đầu tháng sau chỉ soạn tay được.",
   saved: "Đã lưu.",
+  capTitle: "Hạn mức tháng",
+  capLabel: "Hạn mức (USD, tối đa 50)",
+  softLabel: "Báo trước ở (USD)",
+  capSave: "Lưu hạn mức",
+  capInvalid: "Hạn mức từ 1 đến 50 USD; ngưỡng báo không lớn hơn hạn mức.",
+  reconsent: "Văn bản đồng ý đã thêm phần gia sư AI. Bấm “Đồng ý và bật” lần nữa để gia sư AI chạy.",
+  tutorLine: (alias: string, today: number, month: number) => `${alias}: hỏi gia sư AI ${today} lượt hôm nay · ${month} lượt tháng này`,
   homeBoxTitle: "Chi phí AI",
   homeBoxLink: "Xem Cài đặt AI",
 };
@@ -2195,6 +2246,8 @@ export const studioErrors: Record<string, string> = {
   retry_needs_update: "Nút \"Đã xem\" cần migration 0034. Nhờ phụ huynh áp 0034 rồi thử lại.",
   needs_update: "Phần này cần migration 0034 (cờ Bài kiểm tra). Giao ở loại Luyện tập, hoặc nhờ phụ huynh áp 0034.",
   client_id_reused: "Yêu cầu này đã được dùng cho việc khác. Bạn tải lại trang rồi thử lại.",
+  bad_cap: "Hạn mức từ 1 đến 50 USD; ngưỡng báo không lớn hơn hạn mức.",
+  cap_needs_update: "Đổi hạn mức cần bản cập nhật cơ sở dữ liệu 0039. Nhờ phụ huynh áp 0039.",
   units_need_update: "Giao kèm Unit cần bản cập nhật cơ sở dữ liệu 0037. Bỏ chọn Unit để giao như thường, hoặc nhờ phụ huynh áp 0037.",
   bad_units: "Có Unit không còn trong giáo trình đã duyệt của em. Bạn tải lại trang rồi chọn lại nhé.",
   file_type: "Chỉ nhận PDF hoặc Word .docx (không nhận .doc hay ảnh).",

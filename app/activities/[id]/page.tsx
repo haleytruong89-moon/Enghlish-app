@@ -5,12 +5,13 @@ import { RevisionForm } from "@/components/revision/RevisionForm";
 import { ActivityNote } from "@/components/student/ActivityNote";
 import { SourceReader } from "@/components/student/SourceReader";
 import { TaskLines } from "@/components/student/TaskLines";
+import { TaskParts } from "@/components/student/TaskParts";
 import { Player } from "@/components/student/player/Player";
 import { StudentDeskShell } from "@/components/student/desk/StudentDeskShell";
 import { WorkForm } from "@/components/student/WorkForm";
 import { concepts, messages, modeLabels, revisionCopy, work } from "@/lib/copy/vi";
 import { loadDeskBase } from "@/lib/student/desk";
-import { loadActivityPage, loadIsTest, loadResultView, loadRevisionPage } from "@/lib/work/load";
+import { loadActivityPage, loadIsTest, loadResultView, loadRevisionPage, loadTaskParts } from "@/lib/work/load";
 import { formatDmy, formatHm, stepTitle } from "@/lib/work/view";
 
 export const dynamic = "force-dynamic";
@@ -91,7 +92,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
 
   // W4c2: questions are done one at a time in the Player; writing steps keep the plain form below.
   if (a.shape === "answers" && a.step.items.length > 0) {
-    const [base, isTest, result] = await Promise.all([loadDeskBase(), loadIsTest(id, a.mode), a.attempts.length > 0 ? loadResultView(id) : Promise.resolve(null)]);
+    const [base, isTest, result, parts] = await Promise.all([loadDeskBase(), loadIsTest(id, a.mode), a.attempts.length > 0 ? loadResultView(id) : Promise.resolve(null), loadTaskParts(id)]);
     if (base.kind === "login") redirect("/login");
     if (base.kind === "ok") {
       const aside = (
@@ -101,7 +102,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
             <h2 id="task" className="text-sm font-semibold text-muted">
               {work.taskTitle}
             </h2>
-            <TaskLines prompt={a.step.promptEn} className="text-[16px] font-semibold leading-snug" />
+            {parts ? <TaskParts parts={parts} /> : <TaskLines prompt={a.step.promptEn} className="text-[16px] font-semibold leading-snug" />}
             <p className="text-sm text-muted">
               <span lang="en">{a.bigQuestionEn}</span>
               {a.step.timeMin ? ` · ${work.minutes(a.step.timeMin)}` : ""}
@@ -114,7 +115,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
       return (
         <StudentDeskShell active="today" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest}>
           {result || a.canSubmit ? (
-            <Player key={id} activity={a} isTest={isTest} initialResult={result} sentAt={!result && last ? last.submittedAt : null} aside={aside} />
+            <Player key={id} activity={a} isTest={isTest} initialResult={result} sentAt={!result && last ? last.submittedAt : null} aside={aside} parts={parts} />
           ) : (
             <section data-testid="already-submitted" className="mx-auto flex max-w-2xl flex-col gap-2 rounded-2xl border border-line bg-white p-4">
               <p role="status" className="text-[15px] font-semibold text-accent">

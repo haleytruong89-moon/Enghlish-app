@@ -31,7 +31,7 @@ export type RetryInbox = { count: number; attempts: RetryAttempt[] };
 export type PendingInbox = { count: number; attempts: PendingAttempt[] };
 export type AiSettingsView = {
   enabled: boolean; monthlyCapUsd: number; softCapUsd: number; spentUsd: number; runsMonth: number; softReached: boolean; updatedAt: string | null;
-  learners: { id: string; alias: string; isTest: boolean; aiText: boolean | null }[];
+  learners: { id: string; alias: string; isTest: boolean; aiText: boolean | null; aiTextVersion: string | null; tutorToday: number | null; tutorMonth: number | null }[];
 };
 
 export type DraftPageData = { draft: DraftView; context: StudioContext; issues: Issue[]; summary: DraftSummary; can_approve: boolean; gate: GateState | null };

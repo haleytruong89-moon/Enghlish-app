@@ -9,9 +9,11 @@ import {
 import { type ResultView as ResultData } from "@/lib/student/result";
 import { questionNumber } from "@/lib/studio/view";
 import { instructionFor } from "@/lib/studio/promptParts";
+import { leadOf, partForItem, splitBanks, type PartLead, type TaskPart } from "@/lib/studio/taskParts";
 import { ASSISTANCE_VALUES, type Assistance, type DraftContent, type Receipt, type SupportedActivityView } from "@/lib/work/types";
 import { baseRevisionOf, formatDmy, formatHm, nonEmptyAnswers } from "@/lib/work/view";
 import { AskTutorSlot } from "./AskTutorSlot";
+import { AskTutor, type TutorTurnView } from "./AskTutor";
 import { QuestionCard } from "./QuestionCard";
 import { QuestionDots } from "./QuestionDots";
 import { ResultView } from "./ResultView";
@@ -26,7 +28,7 @@ type Phase = "questions" | "review" | "receipt" | "result";
  * for the same content), the help declaration is required, the draft is the child's own. The reply is a receipt: nothing here says whether an answer was right.
  * A practice work shows the dimmed "Hỏi gia sư · Sắp có" slot; a test does not (and has no retry).
  */
-export function Player({ activity, isTest, initialResult, sentAt, aside }: { activity: SupportedActivityView; isTest: boolean; initialResult: ResultData | null; /** Work sent before but no result view to show (before migration 0034): start at the receipt, never at an empty player. */ sentAt?: string | null; aside?: ReactNode }) {
+export function Player({ activity, isTest, initialResult, sentAt, aside, parts = null }: { activity: SupportedActivityView; isTest: boolean; /** E0: the parts of a Studio test (eng_my_task_parts); null = read the lead from the task text. */ parts?: TaskPart[] | null; initialResult: ResultData | null; /** Work sent before but no result view to show (before migration 0034): start at the receipt, never at an empty player. */ sentAt?: string | null; aside?: ReactNode }) {
   const { step, draft } = activity;
   const items = step.items;
   const initial: DraftContent = draft?.content ?? {};
@@ -42,6 +44,8 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
   const [pasteSeen, setPasteSeen] = useState(initial.pasted ?? false);
   const [assist, setAssist] = useState<Assistance[]>(initial.assistance ?? []);
   const [selfCheck, setSelfCheck] = useState<Record<number, boolean>>({});
+  // E1: the tutor's turns per question (kept while the child moves between questions).
+  const [tutorTurns, setTutorTurns] = useState<Record<string, TutorTurnView[]>>({});
   const [flow, setFlow] = useState<SaveFlow>(() => initialSaveFlow(!!draft));
   const [otherTab, setOtherTab] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -388,10 +392,20 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
                   setAnswers(next);
                 }}
                 onCommit={() => void saveRef.current()}
-                lead={instructionFor(step.promptEn, numbers[clampIndex(idx, total)]!)}
+                lead={leadFor(parts, item.id, step.promptEn, numbers[clampIndex(idx, total)]!)}
               >
-                {!isTest ? <AskTutorSlot /> : null}
+                {/* Studio practice (parts known, E0): the real "Hỏi" sits under the question; other work keeps the dimmed slot. Never on a test (L2). */}
+                {!isTest && !parts ? <AskTutorSlot /> : null}
               </QuestionCard>
+              {!isTest && parts ? (
+                <AskTutor
+                  key={`ask-${item.id}`}
+                  activityId={activity.activityId}
+                  itemId={item.id}
+                  turns={tutorTurns[item.id] ?? []}
+                  onTurn={(t) => setTutorTurns((m) => ({ ...m, [item.id]: [...(m[item.id] ?? []), t] }))}
+                />
+              ) : null}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <button type="button" disabled={idx === 0} onClick={() => go(prevIndex(idx, total))} data-testid="player-prev" className="min-h-12 rounded-xl border border-line bg-white px-5 text-base font-semibold disabled:opacity-40">
                   ‹ {c.prev}
@@ -416,3 +430,12 @@ export function Player({ activity, isTest, initialResult, sentAt, aside }: { act
     </div>
   );
 }
+
+/** The lead above one question: its own part (E0); before 0038 / for other work, the matching line of the task text, if any. */
+function leadFor(parts: TaskPart[] | null, itemId: string, prompt: string, n: number): PartLead | null {
+  const part = parts ? partForItem(parts, itemId) : null;
+  if (part) return leadOf(part);
+  const line = instructionFor(prompt, n);
+  return line ? { title: null, ...splitBanks(line) } : null;
+}
+

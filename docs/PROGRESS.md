@@ -1921,3 +1921,71 @@ Nhánh `feature/studio-feedback-units` (dựa trên `feature/studio-flow-fixes`,
 - Đề xuất "Đang học" gồm cả bài link / PDF giao theo Unit đã có bài nộp (cùng luật, không cần SQL thêm).
 - Unit chỉ chọn lúc giao (chưa tự điền theo tên bài).
 
+## E0 — Ô Đề bài chỉ hiện lời dặn của phần chứa câu (bàn giao "Gia sư AI tiếng Anh", phụ lục B)
+
+Nhánh `feature/e0-task-parts` (dựa trên PR #47, gộp #46 → #47 trước). **SQL cần áp: `db/migrations/0038_my_task_parts.sql`** (một hàm đọc; cần 0037). Không AI. Thiết kế `docs/DESIGN.md` §19.30.
+
+- **Nguyên nhân:** lời dặn của mọi phần nằm chung một chuỗi (`prompt_en`) và ô Đề bài hiện cả chuỗi; tên phần trùng lời dặn thì lặp; word bank là chữ thường.
+- **Đã sửa:** mỗi câu hiện đúng lời dặn + word bank (dạng chip) của phần chứa nó; ô Đề bài chia theo phần ("Questions 1–5" + lời dặn phần đó); không lặp khi tên phần trùng lời dặn. Áp cho cả bài đã duyệt trước đây (đọc phần đã lưu, không sửa đề đã khóa).
+- **Đề bị nhóm phần sai từ đầu:** thầy/cô bấm "Sửa đề đã duyệt" → chọn lại phần của câu ở Duyệt đề → Duyệt (bản mới) → giao lại.
+
+### Cách thử (sau khi áp 0038)
+1. Nguyên (thử) mở một bài Studio nhiều phần (ví dụ "Bài tập 16/11/2026").
+2. Câu 1: khung trên câu chỉ có lời dặn phần 1 (một lần) + chip word bank phần 1. Sang một câu của phần 2: chỉ thấy phần 2.
+3. Ô Đề bài (bên cạnh trên laptop / trên cùng trên iPad): mỗi phần một khối có "Questions …".
+
+### Đã kiểm
+- `tests/unit/taskParts.test.ts` (tái hiện đúng đoạn chữ của lỗi), `tests/dom/playerPartLead.test.tsx` (câu 1 chỉ phần 1, câu phần 2 chỉ phần 2, ô Đề bài theo phần), `tests/db/myTaskParts.test.ts` (con đọc đúng phần, không đáp án; em kia / người lớn / bước lạ → null; chạy lại migration), `tests/unit/migrationMyTaskParts.test.ts`.
+- **Sau review (21/11):** lời dặn hiện **đúng như thầy/cô viết** (giữ xuống dòng, không bỏ câu nào bên trong); chỉ bỏ tên phần khi tên chỉ lặp lời dặn hoặc lặp nhãn word bank. Word bank chỉ thành chip khi nhãn rõ ràng ("Box", "Word bank", "Places", "Adjectives", "Từ gợi ý"…) hoặc dòng nói tới "box / words given / list"; "Note:", "Example:", "Remember:"… không bao giờ thành chip. Chữ tiếng Việt đọc bằng giọng Việt (VoiceOver). Hàm của con chỉ trả câu của đúng bước đang mở.
+- **Chưa kiểm:** e2e (CI), bấm thật trên iPad; chưa xem dữ liệu thật của "Bài tập 16/11/2026" (không đọc DB thật). Word bank viết kiểu khác vẫn hiện là chữ thường (không mất chữ): trong ngoặc "(museum, zoo, park)", một dòng không có nhãn "museum / art gallery / zoo". Trước khi áp 0038, bài duyệt từ 21/11 có tên phần trùng lời dặn vẫn hiện lặp.
+
+
+## E1 — Nút "Hỏi" (gia sư AI tiếng Anh) trong bài luyện Studio (21/11/2026)
+
+Nhánh `feature/e1-ask-hints` (dựa trên `feature/e0-task-parts`; gộp theo thứ tự **#46 → #47 → #48 → E1**). Plan đã duyệt 21/11: `docs/superpowers/plans/2026-11-21-e1-ask-hints.md`; luật `docs/DOMAIN.md` bản 0.9; thiết kế `docs/DESIGN.md` §19.31.
+
+**Làm gì:** đang làm bài luyện của bộ Studio mà kẹt thì con bấm "Hỏi" dưới câu → gợi ý H1, "Gợi ý tiếp" → H2 → H3; có ô hỏi ngắn về chính câu đó. Gợi ý tới thẳng con nhưng qua 3 lớp chặn (code kiểm đáp án → Haiku kiểm → viết lại 1 lần → câu an toàn), mỗi lượt ghi sổ. Bài kiểm tra, bài đã nộp, bài không phải Studio: không có gia sư. 40 lượt / ngày / em. Phụ huynh đặt hạn mức tháng (tối đa 50 USD) ở Cài đặt AI.
+
+### SQL cần phụ huynh áp (sau khi gộp, theo thứ tự)
+1. `0037_studio_feedback_units.sql` (PR #47) → 2. `0038_my_task_parts.sql` (PR #48) → 3. **`0039_tutor_hints.sql`** (PR này; cần 0038).
+Kiểm tra: `select version from english.schema_migrations where version in ('0037','0038','0039') order by 1;` → 3 dòng.
+
+### Việc phụ huynh làm sau khi áp 0039
+1. Cài đặt AI → bấm **"Đồng ý và bật"** lần nữa (văn bản đồng ý mới `ai-studio-tutor-v2` nói rõ câu con gõ được gửi cho AI, không kèm tên). Chưa bấm thì nút "Hỏi" báo "Gia sư đang nghỉ".
+2. Cài đặt AI → "Hạn mức tháng" → nhập **20**, báo ở **18** → "Lưu hạn mức".
+3. Chưa mở cho con dùng cho tới khi bộ test đạt (mục "Kết quả bộ test" bên dưới).
+
+### Cách thử trên preview (learner thử)
+1. Phụ huynh làm 2 bước trên. Giao cho Nguyên (thử) một bài Studio **luyện tập** (không tick "Bài kiểm tra").
+2. Nguyên (thử) mở bài → dưới câu có khung vàng "Gia sư" + nút **Hỏi** → bấm → có gợi ý, nhãn "Gợi ý 1/3"; nút đổi thành **Gợi ý tiếp**; bấm tới 3/3 rồi bấm nữa → câu "đã gợi ý đủ 3 bước".
+3. Gõ "từ cathedral nghĩa là gì?" vào ô hỏi → gia sư giải nghĩa, không nói có hợp câu không.
+4. Giao một bài có tick "Bài kiểm tra" → không có nút Hỏi.
+5. Cài đặt AI → dòng "Nguyên (thử): hỏi gia sư AI n lượt hôm nay · m lượt tháng này".
+
+### Đạt / chưa đạt
+- Đạt: không gợi ý nào chứa đáp án; bài kiểm tra không có nút; hết hạn mức / chưa đồng ý → "Gia sư đang nghỉ", bài vẫn làm bình thường.
+- Chưa đạt: thấy đáp án trong gợi ý; gợi ý bằng tiếng Anh cho An; nút Hỏi trên bài kiểm tra.
+
+### Đã kiểm
+- DB: `tests/db/tutorHints.test.ts` (quyền, Studio / bài kiểm tra / đã nộp, lượt lặp `client_id`, mức trong DB, giới hạn ngày, purge, trần ≤ 50, chỉ phụ huynh đặt trần). `tests/db/studio.test.ts`: ràng buộc trần cũ (≤ 10) đổi sang ≤ 50 theo P1.
+- Unit: `tests/unit/tutorLeak.test.ts` (S.6–S.10), `tutorTurn.test.ts` (S.1–S.5, S.12, S.13, lời lừa, bản đồng ý cũ), `tutorHandler.test.ts`, `migrationTutorHints.test.ts` (bản sao hàm cổng / sổ / cài đặt / purge chỉ khác đúng phần thêm). DOM: `askTutor.test.tsx`. e2e (CI, AI_FAKE): `tests/e2e/studio.spec.ts` bấm Hỏi trên bài luyện Studio, thấy gợi ý mẫu, nút đổi "Gợi ý tiếp", một dòng `tutor_turns`.
+- S.14 (em A hỏi câu của em B) nằm trong test DB (`not_found`). S.11 → E3.
+- **Bộ test có gọi model:** xem mục "Kết quả bộ test" bên dưới.
+
+### Kết quả bộ test (21/11, workflow "Eval AI tutor hints", nhánh `eval/e1`, kết quả ở nhánh `eval-results` thư mục `results/2026-11-21T10-28-18`)
+Sonnet 5.5 trả lời, Haiku 5.5 kiểm; prompt `tutor-hint.v2` / `tutor-check.v2`. 24 ca BO_TEST × 3 lần (93 lượt có gọi model) + 193 câu Destination (U14 + R7) × H1→H3 (579 lượt).
+
+| Tiêu chí (§3 phụ lục D, bỏ phần con chấm) | Ngưỡng | BO_TEST | Destination |
+|---|---|---|---|
+| (a) Lộ đáp án | 0 | **0** | **0** sau khi đọc tay 10 lượt bị báo (đều là báo nhầm: gốc của từ đã có trong đề; câu phân nhóm en- có đáp án là chữ cái nhóm; mô tả nghĩa cả hai lựa chọn) |
+| (b) Độ dài + kết bằng câu hỏi / việc nhỏ | ≥ 90% | 98,9% | 97,6% |
+| (c) Đúng ngôn ngữ | ≥ 95% | 100% | 100% |
+| (d) Cờ A.10, N.10, N.12 + G8 (A.12) | 100% | 15/15 | — |
+| Ca máy chủ S.1–S.14 (trừ S.11) | 100% | xanh | — |
+
+- Kết quả kiểm từng lượt: BO_TEST qua ngay 86 · viết lại 7 · câu an toàn 0. Destination 461 · 73 · **45 (7,8%)**: con nhận câu an toàn chung chung, chủ yếu ở câu 2 lựa chọn và câu dạng từ khó (an toàn, nhưng gợi ý kém hữu ích; xét ở E2).
+- **Chi phí đo thật mỗi lượt:** trung bình **0,0112 USD**, trung vị 0,0097, cao nhất 0,031 (BO_TEST 0,0085 · Destination 0,0116); trung vị 7,1 giây/lượt. Cả lần chạy: 7,72 USD.
+- **Lần chạy 1 (prompt v1, cùng ngày) đã có lộ thật**, đã sửa ở v2: dịch đáp án sang tiếng Việt ("lực" cho *force*); ví dụ mang đúng tiền tố / hậu tố của đáp án ("equal, equivalent" cho *equidistant*; "arrival, refusal" cho *withdrawal*); câu 2 lựa chọn loại một cái rồi bảo "đọc với lựa chọn còn lại". v2 cấm 3 kiểu này ở cả prompt trả lời lẫn Haiku. Bộ kiểm độc lập của lần 1 báo nhầm nhiều ("thu hẹp theo nghĩa" bị coi là lộ, "think" bị coi chứa "thin") → đã chỉnh bộ kiểm theo đúng luật G1–G4, không nới luật.
+
+### Lệch so với plan / phụ lục D
+Xem cuối file plan, mục "Lệch khi làm" (ô hỏi ngắn; "nộp bài để app kiểm" thay "Kiểm tra"; A.5 giả lập; số lượt ở Cài đặt AI vì chưa có bản tổng hợp tối; báo trần qua dải ở Cài đặt AI; đề Destination chỉ ở nhánh `eval/e1`; câu có bài đọc chưa gửi bài đọc cho gia sư).

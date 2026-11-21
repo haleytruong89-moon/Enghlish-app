@@ -3,6 +3,8 @@ import { getAuthUser } from "@/lib/auth/session";
 import type { MyActivityNote, MyFeedbackItem, MyRevisionView } from "@/lib/revision/types";
 import { handleStudentActivity, handleStudentActivityNote, handleStudentHome, handleStudentResultView, handleStudentRevision, handleStudentTestMarks } from "./handlers";
 import { createSupabaseWorkStore } from "./supabaseStore";
+import { createUserClient } from "@/lib/supabase/server";
+import { taskPartsFromRaw, type TaskPart } from "@/lib/studio/taskParts";
 import type { ReviewItem } from "@/lib/levels/types";
 import type { ResultView } from "@/lib/student/result";
 import type { ActivityView, HomeView } from "./types";
@@ -65,3 +67,22 @@ export async function loadIsTest(activityId: string, mode: string): Promise<bool
   const res = await handleStudentTestMarks({ user, store: createSupabaseWorkStore() }).catch(() => null);
   return !!res?.body.activityIds.includes(activityId);
 }
+
+/**
+ * E0: the parts of a Studio test for the signed-in child (eng_my_task_parts, 0038; it checks auth.uid() itself, so the USER client).
+ * null = not a Studio test, not this child's, before 0038, or any error: the screen then reads the task text as before.
+ */
+export async function loadTaskParts(activityId: string): Promise<TaskPart[] | null> {
+  try {
+    const { data, error } = await (await createUserClient()).rpc("eng_my_task_parts", { p_activity: activityId });
+    if (error) {
+      // Missing function = 0038 not applied yet (expected); anything else is a real fault worth a trace (the screen still works).
+      if (error.code !== "PGRST202" && error.code !== "42883") console.warn(`eng_my_task_parts: ${error.code ?? "error"}`);
+      return null;
+    }
+    return taskPartsFromRaw(data);
+  } catch {
+    return null;
+  }
+}
+
