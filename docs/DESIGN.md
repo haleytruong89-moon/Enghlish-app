@@ -569,3 +569,17 @@ Trang `/learners/<id>/delete` (chỉ phụ huynh; gia sư/học sinh 403, em ngo
 - **"Đã xem ✓"** (`ItemCard`): câu có cờ "Cần xem" có nút xóa cờ (`needs_review=false`, `review_reason=null`). Chỉ sửa nội dung bản nháp và được lưu khi bấm Lưu nháp hoặc Duyệt. Bộ lọc "Chỉ câu cần xem" bỏ câu đó.
 - **Bài đọc ↔ câu (16/11, sau PR #43).** Thẻ bài đọc ở Duyệt đề ghi các câu dùng nó (`lib/studio/passageUse.ts`, "Dùng cho câu 1–10"; chưa có câu nào thì nhắc). Câu có `passage_ref` mang nhãn "📖 Bài đọc P1". Chỉ hiển thị, không đổi dữ liệu. Màn của con vẫn hiện mọi bài đọc ở đầu bài (nguồn của bước, 0024).
 - **Giới hạn đã biết.** Bài Studio đã giao **chưa tính vào độ phủ Giáo trình** (cần SQL, để sau). Câu `gap` / `word_form` tự chấm theo đáp án + `accepted`, nên đáp án sai sẽ chấm sai cho con: thầy/cô soát kỹ trước khi Duyệt.
+
+### 19.27. Duyệt đề: xóa phần, tự đánh số lại, bỏ nháp có hỏi lại, lỗi chặn Duyệt ghi rõ (21/11/2026, không migration, không AI)
+
+- **Vì sao.** 20/11 thầy/cô của Nguyên muốn giữ 2 trong 4 bài của "Word formation (M–P)": không có nút xóa phần; xóa từng câu làm số câu hụt (`numbering`) nên Duyệt bị chặn; bản nháp sau đó mất (nhiều khả năng do "Bỏ bản nháp", một cú bấm, nằm cạnh Duyệt). Tái hiện trên database cục bộ bằng đúng file đó: giữ M + N thì duyệt được; giữ O + P hoặc M + O thì bị chặn, ép duyệt thì database từ chối khung đề ("a range outside 1..total_items").
+- **`lib/studio/editOps.ts`** (thuần, không đổi đầu vào): `renumber` (thứ tự phần = theo **số câu hiện có** của phần, để đề có danh sách phần lệch thứ tự vẫn giữ số của bản giấy; phần chưa có câu đứng ngay sau phần liệt kê trước nó; trong phần: số cũ, rồi vị trí cũ; số mới 1..N), `removeItem`, `removePart`, `addItem` (cuối phần của nó), `addPart` (chữ cái trống đầu tiên), `moveToPart` (cuối phần mới), `numberingBroken` (chỉ đúng khi đánh số lại sẽ **đổi số** của một câu nào đó).
+- **Màn Duyệt đề** (`DraftEditor`, `ItemCard`):
+  - Mỗi phần có **"Xóa phần"** (`window.confirm`, ghi mã phần và số câu).
+  - Mọi thao tác cấu trúc đi qua `editOps`, nên số câu luôn 1..N. Bản nháp tới với số hỏng có nút **"Đánh số lại"**.
+  - Ô "Số câu" bị bỏ (đổi `key` của React theo từng phím gõ; khi trùng số thì một lần sửa ghi vào hai câu). Mọi sửa đổi tìm câu theo **chính đối tượng**, không theo số.
+  - **"Bỏ bản nháp"** hỏi lại, nằm riêng ở cuối, sau một đường kẻ.
+  - Khi Duyệt bị chặn: hộp đỏ dưới nút liệt kê từng lỗi ("Câu 12: Thiếu đáp án", 8 dòng đầu + "và n lỗi khác"); bấm thì cuộn tới câu.
+- **Không đổi:** đề đã duyệt (bất biến; "Sửa đề đã duyệt" vẫn tạo bản nháp + phiên bản mẫu mới), máy chủ, database, màn của con. Bài đọc của phần đã xóa vẫn nằm trong bản nháp nhưng không gửi cho con (`buildStudioBuild` chỉ lấy bài đọc có câu dùng).
+- **Chưa có:** đổi thứ tự câu trong một phần; xem lại / khôi phục bản nháp đã bỏ.
+

@@ -27,7 +27,7 @@ export function ItemCard({
     onChange({ reading_skill_key: t.key, tag_key: null, target_id: skill });
   }
   return (
-    <li data-testid={`item-${item.n}`} className="flex flex-col gap-2 rounded-xl border border-line bg-white p-4">
+    <li id={`studio-item-${item.n}`} data-testid={`item-${item.n}`} className="flex flex-col gap-2 rounded-xl border border-line bg-white p-4">
       <div className="flex flex-wrap items-center gap-2">
         <strong>{studioCopy.itemLabel(item.n)}</strong>
         {item.passage_ref && passages.some((p) => p.ref === item.passage_ref) ? (
@@ -57,13 +57,9 @@ export function ItemCard({
             </button>
           </>
         ) : null}
-        <button type="button" onClick={onRemove} className="ml-auto min-h-11 text-sm text-muted underline">{studioCopy.removeItem}</button>
+        <button type="button" onClick={onRemove} data-testid={`item-${item.n}-remove`} className="ml-auto min-h-11 text-sm text-muted underline">{studioCopy.removeItem}</button>
       </div>
-      <div className="grid gap-2 sm:grid-cols-3">
-        <label className="flex flex-col text-xs font-semibold">
-          {studioCopy.number}
-          <input type="number" min={1} max={300} value={item.n} onChange={(e) => onChange({ n: Number(e.target.value) })} className={field} />
-        </label>
+      <div className="grid gap-2 sm:grid-cols-2">
         <label className="flex flex-col text-xs font-semibold">
           {studioCopy.part}
           <select value={item.part} onChange={(e) => onChange({ part: e.target.value })} className={field}>
