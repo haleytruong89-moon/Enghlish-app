@@ -44,7 +44,7 @@ export function StudioAssignedTable({ rows }: { rows: StudioAssignedRow[] | null
                 <p className="flex flex-wrap gap-x-5 text-sm">
                   {r.episodeId ? (
                     <Link href={`/review/${r.episodeId}`} data-testid={`studio-assigned-open-${r.instanceId}`} className="inline-flex min-h-11 items-center font-semibold text-accent underline">
-                      {c.openWork}
+                      {r.feedbackReady ? c.openWorkFeedback : c.openWork}
                     </Link>
                   ) : null}
                   {r.status === "waiting" ? (

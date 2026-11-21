@@ -26,12 +26,12 @@ describe("*_studio_feedback_units.sql (found by suffix)", () => {
 
   it("every function is security definer with an empty search_path; writers and the adult read are for service_role only", () => {
     const starts = [...code.matchAll(/create or replace function english\.(\w+)\(/g)].map((m) => m[1]!);
-    expect(starts.sort()).toEqual(["eng_assign_studio_v3", "eng_my_seen", "eng_purge_learner", "eng_purge_preview", "eng_student_done", "eng_studio_feedback", "eng_write_studio_feedback"]);
+    expect(starts.sort()).toEqual(["eng_assign_studio_v3", "eng_my_seen", "eng_purge_learner", "eng_purge_preview", "eng_sent_work_units", "eng_student_done", "eng_studio_feedback", "eng_write_studio_feedback"]);
     for (const name of starts) {
       expect(fnBody(code, name), name).toMatch(/set search_path = ''/);
       expect(fnBody(code, name), name).toMatch(/security definer/);
     }
-    for (const f of ["eng_write_studio_feedback(uuid, text, jsonb, uuid, uuid, text)", "eng_studio_feedback(uuid, uuid)", "eng_assign_studio_v3(uuid, date, date, boolean, uuid, text, jsonb)"]) {
+    for (const f of ["eng_write_studio_feedback(uuid, text, jsonb, uuid, uuid, text)", "eng_studio_feedback(uuid, uuid)", "eng_assign_studio_v3(uuid, date, date, boolean, uuid, text, jsonb)", "eng_sent_work_units(uuid)"]) {
       expect(code, f).toContain(`revoke execute on function english.${f} from public, anon, authenticated;`);
       expect(code, f).toContain(`grant execute on function english.${f} to service_role;`);
     }
@@ -58,9 +58,21 @@ describe("*_studio_feedback_units.sql (found by suffix)", () => {
     const done0 = squash(fnBody(read("0033_paper_link_submit.sql"), "eng_student_done"));
     const done = squash(fnBody(sql, "eng_student_done"));
     expect(done).toBe(done0.replace(squash("where c.attempt_id = t.id ) x),"), squash("where c.attempt_id = t.id union all select stf.created_at from english.studio_feedback stf where stf.attempt_id = t.id ) x),")));
-    const seen = fnBody(code, "eng_my_seen");
-    expect(seen).toContain("from english.studio_feedback f");
-    expect(seen).not.toMatch(/author|display_name|correct|total_items|results/);
+    // eng_my_seen = the 0033 body with exactly these five edits (and nothing else)
+    let seen0 = squash(fnBody(read("0033_paper_link_submit.sql"), "eng_my_seen"));
+    for (const [a, b] of [
+      ["'fb_at', coalesce(fb.created_at, sf.created_at),", "'fb_at', coalesce(fb.created_at, sf.created_at, stf.created_at),"],
+      ["'praise', coalesce(fb.praise, sf.praise),", "'praise', coalesce(fb.praise, sf.praise, stf.praise),"],
+      ["when fb.id is null and sf.id is null then null", "when fb.id is null and sf.id is null and stf.id is null then null"],
+      ["case when fb.id is not null then fb.items else sf.items end", "case when fb.id is not null then fb.items when sf.id is not null then sf.items else stf.items end"],
+      ["case when sf.id is not null then 'note' end", "case when sf.id is not null or stf.id is not null then 'note' end"],
+      ["order by f.created_at desc limit 1) sf on true), '[]'::jsonb));",
+       "order by f.created_at desc limit 1) sf on true left join lateral ( select f.* from english.studio_feedback f where h.src = 'attempt' and f.attempt_id = h.ref and not exists (select 1 from english.studio_feedback f2 where f2.supersedes_id = f.id) order by f.created_at desc limit 1) stf on true), '[]'::jsonb));"],
+    ] as const) {
+      expect(seen0, a).toContain(squash(a));
+      seen0 = seen0.replace(squash(a), squash(b));
+    }
+    expect(squash(fnBody(sql, "eng_my_seen"))).toBe(seen0);
   });
 
   it("purge = the 0036 body with ONLY the two new deletes (Units before the curricula, feedback before attempts) and receipt keys", () => {

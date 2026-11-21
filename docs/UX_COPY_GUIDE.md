@@ -345,3 +345,12 @@ Ba khối cho con trong `lib/copy/vi.ts`: `levelsStudentCopy`, `candoCopy`, `the
 | Người lớn · Hồ sơ cấp · khối "Ngày ấy – bây giờ" | "Chọn hai bài viết của {em} trên app để em tự thấy mình đã tiến bộ. Bài "ngày ấy" phải nộp trước bài "bây giờ" ít nhất một ngày." · ô "Ngày ấy (bài cũ)" / "Bây giờ (bài mới)" · "Lời nhắn cho em (tối đa 200 ký tự, không ghi điểm)" · **Lưu lựa chọn** · **Ẩn thẻ với em** · phụ huynh: "Chỉ {thầy/cô} của em chọn. Phụ huynh chỉ xem." · lời nhắn ghi điểm: "Lời nhắn không được ghi điểm, phần trăm hay xếp loại." |
 
 Khác với kế hoạch: câu giới thiệu "Mỗi điều là một việc {t} đã thấy bạn tự làm được, có bài làm làm bằng chứng." (18 chữ) tách thành hai câu để đủ ≤ 15 chữ (test canh chữ); thẻ cấp **không có "Hướng tới"** (bỏ sau review; để sau nếu có cấp mục tiêu riêng). Ô chọn của người lớn gắn nhãn "bài giấy gõ lại" cho bài do thầy/cô gõ lại.
+
+## 0037 (21/11/2026) — Góp ý cho bài làm trên app · Unit của bài
+
+- `studioFeedbackCopy` (trang xem bài, người lớn): dùng lại các nhãn của `submissionFeedbackCopy` (Góp ý cho con · Khen · Cần sửa…); chỉ đổi lời giới thiệu ("Đây chỉ là lời nhắn: không yêu cầu con làm lại bài") và lỗi `feedback_unavailable` (cần 0037), `not_found`, `attempt_replaced`.
+- `studioAssignedCopy`: `openWork` "Xem cả bài làm" (trước 0037) / `openWorkFeedback` "Xem cả bài làm · góp ý"; `units` "Unit U13, U14"; `feedbackGiven` "Đã góp ý".
+- `studioCopy.assignUnits` "Unit của bài (không bắt buộc)" / "Unit của bài: U14"; `assignUnitsHelp` nói rõ app chỉ **đề xuất** "Đang học" khi đã có bài nộp, người lớn bấm.
+- `curriculumCopy.workProposeTitle` "Đã có bài nộp cho các Unit này" (không ghi "con": bài người lớn nộp thay cũng tính), `workProposeHelp` xưng "bạn" (thầy/cô và phụ huynh đều bấm được), `workProposeLine` "U14 · tên bài, tên bài + n bài".
+- `studioErrors`: `units_need_update` (cần 0037), `bad_units`, `client_id_reused`.
+- Con thấy ở Đã xem: câu khen + điều cần sửa như góp ý bài nộp (không tên người viết, không điểm).

@@ -8,14 +8,21 @@ import type { UnitStatus } from "./types";
 export type SentWorkUnit = { curriculumId: string; unitCode: string; title: string; sentAt: string };
 export type WorkProposal = { code: string; titles: string[]; lastSentAt: string };
 
-export function proposeFromSentWork(curriculumId: string, rows: readonly SentWorkUnit[], statusOf: Readonly<Record<string, UnitStatus>>): WorkProposal[] {
+export function proposeFromSentWork(
+  curriculumId: string,
+  rows: readonly SentWorkUnit[],
+  statusOf: Readonly<Record<string, UnitStatus>>,
+  /** Units the version in use marks "bỏ qua": never proposed (their status reads "not_started"). */
+  skipped: ReadonlySet<string> = new Set(),
+): WorkProposal[] {
   const by = new Map<string, WorkProposal>();
   for (const r of rows) {
     if (r.curriculumId !== curriculumId) continue;
     // Only Units of the version in use that have not started (a unit dropped in a later version has no status here).
-    if (statusOf[r.unitCode] !== "not_started") continue;
+    if (statusOf[r.unitCode] !== "not_started" || skipped.has(r.unitCode)) continue;
     const p = by.get(r.unitCode) ?? { code: r.unitCode, titles: [], lastSentAt: r.sentAt };
-    if (!p.titles.includes(r.title)) p.titles.push(r.title);
+    const title = r.title.trim();
+    if (title && !p.titles.includes(title)) p.titles.push(title);
     if (r.sentAt > p.lastSentAt) p.lastSentAt = r.sentAt;
     by.set(r.unitCode, p);
   }

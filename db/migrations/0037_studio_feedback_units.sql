@@ -10,6 +10,8 @@
 --      eng_assign_studio_v3 = eng_assign_studio_v2 (0034, không đổi) + Unit trong cùng giao dịch; gửi lại cùng client_id phải cùng Unit.
 --      Không tự đổi trạng thái Unit: app chỉ ĐỀ XUẤT "Đang học" khi con đã nộp (DOMAIN §5.1), người lớn bấm (eng_set_unit_status, 0026).
 --   5. eng_purge_learner / eng_purge_preview: chép NGUYÊN thân 0036 + hai bảng mới (xóa trước attempts / activity_instances / giáo trình).
+--   6. eng_sent_work_units (người lớn đọc, service_role sau requireAccess): Unit của bài ĐÃ NỘP (bài Studio có Unit; bài link / PDF giao theo Unit,
+--      0029) để trang Giáo trình đề xuất "Đang học". Bỏ bài link / PDF đã rút và bước Studio đang bị bỏ qua. Một dòng mỗi (giáo trình, Unit, bài).
 -- Idempotent; chỉ thêm. Không đụng schema public. Cần 0036 đã áp.
 
 do $guard$
@@ -42,6 +44,8 @@ create table if not exists english.studio_feedback (
 create unique index if not exists studio_feedback_supersedes_once on english.studio_feedback(supersedes_id) where supersedes_id is not null;
 create unique index if not exists studio_feedback_first_once on english.studio_feedback(attempt_id) where supersedes_id is null;
 create index if not exists studio_feedback_learner_idx on english.studio_feedback(learner_id, created_at desc);
+-- eng_student_done / eng_my_seen tìm theo lần làm (cả dòng đã sửa): chỉ mục riêng, không chỉ chỉ mục một phần ở trên.
+create index if not exists studio_feedback_attempt_idx on english.studio_feedback(attempt_id, created_at desc);
 
 create table if not exists english.studio_assignment_units (
   activity_id uuid not null references english.activity_instances(id),
@@ -163,6 +167,11 @@ begin
       return pg_catalog.jsonb_build_object('id', v_old.id, 'replayed', true);
     end if;
     raise exception 'eng_write_studio_feedback: this client id was already used for other feedback (client_id_reused)' using errcode = '23505';
+  end if;
+
+  -- Chỉ lần làm MỚI NHẤT của bước (như bài nộp hiện hành ở 0033): con làm lại trong lúc người lớn đang xem → nói rõ, không ghi cho bản cũ.
+  if exists (select 1 from english.attempts t2 where t2.activity_instance_id = v_att.activity_instance_id and t2.attempt_no > v_att.attempt_no) then
+    raise exception 'eng_write_studio_feedback: the child sent this test again; give feedback on the newest work (attempt_replaced)' using errcode = '23505';
   end if;
 
   if p_supersedes is null then
@@ -391,6 +400,36 @@ end
 $$;
 revoke execute on function english.eng_my_seen(timestamptz, uuid, int) from public, anon, service_role;
 grant execute on function english.eng_my_seen(timestamptz, uuid, int) to authenticated;
+
+-- 6. Unit của bài đã nộp (cho đề xuất "Đang học" ở Giáo trình) ------------------------------------------------------------------------
+-- Một dòng mỗi (giáo trình, Unit, bài): tên bài + lần nộp gần nhất. Bài Studio: có ít nhất một lần làm, bước không đang bị bỏ qua (sự kiện
+-- skip / unskip mới nhất). Bài link / PDF: có bài nộp, chưa rút. Chỉ đọc; service_role (máy chủ gọi SAU requireAccess).
+create or replace function english.eng_sent_work_units(p_learner uuid) returns jsonb
+language sql stable security definer set search_path = ''
+as $$
+  select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
+           'curriculum_id', w.curriculum_id, 'unit_code', w.unit_code, 'title', w.title, 'sent_at', w.sent_at) order by w.sent_at desc), '[]'::jsonb)
+  from (
+    select su.curriculum_id, su.unit_code, coalesce(i.snapshot -> 'template' ->> 'title_vi', '') as title, pg_catalog.max(t.submitted_at) as sent_at
+    from english.studio_assignment_units su
+    join english.inquiry_instances i on i.id = su.inquiry_instance_id
+    join english.attempts t on t.activity_instance_id = su.activity_id
+    where su.learner_id = p_learner
+      and coalesce((select e.kind = 'skip' from english.activity_instance_events e
+                    where e.activity_instance_id = su.activity_id and e.kind in ('skip', 'unskip') order by e.at desc, e.id desc limit 1), false) = false
+    group by su.curriculum_id, su.unit_code, su.activity_id, i.snapshot -> 'template' ->> 'title_vi'
+    union all
+    select au.curriculum_id, au.unit_code, a.title, pg_catalog.max(sb.created_at)
+    from english.assignment_units au
+    join english.assignments a on a.id = au.assignment_id
+    join english.submissions sb on sb.assignment_id = au.assignment_id
+    where au.learner_id = p_learner
+      and not exists (select 1 from english.assignment_events ev where ev.assignment_id = au.assignment_id and ev.kind = 'retracted')
+    group by au.curriculum_id, au.unit_code, au.assignment_id, a.title
+  ) w
+$$;
+revoke execute on function english.eng_sent_work_units(uuid) from public, anon, authenticated;
+grant execute on function english.eng_sent_work_units(uuid) to service_role;
 
 -- 5. Xóa dữ liệu một em: = bản 0036 + studio_feedback + studio_assignment_units (xóa trước attempts / activity_instances / giáo trình) --------
 create or replace function english.eng_purge_learner(

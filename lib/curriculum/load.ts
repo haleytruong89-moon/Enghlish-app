@@ -4,6 +4,7 @@ import { loadPickerMap } from "@/lib/skillmap/load";
 import { createFileStorage } from "@/lib/storage/server";
 import { getAuthUser, getMemberByUserId } from "@/lib/auth/session";
 import { createUserClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { loadTags } from "@/lib/tutorwork/load";
 import { buildTocContext, type TocContext } from "./context";
 import { handleGetVersion, type CurriculumDeps } from "./handlers";
@@ -85,50 +86,18 @@ export async function loadVersionPage(versionId: string): Promise<{ kind: "ok"; 
 }
 
 /**
- * Units of work the child has sent (Studio tests given with Units, 0037; link / PDF work given with Units, 0029), for the
- * "Đang học" proposal. RLS: the adults of that child. A missing table (0037 not applied) or a failed read gives no rows: the page still opens.
+ * Units of work the child has sent (Studio tests given with Units; link / PDF work given with Units, not retracted; Studio steps not
+ * skipped), for the "Đang học" proposal: english.eng_sent_work_units (0037), one SQL read (no row cap on whole tables).
+ * Service role: call ONLY after the page checked access. Before 0037 / on any error: no rows (the page still opens, with no proposal).
  */
 export async function loadSentWorkUnits(learnerId: string): Promise<SentWorkUnit[]> {
-  const db = await createUserClient();
-  const out: SentWorkUnit[] = [];
   try {
-    const [su, at] = await Promise.all([
-      db.from("studio_assignment_units").select("activity_id, inquiry_instance_id, curriculum_id, unit_code").eq("learner_id", learnerId)
-        .returns<{ activity_id: string; inquiry_instance_id: string; curriculum_id: string; unit_code: string }[]>(),
-      db.from("attempts").select("activity_instance_id, submitted_at").eq("learner_id", learnerId).returns<{ activity_instance_id: string; submitted_at: string }[]>(),
-    ]);
-    if (!su.error && !at.error && (su.data ?? []).length > 0) {
-      const sent = new Map<string, string>();
-      for (const a of at.data ?? []) if ((sent.get(a.activity_instance_id) ?? "") < a.submitted_at) sent.set(a.activity_instance_id, a.submitted_at);
-      const ids = [...new Set((su.data ?? []).map((r) => r.inquiry_instance_id))];
-      const inq = await db.from("inquiry_instances").select("id, title:snapshot->template->>title_vi").in("id", ids).returns<{ id: string; title: string | null }[]>();
-      const titleOf = new Map((inq.error ? [] : (inq.data ?? [])).map((i) => [i.id, i.title ?? ""]));
-      for (const r of su.data ?? []) {
-        const at2 = sent.get(r.activity_id);
-        if (at2) out.push({ curriculumId: r.curriculum_id, unitCode: r.unit_code, title: titleOf.get(r.inquiry_instance_id) ?? "", sentAt: at2 });
-      }
-    }
+    const { data, error } = await createAdminClient().rpc("eng_sent_work_units", { p_learner: learnerId });
+    if (error) return [];
+    return ((data ?? []) as { curriculum_id: string; unit_code: string; title: string; sent_at: string }[]).map((r) => ({
+      curriculumId: r.curriculum_id, unitCode: r.unit_code, title: r.title, sentAt: r.sent_at,
+    }));
   } catch {
-    /* no Studio rows */
+    return [];
   }
-  try {
-    const [au, sub, asg] = await Promise.all([
-      db.from("assignment_units").select("assignment_id, curriculum_id, unit_code").eq("learner_id", learnerId)
-        .returns<{ assignment_id: string; curriculum_id: string; unit_code: string }[]>(),
-      db.from("submissions").select("assignment_id, created_at").eq("learner_id", learnerId).returns<{ assignment_id: string; created_at: string }[]>(),
-      db.from("assignments").select("id, title").eq("learner_id", learnerId).returns<{ id: string; title: string }[]>(),
-    ]);
-    if (!au.error && !sub.error && !asg.error) {
-      const sent = new Map<string, string>();
-      for (const x of sub.data ?? []) if ((sent.get(x.assignment_id) ?? "") < x.created_at) sent.set(x.assignment_id, x.created_at);
-      const titleOf = new Map((asg.data ?? []).map((a) => [a.id, a.title]));
-      for (const r of au.data ?? []) {
-        const at2 = sent.get(r.assignment_id);
-        if (at2) out.push({ curriculumId: r.curriculum_id, unitCode: r.unit_code, title: titleOf.get(r.assignment_id) ?? "", sentAt: at2 });
-      }
-    }
-  } catch {
-    /* no link / PDF rows */
-  }
-  return out;
 }

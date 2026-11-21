@@ -1432,8 +1432,8 @@ export const studioFeedbackCopy = {
   errors: {
     feedback_unavailable: "Góp ý cho bài làm trên app chưa dùng được: cần áp bản cập nhật cơ sở dữ liệu 0037 trước.",
     not_found: "Không tìm thấy lần làm này. Bạn tải lại trang.",
+    attempt_replaced: "Con vừa làm lại bài này. Bạn mở lần làm mới nhất (Giao bài → Bài làm trên app đã giao) để góp ý.",
   } as Record<string, string>,
-  given: "Đã góp ý",
 } as const;
 
 // ---------- SM-2: Hồ sơ cấp đang học (phụ huynh, gia sư). Cấp ghi "đang học B1", KHÔNG BAO GIỜ "đạt" (spec §1 "Cách gọi"). ----------
@@ -1986,7 +1986,8 @@ export const studioAssignedCopy = {
   items: (n: number) => `${n} câu`,
   sent: (when: string, attempts: number) => (attempts > 1 ? `nộp lần ${attempts} lúc ${when}` : `nộp lúc ${when}`),
   firstResult: (correct: number, total: number) => `lần đầu đúng ${correct}/${total}`,
-  openWork: "Xem cả bài làm · góp ý",
+  openWork: "Xem cả bài làm",
+  openWorkFeedback: "Xem cả bài làm · góp ý",
   checkItems: "Chấm các câu đang chờ →",
   units: (codes: string[]) => `Unit ${codes.join(", ")}`,
   feedbackGiven: "Đã góp ý",
@@ -2191,6 +2192,7 @@ export const studioErrors: Record<string, string> = {
   no_retry: "Lần làm này không có lần thử lại nào.",
   retry_needs_update: "Nút \"Đã xem\" cần migration 0034. Nhờ phụ huynh áp 0034 rồi thử lại.",
   needs_update: "Phần này cần migration 0034 (cờ Bài kiểm tra). Giao ở loại Luyện tập, hoặc nhờ phụ huynh áp 0034.",
+  client_id_reused: "Yêu cầu này đã được dùng cho việc khác. Bạn tải lại trang rồi thử lại.",
   units_need_update: "Giao kèm Unit cần bản cập nhật cơ sở dữ liệu 0037. Bỏ chọn Unit để giao như thường, hoặc nhờ phụ huynh áp 0037.",
   bad_units: "Có Unit không còn trong giáo trình đã duyệt của em. Bạn tải lại trang rồi chọn lại nhé.",
   file_type: "Chỉ nhận PDF hoặc Word .docx (không nhận .doc hay ảnh).",
@@ -2477,8 +2479,10 @@ export const curriculumCopy = {
   proposeHelp: `App chỉ đề xuất; ${tutorHonorific} bấm thì mới đổi.`,
   proposeButton: (code: string) => `Đặt ${code} là “Đang học”`,
   proposeDone: (code: string) => `${code} đang học.`,
-  workProposeTitle: "Con đã nộp bài của các Unit này",
-  workProposeLine: (code: string, titles: string[]) => `${code} · ${titles.filter((t) => t).slice(0, 2).join(", ")}${titles.length > 2 ? ` + ${titles.length - 2} bài` : ""}`,
+  workProposeTitle: "Đã có bài nộp cho các Unit này",
+  workProposeHelp: "App chỉ đề xuất; bạn bấm thì Unit mới chuyển sang “Đang học”.",
+  workProposeLine: (code: string, titles: string[]) =>
+    titles.length === 0 ? code : `${code} · ${titles.slice(0, 2).join(", ")}${titles.length > 2 ? ` + ${titles.length - 2} bài` : ""}`,
 } as const;
 
 // ---------- Khung bàn làm việc (cột trái + thanh trên; lát "Khung bàn làm việc", 08/11/2026) ----------

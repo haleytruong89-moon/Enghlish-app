@@ -26,7 +26,7 @@ export function WorkUnitProposal({ curriculumId, proposals }: { curriculumId: st
   return (
     <section className="mt-4 flex flex-col gap-2 rounded-xl border border-accent bg-white p-4" data-testid="work-unit-proposal">
       <h2 className="text-base font-semibold">{curriculumCopy.workProposeTitle}</h2>
-      <p className="text-xs text-muted">{curriculumCopy.proposeHelp}</p>
+      <p className="text-xs text-muted">{curriculumCopy.workProposeHelp}</p>
       <ul className="flex flex-col gap-2">
         {proposals.map((p) => (
           <li key={p.code} className="flex flex-wrap items-center gap-3" data-testid={`work-propose-${p.code}`}>

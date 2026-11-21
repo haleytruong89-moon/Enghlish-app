@@ -36,7 +36,7 @@ export async function loadStudioAssigned(learnerId: string, todayIso: string): P
     db.from("studio_feedback").select("attempt_id").eq("learner_id", learnerId).returns<{ attempt_id: string }[]>(),
     db.from("studio_assignment_units").select("activity_id, unit_code, ord").eq("learner_id", learnerId).order("ord").returns<{ activity_id: string; unit_code: string; ord: number }[]>(),
   ]);
-  const feedbackAttempts = new Set(fb.error ? [] : (fb.data ?? []).map((r) => r.attempt_id));
+  const feedbackAttempts = fb.error ? undefined : new Set((fb.data ?? []).map((r) => r.attempt_id));
   const unitsOf = new Map<string, string[]>();
   for (const u of un.error ? [] : (un.data ?? [])) unitsOf.set(u.activity_id, [...(unitsOf.get(u.activity_id) ?? []), u.unit_code]);
   return buildStudioAssigned(views, attempts, eps.data ?? [], currentStudioResults(res.data ?? []), todayIso, { feedbackAttempts, unitsOf });

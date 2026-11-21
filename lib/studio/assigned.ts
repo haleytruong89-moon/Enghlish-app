@@ -29,6 +29,8 @@ export type StudioAssignedRow = {
   episodeId: string | null;
   /** The latest attempt has feedback from an adult (0037). */
   feedbackGiven: boolean;
+  /** Feedback can be given (0037 applied): the link reads "Xem cả bài làm · góp ý". */
+  feedbackReady: boolean;
   /** Units given with the test (0037), e.g. ["U13", "U14"]. */
   units: string[];
   /** The first attempt's count over the questions done in the app (paper-only ones left out); null until it is checked, or when the
@@ -76,6 +78,7 @@ export function buildStudioAssigned(
       lastSubmittedAt: last?.submitted_at ?? null,
       episodeId: last ? (episodeOf.get(last.id) ?? null) : null,
       feedbackGiven: last ? (extra.feedbackAttempts?.has(last.id) ?? false) : false,
+      feedbackReady: extra.feedbackAttempts !== undefined,
       units: extra.unitsOf?.get(step.activityId) ?? [],
       firstResult: counted ? { correct: counted.correct, total: counted.total_items - counted.not_in_app_items.length } : null,
     });

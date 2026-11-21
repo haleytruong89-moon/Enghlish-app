@@ -20,6 +20,13 @@ describe("Đang học proposals from sent work (bản rà 21/11 #10)", () => {
       { code: "U13", titles: ["Unit 13"], lastSentAt: "2026-11-18T02:00:00Z" },
     ]);
   });
+  it("a Unit the version skips is never proposed; empty titles are left out", () => {
+    const rows = [
+      { curriculumId: C, unitCode: "U13", title: "", sentAt: "2026-11-18T02:00:00Z" },
+      { curriculumId: C, unitCode: "U14", title: "Unit 14", sentAt: "2026-11-18T02:00:00Z" },
+    ];
+    expect(proposeFromSentWork(C, rows, status, new Set(["U14"]))).toEqual([{ code: "U13", titles: [], lastSentAt: "2026-11-18T02:00:00Z" }]);
+  });
   it("nothing sent, nothing proposed", () => {
     expect(proposeFromSentWork(C, [], status)).toEqual([]);
   });

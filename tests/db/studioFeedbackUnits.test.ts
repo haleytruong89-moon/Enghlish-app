@@ -121,6 +121,8 @@ describe("studio_feedback + studio_assignment_units (migration 0037)", () => {
       await fail(asUser(s.users.studentNguyen, "select english.eng_studio_feedback($1) as r", [NG()]), "42501");
       // the parent may give it too (as for paper / link work)
       expect((await feedback(other, { by: M().parent })).replayed).toBe(false);
+      // the child sent the test again: no new note on the older attempt (as for a replaced submission)
+      await fail(feedback(attempt, { clientId: randomUUID(), supersedes: null }), "23505", /attempt_replaced/);
     });
 
     it("the table is append-only and read only by the child's adults (RLS)", async () => {
@@ -165,6 +167,37 @@ describe("studio_feedback + studio_assignment_units (migration 0037)", () => {
       await fail(assignV3(draft, [{ curriculum_id: c.curriculum_id, unit_code: "U99" }], { by: M().tutorAn }), "42501");
       expect(await count()).toBe(0);
     });
+  });
+
+  it("a replay with another kind of work (test flag) is refused even with the same Units", async () => {
+    const c = await curriculum(NG(), M().tutorNguyen);
+    const draft = await approvedDraft();
+    const units = [{ curriculum_id: c.curriculum_id, unit_code: "U13" }];
+    const cid = `as-${randomUUID()}`;
+    await assignV3(draft, units, { clientId: cid });
+    await fail(svc("select english.eng_assign_studio_v3($1, current_date, current_date + 3, true, $2, $3, $4::jsonb) as r", [draft, M().tutorNguyen, cid, JSON.stringify(units)]), "23505", /client_id_reused/);
+  });
+
+  it("sent work: Units of Studio tests the child sent and of link work with a submission; not a skipped step, not retracted work, not unsent work", async () => {
+    const c = await curriculum(NG(), M().tutorNguyen);
+    const u = (code: string) => [{ curriculum_id: c.curriculum_id, unit_code: code }];
+    const sent = await assignV3(await approvedDraft(), u("U13"));
+    await submit(sent.activity_id);
+    await assignV3(await approvedDraft(), u("U14")); // given, not sent
+    const skipped = await assignV3(await approvedDraft(), u("U14"));
+    await submit(skipped.activity_id);
+    await q1("insert into english.activity_instance_events(activity_instance_id, learner_id, kind, reason, by_member) values ($1, $2, 'skip', 'không làm', $3)", [skipped.activity_id, NG(), M().tutorNguyen]);
+    const link = async (code: string, title: string) => {
+      const a = await svc<{ id: string }>("select english.eng_create_assignment_v2($1,'link','https://example.com/x',$2,'{}'::text[],null,null,null,$3,$4,$5::jsonb) as r", [NG(), title, M().tutorNguyen, randomUUID(), JSON.stringify(u(code))]);
+      await q1("insert into english.submissions(assignment_id, learner_id, attempt, link_url, submitted_by_member, submitted_by_role, client_id) values ($1, $2, 'first', 'https://example.com/r', $3, 'student', $4)", [a.id, NG(), M().studentNguyen, randomUUID()]);
+      return a.id;
+    };
+    await link("U13", "Link U13");
+    const gone = await link("U14", "Link U14 (rút)");
+    await svc("select english.eng_retract_assignment($1, null, $2) as r", [gone, M().tutorNguyen]);
+    const rows = (await svc<{ curriculum_id: string; unit_code: string; title: string }[]>("select english.eng_sent_work_units($1) as r", [NG()])).filter((r) => r.curriculum_id === c.curriculum_id);
+    expect(rows.map((r) => `${r.unit_code}:${r.title}`).sort()).toEqual(["U13:Link U13", `U13:Unit test ${k - 2}`]);
+    await fail(asUser(s.users.tutorNguyen, "select english.eng_sent_work_units($1) as r", [NG()]), "42501");
   });
 
   it("purge: the dry run and the receipt count both tables; afterwards there are no rows", async () => {

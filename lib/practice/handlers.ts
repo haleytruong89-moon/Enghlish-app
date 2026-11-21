@@ -331,6 +331,7 @@ const FEEDBACK_TAGS: [RegExp, 400 | 403 | 404 | 409, string][] = [
   [/\(submission_replaced\)/, 409, "submission_replaced"],
   [/\(client_id_reused\)/, 409, "conflict"],
   [/\(not_studio\)/, 404, "not_found"],
+  [/\(attempt_replaced\)/, 409, "attempt_replaced"],
 ];
 
 /**
