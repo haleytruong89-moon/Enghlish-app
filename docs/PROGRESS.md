@@ -1856,7 +1856,7 @@ Nhánh `feature/studio-flow-fixes`, **dựa trên `feature/studio-editor-fixes` 
 | 6 | Bộ Destination Unit 14 + Review 7 **tách thành 21 file, mỗi bài tập một file** (6–13 câu), zip `destination-unit14-tung-bai.zip` (ngoài repo). Kiểm: 0 lỗi; chạy trọn luồng trên database cục bộ: 193/193 câu chấm đúng |
 | 7 | **"Bản nháp đã bỏ"** (đóng sẵn) dưới "Bài đã tạo", nút **Khôi phục** = bản nháp mới cùng tên và câu hỏi (bấm hai lần vẫn một bản) |
 | 8 | Nút **↑ Lên / ↓ Xuống** đổi thứ tự câu trong một phần (ẩn khi đang lọc) |
-| 9 | Đáp án có gạch nối nhận cả cách viết có dấu cách ("fifty-fifty" = "fifty fifty"), áp cho bài duyệt từ nay |
+| 9 | Đáp án có gạch nối nhận cả cách viết có dấu cách ("fifty-fifty" = "fifty fifty"), trừ câu "dạng từ"; áp cho bài duyệt từ nay |
 
 ### Cách thử trên bản thử (Nguyên (thử))
 1. Tạo bài từ đề → Nhập bài soạn sẵn → chọn vài file trong `destination-unit14-tung-bai.zip` (ví dụ `U14-1-A`, `R7-C`) → Mở → Duyệt → Giao bài (hạn hôm qua cho một bài để thấy "Quá hạn").
@@ -1864,7 +1864,7 @@ Nhánh `feature/studio-flow-fixes`, **dựa trên `feature/studio-editor-fixes` 
 3. Bỏ một bản nháp → mở "Bản nháp đã bỏ" → Khôi phục → mở ra bản nháp mới đủ câu.
 4. Đăng nhập Nguyên (thử), mở `R7-C`: trên câu có khung lời dẫn kèm hộp từ; trong ô Đề bài mỗi phần một dòng.
 5. Con nộp → người lớn mở Giao bài: dòng của bài đổi sang "Chờ thầy/cô chấm câu" hoặc "Đã chấm"; bấm "Xem cả bài làm" ra trang xem bài.
-6. Bàn làm việc: có dòng "1 bài làm trên app quá hạn, con chưa nộp".
+6. Bàn làm việc: có dòng "1 bài làm trên app quá hạn, em chưa nộp".
 
 ### Đã kiểm
 - Test mới:
