@@ -94,6 +94,7 @@ function partBits(ctx: TutorContext): { instructions: string; bank: string } {
 
 export function buildHintCall(o: {
   template: string; model: string; ctx: TutorContext; level: number; childText: string | null; rewriteFor?: string[];
+  toolChoice?: "tool" | "auto";
 }): ToolCall {
   const { instructions, bank } = partBits(o.ctx);
   const lang = languageRule(o.ctx.language);
@@ -117,10 +118,10 @@ export function buildHintCall(o: {
   if (o.rewriteFor && o.rewriteFor.length) {
     instructionsText += `\n\nYOUR PREVIOUS HINT WAS REFUSED (${o.rewriteFor.join(", ")}). Write a new hint at the same level that avoids the answer and every piece of it.`;
   }
-  return { model: o.model, documents: [], instructions: instructionsText, tool: hintTool, maxTokens: HINT_MAX_TOKENS, toolChoice: "tool" };
+  return { model: o.model, documents: [], instructions: instructionsText, tool: hintTool, maxTokens: HINT_MAX_TOKENS, toolChoice: o.toolChoice ?? "auto" };
 }
 
-export function buildCheckCall(o: { template: string; model: string; ctx: TutorContext; hint: string; childText: string | null }): ToolCall {
+export function buildCheckCall(o: { template: string; model: string; ctx: TutorContext; hint: string; childText: string | null; toolChoice?: "tool" | "auto" }): ToolCall {
   const { bank } = partBits(o.ctx);
   return {
     model: o.model,
@@ -135,6 +136,6 @@ export function buildCheckCall(o: { template: string; model: string; ctx: TutorC
     }),
     tool: checkTool,
     maxTokens: CHECK_MAX_TOKENS,
-    toolChoice: "tool",
+    toolChoice: o.toolChoice ?? "auto",
   };
 }

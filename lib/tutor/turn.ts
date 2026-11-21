@@ -33,7 +33,7 @@ export type TutorDeps = {
   noticeVersion: string;
   call: (c: ToolCall) => Promise<ToolResult>;
   prompts: { hint: string; check: string };
-  models: { hint: string; check: string };
+  models: { hint: string; check: string; toolChoice?: "tool" | "auto" };
   copy: TutorCopy;
 };
 export type TurnInput = { userId: string; activityId: string; itemId: string; clientId: string; childText: string | null };
@@ -119,7 +119,7 @@ export async function runTutorTurn(deps: TutorDeps, input: TurnInput): Promise<T
 
   const draft = async (rewriteFor?: string[]): Promise<string | null> => {
     try {
-      const res = await deps.call(buildHintCall({ template: deps.prompts.hint, model: deps.models.hint, ctx, level: plan.level, childText, rewriteFor }));
+      const res = await deps.call(buildHintCall({ template: deps.prompts.hint, model: deps.models.hint, ctx, level: plan.level, childText, rewriteFor, toolChoice: deps.models.toolChoice }));
       await log(deps.models.hint, HINT_PROMPT.version, "tutor_hint", res.usage, null);
       const out = hintOut.safeParse(res.input);
       if (!out.success || !out.data.hint.trim()) return null;
@@ -135,7 +135,7 @@ export async function runTutorTurn(deps: TutorDeps, input: TurnInput): Promise<T
     const code = leakReasons(text, { kind: ctx.item.kind, stem: ctx.item.stem, options: ctx.item.options, answers: ctx.answers });
     if (code.length) return code;
     try {
-      const res = await deps.call(buildCheckCall({ template: deps.prompts.check, model: deps.models.check, ctx, hint: text, childText }));
+      const res = await deps.call(buildCheckCall({ template: deps.prompts.check, model: deps.models.check, ctx, hint: text, childText, toolChoice: deps.models.toolChoice }));
       await log(deps.models.check, CHECK_PROMPT.version, "tutor_check", res.usage, null);
       const out = checkOut.safeParse(res.input);
       if (!out.success) return ["check_unreadable"];

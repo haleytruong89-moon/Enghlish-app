@@ -19,4 +19,4 @@ Fail the hint when any of these is true:
 
 Explaining what a word means is allowed, even the answer word, as long as the hint does not say whether it fits the question. Naming a WRONG choice to rule it out is allowed. Telling the child to use the word bank or to look at a word in the question is allowed.
 
-Call the tool `check_hint` exactly once: pass = true only when none of the reasons apply.
+Answer ONLY by calling the tool `check_hint` exactly once (write nothing outside the tool): pass = true only when none of the reasons apply.
