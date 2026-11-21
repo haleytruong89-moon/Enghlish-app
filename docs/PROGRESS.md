@@ -1939,3 +1939,38 @@ Nhánh `feature/e0-task-parts` (dựa trên PR #47, gộp #46 → #47 trước).
 - **Sau review (21/11):** lời dặn hiện **đúng như thầy/cô viết** (giữ xuống dòng, không bỏ câu nào bên trong); chỉ bỏ tên phần khi tên chỉ lặp lời dặn hoặc lặp nhãn word bank. Word bank chỉ thành chip khi nhãn rõ ràng ("Box", "Word bank", "Places", "Adjectives", "Từ gợi ý"…) hoặc dòng nói tới "box / words given / list"; "Note:", "Example:", "Remember:"… không bao giờ thành chip. Chữ tiếng Việt đọc bằng giọng Việt (VoiceOver). Hàm của con chỉ trả câu của đúng bước đang mở.
 - **Chưa kiểm:** e2e (CI), bấm thật trên iPad; chưa xem dữ liệu thật của "Bài tập 16/11/2026" (không đọc DB thật). Word bank viết kiểu khác vẫn hiện là chữ thường (không mất chữ): trong ngoặc "(museum, zoo, park)", một dòng không có nhãn "museum / art gallery / zoo". Trước khi áp 0038, bài duyệt từ 21/11 có tên phần trùng lời dặn vẫn hiện lặp.
 
+
+## E1 — Nút "Hỏi" (gia sư AI tiếng Anh) trong bài luyện Studio (21/11/2026)
+
+Nhánh `feature/e1-ask-hints` (dựa trên `feature/e0-task-parts`; gộp theo thứ tự **#46 → #47 → #48 → E1**). Plan đã duyệt 21/11: `docs/superpowers/plans/2026-11-21-e1-ask-hints.md`; luật `docs/DOMAIN.md` bản 0.9; thiết kế `docs/DESIGN.md` §19.31.
+
+**Làm gì:** đang làm bài luyện của bộ Studio mà kẹt thì con bấm "Hỏi" dưới câu → gợi ý H1, "Gợi ý tiếp" → H2 → H3; có ô hỏi ngắn về chính câu đó. Gợi ý tới thẳng con nhưng qua 3 lớp chặn (code kiểm đáp án → Haiku kiểm → viết lại 1 lần → câu an toàn), mỗi lượt ghi sổ. Bài kiểm tra, bài đã nộp, bài không phải Studio: không có gia sư. 40 lượt / ngày / em. Phụ huynh đặt hạn mức tháng (tối đa 50 USD) ở Cài đặt AI.
+
+### SQL cần phụ huynh áp (sau khi gộp, theo thứ tự)
+1. `0037_studio_feedback_units.sql` (PR #47) → 2. `0038_my_task_parts.sql` (PR #48) → 3. **`0039_tutor_hints.sql`** (PR này; cần 0038).
+Kiểm tra: `select version from english.schema_migrations where version in ('0037','0038','0039') order by 1;` → 3 dòng.
+
+### Việc phụ huynh làm sau khi áp 0039
+1. Cài đặt AI → bấm **"Đồng ý và bật"** lần nữa (văn bản đồng ý mới `ai-studio-tutor-v2` nói rõ câu con gõ được gửi cho AI, không kèm tên). Chưa bấm thì nút "Hỏi" báo "Gia sư đang nghỉ".
+2. Cài đặt AI → "Hạn mức tháng" → nhập **20**, báo ở **18** → "Lưu hạn mức".
+3. Chưa mở cho con dùng cho tới khi bộ test đạt (mục "Kết quả bộ test" bên dưới).
+
+### Cách thử trên preview (learner thử)
+1. Phụ huynh làm 2 bước trên. Giao cho Nguyên (thử) một bài Studio **luyện tập** (không tick "Bài kiểm tra").
+2. Nguyên (thử) mở bài → dưới câu có khung vàng "Gia sư" + nút **Hỏi** → bấm → có gợi ý, nhãn "Gợi ý 1/3"; nút đổi thành **Gợi ý tiếp**; bấm tới 3/3 rồi bấm nữa → câu "đã gợi ý đủ 3 bước".
+3. Gõ "từ cathedral nghĩa là gì?" vào ô hỏi → gia sư giải nghĩa, không nói có hợp câu không.
+4. Giao một bài có tick "Bài kiểm tra" → không có nút Hỏi.
+5. Cài đặt AI → dòng "Nguyên (thử): hỏi gia sư AI n lượt hôm nay · m lượt tháng này".
+
+### Đạt / chưa đạt
+- Đạt: không gợi ý nào chứa đáp án; bài kiểm tra không có nút; hết hạn mức / chưa đồng ý → "Gia sư đang nghỉ", bài vẫn làm bình thường.
+- Chưa đạt: thấy đáp án trong gợi ý; gợi ý bằng tiếng Anh cho An; nút Hỏi trên bài kiểm tra.
+
+### Đã kiểm
+- DB: `tests/db/tutorHints.test.ts` (quyền, Studio / bài kiểm tra / đã nộp, lượt lặp `client_id`, mức trong DB, giới hạn ngày, purge, trần ≤ 50, chỉ phụ huynh đặt trần). `tests/db/studio.test.ts`: ràng buộc trần cũ (≤ 10) đổi sang ≤ 50 theo P1.
+- Unit: `tests/unit/tutorLeak.test.ts` (S.6–S.10), `tutorTurn.test.ts` (S.1–S.5, S.12, S.13, lời lừa, bản đồng ý cũ), `tutorHandler.test.ts`, `migrationTutorHints.test.ts` (bản sao hàm cổng / sổ / cài đặt / purge chỉ khác đúng phần thêm). DOM: `askTutor.test.tsx`. e2e (CI, AI_FAKE): `tests/e2e/studio.spec.ts` bấm Hỏi trên bài luyện Studio, thấy gợi ý mẫu, nút đổi "Gợi ý tiếp", một dòng `tutor_turns`.
+- S.14 (em A hỏi câu của em B) nằm trong test DB (`not_found`). S.11 → E3.
+- **Bộ test có gọi model:** xem mục "Kết quả bộ test" (điền sau khi chạy).
+
+### Lệch so với plan / phụ lục D
+Xem cuối file plan, mục "Lệch khi làm" (ô hỏi ngắn; "nộp bài để app kiểm" thay "Kiểm tra"; A.5 giả lập; số lượt ở Cài đặt AI vì chưa có bản tổng hợp tối; báo trần qua dải ở Cài đặt AI; đề Destination chỉ ở nhánh `eval/e1`; câu có bài đọc chưa gửi bài đọc cho gia sư).
