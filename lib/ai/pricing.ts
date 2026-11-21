@@ -7,6 +7,9 @@ export type ModelPrice = { inputPerMTok: number; outputPerMTok: number };
 
 export const MODEL_PRICES: Record<string, ModelPrice> = {
   "claude-sonnet-5-5": { inputPerMTok: 2, outputPerMTok: 10 },
+  // Claude Haiku 5.5 (E1 checker only): $0.10 / $0.50 for prompts up to 100 000 tokens (Anthropic pricing page, read 21/11/2026; the check
+  // prompt is ~1–2k tokens). Above 100k the price is 5× — never the case here.
+  "claude-haiku-5-5": { inputPerMTok: 0.1, outputPerMTok: 0.5 },
 };
 
 export const isPricedModel = (model: string): boolean => Object.prototype.hasOwnProperty.call(MODEL_PRICES, model);

@@ -1,3 +1,4 @@
+import { z } from "zod";
 /**
  * Framework-free handlers of the Studio B1 routes. Same order everywhere: requireAccess / requireStaff FIRST (401 / 404 outside scope /
  * 403 wrong role), then the body (400), then the injectable stores (service-role functions that check the actor again). A tutor never
@@ -38,6 +39,8 @@ export interface StudioStore {
   aiReserve(a: { learnerId: string; estimateUsd: number; draftId: string; model: string; byMemberId: string }): Promise<unknown>;
   aiSettings(byMemberId: string): Promise<unknown>;
   setAiSettings(a: { enabled: boolean; noticeVersion: string; byMemberId: string }): Promise<unknown>;
+  /** eng_set_ai_cap (0039): the parent sets the monthly cap (≤ 50 USD) and the warning (≤ cap). */
+  setAiCap(a: { cap: number; soft: number; byMemberId: string }): Promise<unknown>;
   logAiRun(r: RunLog): Promise<string>;
   createDraft(a: { learnerId: string; title: string; testFile: FileMetaBody | null; keyFile: FileMetaBody | null; extract: boolean; byMemberId: string; clientId: string }): Promise<unknown>;
   /** The draft a client id made for this child (id + status), or null. Read-only; used by "Nhập bài soạn sẵn" after a title clash. */
@@ -463,6 +466,22 @@ export async function handleSetAiSettings(deps: StudioDeps, raw: unknown): Promi
     return { status: 200, body: { settings: parseAiSettings(await deps.store.setAiSettings({ enabled: p.data.enabled, noticeVersion: AI_NOTICE_VERSION, byMemberId: s.member.id })) } };
   } catch (err) {
     return fromStudioDbError(err);
+  }
+}
+
+const aiCapBodySchema = z.strictObject({ cap: z.number().min(1).max(50), soft: z.number().min(0.5).max(50) }).refine((b) => b.soft <= b.cap);
+
+/** PUT /api/settings/ai/cap — the monthly cap and its warning (parent only; P1: up to 50 USD). Before 0039: needs_update. */
+export async function handleSetAiCap(deps: StudioDeps, raw: unknown): Promise<HandlerResult> {
+  const s = await staff(deps);
+  if (!s.ok) return s.result;
+  if (s.member.role !== "parent") return fail(403, "parent_only");
+  const p = aiCapBodySchema.safeParse(raw);
+  if (!p.success) return fail(400, "bad_cap");
+  try {
+    return { status: 200, body: { settings: parseAiSettings(await deps.store.setAiCap({ cap: p.data.cap, soft: p.data.soft, byMemberId: s.member.id })) } };
+  } catch (err) {
+    return fromStudioDbError(err, { missing: "cap_needs_update" });
   }
 }
 

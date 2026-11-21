@@ -13,6 +13,7 @@ import { leadOf, partForItem, splitBanks, type PartLead, type TaskPart } from "@
 import { ASSISTANCE_VALUES, type Assistance, type DraftContent, type Receipt, type SupportedActivityView } from "@/lib/work/types";
 import { baseRevisionOf, formatDmy, formatHm, nonEmptyAnswers } from "@/lib/work/view";
 import { AskTutorSlot } from "./AskTutorSlot";
+import { AskTutor, type TutorTurnView } from "./AskTutor";
 import { QuestionCard } from "./QuestionCard";
 import { QuestionDots } from "./QuestionDots";
 import { ResultView } from "./ResultView";
@@ -43,6 +44,8 @@ export function Player({ activity, isTest, initialResult, sentAt, aside, parts =
   const [pasteSeen, setPasteSeen] = useState(initial.pasted ?? false);
   const [assist, setAssist] = useState<Assistance[]>(initial.assistance ?? []);
   const [selfCheck, setSelfCheck] = useState<Record<number, boolean>>({});
+  // E1: the tutor's turns per question (kept while the child moves between questions).
+  const [tutorTurns, setTutorTurns] = useState<Record<string, TutorTurnView[]>>({});
   const [flow, setFlow] = useState<SaveFlow>(() => initialSaveFlow(!!draft));
   const [otherTab, setOtherTab] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -391,8 +394,18 @@ export function Player({ activity, isTest, initialResult, sentAt, aside, parts =
                 onCommit={() => void saveRef.current()}
                 lead={leadFor(parts, item.id, step.promptEn, numbers[clampIndex(idx, total)]!)}
               >
-                {!isTest ? <AskTutorSlot /> : null}
+                {/* Studio practice (parts known, E0): the real "Hỏi" sits under the question; other work keeps the dimmed slot. Never on a test (L2). */}
+                {!isTest && !parts ? <AskTutorSlot /> : null}
               </QuestionCard>
+              {!isTest && parts ? (
+                <AskTutor
+                  key={`ask-${item.id}`}
+                  activityId={activity.activityId}
+                  itemId={item.id}
+                  turns={tutorTurns[item.id] ?? []}
+                  onTurn={(t) => setTutorTurns((m) => ({ ...m, [item.id]: [...(m[item.id] ?? []), t] }))}
+                />
+              ) : null}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <button type="button" disabled={idx === 0} onClick={() => go(prevIndex(idx, total))} data-testid="player-prev" className="min-h-12 rounded-xl border border-line bg-white px-5 text-base font-semibold disabled:opacity-40">
                   ‹ {c.prev}

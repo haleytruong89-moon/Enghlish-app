@@ -4,7 +4,7 @@
 --   1. ai_runs.purpose + eng_ai_gate + eng_log_ai_run nhận thêm 'tutor_hint' (Sonnet trả lời) và 'tutor_check' (Haiku kiểm). Thân = bản 0027.
 --      Chung MỘT trần tháng của gia đình với Studio / Giáo trình / Nạp bài.
 --   2. ai_settings: nới trần tối đa 10 → 50 USD (P1; không đổi giá trị đang có). eng_set_ai_cap (chỉ phụ huynh) đặt trần + ngưỡng báo.
---      eng_ai_settings = bản 0024 + số lượt gia sư AI hôm nay / tháng này của từng em (P-E1-5: phụ huynh xem).
+--      eng_ai_settings = bản 0024 + số lượt gia sư AI hôm nay / tháng này của từng em (P-E1-5: phụ huynh xem) + phiên bản văn bản đồng ý mới nhất.
 --   3. track_settings: tutor_language (A 'vi', B 'en_first'), tutor_band, tutor_daily_limit (40, P-E1-5).
 --   4. tutor_turns (chỉ thêm): một lượt hỏi của con (mức, chữ con gõ ≤ 200, chữ đã gửi con SAU kiểm, kết quả kiểm, cờ, chi phí, lần chạy AI).
 --      Con KHÔNG đọc (kể cả chữ của chính mình); người lớn của em đọc (RLS). Không bao giờ chứa đáp án ngoài chữ đã qua kiểm.
@@ -149,6 +149,7 @@ begin
       select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
                'id', l.id, 'alias', l.alias, 'is_test', l.is_test,
                'ai_text', (select c.granted from english.consents c where c.learner_id = l.id and c.scope = 'ai_text' order by c.at desc, c.id desc limit 1),
+               'ai_text_version', (select c.notice_version from english.consents c where c.learner_id = l.id and c.scope = 'ai_text' order by c.at desc, c.id desc limit 1),
                -- 0039: lượt hỏi gia sư AI (có gọi AI) hôm nay / tháng này, giờ Việt Nam (P-E1-5)
                'tutor_today', (select pg_catalog.count(*) from english.tutor_turns t where t.learner_id = l.id and t.kind <> 'fixed'
                                  and (t.created_at at time zone 'Asia/Ho_Chi_Minh')::date = english.eng_today_vn()),
@@ -348,6 +349,9 @@ begin
         select pg_catalog.btrim(aa.answer) from english.accepted_additions aa
         where aa.template_id = v_inst.template_id and aa.template_version = v_inst.template_version and aa.item_id = p_item) s
       where s.a <> ''), '[]'::jsonb),
+    -- Văn bản đồng ý mới nhất mà phụ huynh đã bấm cho em (ai_text): gia sư AI chỉ chạy khi đó là bản có nói về gia sư AI (máy chủ so).
+    'consent_version', (select c.notice_version from english.consents c where c.learner_id = v_l.id and c.scope = 'ai_text' and c.granted
+                        order by c.at desc, c.id desc limit 1),
     'hints_used', v_hints,
     'turns_today', v_today,
     'daily_limit', v_limit,
