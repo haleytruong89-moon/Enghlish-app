@@ -27,6 +27,7 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
     levelsAssumed: data.profile ? data.profile.domains.some((d) => d.status === "assumed") : null,
     flagCount: data.pending.rows.filter((r) => r.kind === "flag").length,
     roadmapOrphans: data.roadmap ? data.roadmap.orphans : null,
+    studioOverdue: data.studioOverdue ?? null,
   });
   return (
     <div className="flex flex-col gap-5" data-testid="today-page">

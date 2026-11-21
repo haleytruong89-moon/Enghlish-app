@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildStudioBuild } from "../../lib/studio/buildTemplate";
 import { removeItem, removePart } from "../../lib/studio/editOps";
 import type { StudioDraft, StudioItem } from "../../lib/studio/schema";
-import { asCommit, createTestDb, migrate, seed, type Seeded, type TestDb } from "./helpers";
+import { asCommit, createTestDb, migrate, rowsAs, seed, type Seeded, type TestDb } from "./helpers";
 
 /** 21/11: a test cut down on "Duyệt đề" (whole parts or single questions removed) must still be approved, assigned and done. */
 describe("Studio draft cut down by the tutor (edit operations + migration 0024)", () => {
@@ -70,4 +70,24 @@ describe("Studio draft cut down by the tutor (edit operations + migration 0024)"
     // the reading text belonged to the removed questions only: the child gets no reading text
     expect(await q1("select 1 from english.template_step_sources where template_id = $1", [r.template_id])).toEqual([]);
   });
+
+  it("Bài làm trên app đã giao: the child's tutor and the parent read the rows the list is built from (RLS); the other tutor and the child do not", async () => {
+    const r = await approveAndAssign(removePart(FOUR, "O"));
+    const att = await asStudent<{ attempt_id: string }>("select english.eng_submit_attempt($1, $2, $3::jsonb, $4::text[], 'in_app') as r", [r.activityId, randomUUID(), JSON.stringify({ answers: { q1: "k1" } }), ["none"]]);
+    const reads = [
+      ["select id from english.inquiry_instances where template_id = $1", [r.template_id]],
+      ["select id from english.activity_instances where id = $1", [r.activityId]],
+      ["select id from english.attempts where id = $1", [att.attempt_id]],
+      ["select id from english.episodes where attempt_id = $1", [att.attempt_id]],
+      ["select id from english.results where attempt_id = $1", [att.attempt_id]],
+    ] as const;
+    for (const [sql, params] of reads) {
+      expect((await rowsAs(db.client, "authenticated", s.users.tutorNguyen, sql, [...params])).length, sql).toBe(1);
+      expect((await rowsAs(db.client, "authenticated", s.users.parent, sql, [...params])).length, sql).toBe(1);
+      expect(await rowsAs(db.client, "authenticated", s.users.tutorAn, sql, [...params]), sql).toEqual([]);
+    }
+    expect(await rowsAs(db.client, "authenticated", s.users.studentNguyen, "select id from english.episodes where attempt_id = $1", [att.attempt_id])).toEqual([]);
+    expect(await rowsAs(db.client, "authenticated", s.users.studentNguyen, "select id from english.results where attempt_id = $1", [att.attempt_id])).toEqual([]);
+  });
 });
+

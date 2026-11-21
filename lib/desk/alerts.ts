@@ -27,6 +27,8 @@ export type DeskAlertInput = {
   levelsAssumed?: boolean | null;
   /** Milestones sitting after a Unit that left the curriculum (W4a); null/undefined = unknown (no alert). */
   roadmapOrphans?: number | null;
+  /** Studio tests past their due day with nothing sent (21/11); null/undefined = unknown (no alert). */
+  studioOverdue?: number | null;
 };
 
 export function deskAlerts(i: DeskAlertInput): DeskAlert[] {
@@ -40,6 +42,11 @@ export function deskAlerts(i: DeskAlertInput): DeskAlert[] {
   if (t) {
     const late = t.practice.filter((a) => isOverdue(a, i.todayIso)).length;
     if (late > 0) out.push({ key: "overdue", tone: "warn", badge: todayPage.practiceOverdue, title: A.overdueTitle(late), line: A.overdueLine, href: `${base}/assign#assigned-list` });
+  }
+  if (i.studioOverdue && i.studioOverdue > 0) {
+    out.push({ key: "studio-overdue", tone: "warn", badge: todayPage.practiceOverdue, title: A.studioOverdueTitle(i.studioOverdue), line: A.studioOverdueLine, href: `${base}/assign#studio-assigned` });
+  }
+  if (t) {
     const label = (key: string) => t.tagLabels[key] ?? fallbackLabels.tag;
     for (const a of t.practice.filter((x) => x.submission !== null).slice(0, 3)) {
       const when = a.submission ? `${formatDateVi(todayVn(new Date(a.submission.createdAt)))} ${formatHm(a.submission.createdAt)}` : "";

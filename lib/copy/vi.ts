@@ -1952,6 +1952,26 @@ export const studioCopy = {
   assignedLine: (start: string, due: string) => `Đã giao: làm từ ${start}, hạn ${due}`,
 };
 
+// "Bài làm trên app đã giao" (21/11): Studio tests of one child with their status. Adults only.
+export const studioAssignedCopy = {
+  title: "Bài làm trên app đã giao",
+  empty: "Chưa giao bài làm trên app nào.",
+  unavailable: "Chưa đọc được danh sách bài làm trên app. Tải lại trang.",
+  status: {
+    not_yet: "Chưa tới ngày làm",
+    todo: "Chưa làm",
+    overdue: "Quá hạn",
+    waiting: `Chờ ${tutorHonorific} chấm câu`,
+    checked: "Đã chấm",
+  } as Record<"not_yet" | "todo" | "overdue" | "waiting" | "checked", string>,
+  dates: (start: string | null, due: string) => (start ? `Làm từ ${start}, hạn ${due}` : `Hạn ${due}`),
+  items: (n: number) => `${n} câu`,
+  sent: (when: string, attempts: number) => (attempts > 1 ? `nộp lần ${attempts} lúc ${when}` : `nộp lúc ${when}`),
+  firstResult: (correct: number, total: number) => `lần đầu đúng ${correct}/${total}`,
+  openWork: "Xem cả bài làm",
+  checkItems: "Chấm các câu đang chờ →",
+};
+
 // Nhập bài soạn sẵn (16/11): a draft made outside the app → a normal Studio draft. Adults only; no AI.
 export const studioImportCopy = {
   title: "Nhập bài soạn sẵn",
@@ -2529,6 +2549,8 @@ export const deskCopy = {
     curriculaLine: "Chưa có giáo trình nào. Thêm quyển đang dạy để app biết em đang học đến đâu.",
     overdueTitle: (n: number) => `${n} bài luyện quá hạn`,
     overdueLine: "Em chưa gửi và chưa ai ghi kết quả. Con không thấy chữ “quá hạn”.",
+    studioOverdueTitle: (n: number) => `${n} bài làm trên app quá hạn, con chưa nộp`,
+    studioOverdueLine: "Xem ở Giao bài → Bài làm trên app đã giao.",
     flagsTitle: (n: number) => `${n} kỹ năng cần xem lại`,
     flagsLine: "Sai lặp lại sau khi đã lên bậc. App không tự hạ bậc.",
     orphanTitle: (n: number) => `${n} mốc gắn Unit không còn`,

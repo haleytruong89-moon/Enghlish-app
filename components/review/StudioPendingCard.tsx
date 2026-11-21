@@ -2,7 +2,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { reviewItemCopy, studioCopy, studioInboxCopy } from "@/lib/copy/vi";
+import { reviewItemCopy, studioAssignedCopy, studioCopy, studioInboxCopy } from "@/lib/copy/vi";
 import { itemStatus, STATUS_TONE } from "@/lib/review/itemStatus";
 import { formatDay } from "@/lib/review/format";
 import { sendJson } from "@/lib/studio/client";
@@ -42,7 +42,10 @@ export function StudioPendingCard({ attempt }: { attempt: PendingAttempt }) {
       <h2 className="text-lg font-semibold">{attempt.alias} · {attempt.title}</h2>
       <p className="text-sm text-muted">
         {studioInboxCopy.submitted(`${formatHm(attempt.submittedAt)} ${formatDay(attempt.submittedAt.slice(0, 10))}`)} · {studioInboxCopy.attempt(attempt.attemptNo)} ·{" "}
-        <span data-testid={`studio-wait-${attempt.attemptId}`}>{studioInboxCopy.waiting(attempt.waitingDays)}</span>
+        <span data-testid={`studio-wait-${attempt.attemptId}`}>{studioInboxCopy.waiting(attempt.waitingDays)}</span> ·{" "}
+        <a href={`/review/attempts/${attempt.attemptId}`} data-testid={`studio-open-${attempt.attemptId}`} className="inline-flex min-h-11 items-center text-accent underline">
+          {studioAssignedCopy.openWork}
+        </a>
       </p>
       {done ? null : (
         <ul className="mt-3 flex flex-col gap-3">
