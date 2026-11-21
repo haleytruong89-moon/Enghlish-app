@@ -7,6 +7,7 @@ import { SaveStatus } from "@/components/ui/SaveStatus";
 import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { studioCopy, studioIssueText } from "@/lib/copy/vi";
 import { sendJson } from "@/lib/studio/client";
+import { addItem as addItemOp, addPart as addPartOp, moveToPart, numberingBroken, removeItem, removePart, renumber } from "@/lib/studio/editOps";
 import { passageItemRanges } from "@/lib/studio/passageUse";
 import type { DraftPageData } from "@/lib/studio/types";
 import type { StudioDraft, StudioItem } from "@/lib/studio/schema";
@@ -15,6 +16,9 @@ import { blockingIssues, validateDraft } from "@/lib/studio/validate";
 import { studioErrorText } from "@/lib/studio/view";
 import { ItemCard } from "./ItemCard";
 import { SidePanel } from "./SidePanel";
+
+/** How many blocking issues are listed under the buttons before "và n lỗi khác". */
+const BLOCKED_SHOWN = 8;
 
 /** Board 19: edit every item, part skill, reading texts; save with the optimistic lock; Duyệt only without blocking issues. */
 export function DraftEditor({ initial }: { initial: DraftPageData }) {
@@ -31,24 +35,26 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
   const blocking = blockingIssues(issues);
   const summary = summarizeDraft(d, issues);
   const flagged = new Set(issues.filter((i) => i.n !== null).map((i) => i.n as number));
+  const broken = numberingBroken(d);
 
   const change = (next: StudioDraft) => {
     setD(next);
   };
-  const upd = (n: number, patch: Partial<StudioItem>) => change({ ...d, items: d.items.map((i) => (i.n === n ? { ...i, ...patch } : i)) });
+  // Questions are addressed by identity, never by number: a draft may arrive with a doubled number, and numbers move on every structural edit.
+  const upd = (item: StudioItem, patch: Partial<StudioItem>) => {
+    const { part, ...rest } = patch;
+    const next = { ...item, ...rest };
+    const swapped = { ...d, items: d.items.map((i) => (i === item ? next : i)) };
+    change(part !== undefined && part !== item.part ? moveToPart(swapped, next, part) : swapped);
+  };
   const partSkill = (part: string, target: string | null) =>
     change({ ...d, items: d.items.map((i) => (i.part === part && !i.out_of_app ? { ...i, target_id: target } : i)) });
-  const addItem = (part: string) => {
-    const n = Math.max(0, ...d.items.map((i) => i.n)) + 1;
-    change({
-      ...d,
-      items: [...d.items, { n, part, kind: "gap", out_of_app: false, stem: "", options: [], passage_ref: null, key: null, accepted: [], tag_key: null, target_id: null, reading_skill_key: null, explanation_vi: "", needs_review: false, review_reason: null }],
-    });
+  const dropPart = (key: string) => {
+    const n = d.items.filter((i) => i.part === key).length;
+    if (!window.confirm(studioCopy.removePartConfirm(key, n))) return;
+    change(removePart(d, key));
   };
-  const addPart = () => {
-    const key = String.fromCharCode(65 + d.parts.length);
-    change({ ...d, parts: [...d.parts, { key, name: key, instructions: "" }] });
-  };
+  const goTo = (n: number) => document.getElementById(`studio-item-${n}`)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
 
   async function save(): Promise<string | null> {
     setBusy(true);
@@ -78,6 +84,7 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
     router.refresh();
   }
   async function discard() {
+    if (!window.confirm(studioCopy.discardConfirm)) return;
     const r = await sendJson(`/api/studio/drafts/${initial.draft.id}/discard`, "POST", {});
     if (r.ok) router.refresh();
     else setMsg(studioErrorText(r.error));
@@ -95,17 +102,24 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
           <input type="checkbox" data-testid="only-flagged" checked={onlyFlagged} onChange={(e) => setOnlyFlagged(e.target.checked)} className="h-5 w-5" />
           {studioCopy.onlyFlagged}
         </label>
+        <p className="text-sm text-muted" data-testid="auto-number-note">{studioCopy.autoNumberNote}</p>
         {blocking.filter((i) => i.n === null).map((i) => (
           <p key={i.code} role="alert" data-testid={`issue-draft-${i.code}`} className="rounded-xl bg-[#F8D7D3] px-3.5 py-3 text-sm text-[#8A1C12]">
             {studioIssueText[i.code]}
           </p>
         ))}
+        {broken ? (
+          <button type="button" onClick={() => change(renumber(d))} data-testid="studio-renumber" className="min-h-11 self-start rounded-lg border border-[#8A1C12] bg-white px-3 text-sm font-semibold text-[#8A1C12]">
+            {studioCopy.renumberNow}
+          </button>
+        ) : null}
         {d.parts.map((p, pi) => {
           const items = ordered.filter((i) => i.part === p.key);
           return (
             <section key={p.key} aria-labelledby={`part-${p.key}`} data-testid={`part-${p.key}`} className="flex flex-col gap-3">
               <div className="flex flex-wrap items-end gap-3">
                 <h2 id={`part-${p.key}`} className="text-lg font-semibold">{studioCopy.part} {p.key}</h2>
+                <span className="text-sm text-muted" data-testid={`part-${p.key}-count`}>{studioCopy.side.items(d.items.filter((i) => i.part === p.key).length)}</span>
                 <input aria-label={studioCopy.partName} value={p.name} onChange={(e) => change({ ...d, parts: d.parts.map((x, j) => (j === pi ? { ...x, name: e.target.value } : x)) })} className="min-h-11 flex-1 rounded-lg border border-line px-3" />
                 <label className="flex flex-col text-xs font-semibold">
                   {studioCopy.partSkill}
@@ -115,19 +129,22 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
                     {context.skills.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
                 </label>
+                <button type="button" onClick={() => dropPart(p.key)} data-testid={`part-${p.key}-remove`} className="min-h-11 text-sm text-muted underline">
+                  {studioCopy.removePart}
+                </button>
               </div>
               <textarea lang="en" aria-label={studioCopy.partInstructions} rows={2} value={p.instructions} onChange={(e) => change({ ...d, parts: d.parts.map((x, j) => (j === pi ? { ...x, instructions: e.target.value } : x)) })} className="rounded-lg border border-line px-3 py-2 text-sm" />
               <ul className="flex flex-col gap-3">
                 {items.map((i) => (
-                  <ItemCard key={i.n} item={i} parts={d.parts} passages={d.passages} context={context} issues={issues.filter((x) => x.n === i.n)}
-                    onChange={(patch) => upd(i.n, patch)} onRemove={() => change({ ...d, items: d.items.filter((x) => x.n !== i.n) })} />
+                  <ItemCard key={d.items.indexOf(i)} item={i} parts={d.parts} passages={d.passages} context={context} issues={issues.filter((x) => x.n === i.n)}
+                    onChange={(patch) => upd(i, patch)} onRemove={() => change(removeItem(d, i))} />
                 ))}
               </ul>
-              <button type="button" onClick={() => addItem(p.key)} className="self-start text-sm text-accent underline">{studioCopy.addItem}</button>
+              <button type="button" onClick={() => change(addItemOp(d, p.key))} data-testid={`part-${p.key}-add`} className="self-start text-sm text-accent underline">{studioCopy.addItem}</button>
             </section>
           );
         })}
-        <button type="button" onClick={addPart} className="self-start text-sm text-accent underline">{studioCopy.addPart}</button>
+        <button type="button" onClick={() => change(addPartOp(d))} data-testid="studio-add-part" className="self-start text-sm text-accent underline">{studioCopy.addPart}</button>
         <section aria-labelledby="passages" className="flex flex-col gap-3">
           <h2 id="passages" className="text-lg font-semibold">{studioCopy.passages}</h2>
           {d.passages.map((p, k) => {
@@ -149,9 +166,29 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
         <div className="flex flex-wrap gap-3">
           <button type="button" disabled={busy} onClick={() => void save()} data-testid="studio-save" className="min-h-12 rounded-xl border border-line bg-white px-5 font-semibold">{busy ? studioCopy.saving : studioCopy.save}</button>
           <button type="button" disabled={busy || blocking.length > 0} onClick={() => void approve()} data-testid="studio-approve" className="min-h-12 rounded-xl bg-accent px-5 font-bold text-white disabled:opacity-50">{studioCopy.approve}</button>
-          <button type="button" disabled={busy} onClick={() => void discard()} className="min-h-12 px-3 text-sm text-muted underline">{studioCopy.discard}</button>
         </div>
-        {blocking.length > 0 ? <p className="text-sm text-[#8A1C12]" data-testid="approve-blocked">{studioCopy.approveBlocked(blocking.length)}</p> : null}
+        {blocking.length > 0 ? (
+          <div className="rounded-xl bg-[#F8D7D3] px-3.5 py-3 text-sm text-[#8A1C12]" data-testid="approve-blocked">
+            <p className="font-semibold">{studioCopy.approveBlocked(blocking.length)}</p>
+            <ul className="mt-1 flex flex-col">
+              {blocking.slice(0, BLOCKED_SHOWN).map((i) => (
+                <li key={`${i.n}-${i.code}`}>
+                  {i.n === null ? (
+                    <span className="inline-flex min-h-11 items-center">{studioIssueText[i.code]}</span>
+                  ) : (
+                    <button type="button" onClick={() => goTo(i.n as number)} data-testid={`blocked-${i.n}-${i.code}`} className="min-h-11 text-left underline">
+                      {studioCopy.blockedItem(i.n, studioIssueText[i.code])}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {blocking.length > BLOCKED_SHOWN ? <p>{studioCopy.blockedMore(blocking.length - BLOCKED_SHOWN)}</p> : null}
+          </div>
+        ) : null}
+        <div className="mt-6 flex justify-end border-t border-line pt-3">
+          <button type="button" disabled={busy} onClick={() => void discard()} data-testid="studio-discard" className="min-h-11 px-3 text-sm text-muted underline">{studioCopy.discard}</button>
+        </div>
       </div>
       <SidePanel summary={summary} aiCostUsd={initial.draft.aiCostUsd} gate={initial.gate} />
     </div>
