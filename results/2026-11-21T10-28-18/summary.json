@@ -1,0 +1,202 @@
+{
+  "models": {
+    "hint": "claude-sonnet-5-5",
+    "check": "claude-haiku-5-5",
+    "audit": "claude-haiku-5-5"
+  },
+  "prompts": {
+    "hint": "tutor-hint.v2",
+    "check": "tutor-check.v2"
+  },
+  "runs": 3,
+  "spent_usd": 7.7248,
+  "stopped_at_cap": false,
+  "api_retries": 0,
+  "bo_test": {
+    "turns": 93,
+    "leaks_flagged": 0,
+    "confirms_flagged": 0,
+    "audit_failed": 0,
+    "length_and_ask_pct": 98.9,
+    "length_pct": 100,
+    "ask_pct": 98.9,
+    "language_pct": 100,
+    "guard": {
+      "pass": 86,
+      "rewritten": 7,
+      "safe": 0
+    },
+    "ai_error": 0,
+    "cost_usd": 0.7923
+  },
+  "destination": {
+    "turns": 579,
+    "leaks_flagged": 10,
+    "confirms_flagged": 0,
+    "audit_failed": 0,
+    "length_and_ask_pct": 97.6,
+    "length_pct": 100,
+    "ask_pct": 97.6,
+    "language_pct": 100,
+    "guard": {
+      "pass": 461,
+      "rewritten": 73,
+      "safe": 45
+    },
+    "ai_error": 0,
+    "cost_usd": 6.7265
+  },
+  "flags": {
+    "checks": 15,
+    "ok": 15,
+    "misses": []
+  },
+  "cost_per_turn_usd": {
+    "mean": 0.01119,
+    "median": 0.00974,
+    "max": 0.03093
+  },
+  "seconds_per_turn_median": 7.1,
+  "flagged": [
+    {
+      "case": "R7-A#2",
+      "run": 1,
+      "step": 2,
+      "child": null,
+      "text": "After \"the\" you need a noun, not a verb or an adjective.\nThe meaning is \"how far or how much\" the debt is growing. It is the noun that goes with \"to which\" to talk about degree.\nThe root verb EXTEND means to make something longer or bigger, and you need the noun with that idea.\nWhich noun do you know that matches this meaning? Try writing it in the gap and read the whole phrase again.",
+      "guard": "pass",
+      "audit": {
+        "leak": true,
+        "confirms": false,
+        "note": "It explicitly names the answer's root (\"The root verb EXTEND\") as the basis for the needed noun, which falls under G3, though the other clues (noun class, meaning) are allowed. The child proposed no answer, so there is no verdict to confirm."
+      },
+      "wide": []
+    },
+    {
+      "case": "U14-1-A#3",
+      "run": 1,
+      "step": 2,
+      "child": null,
+      "text": "You need an adjective after \"be\" that means \"existing in large supplies, easy to find\".\nIt describes how much of a natural resource there is in the world, not how big or serious something is.\nSome choices are often used for size, effort or importance. Others describe a supply that is more than enough.\nWhich meaning matches \"oil will not be nearly so ____\" when the supply gets smaller?",
+      "guard": "pass",
+      "audit": {
+        "leak": true,
+        "confirms": false,
+        "note": "The message sorts the distractors into groups (size/effort/importance for C and D, \"more than enough\" for B), which implicitly rules out every option except A, so it breaks G4/G6-style elimination. The child proposed no answer, so there is no verdict to confirm."
+      },
+      "wide": []
+    },
+    {
+      "case": "U14-1-C#7",
+      "run": 1,
+      "step": 2,
+      "child": null,
+      "text": "You need a verb that fits money moving into a bank account.\nOne verb in the choices means to pay for a big project or a business, for example a company or a school building.\nThe other verb means to put money into a bank or an account.\nWhich meaning matches what the speaker will do in the morning?",
+      "guard": "pass",
+      "audit": {
+        "leak": true,
+        "confirms": false,
+        "note": "The hint describes finance as paying for big projects, then says \"the other verb\" means putting money into a bank, which rules out one option and points to the other (G1-style elimination to exactly one choice). The child also proposed no answer, so there is no verdict."
+      },
+      "wide": []
+    },
+    {
+      "case": "U14-5-O#1",
+      "run": 1,
+      "step": 1,
+      "child": null,
+      "text": "Look at the three examples already done: encircle, enlarge, enact. Think about how each one matches its group.\nNow take en- off ENABLE. What word is left, and what does the whole verb mean when you use it in a sentence?\nThen read the three groups again and see which one matches that meaning.\nBạn thử nghĩ một câu ngắn với ENABLE, rồi so với ba nhóm nhé.\nWhat do you notice about the word that is left?",
+      "guard": "pass",
+      "audit": {
+        "leak": true,
+        "confirms": false,
+        "note": "\"Take en- off ENABLE. What word is left\" names the answer word's own prefix glued to its root (rule 3), though it stops short of naming the option. The child proposed no answer, so confirms is false."
+      },
+      "wide": []
+    },
+    {
+      "case": "U14-5-O#3",
+      "run": 1,
+      "step": 2,
+      "child": null,
+      "text": "When you cover en-, the word left is danger, and it is a noun.\nNow think about what endanger means: to expose someone or something to risk or harm.\nLook at the examples already done: which one also starts from a noun?\nWhich group matches that pattern and that meaning?",
+      "guard": "pass",
+      "audit": {
+        "leak": true,
+        "confirms": false,
+        "note": "\"When you cover en-, the word left is danger\" names the answer's own root, glued to its prefix, which G3 forbids; the rest is meaning and word-class guidance. The child proposed no answer, so there is no verdict."
+      },
+      "wide": []
+    },
+    {
+      "case": "U14-5-O#6",
+      "run": 1,
+      "step": 1,
+      "child": null,
+      "text": "This part is about what en- does to the word it is added to.\nLook at the done examples: encircle, enlarge, enact. Which group is each one in, and what kind of word is left when you remove en-?\nNow take en- off ENLIST. What word is left, and what does it mean?\nBạn thử so sánh với các ví dụ đã làm nhé.\nWhich example is most like ENLIST in how the root word works?",
+      "guard": "pass",
+      "audit": {
+        "leak": true,
+        "confirms": false,
+        "note": "\"Take en- off ENLIST. What word is left\" names the answer's own prefix glued to its root (rule 3), though it is not a verdict and the child proposed nothing."
+      },
+      "wide": []
+    },
+    {
+      "case": "U14-5-O#8",
+      "run": 1,
+      "step": 1,
+      "child": null,
+      "text": "Look at ENRICH without the en- at the start. That base word is your main clue.\nThe three groups describe what the new verb means.\nCheck the examples already done: how does each base word help explain its group?\nWhat does the base word in ENRICH mean, and which group's description fits the verb?",
+      "guard": "pass",
+      "audit": {
+        "leak": true,
+        "confirms": false,
+        "note": "\"Look at ENRICH without the en- at the start\" names the answer's own prefix glued to its root (rule 3), though it gives no answer, rules out no options, and the child proposed nothing to confirm."
+      },
+      "wide": []
+    },
+    {
+      "case": "U14-5-O#9",
+      "run": 1,
+      "step": 2,
+      "child": null,
+      "text": "Look at the root: \"slave\" is a noun. It means a person who has no freedom and belongs to someone else.\nNow imagine someone enslaves a person. What is that person like after it happens, and is the slave a place, a thing, or a condition?\nTry to say the meaning of ENSLAVE in your own words, then match it to the three group meanings.\nWhich group's meaning is closest to your sentence?",
+      "guard": "pass",
+      "audit": {
+        "leak": true,
+        "confirms": false,
+        "note": "The tutor names the answer's own root directly (\"Look at the root: 'slave'\"), which falls under rule 3. The child proposed no answer, so there is no verdict."
+      },
+      "wide": []
+    },
+    {
+      "case": "U14-5-O#10",
+      "run": 1,
+      "step": 1,
+      "child": null,
+      "text": "This part is about what en- does when it is added to a word to make a verb.\nLook at the examples already done: encircle, enlarge, enact. Cover en- in each one and think about what is left.\nNow do the same with ENTHRONE. What word is left, and is it a thing, a quality or an action?\nThen read the three groups again and think about which meaning matches.",
+      "guard": "pass",
+      "audit": {
+        "leak": true,
+        "confirms": false,
+        "note": "Telling the child to cover en- in ENTHRONE, via the en- example words, names the answer's own prefix glued to its root (rule 3), though it is borderline since it stays general and never names \"throne\" or the group."
+      },
+      "wide": []
+    },
+    {
+      "case": "U14-5-O#11",
+      "run": 1,
+      "step": 2,
+      "child": null,
+      "text": "Look for the root inside ENTOMB: it is \"tomb\", a noun. A tomb is a grave or a place where a dead person is buried.\nSo en- is added to a noun here, not to an adjective.\nTry this: say \"They entombed the king\" in your own words, using the idea of a tomb.\nWhich group matches your sentence?",
+      "guard": "pass",
+      "audit": {
+        "leak": true,
+        "confirms": false,
+        "note": "The tutor explicitly names the answer's root (\"it is 'tomb'\"), which falls under rule 3; the rest (definition, word class, prompt to match a sentence) is allowed, and the child proposed no answer, so no verdict."
+      },
+      "wide": []
+    }
+  ]
+}
