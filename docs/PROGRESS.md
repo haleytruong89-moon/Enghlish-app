@@ -1921,3 +1921,20 @@ Nhánh `feature/studio-feedback-units` (dựa trên `feature/studio-flow-fixes`,
 - Đề xuất "Đang học" gồm cả bài link / PDF giao theo Unit đã có bài nộp (cùng luật, không cần SQL thêm).
 - Unit chỉ chọn lúc giao (chưa tự điền theo tên bài).
 
+## E0 — Ô Đề bài chỉ hiện lời dặn của phần chứa câu (bàn giao "Gia sư AI tiếng Anh", phụ lục B)
+
+Nhánh `feature/e0-task-parts` (dựa trên PR #47, gộp #46 → #47 trước). **SQL cần áp: `db/migrations/0038_my_task_parts.sql`** (một hàm đọc; cần 0037). Không AI. Thiết kế `docs/DESIGN.md` §19.30.
+
+- **Nguyên nhân:** lời dặn của mọi phần nằm chung một chuỗi (`prompt_en`) và ô Đề bài hiện cả chuỗi; tên phần trùng lời dặn thì lặp; word bank là chữ thường.
+- **Đã sửa:** mỗi câu hiện đúng lời dặn + word bank (dạng chip) của phần chứa nó; ô Đề bài chia theo phần ("Questions 1–5" + lời dặn phần đó); không lặp khi tên phần trùng lời dặn. Áp cho cả bài đã duyệt trước đây (đọc phần đã lưu, không sửa đề đã khóa).
+- **Đề bị nhóm phần sai từ đầu:** thầy/cô bấm "Sửa đề đã duyệt" → chọn lại phần của câu ở Duyệt đề → Duyệt (bản mới) → giao lại.
+
+### Cách thử (sau khi áp 0038)
+1. Nguyên (thử) mở một bài Studio nhiều phần (ví dụ "Bài tập 16/11/2026").
+2. Câu 1: khung trên câu chỉ có lời dặn phần 1 (một lần) + chip word bank phần 1. Sang một câu của phần 2: chỉ thấy phần 2.
+3. Ô Đề bài (bên cạnh trên laptop / trên cùng trên iPad): mỗi phần một khối có "Questions …".
+
+### Đã kiểm
+- `tests/unit/taskParts.test.ts` (tái hiện đúng đoạn chữ của lỗi), `tests/dom/playerPartLead.test.tsx` (câu 1 chỉ phần 1, câu phần 2 chỉ phần 2, ô Đề bài theo phần), `tests/db/myTaskParts.test.ts` (con đọc đúng phần, không đáp án; em kia / người lớn / bước lạ → null; chạy lại migration), `tests/unit/migrationMyTaskParts.test.ts`.
+- **Chưa kiểm:** e2e (CI), bấm thật trên iPad; chưa xem dữ liệu thật của "Bài tập 16/11/2026" (không đọc DB thật) — nếu word bank của bài đó viết khác kiểu "Nhãn: a, b, c" thì vẫn hiện là chữ thường.
+
