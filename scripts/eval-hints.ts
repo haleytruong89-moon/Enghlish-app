@@ -2,7 +2,7 @@
  * npm run eval:hints -- [--runs 3] [--destination tests/eval/destination] [--max-usd 15] [--out eval/results]
  *
  * E1 test set of the AI tutor (hub BO_TEST_GIA_SU_TIENG_ANH v0.1 §2–§3, P-E1 decisions 21/11): runs the REAL turn (lib/tutor/turn.ts:
- * prompt tutor-hint.v1 on Sonnet, code check, Haiku check, one rewrite, safe sentence) with an in-memory store instead of the database,
+ * prompt tutor-hint.v2 on Sonnet, code check, Haiku check, one rewrite, safe sentence) with an in-memory store instead of the database,
  *   1. on the 24 BO_TEST cases (A.11, N.11 are E3), `--runs` times each;
  *   2. once on every question of the Destination files (if the folder is there), H1 → H2 → H3 ("Gợi ý tiếp" three times).
  * Measures (§3): (a) leaks — the code check on the final text + an independent audit (Haiku, another prompt) + a wider substring scan, every
@@ -118,12 +118,18 @@ function auditCall(c: Case, childText: string | null, text: string): ToolCall {
   return {
     model: AUDIT_MODEL, documents: [], tool: auditTool, maxTokens: 1500, toolChoice: models.toolChoice,
     instructions: [
-      "You audit an AI tutor for children learning English. The tutor must help WITHOUT giving the answer away before the child answers.",
-      "leak = true if the message states the answer or an accepted answer, spells part of it (a word of a multi-word answer the question does not show,",
-      "the right prefix/suffix, the first letters), names the right option (its letter or its text) as the one to pick, or narrows the choice so far that",
-      "only the answer is left (for example 'it is the word with \"art\" in it'). Explaining what a word in the word bank MEANS is allowed, even the answer,",
-      "as long as the message does not say whether it fits the gap. Mentioning a WRONG option to rule it out is allowed.",
-      "confirms = true if the child guessed something and the message says or implies right / wrong / close (\"đúng rồi\", \"not quite\", \"good guess\").",
+      "You audit an AI tutor for children learning English against the app's written rules (G1–G4). A hint is SUPPOSED to narrow things",
+      "down by meaning and grammar; that alone is not a leak. Judge only by these rules.",
+      "leak = true ONLY if the message: (1) states the answer or an accepted answer; (2) shows a word of a multi-word answer that the",
+      "question does not show, or the first letters of the answer; (3) names the answer's own prefix / suffix / root, glued to the root or",
+      "through an example word that carries it (\"like in equivalent\" for equidistant); (4) names the right option (its letter or its text) as",
+      "the one to pick; (5) translates the answer into Vietnamese / gives its Vietnamese equivalent; (6) rules out choices until exactly one is",
+      "left (every other option ruled out, or one of two ruled out and \"the other one\" pointed to).",
+      "NOT a leak: describing the meaning needed, a definition-like clue, the word class, tense, singular / plural, a grammar rule, talking",
+      "about prefixes or suffixes in general (\"a negative prefix\"), ruling out ONE wrong option while two or more stay open, explaining",
+      "what a word means when the child asked (even the answer word) without saying whether it fits.",
+      "confirms = true ONLY if the child proposed a specific answer and the message says or implies it is right / wrong / close",
+      "(\"đúng rồi\", \"not quite\", \"good guess\"). Asking the child to check their own choice is not a verdict.",
       "",
       `QUESTION: ${c.item.stem}`,
       `OPTIONS: ${c.item.options.length ? c.item.options.join(" | ") : "(none)"}`,
@@ -137,16 +143,20 @@ function auditCall(c: Case, childText: string | null, text: string): ToolCall {
   };
 }
 
-/** Wider than the product check (for the report only): the answer as a plain substring, ≥ 4 letters, anywhere. */
+/** Wider than the product check (for the report only): the answer with a short ending added (inflections the code check would miss). */
 function wideScan(c: Case, text: string): string[] {
   const t = normText(text).replace(/[^\p{L}\p{N} ]/gu, "");
   const out: string[] = [];
   const answers = c.item.options.length
     ? c.item.options.filter((o) => o.trim().toUpperCase().startsWith(`${(c.answers[0] ?? "").trim().toUpperCase()}.`)).map((o) => o.trim().slice(2).trim())
     : c.answers;
+  // A word starting with the answer and at most 3 more letters (pocket → pockets, withdraw → withdrawn), answers of 5+ letters;
+  // shorter answers only as the whole word ("think" is not "thin").
   for (const a of answers) {
     const n = normText(a).replace(/[^\p{L}\p{N} ]/gu, "");
-    if (n.replace(/ /g, "").length >= 4 && t.includes(n) && !normText(c.item.stem).includes(n)) out.push(`substring:${a}`);
+    if (n.replace(/ /g, "").length < 4 || normText(c.item.stem).includes(n)) continue;
+    const tail = n.replace(/ /g, "").length >= 5 ? "\\p{L}{0,3}" : "";
+    if (new RegExp(`(?<![\\p{L}\\p{N}])${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}${tail}(?![\\p{L}\\p{N}])`, "u").test(t)) out.push(`word:${a}`);
   }
   return out;
 }

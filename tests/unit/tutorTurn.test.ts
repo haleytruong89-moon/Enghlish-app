@@ -49,7 +49,7 @@ describe("one turn of Hỏi", () => {
     expect(calls.map((c) => c.tool.name)).toEqual(["give_hint", "check_hint"]);
     expect(calls[0]!.instructions).toContain("H1");
     expect(store.logRun).toHaveBeenCalledTimes(2); // S.4
-    expect(store.logRun.mock.calls[0]![0]).toMatchObject({ release: null, purpose: "tutor_hint", model: "claude-sonnet-5-5", promptVersion: "tutor-hint.v1" });
+    expect(store.logRun.mock.calls[0]![0]).toMatchObject({ release: null, purpose: "tutor_hint", model: "claude-sonnet-5-5", promptVersion: "tutor-hint.v2" });
     expect(store.logRun.mock.calls[1]![0]).toMatchObject({ release: "res-1", purpose: "tutor_check", model: "claude-haiku-5-5" });
     expect((deps.call as ReturnType<typeof vi.fn>).mock.calls[0]![1]).toEqual({ timeoutMs: 45_000 });
     expect(store.record.mock.calls[0]![0]).toMatchObject({ kind: "hint", guard: "pass", shown: GOOD });
