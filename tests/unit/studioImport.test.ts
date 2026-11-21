@@ -68,7 +68,7 @@ function store(over: Partial<StudioStore> = {}): StudioStore {
   return {
     getDraftLearnerId: vi.fn(async () => NGUYEN),
     getAttemptLearnerId: vi.fn(async () => null),
-    issueUploadTicket: no(), aiGate: no(), aiReserve: no(), aiSettings: no(), setAiSettings: no(), logAiRun: no(),
+    issueUploadTicket: no(), aiGate: no(), aiReserve: no(), aiSettings: no(), setAiSettings: no(), setAiCap: no(), logAiRun: no(),
     createDraft: vi.fn(async () => ({ id: DRAFT, status: "draft", replayed: false })),
     draftByClientId: vi.fn(async () => null),
     editDraft: no(),

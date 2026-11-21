@@ -98,7 +98,8 @@ describe("Studio B1 (migration 0024)", () => {
       await fail(q1("update english.ai_runs set error_code = 'x' where id = $1", [run]), "42501");
       await fail(q1("delete from english.ai_runs where id = $1", [run]), "42501");
       await fail(q1("insert into english.ai_runs(family_id, purpose, status, cost_usd) values ($1, 'studio_extract', 'refused_cap', 0.01)", [s.familyId]), "23514");
-      await fail(q1("insert into english.ai_settings(family_id, monthly_cap_usd) values ($1, 11)", [s.familyId]), "23514");
+      // 0039 (P1, 21/11): the monthly cap may go up to 50 USD (was 10); above that the check still refuses.
+      await fail(q1("insert into english.ai_settings(family_id, monthly_cap_usd) values ($1, 51)", [s.familyId]), "23514");
     });
 
     it("students read no Studio table; the other child's tutor reads nothing of this child", async () => {

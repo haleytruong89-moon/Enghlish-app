@@ -87,11 +87,18 @@ export function parseAiSettings(raw: unknown): AiSettingsView {
   const s = z
     .object({
       enabled: z.boolean(), monthly_cap_usd: num, soft_cap_usd: num, spent_usd: num, runs_month: num, soft_reached: z.boolean(), updated_at: z.string().nullable(),
-      learners: z.array(z.object({ id: z.string(), alias: z.string(), is_test: z.boolean(), ai_text: z.boolean().nullable() })),
+      learners: z.array(z.object({
+        id: z.string(), alias: z.string(), is_test: z.boolean(), ai_text: z.boolean().nullable(),
+        // 0039 (absent before it is applied)
+        ai_text_version: z.string().nullable().optional(), tutor_today: num.optional(), tutor_month: num.optional(),
+      })),
     })
     .parse(raw);
   return {
     enabled: s.enabled, monthlyCapUsd: s.monthly_cap_usd, softCapUsd: s.soft_cap_usd, spentUsd: s.spent_usd, runsMonth: s.runs_month, softReached: s.soft_reached,
-    updatedAt: s.updated_at, learners: s.learners.map((l) => ({ id: l.id, alias: l.alias, isTest: l.is_test, aiText: l.ai_text })),
+    updatedAt: s.updated_at,
+    learners: s.learners.map((l) => ({
+      id: l.id, alias: l.alias, isTest: l.is_test, aiText: l.ai_text, aiTextVersion: l.ai_text_version ?? null, tutorToday: l.tutor_today ?? null, tutorMonth: l.tutor_month ?? null,
+    })),
   };
 }

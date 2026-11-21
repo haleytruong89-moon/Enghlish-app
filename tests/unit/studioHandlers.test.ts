@@ -48,6 +48,7 @@ function store(over: Partial<StudioStore> = {}): StudioStore {
     aiReserve: vi.fn(async () => ({ ...GATE_ON, reservation_id: null })),
     aiSettings: vi.fn(async () => ({ enabled: true, monthly_cap_usd: 10, soft_cap_usd: 8, spent_usd: 1.5, runs_month: 2, soft_reached: false, updated_at: null, learners: [] })),
     setAiSettings: vi.fn(async () => ({ enabled: false, monthly_cap_usd: 10, soft_cap_usd: 8, spent_usd: 1.5, runs_month: 2, soft_reached: false, updated_at: null, learners: [] })),
+    setAiCap: vi.fn(async () => ({})),
     logAiRun: vi.fn(async () => "run-1"),
     createDraft: vi.fn(async () => ({ id: DRAFT, status: "extracting", replayed: false })),
     draftByClientId: vi.fn(async () => null),
@@ -173,7 +174,7 @@ describe("Studio API (requireAccess first; tutor or parent of the child)", () =>
     expect((await handleAiSettings(deps("parent"))).status).toBe(200);
     const s = store();
     expect((await handleSetAiSettings(deps("parent", s), { enabled: false })).status).toBe(200);
-    expect(s.setAiSettings).toHaveBeenCalledWith({ enabled: false, noticeVersion: "ai-studio-v1", byMemberId: "m-parent" });
+    expect(s.setAiSettings).toHaveBeenCalledWith({ enabled: false, noticeVersion: "ai-studio-tutor-v2", byMemberId: "m-parent" });
     expect((await handleSetAiSettings(deps("studentNguyen"), { enabled: true })).status).toBe(403);
   });
 

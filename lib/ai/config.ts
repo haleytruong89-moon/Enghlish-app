@@ -7,10 +7,14 @@ export const AI_FAKE_FIXTURES: Record<string, string> = {
   save_exercise: AI_FAKE_FIXTURE,
   save_curriculum_toc: "tests/fixtures/curriculum/fake-toc.json",
   save_read_answers: "tests/fixtures/import/fake-read-answers.json",
+  give_hint: "tests/fixtures/tutor/fake-hint.json",
+  check_hint: "tests/fixtures/tutor/fake-check.json",
 };
 export const fakeFixtureFor = (toolName: string): string => AI_FAKE_FIXTURES[toolName] ?? AI_FAKE_FIXTURE;
 /** Version of the short consent text on /settings/ai (consents.notice_version). Change the text → new version. */
-export const AI_NOTICE_VERSION = "ai-studio-v1";
+export const AI_NOTICE_VERSION = "ai-studio-tutor-v2";
+/** E1: the AI tutor runs only for a child whose latest ai_text consent is this version (the text that tells the parent about it). */
+export const TUTOR_NOTICE_VERSION = "ai-studio-tutor-v2";
 type Env = Record<string, string | undefined>;
 
 export function studioModel(env: Env = process.env): string {

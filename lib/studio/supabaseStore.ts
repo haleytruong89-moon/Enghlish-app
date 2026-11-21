@@ -24,6 +24,7 @@ export function createSupabaseStudioStore(): StudioStore {
       call("eng_ai_gate", { p_learner: a.learnerId, p_estimate: a.estimateUsd, p_reserve: true, p_draft: a.draftId, p_model: a.model, p_by: a.byMemberId }),
     aiSettings: (m) => call("eng_ai_settings", { p_by: m }),
     setAiSettings: (a) => call("eng_set_ai_settings", { p_enabled: a.enabled, p_notice_version: a.noticeVersion, p_by: a.byMemberId }),
+    setAiCap: (a) => call("eng_set_ai_cap", { p_cap: a.cap, p_soft: a.soft, p_by: a.byMemberId }),
     logAiRun: async (r) =>
       String(
         await call("eng_log_ai_run", {
