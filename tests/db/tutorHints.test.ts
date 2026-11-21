@@ -137,6 +137,8 @@ describe("tutor hints (migration 0039)", () => {
     const g = await svc<{ allowed: boolean; reservation_id: string }>("select english.eng_ai_gate($1, 0.05, true, null, 'claude-sonnet-5-5', null, 'tutor_hint') as r", [s.learners.nguyen]);
     expect(g.allowed).toBe(true);
     const fam = (await q1<{ family_id: string }>("select family_id from english.learners where id = $1", [s.learners.nguyen]))[0]!.family_id;
+    // The reservation is for tutor_hint: the Haiku run cannot release it (lib/tutor/turn.ts releases with the last Sonnet run).
+    await fail(svc("select english.eng_log_ai_run($1, null, 'claude-haiku-5-5', 'tutor-check.v2', 900, 60, 0.0001, 'ok', null, null, $2, 'tutor_check') as r", [fam, g.reservation_id]), "23514", /bad_release/);
     const run = await svc<string>("select english.eng_log_ai_run($1, null, 'claude-sonnet-5-5', 'tutor-hint.v1', 1500, 800, 0.011, 'ok', null, null, $2, 'tutor_hint') as r", [fam, g.reservation_id]);
     expect(run).toBeTruthy();
     expect(await svc("select english.eng_log_ai_run($1, null, 'claude-haiku-5-5', 'tutor-check.v1', 900, 60, 0.0001, 'ok', null, null, null, 'tutor_check') as r", [fam])).toBeTruthy();

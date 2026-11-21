@@ -122,7 +122,7 @@ export async function runTutorTurn(deps: TutorDeps, input: TurnInput): Promise<T
   if (!gate.allowed) return fixed("ai_off");
   const now = deps.now ?? Date.now;
   const deadline = now() + TURN_BUDGET_MS;
-  // Every call is written to the ledger at the end of the turn; the reservation is released only with the last one, so a turn cut short
+  // Every call is written to the ledger at the end of the turn, releasing the reservation only then, so a turn cut short
   // (the function stopped) keeps its worst case counted against the cap instead of losing calls that were billed.
   type Pending = { model: string; promptVersion: string; purpose: "tutor_hint" | "tutor_check"; input: number; output: number; cost: number; error: string | null };
   const pending: Pending[] = [];
@@ -135,11 +135,13 @@ export async function runTutorTurn(deps: TutorDeps, input: TurnInput): Promise<T
     pending.push({ model: c.model, promptVersion, purpose, input: billed.inputTokens, output: billed.outputTokens, cost: usd, error });
   };
   const flush = async () => {
+    // The reservation was made for purpose tutor_hint, so it is released with the last Sonnet call (eng_log_ai_run checks the purpose).
+    const releaseAt = pending.map((p) => p.purpose).lastIndexOf("tutor_hint");
     for (let i = 0; i < pending.length; i++) {
       const p = pending[i]!;
       runs.push(await deps.store.logRun({
         familyId: ctx.familyId, model: p.model, promptVersion: p.promptVersion, input: p.input, output: p.output, cost: p.cost,
-        status: p.error ? "error" : "ok", error: p.error, release: i === pending.length - 1 ? (gate.reservationId ?? null) : null, purpose: p.purpose,
+        status: p.error ? "error" : "ok", error: p.error, release: i === releaseAt ? (gate.reservationId ?? null) : null, purpose: p.purpose,
       }));
     }
   };
