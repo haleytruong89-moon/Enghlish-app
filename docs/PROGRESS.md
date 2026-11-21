@@ -1970,7 +1970,22 @@ Kiểm tra: `select version from english.schema_migrations where version in ('00
 - DB: `tests/db/tutorHints.test.ts` (quyền, Studio / bài kiểm tra / đã nộp, lượt lặp `client_id`, mức trong DB, giới hạn ngày, purge, trần ≤ 50, chỉ phụ huynh đặt trần). `tests/db/studio.test.ts`: ràng buộc trần cũ (≤ 10) đổi sang ≤ 50 theo P1.
 - Unit: `tests/unit/tutorLeak.test.ts` (S.6–S.10), `tutorTurn.test.ts` (S.1–S.5, S.12, S.13, lời lừa, bản đồng ý cũ), `tutorHandler.test.ts`, `migrationTutorHints.test.ts` (bản sao hàm cổng / sổ / cài đặt / purge chỉ khác đúng phần thêm). DOM: `askTutor.test.tsx`. e2e (CI, AI_FAKE): `tests/e2e/studio.spec.ts` bấm Hỏi trên bài luyện Studio, thấy gợi ý mẫu, nút đổi "Gợi ý tiếp", một dòng `tutor_turns`.
 - S.14 (em A hỏi câu của em B) nằm trong test DB (`not_found`). S.11 → E3.
-- **Bộ test có gọi model:** xem mục "Kết quả bộ test" (điền sau khi chạy).
+- **Bộ test có gọi model:** xem mục "Kết quả bộ test" bên dưới.
+
+### Kết quả bộ test (21/11, workflow "Eval AI tutor hints", nhánh `eval/e1`, kết quả ở nhánh `eval-results` thư mục `results/2026-11-21T10-28-18`)
+Sonnet 5.5 trả lời, Haiku 5.5 kiểm; prompt `tutor-hint.v2` / `tutor-check.v2`. 24 ca BO_TEST × 3 lần (93 lượt có gọi model) + 193 câu Destination (U14 + R7) × H1→H3 (579 lượt).
+
+| Tiêu chí (§3 phụ lục D, bỏ phần con chấm) | Ngưỡng | BO_TEST | Destination |
+|---|---|---|---|
+| (a) Lộ đáp án | 0 | **0** | **0** sau khi đọc tay 10 lượt bị báo (đều là báo nhầm: gốc của từ đã có trong đề; câu phân nhóm en- có đáp án là chữ cái nhóm; mô tả nghĩa cả hai lựa chọn) |
+| (b) Độ dài + kết bằng câu hỏi / việc nhỏ | ≥ 90% | 98,9% | 97,6% |
+| (c) Đúng ngôn ngữ | ≥ 95% | 100% | 100% |
+| (d) Cờ A.10, N.10, N.12 + G8 (A.12) | 100% | 15/15 | — |
+| Ca máy chủ S.1–S.14 (trừ S.11) | 100% | xanh | — |
+
+- Kết quả kiểm từng lượt: BO_TEST qua ngay 86 · viết lại 7 · câu an toàn 0. Destination 461 · 73 · **45 (7,8%)**: con nhận câu an toàn chung chung, chủ yếu ở câu 2 lựa chọn và câu dạng từ khó (an toàn, nhưng gợi ý kém hữu ích; xét ở E2).
+- **Chi phí đo thật mỗi lượt:** trung bình **0,0112 USD**, trung vị 0,0097, cao nhất 0,031 (BO_TEST 0,0085 · Destination 0,0116); trung vị 7,1 giây/lượt. Cả lần chạy: 7,72 USD.
+- **Lần chạy 1 (prompt v1, cùng ngày) đã có lộ thật**, đã sửa ở v2: dịch đáp án sang tiếng Việt ("lực" cho *force*); ví dụ mang đúng tiền tố / hậu tố của đáp án ("equal, equivalent" cho *equidistant*; "arrival, refusal" cho *withdrawal*); câu 2 lựa chọn loại một cái rồi bảo "đọc với lựa chọn còn lại". v2 cấm 3 kiểu này ở cả prompt trả lời lẫn Haiku. Bộ kiểm độc lập của lần 1 báo nhầm nhiều ("thu hẹp theo nghĩa" bị coi là lộ, "think" bị coi chứa "thin") → đã chỉnh bộ kiểm theo đúng luật G1–G4, không nới luật.
 
 ### Lệch so với plan / phụ lục D
 Xem cuối file plan, mục "Lệch khi làm" (ô hỏi ngắn; "nộp bài để app kiểm" thay "Kiểm tra"; A.5 giả lập; số lượt ở Cài đặt AI vì chưa có bản tổng hợp tối; báo trần qua dải ở Cài đặt AI; đề Destination chỉ ở nhánh `eval/e1`; câu có bài đọc chưa gửi bài đọc cho gia sư).

@@ -44,7 +44,7 @@ export function formOf(text: string, language: string): { lines: number; lengthO
   const ls = text.split("\n").map((l) => l.trim()).filter(Boolean);
   const sentences = lines(text);
   const last = sentences[sentences.length - 1] ?? "";
-  const endsWithAsk = /\?\s*$/.test(last) || /^(bạn |hãy |thử |try |look |find |read |think |check |underline |circle |say |count |write |cross |choose |tìm |đọc |gạch |đếm |nói |viết )/i.test(last);
+  const endsWithAsk = /\?\s*$/.test(last) || /^(bạn |hãy |thử |try |look |find |read |think |check |underline |circle |say |count |write |cross |choose |tell |now |then |tìm |đọc |gạch |đếm |nói |viết )/i.test(last);
   const viLines = ls.filter((l) => VI.test(l)).length;
   const languageOk = language === "en_first" ? !VI.test(ls[0] ?? "") && viLines <= 1 : VI.test(text);
   return { lines: ls.length, lengthOk: ls.length <= languageRule(language).maxLines && text.length <= 700, endsWithAsk, languageOk };
