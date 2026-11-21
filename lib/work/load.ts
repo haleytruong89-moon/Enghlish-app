@@ -75,7 +75,12 @@ export async function loadIsTest(activityId: string, mode: string): Promise<bool
 export async function loadTaskParts(activityId: string): Promise<TaskPart[] | null> {
   try {
     const { data, error } = await (await createUserClient()).rpc("eng_my_task_parts", { p_activity: activityId });
-    return error ? null : taskPartsFromRaw(data);
+    if (error) {
+      // Missing function = 0038 not applied yet (expected); anything else is a real fault worth a trace (the screen still works).
+      if (error.code !== "PGRST202" && error.code !== "42883") console.warn(`eng_my_task_parts: ${error.code ?? "error"}`);
+      return null;
+    }
+    return taskPartsFromRaw(data);
   } catch {
     return null;
   }

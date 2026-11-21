@@ -1936,5 +1936,6 @@ Nhánh `feature/e0-task-parts` (dựa trên PR #47, gộp #46 → #47 trước).
 
 ### Đã kiểm
 - `tests/unit/taskParts.test.ts` (tái hiện đúng đoạn chữ của lỗi), `tests/dom/playerPartLead.test.tsx` (câu 1 chỉ phần 1, câu phần 2 chỉ phần 2, ô Đề bài theo phần), `tests/db/myTaskParts.test.ts` (con đọc đúng phần, không đáp án; em kia / người lớn / bước lạ → null; chạy lại migration), `tests/unit/migrationMyTaskParts.test.ts`.
-- **Chưa kiểm:** e2e (CI), bấm thật trên iPad; chưa xem dữ liệu thật của "Bài tập 16/11/2026" (không đọc DB thật) — nếu word bank của bài đó viết khác kiểu "Nhãn: a, b, c" thì vẫn hiện là chữ thường.
+- **Sau review (21/11):** lời dặn hiện **đúng như thầy/cô viết** (giữ xuống dòng, không bỏ câu nào bên trong); chỉ bỏ tên phần khi tên chỉ lặp lời dặn hoặc lặp nhãn word bank. Word bank chỉ thành chip khi nhãn rõ ràng ("Box", "Word bank", "Places", "Adjectives", "Từ gợi ý"…) hoặc dòng nói tới "box / words given / list"; "Note:", "Example:", "Remember:"… không bao giờ thành chip. Chữ tiếng Việt đọc bằng giọng Việt (VoiceOver). Hàm của con chỉ trả câu của đúng bước đang mở.
+- **Chưa kiểm:** e2e (CI), bấm thật trên iPad; chưa xem dữ liệu thật của "Bài tập 16/11/2026" (không đọc DB thật). Word bank viết kiểu khác vẫn hiện là chữ thường (không mất chữ): trong ngoặc "(museum, zoo, park)", một dòng không có nhãn "museum / art gallery / zoo". Trước khi áp 0038, bài duyệt từ 21/11 có tên phần trùng lời dặn vẫn hiện lặp.
 

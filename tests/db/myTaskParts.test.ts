@@ -22,9 +22,10 @@ describe("eng_my_task_parts (migration 0038)", () => {
       { key: "A", name: "Complete the sentences with a suitable place:", instructions: "Complete the sentences with a suitable place:\nPlaces: museum, art gallery, library, zoo" },
       { key: "B", name: "B · Adjectives", instructions: "Choose the best adjective. Adjectives: noisy · quiet · crowded" },
       { key: "C", name: "C", instructions: "Điền dạng đúng của từ trong ngoặc." },
+      { key: "D", name: "D · Writing", instructions: "Write on paper." },
     ],
     passages: [],
-    items: [item(1, "A"), item(2, "A"), item(3, "B"), item(4, "B"), item(5, "C"), item(6, "C", { out_of_app: true, key: null, kind: "open" })],
+    items: [item(1, "A"), item(2, "A"), item(3, "B"), item(4, "B"), item(5, "C"), item(6, "C", { out_of_app: true, key: null, kind: "open" }), item(7, "D", { out_of_app: true, key: null, kind: "open" })],
   };
   let activity: string;
 
@@ -50,7 +51,7 @@ describe("eng_my_task_parts (migration 0038)", () => {
       { key: "B", name: "B · Adjectives", instructions: "Choose the best adjective. Adjectives: noisy · quiet · crowded", items: ["q3", "q4"] },
       { key: "C", name: "C", instructions: "Điền dạng đúng của từ trong ngoặc.", items: ["q5"] },
     ]);
-    expect(JSON.stringify(parts)).not.toMatch(/secret|alt\d|Vì sao|dang-tu|q6/);
+    expect(JSON.stringify(parts)).not.toMatch(/secret|alt\d|Vì sao|dang-tu|q6|q7|Write on paper/);
   });
 
   it("the other child, an adult or nobody gets null; a step that is not the child's gets null; nobody but authenticated may call it", async () => {
@@ -59,6 +60,19 @@ describe("eng_my_task_parts (migration 0038)", () => {
     expect(await asUser(s.users.studentNguyen, "select english.eng_my_task_parts($1) as r", [randomUUID()])).toBeNull();
     const err = await svc("select english.eng_my_task_parts($1) as r", [activity]).then(() => null, (e: { code?: string }) => e.code);
     expect(err).toBe("42501");
+  });
+
+  it("a step that has not opened yet, and work that is not a Studio test, give null", async () => {
+    const by = s.members.tutorNguyen;
+    const made = await svc<{ id: string }>("select english.eng_create_studio_draft($1, 'Later', null, null, false, $2, $3) as r", [s.learners.nguyen, by, "e0-bbbbbbbbbb"]);
+    const cur = await svc<{ updated_at: string }>("select english.eng_studio_draft($1) as r", [made.id]);
+    const saved = await svc<{ updated_at: string }>("select english.eng_save_studio_draft($1, 'Later', $2::jsonb, $3, $4) as r", [made.id, JSON.stringify(PAPER), cur.updated_at, by]);
+    await svc("select english.eng_approve_studio_draft($1, $2, $3::jsonb, $4) as r", [made.id, saved.updated_at, JSON.stringify(buildStudioBuild(PAPER)), by]);
+    const later = (await svc<{ activity_id: string }>("select english.eng_assign_studio($1, current_date + 5, current_date + 9, $2, $3) as r", [made.id, by, `as-${randomUUID()}`])).activity_id;
+    expect(await asUser(s.users.studentNguyen, "select english.eng_my_task_parts($1) as r", [later])).toBeNull();
+    const inst = (await db.client.query<{ id: string }>("select english.eng_assign_inquiry($1, 'B-W1-HOMEWORK', 1, current_date, $2, $3) as id", [s.learners.nguyen, s.members.parent, `wk-${randomUUID()}`])).rows[0]!.id;
+    const topic = (await db.client.query<{ id: string }>("select id from english.activity_instances where inquiry_instance_id = $1 order by step_no limit 1", [inst])).rows[0]!.id;
+    expect(await asUser(s.users.studentNguyen, "select english.eng_my_task_parts($1) as r", [topic])).toBeNull();
   });
 
   it("the migration can run again without error", async () => {

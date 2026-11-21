@@ -23,6 +23,7 @@ declare
   v_act english.activity_instances%rowtype;
   v_inst english.inquiry_instances%rowtype;
   v_parts jsonb;
+  v_items text[];
 begin
   select m.id into v_member from english.members m where m.user_id = auth.uid() and m.role = 'student';
   if v_member is null then return null; end if;
@@ -37,6 +38,13 @@ begin
     return null;
   end if;
 
+  -- Chỉ câu của ĐÚNG bước này (ảnh chụp bước trong bài đã giao), không câu của bước khác cùng bài (vd. bước sửa bài).
+  select array(select x ->> 'id' from pg_catalog.jsonb_array_elements(st -> 'items') x) into v_items
+  from pg_catalog.jsonb_array_elements(v_inst.snapshot -> 'steps') st
+  where (st ->> 'step_no')::int = v_act.step_no
+  limit 1;
+  if v_items is null or cardinality(v_items) = 0 then return null; end if;
+
   -- Phần của từng câu làm trên app (studio_item_meta, đúng phiên bản bài đã giao); tên + lời dặn từ bản nháp đã duyệt ra đúng phiên bản đó
   -- (phần không còn trong bản nháp: tên = mã phần, lời dặn trống).
   select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
@@ -49,6 +57,7 @@ begin
     select m.part, pg_catalog.min(m.n) as first_n, pg_catalog.jsonb_agg(m.item_id order by m.n) as items
     from english.studio_item_meta m
     where m.template_id = v_inst.template_id and m.template_version = v_inst.template_version and not m.out_of_app
+      and m.item_id = any(v_items)
     group by m.part
   ) g
   left join lateral (

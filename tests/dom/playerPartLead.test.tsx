@@ -68,16 +68,17 @@ describe("E0: with the parts from the database, each question shows its own part
     render(<Player activity={old} isTest={false} initialResult={null} parts={PARTS} />);
     const lead = screen.getByTestId("question-lead-q1");
     expect(lead.textContent!.match(/Complete the sentences with a suitable place/g)).toHaveLength(1);
-    expect([...lead.querySelectorAll('[data-testid="question-lead-q1-chip"]')].map((c) => c.textContent)).toEqual(["museum", "art gallery", "library", "zoo"]);
+    expect([...lead.querySelectorAll('[data-testid="question-lead-q1-chip"]')].map((c) => c.textContent)).toEqual(["museum, ", "art gallery, ", "library, ", "zoo"]); // ", " is for screen readers only
     expect(lead.textContent).not.toMatch(/Adjectives|noisy|Điền dạng/);
   });
 
-  it("a question of part 2 shows part 2's title, instruction and chips only", () => {
+  it("a question of part 2 shows part 2's instruction and chips only (its title is the bank's label: not repeated)", () => {
     stub();
     render(<Player activity={old} isTest={false} initialResult={null} parts={PARTS} />);
     fireEvent.click(screen.getByTestId("player-next"));
     const lead = screen.getByTestId("question-lead-q2");
-    expect(lead.textContent).toMatch(/^B · AdjectivesChoose the best adjective\.Adjectives:noisyquietcrowded$/);
+    expect(lead.textContent).toBe("Choose the best adjective.Adjectives:noisy, quiet, crowded");
+    expect(lead.querySelector("ul")?.getAttribute("aria-label")).toBe("Adjectives");
     expect(lead.textContent).not.toMatch(/place|Places|Điền dạng/);
   });
 
