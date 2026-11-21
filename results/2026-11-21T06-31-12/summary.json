@@ -1,0 +1,58 @@
+{
+  "models": {
+    "hint": "claude-sonnet-5-5",
+    "check": "claude-haiku-5-5",
+    "audit": "claude-haiku-5-5"
+  },
+  "prompts": {
+    "hint": "tutor-hint.v1",
+    "check": "tutor-check.v1"
+  },
+  "runs": 1,
+  "spent_usd": 0,
+  "stopped_at_cap": false,
+  "bo_test": {
+    "turns": 0,
+    "leaks_flagged": 0,
+    "confirms_flagged": 0,
+    "length_and_ask_pct": 0,
+    "length_pct": 0,
+    "ask_pct": 0,
+    "language_pct": 0,
+    "guard": {
+      "pass": 0,
+      "rewritten": 0,
+      "safe": 0
+    },
+    "ai_error": 3,
+    "cost_usd": 0
+  },
+  "destination": {
+    "turns": 0,
+    "leaks_flagged": 0,
+    "confirms_flagged": 0,
+    "length_and_ask_pct": 0,
+    "length_pct": 0,
+    "ask_pct": 0,
+    "language_pct": 0,
+    "guard": {
+      "pass": 0,
+      "rewritten": 0,
+      "safe": 0
+    },
+    "ai_error": 0,
+    "cost_usd": 0
+  },
+  "flags": {
+    "checks": 2,
+    "ok": 2,
+    "misses": []
+  },
+  "cost_per_turn_usd": {
+    "mean": 0,
+    "median": 0,
+    "max": 0
+  },
+  "seconds_per_turn_median": 0,
+  "flagged": []
+}
