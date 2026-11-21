@@ -1,0 +1,198 @@
+{
+ "format": "learning-os.studio-draft",
+ "version": 1,
+ "track": "B",
+ "title": "Destination C1&C2 · Review 7 · A · Review 7: word formation · tr.120",
+ "payload": {
+  "parts": [
+   {
+    "key": "A",
+    "name": "A · Review 7: word formation · tr.120",
+    "instructions": "Use the word given in capitals to form a word that fits in the space."
+   }
+  ],
+  "passages": [
+   {
+    "ref": "P1",
+    "title": "Credit card debt (Review 7, A)",
+    "text": "A recent government report (1) ____ (HIGH) the (2) ____ (EXTEND) to which credit card debt is spiralling. Blame is (3) ____ (PORTION) solely to the credit card companies, who, the report claims, will go to any (4) ____ (LONG) to attract new customers. (5) ____ (ADD), according to the report, they are responsible for encouraging existing customers to borrow more by raising their monthly limit. Certainly a recent advertising campaign by a major credit card company – which has since been (6) ____ (DRAW) – seems to bear these findings out.\nHowever, while the responsibility of the credit card companies is not (7) ____ (CONSIDER), it is, in my opinion, unfair to lay all the blame on their shoulders. The (8) ____ (MAJOR) of credit card users are able to make their (9) ____ (PAY) on time without difficulty. There will always be a (10) ____ (MINOR) of people in our society who are financially irresponsible. If they run up huge debts, is it really the credit card company's fault?"
+   }
+  ],
+  "items": [
+   {
+    "n": 1,
+    "part": "A",
+    "kind": "word_form",
+    "out_of_app": false,
+    "stem": "A recent government report ____ (HIGH) the … to which credit card debt is spiralling.",
+    "options": [],
+    "passage_ref": "P1",
+    "key": "highlights",
+    "accepted": [
+     "highlighted"
+    ],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Highlight là làm nổi bật, nêu rõ.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 2,
+    "part": "A",
+    "kind": "word_form",
+    "out_of_app": false,
+    "stem": "… the ____ (EXTEND) to which credit card debt is spiralling.",
+    "options": [],
+    "passage_ref": "P1",
+    "key": "extent",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'The extent to which' là mức độ mà.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 3,
+    "part": "A",
+    "kind": "word_form",
+    "out_of_app": false,
+    "stem": "Blame is ____ (PORTION) solely to the credit card companies …",
+    "options": [],
+    "passage_ref": "P1",
+    "key": "apportioned",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Apportion blame là quy trách nhiệm; bị động.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 4,
+    "part": "A",
+    "kind": "word_form",
+    "out_of_app": false,
+    "stem": "… will go to any ____ (LONG) to attract new customers.",
+    "options": [],
+    "passage_ref": "P1",
+    "key": "lengths",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Go to any lengths' là làm mọi cách.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 5,
+    "part": "A",
+    "kind": "word_form",
+    "out_of_app": false,
+    "stem": "____ (ADD), according to the report, they are responsible for encouraging existing customers to borrow more …",
+    "options": [],
+    "passage_ref": "P1",
+    "key": "Additionally",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Additionally là ngoài ra.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 6,
+    "part": "A",
+    "kind": "word_form",
+    "out_of_app": false,
+    "stem": "… which has since been ____ (DRAW) – seems to bear these findings out.",
+    "options": [],
+    "passage_ref": "P1",
+    "key": "withdrawn",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Withdrawn là bị rút lại, bị thu hồi.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 7,
+    "part": "A",
+    "kind": "word_form",
+    "out_of_app": false,
+    "stem": "… the responsibility of the credit card companies is not ____ (CONSIDER) …",
+    "options": [],
+    "passage_ref": "P1",
+    "key": "inconsiderable",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Not inconsiderable là không nhỏ.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 8,
+    "part": "A",
+    "kind": "word_form",
+    "out_of_app": false,
+    "stem": "The ____ (MAJOR) of credit card users are able to make their payments on time without difficulty.",
+    "options": [],
+    "passage_ref": "P1",
+    "key": "majority",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "The majority là đa số.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 9,
+    "part": "A",
+    "kind": "word_form",
+    "out_of_app": false,
+    "stem": "… are able to make their ____ (PAY) on time without difficulty.",
+    "options": [],
+    "passage_ref": "P1",
+    "key": "repayments",
+    "accepted": [
+     "payments"
+    ],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Repayments là các khoản trả nợ.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 10,
+    "part": "A",
+    "kind": "word_form",
+    "out_of_app": false,
+    "stem": "There will always be a ____ (MINOR) of people in our society who are financially irresponsible.",
+    "options": [],
+    "passage_ref": "P1",
+    "key": "minority",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "A minority là thiểu số.",
+    "needs_review": false,
+    "review_reason": null
+   }
+  ]
+ }
+}

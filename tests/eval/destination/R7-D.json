@@ -1,0 +1,258 @@
+{
+ "format": "learning-os.studio-draft",
+ "version": 1,
+ "track": "B",
+ "title": "Destination C1&C2 · Review 7 · D · Review 7: phrasal verbs · tr.121",
+ "payload": {
+  "parts": [
+   {
+    "key": "D",
+    "name": "D · Review 7: phrasal verbs · tr.121",
+    "instructions": "Circle the correct word."
+   }
+  ],
+  "passages": [],
+  "items": [
+   {
+    "n": 1,
+    "part": "D",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "If we all ____ together, we should be able to afford something special.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "collect"
+     },
+     {
+      "letter": "B",
+      "text": "club"
+     },
+     {
+      "letter": "C",
+      "text": "group"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Club together là góp tiền chung.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 2,
+    "part": "D",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "You'll need to ____ up a lot more support before the council listens to you.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "drum"
+     },
+     {
+      "letter": "B",
+      "text": "beat"
+     },
+     {
+      "letter": "C",
+      "text": "bang"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Drum up support là kêu gọi ủng hộ.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 3,
+    "part": "D",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Reggie's ____ up over 3,000 hours' flying time already.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "watched"
+     },
+     {
+      "letter": "B",
+      "text": "timed"
+     },
+     {
+      "letter": "C",
+      "text": "clocked"
+     }
+    ],
+    "passage_ref": null,
+    "key": "C",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Clock up là đạt đến một con số.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 4,
+    "part": "D",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "My debts are ____ up and I'm not bringing enough money in. It's worrying!",
+    "options": [
+     {
+      "letter": "A",
+      "text": "mounting"
+     },
+     {
+      "letter": "B",
+      "text": "climbing"
+     },
+     {
+      "letter": "C",
+      "text": "getting"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Mount up là tăng dần.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 5,
+    "part": "D",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Let's ____ the situation up very carefully before making any important decisions.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "shape"
+     },
+     {
+      "letter": "B",
+      "text": "size"
+     },
+     {
+      "letter": "C",
+      "text": "lengthen"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Size up là đánh giá tình hình.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 6,
+    "part": "D",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "I know it sounds a lot, but if you ____ it down into an amount per month, it's actually not that much.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "break"
+     },
+     {
+      "letter": "B",
+      "text": "knock"
+     },
+     {
+      "letter": "C",
+      "text": "hit"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Break down là chia nhỏ ra.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 7,
+    "part": "D",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "I will lend you the money, but you have to ____ me back by the end of the week.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "give"
+     },
+     {
+      "letter": "B",
+      "text": "pay"
+     },
+     {
+      "letter": "C",
+      "text": "hand"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Pay back là trả lại tiền.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 8,
+    "part": "D",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Hundreds of British people have been ____ up land all over western Crete.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "buying"
+     },
+     {
+      "letter": "B",
+      "text": "spending"
+     },
+     {
+      "letter": "C",
+      "text": "purchasing"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Buy up là mua gom số lượng lớn.",
+    "needs_review": false,
+    "review_reason": null
+   }
+  ]
+ }
+}

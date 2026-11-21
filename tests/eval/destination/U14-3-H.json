@@ -1,0 +1,356 @@
+{
+ "format": "learning-os.studio-draft",
+ "version": 1,
+ "track": "B",
+ "title": "Destination C1&C2 · Unit 14 · H · Phrases, patterns and collocations · tr.116",
+ "payload": {
+  "parts": [
+   {
+    "key": "H",
+    "name": "H · Phrases, patterns and collocations · tr.116",
+    "instructions": "Choose the correct word."
+   }
+  ],
+  "passages": [],
+  "items": [
+   {
+    "n": 1,
+    "part": "H",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "It took quite a while but at ____ last the website's starting to take off.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "slow"
+     },
+     {
+      "letter": "B",
+      "text": "long"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'At long last' nghĩa là cuối cùng thì.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 2,
+    "part": "H",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Did you really offer Liz a 50 per cent ____ in the business?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "share"
+     },
+     {
+      "letter": "B",
+      "text": "piece"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'A share in the business' là phần sở hữu trong công ty.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 3,
+    "part": "H",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "No, you can't borrow a thousand euros! I'm not made ____ money, you know!",
+    "options": [
+     {
+      "letter": "A",
+      "text": "of"
+     },
+     {
+      "letter": "B",
+      "text": "with"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Made of money' là giàu có vô tận.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 4,
+    "part": "H",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Nice apartments are a bit ____ on the ground round here.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "thin"
+     },
+     {
+      "letter": "B",
+      "text": "slim"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Thin on the ground' là hiếm, ít.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 5,
+    "part": "H",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "I literally went weak ____ the knees when he told me how much he'd won.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "on"
+     },
+     {
+      "letter": "B",
+      "text": "at"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Weak at the knees' là choáng váng, yếu cả chân.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 6,
+    "part": "H",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Let's discuss this ____ depth tomorrow.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "in"
+     },
+     {
+      "letter": "B",
+      "text": "with"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'In depth' là một cách sâu và chi tiết.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 7,
+    "part": "H",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "The field's just over four hectares ____ size.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "at"
+     },
+     {
+      "letter": "B",
+      "text": "in"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'In size' dùng để nói về kích cỡ.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 8,
+    "part": "H",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "They said on the news the escaped convict's still ____ large.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "at"
+     },
+     {
+      "letter": "B",
+      "text": "in"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'At large' là đang bỏ trốn, chưa bị bắt.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 9,
+    "part": "H",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "The problem with Jimmy is that he's such a ____ loser.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "weak"
+     },
+     {
+      "letter": "B",
+      "text": "poor"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Poor loser' là người thua mà không biết chấp nhận.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 10,
+    "part": "H",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "I hate landlords who grow ____ on the rent they collect.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "fat"
+     },
+     {
+      "letter": "B",
+      "text": "large"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Grow fat on' là làm giàu nhờ thứ gì đó.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 11,
+    "part": "H",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "The area used to be very ____ in tin and copper.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "rich"
+     },
+     {
+      "letter": "B",
+      "text": "wealthy"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Rich in' là giàu tài nguyên.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 12,
+    "part": "H",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "It's a good business opportunity ____ my money.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "for"
+     },
+     {
+      "letter": "B",
+      "text": "with"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'For my money' là theo ý tôi.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 13,
+    "part": "H",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "There were a whole ____ of people I knew at the opening.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "number"
+     },
+     {
+      "letter": "B",
+      "text": "load"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'A whole load of' là rất nhiều.",
+    "needs_review": false,
+    "review_reason": null
+   }
+  ]
+ }
+}

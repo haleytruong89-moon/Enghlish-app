@@ -1,0 +1,120 @@
+{
+ "format": "learning-os.studio-draft",
+ "version": 1,
+ "track": "B",
+ "title": "Destination C1&C2 · Unit 14 · J · Phrases, patterns and collocations · tr.117",
+ "payload": {
+  "parts": [
+   {
+    "key": "J",
+    "name": "J · Phrases, patterns and collocations · tr.117",
+    "instructions": "For each question, write one word which can be used in all three sentences."
+   }
+  ],
+  "passages": [],
+  "items": [
+   {
+    "n": 1,
+    "part": "J",
+    "kind": "gap",
+    "out_of_app": false,
+    "stem": "I think we're running ____ of petrol.\nNick would be a terrible teacher – he's got such a ____ temper.\nAt least she apologised for calling me in at such ____ notice.",
+    "options": [],
+    "passage_ref": null,
+    "key": "short",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Short đi với of, temper, notice.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 2,
+    "part": "J",
+    "kind": "gap",
+    "out_of_app": false,
+    "stem": "It ____ to shop around when you're looking for a mortgage.\nI don't mind Guy moving in for a few weeks as long as he ____ his way.\nIt always puts a smile on my face when someone ____ me a compliment.",
+    "options": [],
+    "passage_ref": null,
+    "key": "pays",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Pay: it pays to…, pay your way, pay a compliment.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 3,
+    "part": "J",
+    "kind": "gap",
+    "out_of_app": false,
+    "stem": "You can have one more bowl of ice cream but then that's your ____.\nMaybe it's just my ____ in life never to find someone to settle down with.\nI've got a ____ on this weekend, so I doubt we'll be able to meet up unfortunately.",
+    "options": [],
+    "passage_ref": null,
+    "key": "lot",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "That's your lot, my lot in life, a lot on.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 4,
+    "part": "J",
+    "kind": "gap",
+    "out_of_app": false,
+    "stem": "Pauline seems to be in very ____ spirits this afternoon.\nThere's quite a ____ risk of side effects with this medicine, apparently.\nIt's ____ time you started thinking about your future.",
+    "options": [],
+    "passage_ref": null,
+    "key": "high",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "High spirits, high risk, high time.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 5,
+    "part": "J",
+    "kind": "gap",
+    "out_of_app": false,
+    "stem": "Tom's actually quite a ____ name in the poultry industry.\nI've said I'm sorry; there's no need to make such a ____ thing out of it.\nIt's every teenager's dream to make it ____ in the entertainment business.",
+    "options": [],
+    "passage_ref": null,
+    "key": "big",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Big name, a big thing, make it big.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 6,
+    "part": "J",
+    "kind": "gap",
+    "out_of_app": false,
+    "stem": "I don't think I've got any ____ change, I'm afraid.\nYou made me feel so ____ when you criticised me like that in front of everyone.\nI'm really not keen on making ____ talk at parties.",
+    "options": [],
+    "passage_ref": null,
+    "key": "small",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Small change, feel small, small talk.",
+    "needs_review": false,
+    "review_reason": null
+   }
+  ]
+ }
+}

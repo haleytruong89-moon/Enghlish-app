@@ -1,0 +1,131 @@
+{
+ "format": "learning-os.studio-draft",
+ "version": 1,
+ "track": "B",
+ "title": "Destination C1&C2 · Unit 14 · K · Phrases, patterns and collocations · tr.117",
+ "payload": {
+  "parts": [
+   {
+    "key": "K",
+    "name": "K · Phrases, patterns and collocations · tr.117",
+    "instructions": "Complete the second sentence so that it has a similar meaning to the first sentence, using the word given. Do not change the word given. You must use between three and eight words, including the word given."
+   }
+  ],
+  "passages": [],
+  "items": [
+   {
+    "n": 1,
+    "part": "K",
+    "kind": "transform",
+    "out_of_app": false,
+    "stem": "Some people will do anything to make money. [LENGTHS]\nSome people will ____ to make money.",
+    "options": [],
+    "passage_ref": null,
+    "key": "go to any lengths",
+    "accepted": [
+     "go to great lengths"
+    ],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Go to any lengths' là làm mọi cách.",
+    "needs_review": true,
+    "review_reason": "Viết lại câu: có thể có cách đúng khác ngoài đáp án sách."
+   },
+   {
+    "n": 2,
+    "part": "K",
+    "kind": "transform",
+    "out_of_app": false,
+    "stem": "I don't know why you're saying this is so important. [DEAL]\nI don't know why you're ____ this.",
+    "options": [],
+    "passage_ref": null,
+    "key": "making a big deal out of",
+    "accepted": [
+     "making a big deal of",
+     "making such a big deal out of",
+     "making such a big deal of"
+    ],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Make a big deal out of' là làm to chuyện.",
+    "needs_review": true,
+    "review_reason": "Viết lại câu: có thể có cách đúng khác ngoài đáp án sách."
+   },
+   {
+    "n": 3,
+    "part": "K",
+    "kind": "transform",
+    "out_of_app": false,
+    "stem": "Simon said he had no idea what he was doing for the first few weeks of his new job. [DEPTH]\nSimon said he ____ for the first few weeks of his new job.",
+    "options": [],
+    "passage_ref": null,
+    "key": "was out of his depth",
+    "accepted": [
+     "was completely out of his depth",
+     "was totally out of his depth"
+    ],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Out of your depth' là vượt quá khả năng.",
+    "needs_review": true,
+    "review_reason": "Viết lại câu: có thể có cách đúng khác ngoài đáp án sách."
+   },
+   {
+    "n": 4,
+    "part": "K",
+    "kind": "transform",
+    "out_of_app": false,
+    "stem": "I think they're largely responsible for what's happened. [SMALL]\nI hold them ____ responsible for what's happened.",
+    "options": [],
+    "passage_ref": null,
+    "key": "in no small way",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'In no small way' là ở mức đáng kể.",
+    "needs_review": true,
+    "review_reason": "Viết lại câu: có thể có cách đúng khác ngoài đáp án sách."
+   },
+   {
+    "n": 5,
+    "part": "K",
+    "kind": "transform",
+    "out_of_app": false,
+    "stem": "We've searched everywhere for the lottery ticket and can't find it anywhere. [LOW]\nWe've searched ____ for the lottery ticket and can't find it anywhere.",
+    "options": [],
+    "passage_ref": null,
+    "key": "high and low",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Search high and low' là lục tìm khắp nơi.",
+    "needs_review": true,
+    "review_reason": "Viết lại câu: có thể có cách đúng khác ngoài đáp án sách."
+   },
+   {
+    "n": 6,
+    "part": "K",
+    "kind": "transform",
+    "out_of_app": false,
+    "stem": "We talked about investments for a very long time. [LENGTH]\nWe talked ____ about investments.",
+    "options": [],
+    "passage_ref": null,
+    "key": "at great length",
+    "accepted": [
+     "at length"
+    ],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'At length' là trong thời gian dài, đi vào chi tiết.",
+    "needs_review": true,
+    "review_reason": "Viết lại câu: có thể có cách đúng khác ngoài đáp án sách."
+   }
+  ]
+ }
+}

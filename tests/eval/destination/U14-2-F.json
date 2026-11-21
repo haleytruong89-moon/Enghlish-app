@@ -1,0 +1,340 @@
+{
+ "format": "learning-os.studio-draft",
+ "version": 1,
+ "track": "B",
+ "title": "Destination C1&C2 · Unit 14 · F · Phrasal verbs · tr.116",
+ "payload": {
+  "parts": [
+   {
+    "key": "F",
+    "name": "F · Phrasal verbs · tr.116",
+    "instructions": "Match to make sentences. Choose the ending (A–G) that completes each sentence."
+   }
+  ],
+  "passages": [],
+  "items": [
+   {
+    "n": 1,
+    "part": "F",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "The big supermarket chains have bought ____",
+    "options": [
+     {
+      "letter": "A",
+      "text": "up over 700 hours of flying time already."
+     },
+     {
+      "letter": "B",
+      "text": "up support is to get people in the high street to sign a petition."
+     },
+     {
+      "letter": "C",
+      "text": "it over till next year and take it in January."
+     },
+     {
+      "letter": "D",
+      "text": "up most of the land round here already."
+     },
+     {
+      "letter": "E",
+      "text": "out the company when it was threatened with closure."
+     },
+     {
+      "letter": "F",
+      "text": "blackmailers off – I'd rather go to the police and face the consequences."
+     },
+     {
+      "letter": "G",
+      "text": "together, I'm sure we can afford to get Mrs Timms a nice leaving present."
+     }
+    ],
+    "passage_ref": null,
+    "key": "D",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Buy up là mua hết số lượng lớn.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 2,
+    "part": "F",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "If we club ____",
+    "options": [
+     {
+      "letter": "A",
+      "text": "up over 700 hours of flying time already."
+     },
+     {
+      "letter": "B",
+      "text": "up support is to get people in the high street to sign a petition."
+     },
+     {
+      "letter": "C",
+      "text": "it over till next year and take it in January."
+     },
+     {
+      "letter": "D",
+      "text": "up most of the land round here already."
+     },
+     {
+      "letter": "E",
+      "text": "out the company when it was threatened with closure."
+     },
+     {
+      "letter": "F",
+      "text": "blackmailers off – I'd rather go to the police and face the consequences."
+     },
+     {
+      "letter": "G",
+      "text": "together, I'm sure we can afford to get Mrs Timms a nice leaving present."
+     }
+    ],
+    "passage_ref": null,
+    "key": "G",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Club together là góp tiền chung để mua gì đó.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 3,
+    "part": "F",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Phil's clocked ____",
+    "options": [
+     {
+      "letter": "A",
+      "text": "up over 700 hours of flying time already."
+     },
+     {
+      "letter": "B",
+      "text": "up support is to get people in the high street to sign a petition."
+     },
+     {
+      "letter": "C",
+      "text": "it over till next year and take it in January."
+     },
+     {
+      "letter": "D",
+      "text": "up most of the land round here already."
+     },
+     {
+      "letter": "E",
+      "text": "out the company when it was threatened with closure."
+     },
+     {
+      "letter": "F",
+      "text": "blackmailers off – I'd rather go to the police and face the consequences."
+     },
+     {
+      "letter": "G",
+      "text": "together, I'm sure we can afford to get Mrs Timms a nice leaving present."
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Clock up là đạt đến một con số nào đó.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 4,
+    "part": "F",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "One good way to drum ____",
+    "options": [
+     {
+      "letter": "A",
+      "text": "up over 700 hours of flying time already."
+     },
+     {
+      "letter": "B",
+      "text": "up support is to get people in the high street to sign a petition."
+     },
+     {
+      "letter": "C",
+      "text": "it over till next year and take it in January."
+     },
+     {
+      "letter": "D",
+      "text": "up most of the land round here already."
+     },
+     {
+      "letter": "E",
+      "text": "out the company when it was threatened with closure."
+     },
+     {
+      "letter": "F",
+      "text": "blackmailers off – I'd rather go to the police and face the consequences."
+     },
+     {
+      "letter": "G",
+      "text": "together, I'm sure we can afford to get Mrs Timms a nice leaving present."
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Drum up support là kêu gọi sự ủng hộ.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 5,
+    "part": "F",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Six managers bought ____",
+    "options": [
+     {
+      "letter": "A",
+      "text": "up over 700 hours of flying time already."
+     },
+     {
+      "letter": "B",
+      "text": "up support is to get people in the high street to sign a petition."
+     },
+     {
+      "letter": "C",
+      "text": "it over till next year and take it in January."
+     },
+     {
+      "letter": "D",
+      "text": "up most of the land round here already."
+     },
+     {
+      "letter": "E",
+      "text": "out the company when it was threatened with closure."
+     },
+     {
+      "letter": "F",
+      "text": "blackmailers off – I'd rather go to the police and face the consequences."
+     },
+     {
+      "letter": "G",
+      "text": "together, I'm sure we can afford to get Mrs Timms a nice leaving present."
+     }
+    ],
+    "passage_ref": null,
+    "key": "E",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Buy out là mua lại phần của đối tác.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 6,
+    "part": "F",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "I've got two weeks' holiday left but I think I'll carry ____",
+    "options": [
+     {
+      "letter": "A",
+      "text": "up over 700 hours of flying time already."
+     },
+     {
+      "letter": "B",
+      "text": "up support is to get people in the high street to sign a petition."
+     },
+     {
+      "letter": "C",
+      "text": "it over till next year and take it in January."
+     },
+     {
+      "letter": "D",
+      "text": "up most of the land round here already."
+     },
+     {
+      "letter": "E",
+      "text": "out the company when it was threatened with closure."
+     },
+     {
+      "letter": "F",
+      "text": "blackmailers off – I'd rather go to the police and face the consequences."
+     },
+     {
+      "letter": "G",
+      "text": "together, I'm sure we can afford to get Mrs Timms a nice leaving present."
+     }
+    ],
+    "passage_ref": null,
+    "key": "C",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Carry over là chuyển sang năm sau.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 7,
+    "part": "F",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "I'd never buy ____",
+    "options": [
+     {
+      "letter": "A",
+      "text": "up over 700 hours of flying time already."
+     },
+     {
+      "letter": "B",
+      "text": "up support is to get people in the high street to sign a petition."
+     },
+     {
+      "letter": "C",
+      "text": "it over till next year and take it in January."
+     },
+     {
+      "letter": "D",
+      "text": "up most of the land round here already."
+     },
+     {
+      "letter": "E",
+      "text": "out the company when it was threatened with closure."
+     },
+     {
+      "letter": "F",
+      "text": "blackmailers off – I'd rather go to the police and face the consequences."
+     },
+     {
+      "letter": "G",
+      "text": "together, I'm sure we can afford to get Mrs Timms a nice leaving present."
+     }
+    ],
+    "passage_ref": null,
+    "key": "F",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Buy off là đút tiền để người ta im lặng.",
+    "needs_review": false,
+    "review_reason": null
+   }
+  ]
+ }
+}

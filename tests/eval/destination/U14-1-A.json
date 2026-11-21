@@ -1,0 +1,290 @@
+{
+ "format": "learning-os.studio-draft",
+ "version": 1,
+ "track": "B",
+ "title": "Destination C1&C2 · Unit 14 · A · Topic vocabulary: Quantity · tr.114",
+ "payload": {
+  "parts": [
+   {
+    "key": "A",
+    "name": "A · Topic vocabulary: Quantity · tr.114",
+    "instructions": "Choose the correct word."
+   }
+  ],
+  "passages": [],
+  "items": [
+   {
+    "n": 1,
+    "part": "A",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Thankfully, she only suffered ____ injuries in the accident.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "minor"
+     },
+     {
+      "letter": "B",
+      "text": "meagre"
+     },
+     {
+      "letter": "C",
+      "text": "minute"
+     },
+     {
+      "letter": "D",
+      "text": "tiny"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Minor injuries' là cụm cố định: thương tích nhẹ.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 2,
+    "part": "A",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "A half, written as a/an ____, looks like this: 1/2.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "fraction"
+     },
+     {
+      "letter": "B",
+      "text": "rate"
+     },
+     {
+      "letter": "C",
+      "text": "ratio"
+     },
+     {
+      "letter": "D",
+      "text": "equation"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Fraction là phân số, ví dụ một nửa.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 3,
+    "part": "A",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "In a few hundred years' time, oil will not be nearly so ____ here on Earth.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "abundant"
+     },
+     {
+      "letter": "B",
+      "text": "ample"
+     },
+     {
+      "letter": "C",
+      "text": "considerable"
+     },
+     {
+      "letter": "D",
+      "text": "immense"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Abundant nghĩa là dồi dào, hợp với 'dầu mỏ sẽ không còn dồi dào'.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 4,
+    "part": "A",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "____ is measured in cm³ or m³.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "Mass"
+     },
+     {
+      "letter": "B",
+      "text": "Extent"
+     },
+     {
+      "letter": "C",
+      "text": "Volume"
+     },
+     {
+      "letter": "D",
+      "text": "Magnitude"
+     }
+    ],
+    "passage_ref": null,
+    "key": "C",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Volume là thể tích, đo bằng cm³ hoặc m³.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 5,
+    "part": "A",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Don't wash that sweater in really hot water or it'll ____.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "diminish"
+     },
+     {
+      "letter": "B",
+      "text": "shrink"
+     },
+     {
+      "letter": "C",
+      "text": "reduce"
+     },
+     {
+      "letter": "D",
+      "text": "decrease"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Shrink là co lại, nói về quần áo.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 6,
+    "part": "A",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Maps on paper can only show the world in two ____.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "areas"
+     },
+     {
+      "letter": "B",
+      "text": "masses"
+     },
+     {
+      "letter": "C",
+      "text": "dimensions"
+     },
+     {
+      "letter": "D",
+      "text": "proportions"
+     }
+    ],
+    "passage_ref": null,
+    "key": "C",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Two dimensions là hai chiều.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 7,
+    "part": "A",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Why are all your clothes in a ____ on the floor?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "bulk"
+     },
+     {
+      "letter": "B",
+      "text": "batch"
+     },
+     {
+      "letter": "C",
+      "text": "heap"
+     },
+     {
+      "letter": "D",
+      "text": "sum"
+     }
+    ],
+    "passage_ref": null,
+    "key": "C",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "A heap là một đống.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 8,
+    "part": "A",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Sending out e-mails that people haven't asked for to ____ addresses is often known as 'spamming'.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "sufficient"
+     },
+     {
+      "letter": "B",
+      "text": "widespread"
+     },
+     {
+      "letter": "C",
+      "text": "countless"
+     },
+     {
+      "letter": "D",
+      "text": "multiple"
+     }
+    ],
+    "passage_ref": null,
+    "key": "D",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Multiple addresses nghĩa là nhiều địa chỉ.",
+    "needs_review": false,
+    "review_reason": null
+   }
+  ]
+ }
+}

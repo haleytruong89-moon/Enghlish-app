@@ -1,0 +1,120 @@
+{
+ "format": "learning-os.studio-draft",
+ "version": 1,
+ "track": "B",
+ "title": "Destination C1&C2 · Unit 14 · P · Word formation · tr.119",
+ "payload": {
+  "parts": [
+   {
+    "key": "P",
+    "name": "P · Word formation · tr.119",
+    "instructions": "Write a word with en- from exercise O in the correct form in each gap."
+   }
+  ],
+  "passages": [],
+  "items": [
+   {
+    "n": 1,
+    "part": "P",
+    "kind": "gap",
+    "out_of_app": false,
+    "stem": "Are you really thinking of ____ in the army?",
+    "options": [],
+    "passage_ref": null,
+    "key": "enlisting",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Enlist là nhập ngũ, ở dạng V-ing.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 2,
+    "part": "P",
+    "kind": "gap",
+    "out_of_app": false,
+    "stem": "This new software should ____ us to speed up the distribution process no end.",
+    "options": [],
+    "passage_ref": null,
+    "key": "enable",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Enable somebody to do là giúp ai làm được.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 3,
+    "part": "P",
+    "kind": "gap",
+    "out_of_app": false,
+    "stem": "There's no point having a law if the police can't ____ it.",
+    "options": [],
+    "passage_ref": null,
+    "key": "enforce",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Enforce a law là thi hành luật.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 4,
+    "part": "P",
+    "kind": "gap",
+    "out_of_app": false,
+    "stem": "We were completely ____ by journalists and photographers and couldn't get to the car.",
+    "options": [],
+    "passage_ref": null,
+    "key": "encircled",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Encircle là vây quanh; ở đây ở dạng bị động.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 5,
+    "part": "P",
+    "kind": "gap",
+    "out_of_app": false,
+    "stem": "The destruction of the rainforests is ____ the survival of a number of species.",
+    "options": [],
+    "passage_ref": null,
+    "key": "endangering",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Endanger là đe dọa; thì hiện tại tiếp diễn.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 6,
+    "part": "P",
+    "kind": "gap",
+    "out_of_app": false,
+    "stem": "Can we ____ the photo so we can see their faces in a bit more detail?",
+    "options": [],
+    "passage_ref": null,
+    "key": "enlarge",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Enlarge là phóng to.",
+    "needs_review": false,
+    "review_reason": null
+   }
+  ]
+ }
+}

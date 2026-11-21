@@ -1,0 +1,166 @@
+{
+ "format": "learning-os.studio-draft",
+ "version": 1,
+ "track": "B",
+ "title": "Destination C1&C2 · Review 7 · B · Review 7: key word transformation · tr.120",
+ "payload": {
+  "parts": [
+   {
+    "key": "B",
+    "name": "B · Review 7: key word transformation · tr.120",
+    "instructions": "Complete the second sentence so that it has a similar meaning to the first sentence, using the word given. Do not change the word given. You must use between three and eight words, including the word given."
+   }
+  ],
+  "passages": [],
+  "items": [
+   {
+    "n": 1,
+    "part": "B",
+    "kind": "transform",
+    "out_of_app": false,
+    "stem": "You're asking for trouble by arguing with the boss so aggressively like that. [ICE]\nYou're ____ by arguing with the boss so aggressively like that.",
+    "options": [],
+    "passage_ref": null,
+    "key": "skating on thin ice",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Skate on thin ice' là làm điều mạo hiểm.",
+    "needs_review": true,
+    "review_reason": "Viết lại câu: có thể có cách đúng khác ngoài đáp án sách."
+   },
+   {
+    "n": 2,
+    "part": "B",
+    "kind": "transform",
+    "out_of_app": false,
+    "stem": "Are you saying Dan gets angry easily, Fiona? [SHORT]\nAre you saying Dan ____, Fiona?",
+    "options": [],
+    "passage_ref": null,
+    "key": "has a short temper",
+    "accepted": [
+     "has got a short temper",
+     "has a short fuse",
+     "has got a short fuse"
+    ],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Have a short temper' là dễ nổi nóng.",
+    "needs_review": true,
+    "review_reason": "Viết lại câu: có thể có cách đúng khác ngoài đáp án sách."
+   },
+   {
+    "n": 3,
+    "part": "B",
+    "kind": "transform",
+    "out_of_app": false,
+    "stem": "There's no doubt shopping around is a good idea. [PAYS]\nThere's no doubt ____ around.",
+    "options": [],
+    "passage_ref": null,
+    "key": "it pays to shop",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'It pays to…' là làm vậy có lợi.",
+    "needs_review": true,
+    "review_reason": "Viết lại câu: có thể có cách đúng khác ngoài đáp án sách."
+   },
+   {
+    "n": 4,
+    "part": "B",
+    "kind": "transform",
+    "out_of_app": false,
+    "stem": "I'd prefer to get value for money by staying at the theme park all day. [WORTH]\nI'd rather I ____ by staying at the theme park all day.",
+    "options": [],
+    "passage_ref": null,
+    "key": "got my money's worth",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Get your money's worth' là đáng đồng tiền.",
+    "needs_review": true,
+    "review_reason": "Viết lại câu: có thể có cách đúng khác ngoài đáp án sách."
+   },
+   {
+    "n": 5,
+    "part": "B",
+    "kind": "transform",
+    "out_of_app": false,
+    "stem": "I think Dad's worried about a lot of things at the moment. [MIND]\nI think Dad ____ at the moment.",
+    "options": [],
+    "passage_ref": null,
+    "key": "has a lot on his mind",
+    "accepted": [
+     "has got a lot on his mind",
+     "has a lot of things on his mind",
+     "has got a lot of things on his mind"
+    ],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Have a lot on your mind' là đang lo nhiều chuyện.",
+    "needs_review": true,
+    "review_reason": "Viết lại câu: có thể có cách đúng khác ngoài đáp án sách."
+   },
+   {
+    "n": 6,
+    "part": "B",
+    "kind": "transform",
+    "out_of_app": false,
+    "stem": "Why didn't you search everywhere for your wallet? Then you might have found it. [LOW]\nIf ____ for your wallet, you might have found it.",
+    "options": [],
+    "passage_ref": null,
+    "key": "you had searched high and low",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Search high and low' là lục tìm khắp nơi.",
+    "needs_review": true,
+    "review_reason": "Viết lại câu: có thể có cách đúng khác ngoài đáp án sách."
+   },
+   {
+    "n": 7,
+    "part": "B",
+    "kind": "transform",
+    "out_of_app": false,
+    "stem": "I can't cope at all with my new job, and that bothers me. [DEPTH]\nI wish ____ my new job.",
+    "options": [],
+    "passage_ref": null,
+    "key": "I wasn't out of my depth in",
+    "accepted": [
+     "I wasn't out of my depth with",
+     "I weren't out of my depth in",
+     "I weren't out of my depth with"
+    ],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Out of your depth' là vượt quá khả năng.",
+    "needs_review": true,
+    "review_reason": "Viết lại câu: có thể có cách đúng khác ngoài đáp án sách."
+   },
+   {
+    "n": 8,
+    "part": "B",
+    "kind": "transform",
+    "out_of_app": false,
+    "stem": "Jane was the unlucky one so she had to tell Ed he was losing his company car. [STRAW]\nIf Jane ____, she wouldn't have had to tell Ed he was losing his company car.",
+    "options": [],
+    "passage_ref": null,
+    "key": "hadn't drawn the short straw",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Draw the short straw' là bị chọn làm việc khó chịu.",
+    "needs_review": true,
+    "review_reason": "Viết lại câu: có thể có cách đúng khác ngoài đáp án sách."
+   }
+  ]
+ }
+}

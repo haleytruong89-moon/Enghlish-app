@@ -1,0 +1,200 @@
+{
+ "format": "learning-os.studio-draft",
+ "version": 1,
+ "track": "B",
+ "title": "Destination C1&C2 · Unit 14 · G · Phrasal verbs with 'together' · tr.116",
+ "payload": {
+  "parts": [
+   {
+    "key": "G",
+    "name": "G · Phrasal verbs with 'together' · tr.116",
+    "instructions": "Phrasal verbs with 'together', such as 'club together', often contain the idea of people doing something as a group. Does the sentence contain that idea?"
+   }
+  ],
+  "passages": [],
+  "items": [
+   {
+    "n": 1,
+    "part": "G",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Eight countries in the region have banded together to make a free-trade zone.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "Yes – people doing something as a group"
+     },
+     {
+      "letter": "B",
+      "text": "No"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Banded together là nhiều nước cùng lập thành nhóm.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 2,
+    "part": "G",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "I didn't know anyone was coming to dinner, so I had to cobble a meal together from whatever was in the fridge.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "Yes – people doing something as a group"
+     },
+     {
+      "letter": "B",
+      "text": "No"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Cobble together là chắp vá vội, không phải cả nhóm cùng làm.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 3,
+    "part": "G",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Why don't we all get together on Tuesday evening?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "Yes – people doing something as a group"
+     },
+     {
+      "letter": "B",
+      "text": "No"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Get together là cả nhóm gặp nhau.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 4,
+    "part": "G",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "The twins have been behaving so badly recently. I should knock their heads together!",
+    "options": [
+     {
+      "letter": "A",
+      "text": "Yes – people doing something as a group"
+     },
+     {
+      "letter": "B",
+      "text": "No"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Knock heads together là cách nói hình ảnh, không phải cùng nhau làm việc.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 5,
+    "part": "G",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Everyone in the village pulled together to make the carnival a success.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "Yes – people doing something as a group"
+     },
+     {
+      "letter": "B",
+      "text": "No"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Pull together là cùng chung sức.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 6,
+    "part": "G",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "The only way we'll all get off this mountain alive is if we stick together.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "Yes – people doing something as a group"
+     },
+     {
+      "letter": "B",
+      "text": "No"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Stick together là ở cạnh nhau, cùng nhau.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 7,
+    "part": "G",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "The three of us put together quite an interesting proposal.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "Yes – people doing something as a group"
+     },
+     {
+      "letter": "B",
+      "text": "No"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "cum-dong-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Đáp án sách là No: put together ở đây chỉ là ghép thành một đề xuất.",
+    "needs_review": true,
+    "review_reason": "Câu này có thể hiểu là ba người cùng làm, nhưng đáp án sách là No."
+   }
+  ]
+ }
+}

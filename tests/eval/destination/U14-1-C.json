@@ -1,0 +1,278 @@
+{
+ "format": "learning-os.studio-draft",
+ "version": 1,
+ "track": "B",
+ "title": "Destination C1&C2 · Unit 14 · C · Topic vocabulary: Money · tr.114–115",
+ "payload": {
+  "parts": [
+   {
+    "key": "C",
+    "name": "C · Topic vocabulary: Money · tr.114–115",
+    "instructions": "Choose the correct word or phrase."
+   }
+  ],
+  "passages": [],
+  "items": [
+   {
+    "n": 1,
+    "part": "C",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "The judge awarded us 1,000 euros ____ when the builder admitted he hadn't followed safety standards.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "damage"
+     },
+     {
+      "letter": "B",
+      "text": "damages"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Damages (số nhiều) là tiền bồi thường theo phán quyết.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 2,
+    "part": "C",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "The hotel was so bad I'm thinking of asking for ____ from the travel agency.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "compensation"
+     },
+     {
+      "letter": "B",
+      "text": "debit"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Compensation là tiền bồi thường.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 3,
+    "part": "C",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Many companies ____ tax from your salary before you get paid.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "withdraw"
+     },
+     {
+      "letter": "B",
+      "text": "deduct"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Deduct là khấu trừ.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 4,
+    "part": "C",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Hello. I'd like to ____ 500 euros from my account, please.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "withdraw"
+     },
+     {
+      "letter": "B",
+      "text": "deduct"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Withdraw là rút tiền khỏi tài khoản.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 5,
+    "part": "C",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "You can pay in 12 monthly instalments, but you'll have to make an initial ____ of £25.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "lump sum"
+     },
+     {
+      "letter": "B",
+      "text": "down payment"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Down payment là khoản trả trước ban đầu.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 6,
+    "part": "C",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "If you win, you can choose to receive it all in one go as a ____ or you can have a certain amount per year for life.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "lump sum"
+     },
+     {
+      "letter": "B",
+      "text": "down payment"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Lump sum là khoản trả một lần.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 7,
+    "part": "C",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "I'll ____ the money in your bank account in the morning.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "finance"
+     },
+     {
+      "letter": "B",
+      "text": "deposit"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Deposit là gửi tiền vào tài khoản.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 8,
+    "part": "C",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "I'm thinking of ____ on the stock exchange. Do you think it's risky?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "speculating"
+     },
+     {
+      "letter": "B",
+      "text": "depositing"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Speculate là đầu cơ trên sàn chứng khoán.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 9,
+    "part": "C",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Why don't you arrange to pay your bills by direct ____? That way, they're automatically paid from your account.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "debt"
+     },
+     {
+      "letter": "B",
+      "text": "debit"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Direct debit là ghi nợ trực tiếp, tiền tự động bị trừ.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 10,
+    "part": "C",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Where is the company planning to get the ____ for this project from?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "sum"
+     },
+     {
+      "letter": "B",
+      "text": "finance"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "tu-vung-ngu-canh",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Finance ở đây là nguồn vốn cho dự án.",
+    "needs_review": false,
+    "review_reason": null
+   }
+  ]
+ }
+}

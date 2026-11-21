@@ -1,0 +1,378 @@
+{
+ "format": "learning-os.studio-draft",
+ "version": 1,
+ "track": "B",
+ "title": "Destination C1&C2 · Unit 14 · O · Word formation: prefix en- · tr.119",
+ "payload": {
+  "parts": [
+   {
+    "key": "O",
+    "name": "O · Word formation: prefix en- · tr.119",
+    "instructions": "The prefix en-, as in 'enlarge', can be put on some adjectives, nouns and verbs to make verbs. Which group does each en- word belong to? (Examples already done: encircle, enlarge, enact.)"
+   }
+  ],
+  "passages": [],
+  "items": [
+   {
+    "n": 1,
+    "part": "O",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Which group does the word 'ENABLE' belong to?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "put in/on (a) …"
+     },
+     {
+      "letter": "B",
+      "text": "make …"
+     },
+     {
+      "letter": "C",
+      "text": "bring into effect"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "En- + able = làm cho có khả năng (make able).",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 2,
+    "part": "O",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Which group does the word 'ENCODE' belong to?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "put in/on (a) …"
+     },
+     {
+      "letter": "B",
+      "text": "make …"
+     },
+     {
+      "letter": "C",
+      "text": "bring into effect"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "En- + code = đưa vào mã (put in code).",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 3,
+    "part": "O",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Which group does the word 'ENDANGER' belong to?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "put in/on (a) …"
+     },
+     {
+      "letter": "B",
+      "text": "make …"
+     },
+     {
+      "letter": "C",
+      "text": "bring into effect"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "En- + danger = đưa vào nguy hiểm.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 4,
+    "part": "O",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Which group does the word 'ENDEAR' belong to?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "put in/on (a) …"
+     },
+     {
+      "letter": "B",
+      "text": "make …"
+     },
+     {
+      "letter": "C",
+      "text": "bring into effect"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "En- + dear = làm cho được yêu mến.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 5,
+    "part": "O",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Which group does the word 'ENFORCE' belong to?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "put in/on (a) …"
+     },
+     {
+      "letter": "B",
+      "text": "make …"
+     },
+     {
+      "letter": "C",
+      "text": "bring into effect"
+     }
+    ],
+    "passage_ref": null,
+    "key": "C",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Enforce là thi hành, đưa luật vào hiệu lực.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 6,
+    "part": "O",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Which group does the word 'ENLIST' belong to?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "put in/on (a) …"
+     },
+     {
+      "letter": "B",
+      "text": "make …"
+     },
+     {
+      "letter": "C",
+      "text": "bring into effect"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "En- + list = đưa vào danh sách.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 7,
+    "part": "O",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Which group does the word 'ENRAGE' belong to?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "put in/on (a) …"
+     },
+     {
+      "letter": "B",
+      "text": "make …"
+     },
+     {
+      "letter": "C",
+      "text": "bring into effect"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "En- + rage = làm nổi cơn giận.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 8,
+    "part": "O",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Which group does the word 'ENRICH' belong to?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "put in/on (a) …"
+     },
+     {
+      "letter": "B",
+      "text": "make …"
+     },
+     {
+      "letter": "C",
+      "text": "bring into effect"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "En- + rich = làm giàu thêm.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 9,
+    "part": "O",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Which group does the word 'ENSLAVE' belong to?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "put in/on (a) …"
+     },
+     {
+      "letter": "B",
+      "text": "make …"
+     },
+     {
+      "letter": "C",
+      "text": "bring into effect"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "En- + slave = biến thành nô lệ.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 10,
+    "part": "O",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Which group does the word 'ENTHRONE' belong to?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "put in/on (a) …"
+     },
+     {
+      "letter": "B",
+      "text": "make …"
+     },
+     {
+      "letter": "C",
+      "text": "bring into effect"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "En- + throne = đưa lên ngai vàng.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 11,
+    "part": "O",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Which group does the word 'ENTOMB' belong to?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "put in/on (a) …"
+     },
+     {
+      "letter": "B",
+      "text": "make …"
+     },
+     {
+      "letter": "C",
+      "text": "bring into effect"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "En- + tomb = chôn vào mộ.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 12,
+    "part": "O",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Which group does the word 'ENTRAP' belong to?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "put in/on (a) …"
+     },
+     {
+      "letter": "B",
+      "text": "make …"
+     },
+     {
+      "letter": "C",
+      "text": "bring into effect"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "dang-tu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "En- + trap = đặt vào bẫy.",
+    "needs_review": false,
+    "review_reason": null
+   }
+  ]
+ }
+}

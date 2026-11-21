@@ -1,0 +1,290 @@
+{
+ "format": "learning-os.studio-draft",
+ "version": 1,
+ "track": "B",
+ "title": "Destination C1&C2 · Review 7 · E · Review 7: grammar (Unit 13) · tr.121",
+ "payload": {
+  "parts": [
+   {
+    "key": "E",
+    "name": "E · Review 7: grammar (Unit 13) · tr.121",
+    "instructions": "Choose the correct answer."
+   }
+  ],
+  "passages": [],
+  "items": [
+   {
+    "n": 1,
+    "part": "E",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "It's high time ____ up to your responsibilities as a parent.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "to face"
+     },
+     {
+      "letter": "B",
+      "text": "you face"
+     },
+     {
+      "letter": "C",
+      "text": "you faced"
+     },
+     {
+      "letter": "D",
+      "text": "you have faced"
+     }
+    ],
+    "passage_ref": null,
+    "key": "C",
+    "accepted": [],
+    "tag_key": "wish-would-rather",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'It's high time' + quá khứ đơn: đã đến lúc phải làm.",
+    "needs_review": true,
+    "review_reason": "Nhãn gần nhất (chưa có nhãn riêng cho 'It's high time')."
+   },
+   {
+    "n": 2,
+    "part": "E",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "I'd rather you ____ anything for tonight, but I suppose it's too late to change things now.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "not arrange"
+     },
+     {
+      "letter": "B",
+      "text": "don't arrange"
+     },
+     {
+      "letter": "C",
+      "text": "didn't arrange"
+     },
+     {
+      "letter": "D",
+      "text": "hadn't arranged"
+     }
+    ],
+    "passage_ref": null,
+    "key": "D",
+    "accepted": [],
+    "tag_key": "wish-would-rather",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'I'd rather' + quá khứ hoàn thành: tiếc việc đã làm.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 3,
+    "part": "E",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Do you wish ____ a formal complaint?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "to make"
+     },
+     {
+      "letter": "B",
+      "text": "making"
+     },
+     {
+      "letter": "C",
+      "text": "you made"
+     },
+     {
+      "letter": "D",
+      "text": "you to make"
+     }
+    ],
+    "passage_ref": null,
+    "key": "A",
+    "accepted": [],
+    "tag_key": "wish-would-rather",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Wish to + V' nghĩa là muốn làm gì (cách nói trang trọng).",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 4,
+    "part": "E",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "If only people in our grandparents' generation ____ the opportunities that we take for granted nowadays.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "could have"
+     },
+     {
+      "letter": "B",
+      "text": "could have had"
+     },
+     {
+      "letter": "C",
+      "text": "would have had"
+     },
+     {
+      "letter": "D",
+      "text": "have had"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "wish-would-rather",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'If only' + could have had: tiếc về quá khứ.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 5,
+    "part": "E",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Joan definitely wishes she ____ to do all the housework.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "doesn't have"
+     },
+     {
+      "letter": "B",
+      "text": "didn't have"
+     },
+     {
+      "letter": "C",
+      "text": "wouldn't have"
+     },
+     {
+      "letter": "D",
+      "text": "hadn't"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "wish-would-rather",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Wish' + quá khứ đơn: ước điều hiện tại khác đi.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 6,
+    "part": "E",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "____ any heavier, we'd never have made it on time.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "Were the traffic"
+     },
+     {
+      "letter": "B",
+      "text": "Had the traffic been"
+     },
+     {
+      "letter": "C",
+      "text": "Should the traffic be"
+     },
+     {
+      "letter": "D",
+      "text": "Be the traffic"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "cau-dieu-kien-dao-ngu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Đảo ngữ điều kiện loại 3: Had + S + quá khứ phân từ.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 7,
+    "part": "E",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "I'd never kill an animal unless it ____ me first.",
+    "options": [
+     {
+      "letter": "A",
+      "text": "has attacked"
+     },
+     {
+      "letter": "B",
+      "text": "will attack"
+     },
+     {
+      "letter": "C",
+      "text": "attacks"
+     },
+     {
+      "letter": "D",
+      "text": "attacked"
+     }
+    ],
+    "passage_ref": null,
+    "key": "D",
+    "accepted": [],
+    "tag_key": "cau-dieu-kien-dao-ngu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "Câu điều kiện giả định: unless + quá khứ đơn, would never.",
+    "needs_review": false,
+    "review_reason": null
+   },
+   {
+    "n": 8,
+    "part": "E",
+    "kind": "mcq",
+    "out_of_app": false,
+    "stem": "Imagine the Internet ____ created. Our lives would be so different, don't you think?",
+    "options": [
+     {
+      "letter": "A",
+      "text": "wasn't"
+     },
+     {
+      "letter": "B",
+      "text": "hadn't been"
+     },
+     {
+      "letter": "C",
+      "text": "to not be"
+     },
+     {
+      "letter": "D",
+      "text": "to not have been"
+     }
+    ],
+    "passage_ref": null,
+    "key": "B",
+    "accepted": [],
+    "tag_key": "cau-dieu-kien-dao-ngu",
+    "target_id": null,
+    "reading_skill_key": null,
+    "explanation_vi": "'Imagine' + quá khứ hoàn thành: tưởng tượng điều đã không xảy ra.",
+    "needs_review": true,
+    "review_reason": "Nhãn gần nhất (câu 'imagine + quá khứ hoàn thành')."
+   }
+  ]
+ }
+}
