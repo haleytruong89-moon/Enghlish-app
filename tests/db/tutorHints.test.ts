@@ -87,17 +87,22 @@ describe("tutor hints (migration 0039)", () => {
     const first = await record(act, { clientId: cid, text: "First text." });
     expect(await record(act, { clientId: cid, text: "Other text." })).toMatchObject({ id: first.id, replayed: true, shown_text: "First text." });
     expect((await ctx(act, "q1", cid)).replay).toMatchObject({ shown_text: "First text." }); // S.3: the context gives it back before any model call
+    // review 21/11: the same client id for another question is refused (never shows an old turn under a new question)
+    await fail(record(act, { clientId: cid, item: "q2" }), "22023", /client_id_reused/);
     const c = await ctx(act);
     expect(c.hints_used).toBe(5);
     expect(c.previous).toHaveLength(4);
     expect(c.turns_today).toBeGreaterThanOrEqual(6);
   });
 
-  it("fixed answers (no AI) are recorded but do not count toward the daily limit", async () => {
+  it("fixed answers (no AI) are recorded but do not count toward the daily limit; an AI error does", async () => {
     const act = await assign();
     const before = (await ctx(act)).turns_today;
     await record(act, { kind: "fixed", text: "Bạn thử trả lời nhé." });
     expect((await ctx(act)).turns_today).toBe(before);
+    // review 21/11: an AI error turn called the model, so it counts
+    await record(act, { kind: "fixed", fixed: "ai_error", text: "Gia sư chưa trả lời được." });
+    expect((await ctx(act)).turns_today).toBe(before + 1);
   });
 
   it("P-E1-3: after the work is sent there is no tutor (sent)", async () => {

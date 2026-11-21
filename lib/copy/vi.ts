@@ -2066,20 +2066,24 @@ export const tutorCopy = {
   note: "Gia sư gợi ý từng bước, không đưa đáp án.",
   questionLabel: "Hỏi gia sư về câu này (không bắt buộc)",
   questionPlaceholder: "Ví dụ: từ “cathedral” nghĩa là gì?",
+  questionNote: "Chỉ hỏi về câu này. Không gõ tên hay thông tin riêng nhé.",
   send: "Gửi câu hỏi",
   close: "Đóng",
   fixed: {
     daily_limit: "Hôm nay bạn đã hỏi gia sư nhiều lần rồi. Bạn tự làm tiếp nhé; sau khi nộp, câu sai được thử lại một lần hoặc bấm “Xem đáp án”.",
     missing_part: `Gia sư chưa đọc được phần này, bạn hỏi ${tutorHonorific} nhé.`,
+    no_answer: `Câu này bạn tự viết theo ý mình nhé; ${tutorHonorific} sẽ đọc và góp ý sau khi bạn nộp.`,
     max_level: "Gia sư đã gợi ý đủ 3 bước cho câu này. Bạn thử trả lời nhé: sau khi nộp, câu sai được thử lại một lần hoặc bấm “Xem đáp án”.",
     ai_off: `Gia sư đang nghỉ. Sau khi nộp bạn dùng “Xem đáp án”, hoặc hỏi ${tutorHonorific} nhé.`,
     ai_error: "Gia sư chưa trả lời được lúc này. Bạn thử lại sau một chút nhé.",
   },
   /** The safe sentence when a hint is refused twice (no AI): in the language of the track's explanations. */
   safe: {
-    vi: (instruction: string) => `Bạn đọc lại lời dặn: “${instruction}” Câu này cần gì? Bạn thử từng lựa chọn rồi giữ cái hợp với ý của câu nhất nhé.`,
-    en_first: (instruction: string) => `Read the instructions again: “${instruction}” What does the sentence need? Try each option and keep the one that fits best.`,
-  } as Record<string, (instruction: string) => string>,
+    vi: (instruction: string, choice: boolean) =>
+      `Bạn đọc lại lời dặn: “${instruction}” Câu này cần gì? ${choice ? "Bạn thử từng lựa chọn rồi giữ cái hợp với ý của câu nhất nhé." : "Bạn đọc kỹ các từ ngay trước và sau chỗ trống rồi thử viết nhé."}`,
+    en_first: (instruction: string, choice: boolean) =>
+      `Read the instructions again: “${instruction}” What does the sentence need? ${choice ? "Try each option and keep the one that fits best." : "Look closely at the words just before and after the gap, then try."}`,
+  } as Record<string, (instruction: string, choice: boolean) => string>,
   plain: {
     vi: "Bạn đọc lại lời dặn của phần này và câu hỏi thật chậm nhé. Từ nào trong câu cho bạn manh mối?",
     en_first: "Read the instructions and the sentence again, slowly. Which word in the sentence gives you a clue?",
@@ -2089,6 +2093,7 @@ export const tutorCopy = {
     sent: "Bạn đã nộp bài này rồi.",
     not_found: "Không tìm thấy câu này. Bạn tải lại trang nhé.",
     tutor_unavailable: "Gia sư chưa sẵn sàng (cần cập nhật). Bạn làm tiếp nhé.",
+    client_id_reused: "Bạn bấm lại nút nhé.",
     network: "Mạng chập chờn, bạn bấm lại nhé.",
   } as Record<string, string>,
 };
@@ -2206,12 +2211,12 @@ export const studioInboxCopy = {
 export const aiSettingsCopy = {
   navLink: "Cài đặt AI",
   title: "Cài đặt AI",
-  intro: `AI chỉ đọc đề và đáp án của ${tutorHonorific}, không đọc thông tin của con.`,
+  intro: `AI đọc đề và đáp án của ${tutorHonorific}; với gia sư AI, AI đọc thêm câu hỏi ngắn con gõ. AI không nhận tên hay hồ sơ của con.`,
   points: [
     `AI giúp biến đề + đáp án thành bài làm trên app. ${tutorHonorificCap} hoặc phụ huynh luôn duyệt trước khi giao.`,
     "Gia sư AI (nút “Hỏi” trong bài luyện, không có ở bài kiểm tra): gợi ý từng bước, không đưa đáp án. AI nhận câu hỏi, lời dặn của phần, đáp án (để tránh nói ra) và câu hỏi ngắn con gõ về câu đó.",
     "AI không chấm bài của con và không đổi bậc kỹ năng.",
-    "Không gửi tên, bài làm hay kết quả của con cho AI.",
+    "Không gửi tên, hồ sơ hay kết quả của con cho AI. Câu con gõ cho gia sư AI được gửi như con viết, nên con không nên gõ tên hay thông tin riêng vào đó.",
     "Chi phí tối đa theo hạn mức tháng bên dưới (báo trước ở ngưỡng báo). Hết hạn mức thì soạn tay, gia sư AI nghỉ.",
   ],
   enable: "Đồng ý và bật",

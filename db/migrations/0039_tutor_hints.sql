@@ -151,9 +151,9 @@ begin
                'ai_text', (select c.granted from english.consents c where c.learner_id = l.id and c.scope = 'ai_text' order by c.at desc, c.id desc limit 1),
                'ai_text_version', (select c.notice_version from english.consents c where c.learner_id = l.id and c.scope = 'ai_text' order by c.at desc, c.id desc limit 1),
                -- 0039: lượt hỏi gia sư AI (có gọi AI) hôm nay / tháng này, giờ Việt Nam (P-E1-5)
-               'tutor_today', (select pg_catalog.count(*) from english.tutor_turns t where t.learner_id = l.id and t.kind <> 'fixed'
+               'tutor_today', (select pg_catalog.count(*) from english.tutor_turns t where t.learner_id = l.id and (t.kind <> 'fixed' or t.fixed_code = 'ai_error')
                                  and (t.created_at at time zone 'Asia/Ho_Chi_Minh')::date = english.eng_today_vn()),
-               'tutor_month', (select pg_catalog.count(*) from english.tutor_turns t where t.learner_id = l.id and t.kind <> 'fixed'
+               'tutor_month', (select pg_catalog.count(*) from english.tutor_turns t where t.learner_id = l.id and (t.kind <> 'fixed' or t.fixed_code = 'ai_error')
                                  and t.created_at >= (pg_catalog.date_trunc('month', pg_catalog.now() at time zone 'Asia/Ho_Chi_Minh') at time zone 'Asia/Ho_Chi_Minh')))
              order by l.track_id, l.alias)
       from english.learners l where l.family_id = v_m.family_id), '[]'::jsonb));
@@ -307,6 +307,9 @@ begin
   end if;
   -- Cùng client_id đã ghi: trả lượt cũ (không gọi AI lần hai), trước mọi kiểm "đã nộp" (lượt đó có thể ghi ngay trước khi nộp).
   select * into v_prev from english.tutor_turns t where t.learner_id = v_l.id and t.client_id = p_client_id;
+  if found and (v_prev.activity_id <> p_activity or v_prev.item_id <> p_item) then
+    raise exception 'eng_tutor_context: client id used for another question (client_id_reused)' using errcode = '22023';
+  end if;
   if found then
     return pg_catalog.jsonb_build_object('replay', pg_catalog.jsonb_build_object(
       'id', v_prev.id, 'item_id', v_prev.item_id, 'kind', v_prev.kind, 'level', v_prev.level, 'shown_text', v_prev.shown_text, 'fixed_code', v_prev.fixed_code));
@@ -335,7 +338,8 @@ begin
   select pg_catalog.count(*) into v_hints from english.tutor_turns t
   where t.learner_id = v_l.id and t.activity_id = p_activity and t.item_id = p_item and t.kind = 'hint';
   select pg_catalog.count(*) into v_today from english.tutor_turns t
-  where t.learner_id = v_l.id and t.kind <> 'fixed' and (t.created_at at time zone 'Asia/Ho_Chi_Minh')::date = english.eng_today_vn();
+  -- Lượt có gọi AI hôm nay (giờ Việt Nam): lượt gợi ý / câu hỏi, và cả lượt AI lỗi (đã gọi model, có thể đã tốn tiền).
+  where t.learner_id = v_l.id and (t.kind <> 'fixed' or t.fixed_code = 'ai_error') and (t.created_at at time zone 'Asia/Ho_Chi_Minh')::date = english.eng_today_vn();
   v_limit := coalesce((english.eng_track_setting(v_l.track_id, 'tutor_daily_limit') #>> '{}')::int, 40);
   return pg_catalog.jsonb_build_object(
     'learner_id', v_l.id, 'family_id', v_l.family_id, 'track_id', v_l.track_id,
@@ -394,6 +398,9 @@ begin
   end if;
   perform 1 from english.learners l where l.id = v_act.learner_id for no key update;
   select * into v_prev from english.tutor_turns t where t.learner_id = v_act.learner_id and t.client_id = p_client_id;
+  if found and (v_prev.activity_id <> p_activity or v_prev.item_id <> p_item) then
+    raise exception 'eng_record_tutor_turn: client id used for another question (client_id_reused)' using errcode = '22023';
+  end if;
   if found then
     return pg_catalog.jsonb_build_object('id', v_prev.id, 'level', v_prev.level, 'shown_text', v_prev.shown_text, 'replayed', true);
   end if;

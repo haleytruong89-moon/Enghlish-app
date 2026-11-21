@@ -12,7 +12,7 @@ import { handleStudentHint } from "@/lib/tutor/handler";
 import { CHECK_PROMPT, HINT_PROMPT } from "@/lib/tutor/prompt";
 import { createSupabaseTutorStore } from "@/lib/tutor/supabaseStore";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 /** POST /api/student/activities/:id/hints — one turn of the AI tutor (E1). The child only; the answer never leaves the server. */
 export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
         user: user ? { id: user.id } : null,
         store: createSupabaseTutorStore(),
         noticeVersion: TUTOR_NOTICE_VERSION,
-        call: (c) => caller(c, { timeoutMs: 45_000 }),
+        call: (c, o) => caller(c, { timeoutMs: o?.timeoutMs ?? 45_000 }),
         prompts: { hint: loadPrompt(HINT_PROMPT.file), check: loadPrompt(CHECK_PROMPT.file) },
         models: tutorModels(),
         copy: tutorCopy,

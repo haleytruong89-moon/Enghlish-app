@@ -5,8 +5,8 @@
  * The child only ever gets text that passed the checks, the safe sentence or a fixed sentence. Errors never become a 500 for the child.
  */
 import { parseGate } from "@/lib/ai/cap";
-import { estimateCostUsd } from "@/lib/ai/pricing";
-import { AiCallError, type ToolCall, type ToolResult } from "@/lib/ai/request";
+import { estimateCostUsd, isPricedModel } from "@/lib/ai/pricing";
+import { AiCallError, estimateInputTokens, type ToolCall, type ToolResult } from "@/lib/ai/request";
 import { ReviewDbError } from "@/lib/review/handlers";
 import { leakReasons } from "./leak";
 import { looksLikeInjection, planTurn, safeHint, type FixedCode } from "./policy";
@@ -15,6 +15,14 @@ import { z } from "zod";
 
 /** Worst case of one turn (two Sonnet calls with room to think + two Haiku checks), reserved before the first call. */
 export const TURN_RESERVE_USD = 0.1;
+/** Time for all calls of one turn (the route allows 120 s): each call gets what is left, at most 45 s; under 5 s left = no call. */
+export const TURN_BUDGET_MS = 100_000;
+const CALL_MAX_MS = 45_000;
+const CALL_MIN_MS = 5_000;
+/** Errors after which the call may still have been billed: priced at the estimated input + the full output allowance. */
+const MAYBE_BILLED = new Set(["timeout", "network", "http_5xx"]);
+/** Too little of the turn's time left to start a call: nothing was sent, nothing to log. */
+class NoTimeLeft extends Error {}
 
 export type TutorStore = {
   context(a: { userId: string; activityId: string; itemId: string; clientId: string }): Promise<unknown>;
@@ -26,12 +34,14 @@ export type TutorStore = {
     model: string | null; runs: string[]; cost: number; clientId: string;
   }): Promise<unknown>;
 };
-export type TutorCopy = { fixed: Record<FixedCode, string>; safe: Record<string, (instruction: string) => string>; plain: Record<string, string> };
+export type TutorCopy = { fixed: Record<FixedCode, string>; safe: Record<string, (instruction: string, choice: boolean) => string>; plain: Record<string, string> };
 export type TutorDeps = {
   store: TutorStore;
   /** The consent text version the tutor needs (lib/ai/config TUTOR_NOTICE_VERSION). */
   noticeVersion: string;
-  call: (c: ToolCall) => Promise<ToolResult>;
+  call: (c: ToolCall, o?: { timeoutMs?: number }) => Promise<ToolResult>;
+  /** Clock (tests). */
+  now?: () => number;
   prompts: { hint: string; check: string };
   models: { hint: string; check: string; toolChoice?: "tool" | "auto" };
   copy: TutorCopy;
@@ -68,6 +78,7 @@ function contextError(err: unknown): TurnResult | null {
   if (tag === "test_work") return { status: 403, body: { error: "test_work" } };
   if (tag === "sent") return { status: 409, body: { error: "sent" } };
   if (tag === "not_found" || tag === "not_studio") return { status: 404, body: { error: "not_found" } };
+  if (tag === "client_id_reused") return { status: 409, body: { error: "client_id_reused" } };
   if (err.code === "PGRST202" || err.code === "42883") return { status: 409, body: { error: "tutor_unavailable" } };
   return null;
 }
@@ -104,29 +115,53 @@ export async function runTutorTurn(deps: TutorDeps, input: TurnInput): Promise<T
 
   // The parent agreed to the text that mentions the tutor (the child's typed question goes to the AI): otherwise "Gia sư đang nghỉ".
   if (ctx.consentVersion !== deps.noticeVersion) return fixed("ai_off");
+  // A model without a price could not be put in the ledger: no call at all (an env override to an unknown model).
+  if (!isPricedModel(deps.models.hint) || !isPricedModel(deps.models.check)) return fixed("ai_error");
   // Cost gate of the family (switch, ai_text consent of this child, monthly cap) with a reservation of the worst case.
   const gate = parseGate(await deps.store.gate({ learnerId: ctx.learnerId, estimate: TURN_RESERVE_USD, model: deps.models.hint }));
   if (!gate.allowed) return fixed("ai_off");
-  let release: string | null = gate.reservationId ?? null;
+  const now = deps.now ?? Date.now;
+  const deadline = now() + TURN_BUDGET_MS;
+  // Every call is written to the ledger at the end of the turn; the reservation is released only with the last one, so a turn cut short
+  // (the function stopped) keeps its worst case counted against the cap instead of losing calls that were billed.
+  type Pending = { model: string; promptVersion: string; purpose: "tutor_hint" | "tutor_check"; input: number; output: number; cost: number; error: string | null };
+  const pending: Pending[] = [];
   const runs: string[] = [];
   let cost = 0;
-  const log = async (model: string, promptVersion: string, purpose: "tutor_hint" | "tutor_check", usage: { inputTokens: number; outputTokens: number }, error: string | null) => {
-    const c = estimateCostUsd(model, usage.inputTokens, usage.outputTokens);
-    cost += c;
-    runs.push(await deps.store.logRun({ familyId: ctx.familyId, model, promptVersion, input: usage.inputTokens, output: usage.outputTokens, cost: c, status: error ? "error" : "ok", error, release, purpose }));
-    release = null;
+  const log = (c: ToolCall, promptVersion: string, purpose: Pending["purpose"], usage: { inputTokens: number; outputTokens: number }, error: string | null) => {
+    const billed = error && MAYBE_BILLED.has(error) && usage.inputTokens === 0 && usage.outputTokens === 0 ? { inputTokens: estimateInputTokens(c), outputTokens: c.maxTokens } : usage;
+    const usd = estimateCostUsd(c.model, billed.inputTokens, billed.outputTokens);
+    cost += usd;
+    pending.push({ model: c.model, promptVersion, purpose, input: billed.inputTokens, output: billed.outputTokens, cost: usd, error });
+  };
+  const flush = async () => {
+    for (let i = 0; i < pending.length; i++) {
+      const p = pending[i]!;
+      runs.push(await deps.store.logRun({
+        familyId: ctx.familyId, model: p.model, promptVersion: p.promptVersion, input: p.input, output: p.output, cost: p.cost,
+        status: p.error ? "error" : "ok", error: p.error, release: i === pending.length - 1 ? (gate.reservationId ?? null) : null, purpose: p.purpose,
+      }));
+    }
+  };
+  /** One model call within the time left; too little time = it fails like a timeout, without calling. */
+  const timed = async (c: ToolCall): Promise<ToolResult> => {
+    const left = deadline - now();
+    if (left < CALL_MIN_MS) throw new NoTimeLeft();
+    return deps.call(c, { timeoutMs: Math.min(CALL_MAX_MS, left) });
   };
 
   const draft = async (rewriteFor?: string[]): Promise<string | null> => {
+    const c = buildHintCall({ template: deps.prompts.hint, model: deps.models.hint, ctx, level: plan.level, childText, rewriteFor, toolChoice: deps.models.toolChoice });
     try {
-      const res = await deps.call(buildHintCall({ template: deps.prompts.hint, model: deps.models.hint, ctx, level: plan.level, childText, rewriteFor, toolChoice: deps.models.toolChoice }));
-      await log(deps.models.hint, HINT_PROMPT.version, "tutor_hint", res.usage, null);
+      const res = await timed(c);
+      log(c, HINT_PROMPT.version, "tutor_hint", res.usage, null);
       const out = hintOut.safeParse(res.input);
       if (!out.success || !out.data.hint.trim()) return null;
       for (const f of out.data.flags) if ((TUTOR_FLAGS as readonly string[]).includes(f)) flags.add(f as TutorFlag);
       return out.data.hint.trim().slice(0, 1400);
     } catch (err) {
-      await log(deps.models.hint, HINT_PROMPT.version, "tutor_hint", err instanceof AiCallError ? err.usage : { inputTokens: 0, outputTokens: 0 }, err instanceof AiCallError ? err.code : "error");
+      if (err instanceof NoTimeLeft) return null;
+      log(c, HINT_PROMPT.version, "tutor_hint", err instanceof AiCallError ? err.usage : { inputTokens: 0, outputTokens: 0 }, err instanceof AiCallError ? err.code : "error");
       return null;
     }
   };
@@ -134,14 +169,16 @@ export async function runTutorTurn(deps: TutorDeps, input: TurnInput): Promise<T
   const check = async (text: string): Promise<string[]> => {
     const code = leakReasons(text, { kind: ctx.item.kind, stem: ctx.item.stem, options: ctx.item.options, answers: ctx.answers });
     if (code.length) return code;
+    const c = buildCheckCall({ template: deps.prompts.check, model: deps.models.check, ctx, hint: text, childText, toolChoice: deps.models.toolChoice });
     try {
-      const res = await deps.call(buildCheckCall({ template: deps.prompts.check, model: deps.models.check, ctx, hint: text, childText, toolChoice: deps.models.toolChoice }));
-      await log(deps.models.check, CHECK_PROMPT.version, "tutor_check", res.usage, null);
+      const res = await timed(c);
+      log(c, CHECK_PROMPT.version, "tutor_check", res.usage, null);
       const out = checkOut.safeParse(res.input);
       if (!out.success) return ["check_unreadable"];
       return out.data.pass ? [] : out.data.reasons.length ? out.data.reasons.map((r) => `haiku_${r}`) : ["haiku_fail"];
     } catch (err) {
-      await log(deps.models.check, CHECK_PROMPT.version, "tutor_check", err instanceof AiCallError ? err.usage : { inputTokens: 0, outputTokens: 0 }, err instanceof AiCallError ? err.code : "error");
+      if (err instanceof NoTimeLeft) return ["check_no_time"];
+      log(c, CHECK_PROMPT.version, "tutor_check", err instanceof AiCallError ? err.usage : { inputTokens: 0, outputTokens: 0 }, err instanceof AiCallError ? err.code : "error");
       return ["check_failed"];
     }
   };
@@ -151,7 +188,10 @@ export async function runTutorTurn(deps: TutorDeps, input: TurnInput): Promise<T
   const reasons: string[] = [];
   const first = await draft();
   // The model failed outright (API error, no text): a fixed sentence, no level used; the call stays in the ledger.
-  if (first === null) return fixed("ai_error", { runs, cost, model: deps.models.hint });
+  if (first === null) {
+    await flush();
+    return fixed("ai_error", { runs, cost, model: deps.models.hint });
+  }
   const r1 = await check(first);
   if (r1.length === 0) shown = first;
   else {
@@ -169,6 +209,7 @@ export async function runTutorTurn(deps: TutorDeps, input: TurnInput): Promise<T
     shown = safeHint(ctx, { safe: deps.copy.safe[ctx.language] ?? deps.copy.safe.vi!, plain: deps.copy.plain[ctx.language] ?? deps.copy.plain.vi! });
     guard = "safe";
   }
+  await flush();
   const rec = (await deps.store.record({
     ...input, kind: plan.kind, childText, shown, guard, reasons, flags: [...flags], fixedCode: null, promptVersion: HINT_PROMPT.version, model: deps.models.hint, runs, cost,
     clientId: input.clientId,

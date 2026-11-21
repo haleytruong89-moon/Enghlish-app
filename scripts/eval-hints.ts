@@ -35,7 +35,7 @@ type Case = {
 type Turn = {
   case: string; source: Case["source"]; run: number; step: number; childText: string | null; kind: string; level: number; text: string;
   guard: string; reasons: string[]; flags: string[]; fixed: string | null; cost: number; calls: { tool: string; model: string; in: number; out: number; usd: number; error?: string }[];
-  drafts: string[]; audit: { leak: boolean; confirms: boolean; note: string } | null; wide: string[]; form: ReturnType<typeof formOf> | null; ms: number;
+  drafts: string[]; audit: { leak: boolean; confirms: boolean; note: string; failed?: boolean } | null; wide: string[]; form: ReturnType<typeof formOf> | null; ms: number;
 };
 
 const arg = (name: string, dflt: string) => {
@@ -56,8 +56,9 @@ const AUDIT_MODEL = process.env.TUTOR_AUDIT_MODEL?.trim() || models.check;
 let spent = 0;
 const over = () => spent >= MAX_USD;
 
-/** The real API with two retries on overload / network (the product does not retry; the set should not fail on a 529). */
-async function callApi(c: ToolCall): Promise<ToolResult> {
+let retries = 0;
+/** The real API with the production timeout; two retries on overload only (429 / 5xx, counted in the report; the product does not retry). */
+async function callApi(c: ToolCall, timeoutMs = 45_000): Promise<ToolResult> {
   if (FAKE) {
     const file = c.tool.name === "audit_hint" ? null : fakeFixtureFor(c.tool.name);
     return { input: file ? JSON.parse(readFileSync(file, "utf8")) : { leak: false, confirms: false, note: "fake" }, usage: { inputTokens: 2000, outputTokens: 400 }, model: c.model };
@@ -65,10 +66,11 @@ async function callApi(c: ToolCall): Promise<ToolResult> {
   if (!KEY) throw new AiCallError("http_401");
   for (let i = 0; ; i++) {
     try {
-      return await postToolCall(c, { apiKey: KEY, timeoutMs: 90_000 });
+      return await postToolCall(c, { apiKey: KEY, timeoutMs });
     } catch (err) {
       const code = err instanceof AiCallError ? err.code : "network";
-      if (i >= 2 || !["http_429", "http_5xx", "network", "timeout"].includes(code)) throw err;
+      if (i >= 2 || !["http_429", "http_5xx"].includes(code)) throw err;
+      retries++;
       await new Promise((r) => setTimeout(r, 4000 * (i + 1)));
     }
   }
@@ -157,9 +159,9 @@ async function runCase(c: Case, run: number): Promise<Turn[]> {
     const step = c.turns[s]!;
     const calls: Turn["calls"] = [];
     const drafts: string[] = [];
-    const call = async (tc: ToolCall) => {
+    const call = async (tc: ToolCall, o?: { timeoutMs?: number }) => {
       try {
-        const r = await callApi(tc);
+        const r = await callApi(tc, o?.timeoutMs);
         const usd = estimateCostUsd(tc.model, r.usage.inputTokens, r.usage.outputTokens);
         spent += usd;
         calls.push({ tool: tc.tool.name, model: tc.model, in: r.usage.inputTokens, out: r.usage.outputTokens, usd });
@@ -192,7 +194,8 @@ async function runCase(c: Case, run: number): Promise<Turn[]> {
         const a = r.input as { leak?: boolean; confirms?: boolean; note?: string };
         audit = { leak: !!a.leak, confirms: !!a.confirms, note: String(a.note ?? "") };
       } catch (err) {
-        audit = { leak: false, confirms: false, note: `audit failed: ${err instanceof AiCallError ? err.code : String(err)}` };
+        // Unknown, not "no leak": counted apart and the run is not a pass while any audit failed.
+        audit = { leak: false, confirms: false, failed: true, note: `audit failed: ${err instanceof AiCallError ? err.code : String(err)}` };
       }
     }
     out.push({
@@ -260,6 +263,7 @@ function summarize(turns: Turn[], cases: Case[]) {
       turns: m.length,
       leaks_flagged: m.filter((t) => t.audit?.leak || t.wide.length > 0).length,
       confirms_flagged: m.filter((t) => t.audit?.confirms).length,
+      audit_failed: m.filter((t) => t.audit?.failed).length,
       length_and_ask_pct: pct(m.filter((t) => t.form?.lengthOk && t.form.endsWithAsk).length, m.length),
       length_pct: pct(m.filter((t) => t.form?.lengthOk).length, m.length),
       ask_pct: pct(m.filter((t) => t.form?.endsWithAsk).length, m.length),
@@ -271,7 +275,7 @@ function summarize(turns: Turn[], cases: Case[]) {
   };
   return {
     models: { hint: models.hint, check: models.check, audit: AUDIT_MODEL }, prompts: { hint: HINT_PROMPT.version, check: CHECK_PROMPT.version }, runs: RUNS,
-    spent_usd: Math.round(spent * 10000) / 10000, stopped_at_cap: over(),
+    spent_usd: Math.round(spent * 10000) / 10000, stopped_at_cap: over(), api_retries: retries,
     bo_test: group("bo_test"), destination: group("destination"),
     flags: { checks: flagChecks.length, ok: flagChecks.filter((f) => f.ok).length, misses: flagChecks.filter((f) => !f.ok) },
     cost_per_turn_usd: { mean: costs.length ? Math.round((costs.reduce((a, b) => a + b, 0) / costs.length) * 1e5) / 1e5 : 0, median: Math.round(median(costs) * 1e5) / 1e5, max: Math.round(Math.max(0, ...costs) * 1e5) / 1e5 },
@@ -306,7 +310,7 @@ async function main() {
     `| ${n} | ${x.turns} | ${x.leaks_flagged} | ${x.confirms_flagged} | ${x.length_and_ask_pct}% | ${x.language_pct}% | ${x.guard.pass}/${x.guard.rewritten}/${x.guard.safe} | ${x.ai_error} | $${x.cost_usd} |`;
   writeFileSync(path.join(dir, "summary.md"), [
     `# eval-hints ${stamp}`,
-    `models ${summary.models.hint} / check ${summary.models.check} / audit ${summary.models.audit} · prompts ${summary.prompts.hint}, ${summary.prompts.check} · spent $${summary.spent_usd}${summary.stopped_at_cap ? " (STOPPED AT CAP)" : ""}`,
+    `models ${summary.models.hint} / check ${summary.models.check} / audit ${summary.models.audit} · prompts ${summary.prompts.hint}, ${summary.prompts.check} · spent $${summary.spent_usd}${summary.stopped_at_cap ? " (STOPPED AT CAP)" : ""} · API retries ${summary.api_retries} · audits failed ${summary.bo_test.audit_failed + summary.destination.audit_failed}`,
     "",
     "| set | turns | leak flagged | confirm flagged | length+ask | language | pass/rewritten/safe | ai_error | cost |",
     "|---|---|---|---|---|---|---|---|---|",

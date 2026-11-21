@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { tutorCopy as c } from "@/lib/copy/vi";
 import { langOf } from "@/lib/studio/taskParts";
 
-export type TutorTurnView = { text: string; level: number; kind: "hint" | "question" | "fixed"; childText: string | null };
+export type TutorTurnView = { text: string; level: number; kind: "hint" | "question" | "fixed"; childText: string | null; fixed?: string | null };
 
 /**
  * E1 · "Hỏi" under one question of a Studio practice test. Each press asks the server for the next hint (H1 → H2 → H3, the server owns
@@ -19,8 +19,17 @@ export function AskTutor({
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const last = turns[turns.length - 1] ?? null;
-  const done = turns.some((t) => t.kind === "fixed");
+  // Only "all 3 steps used" and "today's limit" end the tutor for this question; "Gia sư đang nghỉ" / a passing error do not.
+  const done = turns.some((t) => t.kind === "fixed" && (t.fixed === "max_level" || t.fixed === "daily_limit"));
+  // The same press retried after a network error keeps its client id: the server returns the turn it may already have made.
+  const intent = useRef<{ key: string; id: string } | null>(null);
   const level = Math.max(0, ...turns.filter((t) => t.kind === "hint").map((t) => t.level));
+
+  function clientIdFor(text: string | null): string {
+    const key = `${turns.length}|${text ?? ""}`;
+    if (intent.current?.key !== key) intent.current = { key, id: crypto.randomUUID() };
+    return intent.current.id;
+  }
 
   async function ask(text: string | null) {
     setBusy(true);
@@ -29,11 +38,12 @@ export function AskTutor({
       const res = await fetch(`/api/student/activities/${activityId}/hints`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ item_id: itemId, client_id: crypto.randomUUID(), ...(text ? { question: text } : {}) }),
+        body: JSON.stringify({ item_id: itemId, client_id: clientIdFor(text), ...(text ? { question: text } : {}) }),
       });
-      const body = (await res.json().catch(() => null)) as { text?: string; level?: number; kind?: TutorTurnView["kind"]; error?: string } | null;
+      const body = (await res.json().catch(() => null)) as { text?: string; level?: number; kind?: TutorTurnView["kind"]; fixed?: string | null; error?: string } | null;
       if (!res.ok || !body?.text) return setProblem(c.errors[body?.error ?? ""] ?? c.errors.network!);
-      onTurn({ text: body.text, level: Number(body.level ?? 0), kind: body.kind ?? "hint", childText: text });
+      intent.current = null;
+      onTurn({ text: body.text, level: Number(body.level ?? 0), kind: body.kind ?? "hint", childText: text, fixed: body.fixed ?? null });
       setQuestion("");
       setOpen(false);
     } catch {
@@ -75,6 +85,7 @@ export function AskTutor({
         <form onSubmit={(e) => { e.preventDefault(); if (question.trim()) void ask(question.trim()); }} className="flex flex-col gap-2" data-testid="tutor-question-form">
           <input value={question} maxLength={200} onChange={(e) => setQuestion(e.target.value)} placeholder={c.questionPlaceholder} aria-label={c.questionLabel}
             data-testid="tutor-question" className="min-h-11 rounded-xl border border-line bg-white px-3 text-[15px]" />
+          <p className="text-[13px] text-muted">{c.questionNote}</p>
           <button type="submit" disabled={busy || !question.trim()} data-testid="tutor-send" className="min-h-11 self-start rounded-xl bg-accent px-4 text-sm font-semibold text-white disabled:opacity-60">
             {c.send}
           </button>

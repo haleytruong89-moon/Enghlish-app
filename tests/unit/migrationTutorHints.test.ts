@@ -64,7 +64,7 @@ describe("*_tutor_hints.sql (found by suffix)", () => {
     const from = body.indexOf(squash(",'ai_text_version',"));
     const to = body.indexOf(squash(")order by l.track_id"));
     const added = body.slice(from, to);
-    for (const k of ["'tutor_today'", "'tutor_month'", "kind<>'fixed'"]) expect(added, k).toContain(k);
+    for (const k of ["'tutor_today'", "'tutor_month'", "kind<>'fixed'ort.fixed_code='ai_error'"]) expect(added, k).toContain(k);
     expect(body.slice(0, from) + body.slice(to)).toBe(before);
   });
 
