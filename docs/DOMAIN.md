@@ -348,3 +348,37 @@ Lớp / đợt, chứng chỉ, chuỗi theo ngày (chuỗi **tuần** mềm thì
 - **Điều đã làm được (§7.6, Q17):** kỹ năng có trạng thái `INDEPENDENT` / `TRANSFERABLE` mà dòng bậc mới nhất là `CONFIRMED`, và mục kiến thức (điểm) cùng luật. `AUTO` bậc 1–2, đề xuất đang chờ, sửa tay (`MANUAL`) và dòng bị hạ **không** tính; ⚑ đang mở không đổi gì con thấy. Chữ = tên có sẵn (Track A kỹ năng: "tên cho học sinh" ở UX §3.4; còn lại `targets.title_vi` / `error_tags.label_vi`), ghi "Mình đã tự làm được: …"; ngày = lúc xác nhận; "Mới" = trong 7 ngày (đồng hồ máy chủ). Thành tích `cando_n` (5 / 10 / 20 điều đang hiện).
 - **"Ngày ấy – bây giờ" (Q16, Q19):** v1 chỉ so sánh **chữ gõ trên app** (bài giấy chưa; muốn dùng thì thầy/cô nhập lại thành bài viết — chấp nhận bài **thầy/cô** gõ lại, `manual_import`, chỉ làm "ngày ấy"); **thầy/cô của em chọn** cặp bài + lời nhắn; phụ huynh chỉ xem; con thấy cặp bài mới nhất đang `shown`.
 - Con **vẫn không** thấy: điểm, x/y kết quả, %, mức / bậc dạng số, ⚑, đề xuất, bằng chứng, dữ liệu của em kia.
+
+## Bản 0.9 · E1 (21/11/2026) — Gia sư AI tiếng Anh: nút "Hỏi" trong bài luyện (bàn giao từ hub; ❓ chờ phụ huynh duyệt plan)
+
+Nguồn: `HANDOVER_GIA_SU_AI_TIENG_ANH_2026-11-21.md` (hub; T1–T6 phụ huynh chốt 21/11) + SPEC v0.1. Plan: `docs/superpowers/plans/2026-11-21-e1-ask-hints.md`.
+
+**Đổi so với PRD / bản 0.3 (cần phụ huynh xác nhận khi duyệt plan):**
+- §9.1 lớp 1 "Chỉ nháp" và CLAUDE.md "AI chỉ soạn nháp cho gia sư duyệt": gợi ý của nút "Hỏi" **tới thẳng con** (không có người duyệt từng lượt). Thay cho bước duyệt: luật cứng L1/L2/L6 kiểm bằng code + bộ kiểm tra Haiku + câu an toàn; mỗi lượt ghi lại để thầy/cô / phụ huynh xem sau (màn xem là E4). Mọi việc AI khác vẫn "chỉ nháp".
+- §11 "chat tự do với AI": vẫn không. Nút "Hỏi" không có ô gõ: con chỉ bấm "Hỏi" / "Gợi ý tiếp".
+
+**Luật cứng (lớp 1, code giữ):**
+
+| # | Luật | Cách kiểm (máy chủ) | Ví dụ |
+|---|---|---|---|
+| L1 | Bài luyện: không lộ đáp án hay đáp án chấp nhận, trong lời lẫn nút | Sau model: chuẩn hóa như `eng_norm_answer` (hoa thường, dấu câu cuối, ngoặc kép cong) rồi tìm **cả cụm** đáp án / đáp án chấp nhận / cách viết thay gạch nối trong chữ gợi ý. Câu trắc nghiệm: tìm chữ của lựa chọn đúng và các mẫu chỉ chữ cái ("A.", "(A)", "đáp án A", "answer is A", "option A"). Trúng → model viết lại **1 lần** → trúng nữa → **câu an toàn** (H1 dựng từ lời dặn của phần, không AI) | Đáp án "art gallery": gợi ý "Think of a place with paintings…" ✓; "It's the art gallery" ✗ → viết lại |
+| L2 | Bài kiểm tra: không có gia sư AI | Máy chủ từ chối khi bước có cờ **Bài kiểm tra** (`eng_work_is_test`) hoặc là `INDEPENDENT_CHECK`; nút ẩn ở màn con | Bài có cờ → API trả 403 `test_work`, không gọi model, không tốn tiền |
+| L6 | Chỉ chuyện học tiếng Anh của câu đang làm | Haiku kiểm (đạt / trượt + lý do); trượt → viết lại 1 lần → câu an toàn. Haiku **không** trả lời con | Gợi ý lạc sang chuyện khác / có lời khuyên ngoài bài → câu an toàn |
+
+**Thang gợi ý (máy chủ giữ mức, model không tự nhảy):** H1 nhắc lời dặn + word bank của phần · H2 thu hẹp (nghĩa, dạng từ, ngữ pháp cần dùng) · H3 so sánh hai hướng **không gọi tên đáp án** (❓ xem P-E1-2). Tối đa 3 mức mỗi câu mỗi lần làm; hết H3 → nhắc con trả lời, sau khi nộp có luồng thử lại / Xem đáp án đã có (S-17, D39). Không có nút đưa đáp án.
+
+**Đầu vào mỗi lượt gửi model:** đề câu, lời dặn **của phần chứa câu** (E0, `eng_my_task_parts`), word bank, lựa chọn (nếu trắc nghiệm), đáp án + đáp án chấp nhận (chỉ để model tránh và để code kiểm), mức gợi ý, dải cấp của track, ngôn ngữ giải thích (cấu hình theo track: Track A tiếng Việt câu ngắn; Track B tiếng Anh trước). **Không** gửi tên / bí danh của con, câu con đã gõ, bài khác (D-W7).
+
+**Sổ chi phí:** mỗi lượt (model trả lời + Haiku kiểm, kể cả lần viết lại) ghi vào `ai_runs` (mục đích mới) với model, phiên bản prompt, token, chi phí; một dòng `tutor_turns` (chỉ thêm) giữ mức, chữ đã gửi con, kết quả kiểm (pass / rewritten / safe), lý do. Con không đọc `ai_runs` / `tutor_turns`.
+
+**Trần tháng theo cài đặt:** dùng chung cổng `ai_settings` của gia đình (công tắc + đồng ý `ai_text` của từng em + chi tháng < trần; ngưỡng cảnh báo = `soft_cap_usd`). Mặc định **giữ** 10 / 8 USD; P1 (nâng 20, báo ở 18) chỉ mở giới hạn trong cơ sở dữ liệu, phụ huynh tự đổi ở Cài đặt AI. Hết trần / tắt / chưa đồng ý → nút "Hỏi" báo nhẹ "Gia sư đang nghỉ", không lỗi, bài làm bình thường.
+
+**Ví dụ (≥ 3):**
+
+| Tình huống | Kết quả |
+|---|---|
+| Câu 3 (bài luyện), con bấm "Hỏi" lần 1 | H1: nhắc lời dặn phần B + word bank (chip); lượt ghi `pass` |
+| Con bấm "Gợi ý tiếp" lần 3 rồi lần 4 | Lần 3: H3. Lần 4: không gọi model; "Bạn thử trả lời nhé — sau khi nộp được thử lại một lần" |
+| Model viết "The answer is museum" | Code thấy "museum" (đáp án) → viết lại 1 lần → vẫn lộ → câu an toàn H1; lượt ghi `safe` |
+| Bài có cờ Bài kiểm tra | Không có nút; gọi thẳng API → 403, không tốn tiền |
+| Gia đình đã chi 10 USD tháng này | "Gia sư đang nghỉ, bạn làm tiếp nhé"; không gọi model |
