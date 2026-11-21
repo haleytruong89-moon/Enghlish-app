@@ -185,6 +185,7 @@ export function SubmissionFeedbackForm({
               {problem}
             </p>
           ) : null}
+          {studio ? <p className="text-sm font-semibold text-[#6B4600]" data-testid="sfb-send-note">{studioFeedbackCopy.sendNote}</p> : null}
           <div className="flex flex-wrap gap-2">
             <button type="submit" disabled={busy} data-testid="sfb-send" className="min-h-11 rounded-lg bg-accent px-5 text-sm font-semibold text-white disabled:opacity-60">
               {busy ? copy.sending : editing ? copy.sendEdit : copy.send}

@@ -122,6 +122,7 @@ describe("the same form on a Studio attempt (0037)", () => {
     render(<SubmissionFeedbackForm studio learnerId={L} assignmentId={A} submissionId={S} feedback={[]} viewerMemberId="m-tutor" />);
     fireEvent.click(screen.getByTestId(`sfb-open-${A}`));
     expect(screen.getByText(/không yêu cầu con làm lại bài/)).toBeTruthy();
+    expect(screen.getByTestId("sfb-send-note").textContent).toBe("Con sẽ thấy góp ý này ngay khi bạn gửi.");
     fireEvent.change(screen.getByTestId("sfb-praise"), { target: { value: "Bạn chia dạng từ chắc." } });
     fireEvent.click(screen.getByTestId("sfb-send"));
     await waitFor(() => expect(postJson).toHaveBeenCalledTimes(1));

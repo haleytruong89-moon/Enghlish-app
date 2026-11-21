@@ -1916,7 +1916,7 @@ Nhánh `feature/studio-feedback-units` (dựa trên `feature/studio-flow-fixes`,
 ### Giả định (Claude chọn, phụ huynh xem lại)
 - Ai góp ý: thầy/cô của em **hoặc** phụ huynh (như bài link / PDF).
 - Góp ý chỉ người viết sửa được (như bài link / PDF). Nếu thầy/cô thôi dạy, không ai sửa được lời nhắn cũ (phụ huynh viết được góp ý cho lần làm sau).
-- Góp ý ở bài có cờ **Bài kiểm tra** tới con ngay. Lời như "câu 3 sai" không bị chặn (không phải chữ dạng điểm) dù màn của bài kiểm tra cố ý không nói câu nào sai. ❓ Phụ huynh chọn: giữ, hay nhắc người viết, hay chờ tới buổi học.
+- Góp ý ở bài có cờ **Bài kiểm tra** tới con ngay — ✅ phụ huynh chọn **giữ** (21/11, theo S-2) và thêm dòng nhắc cạnh nút Gửi: "Con sẽ thấy góp ý này ngay khi bạn gửi."
 - Khối đề xuất không có nút "Không đổi": còn hiện tới khi Unit sang "Đang học" (hoặc bị bỏ qua).
 - Đề xuất "Đang học" gồm cả bài link / PDF giao theo Unit đã có bài nộp (cùng luật, không cần SQL thêm).
 - Unit chỉ chọn lúc giao (chưa tự điền theo tên bài).
