@@ -1,0 +1,59 @@
+name: Eval AI tutor hints
+
+# E1 test set (hub BO_TEST v0.1 §3): real Sonnet + Haiku calls with the parent's test-set key (secret ANTHROPIC_API_KEY, its own cap).
+# Runs only by hand or when an eval/** branch is pushed; never on a PR or on main. Results go to the eval-results branch.
+on:
+  push:
+    branches: ["eval/**"]
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: "Runs per BO_TEST case"
+        default: "3"
+      max_usd:
+        description: "Stop starting new work past this spend (USD)"
+        default: "15"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: eval-hints
+  cancel-in-progress: false
+
+jobs:
+  eval:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run the test set
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npx tsx scripts/eval-hints.ts --runs "${{ inputs.runs || '3' }}" --max-usd "${{ inputs.max_usd || '15' }}" --out eval/results
+      - name: Push the results to the eval-results branch
+        if: always()
+        run: |
+          set -e
+          [ -d eval/results ] || exit 0
+          git config user.name "eval-bot"
+          git config user.email "eval-bot@users.noreply.github.com"
+          cp -r eval/results /tmp/results
+          if git ls-remote --exit-code origin eval-results >/dev/null; then
+            git fetch origin eval-results
+            git worktree add /tmp/er origin/eval-results
+            git -C /tmp/er checkout -B eval-results
+          else
+            git worktree add --detach /tmp/er
+            git -C /tmp/er checkout --orphan eval-results
+            git -C /tmp/er rm -rf . >/dev/null
+          fi
+          mkdir -p /tmp/er/results && cp -r /tmp/results/* /tmp/er/results/
+          git -C /tmp/er add results
+          git -C /tmp/er commit -m "eval-hints results ${GITHUB_SHA::7} (${GITHUB_REF_NAME})"
+          git -C /tmp/er push origin eval-results
