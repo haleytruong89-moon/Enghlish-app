@@ -157,6 +157,8 @@ describe("Duyệt đề · chặn Duyệt nói rõ lỗi, Bỏ bản nháp hỏi
     expect((screen.getByTestId("item-2-down") as HTMLButtonElement).disabled).toBe(true); // last of M: never into N
     fireEvent.click(screen.getByTestId("item-2-up"));
     expect(stemsOnScreen().slice(0, 2)).toEqual(["1:Sentence 2 ____.", "2:Sentence 1 ____."]);
+    // keyboard focus follows the question that moved (now number 1; its "up" is disabled, so "down" gets focus)
+    expect(document.activeElement).toBe(screen.getByTestId("item-1-down"));
     fireEvent.click(screen.getByTestId("only-flagged"));
     expect(screen.queryByTestId("item-1-up")).toBeNull(); // no moving inside a filtered list
   });

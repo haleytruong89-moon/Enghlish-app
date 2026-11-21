@@ -9,6 +9,7 @@ const TONE: Record<StudioAssignedStatus, string> = {
   not_yet: "bg-[#EFEDE7] text-muted",
   todo: "bg-[#E3ECE8] text-[#1F4439]",
   overdue: "bg-[#FBF1DC] text-[#6B4600]",
+  skipped: "bg-[#EFEDE7] text-muted",
   waiting: "bg-[#FBF1DC] text-[#6B4600]",
   checked: "bg-[#E3ECE8] text-[#1F4439]",
 };

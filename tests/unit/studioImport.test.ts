@@ -236,5 +236,13 @@ describe("handleRestoreDraft (Khôi phục a discarded draft)", () => {
     expect((await handleRestoreDraft(deps("studentNguyen", s), DRAFT)).status).toBe(403);
     expect(s.createDraft).not.toHaveBeenCalled();
   });
-});
 
+  it("refuses an empty draft (nothing to bring back) and a discarded edit of an approved test (edit that test again)", async () => {
+    const empty = store({ draft: vi.fn(async () => ({ ...GONE, payload: EMPTY_DRAFT })) });
+    expect((await handleRestoreDraft(deps("tutorNguyen", empty), DRAFT)).body).toMatchObject({ error: "restore_empty" });
+    const edit = store({ draft: vi.fn(async () => ({ ...GONE, supersedes_draft_id: "d0000000-0000-4000-8000-0000000000ff" })) });
+    expect((await handleRestoreDraft(deps("tutorNguyen", edit), DRAFT)).body).toMatchObject({ error: "restore_edit" });
+    expect(empty.createDraft).not.toHaveBeenCalled();
+    expect(edit.createDraft).not.toHaveBeenCalled();
+  });
+});

@@ -152,9 +152,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
           <h2 id="task" className="text-sm font-semibold text-muted">
             {work.taskTitle}
           </h2>
-          <p lang="en" className="text-[17px] font-semibold leading-snug">
-            {a.step.promptEn}
-          </p>
+          <TaskLines prompt={a.step.promptEn} className="text-[17px] font-semibold leading-snug" />
           <p className="text-sm text-muted">
             <span lang="en">{a.bigQuestionEn}</span>
             {a.step.timeMin ? ` · ${work.minutes(a.step.timeMin)}` : ""}

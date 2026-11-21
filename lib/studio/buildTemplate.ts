@@ -23,6 +23,9 @@ const DEFAULT_PROMPT_EN = "Answer the questions.";
 export const itemIdOf = (n: number) => `q${n}`;
 const isClosed = (i: StudioItem) => (CLOSED_STUDIO_KINDS as readonly string[]).includes(i.kind);
 
+const PROMPT_MAX = 2000;
+const clip = (line: string, max: number) => (line.length <= max ? line : `${line.slice(0, Math.max(0, max - 1)).trimEnd()}…`);
+
 export function buildStudioBuild(d: StudioDraft): StudioBuild {
   const items = [...d.items].sort((a, b) => a.n - b.n);
   const app = items.filter((i) => !i.out_of_app);
@@ -32,14 +35,16 @@ export function buildStudioBuild(d: StudioDraft): StudioBuild {
   const usedRefs = new Set(app.map((i) => i.passage_ref).filter((r): r is string => r !== null));
   const appParts = d.parts.filter((p) => app.some((i) => i.part === p.key));
   // One line per part, with the questions it holds, so the child's screen shows each question with its own instruction (promptParts.ts).
+  // Each line gets an equal share of the 2000-character field, so a long instruction never pushes a later part's line out.
+  const share = Math.floor((PROMPT_MAX - appParts.length + 1) / Math.max(1, appParts.length));
   const prompt = appParts
     .map((p) => {
       const ns = app.filter((i) => i.part === p.key).map((i) => i.n);
       const text = p.instructions.trim() ? `${p.name}: ${p.instructions.trim().replace(/\s*\n\s*/g, " ")}` : p.name;
-      return `${rangeLabel(Math.min(...ns), Math.max(...ns))} · ${text}`;
+      return clip(`${rangeLabel(Math.min(...ns), Math.max(...ns))} · ${text}`, share);
     })
     .join("\n")
-    .slice(0, 2000);
+    .slice(0, PROMPT_MAX);
   const explanation = (i: StudioItem) => i.explanation_vi.trim() || null;
 
   return {
@@ -61,7 +66,11 @@ export function buildStudioBuild(d: StudioDraft): StudioBuild {
         : {
             item_id: itemIdOf(i.n),
             kind: "answer" as const,
-            answer: i.kind === "mcq" ? (i.key ?? "").trim().toUpperCase() : withSpacedHyphens([(i.key ?? "").trim(), ...i.accepted]).join(" / "),
+            answer:
+              i.kind === "mcq"
+                ? (i.key ?? "").trim().toUpperCase()
+                : // In "word form" the hyphen can be the point of the question ("self-confident"), so no spaced form is added there.
+                  (i.kind === "word_form" ? [(i.key ?? "").trim(), ...i.accepted] : withSpacedHyphens([(i.key ?? "").trim(), ...i.accepted])).join(" / "),
             explanation_vi: explanation(i),
           },
     ),

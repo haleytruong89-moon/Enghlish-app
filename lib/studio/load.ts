@@ -59,6 +59,7 @@ export async function loadDiscardedDrafts(learnerId: string): Promise<{ id: stri
     .select("id, title, updated_at")
     .eq("learner_id", learnerId)
     .eq("status", "discarded")
+    .is("supersedes_draft_id", null)
     .order("updated_at", { ascending: false })
     .limit(20)
     .returns<{ id: string; title: string; updated_at: string }[]>();

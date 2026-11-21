@@ -51,7 +51,7 @@ describe("instructions per question (what the child reads above each question)",
 });
 
 describe("hyphenated answers also accept a space (fifty-fifty = fifty fifty)", () => {
-  it("adds the spaced form for gap / word_form / short / transform keys, never twice, never for a choice", () => {
+  it("adds the spaced form for gap / short / transform keys, never twice, never for a choice or a word-form question", () => {
     const d: StudioDraft = {
       ...D,
       parts: [D.parts[0]!],
@@ -60,9 +60,25 @@ describe("hyphenated answers also accept a space (fifty-fifty = fifty fifty)", (
         q(2, "A", { key: "halves", accepted: ["fifty-fifty", "fifty fifty"] }),
         q(3, "A", { kind: "mcq", key: "A", options: [{ letter: "A", text: "well-off" }, { letter: "B", text: "x" }] }),
         q(4, "A", { kind: "transform", key: "a short-term loan" }),
+        q(5, "A", { kind: "word_form", key: "self-confident" }),
       ],
     };
     const keys = Object.fromEntries(buildStudioBuild(d).keys.map((k) => [k.item_id, k.answer]));
-    expect(keys).toEqual({ q1: "fifty-fifty / fifty fifty", q2: "halves / fifty-fifty / fifty fifty", q3: "A", q4: "a short-term loan / a short term loan" });
+    expect(keys).toEqual({ q1: "fifty-fifty / fifty fifty", q2: "halves / fifty-fifty / fifty fifty", q3: "A", q4: "a short-term loan / a short term loan", q5: "self-confident" });
+  });
+});
+
+describe("the 2000-character task line keeps one line for every part", () => {
+  it("a very long instruction is shortened instead of pushing later parts out", () => {
+    const d: StudioDraft = {
+      ...D,
+      parts: [{ ...D.parts[0]!, instructions: "Read carefully. ".repeat(200) }, D.parts[1]!, D.parts[3]!],
+      items: [q(1, "A"), q(2, "A"), q(3, "B"), q(4, "B"), q(5, "D")],
+    };
+    const p = buildStudioBuild(d).template.prompt_en;
+    expect(p.length).toBeLessThanOrEqual(2000);
+    expect(promptLines(p).map((l) => [l.from, l.to])).toEqual([[1, 2], [3, 4], [5, 5]]);
+    expect(instructionFor(p, 5)).toBe("D · One question");
+    expect(instructionFor(p, 1)!.endsWith("…")).toBe(true);
   });
 });

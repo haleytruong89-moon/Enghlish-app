@@ -2,7 +2,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SaveStatus } from "@/components/ui/SaveStatus";
 import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { studioCopy, studioIssueText } from "@/lib/copy/vi";
@@ -29,6 +29,25 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
   const [base, setBase] = useState(initial.draft.updatedAt);
   const { state: saveState, dirty, run } = useSaveStatus({ title, d }, { savedAt: initial.draft.updatedAt });
   const [onlyFlagged, setOnlyFlagged] = useState(false);
+  // After ↑/↓ the cards are re-keyed, so keyboard focus is moved to the question that moved (pressing Enter again keeps moving it).
+  const follow = useRef<{ n: number; dir: "up" | "down" } | null>(null);
+  useEffect(() => {
+    const f = follow.current;
+    if (!f) return;
+    follow.current = null;
+    const pick = (dir: string) => document.querySelector<HTMLButtonElement>(`[data-testid="item-${f.n}-${dir}"]`);
+    const btn = pick(f.dir);
+    (btn && !btn.disabled ? btn : pick(f.dir === "up" ? "down" : "up"))?.focus();
+  });
+  const moveAndFollow = (i: StudioItem, step: -1 | 1) => {
+    const next = moveWithinPart(d, i, step);
+    if (next === d) return;
+    const order = (x: StudioDraft) => x.items.filter((y) => y.part === i.part).sort((a, b) => a.n - b.n);
+    const at = order(d).indexOf(i) + step;
+    change(next);
+    const moved = order(next)[at];
+    if (moved) follow.current = { n: moved.n, dir: step < 0 ? "up" : "down" };
+  };
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const issues = useMemo(() => validateDraft(d, context), [d, context]);
@@ -146,7 +165,7 @@ export function DraftEditor({ initial }: { initial: DraftPageData }) {
                 {items.map((i, k) => (
                   <ItemCard key={d.items.indexOf(i)} item={i} parts={d.parts} passages={d.passages} context={context} issues={issues.filter((x) => x.n === i.n)}
                     onChange={(patch) => upd(i, patch)} onRemove={() => change(removeItem(d, i))}
-                    onMove={onlyFlagged ? undefined : (step) => change(moveWithinPart(d, i, step))} canUp={k > 0} canDown={k < items.length - 1} />
+                    onMove={onlyFlagged ? undefined : (step) => moveAndFollow(i, step)} canUp={k > 0} canDown={k < items.length - 1} />
                 ))}
               </ul>
               <button type="button" disabled={itemsFull} onClick={() => change(addItemOp(d, p.key))} data-testid={`part-${p.key}-add`} className="inline-flex min-h-11 items-center self-start text-sm text-accent underline disabled:opacity-50">{studioCopy.addItem}</button>

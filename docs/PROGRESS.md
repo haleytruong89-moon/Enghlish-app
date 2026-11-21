@@ -1873,6 +1873,15 @@ Nhánh `feature/studio-flow-fixes`, **dựa trên `feature/studio-editor-fixes` 
   - mục mới trong `tests/db/studioEditOps.test.ts`: ai đọc được các dòng của danh sách và của bản nháp đã bỏ
 - **Chưa kiểm:** e2e (CI); bấm thật trên iPad.
 
+### Sửa thêm sau review (21/11)
+
+- Bảng "Bài làm trên app đã giao": điểm "lần đầu đúng x/y" **không tính câu chỉ làm trên giấy**; khi cùng một đề được giao lần hai (lần nộp đầu bị ghi là "làm lại") thì không hiện là "lần đầu"; bài **đã bỏ qua** hiện "Đã bỏ qua", không báo quá hạn; điểm đã sửa (sửa kết quả) được dùng thay điểm cũ; đọc theo em (không còn danh sách id dài trên đường dẫn).
+- Lời dẫn từng phần: mỗi phần được chia đều 2000 ký tự, lời dẫn quá dài bị rút gọn ("…") thay vì làm mất dòng của các phần sau. Trang dự phòng của bài cũng hiện từng dòng.
+- Câu "dạng từ" (word form) **không** tự chấp nhận bản viết cách thay gạch nối ("self confident" ≠ "self-confident"), vì gạch nối có thể là điều cần kiểm. Các dạng khác vẫn chấp nhận. *Phụ huynh muốn khác thì báo.*
+- Nút ↑/↓: con trỏ bàn phím đi theo câu vừa chuyển.
+- "Khôi phục": từ chối bản nháp **chưa có câu nào** và bản **sửa đề đã duyệt** đã bỏ (muốn sửa tiếp thì mở đề đó, bấm "Sửa đề đã duyệt" lại); bản sửa đã bỏ không hiện trong danh sách "Bản nháp đã bỏ".
+- Chữ ở Bàn làm việc: "em chưa nộp" (không dùng "con" ở trang người lớn).
+
 ### Còn lại của bản rà: cần SQL và cần phụ huynh chốt trước
 | # | Việc | Cần phụ huynh chốt |
 |---|---|---|

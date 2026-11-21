@@ -80,6 +80,10 @@ describe("Studio draft cut down by the tutor (edit operations + migration 0024)"
       ["select id from english.attempts where id = $1", [att.attempt_id]],
       ["select id from english.episodes where attempt_id = $1", [att.attempt_id]],
       ["select id from english.results where attempt_id = $1", [att.attempt_id]],
+      // the list reads by learner (no growing id lists in the URL)
+      ["select id from english.attempts where learner_id = $1 and id = $2", [s.learners.nguyen, att.attempt_id]],
+      ["select id from english.episodes where learner_id = $1 and attempt_id = $2", [s.learners.nguyen, att.attempt_id]],
+      ["select id from english.results where learner_id = $1 and attempt_id = $2", [s.learners.nguyen, att.attempt_id]],
     ] as const;
     for (const [sql, params] of reads) {
       expect((await rowsAs(db.client, "authenticated", s.users.tutorNguyen, sql, [...params])).length, sql).toBe(1);

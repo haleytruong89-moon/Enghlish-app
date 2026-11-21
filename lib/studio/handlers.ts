@@ -401,6 +401,10 @@ export async function handleRestoreDraft(deps: StudioDeps, draftId: string): Pro
   if (!g.ok) return g.result;
   const { view } = parseDraft(await deps.store.draft(draftId), { showCost: false });
   if (view.status !== "discarded") return fail(400, "not_discarded");
+  // A discarded "Sửa đề đã duyệt" copy would come back as a separate test without the original's files: edit the test again instead.
+  if (view.supersedesDraftId) return fail(400, "restore_edit");
+  // Nothing to bring back (the AI read failed before any question was saved).
+  if (view.payload.items.length === 0) return fail(400, "restore_empty");
   try {
     const r = await createFilled(deps, { learnerId: g.grant.learner.id, memberId: g.grant.member.id, title: view.title, payload: view.payload, clientBase: `rs-${draftId}` });
     if (r.kind === "too_many") return fail(409, "restore_too_many");
