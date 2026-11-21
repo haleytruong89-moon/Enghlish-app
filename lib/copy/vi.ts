@@ -1429,6 +1429,8 @@ export const submissionFeedbackCopy = {
 /** 0037: the same form on one lần làm of a Studio test (review page). Only the lines that differ from submissionFeedbackCopy. */
 export const studioFeedbackCopy = {
   intro: "Con thấy góp ý ở mục “Đã xem” ngay khi bạn gửi. Đây chỉ là lời nhắn: không yêu cầu con làm lại bài.",
+  /** Hub 21/11 (PR #47): kept even on a "Bài kiểm tra" step (S-2), with this reminder next to Gửi. */
+  sendNote: "Con sẽ thấy góp ý này ngay khi bạn gửi.",
   errors: {
     feedback_unavailable: "Góp ý cho bài làm trên app chưa dùng được: cần áp bản cập nhật cơ sở dữ liệu 0037 trước.",
     not_found: "Không tìm thấy lần làm này. Bạn tải lại trang.",
