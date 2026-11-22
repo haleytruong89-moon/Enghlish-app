@@ -2036,4 +2036,5 @@ Nhánh `fix/tutor-off-in-work`. **Không có SQL.** Phụ huynh quyết 22/11: *
 - Công tắc `TUTOR_IN_WORK` (biến môi trường server). Không đặt hoặc khác `on` = **tắt** (mặc định). Khi tắt: trong bài không có khung "Gia sư", không có ô mờ "Sắp có"; route `POST /api/student/activities/[id]/hints` trả 404 `tutor_off`; thẻ "Việc tiếp theo" ở Hôm nay bỏ dòng chỉ chỗ "💡 Kẹt câu nào thì bấm “Hỏi”…" (PR #52).
 - Code E1 (`lib/tutor/*`, `AskTutor`, bảng `tutor_turns`, bộ test eval) **giữ nguyên** để mục "Gia sư" mới dùng lại; bật lại trong bài = đặt `TUTOR_IN_WORK=on` trên Vercel.
 - Không cần làm gì trên Vercel: gộp PR là tắt.
+- Phụ huynh quyết 22/11: nhãn chế độ của con "Luyện tập (có gợi ý)" → **"Luyện tập"**; đoạn mô tả gia sư AI ở Cài đặt AI sửa cùng E2 (nằm trong văn bản đồng ý).
 - Thử trên preview: con mở một bài luyện Studio → dưới câu không còn khung "Gia sư" / nút "Hỏi"; màn Hôm nay không còn dòng 💡.

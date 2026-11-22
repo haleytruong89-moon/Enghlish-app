@@ -121,7 +121,7 @@ export const LEVEL_ORDER = ["NOT_OBSERVED", "SUPPORTED", "DEVELOPING", "INDEPEND
 export type Mode = "PRACTICE" | "INDEPENDENT_CHECK" | "REVISION";
 
 export const modeLabels: Record<Mode, { student: string; staff: string }> = {
-  PRACTICE: { student: "Luyện tập (có gợi ý)", staff: "Bài luyện tập" },
+  PRACTICE: { student: "Luyện tập", staff: "Bài luyện tập" },
   INDEPENDENT_CHECK: { student: "Bài tự làm — lần này chưa có gợi ý", staff: "Bài tự làm (không gợi ý)" },
   REVISION: { student: "Sửa bài", staff: "Bài sửa lại" },
 };
