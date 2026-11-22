@@ -28,17 +28,20 @@ async function main() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const bucket = sb.storage.from(EVAL_BUCKET);
+  const { data: existing } = await sb.storage.getBucket(EVAL_BUCKET);
+  // Every command refuses a public bucket (book material). Storage policies that forget bucket_id are caught by `npm run doctor`.
+  if (existing?.public) throw new Error(`bucket ${EVAL_BUCKET} is public: refusing to touch book material there`);
 
   if (cmd === "upload") {
-    const { data: existing } = await sb.storage.getBucket(EVAL_BUCKET);
     if (!existing) {
       const { error } = await sb.storage.createBucket(EVAL_BUCKET, { public: false, fileSizeLimit: 2 * 1024 * 1024, allowedMimeTypes: ["application/json"] });
       if (error) throw new Error(`could not create bucket ${EVAL_BUCKET} (${error.message})`);
       console.log(`created private bucket ${EVAL_BUCKET}`);
-    } else if (existing.public) {
-      throw new Error(`bucket ${EVAL_BUCKET} is public: refusing to upload book material there`);
     }
-    const files = readdirSync(dir!).filter((f) => NAME.test(f)).sort();
+    const all = readdirSync(dir!).sort();
+    const files = all.filter((f) => NAME.test(f));
+    const skipped = all.filter((f) => !NAME.test(f));
+    if (skipped.length) throw new Error(`unexpected file name(s), nothing uploaded: ${skipped.join(", ")}`);
     if (files.length === 0) throw new Error(`no question files in ${dir}`);
     for (const f of files) {
       const body = readFileSync(path.join(dir!, f));

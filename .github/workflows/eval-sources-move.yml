@@ -35,7 +35,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/destination"
           git archive origin/eval/e1 tests/eval/destination | tar -x -C "$RUNNER_TEMP"
           mv "$RUNNER_TEMP"/tests/eval/destination/*.json "$RUNNER_TEMP/destination/"
-          ls "$RUNNER_TEMP/destination" | wc -l
+          n=$(ls "$RUNNER_TEMP/destination" | wc -l)
+          [ "$n" -eq 21 ] || { echo "::error::expected 21 files on eval/e1, found $n"; exit 1; }
       - name: Upload to the private bucket and list it
         env:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -43,4 +44,10 @@ jobs:
         run: |
           set -euo pipefail
           npx tsx scripts/eval-sources.ts upload "$RUNNER_TEMP/destination"
+          # Round trip: download again and compare every file byte for byte before anyone deletes the branch.
+          npx tsx scripts/eval-sources.ts download "$RUNNER_TEMP/check"
+          (cd "$RUNNER_TEMP/destination" && sha256sum *.json) > "$RUNNER_TEMP/a.sha"
+          (cd "$RUNNER_TEMP/check" && sha256sum *.json) > "$RUNNER_TEMP/b.sha"
+          diff "$RUNNER_TEMP/a.sha" "$RUNNER_TEMP/b.sha" || { echo "::error::the bucket copy differs from eval/e1: do NOT delete the branch"; exit 1; }
           npx tsx scripts/eval-sources.ts list | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "✓ 21 file trong kho file khớp từng byte với nhánh eval/e1 — có thể xóa nhánh." >> "$GITHUB_STEP_SUMMARY"

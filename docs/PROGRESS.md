@@ -2004,8 +2004,9 @@ Nhánh `feature/e1-eval-sources`. **Không có SQL**, không đổi gì trên m�
 - CLAUDE.md: luật mới "không commit tài liệu sách / đề do thầy/cô tải lên; repo luôn private".
 
 **Phụ huynh làm sau khi gộp (theo thứ tự):**
-1. GitHub → Actions → **"Move eval sources out of git"** → Run workflow → gõ `MOVE`. Xong khi trang tóm tắt ghi "21 file(s) in eval-sources/destination/" (Claude có thể bấm giúp nếu phụ huynh bảo).
-2. Xóa 3 nhánh trên GitHub (Code → Branches): `eval/e1`, `eval/e1-smoke`, `eval-results`. Đề vẫn còn trong lịch sử các nhánh này cho tới khi xóa.
-3. (Không bắt buộc) chạy "Eval AI tutor hints" chế độ `bo_test` để thấy luồng mới chạy được (≈ 1 USD).
+1. GitHub → Actions → **"Move eval sources out of git"** → Run workflow → gõ `MOVE`. Xong khi trang tóm tắt ghi "21 file … khớp từng byte với nhánh eval/e1" (workflow tự tải lại và so từng file; Claude có thể bấm giúp nếu phụ huynh bảo).
+2. (Nên làm) giữ một bản offline của 21 file: kho file **không** nằm trong sao lưu hằng tuần. Ví dụ tải nhánh `eval/e1` về máy (Code → Download ZIP) và cất cùng chỗ khóa `age`.
+3. Xóa 3 nhánh trên GitHub (Code → Branches): `eval/e1`, `eval/e1-smoke`, `eval-results`. Hai nhánh `eval/*` còn workflow cũ (đẩy lên là chạy và ghi kết quả có chữ đề), nên xóa sớm sau bước 1–2.
+4. (Không bắt buộc) chạy "Eval AI tutor hints" chế độ `bo_test` để thấy luồng mới chạy được (≈ 1 USD).
 
 **Đạt:** bước 1 báo 21 file; chạy `full` lần sau tải được đề từ kho file; repo `main` không có file đề.
