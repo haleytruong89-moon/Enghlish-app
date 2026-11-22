@@ -9,7 +9,8 @@
  * flagged turn is listed for reading by hand; (b) length + ends with a question / small task (G9); (c) language; (d) flags and G8;
  * plus the guard outcome (pass / rewritten / safe) and the real cost per turn from the API usage.
  * Needs ANTHROPIC_API_KEY (the parent's test-set key, its own cap). Stops starting new work past --max-usd. Nothing is sent but the
- * questions of the set: no child, no name. Writes <out>/<stamp>/{summary.json,summary.md,turns.jsonl}.
+ * questions of the set: no child, no name. Writes <out>/<stamp>/{summary.json,summary.md,summary.public.md,turns.jsonl}; only
+ * summary.public.md (table + ids, no question text) may go into the repo or the job summary.
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -332,7 +333,13 @@ async function main() {
     "## Flagged (read by hand)",
     ...summary.flagged.map((f) => `- **${f.case}** r${f.run} s${f.step} [${f.guard}] ${f.wide.join(", ")} ${f.audit?.leak ? "audit:leak" : ""}${f.audit?.confirms ? " audit:confirms" : ""} — ${f.audit?.note ?? ""}\n  > ${f.text.replace(/\n/g, " ⏎ ")}`),
   ].join("\n") + "\n");
-  console.log(readFileSync(path.join(dir, "summary.md"), "utf8").split("\n").slice(0, 12).join("\n"));
+  // No question text and no hint text: the table + the ids of the flagged turns, safe to paste anywhere (job summary, docs).
+  const head = readFileSync(path.join(dir, "summary.md"), "utf8").split("\n## Flagged")[0]!;
+  writeFileSync(path.join(dir, "summary.public.md"), [
+    head.trimEnd(), "", "## Flagged (ids only; the text is in the run's artifact)",
+    ...summary.flagged.map((f) => `- ${f.case} r${f.run} s${f.step} [${f.guard}] ${f.wide.join(", ")}${f.audit?.leak ? " audit:leak" : ""}${f.audit?.confirms ? " audit:confirms" : ""}`),
+  ].join("\n") + "\n");
+  console.log(head);
   console.log(`written ${dir}`);
 }
 
