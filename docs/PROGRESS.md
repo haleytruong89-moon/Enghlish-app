@@ -2023,3 +2023,8 @@ Nhánh `feature/e1-passage-items`. **Có SQL `0040_tutor_passage_items.sql`** (t
 **Cách thử (learner thử):** giao cho Nguyên (thử) một bài Studio luyện tập có bài đọc → câu hỏi về bài đọc: bấm Hỏi → câu "Câu này dựa vào bài đọc…", nút Hỏi biến mất ở câu đó; câu ngữ pháp / từ vựng: bấm Hỏi → gợi ý H1 như cũ.
 
 **Đạt:** câu bài đọc không có gợi ý AI; câu khác có. **Chưa đạt:** câu bài đọc vẫn ra gợi ý AI sau khi đã áp 0040.
+
+
+## Sửa nhanh: thẻ "Việc tiếp theo" không còn nút mờ "Hỏi gia sư · Sắp có" (22/11/2026)
+
+Nhánh `fix/today-card-ask-hint`. **Không có SQL.** Phụ huynh báo 22/11: đã bật AI nhưng con thấy "Hỏi gia sư · Sắp có" ở màn Hôm nay và tưởng chưa hỏi được. Nút mờ đó là chỗ giữ chỗ từ W4b, E1 quên đổi. Nút "Hỏi" thật nằm **trong bài**, dưới từng câu (khung vàng "Gia sư"). Thẻ trên Hôm nay giờ chỉ có một dòng chỉ chỗ: "💡 Kẹt câu nào thì bấm “Hỏi” trong khung Gia sư ngay dưới câu đó…".
