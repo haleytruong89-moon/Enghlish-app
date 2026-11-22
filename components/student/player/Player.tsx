@@ -26,9 +26,9 @@ type Phase = "questions" | "review" | "receipt" | "result";
 /**
  * Work in the app, one question at a time, with autosave. Keeps the S4 rules of WorkForm: one `client_submission_id` per open submit (the same one is re-sent
  * for the same content), the help declaration is required, the draft is the child's own. The reply is a receipt: nothing here says whether an answer was right.
- * A practice work shows the dimmed "Hỏi gia sư · Sắp có" slot; a test does not (and has no retry).
+ * No tutor inside a work unless TUTOR_IN_WORK=on (parent, 22/11); a test never has one (and has no retry).
  */
-export function Player({ activity, isTest, initialResult, sentAt, aside, parts = null }: { activity: SupportedActivityView; isTest: boolean; /** E0: the parts of a Studio test (eng_my_task_parts); null = read the lead from the task text. */ parts?: TaskPart[] | null; initialResult: ResultData | null; /** Work sent before but no result view to show (before migration 0034): start at the receipt, never at an empty player. */ sentAt?: string | null; aside?: ReactNode }) {
+export function Player({ activity, isTest, initialResult, sentAt, aside, parts = null, tutorInWork = false }: { activity: SupportedActivityView; isTest: boolean; /** E1 "Hỏi" inside the work: off unless the TUTOR_IN_WORK setting is on (parent, 22/11). */ tutorInWork?: boolean; /** E0: the parts of a Studio test (eng_my_task_parts); null = read the lead from the task text. */ parts?: TaskPart[] | null; initialResult: ResultData | null; /** Work sent before but no result view to show (before migration 0034): start at the receipt, never at an empty player. */ sentAt?: string | null; aside?: ReactNode }) {
   const { step, draft } = activity;
   const items = step.items;
   const initial: DraftContent = draft?.content ?? {};
@@ -394,10 +394,11 @@ export function Player({ activity, isTest, initialResult, sentAt, aside, parts =
                 onCommit={() => void saveRef.current()}
                 lead={leadFor(parts, item.id, step.promptEn, numbers[clampIndex(idx, total)]!)}
               >
-                {/* Studio practice (parts known, E0): the real "Hỏi" sits under the question; other work keeps the dimmed slot. Never on a test (L2). */}
-                {!isTest && !parts ? <AskTutorSlot /> : null}
+                {/* 22/11: no tutor inside a work by default (the tutor gets its own page). With TUTOR_IN_WORK=on: Studio practice has "Hỏi",
+                    other practice the dimmed slot. Never on a test (L2). */}
+                {tutorInWork && !isTest && !parts ? <AskTutorSlot /> : null}
               </QuestionCard>
-              {!isTest && parts ? (
+              {tutorInWork && !isTest && parts ? (
                 <AskTutor
                   key={`ask-${item.id}`}
                   activityId={activity.activityId}

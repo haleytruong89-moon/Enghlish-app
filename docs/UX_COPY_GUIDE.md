@@ -357,6 +357,7 @@ Khác với kế hoạch: câu giới thiệu "Mỗi điều là một việc {t
 
 ## E1 (21/11/2026) — Nút "Hỏi" (gia sư AI) trong bài luyện
 
+- **22/11: tắt trong bài theo mặc định** (`TUTOR_IN_WORK`). `testMarkCopy.hintPractice` không còn hứa "Hỏi" khi làm bài; `tutorCopy.errors.tutor_off` cho tab mở từ trước. Còn để phụ huynh quyết: nhãn `modeLabels.PRACTICE.student` "Luyện tập (có gợi ý)" và đoạn mô tả gia sư AI ở Cài đặt AI.
 - `tutorCopy`: tên "Gia sư" (không "cô", không TOMO; T4), nút "Hỏi" → "Gợi ý tiếp", "Gợi ý n/3", lời nhắc "Gia sư gợi ý từng bước, không đưa đáp án."; ô hỏi ngắn "Hỏi gia sư về câu này (không bắt buộc)".
 - Câu cố định (không AI): `passage` (câu có bài đọc, 0040: gợi ý cách tìm trong bài, không nội dung), `no_answer` (câu mở), `daily_limit` (nhắc tự làm + "Xem đáp án" sau khi nộp), `missing_part` (G8, hỏi thầy/cô), `max_level`, `ai_off` ("Gia sư đang nghỉ"), `ai_error`. Câu an toàn `safe` / `plain` theo ngôn ngữ của track (`vi` / `en_first`).
 - Không chữ "điểm", không đúng / sai trước khi nộp, không số câu đúng; xưng "bạn".

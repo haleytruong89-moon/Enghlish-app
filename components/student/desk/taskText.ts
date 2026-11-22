@@ -30,5 +30,3 @@ export function purposeChip(t: Task): string | null {
   return null;
 }
 
-/** The dimmed "Hỏi gia sư · Sắp có" slot: only for a practice item of the app, never a check, a revision or link / PDF work. */
-export const showAskTutor = (t: Task): boolean => t.practice && !t.isTest && (t.kind === "app" || t.kind === "topic") && t.doable;

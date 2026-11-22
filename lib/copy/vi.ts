@@ -2096,6 +2096,7 @@ export const tutorCopy = {
     not_found: "Không tìm thấy câu này. Bạn tải lại trang nhé.",
     tutor_unavailable: "Gia sư chưa sẵn sàng (cần cập nhật). Bạn làm tiếp nhé.",
     client_id_reused: "Bạn bấm lại nút nhé.",
+    tutor_off: "Trong bài làm không có gia sư AI. Bạn tải lại trang nhé.",
     network: "Mạng chập chờn, bạn bấm lại nhé.",
   } as Record<string, string>,
 };
@@ -2156,7 +2157,7 @@ export const testMarkCopy = {
   label: "Loại bài",
   practice: "Luyện tập",
   test: "Bài kiểm tra",
-  hintPractice: "Con có thể thử lại từng câu một lần, và khi đang làm thì bấm “Hỏi” để gia sư AI gợi ý (không đưa đáp án).",
+  hintPractice: "Con có thể thử lại từng câu một lần. Trong lúc làm bài không có gợi ý của gia sư AI.",
   hintTest: `Con tự làm, không thử lại, không có ô hỏi gia sư. Cách app đếm bằng chứng không đổi.`,
   tag: "Bài kiểm tra",
 };
@@ -3295,8 +3296,6 @@ export const studentDeskCopy = {
   minutes: (m: number) => `khoảng ${m} phút`,
   due: (weekday: string, ddmm: string) => `Hạn ${weekday} ${ddmm}`,
   noDue: "Không có hạn",
-  // E1: the tutor lives INSIDE the work, under each question (the old dimmed "Sắp có" button here confused children, 22/11).
-  askTutorHint: "Kẹt câu nào thì bấm “Hỏi” trong khung Gia sư ngay dưới câu đó: gia sư gợi ý từng bước, không làm hộ.",
   noteTitle: `${tutorHonorificCap} nhắn`,
   noteReview: "Ôn lại mấy mục này",
   footnote: `${tutorHonorificCap} xem bài và nhắn lại cho bạn: điều bạn làm tốt và điều cần sửa.`,

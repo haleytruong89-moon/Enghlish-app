@@ -79,13 +79,13 @@ describe("the player", () => {
     attempts: [], draft: { content: { answers: { q1: "A. x" } }, revision: 1, updatedAt: "2026-11-15T01:00:00Z" }, sources: [],
   };
   const render = (isTest: boolean) => renderToStaticMarkup(createElement(Player, { activity, isTest, initialResult: null }));
-  it("practice: opens on the first question without an answer, counts answered questions only, shows the dimmed slot and no test line", () => {
+  it("practice: opens on the first question without an answer, counts answered questions only, no tutor slot (off since 22/11) and no test line", () => {
     const h = render(false);
     expect(h).toContain('data-testid="question-q2"'); // q1 has an answer → opens on q2
     expect(h).not.toContain('data-testid="question-q1"');
     expect(text(h)).toContain(playerCopy.progress(1, 2));
     expect(h).toContain('data-count="work"');
-    expect(h).toContain('data-testid="ask-tutor"');
+    expect(h).not.toContain('data-testid="ask-tutor"');
     expect(h).not.toContain('data-testid="test-line"');
     expect(text(h)).toContain("Đã lưu");
   });
