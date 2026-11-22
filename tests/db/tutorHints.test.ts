@@ -29,16 +29,16 @@ describe("tutor hints (migration 0039)", () => {
     items: [item(1, "A", { key: "art gallery", accepted: ["art-gallery"] }), item(2, "A", { kind: "mcq", key: "B", options: [{ letter: "A", text: "temple" }, { letter: "B", text: "museum" }] })],
   };
   let k = 0;
-  const assign = async (isTest = false) => {
+  const assign = async (isTest = false, paper: StudioDraft = PAPER) => {
     k += 1;
     const by = s.members.tutorNguyen;
     const made = await svc<{ id: string }>("select english.eng_create_studio_draft($1, $2, null, null, false, $3, $4) as r", [s.learners.nguyen, `Tutor ${k}`, by, `th-${k}-aaaaaaaa`]);
     const cur = await svc<{ updated_at: string }>("select english.eng_studio_draft($1) as r", [made.id]);
-    const saved = await svc<{ updated_at: string }>("select english.eng_save_studio_draft($1, $2, $3::jsonb, $4, $5) as r", [made.id, `Tutor ${k}`, JSON.stringify(PAPER), cur.updated_at, by]);
-    await svc("select english.eng_approve_studio_draft($1, $2, $3::jsonb, $4) as r", [made.id, saved.updated_at, JSON.stringify(buildStudioBuild(PAPER)), by]);
+    const saved = await svc<{ updated_at: string }>("select english.eng_save_studio_draft($1, $2, $3::jsonb, $4, $5) as r", [made.id, `Tutor ${k}`, JSON.stringify(paper), cur.updated_at, by]);
+    await svc("select english.eng_approve_studio_draft($1, $2, $3::jsonb, $4) as r", [made.id, saved.updated_at, JSON.stringify(buildStudioBuild(paper)), by]);
     return (await svc<{ activity_id: string }>("select english.eng_assign_studio_v2($1, current_date, current_date + 3, $2, $3, $4) as r", [made.id, isTest, by, `as-${randomUUID()}`])).activity_id;
   };
-  type Ctx = { item: { id: string; kind: string }; part: { name: string; instructions: string } | null; answers: string[]; hints_used: number; turns_today: number; daily_limit: number; language: string; band: string; previous: unknown[]; replay?: { shown_text: string } };
+  type Ctx = { has_passage?: boolean; item: { id: string; kind: string }; part: { name: string; instructions: string } | null; answers: string[]; hints_used: number; turns_today: number; daily_limit: number; language: string; band: string; previous: unknown[]; replay?: { shown_text: string } };
   const ctx = (activity: string, itemId = "q1", clientId = randomUUID(), user = s.users.studentNguyen) =>
     svc<Ctx>("select english.eng_tutor_context($1, $2, $3, $4) as r", [user, activity, itemId, clientId]);
   const record = (activity: string, o: { kind?: string; item?: string; clientId?: string; text?: string; guard?: string; fixed?: string | null; user?: string } = {}) =>
@@ -63,6 +63,18 @@ describe("tutor hints (migration 0039)", () => {
     expect([...c.answers].sort()).toEqual(["art gallery", "art-gallery"]);
     expect((await ctx(act, "q2")).answers).toEqual(["B"]);
     expect(c).toMatchObject({ hints_used: 0, turns_today: 0, daily_limit: 40, language: "en_first", band: "B2-C1" });
+  });
+
+  it("0040 (hub Q4): has_passage is true only for a question that rests on a reading passage", async () => {
+    const withText: StudioDraft = {
+      ...PAPER,
+      passages: [{ ref: "P1", title: "A short text", text: "Mia visited the art gallery on Sunday and saw paintings." }],
+      items: [...PAPER.items, item(3, "A", { kind: "mcq", key: "A", passage_ref: "P1", stem: "Where did Mia go?", options: [{ letter: "A", text: "an art gallery" }, { letter: "B", text: "a zoo" }] })],
+    };
+    const act = await assign(false, withText);
+    expect((await ctx(act, "q3")).has_passage).toBe(true);
+    expect((await ctx(act, "q1")).has_passage).toBe(false);
+    expect((await ctx(await assign())).has_passage).toBe(false);
   });
 
   it("L2: a test gives 42501 test_work and nothing is recorded; not the child's step / another child / a missing question: not_found", async () => {

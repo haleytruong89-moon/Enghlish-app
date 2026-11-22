@@ -1989,3 +1989,18 @@ Sonnet 5.5 trả lời, Haiku 5.5 kiểm; prompt `tutor-hint.v2` / `tutor-check.
 
 ### Lệch so với plan / phụ lục D
 Xem cuối file plan, mục "Lệch khi làm" (ô hỏi ngắn; "nộp bài để app kiểm" thay "Kiểm tra"; A.5 giả lập; số lượt ở Cài đặt AI vì chưa có bản tổng hợp tối; báo trần qua dải ở Cài đặt AI; đề Destination chỉ ở nhánh `eval/e1`; câu có bài đọc chưa gửi bài đọc cho gia sư).
+
+
+## E1: câu có bài đọc không gọi AI (22/11/2026, hub Q4)
+
+Nhánh `feature/e1-passage-items`. **Có SQL `0040_tutor_passage_items.sql`** (thay một hàm `eng_tutor_context` = thân 0039 + trường `has_passage`; không bảng mới; cần 0039).
+
+**Vì sao:** gia sư AI ở E1 chỉ nhận đề câu, không nhận bài đọc → với câu hỏi về bài đọc, AI dễ đoán nội dung bài. Phụ huynh đồng ý 22/11: không gọi AI cho các câu này cho tới E2.
+
+**Làm gì:** câu có bài đọc (trong bản nháp Studio đã duyệt) → nút "Hỏi" trả một câu cố định cách làm ("gạch chân từ khóa trong câu hỏi, tìm trong bài đoạn có từ đó…"), không gọi AI, không tốn tiền, nút khép lại cho câu đó. Câu khác trong cùng bài vẫn có gợi ý như cũ.
+
+**SQL cần phụ huynh áp (sau khi gộp):** `0040_tutor_passage_items.sql`. Kiểm tra: `select version from english.schema_migrations where version = '0040';` → 1 dòng. Chưa áp thì app chạy như trước (câu có bài đọc vẫn được AI gợi ý).
+
+**Cách thử (learner thử):** giao cho Nguyên (thử) một bài Studio luyện tập có bài đọc → câu hỏi về bài đọc: bấm Hỏi → câu "Câu này dựa vào bài đọc…", nút Hỏi biến mất ở câu đó; câu ngữ pháp / từ vựng: bấm Hỏi → gợi ý H1 như cũ.
+
+**Đạt:** câu bài đọc không có gợi ý AI; câu khác có. **Chưa đạt:** câu bài đọc vẫn ra gợi ý AI sau khi đã áp 0040.

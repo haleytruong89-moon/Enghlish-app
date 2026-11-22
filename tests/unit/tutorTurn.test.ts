@@ -131,6 +131,20 @@ describe("one turn of Hỏi", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("hub Q4 (0040): a question on a reading passage gets the fixed how-to sentence, no model", async () => {
+    const { deps, calls } = setup({ ctx: { ...CTX, has_passage: true } });
+    const r = await runTutorTurn(deps, input);
+    expect(r.body).toMatchObject({ kind: "fixed", fixed: "passage" });
+    expect((r.body as { text: string }).text).toMatch(/bài đọc/);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("before 0040 the field is missing: the question is hinted as before", async () => {
+    const { deps, calls } = setup();
+    await runTutorTurn(deps, input);
+    expect(calls.length).toBeGreaterThan(0);
+  });
+
   it("review 21/11: a model without a price is never called (the ledger could not hold it)", async () => {
     const { deps, store, calls } = setup();
     const r = await runTutorTurn({ ...deps, models: { hint: "claude-unknown-9", check: "claude-haiku-5-5" } }, input);

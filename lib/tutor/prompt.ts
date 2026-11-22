@@ -23,6 +23,8 @@ export type TutorContext = {
   item: { id: string; kind: string; stem: string; options: string[] };
   part: { key: string; name: string; instructions: string } | null;
   answers: string[];
+  /** The question rests on a reading passage the tutor does not get (0040, hub Q4): no AI, a fixed how-to sentence. */
+  hasPassage?: boolean;
   /** notice_version of the child's latest granted ai_text consent (null = none). */
   consentVersion: string | null;
   hintsUsed: number;

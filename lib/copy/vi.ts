@@ -2073,6 +2073,8 @@ export const tutorCopy = {
     daily_limit: "Hôm nay bạn đã hỏi gia sư nhiều lần rồi. Bạn tự làm tiếp nhé; sau khi nộp, câu sai được thử lại một lần hoặc bấm “Xem đáp án”.",
     missing_part: `Gia sư chưa đọc được phần này, bạn hỏi ${tutorHonorific} nhé.`,
     no_answer: `Câu này bạn tự viết theo ý mình nhé; ${tutorHonorific} sẽ đọc và góp ý sau khi bạn nộp.`,
+    passage:
+      "Câu này dựa vào bài đọc. Bạn gạch chân từ khóa trong câu hỏi, tìm trong bài đoạn có từ đó (hoặc từ cùng nghĩa), rồi đọc kỹ câu ấy cùng câu ngay trước và sau nhé.",
     max_level: "Gia sư đã gợi ý đủ 3 bước cho câu này. Bạn thử trả lời nhé: sau khi nộp, câu sai được thử lại một lần hoặc bấm “Xem đáp án”.",
     ai_off: `Gia sư đang nghỉ. Sau khi nộp bạn dùng “Xem đáp án”, hoặc hỏi ${tutorHonorific} nhé.`,
     ai_error: "Gia sư chưa trả lời được lúc này. Bạn thử lại sau một chút nhé.",
