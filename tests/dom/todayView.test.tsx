@@ -39,21 +39,19 @@ describe("Hôm nay", () => {
     expect(card.textContent).toContain(studentDeskCopy.minutes(10));
   });
 
-  it("the dimmed 'Hỏi gia sư · Sắp có' slot only in practice items, never clickable", () => {
+  it("E1: practice items point to the 'Hỏi' button inside the work; no dimmed 'Sắp có' button on the card any more", () => {
     const { unmount } = show([studio]);
-    const ask = screen.getByTestId("ask-tutor") as HTMLButtonElement;
-    expect(ask.disabled).toBe(true);
-    expect(ask.getAttribute("aria-disabled")).toBe("true");
-    expect(ask.textContent).toBe(`${studentDeskCopy.askTutor} · ${studentDeskCopy.askTutorSoon}`);
+    expect(screen.queryByTestId("ask-tutor")).toBeNull();
+    expect(screen.getByTestId("ask-tutor-hint").textContent).toContain(studentDeskCopy.askTutorHint);
+    expect(screen.queryByText(/Sắp có/)).toBeNull();
     unmount();
     show([task({ practice: false })]);
-    expect(screen.queryByTestId("ask-tutor")).toBeNull();
+    expect(screen.queryByTestId("ask-tutor-hint")).toBeNull();
   });
 
   it("buttons are big enough (min-h-12 for the main one, min-h-11 for the others) and an off-app step is listed but not a link", () => {
     show([studio, task({ activityId: "s", doable: false, offLabel: "with_tutor", activityType: "ACT-SPEAK-LIVE", title: "Nói" })]);
     expect(within(screen.getByTestId("continue-card")).getByRole("link").className).toContain("min-h-12");
-    expect(screen.getByTestId("ask-tutor").className).toContain("min-h-11");
     const rows = screen.getAllByTestId("task-row");
     const off = rows.find((r) => r.getAttribute("data-doable") === "no")!;
     expect(within(off).queryByRole("link")).toBeNull();

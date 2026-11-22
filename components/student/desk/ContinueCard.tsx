@@ -3,7 +3,7 @@ import { studentDeskCopy as c } from "@/lib/copy/vi";
 import { taskHref, type Continue } from "@/lib/student/today";
 import { kindLabel, modeText, purposeChip, showAskTutor, taskTitle } from "./taskText";
 
-/** "Làm tiếp" (a draft exists: progress bar of the questions ANSWERED so far) or "Việc tiếp theo". The dimmed "Hỏi gia sư · Sắp có" slot only in practice items. */
+/** "Làm tiếp" (a draft exists: progress bar of the questions ANSWERED so far) or "Việc tiếp theo". In practice items a one-line pointer to the "Hỏi" button inside the work (E1). */
 export function ContinueCard({ pick, hasCard = true }: { pick: Continue; hasCard?: boolean }) {
   const { task, resume } = pick;
   const href = taskHref(task, hasCard);
@@ -46,19 +46,9 @@ export function ContinueCard({ pick, hasCard = true }: { pick: Continue; hasCard
           </Link>
         ) : null}
         {showAskTutor(task) ? (
-          <span className="flex flex-col gap-0.5">
-            <button
-              type="button"
-              disabled
-              aria-disabled="true"
-              aria-describedby="ask-tutor-note"
-              data-testid="ask-tutor"
-              className="inline-flex min-h-11 cursor-not-allowed items-center gap-2 rounded-xl border border-white/40 px-4 text-sm font-semibold text-white/70"
-            >
-              {c.askTutor} · {c.askTutorSoon}
-            </button>
-            <span id="ask-tutor-note" className="max-w-xs text-xs text-[#DCE8E3]">{c.askTutorNote}</span>
-          </span>
+          <p data-testid="ask-tutor-hint" className="max-w-sm text-sm text-[#DCE8E3]">
+            💡 {c.askTutorHint}
+          </p>
         ) : null}
       </div>
     </section>

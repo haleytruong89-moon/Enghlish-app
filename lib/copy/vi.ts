@@ -3295,9 +3295,8 @@ export const studentDeskCopy = {
   minutes: (m: number) => `khoảng ${m} phút`,
   due: (weekday: string, ddmm: string) => `Hạn ${weekday} ${ddmm}`,
   noDue: "Không có hạn",
-  askTutor: "Hỏi gia sư",
-  askTutorSoon: "Sắp có",
-  askTutorNote: "Sắp có — gia sư sẽ gợi ý từng bước, không làm hộ. Chỉ có ở bài luyện tập, không có ở bài kiểm tra.",
+  // E1: the tutor lives INSIDE the work, under each question (the old dimmed "Sắp có" button here confused children, 22/11).
+  askTutorHint: "Kẹt câu nào thì bấm “Hỏi” trong khung Gia sư ngay dưới câu đó: gia sư gợi ý từng bước, không làm hộ.",
   noteTitle: `${tutorHonorificCap} nhắn`,
   noteReview: "Ôn lại mấy mục này",
   footnote: `${tutorHonorificCap} xem bài và nhắn lại cho bạn: điều bạn làm tốt và điều cần sửa.`,
