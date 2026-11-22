@@ -1991,6 +1991,25 @@ Sonnet 5.5 trả lời, Haiku 5.5 kiểm; prompt `tutor-hint.v2` / `tutor-check.
 Xem cuối file plan, mục "Lệch khi làm" (ô hỏi ngắn; "nộp bài để app kiểm" thay "Kiểm tra"; A.5 giả lập; số lượt ở Cài đặt AI vì chưa có bản tổng hợp tối; báo trần qua dải ở Cài đặt AI; đề Destination chỉ ở nhánh `eval/e1`; câu có bài đọc chưa gửi bài đọc cho gia sư).
 
 
+## E1 sau khi chạy (22/11/2026) — đề bộ test ra khỏi git · luật chạy bộ test
+
+Nhánh `feature/e1-eval-sources`. **Không có SQL**, không đổi gì trên màn của con / người lớn.
+
+**Đã áp (21/11, workflow "Apply database migrations", run 44910436531):** 0037, 0038, 0039; chạy lại lần 2 không còn gì để áp. PR #46, #47, #48 (gồm #49) đã gộp.
+
+**Làm gì (hub Q1, Q5, phụ huynh đồng ý 22/11):**
+- 21 file đề Destination của bộ test **không nằm trong git** nữa: lưu ở bucket private `eval-sources` (cùng project Supabase; không dùng `english-work` vì việc dọn file mồ côi sẽ coi chúng là file thừa). `scripts/eval-sources.ts` upload / download / list (cần `SUPABASE_SERVICE_ROLE_KEY` + `NEXT_PUBLIC_SUPABASE_URL`, đã có trong GitHub).
+- Workflow "Eval AI tutor hints": **chỉ bấm tay**, chọn `bo_test` (24 ca, ≈ 1 USD — khi chỉ đổi prompt) hoặc `full` (+ 193 câu Destination, ≈ 7 USD — khi đổi model, thay đổi lớn, hoặc trước khi mở tính năng mới cho con; báo phụ huynh ước tính trước). Kết quả đầy đủ là **artifact của lần chạy, tự xóa sau 90 ngày**; trang tóm tắt của lần chạy chỉ có bảng + mã câu bị báo, không chữ đề. Không còn đẩy kết quả vào nhánh.
+- Mốc so sánh E1 (bảng + mã câu, không chữ đề): `docs/eval/E1_BASELINE.md`.
+- CLAUDE.md: luật mới "không commit tài liệu sách / đề do thầy/cô tải lên; repo luôn private".
+
+**Phụ huynh làm sau khi gộp (theo thứ tự):**
+1. GitHub → Actions → **"Move eval sources out of git"** → Run workflow → gõ `MOVE`. Xong khi trang tóm tắt ghi "21 file … khớp từng byte với nhánh eval/e1" (workflow tự tải lại và so từng file; Claude có thể bấm giúp nếu phụ huynh bảo).
+2. (Nên làm) giữ một bản offline của 21 file: kho file **không** nằm trong sao lưu hằng tuần. Ví dụ tải nhánh `eval/e1` về máy (Code → Download ZIP) và cất cùng chỗ khóa `age`.
+3. Xóa 3 nhánh trên GitHub (Code → Branches): `eval/e1`, `eval/e1-smoke`, `eval-results`. Hai nhánh `eval/*` còn workflow cũ (đẩy lên là chạy và ghi kết quả có chữ đề), nên xóa sớm sau bước 1–2.
+4. (Không bắt buộc) chạy "Eval AI tutor hints" chế độ `bo_test` để thấy luồng mới chạy được (≈ 1 USD).
+
+**Đạt:** bước 1 báo 21 file; chạy `full` lần sau tải được đề từ kho file; repo `main` không có file đề.
 ## E1: câu có bài đọc không gọi AI (22/11/2026, hub Q4)
 
 Nhánh `feature/e1-passage-items`. **Có SQL `0040_tutor_passage_items.sql`** (thay một hàm `eng_tutor_context` = thân 0039 + trường `has_passage`; không bảng mới; cần 0039).
