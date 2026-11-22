@@ -94,7 +94,7 @@ begin
       join english.studio_drafts d on d.template_id = m2.template_id and d.template_version = m2.template_version and d.status = 'approved'
       cross join lateral pg_catalog.jsonb_array_elements(d.payload -> 'items') as x(e)
       where m2.template_id = v_inst.template_id and m2.template_version = v_inst.template_version and m2.item_id = p_item
-        and (x.e ->> 'n')::int = m2.n and pg_catalog.btrim(coalesce(x.e ->> 'passage_ref', '')) <> ''),
+        and x.e ->> 'n' = m2.n::text and pg_catalog.btrim(coalesce(x.e ->> 'passage_ref', '')) <> ''),
     -- Đáp án: CHỈ để máy chủ kiểm L1 và nhắc model tránh. Trắc nghiệm: chữ cái. Câu khác: các đáp án ngăn bằng " / " + đáp án thầy/cô thêm sau.
     'answers', coalesce((
       select pg_catalog.jsonb_agg(distinct a) from (
