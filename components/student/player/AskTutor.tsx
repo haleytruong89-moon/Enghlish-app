@@ -19,8 +19,9 @@ export function AskTutor({
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const last = turns[turns.length - 1] ?? null;
-  // Only "all 3 steps used" and "today's limit" end the tutor for this question; "Gia sư đang nghỉ" / a passing error do not.
-  const done = turns.some((t) => t.kind === "fixed" && (t.fixed === "max_level" || t.fixed === "daily_limit"));
+  // "All 3 steps used", "today's limit" and "no AI for this kind of question" end the tutor for this question; "Gia sư đang nghỉ" /
+  // a passing error do not.
+  const done = turns.some((t) => t.kind === "fixed" && (t.fixed === "max_level" || t.fixed === "daily_limit" || t.fixed === "passage" || t.fixed === "no_answer"));
   // The same press retried after a network error keeps its client id: the server returns the turn it may already have made.
   const intent = useRef<{ key: string; id: string } | null>(null);
   const level = Math.max(0, ...turns.filter((t) => t.kind === "hint").map((t) => t.level));

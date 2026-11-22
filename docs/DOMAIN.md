@@ -381,6 +381,8 @@ Trượt kiểm (code hoặc Haiku) → model viết lại **1 lần** → vẫn
 - Thang gợi ý (máy chủ giữ, model không tự nhảy): H1 → H2 → H3, tối đa 3 mức mỗi câu mỗi lần làm; mức tính trong cơ sở dữ liệu dưới khóa theo em. Hết H3 → câu cố định "đã gợi ý đủ 3 bước", không gọi model. Câu hỏi con gõ dùng mức hiện tại (≥ H1), không tăng mức.
 - **40 lượt có gọi AI / ngày / em** (P-E1-5, `track_settings.tutor_daily_limit`, giờ Việt Nam): tới hạn → câu cố định "Hôm nay bạn đã hỏi gia sư nhiều lần rồi…", không gọi model. Số lượt hôm nay / tháng này hiện ở **Cài đặt AI** (bản tóm tắt buổi tối cho phụ huynh chưa có: E4).
 - Cùng `client_id` gửi lại → trả lượt cũ, không gọi model lần hai.
+- **Câu có bài đọc** (hub Q4, phụ huynh đồng ý 22/11; migration 0040): câu có `passage_ref` trong bản nháp đã duyệt → **không gọi model** (gia sư E1 chưa nhận bài đọc, dễ đoán nội dung bài); trả câu cố định cách làm ("gạch chân từ khóa, tìm đoạn có từ đó, đọc câu ấy và câu trước / sau"). Bỏ khi E2 gửi được bài đọc.
+- **Câu mở** (không có đáp án để kiểm, đáp án mẫu đóng kín): không gọi model, câu cố định "bạn tự viết… thầy/cô sẽ góp ý sau khi nộp".
 
 **Đầu vào mỗi lượt gửi model:** đề câu, lời dặn + word bank **của phần chứa câu** (E0), lựa chọn, đáp án + đáp án chấp nhận (chỉ để model tránh và để code / Haiku kiểm), mức gợi ý, dải cấp + ngôn ngữ của track, câu con vừa gõ (nếu có), tối đa 4 lượt trước của chính câu đó. **Không** gửi tên / bí danh, bài khác.
 

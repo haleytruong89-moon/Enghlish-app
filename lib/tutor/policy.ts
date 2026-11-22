@@ -1,6 +1,7 @@
 /**
  * E1 · what the server decides before and after the model (DOMAIN bản 0.9, BO_TEST G1–G9). Pure.
- *   - before: daily limit (P-E1-5), missing part data (G8), no answer to guard (open question), all three levels used → a fixed
+ *   - before: daily limit (P-E1-5), missing part data (G8), no answer to guard (open question), a question on a reading passage
+ *     (hub Q4), all three levels used → a fixed
  *     sentence, no model call;
  *   - after: the safe sentence when a hint is refused twice; form metrics (G9 length, language) for the test set.
  */
@@ -10,7 +11,7 @@ import type { TutorContext } from "./prompt";
 import { languageRule } from "./prompt";
 
 export const MAX_LEVEL = 3;
-export type FixedCode = "daily_limit" | "missing_part" | "no_answer" | "max_level" | "ai_off" | "ai_error";
+export type FixedCode = "daily_limit" | "missing_part" | "no_answer" | "passage" | "max_level" | "ai_off" | "ai_error";
 export type TurnPlan = { call: true; kind: "hint" | "question"; level: number } | { call: false; fixed: FixedCode };
 
 export function planTurn(ctx: TutorContext, childText: string | null): TurnPlan {
@@ -19,6 +20,8 @@ export function planTurn(ctx: TutorContext, childText: string | null): TurnPlan 
   // No answer to check against (an open question: its model answer stays sealed; or a key that is missing): no AI, the guards could not
   // tell a hint from a written answer.
   if (ctx.answers.length === 0) return { call: false, fixed: "no_answer" };
+  // A question on a reading passage the tutor does not get (0040, hub Q4): the AI would guess what the text says. A fixed how-to instead.
+  if (ctx.hasPassage) return { call: false, fixed: "passage" };
   const kind = childText ? "question" : "hint";
   if (kind === "hint" && ctx.hintsUsed >= MAX_LEVEL) return { call: false, fixed: "max_level" };
   const level = kind === "hint" ? ctx.hintsUsed + 1 : Math.max(1, Math.min(MAX_LEVEL, ctx.hintsUsed));

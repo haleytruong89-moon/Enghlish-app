@@ -55,7 +55,7 @@ const ctxSchema = z.object({
   learner_id: z.string(), family_id: z.string(),
   item: z.object({ id: z.string(), kind: z.string(), stem: z.string(), options: z.array(z.string()) }),
   part: z.object({ key: z.string(), name: z.string(), instructions: z.string() }).nullable(),
-  answers: z.array(z.string()), consent_version: z.string().nullable().optional(), hints_used: num, turns_today: num, daily_limit: num,
+  answers: z.array(z.string()), has_passage: z.boolean().optional(), consent_version: z.string().nullable().optional(), hints_used: num, turns_today: num, daily_limit: num,
   language: z.string().nullable(), band: z.string().nullable(),
   previous: z.array(z.object({ kind: z.string(), level: num, child_text: z.string().nullable(), shown_text: z.string() })),
 });
@@ -66,7 +66,7 @@ const checkOut = z.object({ pass: z.boolean(), reasons: z.array(z.string()).defa
 export function toContext(raw: unknown): TutorContext {
   const c = ctxSchema.parse(raw);
   return {
-    learnerId: c.learner_id, familyId: c.family_id, item: c.item, part: c.part, answers: c.answers, consentVersion: c.consent_version ?? null, hintsUsed: c.hints_used,
+    learnerId: c.learner_id, familyId: c.family_id, item: c.item, part: c.part, answers: c.answers, hasPassage: c.has_passage === true, consentVersion: c.consent_version ?? null, hintsUsed: c.hints_used,
     turnsToday: c.turns_today, dailyLimit: c.daily_limit, language: c.language ?? "vi", band: c.band ?? "", previous: c.previous,
   };
 }

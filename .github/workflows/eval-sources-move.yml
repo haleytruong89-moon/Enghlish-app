@@ -1,0 +1,53 @@
+name: Move eval sources out of git
+
+# One time (hub Q1, 22/11): copy the Destination question files of the AI tutor test set from the old branch eval/e1 into the
+# private Storage bucket `eval-sources`, then list what is there. After it shows 21 files the parent deletes the branches
+# eval/e1, eval/e1-smoke and eval-results on GitHub. Running it again only overwrites the same files.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Gõ MOVE để chép 21 file đề vào kho file riêng'
+        required: true
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  move:
+    if: ${{ inputs.confirm == 'MOVE' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Take the files from branch eval/e1 (not into the working tree of main)
+        run: |
+          set -euo pipefail
+          git fetch origin eval/e1
+          mkdir -p "$RUNNER_TEMP/destination"
+          git archive origin/eval/e1 tests/eval/destination | tar -x -C "$RUNNER_TEMP"
+          mv "$RUNNER_TEMP"/tests/eval/destination/*.json "$RUNNER_TEMP/destination/"
+          n=$(ls "$RUNNER_TEMP/destination" | wc -l)
+          [ "$n" -eq 21 ] || { echo "::error::expected 21 files on eval/e1, found $n"; exit 1; }
+      - name: Upload to the private bucket and list it
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+        run: |
+          set -euo pipefail
+          npx tsx scripts/eval-sources.ts upload "$RUNNER_TEMP/destination"
+          # Round trip: download again and compare every file byte for byte before anyone deletes the branch.
+          npx tsx scripts/eval-sources.ts download "$RUNNER_TEMP/check"
+          (cd "$RUNNER_TEMP/destination" && sha256sum *.json) > "$RUNNER_TEMP/a.sha"
+          (cd "$RUNNER_TEMP/check" && sha256sum *.json) > "$RUNNER_TEMP/b.sha"
+          diff "$RUNNER_TEMP/a.sha" "$RUNNER_TEMP/b.sha" || { echo "::error::the bucket copy differs from eval/e1: do NOT delete the branch"; exit 1; }
+          npx tsx scripts/eval-sources.ts list | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "✓ 21 file trong kho file khớp từng byte với nhánh eval/e1 — có thể xóa nhánh." >> "$GITHUB_STEP_SUMMARY"
