@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
-import { aiSettingsCopy, levelLabels, tutorCopy, pdfPickCopy, pendingCopy, playerCopy, resultCopy, studioInboxCopy, work } from "@/lib/copy/vi";
+import { aiSettingsCopy, levelLabels, pdfPickCopy, pendingCopy, playerCopy, resultCopy, studioInboxCopy, work } from "@/lib/copy/vi";
 import { KEY_RECOMMEND, PAGE_LIMITS } from "@/lib/pdf/limits";
 import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { makeDocx } from "../unit/fixtures/docx";
@@ -89,13 +89,12 @@ async function doTheTest(page: Page, answers: Record<string, { v: string; choice
 test("Nguyên does the test one question at a time: he sees which ones to look at again and the ones his tutor will read - never a score, never the right answer", async ({ page }) => {
   await loginAs(page, "studentNguyen");
   await page.goto(`/activities/${activityId}`);
-  // E1: practice work of a Studio test has the real "Hỏi" (AI_FAKE gives the fixture hint); the dimmed slot is gone.
+  // 22/11: no tutor inside a work (TUTOR_IN_WORK unset = off): no "Hỏi", no dimmed slot; the hints route answers 404 tutor_off.
   await expect(page.getByTestId("ask-tutor")).toHaveCount(0);
-  await page.getByTestId("tutor-ask").click();
-  await expect(page.getByTestId("tutor-text")).toContainText("Bạn đọc lại lời dặn");
-  await expect(page.getByTestId("tutor-ask")).toHaveText(tutorCopy.next);
-  const turns = await q<{ kind: string; level: number; guard: string }>("select kind, level, guard from english.tutor_turns where activity_id = $1", [activityId]);
-  expect(turns).toEqual([{ kind: "hint", level: 1, guard: "pass" }]);
+  await expect(page.getByTestId("tutor-ask")).toHaveCount(0);
+  const off = await page.request.post(`/api/student/activities/${activityId}/hints`, { data: {} });
+  expect(off.status()).toBe(404);
+  expect((await off.json()).error).toBe("tutor_off");
   await doTheTest(page, {
     q1: { v: "B. had", choice: true }, q2: { v: "B. can't", choice: true }, q3: { v: "A. off", choice: true }, q4: { v: "C. A visit that changed Lan's plans", choice: true },
     q6: { v: "happyness" }, q7: { v: "I wish I could" }, q8: { v: "is said to be a" },

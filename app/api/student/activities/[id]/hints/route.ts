@@ -7,7 +7,7 @@ import { apiErrors, tutorCopy } from "@/lib/copy/vi";
 import { readJson } from "@/lib/inquiries/route";
 import { logAppError } from "@/lib/ops/logAppError";
 import { createUserClient } from "@/lib/supabase/server";
-import { tutorModels } from "@/lib/tutor/config";
+import { tutorInWorkEnabled, tutorModels } from "@/lib/tutor/config";
 import { handleStudentHint } from "@/lib/tutor/handler";
 import { CHECK_PROMPT, HINT_PROMPT } from "@/lib/tutor/prompt";
 import { createSupabaseTutorStore } from "@/lib/tutor/supabaseStore";
@@ -18,6 +18,8 @@ export const maxDuration = 120;
 export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const route = "POST /api/student/activities/[id]/hints";
+  // 22/11: no tutor inside a work unless the setting turns it back on. Nothing is read, called or billed.
+  if (!tutorInWorkEnabled()) return NextResponse.json({ error: "tutor_off" }, { status: 404, headers: { "Cache-Control": "private, no-store" } });
   let userId: string | null = null;
   try {
     const supabase = await createUserClient();

@@ -19,7 +19,7 @@ export function dueText(dueOn: string | null): { text: string; iso: string | nul
 /** What a step the app cannot do shows instead of an "open" button. */
 export const offLabelText = (t: Task): string | null => (t.offLabel ? work.statusLabels[t.offLabel] : null);
 
-/** "Luyện tập (có gợi ý)" / "Bài tự làm — lần này chưa có gợi ý": only for steps of the app (never a code like PRACTICE). */
+/** "Luyện tập" / "Bài tự làm — lần này chưa có gợi ý": only for steps of the app (never a code like PRACTICE). */
 export const modeText = (t: Task): string | null =>
   t.isTest && t.doable ? playerCopy.testTag : (t.kind === "app" || t.kind === "topic") && t.doable && t.mode ? modeLabels[t.mode].student : null;
 
@@ -30,5 +30,3 @@ export function purposeChip(t: Task): string | null {
   return null;
 }
 
-/** The dimmed "Hỏi gia sư · Sắp có" slot: only for a practice item of the app, never a check, a revision or link / PDF work. */
-export const showAskTutor = (t: Task): boolean => t.practice && !t.isTest && (t.kind === "app" || t.kind === "topic") && t.doable;
