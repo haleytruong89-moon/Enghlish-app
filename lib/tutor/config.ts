@@ -13,3 +13,10 @@ export const tutorModels = (env: Env = process.env) => ({
  * doing a work (practice or test); the tutor moves to its own "Gia sư" page (E2). The code stays so it can come back by setting.
  */
 export const tutorInWorkEnabled = (env: Env = process.env): boolean => env.TUTOR_IN_WORK?.trim() === "on";
+
+/** E2a "Tra từ": models of the word card (Sonnet writes, Haiku checks / picks a sense). Env overrides; same tool-choice switch as E1. */
+export const notebookModels = (env: Env = process.env) => ({
+  card: env.VOCAB_CARD_MODEL?.trim() || DEFAULT_TUTOR_MODEL,
+  check: env.VOCAB_CHECK_MODEL?.trim() || DEFAULT_CHECK_MODEL,
+  toolChoice: (env.TUTOR_TOOL_CHOICE === "tool" ? "tool" : "auto") as "tool" | "auto",
+});
