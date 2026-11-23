@@ -36,6 +36,8 @@ export type DeskBase = {
   isTest: boolean;
   /** The first page of "Đã xem" (null = 0032 not applied); the shell counts the "Mới" ones on this device from it. */
   seenFirst: SeenRow[] | null;
+  /** E2a: migration 0041 is applied → the Gia sư and Sổ tay tabs. */
+  tutorReady: boolean;
 };
 
 export type DeskBaseResult = DeskBase | { kind: "login" } | { kind: "not-found" };
@@ -50,8 +52,11 @@ export async function loadDeskBase(): Promise<DeskBaseResult> {
   if (home.kind !== "student") return { kind: "not-found" };
   const me = home.learners[0];
   if (!me) return { kind: "not-found" };
-  const seenFirst = await rpcOrNull("eng_my_seen", { p_before: null, p_before_ref: null, p_limit: DESK_PAGE.seen }, parseSeen);
-  return { kind: "ok", learnerId: me.id, alias: me.alias, color: safeColor(me.color), isTest: me.isTest, seenFirst };
+  const [seenFirst, tutor] = await Promise.all([
+    rpcOrNull("eng_my_seen", { p_before: null, p_before_ref: null, p_limit: DESK_PAGE.seen }, parseSeen),
+    rpcOrNull("eng_my_tutor_status", undefined, (raw) => raw).catch(() => null),
+  ]);
+  return { kind: "ok", learnerId: me.id, alias: me.alias, color: safeColor(me.color), isTest: me.isTest, seenFirst, tutorReady: tutor !== null && tutor !== undefined };
 }
 
 export type TodayData = {

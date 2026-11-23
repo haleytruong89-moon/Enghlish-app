@@ -17,7 +17,7 @@ export default async function SubmitPage({ params }: { params: Promise<{ assignm
   if (base.kind === "login") redirect("/login");
   if (base.kind !== "ok" || !item) notFound();
   return (
-    <StudentDeskShell active="today" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest}>
+    <StudentDeskShell active="today" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest} tutorReady={base.tutorReady}>
       <div className="mx-auto flex max-w-3xl flex-col gap-4" data-testid="submit-page" data-kind={item.kind}>
         {item.kind === "pdf" ? <PaperSubmit key={item.assignmentId} item={item} maxPages={maxPages} /> : <LinkSubmit key={item.assignmentId} item={item} maxPages={maxPages} />}
       </div>

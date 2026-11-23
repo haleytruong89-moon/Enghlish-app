@@ -38,7 +38,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     if (base.kind === "login" || today.kind === "login") redirect("/login");
     if (base.kind !== "ok" || today.kind !== "ok") notFound();
     return (
-      <StudentDeskShell active="today" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest}>
+      <StudentDeskShell active="today" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest} tutorReady={base.tutorReady}>
         {today.tasks ? (
           <TodayView alias={base.alias} color={base.color} tasks={today.tasks} practice={today.practice} review={today.review} week={week?.view ?? null} />
         ) : (

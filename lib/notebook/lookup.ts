@@ -14,7 +14,7 @@ import { AiCallError, estimateInputTokens, type ToolCall, type ToolResult } from
 import { ReviewDbError } from "@/lib/review/handlers";
 import { cardCodeReasons, cardContentSchema, cardToolOutputSchema, linesOf, type CardContent, type CardView } from "./card";
 import { checkLookupInput, isBlocked } from "./input";
-import { phraseIpa } from "./ipa";
+import { buildCardView, headwordWords } from "./view";
 import { AGAIN_PROMPT, buildAgainCall, buildCardCall, buildCardCheckCall, buildSenseCall, CARD_CHECK_PROMPT, CARD_PROMPT, SENSE_PROMPT } from "./prompt";
 
 /** Worst case of one lookup (two Sonnet cards with room to think + two Haiku checks), reserved before the first call. */
@@ -88,10 +88,9 @@ function dbTag(err: unknown): LookupResult | null {
 
 /** The card + IPA (code, from ipa_lexicon) + the sense of the child's sentence. */
 async function viewOf(store: LookupStore, cardId: string, content: CardContent, sense: number | null): Promise<CardView> {
-  const words = content.headword.toLowerCase().split(/\s+/).filter(Boolean);
+  const words = headwordWords(content.headword);
   const rows = words.length <= 8 ? await store.ipa(words).catch(() => []) : [];
-  const map = (accent: string) => new Map(rows.filter((r) => r.accent === accent).map((r) => [r.word.toLowerCase(), r.ipa]));
-  return { ...content, cardId, ipa: { uk: phraseIpa(words, map("uk")), us: phraseIpa(words, map("us")) }, sense: sense !== null && sense < content.senses.length ? sense : null };
+  return buildCardView(cardId, content, sense, rows);
 }
 
 /** Ledger + timed calls of one turn; everything written at the end, the reservation released by the last run of its purpose. */

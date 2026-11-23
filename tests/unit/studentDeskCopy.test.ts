@@ -23,6 +23,6 @@ describe("studentDeskCopy (what the child reads on Hôm nay / Đã xem / Đã l�
     }
   });
   it("the tab names are the ones the parent approved (the 'Đã xem' tab, not 'Cô đã xem')", () => {
-    expect(studentDeskCopy.tabs).toEqual({ today: "Hôm nay", seen: "Đã xem", done: "Đã làm", journey: "Hành trình" });
+    expect(studentDeskCopy.tabs).toEqual({ today: "Hôm nay", tutor: "Gia sư", notebook: "Sổ tay", seen: "Đã xem", done: "Đã làm", journey: "Hành trình" }); // Gia sư + Sổ tay: parent 22/11 (E2a)
   });
 });
