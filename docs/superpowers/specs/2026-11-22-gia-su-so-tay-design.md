@@ -1,6 +1,6 @@
 # Gia sư + Sổ tay — spec (bản 0.1 · 22/11/2026)
 
-Trạng thái: **0.1, chờ phụ huynh duyệt bản viết.** Các quyết định trong §2 phụ huynh đã chốt trong chat 22/11.
+Trạng thái: **0.2 (23/11): thêm §4.5 Khuôn trả lời (phụ huynh duyệt 23/11: Vì sao và Liên quan luôn hiện, không phải bấm mở). Chờ phụ huynh duyệt bản viết.** Các quyết định trong §2 phụ huynh đã chốt trong chat 22/11.
 Nguồn:
 - Hub: `SPEC_GIA_SU_AI_TIENG_ANH_v0.1_2026-11-21.md` (§3 thẻ từ, §4 Sổ + ôn, §5 luật L1–L7, §11 thước đo, §12 O1–O5) và `HANDOVER_GIA_SU_AI_TIENG_ANH_2026-11-21.md`.
 - Bản vẽ (canvas `.design/tutor/`, artifact d211e050…): Main / Ipad / Home / TestWork / Notebook.
@@ -81,6 +81,28 @@ Bàn học có 6 mục: Hôm nay · **Gia sư** · **Sổ tay** · Đã xem · �
 
 Có từ đến hạn ôn thì thêm thẻ "Ôn n từ trong Sổ tay" (mở `/notebook/review`). Không có thì không hiện. Thẻ này không tính vào "Còn n việc" và mục tiêu tuần (D-G6).
 
+### 4.5 Khuôn trả lời của gia sư (✅ phụ huynh 23/11)
+
+Mọi câu trả lời (thẻ từ, hỏi ngữ pháp, câu bài tập) có **cùng bố cục**. AI trả dữ liệu theo khuôn (tool có schema); app tự trình bày. Thiếu ô bắt buộc thì coi như trượt kiểm (§5.3). Bản vẽ: board "Laptop · trang Gia sư · khuôn trả lời" (bấm thử, xem như An / Nguyên).
+
+| Thứ tự | Khối | Hiện thế nào | Nội dung |
+|---|---|---|---|
+| 1 | 🤔 **Đoán trước** | Luôn hiện. Các khối dưới **chỉ hiện sau khi con chọn một ý**, hoặc bấm "Xem luôn". Đây là lần bấm duy nhất | Một câu hỏi + 2 lựa chọn (thường là 2 câu ví dụ đối chiếu). Chọn xong hiện ✓/✗ + một câu giải thích |
+| 2 | 💡 **Bản chất** | Luôn hiện | Một câu cốt lõi, dễ nhớ ("make = làm ra thứ trước đó chưa có"). Ngữ pháp về thời gian thì có **dòng thời gian** do app vẽ từ dữ liệu (AI không vẽ) |
+| 3 | 📌 **Nắm nhanh** | Luôn hiện | 2–3 câu ví dụ đối chiếu, mỗi câu kèm một dòng tiếng Việt |
+| 4 | ❓ **Vì sao** | **Luôn hiện** | Lý do; **So với tiếng Việt**; **⚠️ Bẫy hay gặp** (khi nào KHÔNG dùng, lỗi người Việt hay mắc) |
+| 5 | 🔗 **Liên quan** | **Luôn hiện** | 3–5 ô (từ gần nghĩa, họ từ, cụm, điểm ngữ pháp kề). Bấm một ô là tra tiếp (tính một lượt) |
+| 6 | ✏️ **Tự kiểm** | Luôn hiện | 1–3 câu máy chấm, khó dần (nhận ra → dùng → câu dạng đề). Con chọn xong hiện ✓/✗ + một dòng vì sao. Không tổng |
+| 7 | 🎯 **Đến lượt bạn** | Luôn hiện | Một việc con tự làm: đặt câu về chính mình (E2b: AI nhận xét ≤ 2 ý) hoặc "giờ tự làm lại câu bài của bạn" |
+| 8 | Nút | Luôn hiện | 🔊 Nghe (thẻ từ) · "+ Lưu vào Sổ tay" · "Chưa hiểu, giải thích cách khác" · 😊 😐 😕 |
+
+- **"Chưa hiểu, giải thích cách khác"**: gọi AI thêm một lần, đổi góc (hình ảnh, ví dụ đời thường khác, so tiếng Việt), không lặp câu cũ. Tính một lượt có AI. (E2a cho thẻ từ; E3 cho ngữ pháp.)
+- **😊 😐 😕**: con chấm một chạm, ghi vào log lượt hỏi (`tutor_asks` thêm cột `rating`), dùng cho thước đo §1 và vòng sửa prompt.
+- **Độ dài:** Bản chất ≤ 1 câu; Vì sao ≤ 4 dòng (An) / ≤ 5 dòng (Nguyên); không khối nào vượt 6 dòng. Code kiểm.
+- **Theo track (cấu hình `tutor_language`, `tutor_band`):** An: tiếng Việt, hình ảnh, ví dụ đời sống / khoa học. Nguyên: tiếng Anh trước (dòng ví dụ vẫn có tiếng Việt ngắn), sắc thái, văn phong, phân biệt từ gần nghĩa, câu tự kiểm dạng đề vào 10.
+- **Câu bài tập dán vào (E3):** dùng đủ khuôn, nhưng ví dụ là **câu khác** câu bài; Tự kiểm hỏi cách đọc câu (tìm chìa khóa), không hỏi đáp án câu bài; "Đến lượt bạn" là "giờ tự làm lại câu của bạn".
+- **Chi phí:** khối 1–7 soạn trong **một** lần gọi; chỉ "Chưa hiểu" gọi thêm. Ước tính tăng 20–30 % so với §5.4, vẫn trong trần.
+
 ## 5. Thẻ từ
 
 ### 5.1 Nội dung
@@ -96,6 +118,7 @@ Có từ đến hạn ôn thì thêm thẻ "Ôn n từ trong Sổ tay" (mở `/n
 | Cụm hay đi kèm | AI | 3–5 cụm. |
 | Ví dụ | AI | 2–3 câu đúng dải cấp, mỗi câu chứa từ (hoặc một dạng của từ: code kiểm). |
 | Lỗi hay gặp | AI | Không bắt buộc, ≤ 1 dòng. |
+| Đoán trước, Bản chất, Vì sao, Liên quan, Tự kiểm, Đến lượt bạn | AI | Theo khuôn §4.5. Tự kiểm của thẻ từ dùng chung cho mọi em cùng dải cấp (nằm trong thẻ cache). |
 
 ### 5.2 Dùng lại (cache)
 
@@ -140,7 +163,7 @@ Mỗi lát một migration, chỉ thêm, guard migration trước. Tính từ 00
 | `vocab_cards` | `headword`, `band`, `content jsonb`, `prompt_version`, `model`, `supersedes`, `retracted_at` (chỉ người lớn gỡ, E4) | Qua hàm |
 | `notebook_items` | `learner_id`, `kind` (`word`; sau thêm `grammar`, `mistake`, `teacher`), `card_id`, `source` (`lookup`), `client_id` | Con của em đó, mẹ, thầy/cô của em |
 | `notebook_item_events` | `item_id`, `action` (`remove` / `restore`), `at`. Trạng thái = sự kiện mới nhất | Như trên |
-| `tutor_asks` | `learner_id`, `kind` (`lookup`; sau thêm `sentence`, `grammar`, `explain`), `child_text`, `context_text`, `card_id` hoặc `shown_text`, `guard`, `flags`, `fixed_code`, `cost_usd`, `model`, `prompt_version`, `client_id` | Mẹ + thầy/cô của em (D-G8). **Con không đọc log thô**, chỉ đọc "từ vừa tra" qua hàm |
+| `tutor_asks` | `rating` (😊 / 😐 / 😕, con chấm sau), `learner_id`, `kind` (`lookup`; sau thêm `sentence`, `grammar`, `explain`), `child_text`, `context_text`, `card_id` hoặc `shown_text`, `guard`, `flags`, `fixed_code`, `cost_usd`, `model`, `prompt_version`, `client_id` | Mẹ + thầy/cô của em (D-G8). **Con không đọc log thô**, chỉ đọc "từ vừa tra" qua hàm |
 
 - `track_settings` thêm hai giới hạn ở §5.4.
 - `ai_runs.purpose` thêm ba giá trị ở §5.3.
@@ -260,7 +283,8 @@ Trang người lớn của em có thêm mục **"Con hỏi Gia sư"**:
   - gõ sai;
   - từ phải chặn;
   - câu chèn lệnh.
-  Phải đạt: 0 thẻ có phiên âm do AI, 0 ví dụ thiếu từ, 0 nội dung không hợp tuổi. Mốc ghi vào `docs/eval/E2_BASELINE.md`.
+  Phải đạt: 0 thẻ có phiên âm do AI, 0 ví dụ thiếu từ, 0 nội dung không hợp tuổi.
+  **Chấm chất lượng khuôn (§4.5)** bằng Haiku + mẹ đọc mẫu 10 câu: có câu bản chất đúng và ngắn; câu đoán có 2 lựa chọn thật sự khác nhau; ví dụ đối chiếu; "So với tiếng Việt" và "Bẫy" đúng; câu Tự kiểm đúng đáp án (code kiểm lại); "Đến lượt bạn" buộc con tự viết. Mục tiêu ≥ 90 % câu đạt mọi tiêu chí. Mốc ghi vào `docs/eval/E2_BASELINE.md`.
 
 ## 12. Giả định (phụ huynh sửa được khi duyệt)
 
