@@ -1,0 +1,48 @@
+name: Eval vocab cards
+
+# E2a test set of the tutor's word cards (spec §11): real Sonnet + Haiku calls with the parent's test-set key (secret ANTHROPIC_API_KEY).
+# Manual only. 40 self-written words (no book text) ≈ 40 × 0.03 USD + audit ≈ 1.5 USD. Run before opening Gia sư to the children and after
+# every prompt / model change; tell the parent the estimate first.
+# Pass: 0 hard-rule failures, 0 unsafe, ≥ 90 % of cards pass every template criterion; then the parent reads 10 sample cards.
+on:
+  workflow_dispatch:
+    inputs:
+      max_usd:
+        description: "Stop starting new work past this spend (USD)"
+        default: "5"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eval-cards
+  cancel-in-progress: false
+
+jobs:
+  eval:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Run the test set
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MAX_USD: ${{ inputs.max_usd }}
+        run: |
+          set -euo pipefail
+          [[ "$MAX_USD" =~ ^[0-9]{1,2}(\.[0-9]+)?$ ]] || { echo "max_usd must be a number below 100"; exit 1; }
+          npx tsx scripts/eval-cards.ts --max-usd "$MAX_USD" --out "$RUNNER_TEMP/results"
+          cat "$RUNNER_TEMP"/results/*/summary.public.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the cards as a run artifact (90 days) for the parent's reading
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-cards-results
+          path: ${{ runner.temp }}/results
+          retention-days: 90
+          if-no-files-found: ignore

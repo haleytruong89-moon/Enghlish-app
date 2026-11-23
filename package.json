@@ -28,6 +28,7 @@
     "report:curriculum-ai": "tsx --env-file-if-exists=.env.local scripts/curriculum-ai-report.ts",
     "golden:curriculum": "tsx --env-file-if-exists=.env.local scripts/golden-curriculum.ts",
     "eval:hints": "tsx --env-file-if-exists=.env.local scripts/eval-hints.ts",
+    "eval:cards": "tsx scripts/eval-cards.ts",
     "eval:sources": "tsx --env-file-if-exists=.env.local scripts/eval-sources.ts"
   },
   "dependencies": {
