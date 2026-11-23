@@ -97,7 +97,7 @@ Mọi câu trả lời (thẻ từ, hỏi ngữ pháp, câu bài tập) có **c�
 | 8 | Nút | Luôn hiện | 🔊 Nghe (thẻ từ) · "+ Lưu vào Sổ tay" · "Chưa hiểu, giải thích cách khác" · 😊 😐 😕 |
 
 - **"Chưa hiểu, giải thích cách khác"**: gọi AI thêm một lần, đổi góc (hình ảnh, ví dụ đời thường khác, so tiếng Việt), không lặp câu cũ. Tính một lượt có AI. (E2a cho thẻ từ; E3 cho ngữ pháp.)
-- **😊 😐 😕**: con chấm một chạm, ghi vào log lượt hỏi (`tutor_asks` thêm cột `rating`), dùng cho thước đo §1 và vòng sửa prompt.
+- **😊 😐 😕**: con chấm một chạm, ghi vào bảng chỉ thêm `tutor_ask_ratings` (một dòng mỗi lần chấm, lần mới nhất thắng), dùng cho thước đo §1 và vòng sửa prompt.
 - **Độ dài:** Bản chất ≤ 1 câu; Vì sao ≤ 4 dòng (An) / ≤ 5 dòng (Nguyên); không khối nào vượt 6 dòng. Code kiểm.
 - **Theo track (cấu hình `tutor_language`, `tutor_band`):** An: tiếng Việt, hình ảnh, ví dụ đời sống / khoa học. Nguyên: tiếng Anh trước (dòng ví dụ vẫn có tiếng Việt ngắn), sắc thái, văn phong, phân biệt từ gần nghĩa, câu tự kiểm dạng đề vào 10.
 - **Câu bài tập dán vào (E3):** dùng đủ khuôn, nhưng ví dụ là **câu khác** câu bài; Tự kiểm hỏi cách đọc câu (tìm chìa khóa), không hỏi đáp án câu bài; "Đến lượt bạn" là "giờ tự làm lại câu của bạn".
@@ -162,8 +162,9 @@ Mỗi lát một migration, chỉ thêm, guard migration trước. Tính từ 00
 | `ipa_lexicon` | `word`, `accent` (`uk` / `us`), `ipa`, `source` (`ipa-dict@<commit>`) | Mọi tài khoản đã đăng nhập (dữ liệu tham chiếu, không của con) |
 | `vocab_cards` | `headword`, `band`, `content jsonb`, `prompt_version`, `model`, `supersedes`, `retracted_at` (chỉ người lớn gỡ, E4) | Qua hàm |
 | `notebook_items` | `learner_id`, `kind` (`word`; sau thêm `grammar`, `mistake`, `teacher`), `card_id`, `source` (`lookup`), `client_id` | Con của em đó, mẹ, thầy/cô của em |
+| `tutor_ask_ratings` | `ask_id`, `rating` (`good` / `ok` / `confused`), `at`. Chỉ thêm | Mẹ + thầy/cô của em |
 | `notebook_item_events` | `item_id`, `action` (`remove` / `restore`), `at`. Trạng thái = sự kiện mới nhất | Như trên |
-| `tutor_asks` | `rating` (😊 / 😐 / 😕, con chấm sau), `learner_id`, `kind` (`lookup`; sau thêm `sentence`, `grammar`, `explain`), `child_text`, `context_text`, `card_id` hoặc `shown_text`, `guard`, `flags`, `fixed_code`, `cost_usd`, `model`, `prompt_version`, `client_id` | Mẹ + thầy/cô của em (D-G8). **Con không đọc log thô**, chỉ đọc "từ vừa tra" qua hàm |
+| `tutor_asks` | `learner_id`, `kind` (`lookup`; sau thêm `sentence`, `grammar`, `explain`), `child_text`, `context_text`, `card_id` hoặc `shown_text`, `guard`, `flags`, `fixed_code`, `cost_usd`, `model`, `prompt_version`, `client_id` | Mẹ + thầy/cô của em (D-G8). **Con không đọc log thô**, chỉ đọc "từ vừa tra" qua hàm |
 
 - `track_settings` thêm hai giới hạn ở §5.4.
 - `ai_runs.purpose` thêm ba giá trị ở §5.3.
