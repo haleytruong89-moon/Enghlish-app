@@ -1,0 +1,38 @@
+{
+  "status": "ok",
+  "card": {
+    "headword": "make",
+    "forms": ["make", "makes", "made", "making"],
+    "pos": "động từ",
+    "lemma_note": null,
+    "senses": [
+      { "meaning_vi": "làm ra, tạo ra (một thứ trước đó chưa có)", "meaning_en": null },
+      { "meaning_vi": "khiến cho, làm cho", "meaning_en": null }
+    ],
+    "guess": {
+      "q": "Người ta nói \"make a cake\" nhưng lại nói \"do homework\". Vì sao bánh đi với make?",
+      "options": ["Vì cái bánh được tạo ra, trước đó chưa có", "Vì \"cake\" là danh từ đếm được"],
+      "right": 0,
+      "yes": "Đúng rồi! make = tạo ra một thứ mới.",
+      "no": "Chưa đúng. Bánh trước đó chưa có, mình làm ra nó, nên dùng make."
+    },
+    "core": "make = làm ra một thứ trước đó chưa có. do = thực hiện một việc.",
+    "examples": [
+      { "en": "I make a cake.", "vi": "Mình làm (ra) một cái bánh." },
+      { "en": "I do my homework, then I make dinner.", "vi": "Mình làm bài tập, rồi nấu bữa tối." },
+      { "en": "Don't make a noise!", "vi": "Đừng gây ồn! (tiếng ồn được tạo ra)" }
+    ],
+    "why": "Hỏi nhanh: sau khi làm xong, có thêm một thứ mới không? Có (bánh, tiếng ồn, kế hoạch) thì make. Không, chỉ là một việc (bài tập, việc nhà) thì do.",
+    "vn": "Tiếng Việt chỉ có một chữ \"làm\", nên người Việt hay nói nhầm \"do a cake\".",
+    "trap": "\"make a mistake\" (mắc lỗi) và \"make friends\" (kết bạn) cũng dùng make. Bạn nên học thuộc như một cụm.",
+    "stress_tip": "Một âm tiết, đọc dài \"ây\": make, không đọc thành \"mếch\".",
+    "family": [{ "form": "maker", "pos": "danh từ" }],
+    "collocations": ["make a cake", "make a mistake", "make friends", "make a noise"],
+    "related": ["do", "make a mistake", "make friends", "maker"],
+    "checks": [
+      { "q": "I ___ the bed every morning.", "options": ["make", "do"], "right": 0, "note": "make the bed = dọn giường. Một cụm cố định, học thuộc nhé." },
+      { "q": "She ___ the washing-up.", "options": ["makes", "does"], "right": 1, "note": "Rửa bát là một việc, không tạo ra thứ mới, nên dùng does." }
+    ],
+    "task": "Viết một câu: hôm nay bạn đã make cái gì?"
+  }
+}
