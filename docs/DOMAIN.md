@@ -406,3 +406,20 @@ Trượt kiểm (code hoặc Haiku) → model viết lại **1 lần** → vẫn
 | Gia đình đã chi tới trần tháng này | "Gia sư đang nghỉ…"; không gọi model |
 
 **Mở cho con dùng (P-E1-6):** khi bộ test đạt §3 của phụ lục D **trừ phần con chấm** (😊/😐/😕 chuyển E2): (a) 0 lần lộ trong các ca × 3 lần chạy; (b) độ dài + kết bằng câu hỏi / việc nhỏ ≥ 90%; (c) đúng ngôn ngữ ≥ 95%; (d) cờ A.10, N.10, N.12 và G8 đúng 100%; ca máy chủ xanh. Ca bị báo lộ mà đọc tay không lộ → sửa bộ kiểm, không nới luật.
+
+## Bản 0.10 · E2a (23/11/2026) — Gia sư (tra từ) + Sổ tay ✅ phụ huynh duyệt spec 0.2 + plan 23/11
+
+Spec `docs/superpowers/specs/2026-11-22-gia-su-so-tay-design.md`. Luật G1–G9 (bản 0.9) vẫn là luật của gia sư AI. Thêm:
+
+| # | Luật | Ở đâu |
+|---|---|---|
+| E2-1 | Không có gì của gia sư trong bài làm (kể cả link); gia sư là mục riêng | `TUTOR_IN_WORK` tắt; trang `/tutor` |
+| E2-2 | Phiên âm không do AI viết (L3); AI viết trường `ipa` là thẻ bị loại | zod strict + `cardCodeReasons` `has_ipa`; `ipa_lexicon` |
+| E2-3 | Âm thanh không rời máy (L5): chỉ giọng `localService` | `pickVoice` |
+| E2-4 | Không gửi tên / mã em cho AI; chỉ từ, câu con gõ, dải cấp, ngôn ngữ giải thích | `lib/notebook/prompt.ts` |
+| E2-5 | 60 lượt tra / ngày / em (cả thẻ có sẵn), 30 lượt có AI; ngày theo giờ Việt Nam | `track_settings`, `eng_lookup_context` |
+| E2-6 | Thẻ đã có dùng lại cho mọi em cùng dải cấp + ngôn ngữ; không cần AI, không cần đồng ý v3 | `eng_vocab_card_find` |
+| E2-7 | Thẻ mới tới con chỉ khi qua code + Haiku (viết lại tối đa 1 lần); không thì câu cố định | `runLookup` |
+| E2-8 | Câu con hỏi được lưu; mẹ + thầy/cô của em đọc được; con được báo trên trang Gia sư (D-G8) | `eng_tutor_asks_for`, `tutorPageCopy.watched` |
+| E2-9 | Ôn trong Sổ tay không tính vào chuỗi tuần (D-G6; ôn làm ở E2b) | — |
+| E2-10 | Tra không tự lưu; con bấm "+ Lưu vào Sổ tay"; lưu lại từ đã bỏ = thêm lại | `eng_notebook_save` |

@@ -363,3 +363,18 @@ Khác với kế hoạch: câu giới thiệu "Mỗi điều là một việc {t
 - Không chữ "điểm", không đúng / sai trước khi nộp, không số câu đúng; xưng "bạn".
 - `aiSettingsCopy`: `capTitle` / `capLabel` "Hạn mức (USD, tối đa 50)" / `softLabel` / `capSave` / `capInvalid`; `reconsent` (bản đồng ý mới có phần gia sư AI); `tutorLine` "An: hỏi gia sư AI n lượt hôm nay · m lượt tháng này"; `points` nói rõ câu hỏi con gõ được gửi cho AI, không kèm tên.
 - `studioErrors`: `bad_cap`, `cap_needs_update` (cần 0039).
+
+## E2a (23/11/2026) — Gia sư + Sổ tay
+
+- Tab của con: `studentDeskCopy.tabs.tutor` "Gia sư", `.notebook` "Sổ tay" (chỉ hiện khi đã áp 0041).
+- `tutorPageCopy`:
+  - `title` "Gia sư";
+  - `watched` "Mẹ và thầy/cô xem được câu bạn hỏi ở đây để giúp bạn." (D-G8, luôn hiện);
+  - `tabWord` "Tra từ", `send` "Tra";
+  - `off` (chưa đồng ý v3 / AI tắt), `left(n)` (số lượt còn trong `data-count="work"`);
+  - `errors` và `fixed` (hết lượt, từ chặn, chưa soạn được thẻ, không thấy từ).
+- `vocabCardCopy`: khối theo khuôn §4.5 "🤔 Đoán trước" · "Xem luôn" · "💡 Bản chất" · "📌 Nắm nhanh" · "❓ Vì sao" (+ "So với tiếng Việt:", "⚠️ Bẫy hay gặp:") · "🔗 Liên quan" · "✏️ Tự kiểm" · "🎯 Đến lượt bạn"; "+ Lưu vào Sổ tay" / "Đã lưu vào Sổ tay ✓" / "Đã có trong Sổ tay ✓"; "Chưa hiểu, giải thích cách khác"; 😊 / 😐 / 😕 (nhãn "Dễ hiểu" / "Tạm được" / "Chưa hiểu").
+- `notebookCopy`: "Sổ tay", tab "Từ vựng", ô lọc, "Bỏ khỏi Sổ tay" (hỏi lại "Bỏ từ này khỏi Sổ tay?"), "Đã bỏ (n)" + "Thêm lại".
+- `tutorAsksCopy` (người lớn): "Con hỏi Gia sư", bảng Lúc · Loại · Con gõ · Gia sư trả lời · Sổ tay · Con chấm; "thẻ có sẵn".
+- `aiSettingsCopy` (bản đồng ý `ai-studio-tutor-v3`): `intro`, `points[1]` (Gia sư là mục riêng, không có trong bài làm; câu con hỏi được lưu, mẹ và thầy/cô đọc được), `reconsent`.
+- Con không thấy chữ "điểm", tổng số câu đúng, %; Tự kiểm chỉ ✓ / ✗ từng câu + một dòng vì sao.
