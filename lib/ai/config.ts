@@ -16,9 +16,12 @@ export const AI_FAKE_FIXTURES: Record<string, string> = {
 };
 export const fakeFixtureFor = (toolName: string): string => AI_FAKE_FIXTURES[toolName] ?? AI_FAKE_FIXTURE;
 /** Version of the short consent text on /settings/ai (consents.notice_version). Change the text → new version. */
-export const AI_NOTICE_VERSION = "ai-studio-tutor-v2";
-/** E1: the AI tutor runs only for a child whose latest ai_text consent is this version (the text that tells the parent about it). */
-export const TUTOR_NOTICE_VERSION = "ai-studio-tutor-v2";
+export const AI_NOTICE_VERSION = "ai-studio-tutor-v3";
+/**
+ * The AI tutor runs only for a child whose latest ai_text consent is this version (the text that tells the parent about it).
+ * v3 (E2a, 23/11): the tutor is its own "Gia sư" page (not inside works) and the child's questions are kept for mum and the tutor.
+ */
+export const TUTOR_NOTICE_VERSION = "ai-studio-tutor-v3";
 type Env = Record<string, string | undefined>;
 
 export function studioModel(env: Env = process.env): string {

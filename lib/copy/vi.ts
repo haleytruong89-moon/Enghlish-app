@@ -2214,10 +2214,10 @@ export const studioInboxCopy = {
 export const aiSettingsCopy = {
   navLink: "Cài đặt AI",
   title: "Cài đặt AI",
-  intro: `AI đọc đề và đáp án của ${tutorHonorific}; với gia sư AI, AI đọc thêm câu hỏi ngắn con gõ. AI không nhận tên hay hồ sơ của con.`,
+  intro: `AI đọc đề và đáp án của ${tutorHonorific}; với Gia sư, AI đọc thêm từ hoặc câu ngắn con gõ. AI không nhận tên hay hồ sơ của con.`,
   points: [
     `AI giúp biến đề + đáp án thành bài làm trên app. ${tutorHonorificCap} hoặc phụ huynh luôn duyệt trước khi giao.`,
-    "Gia sư AI (nút “Hỏi” trong bài luyện, không có ở bài kiểm tra): gợi ý từng bước, không đưa đáp án. AI nhận câu hỏi, lời dặn của phần, đáp án (để tránh nói ra) và câu hỏi ngắn con gõ về câu đó.",
+    `Gia sư AI là một mục riêng “Gia sư” trên bàn học của con, không có trong bài làm. Con tra từ (sau này hỏi ngữ pháp); AI nhận từ hoặc câu ngắn con gõ. Câu con hỏi được lưu lại; mẹ và ${tutorHonorific} của em đọc được.`,
     "AI không chấm bài của con và không đổi bậc kỹ năng.",
     "Không gửi tên, hồ sơ hay kết quả của con cho AI. Câu con gõ cho gia sư AI được gửi như con viết, nên con không nên gõ tên hay thông tin riêng vào đó.",
     "Chi phí tối đa theo hạn mức tháng bên dưới (báo trước ở ngưỡng báo). Hết hạn mức thì soạn tay, gia sư AI nghỉ.",
@@ -2237,7 +2237,7 @@ export const aiSettingsCopy = {
   softLabel: "Báo trước ở (USD)",
   capSave: "Lưu hạn mức",
   capInvalid: "Hạn mức từ 1 đến 50 USD; ngưỡng báo không lớn hơn hạn mức.",
-  reconsent: "Văn bản đồng ý đã thêm phần gia sư AI. Bấm “Đồng ý và bật” lần nữa để gia sư AI chạy.",
+  reconsent: "Văn bản đồng ý đã đổi: Gia sư AI giờ là một mục riêng, câu con hỏi được lưu để mẹ và thầy/cô xem. Bấm “Đồng ý và bật” lần nữa để Gia sư chạy.",
   tutorLine: (alias: string, today: number, month: number) => `${alias}: hỏi gia sư AI ${today} lượt hôm nay · ${month} lượt tháng này`,
   homeBoxTitle: "Chi phí AI",
   homeBoxLink: "Xem Cài đặt AI",
