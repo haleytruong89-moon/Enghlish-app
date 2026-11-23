@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { studentDeskCopy as c } from "@/lib/copy/vi";
 import { taskHref, type Continue } from "@/lib/student/today";
-import { kindLabel, modeText, purposeChip, showAskTutor, taskTitle } from "./taskText";
+import { kindLabel, modeText, purposeChip, taskTitle } from "./taskText";
 
-/** "Làm tiếp" (a draft exists: progress bar of the questions ANSWERED so far) or "Việc tiếp theo". In practice items a one-line pointer to the "Hỏi" button inside the work (E1). */
+/** "Làm tiếp" (a draft exists: progress bar of the questions ANSWERED so far) or "Việc tiếp theo". No tutor here: the tutor is not part of the work (parent, 22/11). */
 export function ContinueCard({ pick, hasCard = true }: { pick: Continue; hasCard?: boolean }) {
   const { task, resume } = pick;
   const href = taskHref(task, hasCard);
@@ -44,11 +44,6 @@ export function ContinueCard({ pick, hasCard = true }: { pick: Continue; hasCard
           <Link href={href} className="inline-flex min-h-12 items-center justify-center rounded-xl bg-white px-6 text-base font-bold text-accent no-underline">
             {task.assignmentId ? c.openWork : resume ? c.resume : c.start}
           </Link>
-        ) : null}
-        {showAskTutor(task) ? (
-          <p data-testid="ask-tutor-hint" className="max-w-sm text-sm text-[#DCE8E3]">
-            💡 {c.askTutorHint}
-          </p>
         ) : null}
       </div>
     </section>

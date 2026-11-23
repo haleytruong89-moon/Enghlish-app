@@ -351,6 +351,8 @@ Lớp / đợt, chứng chỉ, chuỗi theo ngày (chuỗi **tuần** mềm thì
 
 ## Bản 0.9 · E1 (21/11/2026) — Gia sư AI tiếng Anh: nút "Hỏi" trong bài luyện ✅ phụ huynh duyệt plan 21/11 (P-E1-1…6, P1, G5)
 
+**Cập nhật 22/11 (phụ huynh):** không có gợi ý AI trong lúc làm bài (luyện hay kiểm tra). Nút "Hỏi" trong bài tắt mặc định (`TUTOR_IN_WORK`); gia sư AI chuyển sang mục riêng "Gia sư" + "Sổ tay" (E2). Luật G1–G9 dưới đây vẫn là luật của gia sư AI.
+
 Nguồn: `HANDOVER_GIA_SU_AI_TIENG_ANH_2026-11-21.md` + `BO_TEST_GIA_SU_TIENG_ANH_v0.1_2026-11-21.md` (hub; trả lời duyệt plan 21/11). Plan: `docs/superpowers/plans/2026-11-21-e1-ask-hints.md`.
 
 **Đổi so với PRD / bản 0.3 (phụ huynh đã duyệt 21/11):**

@@ -2028,3 +2028,13 @@ Nhánh `feature/e1-passage-items`. **Có SQL `0040_tutor_passage_items.sql`** (t
 ## Sửa nhanh: thẻ "Việc tiếp theo" không còn nút mờ "Hỏi gia sư · Sắp có" (22/11/2026)
 
 Nhánh `fix/today-card-ask-hint`. **Không có SQL.** Phụ huynh báo 22/11: đã bật AI nhưng con thấy "Hỏi gia sư · Sắp có" ở màn Hôm nay và tưởng chưa hỏi được. Nút mờ đó là chỗ giữ chỗ từ W4b, E1 quên đổi. Nút "Hỏi" thật nằm **trong bài**, dưới từng câu (khung vàng "Gia sư"). Thẻ trên Hôm nay giờ chỉ có một dòng chỉ chỗ: "💡 Kẹt câu nào thì bấm “Hỏi” trong khung Gia sư ngay dưới câu đó…".
+
+## Tắt nút "Hỏi" trong bài làm (22/11/2026)
+
+Nhánh `fix/tutor-off-in-work`. **Không có SQL.** Phụ huynh quyết 22/11: **không có gợi ý trong lúc làm bài** (bài luyện cũng như bài kiểm tra), vì con dễ lười nghĩ, lười đoán. Gia sư AI sẽ thành **một mục riêng** ("Gia sư": Tra từ / Hỏi ngữ pháp, dùng cho cả bài trên lớp), Sổ tay là một mục riêng khác (E2, spec làm tiếp).
+
+- Công tắc `TUTOR_IN_WORK` (biến môi trường server). Không đặt hoặc khác `on` = **tắt** (mặc định). Khi tắt: trong bài không có khung "Gia sư", không có ô mờ "Sắp có"; route `POST /api/student/activities/[id]/hints` trả 404 `tutor_off`; thẻ "Việc tiếp theo" ở Hôm nay bỏ dòng chỉ chỗ "💡 Kẹt câu nào thì bấm “Hỏi”…" (PR #52).
+- Code E1 (`lib/tutor/*`, `AskTutor`, bảng `tutor_turns`, bộ test eval) **giữ nguyên** để mục "Gia sư" mới dùng lại; bật lại trong bài = đặt `TUTOR_IN_WORK=on` trên Vercel.
+- Không cần làm gì trên Vercel: gộp PR là tắt.
+- Phụ huynh quyết 22/11: nhãn chế độ của con "Luyện tập (có gợi ý)" → **"Luyện tập"**; đoạn mô tả gia sư AI ở Cài đặt AI sửa cùng E2 (nằm trong văn bản đồng ý).
+- Thử trên preview: con mở một bài luyện Studio → dưới câu không còn khung "Gia sư" / nút "Hỏi"; màn Hôm nay không còn dòng 💡.

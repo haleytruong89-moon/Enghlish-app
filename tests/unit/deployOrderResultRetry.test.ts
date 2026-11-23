@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { modeText, showAskTutor } from "@/components/student/desk/taskText";
+import { modeText } from "@/components/student/desk/taskText";
 import { parseTestMarks } from "@/lib/student/shape";
 import type { Task } from "@/lib/student/types";
 
@@ -39,10 +39,8 @@ describe("assigning before and after 0034", () => {
 
 describe("the child's desk labels a test", () => {
   const task = { kind: "app", activityId: "a", assignmentId: null, stepNo: 1, activityType: "ACT-SOURCE-QA", title: "T", dueOn: null, opensOn: "", timeMin: null, doable: true, practice: true, mode: "PRACTICE", purpose: [], offLabel: null, hasDraft: false, draftAt: null, filled: null, total: null } satisfies Task;
-  it("a flagged work says 'Bài kiểm tra' and has no hint slot; a practice one keeps both", () => {
+  it("a flagged work says 'Bài kiểm tra'; a practice one does not", () => {
     expect(modeText({ ...task, isTest: true })).toBe("Bài kiểm tra");
-    expect(showAskTutor({ ...task, isTest: true })).toBe(false);
-    expect(showAskTutor(task)).toBe(true);
     expect(modeText(task)).not.toBe("Bài kiểm tra");
   });
   it("test marks: only the two id lists are accepted", () => {

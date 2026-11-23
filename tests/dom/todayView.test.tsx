@@ -39,14 +39,11 @@ describe("Hôm nay", () => {
     expect(card.textContent).toContain(studentDeskCopy.minutes(10));
   });
 
-  it("E1: practice items point to the 'Hỏi' button inside the work; no dimmed 'Sắp có' button on the card any more", () => {
-    const { unmount } = show([studio]);
+  it("22/11: the card carries no tutor (no dimmed 'Sắp có' button, no pointer): the tutor is not part of the work", () => {
+    show([studio]);
     expect(screen.queryByTestId("ask-tutor")).toBeNull();
-    expect(screen.getByTestId("ask-tutor-hint").textContent).toContain(studentDeskCopy.askTutorHint);
-    expect(screen.queryByText(/Sắp có/)).toBeNull();
-    unmount();
-    show([task({ practice: false })]);
     expect(screen.queryByTestId("ask-tutor-hint")).toBeNull();
+    expect(screen.queryByText(/Sắp có/)).toBeNull();
   });
 
   it("buttons are big enough (min-h-12 for the main one, min-h-11 for the others) and an off-app step is listed but not a link", () => {

@@ -133,7 +133,7 @@ describe("levels 1–2 and what counts as help (D4, D5)", () => {
     ["declared help (notes)", { assistance: [NOTES] }],
     ["help the tutor saw (frame)", { assistance: [{ kind: "frame", verification: "observed" as const }] }],
     ["paper work with unknown help (UAT-06)", { declaredUnknown: true }],
-    ["a PRACTICE step ('Luyện tập (có gợi ý)')", { mode: "PRACTICE" as const }],
+    ["a PRACTICE step ('Luyện tập')", { mode: "PRACTICE" as const }],
     ["an S6 revision: never a first attempt (FR-14a)", { mode: "REVISION" as const, isFirstAttempt: false, facets: { revision: true }, assistance: [{ kind: "tutor_prompt", verification: "observed" as const }] }],
     ["a retry in the same learning family", { isFirstAttempt: false }],
   ])("%s at 4/4 is only 'Làm được khi có gợi ý' (AUTO, no proposal)", (_name, o) => {

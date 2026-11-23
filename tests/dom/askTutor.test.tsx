@@ -35,7 +35,7 @@ function stubFetch(turns: { text: string; level: number; kind: string; fixed?: s
 describe("E1 · Hỏi under a Studio practice question", () => {
   it("Hỏi → H1 in the yellow box; Gợi ý tiếp → H2 … H3; then the reminder to answer and no more button; turns stay when moving between questions", async () => {
     const calls = stubFetch([{ text: "Hint one?", level: 1, kind: "hint" }, { text: "Hint two?", level: 2, kind: "hint" }, { text: "Hint three?", level: 3, kind: "hint" }]);
-    render(<Player activity={ACT} isTest={false} initialResult={null} parts={PARTS} />);
+    render(<Player activity={ACT} isTest={false} initialResult={null} parts={PARTS} tutorInWork />);
     expect(screen.queryByTestId("ask-tutor")).toBeNull(); // the dimmed "Sắp có" slot is gone
     fireEvent.click(screen.getByTestId("tutor-ask"));
     await waitFor(() => expect(screen.getAllByTestId("tutor-text").map((x) => x.textContent)).toEqual(["Hint one?"]));
@@ -56,17 +56,17 @@ describe("E1 · Hỏi under a Studio practice question", () => {
 
   it("a short question goes with the request; a test or work without parts has no Hỏi", async () => {
     const calls = stubFetch([{ text: "Cathedral là nhà thờ lớn. Bạn đọc lại câu xem cần nơi nào?", level: 0, kind: "question" }]);
-    render(<Player activity={ACT} isTest={false} initialResult={null} parts={PARTS} />);
+    render(<Player activity={ACT} isTest={false} initialResult={null} parts={PARTS} tutorInWork />);
     fireEvent.click(screen.getByTestId("tutor-open-question"));
     fireEvent.change(screen.getByTestId("tutor-question"), { target: { value: "cathedral nghĩa là gì?" } });
     fireEvent.click(screen.getByTestId("tutor-send"));
     await waitFor(() => expect(screen.getByTestId("tutor-text").getAttribute("lang")).toBe("vi"));
     expect(calls[0]!.body).toMatchObject({ item_id: "q1", question: "cathedral nghĩa là gì?" });
     cleanup();
-    render(<Player activity={ACT} isTest initialResult={null} parts={PARTS} />);
+    render(<Player activity={ACT} isTest initialResult={null} parts={PARTS} tutorInWork />);
     expect(screen.queryByTestId("tutor-ask")).toBeNull();
     cleanup();
-    render(<Player activity={ACT} isTest={false} initialResult={null} parts={null} />);
+    render(<Player activity={ACT} isTest={false} initialResult={null} parts={null} tutorInWork />);
     expect(screen.queryByTestId("tutor-ask")).toBeNull();
     expect(screen.getByTestId("ask-tutor")).toBeTruthy();
   });
@@ -77,7 +77,7 @@ describe("E1 · Hỏi under a Studio practice question", () => {
       { text: "", level: 0, kind: "hint", fail: true },
       { text: "Hint one?", level: 1, kind: "hint" },
     ]);
-    render(<Player activity={ACT} isTest={false} initialResult={null} parts={PARTS} />);
+    render(<Player activity={ACT} isTest={false} initialResult={null} parts={PARTS} tutorInWork />);
     fireEvent.click(screen.getByTestId("tutor-ask"));
     await waitFor(() => expect(screen.getAllByTestId("tutor-text")).toHaveLength(1));
     fireEvent.click(screen.getByTestId("tutor-ask")); // still there
@@ -86,5 +86,14 @@ describe("E1 · Hỏi under a Studio practice question", () => {
     await waitFor(() => expect(screen.getAllByTestId("tutor-text")).toHaveLength(2));
     expect(calls[2]!.body.client_id).toBe(calls[1]!.body.client_id);
     expect(calls[1]!.body.client_id).not.toBe(calls[0]!.body.client_id);
+  });
+
+  it("22/11: by default (setting off) a work has no tutor at all: no Hỏi, no dimmed slot", () => {
+    render(<Player activity={ACT} isTest={false} initialResult={null} parts={PARTS} />);
+    expect(screen.queryByTestId("tutor-ask")).toBeNull();
+    expect(screen.queryByTestId("ask-tutor")).toBeNull();
+    cleanup();
+    render(<Player activity={ACT} isTest={false} initialResult={null} parts={null} />);
+    expect(screen.queryByTestId("ask-tutor")).toBeNull();
   });
 });
