@@ -9,6 +9,10 @@ export const AI_FAKE_FIXTURES: Record<string, string> = {
   save_read_answers: "tests/fixtures/import/fake-read-answers.json",
   give_hint: "tests/fixtures/tutor/fake-hint.json",
   check_hint: "tests/fixtures/tutor/fake-check.json",
+  save_vocab_card: "tests/fixtures/notebook/fake-card.json",
+  check_vocab_card: "tests/fixtures/notebook/fake-card-check.json",
+  pick_sense: "tests/fixtures/notebook/fake-sense.json",
+  explain_again: "tests/fixtures/notebook/fake-again.json",
 };
 export const fakeFixtureFor = (toolName: string): string => AI_FAKE_FIXTURES[toolName] ?? AI_FAKE_FIXTURE;
 /** Version of the short consent text on /settings/ai (consents.notice_version). Change the text → new version. */
