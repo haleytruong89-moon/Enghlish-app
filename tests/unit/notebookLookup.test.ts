@@ -23,7 +23,7 @@ function setup(o: Opts = {}) {
     context: vi.fn(async (_a: Parameters<LookupStore["context"]>[0]) => (o.ctx ?? CTX) as unknown),
     findCard: vi.fn(async () => (o.cached ? { id: "card-old", content: o.cached } : null)),
     cardById: vi.fn(async (id: string) => ({ id, content: CARD })),
-    saveCard: vi.fn(async () => "card-new"),
+    saveCard: vi.fn(async (_a: Parameters<LookupStore["saveCard"]>[0]) => "card-new"),
     ipa: vi.fn(async () => o.ipa ?? [{ word: "make", accent: "uk", ipa: ["/ˈmeɪk/"] }, { word: "make", accent: "us", ipa: ["/ˈmeɪk/"] }]),
     gate: vi.fn(async (_a: Parameters<LookupStore["gate"]>[0]) => ({ family_id: "f1", enabled: true, consent: true, spent_usd: 1, monthly_cap_usd: 20, soft_cap_usd: 18, soft_reached: false, allowed: o.gateAllowed ?? true, reason: o.gateAllowed === false ? "cap" : null, reservation_id: o.gateAllowed === false ? null : "res-1" })),
     logRun: vi.fn(async (_a: Parameters<LookupStore["logRun"]>[0]) => `run-${calls.length}`),
