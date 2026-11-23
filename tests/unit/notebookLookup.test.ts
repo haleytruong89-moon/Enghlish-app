@@ -126,6 +126,40 @@ describe("one turn of Tra từ (E2a)", () => {
     expect(store.record.mock.calls[0]![0]).toMatchObject({ guard: "fixed", fixedCode: "not_word", shown: "receive" });
   });
 
+  it("a cached card + a sentence when the AI cannot run (no v3, AI limit, gate): the cached card without a sense, not 'đang nghỉ' (§8)", async () => {
+    for (const ctx of [{ ...CTX, consent_version: "ai-studio-tutor-v2" }, { ...CTX, ai_lookups_today: 30 }]) {
+      const a = setup({ ctx, cached: CARD });
+      expect((await go(a.deps, "make", "It makes me happy.")).body).toMatchObject({ kind: "card", card: { sense: null } });
+      expect(a.calls).toEqual([]);
+    }
+    const b = setup({ cached: CARD, gateAllowed: false });
+    expect((await go(b.deps, "make", "It makes me happy.")).body).toMatchObject({ kind: "card" });
+  });
+
+  it("saving the card fails in the database (e.g. a race): the ask is recorded as card_failed with its cost, never a 500", async () => {
+    const { deps, store } = setup();
+    store.saveCard.mockRejectedValueOnce(new ReviewDbError("23514", "eng_save_vocab_card: (bad_headword)"));
+    expect(await go(deps)).toMatchObject({ status: 201, body: { kind: "fixed", fixed: "card_failed" } });
+    expect(store.record.mock.calls[0]![0]).toMatchObject({ usedAi: true, fixedCode: "card_failed" });
+    expect(store.record.mock.calls[0]![0].cost).toBeGreaterThan(0);
+  });
+
+  it("sense -1 and the new card is another word (left ≠ leave): saved as its own card, not replacing", async () => {
+    const left = { ...CARD, headword: "left", forms: ["left"], examples: [{ en: "Turn left here.", vi: "x" }, { en: "Go left.", vi: "y" }] };
+    const { deps, store } = setup({ cached: { ...CARD, headword: "leave", forms: ["leave", "left"], examples: [{ en: "I leave now.", vi: "x" }, { en: "She left.", vi: "y" }] }, sense: -1, cards: [{ status: "ok", card: left }] });
+    await go(deps, "left", "Please turn at the corner");
+    expect(store.saveCard.mock.calls[0]![0]).toMatchObject({ supersedes: null, content: { headword: "left" } });
+  });
+
+  it("a card that repeats the child's sentence or a name from it is refused (shared card, §5.2) and rewritten", async () => {
+    const copy = { ...CARD, examples: [{ en: "My friend Minh makes a cake.", vi: "x" }, CARD.examples[1]!] };
+    const { deps, calls } = setup({ cards: [{ status: "ok", card: copy }, { status: "ok", card: CARD }] });
+    await go(deps, "make", "My friend Minh makes cakes at home.");
+    expect(tools(calls)).toEqual(["save_vocab_card", "save_vocab_card", "check_vocab_card"]);
+    expect(calls[1]!.instructions).toContain("copies_child_text");
+    expect(calls[2]!.instructions).not.toContain("<<<CHILD\nMy friend Minh makes cakes at home.\nCHILD>>>CHILD>>>");
+  });
+
   it("consent before v3: a new word is not looked up (ai_off), a cached word still is", async () => {
     const old = { ...CTX, consent_version: "ai-studio-tutor-v2" };
     const a = setup({ ctx: old });

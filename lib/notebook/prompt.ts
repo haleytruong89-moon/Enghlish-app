@@ -105,6 +105,8 @@ export const againTool: ToolSpec = {
 };
 
 const fill = (t: string, vars: Record<string, string>) => t.replace(/\{\{([A-Z_]+)\}\}/g, (_, k: string) => vars[k] ?? "");
+/** The child's text goes between <<<CHILD … CHILD>>>: it can never close that block. */
+export const asData = (s: string | null | undefined) => (s ?? "").replace(/[<>]{2,}/g, " ").replace(/\b(CHILD|WORD|CARD)\b/g, (m) => m.toLowerCase());
 
 export function buildCardCall(o: {
   template: string; model: string; word: string; context: string | null; language: string; band: string; rewriteFor?: string[];
@@ -126,7 +128,7 @@ export function buildCardCall(o: {
       LENGTH_RULE: lang.length,
       WHY_LINES: String(WHY_MAX_LINES[o.language] ?? WHY_MAX_LINES.vi),
       WORD: o.word,
-      CONTEXT: o.context ?? "",
+      CONTEXT: asData(o.context),
       KEEP_SENSES: keep,
       REWRITE: rewrite,
     }),
@@ -136,11 +138,11 @@ export function buildCardCall(o: {
   };
 }
 
-export function buildCardCheckCall(o: { template: string; model: string; word: string; card: unknown; language: string; band: string; toolChoice?: "tool" | "auto" }): ToolCall {
+export function buildCardCheckCall(o: { template: string; model: string; word: string; card: unknown; language: string; band: string; context?: string | null; toolChoice?: "tool" | "auto" }): ToolCall {
   return {
     model: o.model,
     documents: [],
-    instructions: fill(o.template, { BAND: o.band || "(unknown)", LANGUAGE: o.language, WORD: o.word, CARD: JSON.stringify(o.card) }),
+    instructions: fill(o.template, { BAND: o.band || "(unknown)", LANGUAGE: o.language, WORD: o.word, CONTEXT: asData(o.context), CARD: JSON.stringify(o.card) }),
     tool: cardCheckTool,
     maxTokens: CHECK_MAX_TOKENS,
     toolChoice: o.toolChoice ?? "auto",
@@ -154,7 +156,7 @@ export function buildSenseCall(o: { template: string; model: string; word: strin
     instructions: fill(o.template, {
       WORD: o.word,
       SENSES: o.senses.map((s, i) => `${i}. ${s.meaning_vi}${s.meaning_en ? ` / ${s.meaning_en}` : ""}`).join("\n"),
-      CONTEXT: o.context,
+      CONTEXT: asData(o.context),
     }),
     tool: senseTool,
     maxTokens: SENSE_MAX_TOKENS,

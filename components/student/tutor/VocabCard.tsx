@@ -7,6 +7,7 @@ import type { AgainView } from "@/lib/notebook/lookup";
 import { SpeakButton, useHasVoice } from "./SpeakButton";
 
 type Rating = "good" | "ok" | "confused";
+const LOOKABLE = /^[A-Za-z' -]{1,40}$/;
 
 const block = "flex flex-col gap-1.5";
 const head = "text-xs font-bold uppercase tracking-wide text-[#6B5200]";
@@ -162,12 +163,17 @@ export function VocabCard({
           <section className={block} data-testid="card-related">
             <h4 className={head}>{c.related}</h4>
             <div className="flex flex-wrap gap-2">
-              {card.related.map((r) => (
-                <button key={r} type="button" lang="en" onClick={() => onLookup?.(r)} disabled={!onLookup}
-                  className="min-h-11 rounded-full border border-line bg-white px-4 text-sm" data-testid={`related-${r}`}>
-                  {r}
-                </button>
-              ))}
+              {card.related.map((r) =>
+                // Only a plain English word / phrase can be looked up; a grammar point ("make + noun") is shown as text.
+                LOOKABLE.test(r.trim()) && r.trim().split(/\s+/).length <= 4 ? (
+                  <button key={r} type="button" lang="en" onClick={() => onLookup?.(r.trim())} disabled={!onLookup}
+                    className="min-h-11 rounded-full border border-line bg-white px-4 text-sm" data-testid={`related-${r}`}>
+                    {r}
+                  </button>
+                ) : (
+                  <span key={r} lang="en" className="inline-flex min-h-11 items-center rounded-full bg-white/60 px-4 text-sm text-muted" data-testid={`related-${r}`}>{r}</span>
+                ),
+              )}
             </div>
             {onLookup ? <p className="text-sm text-muted">{c.relatedHint}</p> : null}
           </section>

@@ -640,6 +640,9 @@ Spec `docs/superpowers/specs/2026-11-22-gia-su-so-tay-design.md` (bản 0.2, ph�
   10. Haiku kiểm (`vocab-check.v1`); Haiku lỗi tính là trượt.
   11. Viết lại 1 lần → không được thì câu cố định `card_failed`.
   12. `eng_save_vocab_card` → ghi sổ AI ở cuối, trả chỗ giữ bằng lần chạy cuối cùng cùng mục đích → `eng_record_tutor_ask`.
+  - Lưu thẻ: bản mới luôn THAY bản hiện hành cùng khóa (khóa theo khóa thẻ), nên thẻ con thấy là thẻ được lưu và dạng mới (went → go) vào bộ tìm. Câu chỉ sang từ khác (left ≠ leave) thì thành thẻ riêng. Lưu lỗi → câu cố định `card_failed`, vẫn ghi lượt + chi phí, không bao giờ 500.
+  - Câu con gõ không bao giờ vào thẻ dùng chung (§5.2): prompt cấm, code từ chối thẻ lặp 4 từ liền hoặc một từ viết hoa của câu (`copiesChildText`), Haiku nhận câu để kiểm; câu không thể đóng khối dữ liệu (`asData`).
+  - Thẻ có sẵn + câu mà AI không chạy được (chưa v3, hết lượt AI, cổng từ chối): trả thẻ có sẵn, không in đậm nghĩa (§8).
 - **Phiên âm** không nằm trong thẻ: mỗi lần trả thẻ, code ghép từ `ipa_lexicon` (`eng_ipa_for`, `lib/notebook/view.ts`).
   - Bảng nạp bằng `scripts/seed-ipa.ts` / workflow "Seed IPA lexicon" từ ipa-dict (MIT, commit ghim, sha256).
   - Chuẩn hóa: dấu nhấn về đầu âm tiết, `ɹ` → `r`, `ɐ` → `ʌ`/`ə`.
@@ -649,7 +652,7 @@ Spec `docs/superpowers/specs/2026-11-22-gia-su-so-tay-design.md` (bản 0.2, ph�
   - chỉ trên lượt `lookup` của chính con;
   - một lượt AI (`vocab-again.v1`, `vocab_again`), kiểm code + Haiku như thẻ;
   - lưu `kind = 'again'`, `parent_ask`, `shown_text` = JSON đã qua kiểm.
-- **Sổ tay** (`/notebook`): `eng_notebook_save` (đã có thì `already`; đã bỏ thì thêm lại), `eng_notebook_set` (`remove` / `restore`), `eng_my_notebook`. Mở thẻ ở `/tutor/card/[cardId]`, luôn là bản hiện hành (`eng_my_vocab_card` đi theo chuỗi `supersedes`).
+- **Sổ tay** (`/notebook`): `eng_notebook_save` (đã có thì `already`; đã bỏ thì thêm lại), `eng_notebook_set` (`remove` / `restore`), `eng_my_notebook` (nghĩa lấy từ bản hiện hành). Mở thẻ ở `/tutor/card/[cardId]`, luôn là bản hiện hành (`eng_my_vocab_card` đi theo chuỗi `supersedes`); người lớn xem đúng bản con đã thấy (`p_exact`).
 - **😊 / 😐 / 😕:** `eng_rate_tutor_ask` (bảng chỉ thêm `tutor_ask_ratings`, lần mới nhất thắng).
 - **Người lớn** (D-G8): trang `/learners/[id]/tutor-asks` ("Con hỏi Gia sư", con của mục Hồ sơ học sinh).
   - `eng_tutor_asks_for` kiểm `eng_is_staff_of`: phụ huynh và thầy/cô của em đọc được; thầy/cô em khác và con bị từ chối (42501).

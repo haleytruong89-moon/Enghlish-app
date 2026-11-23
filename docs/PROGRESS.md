@@ -2067,7 +2067,10 @@ Nhánh `feature/e2a-gia-su-so-tay`. Spec `docs/superpowers/specs/2026-11-22-gia-
 - Thời gian một lượt 55 giây (route 60 giây), thay vì 100 giây như E1.
 - Thẻ có sẵn + câu: nếu Haiku chọn nghĩa lỗi thì vẫn trả thẻ (không nghĩa in đậm), không mua thẻ mới.
 - Thêm `readOnly` cho thẻ ở trang người lớn.
-- "Từ vừa tra" mở `/tutor/card/[cardId]` (không tính lượt).
+- "Từ vừa tra" mở `/tutor/card/[cardId]` (không tính lượt), mỗi từ một dòng.
+
+**Sau rà soát (Opus, 23/11) đã sửa:** lưu thẻ lỗi không còn ra 500 (ghi `card_failed` + chi phí); câu con gõ không thể vào thẻ dùng chung (prompt + code + Haiku); thẻ con thấy luôn là thẻ được lưu; thẻ có sẵn vẫn trả khi AI không chạy; người lớn xem đúng bản thẻ con đã thấy; trigger chỉ thêm của `vocab_cards` không mở cả khi xóa dữ liệu; nghĩa trong Sổ tay theo bản mới; đồng ý đã tắt tính như chưa có; chấm 😊 lặp không thêm dòng; ô "Liên quan" không tra được thì hiện chữ thường; phiên âm trong `[…]` cũng bị chặn; cờ chèn lệnh bớt báo nhầm.
+**Còn để sau (ghi lại, mức thấp):** hai yêu cầu cùng `client_id` chạy song song (mạng chập, con bấm lại khi yêu cầu đầu chưa xong) có thể tính tiền hai lần; giới hạn lượt / ngày có thể vượt 1–2 lượt khi bấm rất nhanh cùng lúc.
 
 **Cách thử trên preview (em thử):**
 1. Đăng nhập phụ huynh → Cài đặt AI → bật / đồng ý lại.

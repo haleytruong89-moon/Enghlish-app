@@ -63,8 +63,25 @@ function allStrings(v: unknown, out: string[] = []): string[] {
 }
 
 const VI_MARK = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
-// "/…/" holding an IPA-only symbol: the model wrote a transcription (L3).
-const IPA_LIKE = /\/[^/\n]*[ˈˌəɪʊʌɒɔæɑɜθðʃʒŋː][^/\n]*\//;
+// "/…/" or "[…]" holding an IPA-only symbol: the model wrote a transcription (L3).
+export const IPA_LIKE = /\/[^/\n]*[ˈˌəɪʊʌɒɔæɑɜθðʃʒŋː][^/\n]*\/|\[[^\]\n]*[ˈˌəɪʊʌɒɔæɑɜθðʃʒŋː][^\]\n]*\]/;
+/** What the database accepts as a card's headword (vocab_cards.headword). */
+export const HEADWORD_RE = /^[a-z' -]{1,40}$/;
+
+const wordsOf = (t: string) => t.toLowerCase().normalize("NFC").match(/[\p{L}\p{N}']+/gu) ?? [];
+/**
+ * The child's sentence must never end up in the SHARED card (spec §5.2; purge keeps shared cards): refused when the card repeats any
+ * 4 words in a row of it, or a capitalised name from it (not the first word, not "I", not the looked-up word).
+ */
+export function copiesChildText(card: unknown, context: string | null, headword: string): boolean {
+  if (!context) return false;
+  const text = ` ${wordsOf(allStrings(card).join(" \n ")).join(" ")} `;
+  const w = wordsOf(context);
+  for (let i = 0; i + 4 <= w.length; i++) if (text.includes(` ${w.slice(i, i + 4).join(" ")} `)) return true;
+  const tokens = context.normalize("NFC").match(/[\p{L}']+/gu) ?? [];
+  const head = new Set(headword.toLowerCase().split(/\s+/));
+  return tokens.slice(1).some((t) => /^\p{Lu}\p{L}+$/u.test(t) && t !== "I" && !head.has(t.toLowerCase()) && text.includes(` ${t.toLowerCase()} `));
+}
 
 export type CardReason =
   | "example_missing_word"
@@ -74,10 +91,14 @@ export type CardReason =
   | "has_url"
   | "has_ipa"
   | "too_many_lines"
-  | "missing_vietnamese";
+  | "missing_vietnamese"
+  | "bad_headword"
+  | "copies_child_text";
 
-export function cardCodeReasons(card: CardContent, opts: { headword: string; language: string }): CardReason[] {
+export function cardCodeReasons(card: CardContent, opts: { headword: string; language: string; context?: string | null }): CardReason[] {
   const r = new Set<CardReason>();
+  if (!HEADWORD_RE.test(card.headword.trim().toLowerCase())) r.add("bad_headword");
+  if (copiesChildText(card, opts.context ?? null, opts.headword)) r.add("copies_child_text");
   const head = card.headword.toLowerCase();
   const forms = new Set([head, opts.headword.toLowerCase(), ...card.forms.map((f) => f.toLowerCase()), ...card.family.map((f) => f.form.toLowerCase())]);
   for (const ex of card.examples) if (![...forms].some((f) => hasWord(ex.en, f))) r.add("example_missing_word");

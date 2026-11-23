@@ -7,11 +7,11 @@ import { requireLearnerPage } from "@/lib/tutorwork/page";
 
 export const dynamic = "force-dynamic";
 
-/** The card the child saw, for the parent / tutor (read-only: no save, no "Chưa hiểu", no 😊). */
+/** The very version of the card the child saw, for the parent / tutor (read-only: no save, no "Chưa hiểu", no 😊). */
 export default async function TutorAskCardPage({ params }: { params: Promise<{ id: string; cardId: string }> }) {
   const { id, cardId } = await params;
   const { learner } = await requireLearnerPage(id, "tutorwork:read");
-  const card = await loadCardView(cardId);
+  const card = await loadCardView(cardId, { exact: true });
   if (!card) notFound();
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-3" data-testid="tutor-ask-card-page">

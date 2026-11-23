@@ -236,7 +236,7 @@ begin
   end loop;
   -- Thẻ dùng chung: không có learner_id; chỉ thêm, không bao giờ sửa / xóa (kể cả khi xóa dữ liệu một em).
   drop trigger if exists vocab_cards_forbid_mutation on english.vocab_cards;
-  create trigger vocab_cards_forbid_mutation before update or delete on english.vocab_cards for each row execute function english.eng_forbid_mutation('*');
+  create trigger vocab_cards_forbid_mutation before update or delete on english.vocab_cards for each row execute function english.eng_forbid_mutation('headword'); -- never a learner id: no row ever matches, even inside purge
   drop trigger if exists vocab_cards_forbid_truncate on english.vocab_cards;
   create trigger vocab_cards_forbid_truncate before truncate on english.vocab_cards for each statement execute function english.eng_forbid_mutation();
   alter table english.vocab_cards enable row level security;
@@ -285,7 +285,8 @@ begin
                          where a.learner_id = v_l.id and a.used_ai and (a.created_at at time zone 'Asia/Ho_Chi_Minh')::date = english.eng_today_vn()),
     'ai_lookup_limit', coalesce((english.eng_track_setting(v_l.track_id, 'tutor_lookup_ai_daily_limit') #>> '{}')::int, 30),
     -- Văn bản đồng ý mới nhất mà phụ huynh đã bấm cho em (ai_text): máy chủ so với bản v3 (Gia sư là mục riêng, câu hỏi được lưu).
-    'consent_version', (select c.notice_version from english.consents c where c.learner_id = v_l.id and c.scope = 'ai_text' and c.granted
+    -- Dòng đồng ý ai_text MỚI NHẤT (kể cả dòng tắt): đã tắt thì null, máy chủ coi như chưa đồng ý.
+    'consent_version', (select case when c.granted then c.notice_version end from english.consents c where c.learner_id = v_l.id and c.scope = 'ai_text'
                         order by c.at desc, c.id desc limit 1),
     'ask', v_ask);
 end
@@ -316,8 +317,9 @@ $$;
 revoke execute on function english.eng_vocab_card_by_id(uuid) from public, anon, authenticated;
 grant execute on function english.eng_vocab_card_by_id(uuid) to service_role;
 
--- Lưu một thẻ đã qua kiểm (code + Haiku ở máy chủ). Chưa có thẻ cùng khóa mà p_supersedes null → thêm; đã có (hai em tra cùng lúc)
--- → trả thẻ hiện hành, không thêm bản thứ hai. p_supersedes phải là bản hiện hành cùng khóa (bad_supersedes).
+-- Lưu một thẻ đã qua kiểm (code + Haiku ở máy chủ). Bản mới luôn THAY bản hiện hành cùng khóa (headword, band, language) nếu có — kể cả khi
+-- hai em tra cùng lúc (khóa theo khóa thẻ), để thẻ con thấy luôn là thẻ được lưu và các dạng mới (went → go) vào được bộ tìm.
+-- p_supersedes (không bắt buộc) phải cùng khóa (bad_supersedes); thẻ bị thay là bản hiện hành lúc ghi, không phải p_supersedes.
 create or replace function english.eng_save_vocab_card(
   p_band text, p_language text, p_content jsonb, p_prompt_version text, p_model text, p_supersedes uuid default null
 ) returns uuid
@@ -326,28 +328,29 @@ as $$
 declare
   v_head text := pg_catalog.lower(pg_catalog.btrim(p_content ->> 'headword'));
   v_forms text[];
+  v_cur uuid;
   v_id uuid;
 begin
   if p_band is null or p_language is null or p_content is null or v_head is null then
     raise exception 'eng_save_vocab_card: band, language and content with a headword are required' using errcode = '22004';
   end if;
-  select coalesce(pg_catalog.array_agg(distinct pg_catalog.lower(pg_catalog.btrim(f))), '{}') into v_forms
-  from pg_catalog.jsonb_array_elements_text(coalesce(p_content -> 'forms', '[]'::jsonb)) f;
-  if not (v_head = any(v_forms)) then v_forms := v_forms || v_head; end if;
-  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('vocab_card:' || v_head || ':' || p_band || ':' || p_language, 0));
-  if p_supersedes is null then
-    select v.id into v_id from english.vocab_cards v
-    where v.headword = v_head and v.band = p_band and v.language = p_language
-      and not exists (select 1 from english.vocab_cards n where n.supersedes = v.id)
-    order by v.created_at desc limit 1;
-    if v_id is not null then return v_id; end if;
-  elsif not exists (select 1 from english.vocab_cards v
-                    where v.id = p_supersedes and v.headword = v_head and v.band = p_band and v.language = p_language
-                      and not exists (select 1 from english.vocab_cards n where n.supersedes = v.id)) then
-    raise exception 'eng_save_vocab_card: only the current card of the same word can be replaced (bad_supersedes)' using errcode = '23514';
+  if v_head !~ '^[a-z'' -]{1,40}$' then
+    raise exception 'eng_save_vocab_card: headword must be plain English letters (bad_headword)' using errcode = '23514';
   end if;
+  select coalesce(pg_catalog.array_agg(distinct f2), '{}') into v_forms
+  from (select pg_catalog.lower(pg_catalog.btrim(f)) as f2 from pg_catalog.jsonb_array_elements_text(coalesce(p_content -> 'forms', '[]'::jsonb)) f) x
+  where x.f2 ~ '^[a-z'' -]{1,40}$';
+  if not (v_head = any(v_forms)) then v_forms := v_forms || v_head; end if;
+  if p_supersedes is not null and not exists (select 1 from english.vocab_cards v where v.id = p_supersedes and v.headword = v_head and v.band = p_band and v.language = p_language) then
+    raise exception 'eng_save_vocab_card: only a card of the same word can be replaced (bad_supersedes)' using errcode = '23514';
+  end if;
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('vocab_card:' || v_head || ':' || p_band || ':' || p_language, 0));
+  select v.id into v_cur from english.vocab_cards v
+  where v.headword = v_head and v.band = p_band and v.language = p_language
+    and not exists (select 1 from english.vocab_cards n where n.supersedes = v.id)
+  order by v.created_at desc limit 1;
   insert into english.vocab_cards(headword, forms, band, language, content, prompt_version, model, supersedes)
-  values (v_head, v_forms, p_band, p_language, p_content, p_prompt_version, p_model, p_supersedes)
+  values (v_head, v_forms, p_band, p_language, p_content, p_prompt_version, p_model, v_cur)
   returning id into v_id;
   return v_id;
 end
@@ -426,7 +429,8 @@ begin
                       where a.learner_id = v_l.id and coalesce(a.fixed_code, '') not in ('daily_limit', 'ai_daily_limit')
                         and (a.created_at at time zone 'Asia/Ho_Chi_Minh')::date = english.eng_today_vn()),
     'lookup_limit', coalesce((english.eng_track_setting(v_l.track_id, 'tutor_lookup_daily_limit') #>> '{}')::int, 60),
-    'consent_version', (select c.notice_version from english.consents c where c.learner_id = v_l.id and c.scope = 'ai_text' and c.granted
+    -- Dòng đồng ý ai_text MỚI NHẤT (kể cả dòng tắt): đã tắt thì null, máy chủ coi như chưa đồng ý.
+    'consent_version', (select case when c.granted then c.notice_version end from english.consents c where c.learner_id = v_l.id and c.scope = 'ai_text'
                         order by c.at desc, c.id desc limit 1),
     'ai_enabled', coalesce((select s.enabled from english.ai_settings s where s.family_id = v_l.family_id), false));
 end
@@ -440,39 +444,53 @@ declare
 begin
   v_l := english.eng_my_learner_for_tutor();
   if v_l.id is null then return '[]'::jsonb; end if;
-  -- Mỗi thẻ một dòng (lượt tra gần nhất của thẻ đó), mới nhất trước.
+  -- Mỗi từ một dòng (lượt tra gần nhất của từ đó, mọi phiên bản thẻ), mới nhất trước.
   return coalesce((
-    select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('ask_id', r.id, 'headword', v.headword, 'card_id', r.card_id, 'at', r.created_at) order by r.created_at desc)
+    select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('ask_id', r.id, 'headword', r.headword, 'card_id', r.card_id, 'at', r.created_at) order by r.created_at desc)
     from (
       select d.* from (
-        select distinct on (a.card_id) a.id, a.card_id, a.created_at
-        from english.tutor_asks a
-        where a.learner_id = v_l.id and a.kind = 'lookup' and a.card_id is not null
-        order by a.card_id, a.created_at desc) d
+        select distinct on (v.headword) a.id, a.card_id, a.created_at, v.headword
+        from english.tutor_asks a join english.vocab_cards v on v.id = a.card_id
+        where a.learner_id = v_l.id and a.kind = 'lookup'
+        order by v.headword, a.created_at desc) d
       order by d.created_at desc
-      limit least(greatest(coalesce(p_limit, 5), 1), 20)) r
-    join english.vocab_cards v on v.id = r.card_id), '[]'::jsonb);
+      limit least(greatest(coalesce(p_limit, 5), 1), 20)) r), '[]'::jsonb);
 end
 $$;
 
--- Một thẻ: luôn trả BẢN HIỆN HÀNH của chuỗi (§9). Mọi thành viên đã đăng nhập (con, người lớn) đọc được: thẻ không có gì của em.
-create or replace function english.eng_my_vocab_card(p_card uuid) returns jsonb
+-- Bản hiện hành của chuỗi phiên bản chứa p_card (đi theo supersedes). Dùng nội bộ.
+create or replace function english.eng_vocab_card_head(p_card uuid) returns uuid
 language plpgsql stable security definer set search_path = ''
 as $$
 declare
   v_cur uuid := p_card;
   v_next uuid;
+  v_steps int := 0;
+begin
+  loop
+    select n.id into v_next from english.vocab_cards n where n.supersedes = v_cur;
+    exit when v_next is null or v_steps > 1000;
+    v_cur := v_next;
+    v_next := null;
+    v_steps := v_steps + 1;
+  end loop;
+  return v_cur;
+end
+$$;
+revoke execute on function english.eng_vocab_card_head(uuid) from public, anon, authenticated, service_role;
+
+-- Một thẻ. Mặc định trả BẢN HIỆN HÀNH của chuỗi (§9: Sổ tay, "Từ vừa tra"); p_exact = đúng bản đó (người lớn xem thẻ con đã thấy).
+-- Mọi thành viên đã đăng nhập (con, người lớn) đọc được: thẻ không có gì của em.
+create or replace function english.eng_my_vocab_card(p_card uuid, p_exact boolean default false) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
   v_row english.vocab_cards%rowtype;
 begin
   if not exists (select 1 from english.members m where m.user_id = auth.uid()) then return null; end if;
   if not exists (select 1 from english.vocab_cards v where v.id = p_card) then return null; end if;
-  loop
-    select n.id into v_next from english.vocab_cards n where n.supersedes = v_cur;
-    exit when v_next is null;
-    v_cur := v_next;
-    v_next := null;
-  end loop;
-  select * into v_row from english.vocab_cards v where v.id = v_cur;
+  select * into v_row from english.vocab_cards v
+  where v.id = case when coalesce(p_exact, false) then p_card else english.eng_vocab_card_head(p_card) end;
   return pg_catalog.jsonb_build_object('id', v_row.id, 'requested', p_card, 'headword', v_row.headword, 'content', v_row.content);
 end
 $$;
@@ -488,10 +506,10 @@ begin
   return coalesce((
     select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object(
              'item_id', i.id, 'card_id', i.card_id, 'headword', i.headword,
-             'meaning', v.content #>> '{senses,0,meaning_vi}', 'saved_at', i.created_at,
+             'meaning', h.content #>> '{senses,0,meaning_vi}', 'saved_at', i.created_at,
              'state', case when e.action = 'remove' then 'removed' else 'active' end) order by i.created_at desc)
     from english.notebook_items i
-    join english.vocab_cards v on v.id = i.card_id
+    join english.vocab_cards h on h.id = english.eng_vocab_card_head(i.card_id)
     left join lateral (select ev.action from english.notebook_item_events ev where ev.item_id = i.id order by ev.at desc, ev.id desc limit 1) e on true
     where i.learner_id = v_l.id and i.kind = coalesce(p_kind, 'word')), '[]'::jsonb);
 end
@@ -521,7 +539,8 @@ begin
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('notebook:' || v_l.id::text || ':' || v_head, 0));
   select i.id into v_item from english.notebook_items i where i.learner_id = v_l.id and i.client_id = p_client_id;
   if v_item is not null then
-    return pg_catalog.jsonb_build_object('item_id', v_item, 'already', true, 'state', 'active');
+    select ev.action into v_state from english.notebook_item_events ev where ev.item_id = v_item order by ev.at desc, ev.id desc limit 1;
+    return pg_catalog.jsonb_build_object('item_id', v_item, 'already', true, 'state', case when v_state = 'remove' then 'removed' else 'active' end);
   end if;
   select i.id into v_item from english.notebook_items i where i.learner_id = v_l.id and i.kind = 'word' and i.headword = v_head
   order by i.created_at desc limit 1;
@@ -574,7 +593,11 @@ begin
   if v_l.id is null or not exists (select 1 from english.tutor_asks a where a.id = p_ask and a.learner_id = v_l.id) then
     raise exception 'eng_rate_tutor_ask: not this child''s ask (forbidden)' using errcode = '42501';
   end if;
-  insert into english.tutor_ask_ratings(ask_id, learner_id, rating) values (p_ask, v_l.id, p_rating);
+  -- Bấm lại cùng mặt: không thêm dòng. Tối đa 20 lần đổi mỗi lượt.
+  if coalesce((select r.rating from english.tutor_ask_ratings r where r.ask_id = p_ask order by r.at desc, r.id desc limit 1), '') <> p_rating
+     and (select pg_catalog.count(*) from english.tutor_ask_ratings r where r.ask_id = p_ask) < 20 then
+    insert into english.tutor_ask_ratings(ask_id, learner_id, rating) values (p_ask, v_l.id, p_rating);
+  end if;
   return pg_catalog.jsonb_build_object('ask_id', p_ask, 'rating', p_rating);
 end
 $$;
@@ -605,7 +628,7 @@ do $$
 declare
   f text;
 begin
-  foreach f in array array['eng_my_tutor_status()', 'eng_my_recent_lookups(int)', 'eng_my_vocab_card(uuid)', 'eng_my_notebook(text)',
+  foreach f in array array['eng_my_tutor_status()', 'eng_my_recent_lookups(int)', 'eng_my_vocab_card(uuid, boolean)', 'eng_my_notebook(text)',
                            'eng_notebook_save(uuid, text)', 'eng_notebook_set(uuid, text)', 'eng_rate_tutor_ask(uuid, text)',
                            'eng_tutor_asks_for(uuid, timestamptz, int)'] loop
     execute pg_catalog.format('revoke execute on function english.%s from public, anon, service_role', f);

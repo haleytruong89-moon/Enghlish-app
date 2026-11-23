@@ -12,7 +12,7 @@ import { parseGate } from "@/lib/ai/cap";
 import { estimateCostUsd, isPricedModel } from "@/lib/ai/pricing";
 import { AiCallError, estimateInputTokens, type ToolCall, type ToolResult } from "@/lib/ai/request";
 import { ReviewDbError } from "@/lib/review/handlers";
-import { cardCodeReasons, cardContentSchema, cardToolOutputSchema, linesOf, type CardContent, type CardView } from "./card";
+import { cardCodeReasons, cardContentSchema, cardToolOutputSchema, IPA_LIKE, linesOf, type CardContent, type CardView } from "./card";
 import { checkLookupInput, isBlocked } from "./input";
 import { buildCardView, headwordWords } from "./view";
 import { AGAIN_PROMPT, buildAgainCall, buildCardCall, buildCardCheckCall, buildSenseCall, CARD_CHECK_PROMPT, CARD_PROMPT, SENSE_PROMPT } from "./prompt";
@@ -77,6 +77,8 @@ const againOut = z.object({
   examples: z.array(z.object({ en: z.string().trim().min(1).max(160), vi: z.string().trim().min(1).max(160) })).length(2), task: z.string().trim().min(1).max(200),
 });
 const SUGGESTION = /^[a-z' -]{1,40}$/;
+/** A sentence that tries to talk to the model instead of showing the word (flag only; the turn is the same). */
+const INJECTION = /ignore (all |your |the |previous )*(rules|instructions)|system\s*:|system prompt|you are now|[<>]{3}|bỏ qua (mọi |các )?(luật|quy tắc)/i;
 
 function dbTag(err: unknown): LookupResult | null {
   if (!(err instanceof ReviewDbError)) return null;
@@ -150,7 +152,7 @@ export async function runLookup(deps: LookupDeps, input: { userId: string; word:
   const ctx = ctxSchema.parse(raw);
   const language = ctx.language ?? "vi";
   const band = ctx.band ?? "";
-  const flags = context && /ignore|instruction|system prompt|you are now|bỏ qua (luật|quy tắc)/i.test(context) ? ["injection_attempt"] : [];
+  const flags = context && INJECTION.test(context) ? ["injection_attempt"] : [];
 
   const record = (a: Omit<Parameters<LookupStore["record"]>[0], "userId" | "kind" | "childText" | "contextText" | "parentAsk" | "clientId" | "flags">) =>
     deps.store.record({ userId: input.userId, kind: "lookup", childText: headword, contextText: context, parentAsk: null, clientId: input.clientId, flags, ...a });
@@ -170,13 +172,21 @@ export async function runLookup(deps: LookupDeps, input: { userId: string; word:
     return { status: r.replayed ? 200 : 201, body: { kind: "card", askId: r.id, card: await viewOf(deps.store, cachedOk.id, cachedOk.card, null), replayed: r.replayed } };
   }
 
+  // A cached card is always better than "Gia sư đang nghỉ" when the AI cannot run (spec §8): shown without a sense.
+  const cachedFallback = async (): Promise<LookupResult> => {
+    const r = await record({ cardId: cachedOk!.id, sense: null, shown: null, guard: "cache", reasons: ["no_ai_for_sense"], fixedCode: null, usedAi: false, promptVersion: null, model: null, runs: [], cost: 0 });
+    return { status: r.replayed ? 200 : 201, body: { kind: "card", askId: r.id, card: await viewOf(deps.store, cachedOk!.id, cachedOk!.card, null), replayed: r.replayed } };
+  };
   // Everything below calls a model: consent v3, the AI limit of the day, priced models, the family gate with a reservation.
-  if (ctx.consent_version !== deps.noticeVersion) return fixed("ai_off");
-  if (ctx.ai_lookups_today >= ctx.ai_lookup_limit) return fixed("ai_daily_limit");
-  if (!isPricedModel(deps.models.card) || !isPricedModel(deps.models.check)) return fixed("ai_error");
+  const blocked: LookupFixed | null =
+    ctx.consent_version !== deps.noticeVersion ? "ai_off"
+      : ctx.ai_lookups_today >= ctx.ai_lookup_limit ? "ai_daily_limit"
+        : !isPricedModel(deps.models.card) || !isPricedModel(deps.models.check) ? "ai_error"
+          : null;
+  if (blocked) return cachedOk ? cachedFallback() : fixed(blocked);
   const purpose: ReservePurpose = cachedOk ? "vocab_sense" : "vocab_card";
   const gate = parseGate(await deps.store.gate({ learnerId: ctx.learner_id, estimate: LOOKUP_RESERVE_USD, model: deps.models.card, purpose }));
-  if (!gate.allowed) return fixed("ai_off");
+  if (!gate.allowed) return cachedOk ? cachedFallback() : fixed("ai_off");
   const m = meter(deps, ctx.family_id);
   const tc = deps.models.toolChoice;
 
@@ -204,9 +214,9 @@ export async function runLookup(deps: LookupDeps, input: { userId: string; word:
       await m.call(buildCardCall({ template: deps.prompts.card, model: deps.models.card, word: headword, context, language, band, rewriteFor, keepSenses: supersedes ? cachedOk?.card.senses : undefined, toolChoice: tc }), CARD_PROMPT.version, "vocab_card"),
     );
   const check = async (card: CardContent): Promise<string[]> => {
-    const code = cardCodeReasons(card, { headword, language });
+    const code = cardCodeReasons(card, { headword, language, context });
     if (code.length) return code;
-    const out = checkOut.safeParse(await m.call(buildCardCheckCall({ template: deps.prompts.check, model: deps.models.check, word: headword, card, language, band, toolChoice: tc }), CARD_CHECK_PROMPT.version, "vocab_check"));
+    const out = checkOut.safeParse(await m.call(buildCardCheckCall({ template: deps.prompts.check, model: deps.models.check, word: headword, card, language, band, context, toolChoice: tc }), CARD_CHECK_PROMPT.version, "vocab_check"));
     if (!out.success) return ["check_failed"];
     return out.data.pass ? [] : out.data.reasons.length ? out.data.reasons.map((r) => `haiku_${r}`) : ["haiku_fail"];
   };
@@ -237,7 +247,16 @@ export async function runLookup(deps: LookupDeps, input: { userId: string; word:
   }
   await m.flush(gate.reservationId ?? null, purpose);
   if (!card) return fixed(m.used ? "card_failed" : "ai_error", { usedAi: m.used, runs: m.runs, cost: m.cost });
-  const cardId = await deps.store.saveCard({ band, language, content: card, promptVersion: CARD_PROMPT.version, model: deps.models.card, supersedes });
+  // A sentence that points to another word ("left" the adjective vs "leave") makes a card of its own: replace only the same word.
+  const replaces = supersedes && cachedOk && cachedOk.card.headword.trim().toLowerCase() === card.headword.trim().toLowerCase() ? supersedes : null;
+  card = { ...card, headword: card.headword.trim().toLowerCase() };
+  let cardId: string;
+  try {
+    cardId = await deps.store.saveCard({ band, language, content: card, promptVersion: CARD_PROMPT.version, model: deps.models.card, supersedes: replaces });
+  } catch {
+    // The money is spent and booked: record the ask (it counts against the AI limit) and say so; never a 500.
+    return fixed("card_failed", { usedAi: true, runs: m.runs, cost: m.cost });
+  }
   const r = await record({ cardId, sense: context ? 0 : null, shown: null, guard, reasons, fixedCode: null, usedAi: true, promptVersion: CARD_PROMPT.version, model: deps.models.card, runs: m.runs, cost: m.cost });
   return { status: r.replayed ? 200 : 201, body: { kind: "card", askId: r.id, card: await viewOf(deps.store, cardId, card, context ? 0 : null), replayed: r.replayed } };
 }
@@ -294,7 +313,7 @@ export async function runAgain(deps: LookupDeps, input: { userId: string; askId:
     const all = [a.core, a.task, ...a.examples.flatMap((e) => [e.en, e.vi])];
     const r: string[] = [];
     if (all.some((s) => /https?:|www\./i.test(s))) r.push("has_url");
-    if (all.some((s) => /\/[^/\n]*[ˈˌəɪʊʌɒɔæɑɜθðʃʒŋː][^/\n]*\//.test(s))) r.push("has_ipa");
+    if (all.some((s) => IPA_LIKE.test(s))) r.push("has_ipa");
     if (linesOf(a.core) > 2) r.push("too_many_lines");
     return r;
   };

@@ -45,16 +45,20 @@ describe("tutor + notebook (migration 0041)", () => {
     await fail(ctx(s.users.tutorAn), "42501", /not_child/);
   });
 
-  it("a card is found by its word or a form; a new version replaces it once; a second save of the same word returns the current card", async () => {
+  it("a card is found by its word or a form; every new save of the same word becomes the current version; a different word cannot replace it", async () => {
     const first = await save(CARD);
     expect((await svc<{ id: string }>("select english.eng_vocab_card_find('made', 'A2-B1', 'vi') as r")).id).toBe(first);
     expect(await svc("select english.eng_vocab_card_find('made', 'B2-C1', 'en_first') as r")).toBeNull();
-    expect(await save(CARD)).toBe(first); // two children at once: no second current card
-    const second = await save({ ...CARD, core: "make = tạo ra." }, first);
-    expect((await svc<{ id: string }>("select english.eng_vocab_card_find('make', 'A2-B1', 'vi') as r")).id).toBe(second);
-    await fail(save(CARD, first), "23514", /bad_supersedes/);
-    // the child always opens the current version of a card
-    expect((await asUser<{ id: string }>(s.users.studentAn, "select english.eng_my_vocab_card($1) as r", [first])).id).toBe(second);
+    const second = await save({ ...CARD, forms: ["make", "makes", "made", "making", "maked"] }); // two children at once / a new form
+    expect(second).not.toBe(first);
+    expect((await svc<{ id: string }>("select english.eng_vocab_card_find('maked', 'A2-B1', 'vi') as r")).id).toBe(second);
+    const third = await save({ ...CARD, core: "make = tạo ra." }, first); // replaces the CURRENT version, not the stale one given
+    expect((await svc<{ id: string }>("select english.eng_vocab_card_find('make', 'A2-B1', 'vi') as r")).id).toBe(third);
+    await fail(save({ ...CARD, headword: "left", forms: ["left"] }, first), "23514", /bad_supersedes/);
+    await fail(save({ ...CARD, headword: "café", forms: ["café"] }), "23514", /bad_headword/);
+    // the child opens the current version; an adult can open the exact version the child saw
+    expect((await asUser<{ id: string }>(s.users.studentAn, "select english.eng_my_vocab_card($1) as r", [first])).id).toBe(third);
+    expect((await asUser<{ id: string }>(s.users.parent, "select english.eng_my_vocab_card($1, true) as r", [first])).id).toBe(first);
   });
 
   it("an ask is recorded once per client id; counts are per Vietnamese day; used_ai counts AI lookups", async () => {
@@ -92,6 +96,14 @@ describe("tutor + notebook (migration 0041)", () => {
     const again = await asUser<{ item_id: string; already: boolean }>(s.users.studentAn, "select english.eng_notebook_save($1, $2) as r", [card, randomUUID()]);
     expect(again).toMatchObject({ item_id: s1.item_id, already: false });
     expect((await mine()).find((r) => r.headword === "erupt")?.state).toBe("active");
+    // replaying the first save after a removal reports the real state
+    await asUser(s.users.studentAn, "select english.eng_notebook_set($1, 'remove') as r", [s1.item_id]);
+    const firstClient = (await db.client.query("select client_id from english.notebook_items where id = $1", [s1.item_id])).rows[0].client_id as string;
+    expect(await asUser(s.users.studentAn, "select english.eng_notebook_save($1, $2) as r", [card, firstClient])).toMatchObject({ already: true, state: "removed" });
+    await asUser(s.users.studentAn, "select english.eng_notebook_set($1, 'restore') as r", [s1.item_id]);
+    // the list shows the meaning of the CURRENT version of the card
+    await save({ ...CARD, headword: "erupt", forms: ["erupt", "erupted"], senses: [{ meaning_vi: "phun trào (bản mới)", meaning_en: null }] });
+    expect((await mine()).find((r) => r.headword === "erupt")?.meaning).toBe("phun trào (bản mới)");
     // the other child cannot touch or see it
     await fail(asUser(s.users.studentNguyen, "select english.eng_notebook_set($1, 'remove') as r", [s1.item_id]), "42501");
     expect((await asUser<Row[]>(s.users.studentNguyen, "select english.eng_my_notebook('word') as r")).some((r) => r.headword === "erupt")).toBe(false);
@@ -109,14 +121,24 @@ describe("tutor + notebook (migration 0041)", () => {
     // 😊😐😕: only on one's own ask; the latest wins
     await asUser(s.users.studentAn, "select english.eng_rate_tutor_ask($1, 'ok') as r", [a.id]);
     await asUser(s.users.studentAn, "select english.eng_rate_tutor_ask($1, 'good') as r", [a.id]);
+    await asUser(s.users.studentAn, "select english.eng_rate_tutor_ask($1, 'good') as r", [a.id]); // same face again: no new row
+    expect(Number((await db.client.query("select count(*) from english.tutor_ask_ratings where ask_id = $1", [a.id])).rows[0].count)).toBe(2);
     await fail(asUser(s.users.studentNguyen, "select english.eng_rate_tutor_ask($1, 'good') as r", [a.id]), "42501");
     expect((await asUser<Ask[]>(s.users.parent, "select english.eng_tutor_asks_for($1) as r", [s.learners.an])).find((r) => r.id === a.id)?.rating).toBe("good");
   });
 
-  it("recent lookups: one row per card, newest first; status for the child only", async () => {
+  it("a consent turned off after being given counts as none", async () => {
+    const id = (await db.client.query("select id from english.members where id = $1", [s.members.studentNguyen])).rows[0].id as string;
+    await db.client.query("insert into english.consents(learner_id, subject_member_id, notice_version, scope, granted, recorded_by) values ($1,$2,'ai-studio-tutor-v3','ai_text',true,$3)", [s.learners.nguyen, id, s.members.parent]);
+    expect((await ctx(s.users.studentNguyen)).consent_version).toBe("ai-studio-tutor-v3");
+    await db.client.query("insert into english.consents(learner_id, subject_member_id, notice_version, scope, granted, recorded_by) values ($1,$2,'ai-studio-tutor-v3','ai_text',false,$3)", [s.learners.nguyen, id, s.members.parent]);
+    expect((await ctx(s.users.studentNguyen)).consent_version).toBeNull();
+  });
+
+  it("recent lookups: one row per word, newest first; status for the child only", async () => {
     const recent = await asUser<{ headword: string }[]>(s.users.studentAn, "select english.eng_my_recent_lookups(5) as r");
     expect(recent.length).toBeGreaterThan(0);
-    expect(new Set(recent.map((r) => r.headword)).size).toBe(recent.length);
+    expect(new Set(recent.map((r) => r.headword)).size).toBe(recent.length); // "make" has several versions: still one row
     const st = await asUser<{ lookup_limit: number; ai_enabled: boolean }>(s.users.studentAn, "select english.eng_my_tutor_status() as r");
     expect(st.lookup_limit).toBe(60);
     expect(await asUser(s.users.parent, "select english.eng_my_tutor_status() as r")).toBeNull();

@@ -27,7 +27,19 @@ describe("word card: shape (§4.5) and code checks before Haiku", () => {
     ["IPA written by the model", with_({ stress_tip: "Đọc là /meɪk/." }), "has_ipa"],
     ["why too long for vi", with_({ why: "a\nb\nc\nd\ne" }), "too_many_lines"],
     ["no Vietnamese meaning for vi", with_({ senses: [{ meaning_vi: "to create", meaning_en: null }] }), "missing_vietnamese"],
+    ["IPA in brackets", with_({ stress_tip: "Đọc là [meɪk]." }), "has_ipa"],
+    ["a headword the database refuses", with_({ headword: "café", forms: ["café"] }), "bad_headword"],
   ])("%s", (_n, card, reason) => expect(cardCodeReasons(card, opts)).toContain(reason));
+  it("the child's sentence never goes into the shared card: 4 words in a row or a name from it", async () => {
+    const { copiesChildText } = await import("@/lib/notebook/card");
+    const ctx = "My friend Minh at Tô Hoàng makes cakes every Sunday.";
+    expect(cardCodeReasons(GOOD, { ...opts, context: ctx })).toEqual([]);
+    expect(copiesChildText({ e: "Minh makes tea." }, ctx, "make")).toBe(true);
+    expect(copiesChildText({ e: "She makes cakes every Sunday." }, ctx, "make")).toBe(true);
+    expect(copiesChildText({ e: "She makes cakes at the weekend." }, ctx, "make")).toBe(false);
+    expect(copiesChildText({ e: "We meet on Sunday." }, ctx, "make")).toBe(true); // strict: any capitalised word of the sentence
+    expect(copiesChildText({ e: "I like it." }, "I make it.", "make")).toBe(false);
+  });
   it("a form of the word counts in an example (made, making)", () => {
     expect(cardCodeReasons(with_({ examples: [{ en: "She made tea.", vi: "x" }, { en: "Making friends is fun.", vi: "y" }] }), opts)).toEqual([]);
   });

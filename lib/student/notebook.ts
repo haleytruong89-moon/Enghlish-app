@@ -43,10 +43,13 @@ export async function loadNotebook(): Promise<NotebookRow[] | null> {
   return notebookSchema.parse(raw).map((x) => ({ itemId: x.item_id, cardId: x.card_id, headword: x.headword, meaning: x.meaning, savedAt: x.saved_at, state: x.state }));
 }
 
-/** One card (the current version of its chain) with IPA from the table; null = not found / not applied / unreadable. */
-export async function loadCardView(cardId: string): Promise<CardView | null> {
+/**
+ * One card with IPA from the table; null = not found / not applied / unreadable. Default: the current version of its chain (the child's
+ * Sổ tay); `exact`: that very version (adults reading the card the child saw).
+ */
+export async function loadCardView(cardId: string, o: { exact?: boolean } = {}): Promise<CardView | null> {
   if (!/^[0-9a-f-]{36}$/i.test(cardId)) return null;
-  const raw = (await rpc("eng_my_vocab_card", { p_card: cardId })) as { id?: string; content?: unknown } | null | undefined;
+  const raw = (await rpc("eng_my_vocab_card", { p_card: cardId, p_exact: o.exact === true })) as { id?: string; content?: unknown } | null | undefined;
   if (!raw?.id) return null;
   const content = cardContentSchema.safeParse(raw.content);
   if (!content.success) return null;
