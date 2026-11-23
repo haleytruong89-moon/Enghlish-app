@@ -39,8 +39,8 @@ function Check({ q, options, right, note, id }: { q: string; options: string[]; 
  * "Chưa hiểu" and no 😊.
  */
 export function VocabCard({
-  card, askId, onLookup, saved: savedAtFirst = false,
-}: { card: CardView; askId: string | null; onLookup?: (word: string) => void; saved?: boolean }) {
+  card, askId, onLookup, saved: savedAtFirst = false, readOnly = false,
+}: { card: CardView; askId: string | null; onLookup?: (word: string) => void; saved?: boolean; /** An adult reading the card: no save, no task box. */ readOnly?: boolean }) {
   const [guess, setGuess] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
   const [save, setSave] = useState<"idle" | "busy" | "saved" | "already">(savedAtFirst ? "already" : "idle");
@@ -175,12 +175,12 @@ export function VocabCard({
             <h4 className={head}>{c.checks}</h4>
             {card.checks.map((k, i) => <Check key={i} id={String(i)} {...k} />)}
           </section>
-          <section className={`${block} rounded-xl bg-[#e8efe9] px-3.5 py-3`}>
+          {readOnly ? null : <section className={`${block} rounded-xl bg-[#e8efe9] px-3.5 py-3`}>
             <h4 className={`${head} text-accent`}>{c.task}</h4>
             <p className="text-[15px]">{card.task}</p>
             <input value={task} onChange={(e) => setTask(e.target.value.slice(0, 200))} placeholder={c.taskPlaceholder} lang="en"
               className="min-h-11 rounded-xl border border-line bg-white px-3 text-[15px]" aria-label={c.task} />
-          </section>
+          </section>}
 
           {again ? (
             <section className={`${block} rounded-xl border border-line bg-white px-3.5 py-3`} data-testid="card-again">
@@ -196,7 +196,7 @@ export function VocabCard({
             </section>
           ) : null}
 
-          <div className="flex flex-wrap items-center gap-2">
+          {readOnly ? null : <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={onSave} disabled={save !== "idle"} data-testid="card-save"
               className="min-h-11 rounded-xl bg-accent px-4 font-bold text-white disabled:opacity-80">
               {save === "busy" ? c.saving : save === "saved" ? c.saved : save === "already" ? c.already : c.save}
@@ -217,7 +217,7 @@ export function VocabCard({
                 ))}
               </span>
             ) : null}
-          </div>
+          </div>}
           {hasVoice === false && (card.ipa.uk || card.ipa.us) ? <p className="text-sm text-muted" data-testid="no-voice">{c.noVoice}</p> : null}
           {problem ? <p role="alert" className="text-sm text-[#8a2f12]">{problem}</p> : null}
         </div>

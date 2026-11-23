@@ -22,6 +22,7 @@ const RULES: readonly Rule[] = [
   { re: lp("/weak"), section: "profile", child: "weak", screen: S.weak },
   { re: lp("/targets"), section: "profile", child: "targets", screen: S.targets },
   { re: lp("/reading/new"), section: "profile", child: "reading", screen: S.reading },
+  { re: lp("/tutor-asks(/.*)?"), section: "profile", child: "tutorAsks", screen: S.tutorAsks },
   { re: lp("/knowledge(/.*)?"), section: "knowledge", child: null, screen: S.knowledgeMap },
   { re: lp("/roadmap(/.*)?"), section: "roadmap", child: null, screen: shellCopy.sections.roadmap },
   { re: lp("/notes/new"), section: "sessions", child: "notesNew", screen: S.notesNew },

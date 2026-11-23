@@ -2364,6 +2364,7 @@ export const appFeedback = {
     notesNew: "Ghi buổi học mới",
     targets: "Kỹ năng đang theo dõi",
     weak: "Mục cần chú ý",
+    tutorAsks: "Con hỏi Gia sư",
     results: "Kết quả bài",
     resultsNew: "Ghi điểm nhanh (bài link)",
     revisions: "Bài đã sửa",
@@ -3411,6 +3412,25 @@ export const vocabCardCopy = {
   rateLabel: { good: "Dễ hiểu", ok: "Tạm được", confused: "Chưa hiểu" } as Record<string, string>,
   right: "✓",
   wrong: "✗",
+};
+
+export const tutorAsksCopy = {
+  link: "Con hỏi Gia sư",
+  title: (alias: string) => `${alias} hỏi Gia sư`,
+  intro: `Mọi lượt con tra ở mục Gia sư, mới nhất trước. Chỉ mẹ và ${tutorHonorific} của em xem được; con được báo điều này trên trang Gia sư.`,
+  back: "← Bàn làm việc",
+  backList: "← Con hỏi Gia sư",
+  cols: { at: "Lúc", kind: "Loại", asked: "Con gõ", answer: "Gia sư trả lời", saved: "Sổ tay", rating: "Con chấm" },
+  kinds: { lookup: "Tra từ", again: "Chưa hiểu, giải thích lại" } as Record<string, string>,
+  context: "Câu kèm:",
+  card: (w: string) => `Thẻ “${w}”`,
+  cache: "thẻ có sẵn",
+  saved: "Đã lưu",
+  rating: { good: "😊", ok: "😐", confused: "😕" } as Record<string, string>,
+  ratingLabel: { good: "Dễ hiểu", ok: "Tạm được", confused: "Chưa hiểu" } as Record<string, string>,
+  empty: "Con chưa hỏi Gia sư lần nào.",
+  older: "Cũ hơn",
+  unavailable: "Cần áp SQL 0041 để xem phần này.",
 };
 
 export const notebookCopy = {
