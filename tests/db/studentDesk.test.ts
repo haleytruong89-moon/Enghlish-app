@@ -234,9 +234,13 @@ describe("student desk reads (migration 0032)", () => {
     await fail(q1("select english.eng_activity_event($1, 'skip', null, 'ab', $2)", [act, M().tutorNguyen]), "23514");
     await fail(q1("select english.eng_activity_event($1, 'skip', null, 'Giao thử', $2)", [act, M().tutorAn]), "42501");
     await q1("select english.eng_activity_event($1, 'skip', null, 'Giao trùng bài', $2)", [act, M().tutorNguyen]);
-    expect((await today(U().studentNguyen)).some((i) => i.activity_id === act)).toBe(false);
-    expect(await count(U().studentNguyen)).toBe(before - 1);
-    await q1("select english.eng_activity_event($1, 'unskip', null, 'Khôi phục bài đã gỡ', $2)", [act, M().parent]);
+    try {
+      expect((await today(U().studentNguyen)).some((i) => i.activity_id === act)).toBe(false);
+      expect(await count(U().studentNguyen)).toBe(before - 1);
+    } finally {
+      // always restore the shared fixture, even when an assertion above fails
+      await q1("select english.eng_activity_event($1, 'unskip', null, 'Khôi phục bài đã gỡ', $2)", [act, M().parent]);
+    }
     expect((await today(U().studentNguyen)).some((i) => i.activity_id === act)).toBe(true);
     expect(await count(U().studentNguyen)).toBe(before);
   });

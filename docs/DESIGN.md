@@ -682,5 +682,5 @@ Spec `docs/superpowers/specs/2026-11-22-gia-su-so-tay-design.md` (bản 0.2, ph�
 ### 19.34. Gỡ bài trên app (không SQL)
 
 - Gỡ bài = `eng_activity_event(step, 'skip', null, lý do, người)`; Khôi phục = `unskip`. `eng_step_effective_date` trả null khi bước đang bỏ → `eng_activity_released` false → bước không có trong `eng_my_today` / `eng_my_today_count`, không mở được, không tính quá hạn (`studioOverdueCount` bỏ qua "skipped"). Test DB: `tests/db/studentDesk.test.ts` "Gỡ bài = skip".
-- Chỉ hiện nút khi bài chưa có lần nộp nào (`lastAttemptId` null). Sự kiện chỉ thêm, có người + lý do; quyền = `eng_actor_may_manage` (phụ huynh, thầy/cô của em).
+- Chỉ hiện nút Gỡ bài khi bài chưa có lần nộp nào (`lastAttemptId` null); `handleActivityEvent` từ chối `skip` khi bước đã có attempt (409 `has_work`, `InquiryStore.stepHasWork`) — DB (0007) không chặn nên chặn ở server. Bước đang bỏ luôn hiện "Đã gỡ" + Khôi phục, kể cả khi đã có bài nộp (status "skipped" thắng). `Schedule.skipReason` = lý do của lần gỡ đang hiệu lực. Sự kiện chỉ thêm, có người + lý do; quyền = `eng_actor_may_manage` (phụ huynh, thầy/cô của em).
 - `StudioAssignedRow.lateDays` = số ngày sau hạn (chỉ "overdue"); `sortStudioAssigned` đưa bài quá hạn lâu nhất lên đầu.

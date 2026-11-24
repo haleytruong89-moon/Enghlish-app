@@ -4,9 +4,13 @@ import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 import { studioAssignedCopy as c } from "@/lib/copy/vi";
 
+/** The API caps a reason at 500 characters; the form keeps it shorter. */
+const REASON_MAX = 300;
+
 /**
  * "Gỡ bài" for a Studio test the child has not sent = the step event `skip` (0007): the step leaves the child's Hôm nay and the
  * overdue counts. "Khôi phục" = `unskip`. The reason is checked here for a friendly message and again by the API and the database.
+ * The server refuses to skip a step with sent work (409 has_work); 400 / 409 mean the page is stale: it is reloaded.
  */
 export function RemoveAssignedButton({ activityId, removed, title }: { activityId: string; removed: boolean; title: string }) {
   const router = useRouter();
@@ -14,10 +18,11 @@ export function RemoveAssignedButton({ activityId, removed, title }: { activityI
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  // "sent" stays true until the refreshed page replaces this row: no second click can send a duplicate event in between.
+  const [busy, setBusy] = useState<"idle" | "sending" | "sent">("idle");
 
   async function send(kind: "skip" | "unskip", why: string) {
-    setBusy(true);
+    setBusy("sending");
     setError(null);
     try {
       const res = await fetch(`/api/activities/${activityId}/events`, {
@@ -25,23 +30,28 @@ export function RemoveAssignedButton({ activityId, removed, title }: { activityI
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ kind, reason: why }),
       });
+      if (res.status === 400 || res.status === 409) {
+        setBusy("idle");
+        setError(c.stale);
+        router.refresh();
+        return;
+      }
       if (!res.ok) throw new Error(String(res.status));
-      setOpen(false);
-      setReason("");
+      setBusy("sent");
       router.refresh();
     } catch {
+      setBusy("idle");
       setError(c.failed);
-    } finally {
-      setBusy(false);
     }
   }
 
-  const btn = "min-h-11 rounded-lg border px-4 text-sm font-semibold";
+  const btn = "min-h-11 rounded-lg border px-4 text-sm font-semibold disabled:opacity-60";
+  const disabled = busy !== "idle";
   if (removed) {
     return (
       <div className="flex flex-col gap-1">
-        <button type="button" disabled={busy} onClick={() => void send("unskip", c.restoreReason)} className={`${btn} border-accent bg-white text-accent`} data-testid={`restore-${activityId}`}>
-          {busy ? c.saving : c.restore}
+        <button type="button" disabled={disabled} onClick={() => void send("unskip", c.restoreReason)} className={`${btn} border-accent bg-white text-accent`} data-testid={`restore-${activityId}`}>
+          {disabled ? c.saving : c.restore}
         </button>
         {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
       </div>
@@ -49,14 +59,18 @@ export function RemoveAssignedButton({ activityId, removed, title }: { activityI
   }
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className={`${btn} border-[#b9582a] bg-white text-[#8a3a12]`} data-testid={`remove-${activityId}`}>
-        {c.remove}
-      </button>
+      <div className="flex flex-col gap-1">
+        <button type="button" disabled={disabled} onClick={() => setOpen(true)} className={`${btn} border-[#b9582a] bg-white text-[#8a3a12]`} data-testid={`remove-${activityId}`}>
+          {c.remove}
+        </button>
+        {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
+      </div>
     );
   }
   return (
     <form
       className="flex w-full flex-col gap-2 border-t border-line pt-3"
+      aria-labelledby={`${id}-title`}
       data-testid={`remove-form-${activityId}`}
       onSubmit={(e) => {
         e.preventDefault();
@@ -65,7 +79,9 @@ export function RemoveAssignedButton({ activityId, removed, title }: { activityI
         void send("skip", why);
       }}
     >
-      <p className="text-sm font-semibold">{c.removeTitle(title)}</p>
+      <p id={`${id}-title`} className="text-sm font-semibold">
+        {c.removeTitle(title)}
+      </p>
       <p className="text-sm text-muted">{c.removeHelp}</p>
       <label htmlFor={`${id}-reason`} className="text-sm font-semibold">
         {c.reasonLabel}
@@ -74,7 +90,9 @@ export function RemoveAssignedButton({ activityId, removed, title }: { activityI
         id={`${id}-reason`}
         type="text"
         value={reason}
+        maxLength={REASON_MAX}
         placeholder={c.reasonPlaceholder}
+        autoFocus
         onChange={(e) => {
           setReason(e.target.value);
           setError(null);
@@ -83,8 +101,8 @@ export function RemoveAssignedButton({ activityId, removed, title }: { activityI
       />
       {error ? <p role="alert" className="text-sm text-red-700">{error}</p> : null}
       <div className="flex flex-wrap gap-2">
-        <button type="submit" disabled={busy} className={`${btn} border-[#8a3a12] bg-[#8a3a12] text-white disabled:opacity-60`}>
-          {busy ? c.saving : c.confirmRemove}
+        <button type="submit" disabled={disabled} className={`${btn} border-[#8a3a12] bg-[#8a3a12] text-white`}>
+          {disabled ? c.saving : c.confirmRemove}
         </button>
         <button
           type="button"

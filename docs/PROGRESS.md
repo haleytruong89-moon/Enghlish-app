@@ -2123,3 +2123,4 @@ Nhánh `feature/assigned-remove`. Kế hoạch `docs/superpowers/plans/2026-11-2
 - "Quá hạn n ngày" thay cho "Quá hạn"; bài quá hạn lâu nhất lên đầu danh sách.
 
 **Cách thử trên preview:** Giao bài → "Bài làm trên app đã giao" → bài "Destination C1 C2" quá hạn → Gỡ bài → ghi "Giao trùng" → Gỡ bài. Đăng nhập "Nguyên (thử)": Hôm nay không còn bài đó. Quay lại, bấm Khôi phục: bài trở lại.
+- Sau review (24/11): server **từ chối gỡ bài con đã nộp** (409 `has_work`, phòng trang cũ chưa tải lại); bài lỡ bị gỡ sau khi đã nộp vẫn hiện "Đã gỡ" + Khôi phục; lý do gỡ lấy đúng từ lần gỡ (không bị lý do đổi ngày đè); trang cũ / bấm hai lần → báo "vừa đổi trạng thái" và tải lại trang.

@@ -39,6 +39,7 @@ function makeStore(over: Partial<InquiryStore> = {}) {
     assign: vi.fn(async () => "99999999-9999-4999-8999-999999999999"),
     getActivityLearnerId: vi.fn(async (id: string) => (id === ACT_AN ? AN : id === ACT_NGUYEN ? NGUYEN : null)),
     recordEvent: vi.fn(async () => 7),
+    stepHasWork: vi.fn(async () => false),
     ...over,
   } satisfies InquiryStore;
   return store;
@@ -115,6 +116,15 @@ describe("S2 route handlers: happy paths", () => {
     const r = await handleActivityEvent(deps("tutorAn", s), ACT_AN, { kind: "skip", reason: "Nghỉ lễ" });
     expect(r.status).toBe(201);
     expect(s.recordEvent).toHaveBeenLastCalledWith({ kind: "skip", reason: "Nghỉ lễ", activityId: ACT_AN, byMemberId: "m-tutorAn" });
+  });
+
+  it("a step with sent work is never skipped (409 has_work, nothing written); unskip and reschedule still work (24/11)", async () => {
+    const s = makeStore({ stepHasWork: vi.fn(async () => true) });
+    const r = await handleActivityEvent(deps("tutorAn", s), ACT_AN, { kind: "skip", reason: "Giao trùng" });
+    expect(r).toMatchObject({ status: 409, body: { error: "has_work" } });
+    expect(s.recordEvent).not.toHaveBeenCalled();
+    expect((await handleActivityEvent(deps("parent", s), ACT_AN, { kind: "unskip", reason: "Khôi phục bài đã gỡ" })).status).toBe(201);
+    expect((await handleActivityEvent(deps("parent", s), ACT_AN, goodEvent)).status).toBe(201);
   });
 });
 
@@ -200,13 +210,16 @@ describe("S2 views", () => {
   });
 
   it("effective schedule = latest reschedule; skip and unskip toggle independently", () => {
-    expect(effectiveSchedule("2026-10-15", [])).toEqual({ date: "2026-10-15", plannedDate: "2026-10-15", skipped: false, lastReason: null });
+    expect(effectiveSchedule("2026-10-15", [])).toEqual({ date: "2026-10-15", plannedDate: "2026-10-15", skipped: false, lastReason: null, skipReason: null });
     const s = effectiveSchedule("2026-10-15", [
       ev(2, "2026-10-10T10:00:00Z", "reschedule", "2026-10-22", "hai"),
       ev(1, "2026-10-09T10:00:00Z", "reschedule", "2026-10-18", "một"),
       ev(3, "2026-10-11T10:00:00Z", "skip", null, "ba"),
     ]);
-    expect(s).toEqual({ date: "2026-10-22", plannedDate: "2026-10-15", skipped: true, lastReason: "ba" });
+    expect(s).toEqual({ date: "2026-10-22", plannedDate: "2026-10-15", skipped: true, lastReason: "ba", skipReason: "ba" });
+    // a reschedule after the skip changes the last reason, not the reason of the skip
+    const later = effectiveSchedule("2026-10-15", [ev(3, "2026-10-11T10:00:00Z", "skip", null, "ba"), ev(4, "2026-10-12T10:00:00Z", "reschedule", "2026-10-25", "bốn")]);
+    expect(later).toMatchObject({ skipped: true, lastReason: "bốn", skipReason: "ba" });
     const back = effectiveSchedule("2026-10-15", [ev(1, "t1", "skip", null), ev(2, "t2", "unskip", null)]);
     expect(back.skipped).toBe(false);
   });
