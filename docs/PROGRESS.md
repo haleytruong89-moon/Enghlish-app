@@ -2081,3 +2081,22 @@ Nhánh `feature/e2a-gia-su-so-tay`. Spec `docs/superpowers/specs/2026-11-22-gia-
 3. Mục Sổ tay: thấy `make` → Bỏ (xác nhận) → "Đã bỏ (1)" → Thêm lại.
 4. Phụ huynh → Hồ sơ học sinh → "Con hỏi Gia sư": thấy các lượt tra, lượt từ thẻ có sẵn ghi "thẻ có sẵn".
 5. Mở một bài luyện: vẫn không có gia sư trong bài.
+
+## Nhãn Destination cho Track B + khung "Box A/B" (24/11/2026)
+
+Nhánh `feature/destination-tags`. Nguồn: hub `HANDOVER_ENGLISH_OS_DESTINATION_2026-11-24.md` + `HANDOVER_NHAN_DESTINATION_B_2026-11-24.md` (phụ huynh chọn cách A).
+
+**Có gì:**
+- `0042_seed_tags_destination_b.sql`: 23 nhãn có sẵn của Track B (9 "Ngữ pháp", 14 "Từ vựng"), **mã cố định mãi** (file bài soạn ngoài app dùng đúng các mã này). Nguồn `content/tags/destination_B.json`. 8 nhãn B cũ không đổi.
+- Bản đồ kiến thức / ô chọn nhãn / mức điểm kiến thức đặt mỗi nhãn vào đúng nhóm SM-1 (vd `tinh-tu-trang-tu` → So sánh & giới từ). SM-1 không đổi (đã công bố).
+- Studio nhận "Box A: …", "Box B: …", "Box C: …" là khung từ (tách thành ô chữ như "Box:").
+
+**Lệch so với bàn giao (đã cân nhắc, không cần phụ huynh quyết):**
+- Nhãn ở file riêng `destination_B.json`, không gộp vào `tags_B.json`: `tags_B.json` là các nhãn có lá trong SM-1; thêm vào đó nghĩa là phải làm SM-2.
+- Nhóm nằm ở cột mới `error_tags.seed_group_key`, không dùng `group_key` như nhãn nghe (0026): chạy lại 0026 dựng lại luật cũ của `group_key` và sẽ vỡ. Hai hàm đọc nhóm (`eng_skill_map`, `eng_point_inputs`) được định nghĩa lại y như bản trước, chỉ thêm `coalesce(group_key, seed_group_key)` (test so từng chữ).
+
+**SQL phụ huynh cần áp:** `0042_seed_tags_destination_b.sql` (GitHub → Actions → "Apply database migrations", gõ `APPLY`). Chỉ thêm. **Nhập bài Destination chỉ sau khi áp**, trước đó các câu báo `unknown_tag`. Code của PR này chạy bình thường khi chưa áp (không đọc cột mới từ trình duyệt).
+
+**Cách thử trên preview ("Nguyên (thử)"):** áp 0042 → Studio → Nhập bài → chọn `destination-lo1-9-bai.zip` → 9 dòng ✓, 317 câu, 4 "cần xem", 0 lỗi chặn → mở `U15-1` → Duyệt được; ô chọn nhãn có "Tính từ & trạng từ…". Bản đồ kiến thức: nhãn mới nằm trong Ngữ pháp / Từ vựng, không ở "Chưa xếp mảng".
+
+**Chưa làm (đúng bàn giao):** cô làm bản 2 mục lục Destination để nối Unit → nhãn mới (Giáo trình); U17-1b giao sau U17-1 (người giao bài lo).

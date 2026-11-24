@@ -64,6 +64,14 @@ describe("word banks", () => {
     expect(splitBanks("Note: complete the gaps. Box: debt · share")).toEqual({ text: "Note: complete the gaps.", banks: [{ label: "Box", words: ["debt", "share"] }] });
     expect(splitBanks("Places: museum, art gallery, library, zoo.").banks[0]!.words).toEqual(["museum", "art gallery", "library", "zoo"]);
     expect(splitBanks("Box: and/or, either/or").banks[0]!.words).toEqual(["and/or", "either/or"]);
+    // Destination U17: two lettered boxes, one per line.
+    expect(splitBanks("Box A: come · cut · prop").banks).toEqual([{ label: "Box A", words: ["come", "cut", "prop"] }]);
+    expect(splitBanks("Box B: down · out · together · up").banks).toEqual([{ label: "Box B", words: ["down", "out", "together", "up"] }]);
+    expect(splitBanks("Box C: in, off").banks).toEqual([{ label: "Box C", words: ["in", "off"] }]);
+    expect(splitBanks("Complete with a verb from box A and a particle from box B.\nBox A: come · cut · prop\nBox B: down · out · together · up")).toEqual({
+      text: "Complete with a verb from box A and a particle from box B.",
+      banks: [{ label: "Box A", words: ["come", "cut", "prop"] }, { label: "Box B", words: ["down", "out", "together", "up"] }],
+    });
     expect(splitBanks("Word Bank: run · swim · jump").banks[0]!.label).toBe("Word Bank");
     expect(splitBanks("Từ gợi ý: museum, zoo, park").banks[0]!.words).toEqual(["museum", "zoo", "park"]);
     expect(splitBanks("Fill the gaps with the words given. Choose from: tall, short, wide").banks[0]!.words).toEqual(["tall", "short", "wide"]);

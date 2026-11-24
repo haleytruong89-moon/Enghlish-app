@@ -54,7 +54,7 @@ describe("SM-1 skill map (migration 0019)", () => {
     });
 
     it("every seed tag still in use has exactly one leaf, and A's doc-hieu is hidden from the picker", async () => {
-      expect(await n(`select count(*)::int as n from english.error_tags t where t.family_id is null and t.retired_at is null and t.group_key is null
+      expect(await n(`select count(*)::int as n from english.error_tags t where t.family_id is null and t.retired_at is null and t.group_key is null and t.seed_group_key is null
                       and not exists (select 1 from english.skill_leaves lf where lf.map_id = 'SM-1' and lf.kind = 'tag' and lf.track_id = t.track_id and lf.ref_key = t.key)`)).toBe(0);
       expect(await q1("select track_id, ref_key, group_key from english.skill_leaves where hidden_in_picker")).toEqual([
         { track_id: "A", ref_key: "doc-hieu", group_key: "re-gist-detail" },
@@ -201,7 +201,7 @@ describe("SM-1 skill map (migration 0019)", () => {
       }
     });
 
-    it("Nguyên (B): 7 domains, 40 groups, the 24 B tags + the family's grouped tags, all 70 skills with the 12 of B-v1 flagged", async () => {
+    it("Nguyên (B): 7 domains, 40 groups, the 24 B tags (+ 8 listening, 23 Destination) + the family's grouped tags, all 70 skills with the 12 of B-v1 flagged", async () => {
       const m = await mapOf(NG());
       expect([m.map_id, m.track_id]).toEqual(["SM-1", "B"]);
       expect(m.assumed).toEqual({ grammar: "B2", vocab: "B2", reading: "B2", listening: "B2", writing: "B2", speaking: "B2", thinking: 2 });
@@ -209,7 +209,7 @@ describe("SM-1 skill map (migration 0019)", () => {
       expect(m.domains.flatMap((d) => d.groups)).toHaveLength(40);
       const all = leavesOf(m);
       const tags = all.filter((l) => l.kind === "tag");
-      expect(tags.filter((l) => !l.custom)).toHaveLength(32); // 24 tags with a leaf + 8 listening tags of 0026 (group_key)
+      expect(tags.filter((l) => !l.custom)).toHaveLength(55); // 24 tags with a leaf + 8 listening tags of 0026 (group_key) + 23 Destination tags of 0042 (seed_group_key)
       expect(tags.every((l) => l.track_id === m.track_id)).toBe(true);
       expect(tags.filter((l) => l.custom).map((l) => [l.ref_key, l.group]).sort()).toEqual([[grouped, "gr-emphasis"], [oldKey, "wr-sentence-mech"]].sort());
       const targets = all.filter((l) => l.kind === "target");

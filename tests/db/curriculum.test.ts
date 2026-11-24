@@ -221,6 +221,27 @@ describe("W2 curriculum (migration 0026)", () => {
   });
 
 
+  describe("4b. Destination tags of Track B (0042)", () => {
+    it("23 seed tags with a grammar / vocabulary group are placed in the map; old seed tags still may not carry a group", async () => {
+      expect(await q1("select count(*)::int as n from english.error_tags where track_id = 'B' and origin = 'seed' and family_id is null and group_key is null and seed_group_key ~ '^(gr|vo)-'")).toEqual([{ n: 23 }]);
+      const map = await svc<{ domains: { key: string; groups: { key: string; leaves: { ref_key: string; custom: boolean }[] }[] }[]; unassigned: { ref_key: string }[] }>(
+        "select english.eng_skill_map($1) as r", [NG()]);
+      const grp = (d: string, g: string) => map.domains.find((x) => x.key === d)!.groups.find((x) => x.key === g)!.leaves.map((l) => [l.ref_key, l.custom]);
+      expect(grp("grammar", "gr-compare-prep")).toContainEqual(["tinh-tu-trang-tu", false]);
+      expect(grp("grammar", "gr-tense")).toEqual(expect.arrayContaining([["thi-hien-tai", false], ["thi-qua-khu", false], ["thi-tuong-lai", false]]));
+      expect(grp("vocab", "vo-topic").filter(([k]) => String(k).startsWith("chu-de-"))).toHaveLength(13);
+      expect(map.unassigned.some((l) => ["tinh-tu-trang-tu", "ket-hop-tu", "cau-phuc"].includes(l.ref_key))).toBe(false);
+      // Track A does not get them.
+      const an = await svc<{ domains: { groups: { leaves: { ref_key: string }[] }[] }[] }>("select english.eng_skill_map($1) as r", [AN()]);
+      expect(an.domains.flatMap((d) => d.groups.flatMap((g) => g.leaves)).some((l) => l.ref_key === "tinh-tu-trang-tu")).toBe(false);
+      await fail(q1("update english.error_tags set group_key = 'gr-modal' where track_id = 'B' and key = 'modal-suy-doan'"), "23514");
+      await fail(q1("insert into english.error_tags(track_id, key, label_vi, group_vi, family_id, origin, group_key) values ('B', 'thi-moi', 'x', 'Ngữ pháp', null, 'seed', 'gr-tense')"), "23514");
+      // seed_group_key is for seed tags only, and never next to a group_key.
+      await fail(q1("insert into english.error_tags(track_id, key, label_vi, group_vi, family_id, origin, seed_group_key) values ('B', 'rieng-x', 'x', 'Ngữ pháp', $1, 'custom', 'gr-tense')", [s.familyId]), "23514");
+      await fail(q1("update english.error_tags set group_key = 'gr-tense' where track_id = 'B' and key = 'thi-hien-tai'"), "23514");
+    });
+  });
+
   describe("5. lesson note v3 (Unit đã dạy hôm nay)", () => {
     it("records taught units of the CURRENT version; empty 'studied' becomes the unit names; replays and wrong units are refused; v2 is unchanged", async () => {
       const c = await create(M().tutorNguyen, { title: "Destination (ghi buổi)" });

@@ -14,7 +14,7 @@ export type PartLead = { title: string | null; text: string; banks: WordBank[] }
 
 /** Labels that announce a word list. Anything else is a bank only when its line speaks of a box / list / given words. */
 const BANK_LABELS = new Set([
-  "box", "word box", "word bank", "words", "word list", "places", "adjectives", "adverbs", "verbs", "nouns", "phrases", "phrasal verbs",
+  "box", "box a", "box b", "box c", "word box", "word bank", "words", "word list", "places", "adjectives", "adverbs", "verbs", "nouns", "phrases", "phrasal verbs",
   "prepositions", "idioms", "từ gợi ý", "từ cho sẵn", "các từ",
 ]);
 /** Labels that are never a bank, whatever follows ("Note: …", "Example: big, bigger, biggest"). */
