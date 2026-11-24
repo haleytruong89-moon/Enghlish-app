@@ -12,6 +12,13 @@ vi.mock("@/lib/tutorwork/load", () => ({ loadTags: async () => [], loadFrames: a
 vi.mock("@/lib/practice/load", () => ({ loadAssignments: async () => [] }));
 vi.mock("@/lib/skillmap/load", async () => { const { levelledMap } = await import("./fixtures/skillMap"); return { loadPickerMap: async () => levelledMap() }; });
 vi.mock("@/lib/curriculum/load", () => ({ loadUnitChoices: async () => [] }));
+vi.mock("@/lib/studio/load", () => ({
+  loadDraftList: async () => [
+    { id: "d1", title: "U15-1", status: "draft", updatedAt: "2026-11-24T01:00:00Z", templateId: null, templateVersion: null, superseded: false, assigned: 0 },
+    { id: "d2", title: "U14 cũ", status: "approved", updatedAt: "2026-11-20T01:00:00Z", templateId: "B-ST-000001", templateVersion: 1, superseded: false, assigned: 1 },
+    { id: "d3", title: "Bỏ rồi", status: "discarded", updatedAt: "2026-11-20T01:00:00Z", templateId: null, templateVersion: null, superseded: false, assigned: 0 },
+  ],
+}));
 
 import Page from "@/app/learners/[id]/assign/page";
 
@@ -26,12 +33,18 @@ const run = async (sp: Record<string, string>) => {
 };
 
 describe("Giao bài page", () => {
-  it("no way: the chooser with four cards, the assigned list and the two 'see' links", async () => {
+  it("no way: the four cards, the follow banner and the drafts being prepared — no assigned lists (24/11)", async () => {
     const r = await run({});
     expect(r.html).toContain('data-testid="way-cards"');
-    expect(r.html).toContain('data-testid="assigned-list"');
+    expect(r.html).not.toContain('data-testid="assigned-list"');
+    expect(r.html).not.toContain('data-testid="studio-assigned"');
+    expect(r.html).toContain('data-testid="follow-banner"');
+    expect(r.html).toContain(`/learners/${L}/assigned`);
     expect(r.html).toContain(`/studio/new?learner=${L}#drafts`);
-    expect(r.html).toContain(`/learners/${L}/inquiries#assigned`);
+    expect(r.html).toContain('data-testid="assign-drafts"');
+    expect(r.html).toContain("U15-1");
+    expect(r.html).not.toContain("U14 cũ");
+    expect(r.html).not.toContain("Bỏ rồi");
     expect(r.html).not.toContain('data-testid="assign-form"');
   });
   it.each([["link"], ["pdf"]])("way=%s: the form with a fixed kind and the strip", async (w) => {

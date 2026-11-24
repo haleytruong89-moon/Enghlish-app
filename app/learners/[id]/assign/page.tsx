@@ -5,41 +5,38 @@ import { WayCards } from "@/components/assign/WayCards";
 import { WaysStrip } from "@/components/assign/WaysStrip";
 import { parseWay, wayHref } from "@/lib/assign/ways";
 import { AssignForm } from "@/components/practice/AssignForm";
-import { maxPagesPerSubmission } from "@/lib/practice/capabilities";
-import { AssignmentTable } from "@/components/practice/AssignmentTable";
-import { StudioAssignedTable } from "@/components/studio/StudioAssignedTable";
-import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
-import { sortStudioAssigned } from "@/lib/studio/assigned";
+import { DraftList } from "@/components/studio/DraftList";
 import { readPrefill } from "@/lib/prefill";
 import { assignPage, assignWaysCopy, learnerWithTrack } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { loadUnitChoices } from "@/lib/curriculum/load";
-import { loadAssignments } from "@/lib/practice/load";
 import { loadPickerMap } from "@/lib/skillmap/load";
+import { loadDraftList } from "@/lib/studio/load";
 import { loadFrames, loadTags } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
 export const dynamic = "force-dynamic";
 
-/** "Giao bài luyện": give a link or a PDF to one child (tutor or parent), and follow what came back. Same screen for both tutors. */
+/**
+ * "Giao bài" (24/11: only to CREATE work): the four ways, or the link / PDF form, and the Studio drafts not given yet. What was given and
+ * what came back is followed on "Bài đã giao" (/learners/[id]/assigned). Tutor of the child or parent.
+ */
 export default async function AssignPracticePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { id } = await params;
   const sp = await searchParams;
   const prefill = readPrefill(sp);
   const way = parseWay(sp.way);
-  const { learner, member } = await requireLearnerPage(id, "practice:write");
+  const { learner } = await requireLearnerPage(id, "practice:write");
   // The other two ways live on their own pages (the forms are not copied); this page only points there.
   if (way === "studio" || way === "topic") redirect(wayHref(learner.id, way, prefill));
   const kind = way === "link" || way === "pdf" ? way : null;
-  const [tags, frames, assignments, map, unitChoices, studio] = await Promise.all([
+  const [tags, frames, map, unitChoices, drafts] = await Promise.all([
     loadTags(learner.trackId),
     loadFrames(learner.trackId, learner.id),
-    loadAssignments(learner.id),
     loadPickerMap(learner.id),
     loadUnitChoices(learner.id),
-    loadStudioAssigned(learner.id, todayVn()).then(sortStudioAssigned).catch(() => null),
+    loadDraftList(learner.id).catch(() => []),
   ]);
-  const tagLabels = Object.fromEntries(tags.map((t) => [t.key, t.label]));
   const head = (
     <>
       <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">
@@ -47,15 +44,23 @@ export default async function AssignPracticePage({ params, searchParams }: { par
       </Link>
       <h1 className="mt-2 text-2xl font-bold">{assignWaysCopy.title(learner.alias)}</h1>
       <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
+      <p className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#e3ece8] px-4 py-1 text-[15px] text-[#1f4439]" data-testid="follow-banner">
+        <span>{assignWaysCopy.followBanner}</span>
+        <Link href={`/learners/${learner.id}/assigned`} data-testid="follow-link" className="inline-flex min-h-11 items-center font-semibold underline">
+          {assignWaysCopy.followLink}
+        </Link>
+      </p>
     </>
   );
-  const list = (
-    <section className="flex flex-col gap-3" aria-label={assignWaysCopy.listTitle} id="assigned-list" data-testid="assigned-list">
-      <h2 className="text-lg font-semibold">{assignWaysCopy.listTitle}</h2>
-      <AssignmentTable learnerId={learner.id} assignments={assignments} tagLabels={tagLabels} viewerMemberId={member.id} maxFiles={await maxPagesPerSubmission()} today={todayVn()} />
-    </section>
-  );
-  const studioList = <StudioAssignedTable rows={studio} />;
+  // Drafts being prepared: not given yet (the child does not see them), not discarded, not replaced by a newer version.
+  const open = drafts.filter((d) => d.status !== "discarded" && !d.superseded && d.assigned === 0);
+  const draftsBlock =
+    open.length > 0 ? (
+      <div data-testid="assign-drafts">
+        <DraftList drafts={open} title={assignWaysCopy.draftsTitle(open.length)} />
+        <p className="mt-2 text-sm text-muted">{assignWaysCopy.draftsHelp}</p>
+      </div>
+    ) : null;
   return (
     <div className="mx-auto max-w-4xl" data-testid="assign-page">
       {head}
@@ -65,23 +70,17 @@ export default async function AssignPracticePage({ params, searchParams }: { par
           <p className="mt-3 text-muted">{assignPage.intro}</p>
           <div className="mt-6 flex flex-col gap-8">
             <AssignForm key={kind} learnerId={learner.id} alias={learner.alias} tags={tags} frames={frames} today={todayVn()} map={map} prefill={prefill} unitChoices={unitChoices} fixedKind={kind} />
-            {list}
-            {studioList}
           </div>
         </>
       ) : (
         <>
           <p className="mt-3 text-muted">{assignWaysCopy.intro}</p>
-          <div className="mt-6 flex flex-col gap-8">
+          <div className="mt-6 flex flex-col gap-6">
             <WayCards learnerId={learner.id} prefill={prefill} />
-            {studioList}
-            {list}
+            {draftsBlock}
             <p className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
               <Link href={`/studio/new?learner=${learner.id}#drafts`} data-testid="see-studio" className="inline-flex min-h-11 items-center text-accent underline">
                 {assignWaysCopy.seeStudio}
-              </Link>
-              <Link href={`/learners/${learner.id}/inquiries#assigned`} data-testid="see-topic" className="inline-flex min-h-11 items-center text-accent underline">
-                {assignWaysCopy.seeTopic}
               </Link>
             </p>
           </div>

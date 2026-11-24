@@ -3002,6 +3002,10 @@ export const prefillCopy = {
 /** UX vòng 3A · một trang "Giao bài": chọn 1 trong 4 cách + dải "Cách giao" (kế hoạch 14/11, U5–U8). */
 export const assignWaysCopy = {
   title: (alias: string) => `Giao bài · ${alias}`,
+  followBanner: "Muốn xem con làm đến đâu, bài nào quá hạn?",
+  followLink: "Mở Bài đã giao →",
+  draftsTitle: (n: number) => `Bản nháp đang soạn · ${n}`,
+  draftsHelp: "Bài chưa giao: con chưa thấy. Duyệt xong mới chọn hạn và giao.",
   intro: "Chọn một cách giao. Cách nào cũng chọn được Unit của giáo trình (trừ Bài chủ đề).",
   stripLabel: "Cách giao",
   recommended: "Nên dùng",
