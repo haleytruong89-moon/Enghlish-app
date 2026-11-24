@@ -9,7 +9,7 @@ const hrefs = (n: ReturnType<typeof buildNav>) => [...n.sections.flatMap((s) => 
 describe("staff sidebar model", () => {
   it("follows the prototype order with the agreed labels", () => {
     const n = buildNav("tutor", NG, { revisionsReady: true });
-    expect(n.sections.map((s) => s.key)).toEqual(["desk", "profile", "knowledge", "roadmap", "sessions", "assign", "results", "curricula", "inbox"]);
+    expect(n.sections.map((s) => s.key)).toEqual(["desk", "profile", "knowledge", "roadmap", "sessions", "assign", "assigned", "results", "curricula", "inbox"]);
     expect(n.sections.map((s) => s.key)).toEqual([...SECTION_KEYS]);
     for (const s of n.sections) expect(s.label).toBe(shellCopy.sections[s.key]);
   });
@@ -23,6 +23,11 @@ describe("staff sidebar model", () => {
     expect(r.label).toBe("Ghi kết quả");
     expect(r.children.map((c) => c.key)).toEqual(["import", "results"]);
     expect(r.children.map((c) => c.href)).toEqual([`/learners/${NG}/imports/new`, `/learners/${NG}/results/new`]);
+  });
+
+  it("Bài đã giao sits right after Giao bài and opens the child's list (24/11)", () => {
+    const s = buildNav("parent", NG, { revisionsReady: true }).sections.find((x) => x.key === "assigned")!;
+    expect(s).toMatchObject({ label: "Bài đã giao", status: "live", href: `/learners/${NG}/assigned`, children: [] });
   });
 
   it("every section is live since W4a (Lộ trình opens /roadmap); Bản đồ kiến thức is live since W3", () => {
