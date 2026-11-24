@@ -19,6 +19,8 @@ async function q<R extends Record<string, unknown>>(sql: string, params: unknown
   }
 }
 const cardRuns = async () => Number((await q<{ n: string }>("select count(*) as n from english.ai_runs where purpose = 'vocab_card'"))[0]!.n);
+type Ask = { child_text: string; guard: string; used_ai: boolean; reasons: string[]; fixed_code: string | null };
+const asks = () => q<Ask>("select child_text, guard, used_ai, reasons, fixed_code from english.tutor_asks where learner_id = $1 order by created_at", [NGUYEN]);
 
 test("the parent turns AI on with the v3 text (Gia sư is its own page, questions are kept)", async ({ page }) => {
   await loginAs(page, "parent");
@@ -37,7 +39,7 @@ test("Nguyên looks up a word: guess first, then Vì sao and Liên quan already 
   await expect(page.getByTestId("nav-tutor")).toBeVisible();
   await expect(page.getByTestId("nav-notebook")).toBeVisible();
   await expect(page.getByTestId("tutor-watched")).toHaveText(tutorPageCopy.watched);
-  const before = await cardRuns();
+  const asksBefore = (await asks()).length;
   await page.getByTestId("lookup-word").fill("make");
   await page.getByTestId("lookup-send").click();
   const card = page.getByTestId("vocab-card").first();
@@ -46,7 +48,12 @@ test("Nguyên looks up a word: guess first, then Vì sao and Liên quan already 
   await card.getByTestId("guess-0").click();
   await expect(card.getByTestId("card-why")).toBeVisible();
   await expect(card.getByTestId("card-related")).toBeVisible();
-  expect(await cardRuns()).toBe(before + 1);
+  // one ask, written by the AI and passed both checks (the reasons are printed if not)
+  const first = (await asks()).slice(asksBefore);
+  expect(first, JSON.stringify(first)).toHaveLength(1);
+  expect(first[0]).toMatchObject({ child_text: "make", used_ai: true });
+  expect(["pass", "rewritten"]).toContain(first[0]!.guard);
+  const runsAfterFirst = await cardRuns();
   await card.getByTestId("card-save").click();
   await expect(card.getByTestId("card-save")).toContainText("Đã lưu");
 
@@ -54,7 +61,8 @@ test("Nguyên looks up a word: guess first, then Vì sao and Liên quan already 
   await page.getByTestId("lookup-word").fill("make");
   await page.getByTestId("lookup-send").click();
   await expect(page.getByTestId("vocab-card")).toHaveCount(2);
-  expect(await cardRuns()).toBe(before + 1);
+  expect(await cardRuns()).toBe(runsAfterFirst);
+  expect((await asks()).at(-1)).toMatchObject({ child_text: "make", guard: "cache", used_ai: false });
 
   // Vietnamese in the word box: told to type a short English word
   await page.getByTestId("lookup-word").fill("núi lửa");

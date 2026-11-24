@@ -56,3 +56,15 @@ describe("Gia sư · Tra từ", () => {
     expect(screen.getByTestId("tutor-off").textContent).toBe(tutorPageCopy.off);
   });
 });
+
+describe("Gia sư · one paid turn per press", () => {
+  it("two submits in the same tick send one request", async () => {
+    const calls = stub([{ body: { kind: "fixed", askId: "a1", fixed: "daily_limit", replayed: false } }, { body: { kind: "fixed", askId: "a2", fixed: "daily_limit", replayed: false } }]);
+    render(<LookupForm off={false} />);
+    fireEvent.change(screen.getByTestId("lookup-word"), { target: { value: "make" } });
+    fireEvent.submit(screen.getByTestId("lookup-form"));
+    fireEvent.submit(screen.getByTestId("lookup-form"));
+    await waitFor(() => expect(screen.getByTestId("lookup-fixed")).toBeTruthy());
+    expect(calls).toHaveLength(1);
+  });
+});

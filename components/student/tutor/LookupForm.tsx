@@ -22,6 +22,8 @@ export function LookupForm({ off }: { off: boolean }) {
   const [problem, setProblem] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const intent = useRef<{ key: string; id: string } | null>(null);
+  // A second submit in the same tick (double tap, Enter + click) must not start a second paid turn: state updates are not instant.
+  const inFlight = useRef(false);
 
   function clientIdFor(key: string): string {
     if (intent.current?.key !== key) intent.current = { key, id: crypto.randomUUID() };
@@ -30,7 +32,8 @@ export function LookupForm({ off }: { off: boolean }) {
 
   async function lookup(w: string, ctx: string) {
     const text = w.trim();
-    if (!text || busy) return;
+    if (!text || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setProblem(null);
     const key = `${entries.length}|${text}|${ctx}`;
@@ -59,6 +62,7 @@ export function LookupForm({ off }: { off: boolean }) {
     } catch {
       setProblem(c.errors.network!);
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   }
