@@ -1,0 +1,29 @@
+{
+  "track": "B",
+  "note": "Destination C1&C2 grammar and vocabulary tags (hub HANDOVER_NHAN_DESTINATION_B_2026-11-24, parent chose option A). Seed tags of migration 0042 with a skill-map group (SM-1 is published, so no leaf). Keys are fixed for ever: exercise files prepared outside the app use them.",
+  "tags": [
+    {"key": "thi-hien-tai", "label_vi": "Thì hiện tại", "group_vi": "Ngữ pháp", "group_key": "gr-tense"},
+    {"key": "thi-qua-khu", "label_vi": "Thì quá khứ (cả used to / would)", "group_vi": "Ngữ pháp", "group_key": "gr-tense"},
+    {"key": "thi-tuong-lai", "label_vi": "Thì tương lai & các cách nói tương lai", "group_vi": "Ngữ pháp", "group_key": "gr-tense"},
+    {"key": "modal-bat-buoc-cho-phep", "label_vi": "Động từ khuyết thiếu (bắt buộc, cho phép, cần) & semi-modals", "group_vi": "Ngữ pháp", "group_key": "gr-modal"},
+    {"key": "tinh-tu-trang-tu", "label_vi": "Tính từ & trạng từ (vị trí, so sánh, tính từ ghép)", "group_vi": "Ngữ pháp", "group_key": "gr-compare-prep"},
+    {"key": "menh-de-quan-he-phan-tu", "label_vi": "Mệnh đề quan hệ & mệnh đề phân từ", "group_vi": "Ngữ pháp", "group_key": "gr-clause"},
+    {"key": "cau-phuc", "label_vi": "Câu phức: liên từ, mệnh đề trạng ngữ, nhấn mạnh", "group_vi": "Ngữ pháp", "group_key": "gr-clause"},
+    {"key": "cum-danh-tu-mao-tu", "label_vi": "Cụm danh từ, mạo từ, lượng từ", "group_vi": "Ngữ pháp", "group_key": "gr-noun-det"},
+    {"key": "dong-tu-bo-ngu", "label_vi": "Động từ + V-ing / to V / mệnh đề", "group_vi": "Ngữ pháp", "group_key": "gr-verb-pattern"},
+    {"key": "ket-hop-tu", "label_vi": "Kết hợp từ & cấu trúc cố định (collocations, patterns)", "group_vi": "Từ vựng", "group_key": "vo-colloc-idiom"},
+    {"key": "chu-de-tu-duy-hoc-tap", "label_vi": "Chủ đề: Tư duy & học tập", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "chu-de-thay-doi-cong-nghe", "label_vi": "Chủ đề: Thay đổi & công nghệ", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "chu-de-thoi-gian-cong-viec", "label_vi": "Chủ đề: Thời gian & công việc", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "chu-de-di-chuyen-giao-thong", "label_vi": "Chủ đề: Di chuyển & giao thông", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "chu-de-giao-tiep-truyen-thong", "label_vi": "Chủ đề: Giao tiếp & truyền thông", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "chu-de-co-hoi-thien-nhien", "label_vi": "Chủ đề: Cơ hội & thiên nhiên", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "chu-de-so-luong-tien-bac", "label_vi": "Chủ đề: Số lượng & tiền bạc", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "chu-de-vat-lieu-xay-dung", "label_vi": "Chủ đề: Vật liệu & môi trường xây dựng", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "chu-de-cam-xuc-suc-khoe", "label_vi": "Chủ đề: Cảm xúc, phản ứng & sức khỏe", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "chu-de-quyen-luc-xa-hoi", "label_vi": "Chủ đề: Quyền lực & vấn đề xã hội", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "chu-de-chat-luong-nghe-thuat", "label_vi": "Chủ đề: Chất lượng & nghệ thuật", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "chu-de-quan-he-con-nguoi", "label_vi": "Chủ đề: Các mối quan hệ & con người", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "chu-de-so-thich-giai-tri", "label_vi": "Chủ đề: Sở thích & giải trí", "group_vi": "Từ vựng", "group_key": "vo-topic"}
+  ]
+}

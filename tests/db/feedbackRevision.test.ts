@@ -263,6 +263,21 @@ describe("S6 feedback + revision (migration 0021)", () => {
       expect(rb2.revision_activity_id).toBe(await step(b1, 8)); // B-W1 7 → 8 (the next step)
     });
 
+    it("a 'Kỹ năng' leaf may be a seed tag that has its own group (Destination 0042, listening 0026), not a tag of the other track", async () => {
+      const b = await assign("nguyen", "B-W1-HOMEWORK", dueReleasingAll("B-W1-HOMEWORK"));
+      const wb = (await submitText(U().studentNguyen, await step(b, 7), TEXT_B)).attempt_id;
+      const items = [
+        { text: "Xem lại thì hiện tại.", leaf: { kind: "tag", ref_key: "thi-hien-tai" } },
+        { text: "Chọn từ đúng chủ đề.", leaf: { kind: "tag", ref_key: "chu-de-tu-duy-hoc-tap" } },
+        { text: "Nghe ý chính.", leaf: { kind: "tag", ref_key: "nghe-main-idea" } },
+      ];
+      const ok = await write(M().tutorNguyen, wb, { items });
+      const [row] = await q1<{ items: { leaf: unknown }[] }>("select items from english.feedback_notes where id = $1", [ok.id]);
+      expect(row!.items.map((i) => i.leaf)).toEqual(items.map((i) => i.leaf));
+      const wa = (await submitText(U().studentAn, await step(a1, 6), TEXT_A)).attempt_id;
+      await fail(write(M().tutorAn, wa, { items: [{ text: "Sửa.", leaf: { kind: "tag", ref_key: "thi-hien-tai" } }] }), "23514", /\(unknown_leaf\)/);
+    });
+
     it("'Chỉ góp ý' opens no step; the S4 paths still refuse a REVISION step; eng_revision_open follows the live feedback", async () => {
       const work = (await submitText(U().studentAn, await step(a1, 6), TEXT_A)).attempt_id;
       const note = await write(M().tutorAn, work, { requires: false });
