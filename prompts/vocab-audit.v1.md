@@ -9,7 +9,7 @@ THE CARD (JSON):
 CARD>>>
 
 Judge each criterion true / false:
-- core_ok: `core` is ONE short, correct sentence that gives the essence of the word (an image or rule a child can remember), not a generic statement.
+- core_ok: `core` is short (one sentence, or two when it contrasts the word with a confusable word) and correct, and gives the essence of the word (an image or rule a child can remember), not a generic statement such as "X is a common verb".
 - guess_ok: `guess` asks something the child can really think about, with exactly two options that are really different, and `right` is correct.
 - examples_contrast: the examples are correct English at the level and show a contrast (two uses, or the word next to a confusable word).
 - vn_trap_ok: `vn` (comparison with Vietnamese) and `trap` (when not to use / common mistake) are correct and useful.

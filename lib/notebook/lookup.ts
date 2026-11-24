@@ -223,8 +223,10 @@ export async function runLookup(deps: LookupDeps, input: { userId: string; word:
 
   let card: CardContent | null = null;
   let guard: "pass" | "rewritten" = "pass";
+  /** "unreadable:examples.0.en:too_big": where a refused tool answer went wrong (codes only, no text). */
+  const why = (e: z.ZodError) => `unreadable:${e.issues[0]?.path.join(".") ?? ""}:${e.issues[0]?.code ?? ""}`.slice(0, 80);
   const first = await draft();
-  if (!first.success) reasons.push("unreadable");
+  if (!first.success) reasons.push(why(first.error));
   else if (first.data.status === "not_word") {
     await m.flush(gate.reservationId ?? null, purpose);
     const suggestions = first.data.suggestions.map((x) => x.trim().toLowerCase()).filter((x) => SUGGESTION.test(x) && !isBlocked(x)).slice(0, 3);
@@ -243,7 +245,7 @@ export async function runLookup(deps: LookupDeps, input: { userId: string; word:
         card = second.data.card;
         guard = "rewritten";
       } else reasons.push(...r2.map((x) => `rewrite_${x}`));
-    } else reasons.push("rewrite_failed");
+    } else reasons.push(second.success ? "rewrite_not_word" : `rewrite_${why(second.error)}`);
   }
   await m.flush(gate.reservationId ?? null, purpose);
   if (!card) return fixed(m.used ? "card_failed" : "ai_error", { usedAi: m.used, runs: m.runs, cost: m.cost, reasons });
