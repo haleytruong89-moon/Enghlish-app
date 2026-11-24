@@ -678,3 +678,9 @@ Spec `docs/superpowers/specs/2026-11-22-gia-su-so-tay-design.md` (bản 0.2, ph�
 - 23 nhãn có sẵn (`origin = 'seed'`, mã cố định) sau SM-1. Nhóm của chúng ở cột `error_tags.seed_group_key` (chỉ nhãn có sẵn, chỉ khi `group_key` null); `group_key` giữ nguyên luật 0026 (nhãn riêng + nhãn `nghe-…`).
 - Bốn hàm đọc nhóm của nhãn có bản hiện hành ở 0042, dùng `coalesce(group_key, seed_group_key)`: `eng_skill_map`, `eng_point_inputs`, `eng_my_review_by_domain`, `eng_clean_feedback_items` (Góp ý nhận nhãn có sẵn có nhóm riêng, kể cả nhãn nghe). **Migration sau sửa các hàm này thì chép từ 0042.**
 - Trình duyệt không đọc `seed_group_key`: ô chọn nhãn tìm nhóm qua `eng_skill_map` (`placeOfTag`).
+
+### 19.34. Gỡ bài trên app (không SQL)
+
+- Gỡ bài = `eng_activity_event(step, 'skip', null, lý do, người)`; Khôi phục = `unskip`. `eng_step_effective_date` trả null khi bước đang bỏ → `eng_activity_released` false → bước không có trong `eng_my_today` / `eng_my_today_count`, không mở được, không tính quá hạn (`studioOverdueCount` bỏ qua "skipped"). Test DB: `tests/db/studentDesk.test.ts` "Gỡ bài = skip".
+- Chỉ hiện nút khi bài chưa có lần nộp nào (`lastAttemptId` null). Sự kiện chỉ thêm, có người + lý do; quyền = `eng_actor_may_manage` (phụ huynh, thầy/cô của em).
+- `StudioAssignedRow.lateDays` = số ngày sau hạn (chỉ "overdue"); `sortStudioAssigned` đưa bài quá hạn lâu nhất lên đầu.
