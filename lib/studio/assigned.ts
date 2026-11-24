@@ -65,8 +65,10 @@ export function buildStudioAssigned(
     const counted = firstRes && firstRes.attempt === "first" ? firstRes : undefined;
     const startOn = step.schedule.date;
     let status: StudioAssignedStatus;
-    if (last) status = resultOf.has(last.id) ? "checked" : "waiting";
-    else if (step.schedule.skipped) status = "skipped";
+    // A removed step stays "skipped" even when work was sent before the removal (an adult on a stale page): it must show "Đã gỡ" and
+    // "Khôi phục" — while it is skipped the child cannot open the work or its result.
+    if (step.schedule.skipped) status = "skipped";
+    else if (last) status = resultOf.has(last.id) ? "checked" : "waiting";
     else if (startOn && startOn > todayIso) status = "not_yet";
     else status = q.dueOn < todayIso ? "overdue" : "todo";
     out.push({
@@ -79,7 +81,7 @@ export function buildStudioAssigned(
       assignedAt: q.assignedAt,
       status,
       lateDays: status === "overdue" ? daysBetween(q.dueOn, todayIso) : null,
-      removedReason: status === "skipped" ? step.schedule.lastReason : null,
+      removedReason: status === "skipped" ? step.schedule.skipReason : null,
       attempts: mine.length,
       lastAttemptId: last?.id ?? null,
       lastSubmittedAt: last?.submitted_at ?? null,

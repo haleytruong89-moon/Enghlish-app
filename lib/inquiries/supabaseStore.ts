@@ -82,6 +82,15 @@ export function createSupabaseInquiryStore(): InquiryStore {
       return data?.learner_id ?? null;
     },
 
+    async stepHasWork(activityId) {
+      const { count, error } = await createAdminClient()
+        .from("attempts")
+        .select("id", { count: "exact", head: true })
+        .eq("activity_instance_id", activityId);
+      if (error) dbError("attempts lookup", error);
+      return (count ?? 0) > 0;
+    },
+
     async recordEvent(args) {
       const { data, error } = await createAdminClient().rpc("eng_activity_event", {
         p_activity: args.activityId,

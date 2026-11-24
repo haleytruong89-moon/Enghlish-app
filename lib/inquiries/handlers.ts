@@ -44,6 +44,8 @@ export interface InquiryStore {
   getActivityLearnerId(activityId: string): Promise<string | null>;
   /** Calls english.eng_activity_event (service role). Returns the event id. */
   recordEvent(args: EventBody & { activityId: string; byMemberId: string }): Promise<number>;
+  /** The child has sent work for this step (an attempt exists). Such a step is never skipped from the app (24/11). */
+  stepHasWork(activityId: string): Promise<boolean>;
 }
 
 export type HandlerDeps = {
@@ -130,6 +132,8 @@ export async function handleActivityEvent(deps: HandlerDeps, activityId: string,
   if (!g.ok) return g.result;
   const parsed = eventBodySchema(deps.access?.now).safeParse(rawBody);
   if (!parsed.success) return fail(400, "invalid_body");
+  // Skipping a step hides it from the child, its sent work and its result included: refused once anything was sent (a stale page).
+  if (parsed.data.kind === "skip" && (await deps.store.stepHasWork(activityId))) return fail(409, "has_work");
   try {
     const id = await deps.store.recordEvent({ ...parsed.data, activityId, byMemberId: g.grant.member.id });
     return { status: 201, body: { id } };

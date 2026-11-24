@@ -28,6 +28,11 @@ describe("Bài làm trên app đã giao: late days, removal", () => {
     expect(h).toContain(c.restore);
     expect(h).not.toContain(`>${c.remove}<`);
   });
+  it("a test removed after work was sent (stale page) still shows Đã gỡ and Khôi phục, never Gỡ bài", () => {
+    const h = html([row({ status: "skipped", removedReason: "Giao trùng", attempts: 1, lastAttemptId: "t1", lastSubmittedAt: "2026-11-16T02:00:00Z", episodeId: "e1" })]);
+    expect(h).toContain(c.restore);
+    expect(h).not.toContain(`>${c.remove}<`);
+  });
   it("sent work can never be removed", () => {
     for (const status of ["waiting", "checked"] as const) {
       const h = html([row({ status, attempts: 1, lastAttemptId: "t1", lastSubmittedAt: "2026-11-16T02:00:00Z", episodeId: "e1" })]);

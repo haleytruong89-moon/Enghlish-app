@@ -46,7 +46,8 @@ export function StudioAssignedTable({ rows }: { rows: StudioAssignedRow[] | null
                   {c.removedReason(r.removedReason)}
                 </p>
               ) : null}
-              {r.lastAttemptId === null ? (
+              {/* Gỡ bài only before anything was sent; Khôi phục for every removed test, even one with work sent before the removal. */}
+              {r.status === "skipped" || r.lastAttemptId === null ? (
                 <div className="flex flex-wrap gap-2">
                   <RemoveAssignedButton activityId={r.activityId} removed={r.status === "skipped"} title={r.title} />
                 </div>

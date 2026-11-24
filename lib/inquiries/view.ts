@@ -51,6 +51,8 @@ export type Schedule = {
   skipped: boolean;
   /** Reason of the latest event, if any. */
   lastReason: string | null;
+  /** Reason of the skip that is in force (null when not skipped): a later reschedule does not replace it. */
+  skipReason: string | null;
 };
 
 /** Order events as the DB defines "latest": by time, then id. */
@@ -60,11 +62,15 @@ export function effectiveSchedule(planned: string | null, events: readonly Event
   const sorted = [...events].sort(byTimeThenId);
   let date = planned;
   let skipped = false;
+  let skipReason: string | null = null;
   for (const e of sorted) {
     if (e.kind === "reschedule") date = e.new_date;
-    else skipped = e.kind === "skip";
+    else {
+      skipped = e.kind === "skip";
+      skipReason = skipped ? e.reason : null;
+    }
   }
-  return { date, plannedDate: planned, skipped, lastReason: sorted.length ? sorted[sorted.length - 1]!.reason : null };
+  return { date, plannedDate: planned, skipped, lastReason: sorted.length ? sorted[sorted.length - 1]!.reason : null, skipReason };
 }
 
 export type StepView = {
