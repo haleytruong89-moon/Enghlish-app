@@ -414,7 +414,7 @@ Spec `docs/superpowers/specs/2026-11-22-gia-su-so-tay-design.md`. Luật G1–G9
 | # | Luật | Ở đâu |
 |---|---|---|
 | E2-1 | Không có gì của gia sư trong bài làm (kể cả link); gia sư là mục riêng | `TUTOR_IN_WORK` tắt; trang `/tutor` |
-| E2-2 | Phiên âm không do AI viết (L3); AI viết trường `ipa` là thẻ bị loại | zod strict + `cardCodeReasons` `has_ipa`; `ipa_lexicon` |
+| E2-2 | Phiên âm không do AI viết (L3): trường lạ AI thêm (vd. `ipa`) bị bỏ, không lưu, không hiện; phiên âm viết lẫn trong chữ (`/…/`, `[…]`) làm thẻ bị loại | zod giữ đúng các trường + `cardCodeReasons` `has_ipa`; `ipa_lexicon` |
 | E2-3 | Âm thanh không rời máy (L5): chỉ giọng `localService` | `pickVoice` |
 | E2-4 | Không gửi tên / mã em cho AI; chỉ từ, câu con gõ, dải cấp, ngôn ngữ giải thích | `lib/notebook/prompt.ts` |
 | E2-5 | 60 lượt tra / ngày / em (cả thẻ có sẵn), 30 lượt có AI; ngày theo giờ Việt Nam | `track_settings`, `eng_lookup_context` |

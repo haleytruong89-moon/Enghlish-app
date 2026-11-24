@@ -17,5 +17,5 @@ Refuse (pass = false) with every reason that applies:
 - level_mismatch: examples or self-checks are clearly far above or below the level band.
 - not_age_appropriate: anything a 11–15 year old should not read (violence, adult content, rude words, fear), or a mocking tone.
 - off_topic: content that is not about learning this English word.
-- reveals_private: asks for or mentions personal information, names of real people, places to meet, or repeats the child's sentence or anything personal from it.
+- reveals_private: asks the child for identifying information (full name, address, school, phone, photos, accounts), names real private people or places to meet, or repeats the child's sentence or anything personal from it. NOT a reason: the `task` inviting the child to write a sentence about their own day, hobbies or school life; examples with common first names of fictional people ("Tom", "Lan").
 Otherwise pass = true with no reasons. Small style issues are NOT a reason to refuse.
