@@ -16,10 +16,10 @@ const TONE: Record<StudioAssignedStatus, string> = {
 };
 
 /** "Bài làm trên app đã giao": each Studio test with its status and a way to see the whole work. Adults only (staff pages). */
-export function StudioAssignedTable({ rows }: { rows: StudioAssignedRow[] | null }) {
+export function StudioAssignedTable({ rows, title = c.title }: { rows: StudioAssignedRow[] | null; title?: string }) {
   return (
     <section className="flex flex-col gap-3" aria-labelledby="studio-assigned-title" id="studio-assigned" data-testid="studio-assigned">
-      <h2 id="studio-assigned-title" className="text-lg font-semibold">{c.title}</h2>
+      <h2 id="studio-assigned-title" className="text-lg font-semibold">{title}</h2>
       {rows === null ? (
         <p className="rounded-xl border border-line bg-white px-4 py-3 text-sm text-muted">{c.unavailable}</p>
       ) : rows.length === 0 ? (
