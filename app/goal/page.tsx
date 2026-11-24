@@ -15,7 +15,7 @@ export default async function GoalPage() {
   if (base.kind === "login") redirect("/login");
   if (base.kind !== "ok") notFound();
   const shell = (children: React.ReactNode) => (
-    <StudentDeskShell active="journey" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest}>
+    <StudentDeskShell active="journey" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest} tutorReady={base.tutorReady}>
       {children}
     </StudentDeskShell>
   );

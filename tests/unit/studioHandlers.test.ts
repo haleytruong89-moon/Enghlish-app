@@ -174,7 +174,7 @@ describe("Studio API (requireAccess first; tutor or parent of the child)", () =>
     expect((await handleAiSettings(deps("parent"))).status).toBe(200);
     const s = store();
     expect((await handleSetAiSettings(deps("parent", s), { enabled: false })).status).toBe(200);
-    expect(s.setAiSettings).toHaveBeenCalledWith({ enabled: false, noticeVersion: "ai-studio-tutor-v2", byMemberId: "m-parent" });
+    expect(s.setAiSettings).toHaveBeenCalledWith({ enabled: false, noticeVersion: "ai-studio-tutor-v3", byMemberId: "m-parent" });
     expect((await handleSetAiSettings(deps("studentNguyen"), { enabled: true })).status).toBe(403);
   });
 

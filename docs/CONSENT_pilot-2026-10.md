@@ -19,3 +19,13 @@
 - Câu 5 là quyết định D29 (PRD).
 - Câu 6: **file ảnh/PDF chưa nằm trong bản sao lưu** (quyết định A4); chức năng xóa cũng xóa các file đó.
 - Hiện đồng ý được ghi bởi phụ huynh thay cho con (không có luồng xác minh tuổi tự động — PRD FR-02).
+
+## Đồng ý AI trên Cài đặt AI (`ai_text`) — các phiên bản
+
+Văn bản ngắn hiện trên trang Cài đặt AI (chữ ở `lib/copy/vi.ts` → `aiSettingsCopy`). Mỗi lần đổi nội dung là một phiên bản mới; phụ huynh bấm "Đồng ý và bật" lại.
+
+| Phiên bản | Ngày | Thêm gì |
+|---|---|---|
+| `ai-studio-v1` | 07/11/2026 | AI đọc đề + đáp án để soạn nháp (Studio) |
+| `ai-studio-tutor-v2` | 21/11/2026 | Gia sư AI trong bài luyện (E1); câu hỏi ngắn con gõ được gửi cho AI |
+| `ai-studio-tutor-v3` | 23/11/2026 | Gia sư AI là **mục riêng "Gia sư"**, không có trong bài làm (phụ huynh quyết 22/11); con tra từ (sau này hỏi ngữ pháp), AI nhận từ / câu ngắn con gõ, không kèm tên; **câu con hỏi được lưu, mẹ và thầy/cô của em đọc được**, con được báo trên trang Gia sư (E2a) |

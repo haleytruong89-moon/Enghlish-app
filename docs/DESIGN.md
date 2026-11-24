@@ -619,3 +619,56 @@ Trang `/learners/<id>/delete` (chỉ phụ huynh; gia sư/học sinh 403, em ngo
 - **Model:** `claude-sonnet-5-5` trả lời, `claude-haiku-5-5` kiểm (env `TUTOR_MODEL`, `TUTOR_CHECK_MODEL`). `tool_choice` mặc định **auto** (`TUTOR_TOOL_CHOICE=tool` để ép): model 5.5 từ chối ép công cụ (400 `tool_choice`, đo ở bộ test 21/11); prompt dặn chỉ trả lời qua công cụ; không gọi công cụ = `ai_error`.
 - **Màn của con:** `AskTutor` (khung vàng dưới câu, "Hỏi" → "Gợi ý tiếp", "Gợi ý n/3", ô hỏi ngắn ≤ 200 ký tự) chỉ ở bài luyện Studio khi đã đọc được phần (0038); bài khác giữ ô mờ cũ. **Cài đặt AI:** ô hạn mức tháng, dòng "bấm Đồng ý lần nữa" khi bản đồng ý cũ, số lượt hôm nay / tháng này mỗi em.
 - **Bộ test** (`scripts/eval-hints.ts`, `tests/eval/bo-test-cases.json`, workflow "Eval AI tutor hints", chỉ bấm tay): chạy đúng `runTutorTurn` với kho trong bộ nhớ + API thật; đo lộ (code + Haiku kiểm độc lập bằng prompt khác + quét rộng hơn), độ dài / kết bằng câu hỏi, ngôn ngữ, cờ, kết quả kiểm, chi phí thật mỗi lượt. Chế độ `bo_test` (24 ca) / `full` (+ đề Destination tải từ bucket private `eval-sources` bằng `scripts/eval-sources.ts`; đề **không** ở git). Kết quả đầy đủ = artifact 90 ngày; tóm tắt công khai (`summary.public.md`) chỉ có bảng + mã câu. Mốc: `docs/eval/E1_BASELINE.md`.
+
+### 19.32. E2a — Gia sư (tra từ) + Sổ tay (migration 0041, AI tới thẳng con)
+
+Spec `docs/superpowers/specs/2026-11-22-gia-su-so-tay-design.md` (bản 0.2, phụ huynh duyệt 23/11); plan `docs/superpowers/plans/2026-11-23-e2a-gia-su-so-tay.md`.
+
+- **Chỗ hỏi duy nhất ngoài bài làm** (D-G1, D-G2): con có 6 mục (Hôm nay · Gia sư · Sổ tay · Đã xem · Đã làm · Hành trình). Hai mục mới chỉ hiện khi `eng_my_tutor_status` có (0041 đã áp); trước đó giữ 4 mục, không "Sắp có".
+- **Một lượt tra từ** (`lib/notebook/lookup.ts` `runLookup`, `POST /api/student/tutor/lookup`, `{word, context?, client_id}`). Các bước theo thứ tự:
+  1. Kiểm chữ: tiếng Anh, 1–4 từ, ≤ 40 ký tự.
+  2. `eng_lookup_context`: chỉ con; cùng `client_id` thì trả lượt cũ.
+  3. Giới hạn 60 lượt / ngày (tính cả thẻ có sẵn).
+  4. Từ chặn (code, trước mọi AI).
+  5. Thẻ có sẵn theo (`headword` hoặc một dạng trong `forms`, `band`, `language`):
+     - không có câu → trả ngay, không AI, không cần đồng ý v3;
+     - có câu → Haiku `vocab-sense.v1` chỉ chọn số nghĩa; `-1` thì soạn bản mới (`supersedes`).
+  6. Đồng ý `ai-studio-tutor-v3` → 30 lượt AI / ngày → model có giá → `eng_ai_gate` giữ 0,08 USD (`vocab_card` hoặc `vocab_sense`).
+  7. Sonnet `vocab-card.v1` (tool `save_vocab_card`).
+  8. zod `strictObject`: có trường `ipa` là trượt (L3).
+  9. Code kiểm (`cardCodeReasons`): ví dụ chứa từ, đáp án tự kiểm, không URL / IPA, số dòng, nghĩa tiếng Việt.
+  10. Haiku kiểm (`vocab-check.v1`); Haiku lỗi tính là trượt.
+  11. Viết lại 1 lần → không được thì câu cố định `card_failed`.
+  12. `eng_save_vocab_card` → ghi sổ AI ở cuối, trả chỗ giữ bằng lần chạy cuối cùng cùng mục đích → `eng_record_tutor_ask`.
+  - Lưu thẻ: bản mới luôn THAY bản hiện hành cùng khóa (khóa theo khóa thẻ), nên thẻ con thấy là thẻ được lưu và dạng mới (went → go) vào bộ tìm. Câu chỉ sang từ khác (left ≠ leave) thì thành thẻ riêng. Lưu lỗi → câu cố định `card_failed`, vẫn ghi lượt + chi phí, không bao giờ 500.
+  - Câu con gõ không bao giờ vào thẻ dùng chung (§5.2): prompt cấm, code từ chối thẻ lặp 4 từ liền hoặc một từ viết hoa của câu (`copiesChildText`), Haiku nhận câu để kiểm; câu không thể đóng khối dữ liệu (`asData`).
+  - Thẻ có sẵn + câu mà AI không chạy được (chưa v3, hết lượt AI, cổng từ chối): trả thẻ có sẵn, không in đậm nghĩa (§8).
+- **Phiên âm** không nằm trong thẻ: mỗi lần trả thẻ, code ghép từ `ipa_lexicon` (`eng_ipa_for`, `lib/notebook/view.ts`).
+  - Bảng nạp bằng `scripts/seed-ipa.ts` / workflow "Seed IPA lexicon" từ ipa-dict (MIT, commit ghim, sha256).
+  - Chuẩn hóa: dấu nhấn về đầu âm tiết, `ɹ` → `r`, `ɐ` → `ʌ`/`ə`.
+  - Bảng trống thì chỉ thiếu dòng phiên âm.
+- **Giọng đọc:** chỉ `speechSynthesis` với giọng `localService` (`lib/notebook/voice.ts`, L5); không có giọng trên máy thì ẩn 🔊.
+- **"Chưa hiểu, giải thích cách khác"** (`runAgain`, `POST /api/student/tutor/asks/:id/again`):
+  - chỉ trên lượt `lookup` của chính con;
+  - một lượt AI (`vocab-again.v1`, `vocab_again`), kiểm code + Haiku như thẻ;
+  - lưu `kind = 'again'`, `parent_ask`, `shown_text` = JSON đã qua kiểm.
+- **Sổ tay** (`/notebook`): `eng_notebook_save` (đã có thì `already`; đã bỏ thì thêm lại), `eng_notebook_set` (`remove` / `restore`), `eng_my_notebook` (nghĩa lấy từ bản hiện hành). Mở thẻ ở `/tutor/card/[cardId]`, luôn là bản hiện hành (`eng_my_vocab_card` đi theo chuỗi `supersedes`); người lớn xem đúng bản con đã thấy (`p_exact`).
+- **😊 / 😐 / 😕:** `eng_rate_tutor_ask` (bảng chỉ thêm `tutor_ask_ratings`, lần mới nhất thắng).
+- **Người lớn** (D-G8): trang `/learners/[id]/tutor-asks` ("Con hỏi Gia sư", con của mục Hồ sơ học sinh).
+  - `eng_tutor_asks_for` kiểm `eng_is_staff_of`: phụ huynh và thầy/cô của em đọc được; thầy/cô em khác và con bị từ chối (42501).
+  - Xem thẻ ở chế độ chỉ đọc. Không AI, không tổng hợp (C làm sau).
+- **Dữ liệu (0041, chỉ thêm, cần 0040):**
+
+  | Bảng | Ghi chú |
+  |---|---|
+  | `ipa_lexicon` | Tham chiếu, ai đăng nhập cũng đọc |
+  | `vocab_cards` | Dùng chung, có phiên bản, không có gì của em |
+  | `tutor_asks` | Chỉ thêm; con không đọc trực tiếp |
+  | `tutor_ask_ratings` | Chỉ thêm |
+  | `notebook_items` / `notebook_item_events` | Chỉ thêm; trạng thái = sự kiện mới nhất |
+
+  - `ai_runs.purpose` thêm `vocab_card`, `vocab_check`, `vocab_sense`, `vocab_again`.
+  - `track_settings` thêm `tutor_lookup_daily_limit` 60, `tutor_lookup_ai_daily_limit` 30.
+  - Xóa dữ liệu một em gồm 4 bảng của em; giữ thẻ dùng chung.
+- **Đồng ý:** `AI_NOTICE_VERSION` = `TUTOR_NOTICE_VERSION` = `ai-studio-tutor-v3`. Studio không đổi: cổng chỉ kiểm `granted`.
+- **Bộ test:** `scripts/eval-cards.ts`, `tests/eval/cards/cases.json` (40 từ tự soạn), workflow "Eval vocab cards" (chỉ bấm tay, ≈ 1,5 USD). Audit khuôn §4.5 bằng Haiku (`vocab-audit.v1`). Mốc ghi ở `docs/eval/E2_BASELINE.md`.

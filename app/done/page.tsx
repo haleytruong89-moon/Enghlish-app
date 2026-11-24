@@ -17,7 +17,7 @@ export default async function DonePage({ searchParams }: { searchParams: Promise
   const last = page?.rows.at(-1);
   const olderHref = page && page.rows.length >= DESK_PAGE.done && last ? `/done?before=${encodeURIComponent(last.submittedAt)}&ref=${last.ref}` : null;
   return (
-    <StudentDeskShell active="done" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest}>
+    <StudentDeskShell active="done" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest} tutorReady={base.tutorReady}>
       <div className="mx-auto flex max-w-3xl flex-col gap-4" data-testid="done-page">
         <div>
           <h1 className="text-3xl font-bold">{c.doneTitle}</h1>

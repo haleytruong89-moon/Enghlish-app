@@ -3,7 +3,7 @@
  * slice builds is "soon": shown, never a link, until that slice flips its status here. No track branching: the same model for every
  * child; only the learner id differs.
  */
-import { aiSettingsCopy, importCopy, levelCopy, notesPage, purgePage, readingPage, resultPage, revisionReviewCopy, sessionNotePage, shellCopy, skillStateCopy, studioInboxCopy, targetsPage, weakPage } from "@/lib/copy/vi";
+import { aiSettingsCopy, importCopy, levelCopy, notesPage, purgePage, readingPage, resultPage, revisionReviewCopy, sessionNotePage, shellCopy, skillStateCopy, studioInboxCopy, targetsPage, tutorAsksCopy, weakPage } from "@/lib/copy/vi";
 
 export const SECTION_KEYS = ["desk", "profile", "knowledge", "roadmap", "sessions", "assign", "results", "curricula", "inbox"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
@@ -35,6 +35,7 @@ export const SECTIONS: readonly SectionDef[] = [
       { key: "weak", label: weakPage.link, href: `${L(id)}/weak` },
       { key: "targets", label: targetsPage.link, href: `${L(id)}/targets` },
       { key: "reading", label: readingPage.link, href: `${L(id)}/reading/new` },
+      { key: "tutorAsks", label: tutorAsksCopy.link, href: `${L(id)}/tutor-asks` },
     ],
   },
   { key: "knowledge", status: "live", lane: null, root: (id) => `${L(id)}/knowledge`, children: () => [] },

@@ -1,0 +1,44 @@
+name: Seed IPA lexicon
+
+# Manual only — the parent presses "Run workflow" and types SEED, AFTER migration 0041 is applied.
+# Loads english.ipa_lexicon (pronunciations from ipa-dict, MIT, pinned commit + sha256) used by the tutor's word cards.
+# Reference data only, no child's data. Running it again is safe.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Gõ SEED để nạp bảng phiên âm vào database thật'
+        required: true
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seed-ipa
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    if: ${{ inputs.confirm == 'SEED' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check secret is present (without printing it)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: test -n "$DATABASE_URL" || { echo "::error::secret DATABASE_URL is not set"; exit 1; }
+      - name: Seed
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          npm run db:seed-ipa | tee /tmp/seed.txt
+          { echo "## Nạp bảng phiên âm"; echo; echo '```'; cat /tmp/seed.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

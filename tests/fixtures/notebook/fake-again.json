@@ -1,0 +1,9 @@
+{
+  "angle": "picture",
+  "core": "Hãy tưởng tượng hai bàn tay nặn ra một thứ mới: đó là make.",
+  "examples": [
+    { "en": "We make a paper boat.", "vi": "Bọn mình gấp (làm ra) một chiếc thuyền giấy." },
+    { "en": "My mum makes soup on Sundays.", "vi": "Mẹ mình nấu súp vào Chủ nhật." }
+  ],
+  "task": "Viết một câu: tuần này bạn đã make một thứ gì bằng tay?"
+}

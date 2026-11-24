@@ -17,7 +17,7 @@ export default async function JourneyPage() {
   if (base.kind === "login" || data.kind === "login") redirect("/login");
   if (base.kind !== "ok" || data.kind === "not-found") notFound();
   return (
-    <StudentDeskShell active="journey" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest}>
+    <StudentDeskShell active="journey" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest} tutorReady={base.tutorReady}>
       {data.kind === "ok" ? (
         <JourneyView
           journey={data.journey}

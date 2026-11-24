@@ -114,7 +114,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ id: s
         </div>
       );
       return (
-        <StudentDeskShell active="today" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest}>
+        <StudentDeskShell active="today" learnerId={base.learnerId} seenTimes={(base.seenFirst ?? []).map((r) => r.newsAt)} showTestBadge={base.isTest} tutorReady={base.tutorReady}>
           {result || a.canSubmit ? (
             <Player key={id} activity={a} isTest={isTest} initialResult={result} sentAt={!result && last ? last.submittedAt : null} aside={aside} parts={parts} tutorInWork={tutorInWorkEnabled()} />
           ) : (

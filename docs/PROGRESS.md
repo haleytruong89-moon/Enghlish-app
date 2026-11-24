@@ -2038,3 +2038,46 @@ Nhánh `fix/tutor-off-in-work`. **Không có SQL.** Phụ huynh quyết 22/11: *
 - Không cần làm gì trên Vercel: gộp PR là tắt.
 - Phụ huynh quyết 22/11: nhãn chế độ của con "Luyện tập (có gợi ý)" → **"Luyện tập"**; đoạn mô tả gia sư AI ở Cài đặt AI sửa cùng E2 (nằm trong văn bản đồng ý).
 - Thử trên preview: con mở một bài luyện Studio → dưới câu không còn khung "Gia sư" / nút "Hỏi"; màn Hôm nay không còn dòng 💡.
+
+## E2a · Gia sư (tra từ) + Sổ tay (23/11/2026)
+
+Nhánh `feature/e2a-gia-su-so-tay`. Spec `docs/superpowers/specs/2026-11-22-gia-su-so-tay-design.md` (bản 0.2, phụ huynh duyệt 23/11), plan `docs/superpowers/plans/2026-11-23-e2a-gia-su-so-tay.md`. Thiết kế: `docs/DESIGN.md` §19.32, luật `docs/DOMAIN.md` bản 0.10.
+
+**Có gì:**
+- Con có 6 mục: Hôm nay · **Gia sư** · **Sổ tay** · Đã xem · Đã làm · Hành trình.
+- Gia sư: tra một từ / cụm tiếng Anh (có thể kèm câu) → thẻ từ theo khuôn §4.5. Đoán trước; rồi Bản chất, Nắm nhanh, Vì sao, Liên quan, Tự kiểm, Đến lượt bạn luôn hiện.
+  - Phiên âm Anh–Anh / Anh–Mỹ từ từ điển mở; nghe bằng giọng có sẵn trên máy.
+  - "+ Lưu vào Sổ tay", "Chưa hiểu, giải thích cách khác", 😊😐😕.
+- Sổ tay (tab Từ vựng): lọc, bỏ (có hỏi lại), thêm lại.
+- Người lớn: "Con hỏi Gia sư" ở Hồ sơ học sinh.
+- Văn bản đồng ý AI mới `ai-studio-tutor-v3`.
+
+**SQL cần phụ huynh áp:** `0041_tutor_notebook.sql` (workflow "Apply database migrations", gõ APPLY; cần 0040). Chưa áp thì app vẫn chạy như cũ (4 mục, không lỗi).
+
+**Sau khi áp, phụ huynh làm 3 việc:**
+1. Workflow **"Seed IPA lexicon"** (gõ SEED): nạp bảng phiên âm. Chưa nạp thì thẻ chỉ thiếu dòng phiên âm.
+2. Cài đặt AI → **"Đồng ý và bật"** lần nữa (bản v3). Chưa bấm thì con chỉ mở được thẻ đã có, từ mới báo "Gia sư đang nghỉ".
+3. Workflow **"Eval vocab cards"** (≈ 1,5 USD) rồi đọc 10 thẻ mẫu trong artifact `results.jsonl`.
+   - Đạt khi: 0 ca sai luật cứng, 0 nội dung không an toàn, ≥ 90 % thẻ đúng khuôn.
+   - Ghi kết quả vào `docs/eval/E2_BASELINE.md`. Đạt thì mới cho con dùng.
+
+**Giả định đã duyệt (spec §12):** 60 lượt tra / 30 lượt có AI mỗi ngày mỗi em; thẻ ≤ 3 nghĩa; tra không tự lưu; chỉ tiếng Anh 1–4 từ; thẻ sai báo qua "Góp ý về app" tới E4.
+
+**Lệch so với plan:**
+- Thời gian một lượt 55 giây (route 60 giây), thay vì 100 giây như E1.
+- Thẻ có sẵn + câu: nếu Haiku chọn nghĩa lỗi thì vẫn trả thẻ (không nghĩa in đậm), không mua thẻ mới.
+- Thêm `readOnly` cho thẻ ở trang người lớn.
+- "Từ vừa tra" mở `/tutor/card/[cardId]` (không tính lượt), mỗi từ một dòng.
+
+**Sau rà soát (Opus, 23/11) đã sửa:** lưu thẻ lỗi không còn ra 500 (ghi `card_failed` + chi phí); câu con gõ không thể vào thẻ dùng chung (prompt + code + Haiku); thẻ con thấy luôn là thẻ được lưu; thẻ có sẵn vẫn trả khi AI không chạy; người lớn xem đúng bản thẻ con đã thấy; trigger chỉ thêm của `vocab_cards` không mở cả khi xóa dữ liệu; nghĩa trong Sổ tay theo bản mới; đồng ý đã tắt tính như chưa có; chấm 😊 lặp không thêm dòng; ô "Liên quan" không tra được thì hiện chữ thường; phiên âm trong `[…]` cũng bị chặn; cờ chèn lệnh bớt báo nhầm.
+**Còn để sau (ghi lại, mức thấp):** hai yêu cầu cùng `client_id` chạy song song (mạng chập, con bấm lại khi yêu cầu đầu chưa xong) có thể tính tiền hai lần; giới hạn lượt / ngày có thể vượt 1–2 lượt khi bấm rất nhanh cùng lúc.
+
+**Cách thử trên preview (em thử):**
+1. Đăng nhập phụ huynh → Cài đặt AI → bật / đồng ý lại.
+2. Đăng nhập Nguyên (thử) → mục Gia sư.
+   - Gõ `make` → Tra → chọn một ý ở "Đoán trước" → thấy đủ các khối → "+ Lưu vào Sổ tay".
+   - Gõ lại `make` → thẻ ra ngay (không tốn AI).
+   - Gõ `núi lửa` → báo chỉ tra tiếng Anh.
+3. Mục Sổ tay: thấy `make` → Bỏ (xác nhận) → "Đã bỏ (1)" → Thêm lại.
+4. Phụ huynh → Hồ sơ học sinh → "Con hỏi Gia sư": thấy các lượt tra, lượt từ thẻ có sẵn ghi "thẻ có sẵn".
+5. Mở một bài luyện: vẫn không có gia sư trong bài.
