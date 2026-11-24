@@ -205,7 +205,7 @@ export function AssignForm({
           />
         </label>
         {isDuplicate(title, openTitles) ? (
-          <p role="note" className="rounded-lg bg-[#FBF1DC] px-3 py-2 text-sm text-[#6B4600]" data-testid="assign-duplicate">
+          <p role="note" aria-live="polite" className="rounded-lg bg-[#FBF1DC] px-3 py-2 text-sm text-[#6B4600]" data-testid="assign-duplicate">
             {studioAssignedCopy.duplicateWarning}
           </p>
         ) : null}

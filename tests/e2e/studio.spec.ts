@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
-import { aiSettingsCopy, levelLabels, pdfPickCopy, pendingCopy, playerCopy, resultCopy, studioInboxCopy, work } from "@/lib/copy/vi";
+import { aiSettingsCopy, levelLabels, pdfPickCopy, pendingCopy, playerCopy, resultCopy, studioAssignedCopy, studioInboxCopy, work } from "@/lib/copy/vi";
 import { KEY_RECOMMEND, PAGE_LIMITS } from "@/lib/pdf/limits";
 import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { makeDocx } from "../unit/fixtures/docx";
@@ -258,12 +258,13 @@ test.describe("Bài đã giao: Gỡ bài (24/11)", () => {
     await tutor.goto(`/learners/${NGUYEN}/assigned?tab=doing`);
     await expect(tutor.getByTestId("board-tab-doing")).toHaveAttribute("aria-current", "page");
     await tutor.getByTestId(`remove-${fresh}`).click();
-    await tutor.getByLabel("Lý do gỡ bài").fill("Giao thử e2e");
-    await tutor.getByTestId(`remove-form-${fresh}`).getByRole("button", { name: "Gỡ bài" }).click();
-    await expect(tutor.getByTestId(`remove-${fresh}`)).toHaveCount(0);
+    await tutor.getByLabel(studioAssignedCopy.reasonLabel).fill("Giao thử e2e");
+    await tutor.getByTestId(`remove-form-${fresh}`).getByRole("button", { name: studioAssignedCopy.confirmRemove }).click();
+    // the refreshed page moves the row to "Đã gỡ": the form (and the row) leave "Con đang làm" only after the event is written
+    await expect(tutor.locator(`[data-testid="remove-form-${fresh}"], [data-testid="remove-${fresh}"]`)).toHaveCount(0);
     await tutor.goto(`/learners/${NGUYEN}/assigned?tab=removed`);
     await expect(tutor.getByTestId(`restore-${fresh}`)).toBeVisible();
-    await expect(tutor.getByText("Lý do gỡ: Giao thử e2e")).toBeVisible();
+    await expect(tutor.getByText(studioAssignedCopy.removedReason("Giao thử e2e"))).toBeVisible();
 
     await loginAs(page, "studentNguyen");
     await page.goto("/");

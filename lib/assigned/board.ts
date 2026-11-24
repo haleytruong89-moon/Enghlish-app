@@ -19,12 +19,14 @@ export function tabOfStudio(r: StudioAssignedRow): BoardTab {
 }
 
 /** Link / PDF work: retracted → removed; nothing sent → doing (a result recorded by an adult without a sending → done); sent → need until it
- *  has a result and (D-d) live feedback. */
+ *  has a result and (D-d) live feedback on the current submission. */
 export function tabOfPractice(a: AssignmentView): BoardTab {
   if (a.retractedAt) return "removed";
   if (a.submission === null) return a.resultId ? "done" : "doing";
   if (a.resultId === null) return "need";
-  return NEEDS_FEEDBACK_TO_FINISH && !a.feedback.some((f) => f.live) ? "need" : "done";
+  // Feedback counts only on the CURRENT submission (an adult's "Nộp thay" may have replaced the one that got feedback).
+  const current = a.submission.id;
+  return NEEDS_FEEDBACK_TO_FINISH && !a.feedback.some((f) => f.live && f.submissionId === current) ? "need" : "done";
 }
 
 export type Board = {

@@ -2132,7 +2132,7 @@ Nhánh `feature/assigned-board` (dựa trên PR 1). Kế hoạch `docs/superpowe
 - Cột trái có mục **Bài đã giao** ngay dưới Giao bài: 4 tab "Cần thầy/cô xử lý" · "Con đang làm" · "Đã xong" · "Đã gỡ", mỗi tab có số bài. Trong tab, bài trên app và bài link / PDF là hai danh sách (giữ nguyên các nút cũ: chấm, ghi kết quả, nộp thay, thu hồi, góp ý, gỡ bài) — khác bản mẫu một chút (bản mẫu gộp một danh sách) để không phải viết lại các nút.
 - "Cần thầy/cô xử lý" = bài chờ chấm câu / chờ ghi kết quả, và bài đã chấm nhưng chưa góp ý (hằng số `NEEDS_FEEDBACK_TO_FINISH`, đổi được).
 - **Giao bài** chỉ còn 4 cách giao + "Bản nháp đang soạn" (bản nháp chưa giao) + dòng dẫn sang Bài đã giao. "Tạo bài từ đề" bỏ danh sách đã giao.
-- Bàn làm việc: báo "quá hạn" và "Xem bài đã giao" mở Bài đã giao (tab Con đang làm).
+- Bàn làm việc: báo "quá hạn" mở Bài đã giao ở tab Con đang làm; "Xem bài giao" mở Bài đã giao (tab mặc định: Cần thầy/cô xử lý nếu có việc).
 - Giao bài trùng tên với bài con chưa nộp: hiện cảnh báo (vẫn giao được) — ở trang bản nháp Studio và ở form link / PDF.
 - Bài đã nộp ghi rõ "chưa góp ý" / "đã góp ý"; nút "Xem bài và góp ý" / "Xem bài · đã góp ý".
 

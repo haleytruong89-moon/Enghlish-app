@@ -14,8 +14,8 @@ const pr = (id: string, o: Partial<AssignmentView>): AssignmentView => ({
   frameId: null, createdAt: "2026-11-15T01:00:00Z", retractedAt: null, file: null, answerFile: null, submission: null, resultId: null, feedback: [], ...o,
 });
 const sent: SubmissionView = { id: "s1", createdAt: "2026-11-20T01:00:00Z", attempt: "first", usedHint: false, linkUrl: null, byRole: "student", files: [] };
-const fb = (live: boolean): SubmissionFeedbackView => ({
-  id: "f1", submissionId: "s1", assignmentId: "x", praise: "Tốt", items: [], authorMember: "m", authorRole: "tutor", authorName: null, createdAt: "2026-11-21T01:00:00Z", live,
+const fb = (live: boolean, submissionId = "s1"): SubmissionFeedbackView => ({
+  id: "f1", submissionId, assignmentId: "x", praise: "Tốt", items: [], authorMember: "m", authorRole: "tutor", authorName: null, createdAt: "2026-11-21T01:00:00Z", live,
 });
 
 describe("Bài đã giao: which tab a piece of work is in", () => {
@@ -35,6 +35,8 @@ describe("Bài đã giao: which tab a piece of work is in", () => {
     expect(tabOfPractice(pr("1", { submission: sent, resultId: "r" }))).toBe("need");
     expect(tabOfPractice(pr("1", { submission: sent, resultId: "r", feedback: [fb(false)] }))).toBe("need");
     expect(tabOfPractice(pr("1", { submission: sent, resultId: "r", feedback: [fb(true)] }))).toBe("done");
+    // feedback on an older submission replaced by "Nộp thay" does not finish the current one
+    expect(tabOfPractice(pr("1", { submission: { ...sent, id: "s2" }, resultId: "r", feedback: [fb(true, "s1")] }))).toBe("need");
     expect(tabOfPractice(pr("1", { resultId: "r" }))).toBe("done");
     expect(tabOfPractice(pr("1", { retractedAt: "2026-11-21T01:00:00Z" }))).toBe("removed");
   });

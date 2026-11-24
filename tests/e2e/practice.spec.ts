@@ -287,6 +287,7 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     expect((await page.request.get(`/api/files/${fileId}`, { maxRedirects: 0 })).status()).toBe(404);
     const res = await page.goto(`/learners/${NG}/assign`);
     expect(res?.status()).toBe(404);
+    expect((await page.goto(`/learners/${NG}/assigned`))?.status()).toBe(404);
     expect((await page.request.get(`/api/learners/${NG}/assignments`)).status()).toBe(404);
   });
 
@@ -375,6 +376,7 @@ test("the tutor gives an assignment by Unit: the title fills itself, the row sho
   await page.getByTestId("assign-url").fill("https://notebooklm.google.com/notebook/units");
   await page.getByTestId("assign-submit").click();
   await expect(page.getByTestId("assign-done")).toContainText(assignPage.done);
+  await page.goto(`/learners/${NG}/assigned?tab=doing`);
   const item = page.locator('li[data-testid^="assignment-"]', { hasText: bookTitle }).first();
   await expect(item).toContainText("Unit 2–3");
   await expect(item).toContainText("2 mục");

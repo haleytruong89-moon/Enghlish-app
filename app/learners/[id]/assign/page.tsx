@@ -38,7 +38,7 @@ export default async function AssignPracticePage({ params, searchParams }: { par
     loadFrames(learner.trackId, learner.id),
     loadPickerMap(learner.id),
     loadUnitChoices(learner.id),
-    loadDraftList(learner.id).catch(() => []),
+    kind ? Promise.resolve([]) : loadDraftList(learner.id).catch(() => []),
     // Only for the "same title" warning of the link / PDF form: a failed read = no warning.
     kind ? loadStudioAssigned(learner.id, todayVn()).catch(() => null) : Promise.resolve(null),
     kind ? loadAssignments(learner.id).catch(() => []) : Promise.resolve([]),
@@ -64,7 +64,7 @@ export default async function AssignPracticePage({ params, searchParams }: { par
     open.length > 0 ? (
       <div data-testid="assign-drafts">
         <DraftList drafts={open} title={assignWaysCopy.draftsTitle(open.length)} />
-        <p className="mt-2 text-sm text-muted">{assignWaysCopy.draftsHelp}</p>
+        <p className="mt-2 text-sm text-muted" data-testid="assign-drafts-help">{assignWaysCopy.draftsHelp}</p>
       </div>
     ) : null;
   return (
