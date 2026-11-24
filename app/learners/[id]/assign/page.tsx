@@ -9,6 +9,7 @@ import { maxPagesPerSubmission } from "@/lib/practice/capabilities";
 import { AssignmentTable } from "@/components/practice/AssignmentTable";
 import { StudioAssignedTable } from "@/components/studio/StudioAssignedTable";
 import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
+import { sortStudioAssigned } from "@/lib/studio/assigned";
 import { readPrefill } from "@/lib/prefill";
 import { assignPage, assignWaysCopy, learnerWithTrack } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
@@ -36,7 +37,7 @@ export default async function AssignPracticePage({ params, searchParams }: { par
     loadAssignments(learner.id),
     loadPickerMap(learner.id),
     loadUnitChoices(learner.id),
-    loadStudioAssigned(learner.id, todayVn()).catch(() => null),
+    loadStudioAssigned(learner.id, todayVn()).then(sortStudioAssigned).catch(() => null),
   ]);
   const tagLabels = Object.fromEntries(tags.map((t) => [t.key, t.label]));
   const head = (

@@ -9,6 +9,7 @@ import { DiscardedDrafts } from "@/components/studio/DiscardedDrafts";
 import { DraftList } from "@/components/studio/DraftList";
 import { StudioAssignedTable } from "@/components/studio/StudioAssignedTable";
 import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
+import { sortStudioAssigned } from "@/lib/studio/assigned";
 import { todayVn } from "@/lib/inquiries/dates";
 import { ImportForm } from "@/components/studio/ImportForm";
 import { UploadForm } from "@/components/studio/UploadForm";
@@ -32,7 +33,7 @@ export default async function StudioNewPage({ searchParams }: { searchParams: Pr
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();
   const l = access.grant.learner;
-  const [gate, drafts, unitChoices, assigned, discarded] = await Promise.all([loadStudioGate(l.id), loadDraftList(l.id), loadUnitChoices(l.id), loadStudioAssigned(l.id, todayVn()).catch(() => null), loadDiscardedDrafts(l.id).catch(() => [])]);
+  const [gate, drafts, unitChoices, assigned, discarded] = await Promise.all([loadStudioGate(l.id), loadDraftList(l.id), loadUnitChoices(l.id), loadStudioAssigned(l.id, todayVn()).then(sortStudioAssigned).catch(() => null), loadDiscardedDrafts(l.id).catch(() => [])]);
   return (
     <StaffShell shell={shell}>
       <div className="mx-auto max-w-2xl" data-testid="studio-new">
