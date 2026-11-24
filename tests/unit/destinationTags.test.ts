@@ -57,7 +57,7 @@ describe("Destination tags for Track B (migration 0042)", () => {
     expect(sql).toMatch(/insert into english\.schema_migrations\(version\) values \('0042'\) on conflict do nothing;\s*$/);
   });
 
-  it("redefines the two readers of a tag's group as their previous body with only group_key → coalesce(group_key, seed_group_key)", () => {
+  it("redefines the four readers of a tag's group as their previous body with only group_key → coalesce(group_key, seed_group_key)", () => {
     const body = (file: string, start: string, end: string) => {
       const src = readFileSync(path.join(MIGRATIONS_DIR, file), "utf8");
       const a = src.indexOf(start);
@@ -68,6 +68,14 @@ describe("Destination tags for Track B (migration 0042)", () => {
         /\bt\.group_key\b/g, "coalesce(t.group_key, t.seed_group_key)"],
       ["0027_points_import.sql", "create or replace function english.eng_point_inputs(", "grant execute on function english.eng_point_inputs(uuid, text[]) to service_role;",
         /select et\.group_key from english\.error_tags et/g, "select coalesce(et.group_key, et.seed_group_key) from english.error_tags et"],
+      ["0020_level_profile.sql", "create or replace function english.eng_my_review_by_domain()", "$$;",
+        /g\.key = coalesce\(et\.group_key, lf\.group_key\)/g, "g.key = coalesce(et.group_key, et.seed_group_key, lf.group_key)"],
+      ["0021_feedback_revision.sql", "create or replace function english.eng_clean_feedback_items(",
+        "revoke execute on function english.eng_clean_feedback_items(jsonb, text, uuid) from public, anon, authenticated, service_role;",
+        /where et\.family_id = v_l\.family_id and et\.track_id = v_l\.track_id and et\.key = v_leaf ->> 'ref_key'\n\s+and et\.group_key is not null and et\.retired_at is null\)\) then/g,
+        `where et.track_id = v_l.track_id and et.key = v_leaf ->> 'ref_key' and et.retired_at is null
+                       and ((et.family_id = v_l.family_id and et.group_key is not null)
+                            or (et.family_id is null and et.origin = 'seed' and coalesce(et.group_key, et.seed_group_key) is not null)))) then`],
     ];
     for (const [f, start, end, from, to] of cases) {
       const before = body(f, start, end);

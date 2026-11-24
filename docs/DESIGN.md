@@ -672,3 +672,9 @@ Spec `docs/superpowers/specs/2026-11-22-gia-su-so-tay-design.md` (bản 0.2, ph�
   - Xóa dữ liệu một em gồm 4 bảng của em; giữ thẻ dùng chung.
 - **Đồng ý:** `AI_NOTICE_VERSION` = `TUTOR_NOTICE_VERSION` = `ai-studio-tutor-v3`. Studio không đổi: cổng chỉ kiểm `granted`.
 - **Bộ test:** `scripts/eval-cards.ts`, `tests/eval/cards/cases.json` (40 từ tự soạn), workflow "Eval vocab cards" (chỉ bấm tay, ≈ 1,5 USD). Audit khuôn §4.5 bằng Haiku (`vocab-audit.v1`). Mốc ghi ở `docs/eval/E2_BASELINE.md`.
+
+### 19.33. Nhãn Destination của Track B (migration 0042, không AI)
+
+- 23 nhãn có sẵn (`origin = 'seed'`, mã cố định) sau SM-1. Nhóm của chúng ở cột `error_tags.seed_group_key` (chỉ nhãn có sẵn, chỉ khi `group_key` null); `group_key` giữ nguyên luật 0026 (nhãn riêng + nhãn `nghe-…`).
+- Bốn hàm đọc nhóm của nhãn có bản hiện hành ở 0042, dùng `coalesce(group_key, seed_group_key)`: `eng_skill_map`, `eng_point_inputs`, `eng_my_review_by_domain`, `eng_clean_feedback_items` (Góp ý nhận nhãn có sẵn có nhóm riêng, kể cả nhãn nghe). **Migration sau sửa các hàm này thì chép từ 0042.**
+- Trình duyệt không đọc `seed_group_key`: ô chọn nhãn tìm nhóm qua `eng_skill_map` (`placeOfTag`).

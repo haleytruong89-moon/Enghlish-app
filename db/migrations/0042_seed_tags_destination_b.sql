@@ -6,7 +6,10 @@
 --   (chỉ 'nghe-…') và sẽ vỡ vì các dòng này.
 --   Hai hàm đọc nhóm của nhãn được định nghĩa lại, giống hệt bản trước, chỉ thay "group_key" bằng coalesce(group_key, seed_group_key):
 --     eng_skill_map (bản 0026) → Bản đồ kiến thức / ô chọn nhãn đặt nhãn vào đúng nhóm;
---     eng_point_inputs (bản 0027) → mức điểm kiến thức (và eng_point_map, đọc từ nó) biết mảng của nhãn.
+--     eng_point_inputs (bản 0027) → mức điểm kiến thức (và eng_point_map, đọc từ nó) biết mảng của nhãn;
+--     eng_my_review_by_domain (bản 0020) → "Việc cần ôn" của con có mảng của nhãn.
+--   eng_clean_feedback_items (bản 0021) nhận nhãn có sẵn có nhóm riêng khi chọn "Kỹ năng" ở Góp ý (trước đây báo unknown_leaf).
+--   ⚠ Bản hiện hành của bốn hàm này nằm ở ĐÂY: migration sau muốn sửa chúng thì chép từ 0042, không chép từ 0020/0021/0026/0027.
 -- Idempotent; chỉ thêm. Không đụng schema public.
 
 -- 1. Cột nhóm cho nhãn có sẵn ra đời sau SM-1 ------------------------------------------------------------------------------------------
@@ -245,5 +248,112 @@ end
 $$;
 revoke execute on function english.eng_point_inputs(uuid, text[]) from public, anon, authenticated;
 grant execute on function english.eng_point_inputs(uuid, text[]) to service_role;
+
+-- 5. Góp ý (S6): chọn "Kỹ năng" là nhãn có sẵn có nhóm riêng (nhãn Destination, và nhãn nghe 'nghe-…' từ 0026) — bản 0021, nới đúng
+--    điều kiện nhãn: nhãn riêng của gia đình có group_key như cũ, HOẶC nhãn có sẵn có group_key / seed_group_key.
+create or replace function english.eng_clean_feedback_items(p_items jsonb, p_text text, p_learner uuid) returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_map text := english.eng_current_skill_map();
+  v_x jsonb;
+  v_i int := 0;
+  v_text text;
+  v_ex text;
+  v_leaf jsonb;
+  v_out jsonb := '[]'::jsonb;
+begin
+  if p_items is null or pg_catalog.jsonb_typeof(p_items) <> 'array' or pg_catalog.jsonb_array_length(p_items) not between 1 and 3 then
+    raise exception 'feedback: 1 to 3 items (bad_items)' using errcode = '22023';
+  end if;
+  select * into v_l from english.learners l where l.id = p_learner;
+  for v_x in select x from pg_catalog.jsonb_array_elements(p_items) as x loop
+    v_i := v_i + 1;
+    if pg_catalog.jsonb_typeof(v_x) <> 'object'
+       or exists (select 1 from pg_catalog.jsonb_object_keys(v_x) k where k not in ('text', 'excerpt', 'leaf'))
+       or pg_catalog.jsonb_typeof(v_x -> 'text') is distinct from 'string'
+       or (v_x ? 'excerpt' and pg_catalog.jsonb_typeof(v_x -> 'excerpt') not in ('string', 'null'))
+       or (v_x ? 'leaf' and pg_catalog.jsonb_typeof(v_x -> 'leaf') not in ('object', 'null')) then
+      raise exception 'feedback: each item is {text, excerpt?, leaf?} (bad_items)' using errcode = '22023';
+    end if;
+    v_text := pg_catalog.btrim(v_x ->> 'text');
+    if pg_catalog.length(v_text) not between 1 and 200 then
+      raise exception 'feedback: each item is 1 to 200 characters (bad_items)' using errcode = '22023';
+    end if;
+    if english.eng_has_score_words(v_text) then
+      raise exception 'feedback: no scores in feedback for the child (score_words)' using errcode = '23514';
+    end if;
+    v_ex := nullif(pg_catalog.btrim(coalesce(v_x ->> 'excerpt', '')), '');
+    if v_ex is not null then
+      if pg_catalog.length(v_ex) > 120 then
+        raise exception 'feedback: an excerpt is at most 120 characters (excerpt_too_long)' using errcode = '22023';
+      end if;
+      if pg_catalog.strpos(english.eng_clean_text(p_text), english.eng_clean_text(v_ex)) = 0 then
+        raise exception 'feedback: the excerpt is not in the work (excerpt_not_found)' using errcode = '23514';
+      end if;
+    end if;
+    v_leaf := case when pg_catalog.jsonb_typeof(v_x -> 'leaf') = 'object' then v_x -> 'leaf' end;
+    if v_leaf is not null then
+      if (select pg_catalog.count(*) from pg_catalog.jsonb_object_keys(v_leaf)) <> 2
+         or coalesce(v_leaf ->> 'kind', '') not in ('tag', 'target') or coalesce(v_leaf ->> 'ref_key', '') = '' then
+        raise exception 'feedback: a leaf is {kind, ref_key} (bad_items)' using errcode = '22023';
+      end if;
+      if not exists (select 1 from english.skill_leaves sl
+                     where sl.map_id = v_map and sl.kind = v_leaf ->> 'kind' and sl.track_id = v_l.track_id and sl.ref_key = v_leaf ->> 'ref_key')
+         and not (v_leaf ->> 'kind' = 'tag' and exists (
+                     select 1 from english.error_tags et
+                     where et.track_id = v_l.track_id and et.key = v_leaf ->> 'ref_key' and et.retired_at is null
+                       and ((et.family_id = v_l.family_id and et.group_key is not null)
+                            or (et.family_id is null and et.origin = 'seed' and coalesce(et.group_key, et.seed_group_key) is not null)))) then
+        raise exception 'feedback: the skill is not a leaf of the map for this child (unknown_leaf)' using errcode = '23514';
+      end if;
+    end if;
+    v_out := v_out || pg_catalog.jsonb_build_array(
+      pg_catalog.jsonb_build_object('n', v_i, 'text', v_text)
+      || case when v_ex is null then '{}'::jsonb else pg_catalog.jsonb_build_object('excerpt', v_ex) end
+      || case when v_leaf is null then '{}'::jsonb
+              else pg_catalog.jsonb_build_object('leaf', pg_catalog.jsonb_build_object('kind', v_leaf ->> 'kind', 'ref_key', v_leaf ->> 'ref_key')) end);
+  end loop;
+  return v_out;
+end
+$$;
+revoke execute on function english.eng_clean_feedback_items(jsonb, text, uuid) from public, anon, authenticated, service_role;
+
+-- 6. "Việc cần ôn" của con theo mảng — bản 0020, nhóm của nhãn đọc thêm seed_group_key.
+create or replace function english.eng_my_review_by_domain() returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_l english.learners%rowtype;
+  v_map text;
+  v_weak jsonb;
+begin
+  select l.* into v_l
+  from english.members m
+  join english.learners l on l.member_id = m.id
+  where m.user_id = auth.uid() and m.role = 'student';
+  if not found then
+    return pg_catalog.jsonb_build_object('items', '[]'::jsonb);
+  end if;
+  v_map := english.eng_current_skill_map();
+  v_weak := english.eng_weak_points(v_l.id, null);
+  return pg_catalog.jsonb_build_object('items', coalesce((
+    select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('domain_key', p.domain_key, 'domain_name', p.domain_name, 'label', p.label) order by p.ord)
+    from (
+      select x.ord, x.tag ->> 'label_vi' as label, dm.key as domain_key, dm.name_vi as domain_name
+      from pg_catalog.jsonb_array_elements(coalesce(v_weak -> 'tags', '[]'::jsonb)) with ordinality as x(tag, ord)
+      left join english.error_tags et on et.track_id = v_l.track_id and et.key = x.tag ->> 'tag_key'
+      left join english.skill_leaves lf on lf.map_id = v_map and lf.kind = 'tag' and lf.track_id = v_l.track_id and lf.ref_key = x.tag ->> 'tag_key'
+      left join english.skill_groups g on g.map_id = v_map and g.key = coalesce(et.group_key, et.seed_group_key, lf.group_key)
+      left join english.skill_domains dm on dm.map_id = g.map_id and dm.key = g.domain_key
+      where coalesce((x.tag ->> 'recheck_due')::boolean, false)
+      order by x.ord
+      limit 3
+    ) p), '[]'::jsonb));
+end
+$$;
+revoke execute on function english.eng_my_review_by_domain() from public, anon, service_role;
+grant execute on function english.eng_my_review_by_domain() to authenticated;
 
 insert into english.schema_migrations(version) values ('0042') on conflict do nothing;

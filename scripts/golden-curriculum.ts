@@ -28,7 +28,7 @@ async function main() {
   const golden = JSON.parse(readFileSync(goldenPath, "utf8")) as Golden;
   const tagFile = (f: string) => (JSON.parse(readFileSync(path.join("content", "tags", f), "utf8")) as { tags: { key: string; label_vi: string }[] }).tags;
   const ctx: TocContext = {
-    tags: ["tags_B.json", "reading_B.json", "listening_B.json"].flatMap(tagFile).map((t) => ({ key: t.key, label: t.label_vi, domain: null, group: null, custom: false })),
+    tags: ["tags_B.json", "destination_B.json", "reading_B.json", "listening_B.json"].flatMap(tagFile).map((t) => ({ key: t.key, label: t.label_vi, domain: null, group: null, custom: false })),
   };
   const model = studioModel();
   const call = buildTocCall({

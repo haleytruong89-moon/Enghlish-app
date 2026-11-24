@@ -239,6 +239,7 @@ describe("W2 curriculum (migration 0026)", () => {
       // seed_group_key is for seed tags only, and never next to a group_key.
       await fail(q1("insert into english.error_tags(track_id, key, label_vi, group_vi, family_id, origin, seed_group_key) values ('B', 'rieng-x', 'x', 'Ngữ pháp', $1, 'custom', 'gr-tense')", [s.familyId]), "23514");
       await fail(q1("update english.error_tags set group_key = 'gr-tense' where track_id = 'B' and key = 'thi-hien-tai'"), "23514");
+      await fail(q1("update english.error_tags set seed_group_key = 'li-sound' where track_id = 'B' and key = 'nghe-main-idea'"), "23514", /error_tags_seed_group_key_shape/);
     });
   });
 
