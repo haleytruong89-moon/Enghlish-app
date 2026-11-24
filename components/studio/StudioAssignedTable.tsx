@@ -16,10 +16,10 @@ const TONE: Record<StudioAssignedStatus, string> = {
 };
 
 /** "Bài làm trên app đã giao": each Studio test with its status and a way to see the whole work. Adults only (staff pages). */
-export function StudioAssignedTable({ rows }: { rows: StudioAssignedRow[] | null }) {
+export function StudioAssignedTable({ rows, title = c.title }: { rows: StudioAssignedRow[] | null; title?: string }) {
   return (
     <section className="flex flex-col gap-3" aria-labelledby="studio-assigned-title" id="studio-assigned" data-testid="studio-assigned">
-      <h2 id="studio-assigned-title" className="text-lg font-semibold">{c.title}</h2>
+      <h2 id="studio-assigned-title" className="text-lg font-semibold">{title}</h2>
       {rows === null ? (
         <p className="rounded-xl border border-line bg-white px-4 py-3 text-sm text-muted">{c.unavailable}</p>
       ) : rows.length === 0 ? (
@@ -39,7 +39,9 @@ export function StudioAssignedTable({ rows }: { rows: StudioAssignedRow[] | null
                 {r.lastSubmittedAt ? ` · ${c.sent(`${formatHm(r.lastSubmittedAt)} ${formatDay(todayVn(new Date(r.lastSubmittedAt)))}`, r.attempts)}` : ""}
                 {r.firstResult ? ` · ${c.firstResult(r.firstResult.correct, r.firstResult.total)}` : ""}
                 {r.units.length > 0 ? <span data-testid={`studio-assigned-units-${r.instanceId}`}>{` · ${c.units(r.units)}`}</span> : null}
-                {r.feedbackGiven ? <span data-testid={`studio-assigned-fb-${r.instanceId}`}>{` · ${c.feedbackGiven}`}</span> : null}
+                {r.feedbackReady && r.lastAttemptId ? (
+                  <span data-testid={`studio-assigned-fb-${r.instanceId}`} data-given={r.feedbackGiven ? "yes" : "no"}>{` · ${r.feedbackGiven ? c.feedbackGiven : c.noFeedbackYet}`}</span>
+                ) : null}
               </p>
               {r.removedReason ? (
                 <p className="text-sm text-muted" data-testid={`studio-assigned-reason-${r.instanceId}`}>
@@ -56,7 +58,7 @@ export function StudioAssignedTable({ rows }: { rows: StudioAssignedRow[] | null
                 <p className="flex flex-wrap gap-x-5 text-sm">
                   {r.episodeId ? (
                     <Link href={`/review/${r.episodeId}`} data-testid={`studio-assigned-open-${r.instanceId}`} className="inline-flex min-h-11 items-center font-semibold text-accent underline">
-                      {r.feedbackReady ? c.openWorkFeedback : c.openWork}
+                      {!r.feedbackReady ? c.openWork : r.feedbackGiven ? c.openWorkFed : c.openWorkToFeedback}
                     </Link>
                   ) : null}
                   {r.status === "waiting" ? (

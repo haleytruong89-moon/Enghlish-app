@@ -9,7 +9,8 @@ import { useRef, useState } from "react";
 import { UnitPicker } from "@/components/curriculum/UnitPicker";
 import { TagChips } from "@/components/tutor/TagChips";
 import { useTags } from "@/components/tutor/useTags";
-import { assignPage, prefillCopy, sourceLabels, testMarkCopy, unitPickerCopy } from "@/lib/copy/vi";
+import { assignPage, prefillCopy, sourceLabels, studioAssignedCopy, testMarkCopy, unitPickerCopy } from "@/lib/copy/vi";
+import { isDuplicate } from "@/lib/assigned/duplicates";
 import { autoTitle, emptyPicker, selectedUnits, stateFromCodes, type PickerState, type UnitChoice } from "@/lib/curriculum/unitPicker";
 import { formatRange, type Prefill } from "@/lib/prefill";
 import { codeOf, nextAttempt, practiceErrorText, uploadAll, type SendAttempt, type UploadCache } from "@/lib/practice/client";
@@ -34,6 +35,7 @@ export function AssignForm({
   prefill,
   unitChoices = [],
   fixedKind,
+  openTitles = [],
 }: {
   learnerId: string;
   alias: string;
@@ -47,6 +49,8 @@ export function AssignForm({
   unitChoices?: UnitChoice[];
   /** "Giao bằng link" / "PDF để con tải về" pages fix the kind (no switch button). Without it the form keeps its two-button switch. */
   fixedKind?: "link" | "pdf";
+  /** Normalized titles of the child's open (unsent, not retracted) work: a same title shows a warning (it never blocks). */
+  openTitles?: string[];
 }) {
   const router = useRouter();
   const { tags, add, setGroup } = useTags(learnerId, initialTags);
@@ -200,6 +204,11 @@ export function AssignForm({
             className={`${field} text-base font-normal`}
           />
         </label>
+        {isDuplicate(title, openTitles) ? (
+          <p role="note" aria-live="polite" className="rounded-lg bg-[#FBF1DC] px-3 py-2 text-sm text-[#6B4600]" data-testid="assign-duplicate">
+            {studioAssignedCopy.duplicateWarning}
+          </p>
+        ) : null}
 
         {kind === "link" ? (
           <div className="flex flex-col gap-1.5">

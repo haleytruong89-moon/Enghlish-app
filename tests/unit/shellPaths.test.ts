@@ -20,6 +20,7 @@ describe("activeFor: every existing page keeps the feedback screen it passed to 
     [`/learners/${X}/notes`, "sessions", "notes", S.notes],
     [`/learners/${X}/notes/month/2026-11`, "sessions", "notes", S.notes],
     [`/learners/${X}/assign`, "assign", null, S.assign],
+    [`/learners/${X}/assigned`, "assigned", null, S.assigned],
     ["/studio/new", "assign", null, S.studioNew],
     ["/studio/drafts/d1", "assign", null, S.studioDraft],
     [`/learners/${X}/inquiries`, "assign", null, S.inquiries],
@@ -61,6 +62,7 @@ describe("switchHref keeps the part of the app that is open", () => {
     expect(switchHref("/review/e1", Y)).toBe(`/review?learner=${Y}`);
     expect(switchHref("/studio/drafts/d1", Y)).toBe(`/learners/${Y}/assign`);
     expect(switchHref("/studio/new", Y)).toBe(`/studio/new?learner=${Y}`);
+    expect(switchHref(`/learners/${X}/assigned`, Y)).toBe(`/learners/${Y}/assigned`);
     expect(switchHref(`/learners/${X}/inquiries`, Y)).toBe(`/learners/${Y}/inquiries`);
     expect(switchHref(`/learners/${X}/results/new`, Y)).toBe(`/learners/${Y}/results/new`);
     expect(switchHref(`/learners/${X}/inbox`, Y)).toBe(`/learners/${Y}/inbox`);

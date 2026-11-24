@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { Client } from "pg";
-import { aiSettingsCopy, levelLabels, pdfPickCopy, pendingCopy, playerCopy, resultCopy, studioInboxCopy, work } from "@/lib/copy/vi";
+import { aiSettingsCopy, levelLabels, pdfPickCopy, pendingCopy, playerCopy, resultCopy, studioAssignedCopy, studioInboxCopy, work } from "@/lib/copy/vi";
 import { KEY_RECOMMEND, PAGE_LIMITS } from "@/lib/pdf/limits";
 import { pgConfigFromUrl } from "../../scripts/lib/pg";
 import { makeDocx } from "../unit/fixtures/docx";
@@ -236,5 +236,45 @@ test.describe("the Bài kiểm tra flag on a Studio work", () => {
     const text = await studentVisibleText(page, "result-view");
     expect(text).not.toMatch(SCORE);
     expect(text).not.toMatch(/đúng\s+\d|Nên là|Vì sao/i);
+  });
+});
+
+test.describe("Bài đã giao: Gỡ bài (24/11)", () => {
+  test("the tutor gives the test a third time, warned it is a duplicate, removes it with a reason; the child no longer sees it; Khôi phục brings it back", async ({ page, browser }) => {
+    const tutor = await (await browser.newContext()).newPage();
+    await loginAs(tutor, "tutorNguyen");
+    await tutor.goto(draftUrl);
+    await tutor.getByTestId("assign-submit").click();
+    await expect(tutor.getByTestId("assigned-list").locator("li")).toHaveCount(3);
+    // the new copy is open (nothing sent): the draft page now warns that giving it again makes a duplicate
+    await tutor.reload();
+    await expect(tutor.getByTestId("assign-duplicate")).toBeVisible();
+    const row = await q<{ id: string }>(
+      `select a.id from english.activity_instances a join english.inquiry_instances i on i.id = a.inquiry_instance_id
+       where a.learner_id = $1 and not exists (select 1 from english.attempts t where t.activity_instance_id = a.id)
+         and i.template_id ~ '^B-ST-' order by i.assigned_at desc limit 1`, [NGUYEN]);
+    const fresh = row[0]!.id;
+
+    await tutor.goto(`/learners/${NGUYEN}/assigned?tab=doing`);
+    await expect(tutor.getByTestId("board-tab-doing")).toHaveAttribute("aria-current", "page");
+    await tutor.getByTestId(`remove-${fresh}`).click();
+    await tutor.getByLabel(studioAssignedCopy.reasonLabel).fill("Giao thử e2e");
+    await tutor.getByTestId(`remove-form-${fresh}`).getByRole("button", { name: studioAssignedCopy.confirmRemove }).click();
+    // the refreshed page moves the row to "Đã gỡ": the form (and the row) leave "Con đang làm" only after the event is written
+    await expect(tutor.locator(`[data-testid="remove-form-${fresh}"], [data-testid="remove-${fresh}"]`)).toHaveCount(0);
+    await tutor.goto(`/learners/${NGUYEN}/assigned?tab=removed`);
+    await expect(tutor.getByTestId(`restore-${fresh}`)).toBeVisible();
+    await expect(tutor.getByText(studioAssignedCopy.removedReason("Giao thử e2e"))).toBeVisible();
+
+    await loginAs(page, "studentNguyen");
+    await page.goto("/");
+    await expect(page.getByTestId("today-view")).toBeVisible();
+    await expect(page.locator(`a[href="/activities/${fresh}"]`)).toHaveCount(0);
+    expect((await page.goto(`/activities/${fresh}`))?.status()).toBe(404);
+
+    await tutor.getByTestId(`restore-${fresh}`).click();
+    await expect(tutor.getByTestId(`restore-${fresh}`)).toHaveCount(0);
+    await page.goto("/");
+    await expect(page.locator(`a[href="/activities/${fresh}"]`)).not.toHaveCount(0);
   });
 });

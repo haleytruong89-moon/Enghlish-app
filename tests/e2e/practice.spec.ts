@@ -28,6 +28,9 @@ async function openExtraItems(page: Page) {
 
 /** The id of the assignment row with this title on the Giao bài page. */
 async function assignmentIdOf(page: Page, title: string): Promise<string> {
+  // 24/11: the lists moved from Giao bài to Bài đã giao; work just given (nothing sent) is in the tab "Con đang làm".
+  const m = /\/learners\/([^/?#]+)\/assign(?:[?#]|$)/.exec(page.url());
+  if (m) await page.goto(`/learners/${m[1]}/assigned?tab=doing`);
   const row = page.locator('li[data-testid^="assignment-"]', { hasText: title }).first();
   await expect(row).toBeVisible();
   const id = (await row.getAttribute("data-testid"))?.replace("assignment-", "");
@@ -173,7 +176,7 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     await loginAs(page, "tutorNguyen");
     await page.goto("/");
     await expect(page.getByTestId(`attention-${NG}`).locator(`a[href$="results/new?assignment=${assignmentId}"]`)).toBeVisible();
-    await page.goto(`/learners/${NG}/assign`);
+    await page.goto(`/learners/${NG}/assigned?tab=need`);
     await expect(page.getByTestId(`status-${assignmentId}`)).toHaveText(assignPage.statusSent);
     await page.getByTestId(`record-${assignmentId}`).click();
     await expect(page).toHaveURL(new RegExp(`results/new\\?assignment=${assignmentId}`));
@@ -195,13 +198,13 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
 
     await page.goto(`/learners/${NG}/weak?weeks=all&domain=vocab`);
     await expect(page.getByTestId("weak-row-thanh-ngu")).toBeVisible();
-    await page.goto(`/learners/${NG}/assign`);
+    await page.goto(`/learners/${NG}/assigned?tab=need`);
     await expect(page.getByTestId(`status-${assignmentId}`)).toHaveText(assignPage.statusRecorded);
   });
 
   test("'Sửa kết quả' opens the recorded result filled in and replaces it; a second FIRST result for the same assignment is refused", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
-    await page.goto(`/learners/${NG}/assign`);
+    await page.goto(`/learners/${NG}/assigned?tab=need`);
     await expect(page.getByTestId(`record-${assignmentId}`)).toHaveText(assignPage.editResult);
     await page.getByTestId(`record-${assignmentId}`).click();
     await expect(page.getByTestId("supersede-notice")).toBeVisible();
@@ -284,6 +287,7 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     expect((await page.request.get(`/api/files/${fileId}`, { maxRedirects: 0 })).status()).toBe(404);
     const res = await page.goto(`/learners/${NG}/assign`);
     expect(res?.status()).toBe(404);
+    expect((await page.goto(`/learners/${NG}/assigned`))?.status()).toBe(404);
     expect((await page.request.get(`/api/learners/${NG}/assignments`)).status()).toBe(404);
   });
 
@@ -298,6 +302,8 @@ test.describe.serial("S5b-1 practice: a PDF out, a picture back, a result with t
     const id = await assignmentIdOf(page, gone);
     page.once("dialog", (d) => void d.accept());
     await page.getByTestId(`retract-${id}`).click();
+    await expect(page.getByTestId(`status-${id}`)).toHaveCount(0); // left "Con đang làm"
+    await page.goto(`/learners/${AN}/assigned?tab=removed`);
     await expect(page.getByTestId(`status-${id}`)).toHaveText(assignPage.statusRetracted);
 
     await page.context().clearCookies();
@@ -370,6 +376,7 @@ test("the tutor gives an assignment by Unit: the title fills itself, the row sho
   await page.getByTestId("assign-url").fill("https://notebooklm.google.com/notebook/units");
   await page.getByTestId("assign-submit").click();
   await expect(page.getByTestId("assign-done")).toContainText(assignPage.done);
+  await page.goto(`/learners/${NG}/assigned?tab=doing`);
   const item = page.locator('li[data-testid^="assignment-"]', { hasText: bookTitle }).first();
   await expect(item).toContainText("Unit 2–3");
   await expect(item).toContainText("2 mục");
@@ -447,7 +454,7 @@ test.describe.serial("W4c1: paper pages, link result pictures, feedback on a sub
 
   test("the tutor sees the 3 pictures in the child's order and turned the right way, and the hint answer", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
-    await page.goto(`/learners/${NG}/assign`);
+    await page.goto(`/learners/${NG}/assigned?tab=need`);
     const work = page.getByTestId(`work-${paperId}`);
     await work.locator("summary").click();
     await expect.poll(() => sizes(page, `work-${paperId}`)).toEqual(["20x40", "80x20", "60x20"]);
@@ -457,7 +464,7 @@ test.describe.serial("W4c1: paper pages, link result pictures, feedback on a sub
 
   test("feedback: a score is refused; a praise + something to fix is sent; the child sees it at once in 'Đã xem' and cannot send again", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
-    await page.goto(`/learners/${NG}/assign`);
+    await page.goto(`/learners/${NG}/assigned?tab=need`);
     await page.getByTestId(`sfb-open-${paperId}`).click();
     await page.getByTestId("sfb-praise").fill("Con được 8 điểm");
     await page.getByTestId("sfb-send").click();
@@ -574,7 +581,7 @@ test.describe.serial("W4c1: paper pages, link result pictures, feedback on a sub
 
     await page.context().clearCookies();
     await loginAs(page, "tutorNguyen");
-    await page.goto(`/learners/${NG}/assign`);
+    await page.goto(`/learners/${NG}/assigned?tab=need`);
     const work = page.getByTestId(`work-${exifId}`);
     await work.locator("summary").click();
     const src = await work.locator('[data-testid="submission-image"]').first().getAttribute("src");

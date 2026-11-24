@@ -3,10 +3,10 @@ import Link from "next/link";
 import { studioCopy } from "@/lib/copy/vi";
 import type { DraftListItem } from "@/lib/studio/types";
 
-export function DraftList({ drafts }: { drafts: DraftListItem[] }) {
+export function DraftList({ drafts, title = studioCopy.draftsTitle }: { drafts: DraftListItem[]; title?: string }) {
   return (
     <section className="mt-8" aria-labelledby="drafts-title">
-      <h2 id="drafts-title" className="text-lg font-semibold">{studioCopy.draftsTitle}</h2>
+      <h2 id="drafts-title" className="text-lg font-semibold">{title}</h2>
       {drafts.length === 0 ? (
         <p className="mt-2 text-sm text-muted">{studioCopy.draftsEmpty}</p>
       ) : (

@@ -6,7 +6,7 @@ import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { BusyButton } from "@/components/ui/BusyButton";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { busyCopy, studioCopy, testMarkCopy } from "@/lib/copy/vi";
+import { busyCopy, studioAssignedCopy, studioCopy, testMarkCopy } from "@/lib/copy/vi";
 import { addDays } from "@/lib/inquiries/dates";
 import { sendJson } from "@/lib/studio/client";
 import { studioErrorText } from "@/lib/studio/view";
@@ -17,7 +17,7 @@ import { emptyPicker, selectedUnits, type PickerState, type UnitChoice } from "@
  * Giao bài (spec §3 step 4): ngày làm + hạn nộp → the child sees it in "Việc tiếp theo" from ngày làm.
  * 0037: optional Units of the test; once the child has sent it, Giáo trình proposes "Đang học" for them (never automatic).
  */
-export function AssignStudioForm({ draftId, today, learnerId, unitChoices = [] }: { draftId: string; today: string; learnerId?: string; unitChoices?: UnitChoice[] }) {
+export function AssignStudioForm({ draftId, today, learnerId, unitChoices = [], duplicate = false }: { draftId: string; today: string; learnerId?: string; unitChoices?: UnitChoice[]; /** An open (unsent) test of the child has the same title. */ duplicate?: boolean }) {
   const router = useRouter();
   const [start, setStart] = useState(today);
   const [due, setDue] = useState(addDays(today, 7));
@@ -47,6 +47,11 @@ export function AssignStudioForm({ draftId, today, learnerId, unitChoices = [] }
   return (
     <form onSubmit={submit} className="mt-4 flex flex-wrap items-end gap-3" data-testid="assign-form">
       <h3 className="w-full font-semibold">{studioCopy.assignTitle}</h3>
+      {duplicate ? (
+        <p role="note" className="w-full rounded-lg bg-[#FBF1DC] px-3 py-2 text-sm text-[#6B4600]" data-testid="assign-duplicate">
+          {studioAssignedCopy.duplicateWarning}
+        </p>
+      ) : null}
       <label className="flex flex-col text-xs font-semibold">
         {studioCopy.startOn}
         <input type="date" data-testid="assign-start" value={start} onChange={(e) => setStart(e.target.value)} className="min-h-11 rounded-lg border border-line px-3" />

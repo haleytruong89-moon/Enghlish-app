@@ -67,7 +67,7 @@ describe("desk alerts (was the attention part of the learner card)", () => {
     const t = deskAlerts(input({ intakeMissing: true, curriculaCount: 0, flagCount: 2, today: today({ repeats: [], due: [], untagged: [], practice: [late] }) }));
     expect(t.map((a) => a.key)).toEqual(["intake", "curricula", "overdue", "flags"]);
     expect(t[0]).toMatchObject({ line: deskCopy.alerts.intakeLineTutor, href: `/learners/${L}/levels#intake` });
-    expect(t[2]).toMatchObject({ title: deskCopy.alerts.overdueTitle(1), href: `/learners/${L}/assign#assigned-list` });
+    expect(t[2]).toMatchObject({ title: deskCopy.alerts.overdueTitle(1), href: `/learners/${L}/assigned?tab=doing` });
     expect(t[3]).toMatchObject({ title: deskCopy.alerts.flagsTitle(2), href: `/learners/${L}/inbox?f=skills` });
     expect(deskAlerts(input({ role: "parent", intakeMissing: true }))[0]!.line).toBe(deskCopy.alerts.intakeLineParent);
   });
@@ -91,7 +91,7 @@ describe("level baseline alert", () => {
   it("Studio tests overdue with nothing sent get one row that opens the Studio list; unknown or zero gives none", () => {
     const base = { learnerId: "L1", role: "tutor" as const, todayIso: "2026-11-21", today: null, intakeMissing: null, curriculaCount: null, flagCount: 0 };
     const rows = deskAlerts({ ...base, studioOverdue: 2 });
-    expect(rows.find((r) => r.key === "studio-overdue")).toMatchObject({ tone: "warn", href: "/learners/L1/assign#studio-assigned" });
+    expect(rows.find((r) => r.key === "studio-overdue")).toMatchObject({ tone: "warn", href: "/learners/L1/assigned?tab=doing" });
     expect(rows.find((r) => r.key === "studio-overdue")?.title).toContain("2 bài làm trên app quá hạn");
     expect(deskAlerts({ ...base, studioOverdue: 0 }).some((r) => r.key === "studio-overdue")).toBe(false);
     expect(deskAlerts({ ...base, studioOverdue: null }).some((r) => r.key === "studio-overdue")).toBe(false);

@@ -1989,10 +1989,12 @@ export const studioAssignedCopy = {
   sent: (when: string, attempts: number) => (attempts > 1 ? `nộp lần ${attempts} lúc ${when}` : `nộp lúc ${when}`),
   firstResult: (correct: number, total: number) => `lần đầu đúng ${correct}/${total}`,
   openWork: "Xem cả bài làm",
-  openWorkFeedback: "Xem cả bài làm · góp ý",
+  openWorkToFeedback: "Xem bài và góp ý",
+  openWorkFed: "Xem bài · đã góp ý",
   checkItems: "Chấm các câu đang chờ →",
   units: (codes: string[]) => `Unit ${codes.join(", ")}`,
-  feedbackGiven: "Đã góp ý",
+  feedbackGiven: "đã góp ý",
+  noFeedbackYet: "chưa góp ý",
   overdueDays: (n: number) => `Quá hạn ${n} ngày`,
   remove: "Gỡ bài",
   removeTitle: (title: string) => `Gỡ bài "${title}"`,
@@ -2008,6 +2010,32 @@ export const studioAssignedCopy = {
   failed: "Chưa lưu được. Thử lại.",
   stale: "Bài này vừa đổi trạng thái (con đã nộp, hoặc người khác đã gỡ / khôi phục). Trang đã tải lại.",
   removedReason: (r: string) => `Lý do gỡ: ${r}`,
+  duplicateWarning: "Con đang có một bài cùng tên chưa nộp. Giao thêm sẽ thành hai bài; nếu bài cũ giao nhầm, gỡ nó ở Bài đã giao.",
+};
+
+// Bài đã giao (24/11): one place to follow every piece of work given to one child. Adults only.
+export const assignedBoardCopy = {
+  title: (alias: string) => `Bài đã giao · ${alias}`,
+  intro: "Bài trên app, bài link, bài PDF đã giao ở một chỗ (bài chủ đề ở trang riêng).",
+  newWork: "+ Giao bài mới",
+  tabsLabel: "Tình trạng bài",
+  tab: { need: `Cần ${tutorHonorific} xử lý`, doing: "Con đang làm", done: "Đã xong", removed: "Đã gỡ" } as Record<"need" | "doing" | "done" | "removed", string>,
+  tabCount: (label: string, n: number) => `${label} · ${n}`,
+  hint: {
+    need: `Con đã nộp, đang chờ ${tutorHonorific}: chấm câu tự luận, ghi kết quả hoặc góp ý.`,
+    doing: "Con chưa nộp. Bài quá hạn lâu nhất nằm trên cùng; gỡ bài giao nhầm hoặc giao thử ở đây.",
+    done: "Đã có kết quả và đã góp ý (hoặc không cần góp ý). Không còn việc gì.",
+    removed: "Bài đã gỡ hoặc đã thu hồi. Con không thấy các bài này.",
+  } as Record<"need" | "doing" | "done" | "removed", string>,
+  empty: {
+    need: `Không có bài nào chờ ${tutorHonorific}.`,
+    doing: "Con không còn bài nào đang mở.",
+    done: "Chưa có bài nào xong hẳn.",
+    removed: "Chưa có bài nào bị gỡ hay thu hồi.",
+  } as Record<"need" | "doing" | "done" | "removed", string>,
+  studioList: "Bài trên app",
+  practiceList: "Bài link / PDF",
+  topicLink: "Bài chủ đề đã giao →",
 };
 
 // Nhập bài soạn sẵn (16/11): a draft made outside the app → a normal Studio draft. Adults only; no AI.
@@ -2384,8 +2412,9 @@ export const appFeedback = {
     resultsNew: "Ghi điểm nhanh (bài link)",
     revisions: "Bài đã sửa",
     revisionOne: "Bài sửa lại",
-    inquiries: "Bài đã giao",
+    inquiries: "Bài chủ đề đã giao",
     assign: "Giao bài",
+    assigned: "Bài đã giao",
     delete: "Xóa dữ liệu",
     baseline: "Cấp khởi điểm",
     adjust: "Điều chỉnh cấp",
@@ -2571,6 +2600,7 @@ export const shellCopy = {
     roadmap: "Lộ trình",
     sessions: "Buổi học",
     assign: "Giao bài",
+    assigned: "Bài đã giao",
     results: "Ghi kết quả",
     curricula: "Giáo trình",
     inbox: "Chờ duyệt",
@@ -2976,6 +3006,10 @@ export const prefillCopy = {
 /** UX vòng 3A · một trang "Giao bài": chọn 1 trong 4 cách + dải "Cách giao" (kế hoạch 14/11, U5–U8). */
 export const assignWaysCopy = {
   title: (alias: string) => `Giao bài · ${alias}`,
+  followBanner: "Muốn xem con làm đến đâu, bài nào quá hạn?",
+  followLink: "Mở Bài đã giao →",
+  draftsTitle: (n: number) => `Bản nháp đang soạn · ${n}`,
+  draftsHelp: "Bài chưa giao: con chưa thấy. Duyệt xong mới chọn hạn và giao.",
   intro: "Chọn một cách giao. Cách nào cũng chọn được Unit của giáo trình (trừ Bài chủ đề).",
   stripLabel: "Cách giao",
   recommended: "Nên dùng",
@@ -3001,8 +3035,6 @@ export const assignWaysCopy = {
   choose: "Chọn cách này →",
   fromBook: (label: string) => `Từ giáo trình: ${label} — chọn cách giao bên dưới.`,
   seeStudio: "Bài đã tạo từ đề →",
-  seeTopic: "Bài chủ đề đã giao →",
-  listTitle: "Bài link / PDF đã giao",
 } as const;
 
 /** UX vòng 3A · thống kê buổi học (kế hoạch 14/11, U9–U14, U25). Một buổi = một ngày có ghi chú buổi học hiện hành; không có số tiền. */

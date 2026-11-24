@@ -7,13 +7,9 @@ import { requireShell } from "@/lib/shell/load";
 import { WaysStrip } from "@/components/assign/WaysStrip";
 import { DiscardedDrafts } from "@/components/studio/DiscardedDrafts";
 import { DraftList } from "@/components/studio/DraftList";
-import { StudioAssignedTable } from "@/components/studio/StudioAssignedTable";
-import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
-import { sortStudioAssigned } from "@/lib/studio/assigned";
-import { todayVn } from "@/lib/inquiries/dates";
 import { ImportForm } from "@/components/studio/ImportForm";
 import { UploadForm } from "@/components/studio/UploadForm";
-import { learnerWithTrack, reviewPage, studioCopy } from "@/lib/copy/vi";
+import { assignWaysCopy, learnerWithTrack, reviewPage, studioCopy } from "@/lib/copy/vi";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { loadUnitChoices } from "@/lib/curriculum/load";
 import { loadDiscardedDrafts, loadDraftList, loadStudioGate } from "@/lib/studio/load";
@@ -33,7 +29,7 @@ export default async function StudioNewPage({ searchParams }: { searchParams: Pr
   if (access.kind === "login") redirect("/login");
   if (access.kind === "not-found") notFound();
   const l = access.grant.learner;
-  const [gate, drafts, unitChoices, assigned, discarded] = await Promise.all([loadStudioGate(l.id), loadDraftList(l.id), loadUnitChoices(l.id), loadStudioAssigned(l.id, todayVn()).then(sortStudioAssigned).catch(() => null), loadDiscardedDrafts(l.id).catch(() => [])]);
+  const [gate, drafts, unitChoices, discarded] = await Promise.all([loadStudioGate(l.id), loadDraftList(l.id), loadUnitChoices(l.id), loadDiscardedDrafts(l.id).catch(() => [])]);
   return (
     <StaffShell shell={shell}>
       <div className="mx-auto max-w-2xl" data-testid="studio-new">
@@ -51,7 +47,11 @@ export default async function StudioNewPage({ searchParams }: { searchParams: Pr
         <div id="drafts">
           <DraftList drafts={drafts} />
           <DiscardedDrafts drafts={discarded} />
-          <div className="mt-8"><StudioAssignedTable rows={assigned} /></div>
+          <p className="mt-8">
+            <Link href={`/learners/${l.id}/assigned`} data-testid="studio-follow" className="inline-flex min-h-11 items-center text-accent underline">
+              {assignWaysCopy.followLink}
+            </Link>
+          </p>
         </div>
       </div>
     </StaffShell>

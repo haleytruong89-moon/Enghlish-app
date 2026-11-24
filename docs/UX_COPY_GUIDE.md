@@ -386,3 +386,11 @@ Khác với kế hoạch: câu giới thiệu "Mỗi điều là một việc {t
 - `restore` "Khôi phục"; lý do ghi sẵn `restoreReason` "Khôi phục bài đã gỡ".
 - `overdueDays` "Quá hạn n ngày" thay cho "Quá hạn" ở danh sách người lớn. Con không bao giờ thấy chữ quá hạn.
 - `removedReason` "Lý do gỡ: …".
+
+## Bài đã giao · PR 2 (24/11/2026) — mục mới · Giao bài chỉ để tạo bài
+
+- `shellCopy.sections.assigned` / `appFeedback.screens.assigned` "Bài đã giao"; `appFeedback.screens.inquiries` đổi thành "Bài chủ đề đã giao" (để góp ý về app phân biệt hai trang). Bỏ `assignWaysCopy.seeTopic`, `assignWaysCopy.listTitle` (không còn dùng).
+- `assignedBoardCopy`: `title` "Bài đã giao · Nguyên", `intro`, `newWork` "+ Giao bài mới", `tab` (Cần thầy/cô xử lý · Con đang làm · Đã xong · Đã gỡ), `tabCount` "… · n", `hint` (một câu mỗi tab nói tab đó là gì), `empty` (mỗi tab), `studioList` "Bài trên app", `practiceList` "Bài link / PDF", `topicLink`.
+- `assignWaysCopy.followBanner` "Muốn xem con làm đến đâu, bài nào quá hạn?", `followLink` "Mở Bài đã giao →", `draftsTitle` "Bản nháp đang soạn · n", `draftsHelp`.
+- `studioAssignedCopy.duplicateWarning` (cảnh báo giao trùng, không chặn); `openWorkToFeedback` "Xem bài và góp ý", `openWorkFed` "Xem bài · đã góp ý", `feedbackGiven` "đã góp ý", `noFeedbackYet` "chưa góp ý" (thay `openWorkFeedback`).
+

@@ -41,10 +41,10 @@ export function deskAlerts(i: DeskAlertInput): DeskAlert[] {
   const t = i.today;
   if (t) {
     const late = t.practice.filter((a) => isOverdue(a, i.todayIso)).length;
-    if (late > 0) out.push({ key: "overdue", tone: "warn", badge: todayPage.practiceOverdue, title: A.overdueTitle(late), line: A.overdueLine, href: `${base}/assign#assigned-list` });
+    if (late > 0) out.push({ key: "overdue", tone: "warn", badge: todayPage.practiceOverdue, title: A.overdueTitle(late), line: A.overdueLine, href: `${base}/assigned?tab=doing` });
   }
   if (i.studioOverdue && i.studioOverdue > 0) {
-    out.push({ key: "studio-overdue", tone: "warn", badge: todayPage.practiceOverdue, title: A.studioOverdueTitle(i.studioOverdue), line: A.studioOverdueLine, href: `${base}/assign#studio-assigned` });
+    out.push({ key: "studio-overdue", tone: "warn", badge: todayPage.practiceOverdue, title: A.studioOverdueTitle(i.studioOverdue), line: A.studioOverdueLine, href: `${base}/assigned?tab=doing` });
   }
   if (t) {
     const label = (key: string) => t.tagLabels[key] ?? fallbackLabels.tag;
