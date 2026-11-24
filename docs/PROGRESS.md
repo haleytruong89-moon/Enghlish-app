@@ -2112,3 +2112,15 @@ Nhánh `feature/destination-tags`. Nguồn: hub `HANDOVER_ENGLISH_OS_DESTINATION
 **Cách thử trên preview ("Nguyên (thử)"):** áp 0042 → Studio → Nhập bài → chọn `destination-lo1-9-bai.zip` → 9 dòng ✓, 317 câu, 4 "cần xem", 0 lỗi chặn → mở `U15-1` → Duyệt được; ô chọn nhãn có "Tính từ & trạng từ…". Bản đồ kiến thức: nhãn mới nằm trong Ngữ pháp / Từ vựng, không ở "Chưa xếp mảng".
 
 **Chưa làm (đúng bàn giao):** cô làm bản 2 mục lục Destination để nối Unit → nhãn mới (Giáo trình); U17-1b giao sau U17-1 (người giao bài lo).
+
+## Bài đã giao · PR 1: Gỡ bài · Khôi phục · Quá hạn n ngày (24/11/2026)
+
+Nhánh `feature/assigned-remove`. Kế hoạch `docs/superpowers/plans/2026-11-24-bai-da-giao.md`; bản mẫu https://claude.ai/artifact/HE9sDkBdDAHLGKHAxPr4Ko (phụ huynh duyệt 24/11). **Không có SQL.**
+
+- "Bài làm trên app đã giao": bài con chưa nộp có nút **Gỡ bài** (ghi lý do ≥ 3 chữ cái). Bài gỡ rời Hôm nay của con, không còn đếm vào "còn n việc", không còn báo quá hạn ở Bàn làm việc; hiện "Đã gỡ · Lý do gỡ: …" + nút **Khôi phục**.
+- Dùng lại sự kiện "bỏ bước" có sẵn (`skip` / `unskip`, 0007): phụ huynh hoặc thầy/cô của em; mọi lần gỡ / khôi phục được ghi lại.
+- Bài con đã nộp không gỡ được (bài làm là bằng chứng). Đánh dấu "không tính" cho bài test đã nộp: lát riêng, cần SQL, chưa làm.
+- "Quá hạn n ngày" thay cho "Quá hạn"; bài quá hạn lâu nhất lên đầu danh sách.
+
+**Cách thử trên preview:** Giao bài → "Bài làm trên app đã giao" → bài "Destination C1 C2" quá hạn → Gỡ bài → ghi "Giao trùng" → Gỡ bài. Đăng nhập "Nguyên (thử)": Hôm nay không còn bài đó. Quay lại, bấm Khôi phục: bài trở lại.
+- Sau review (24/11): server **từ chối gỡ bài con đã nộp** (409 `has_work`, phòng trang cũ chưa tải lại); bài lỡ bị gỡ sau khi đã nộp vẫn hiện "Đã gỡ" + Khôi phục; lý do gỡ lấy đúng từ lần gỡ (không bị lý do đổi ngày đè); trang cũ / bấm hai lần → báo "vừa đổi trạng thái" và tải lại trang.

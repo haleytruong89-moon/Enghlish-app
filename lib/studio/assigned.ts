@@ -2,6 +2,7 @@
  * "Bài làm trên app đã giao" (21/11): every Studio test assigned to one child, with what the adult needs to act — not open yet, to do,
  * overdue, sent and waiting for the tutor's verdicts, or checked — and where to see the whole work. Pure; rows are read through RLS.
  */
+import { daysBetween } from "@/lib/inquiries/dates";
 import type { InquiryView } from "@/lib/inquiries/view";
 
 /** Studio templates are named <track>-ST-nnnnnn by english.eng_approve_studio_draft (0024). */
@@ -22,6 +23,10 @@ export type StudioAssignedRow = {
   dueOn: string;
   assignedAt: string;
   status: StudioAssignedStatus;
+  /** Days after the due day, only for "overdue" (the due day itself is not late). */
+  lateDays: number | null;
+  /** The adult's reason when the test was removed ("Gỡ bài" = the step event `skip`), else null. */
+  removedReason: string | null;
   attempts: number;
   lastAttemptId: string | null;
   lastSubmittedAt: string | null;
@@ -60,8 +65,10 @@ export function buildStudioAssigned(
     const counted = firstRes && firstRes.attempt === "first" ? firstRes : undefined;
     const startOn = step.schedule.date;
     let status: StudioAssignedStatus;
-    if (last) status = resultOf.has(last.id) ? "checked" : "waiting";
-    else if (step.schedule.skipped) status = "skipped";
+    // A removed step stays "skipped" even when work was sent before the removal (an adult on a stale page): it must show "Đã gỡ" and
+    // "Khôi phục" — while it is skipped the child cannot open the work or its result.
+    if (step.schedule.skipped) status = "skipped";
+    else if (last) status = resultOf.has(last.id) ? "checked" : "waiting";
     else if (startOn && startOn > todayIso) status = "not_yet";
     else status = q.dueOn < todayIso ? "overdue" : "todo";
     out.push({
@@ -73,6 +80,8 @@ export function buildStudioAssigned(
       dueOn: q.dueOn,
       assignedAt: q.assignedAt,
       status,
+      lateDays: status === "overdue" ? daysBetween(q.dueOn, todayIso) : null,
+      removedReason: status === "skipped" ? step.schedule.skipReason : null,
       attempts: mine.length,
       lastAttemptId: last?.id ?? null,
       lastSubmittedAt: last?.submitted_at ?? null,
@@ -88,6 +97,12 @@ export function buildStudioAssigned(
 
 /** Tests past their due day with nothing sent (the desk's "Cần chú ý"). A skipped test is not overdue. */
 export const studioOverdueCount = (rows: readonly StudioAssignedRow[]): number => rows.filter((r) => r.status === "overdue").length;
+
+/** "Quá hạn lâu nhất lên đầu": overdue tests first (most days late first, then title); every other row keeps the given order. */
+export function sortStudioAssigned(rows: readonly StudioAssignedRow[]): StudioAssignedRow[] {
+  const late = rows.filter((r) => r.status === "overdue").sort((a, b) => (b.lateDays ?? 0) - (a.lateDays ?? 0) || a.title.localeCompare(b.title, "vi"));
+  return [...late, ...rows.filter((r) => r.status !== "overdue")];
+}
 
 export type RawResultRow = {
   id: string;

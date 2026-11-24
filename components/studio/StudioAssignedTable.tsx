@@ -4,6 +4,7 @@ import { formatDay } from "@/lib/review/format";
 import type { StudioAssignedRow, StudioAssignedStatus } from "@/lib/studio/assigned";
 import { formatHm } from "@/lib/work/view";
 import { todayVn } from "@/lib/inquiries/dates";
+import { RemoveAssignedButton } from "./RemoveAssignedButton";
 
 const TONE: Record<StudioAssignedStatus, string> = {
   not_yet: "bg-[#EFEDE7] text-muted",
@@ -26,11 +27,11 @@ export function StudioAssignedTable({ rows }: { rows: StudioAssignedRow[] | null
       ) : (
         <ul className="flex flex-col gap-2">
           {rows.map((r) => (
-            <li key={r.instanceId} data-testid={`studio-assigned-${r.instanceId}`} data-status={r.status} className="flex flex-col gap-1.5 rounded-xl border border-line bg-white px-4 py-3">
+            <li key={r.instanceId} data-testid={`studio-assigned-${r.instanceId}`} data-status={r.status} data-late-days={r.lateDays ?? undefined} className="flex flex-col gap-1.5 rounded-xl border border-line bg-white px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-semibold">{r.title}</span>
                 <span className={`rounded-full px-3 py-1 text-xs font-bold ${TONE[r.status]}`} data-testid={`studio-assigned-status-${r.instanceId}`}>
-                  {c.status[r.status]}
+                  {r.status === "overdue" && r.lateDays !== null ? c.overdueDays(r.lateDays) : c.status[r.status]}
                 </span>
               </div>
               <p className="text-sm text-muted">
@@ -40,6 +41,17 @@ export function StudioAssignedTable({ rows }: { rows: StudioAssignedRow[] | null
                 {r.units.length > 0 ? <span data-testid={`studio-assigned-units-${r.instanceId}`}>{` · ${c.units(r.units)}`}</span> : null}
                 {r.feedbackGiven ? <span data-testid={`studio-assigned-fb-${r.instanceId}`}>{` · ${c.feedbackGiven}`}</span> : null}
               </p>
+              {r.removedReason ? (
+                <p className="text-sm text-muted" data-testid={`studio-assigned-reason-${r.instanceId}`}>
+                  {c.removedReason(r.removedReason)}
+                </p>
+              ) : null}
+              {/* Gỡ bài only before anything was sent; Khôi phục for every removed test, even one with work sent before the removal. */}
+              {r.status === "skipped" || r.lastAttemptId === null ? (
+                <div className="flex flex-wrap gap-2">
+                  <RemoveAssignedButton activityId={r.activityId} removed={r.status === "skipped"} title={r.title} />
+                </div>
+              ) : null}
               {r.lastAttemptId ? (
                 <p className="flex flex-wrap gap-x-5 text-sm">
                   {r.episodeId ? (

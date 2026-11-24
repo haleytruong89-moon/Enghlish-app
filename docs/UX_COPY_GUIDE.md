@@ -378,3 +378,11 @@ Khác với kế hoạch: câu giới thiệu "Mỗi điều là một việc {t
 - `tutorAsksCopy` (người lớn): "Con hỏi Gia sư", bảng Lúc · Loại · Con gõ · Gia sư trả lời · Sổ tay · Con chấm; "thẻ có sẵn".
 - `aiSettingsCopy` (bản đồng ý `ai-studio-tutor-v3`): `intro`, `points[1]` (Gia sư là mục riêng, không có trong bài làm; câu con hỏi được lưu, mẹ và thầy/cô đọc được), `reconsent`.
 - Con không thấy chữ "điểm", tổng số câu đúng, %; Tự kiểm chỉ ✓ / ✗ từng câu + một dòng vì sao.
+
+## Bài đã giao · PR 1 (24/11/2026) — Gỡ bài · Khôi phục · Quá hạn n ngày
+
+- `studioAssignedCopy.status.skipped` đổi "Đã bỏ qua" → "Đã gỡ".
+- `remove` "Gỡ bài" (chỉ bài con CHƯA nộp), `removeTitle`, `removeHelp` (nói rõ con không còn thấy bài, hết báo quá hạn, khôi phục được), `reasonLabel` "Lý do gỡ bài", `reasonPlaceholder`, `reasonRequired`, `confirmRemove`, `cancel` "Thôi", `saving`, `failed`.
+- `restore` "Khôi phục"; lý do ghi sẵn `restoreReason` "Khôi phục bài đã gỡ".
+- `overdueDays` "Quá hạn n ngày" thay cho "Quá hạn" ở danh sách người lớn. Con không bao giờ thấy chữ quá hạn.
+- `removedReason` "Lý do gỡ: …".

@@ -227,6 +227,24 @@ describe("student desk reads (migration 0032)", () => {
     expect(sn3).toMatchObject({ kind: "revision", closing_note: "Cô thấy con đã sửa rất tốt.", fb_state: null });
   });
 
+  it("Gỡ bài = skip: the step leaves Hôm nay and the count; Khôi phục = unskip brings it back (parent or the child's tutor, reason required)", async () => {
+    // any step the child can do in the app today (the B-W1 of the setup has released steps)
+    const act = (await today(U().studentNguyen)).find((i) => i.doable && typeof i.activity_id === "string")!.activity_id!;
+    const before = await count(U().studentNguyen);
+    await fail(q1("select english.eng_activity_event($1, 'skip', null, 'ab', $2)", [act, M().tutorNguyen]), "23514");
+    await fail(q1("select english.eng_activity_event($1, 'skip', null, 'Giao thử', $2)", [act, M().tutorAn]), "42501");
+    await q1("select english.eng_activity_event($1, 'skip', null, 'Giao trùng bài', $2)", [act, M().tutorNguyen]);
+    try {
+      expect((await today(U().studentNguyen)).some((i) => i.activity_id === act)).toBe(false);
+      expect(await count(U().studentNguyen)).toBe(before - 1);
+    } finally {
+      // always restore the shared fixture, even when an assertion above fails
+      await q1("select english.eng_activity_event($1, 'unskip', null, 'Khôi phục bài đã gỡ', $2)", [act, M().parent]);
+    }
+    expect((await today(U().studentNguyen)).some((i) => i.activity_id === act)).toBe(true);
+    expect(await count(U().studentNguyen)).toBe(before);
+  });
+
   it("paging: the cursor (time, ref) walks every row once, newest first; p_limit is clamped to 1..50; total / waiting cover the whole history", async () => {
     const all = await history(U().studentNguyen, null, 50);
     expect(all.length).toBeGreaterThanOrEqual(2);

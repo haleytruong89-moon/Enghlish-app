@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildStudioAssigned, currentStudioResults, isStudioTemplateId, studioOverdueCount } from "@/lib/studio/assigned";
+import { buildStudioAssigned, currentStudioResults, isStudioTemplateId, sortStudioAssigned, studioOverdueCount } from "@/lib/studio/assigned";
 import type { InquiryView } from "@/lib/inquiries/view";
 
 const inq = (id: string, templateId: string, start: string | null, due: string, act = `a-${id}`, assignedAt = "2026-11-20T01:00:00Z"): InquiryView => ({
   id, templateId, templateVersion: 1, titleVi: `Bài ${id}`, bigQuestionEn: "", bigQuestionVi: "", week: 0, dateFrom: "", dateTo: "", assignedAt, dueOn: due, sources: [],
-  steps: [{ activityId: act, stepNo: 1, activityType: "ACT-SOURCE-QA", mode: "PRACTICE", purpose: [], targetIds: [], timeMin: 10, promptEn: "", itemCount: 12, schedule: { date: start, plannedDate: due, skipped: false, lastReason: null } }],
+  steps: [{ activityId: act, stepNo: 1, activityType: "ACT-SOURCE-QA", mode: "PRACTICE", purpose: [], targetIds: [], timeMin: 10, promptEn: "", itemCount: 12, schedule: { date: start, plannedDate: due, skipped: false, lastReason: null, skipReason: null } }],
 });
 
 describe("Studio tests assigned to a child: what the adults see", () => {
@@ -27,6 +27,29 @@ describe("Studio tests assigned to a child: what the adults see", () => {
     { attempt_id: "t5a", correct: 9, total_items: 12, not_in_app_items: [], attempt: "first" },
     { attempt_id: "t5b", correct: 12, total_items: 12, not_in_app_items: [], attempt: "retry" },
   ];
+
+  it("an overdue test says how many days it is late; a removed one keeps the adult's reason", () => {
+    const skipped = inq("7", "B-ST-000007", "2026-11-15", "2026-11-18");
+    skipped.steps[0]!.schedule = { ...skipped.steps[0]!.schedule, skipped: true, lastReason: "Đổi ngày", skipReason: "Giao trùng bài" };
+    const rows = buildStudioAssigned([...inquiries, skipped], attempts, episodes, results, TODAY);
+    const by = Object.fromEntries(rows.map((r) => [r.instanceId, r]));
+    expect(by["3"]).toMatchObject({ status: "overdue", lateDays: 1, removedReason: null });
+    expect(by["2"]).toMatchObject({ status: "todo", lateDays: null });
+    expect(by["7"]).toMatchObject({ status: "skipped", lateDays: null, removedReason: "Giao trùng bài" });
+  });
+
+  it("a step removed after the child sent it stays 'skipped' (Đã gỡ + Khôi phục), it does not hide behind 'checked'", () => {
+    const sentThenSkipped = inq("5", "B-ST-000005", "2026-11-15", "2026-11-19");
+    sentThenSkipped.steps[0]!.schedule = { ...sentThenSkipped.steps[0]!.schedule, skipped: true, skipReason: "Giao trùng" };
+    const row5 = buildStudioAssigned([sentThenSkipped], attempts, episodes, results, TODAY)[0]!;
+    expect(row5).toMatchObject({ status: "skipped", removedReason: "Giao trùng", lastAttemptId: "t5b" });
+  });
+
+  it("sortStudioAssigned: overdue first, the longest late on top; the others keep their order", () => {
+    const late10 = inq("8", "B-ST-000008", "2026-11-01", "2026-11-11");
+    const rows = sortStudioAssigned(buildStudioAssigned([...inquiries, late10], attempts, episodes, results, TODAY));
+    expect(rows.map((r) => r.instanceId)).toEqual(["8", "3", "1", "2", "4", "5"]);
+  });
 
   it("one row per Studio test, newest first, with a status the adult can act on", () => {
     const rows = buildStudioAssigned(inquiries, attempts, episodes, results, TODAY);
