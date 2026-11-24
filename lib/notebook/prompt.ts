@@ -37,7 +37,7 @@ const cardSchema = {
   properties: {
     headword: str(40),
     forms: { type: "array", items: str(40), minItems: 1, maxItems: 12 },
-    pos: str(30),
+    pos: str(60),
     lemma_note: { type: ["string", "null"], maxLength: 120 },
     senses: { type: "array", minItems: 1, maxItems: 3, items: { type: "object", additionalProperties: false, required: ["meaning_vi", "meaning_en"], properties: { meaning_vi: str(120), meaning_en: { type: ["string", "null"], maxLength: 160 } } } },
     guess: {
@@ -50,7 +50,7 @@ const cardSchema = {
     vn: str(300),
     trap: str(300),
     stress_tip: str(160),
-    family: { type: "array", maxItems: 5, items: { type: "object", additionalProperties: false, required: ["form", "pos"], properties: { form: str(40), pos: str(20) } } },
+    family: { type: "array", maxItems: 5, items: { type: "object", additionalProperties: false, required: ["form", "pos"], properties: { form: str(40), pos: str(40) } } },
     collocations: { type: "array", items: str(60), minItems: 3, maxItems: 5 },
     related: { type: "array", items: str(40), minItems: 3, maxItems: 5 },
     checks: {

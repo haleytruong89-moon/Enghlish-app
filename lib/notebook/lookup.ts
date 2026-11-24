@@ -156,8 +156,8 @@ export async function runLookup(deps: LookupDeps, input: { userId: string; word:
 
   const record = (a: Omit<Parameters<LookupStore["record"]>[0], "userId" | "kind" | "childText" | "contextText" | "parentAsk" | "clientId" | "flags">) =>
     deps.store.record({ userId: input.userId, kind: "lookup", childText: headword, contextText: context, parentAsk: null, clientId: input.clientId, flags, ...a });
-  const fixed = async (code: LookupFixed, spent: { usedAi: boolean; runs: string[]; cost: number; shown?: string | null } = { usedAi: false, runs: [], cost: 0 }): Promise<LookupResult> => {
-    const r = await record({ cardId: null, sense: null, shown: spent.shown ?? null, guard: "fixed", reasons: [], fixedCode: code, usedAi: spent.usedAi, promptVersion: spent.usedAi ? CARD_PROMPT.version : null, model: spent.usedAi ? deps.models.card : null, runs: spent.runs, cost: spent.cost });
+  const fixed = async (code: LookupFixed, spent: { usedAi: boolean; runs: string[]; cost: number; shown?: string | null; reasons?: string[] } = { usedAi: false, runs: [], cost: 0 }): Promise<LookupResult> => {
+    const r = await record({ cardId: null, sense: null, shown: spent.shown ?? null, guard: "fixed", reasons: spent.reasons ?? [], fixedCode: code, usedAi: spent.usedAi, promptVersion: spent.usedAi ? CARD_PROMPT.version : null, model: spent.usedAi ? deps.models.card : null, runs: spent.runs, cost: spent.cost });
     return { status: r.replayed ? 200 : 201, body: { kind: "fixed", askId: r.id, fixed: code, replayed: r.replayed } };
   };
 
@@ -223,8 +223,10 @@ export async function runLookup(deps: LookupDeps, input: { userId: string; word:
 
   let card: CardContent | null = null;
   let guard: "pass" | "rewritten" = "pass";
+  /** "unreadable:examples.0.en:too_big": where a refused tool answer went wrong (codes only, no text). */
+  const why = (e: z.ZodError) => `unreadable:${e.issues[0]?.path.join(".") ?? ""}:${e.issues[0]?.code ?? ""}`.slice(0, 80);
   const first = await draft();
-  if (!first.success) reasons.push("unreadable");
+  if (!first.success) reasons.push(why(first.error));
   else if (first.data.status === "not_word") {
     await m.flush(gate.reservationId ?? null, purpose);
     const suggestions = first.data.suggestions.map((x) => x.trim().toLowerCase()).filter((x) => SUGGESTION.test(x) && !isBlocked(x)).slice(0, 3);
@@ -243,10 +245,10 @@ export async function runLookup(deps: LookupDeps, input: { userId: string; word:
         card = second.data.card;
         guard = "rewritten";
       } else reasons.push(...r2.map((x) => `rewrite_${x}`));
-    } else reasons.push("rewrite_failed");
+    } else reasons.push(second.success ? "rewrite_not_word" : `rewrite_${why(second.error)}`);
   }
   await m.flush(gate.reservationId ?? null, purpose);
-  if (!card) return fixed(m.used ? "card_failed" : "ai_error", { usedAi: m.used, runs: m.runs, cost: m.cost });
+  if (!card) return fixed(m.used ? "card_failed" : "ai_error", { usedAi: m.used, runs: m.runs, cost: m.cost, reasons });
   // A sentence that points to another word ("left" the adjective vs "leave") makes a card of its own: replace only the same word.
   const replaces = supersedes && cachedOk && cachedOk.card.headword.trim().toLowerCase() === card.headword.trim().toLowerCase() ? supersedes : null;
   card = { ...card, headword: card.headword.trim().toLowerCase() };
@@ -296,8 +298,8 @@ export async function runAgain(deps: LookupDeps, input: { userId: string; askId:
   const language = ctx.language ?? "vi";
   const band = ctx.band ?? "";
   const base = { userId: input.userId, kind: "again" as const, childText: card.headword.slice(0, 40), contextText: null, cardId: row.id, sense: null, parentAsk: ctx.ask.id, clientId: input.clientId, flags: [] as string[] };
-  const fixed = async (code: LookupFixed, spent: { usedAi: boolean; runs: string[]; cost: number } = { usedAi: false, runs: [], cost: 0 }): Promise<LookupResult> => {
-    const r = await deps.store.record({ ...base, shown: null, guard: "fixed", reasons: [], fixedCode: code, usedAi: spent.usedAi, promptVersion: spent.usedAi ? AGAIN_PROMPT.version : null, model: spent.usedAi ? deps.models.card : null, runs: spent.runs, cost: spent.cost });
+  const fixed = async (code: LookupFixed, spent: { usedAi: boolean; runs: string[]; cost: number; reasons?: string[] } = { usedAi: false, runs: [], cost: 0 }): Promise<LookupResult> => {
+    const r = await deps.store.record({ ...base, shown: null, guard: "fixed", reasons: spent.reasons ?? [], fixedCode: code, usedAi: spent.usedAi, promptVersion: spent.usedAi ? AGAIN_PROMPT.version : null, model: spent.usedAi ? deps.models.card : null, runs: spent.runs, cost: spent.cost });
     return { status: r.replayed ? 200 : 201, body: { kind: "fixed", askId: r.id, fixed: code, replayed: r.replayed } };
   };
   if (ctx.lookups_today >= ctx.lookup_limit) return fixed("daily_limit");
@@ -336,7 +338,7 @@ export async function runAgain(deps: LookupDeps, input: { userId: string; askId:
     } else reasons.push(...(attempt ? r.map((x) => `rewrite_${x}`) : r));
   }
   await m.flush(gate.reservationId ?? null, "vocab_again");
-  if (!shown) return fixed(m.used ? "card_failed" : "ai_error", { usedAi: m.used, runs: m.runs, cost: m.cost });
+  if (!shown) return fixed(m.used ? "card_failed" : "ai_error", { usedAi: m.used, runs: m.runs, cost: m.cost, reasons });
   const r = await deps.store.record({ ...base, shown: JSON.stringify(shown), guard, reasons, fixedCode: null, usedAi: true, promptVersion: AGAIN_PROMPT.version, model: deps.models.card, runs: m.runs, cost: m.cost });
   return { status: r.replayed ? 200 : 201, body: { kind: "again", askId: r.id, again: shown, replayed: r.replayed } };
 }

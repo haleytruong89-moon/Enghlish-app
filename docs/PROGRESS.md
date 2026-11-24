@@ -2081,3 +2081,15 @@ Nhánh `feature/e2a-gia-su-so-tay`. Spec `docs/superpowers/specs/2026-11-22-gia-
 3. Mục Sổ tay: thấy `make` → Bỏ (xác nhận) → "Đã bỏ (1)" → Thêm lại.
 4. Phụ huynh → Hồ sơ học sinh → "Con hỏi Gia sư": thấy các lượt tra, lượt từ thẻ có sẵn ghi "thẻ có sẵn".
 5. Mở một bài luyện: vẫn không có gia sư trong bài.
+
+### E2a · bộ test thẻ từ lần đầu (24/11/2026)
+
+- 24/11: SQL `0041` ĐÃ ÁP (run 45312741876); bảng phiên âm đã nạp (run 45312924588: Anh–Anh 65.118 từ, Anh–Mỹ 125.927 từ).
+- Bộ test chạy lần đầu (run 45313164019): 28/40 ca đúng mong đợi; 12 ca "chưa soạn được thẻ".
+- Nguyên nhân (đọc mã lý do, nhánh `fix/e2a-eval-diagnostics`):
+  - khuôn đọc quá chặt (model thêm một trường phụ, bỏ lớp `status`, nhãn từ loại dài hơn 30 ký tự);
+  - cụm động từ tách ("turn it down") bị coi là ví dụ thiếu từ;
+  - quy tắc "không lặp câu của con" bắt cả cụm 4 từ thông dụng;
+  - Haiku kiểm coi "viết một câu về bạn" là hỏi thông tin riêng.
+  Đã sửa cả bốn; Haiku kiểm vẫn bắt được đáp án tự kiểm sai, và thẻ đó được viết lại.
+- Lần chạy cuối dừng giữa chừng: mọi lời gọi trả `http_400`, nhiều khả năng khóa API của bộ test đã hết hạn mức. **Cần phụ huynh nạp thêm / nâng hạn mức khóa bộ test**, rồi chạy lại "Eval vocab cards" để ghi mốc vào `docs/eval/E2_BASELINE.md`.

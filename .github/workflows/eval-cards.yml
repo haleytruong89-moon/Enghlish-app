@@ -10,6 +10,9 @@ on:
       max_usd:
         description: "Stop starting new work past this spend (USD)"
         default: "5"
+      only:
+        description: "Chỉ chạy các ca này (vd W09,P01), để trống = cả bộ"
+        default: ""
 
 permissions:
   contents: read
@@ -33,10 +36,12 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           MAX_USD: ${{ inputs.max_usd }}
+          ONLY: ${{ inputs.only }}
         run: |
           set -euo pipefail
           [[ "$MAX_USD" =~ ^[0-9]{1,2}(\.[0-9]+)?$ ]] || { echo "max_usd must be a number below 100"; exit 1; }
-          npx tsx scripts/eval-cards.ts --max-usd "$MAX_USD" --out "$RUNNER_TEMP/results"
+          [[ -z "$ONLY" || "$ONLY" =~ ^[A-Z][0-9]{2}(,[A-Z][0-9]{2})*$ ]] || { echo "only must look like W09,P01"; exit 1; }
+          npx tsx scripts/eval-cards.ts --max-usd "$MAX_USD" --out "$RUNNER_TEMP/results" ${ONLY:+--only "$ONLY"}
           cat "$RUNNER_TEMP"/results/*/summary.public.md >> "$GITHUB_STEP_SUMMARY"
       - name: Keep the cards as a run artifact (90 days) for the parent's reading
         if: always()
