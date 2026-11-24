@@ -9,7 +9,7 @@ const line = (max: number) => z.string().trim().min(1).max(max);
 export const cardContentSchema = z.strictObject({
   headword: line(40),
   forms: z.array(line(40)).min(1).max(12),
-  pos: line(30),
+  pos: line(60),
   lemma_note: line(120).nullable(),
   senses: z.array(z.strictObject({ meaning_vi: line(120), meaning_en: line(160).nullable() })).min(1).max(3),
   guess: z.strictObject({
@@ -25,7 +25,7 @@ export const cardContentSchema = z.strictObject({
   vn: line(300),
   trap: line(300),
   stress_tip: line(160),
-  family: z.array(z.strictObject({ form: line(40), pos: line(20) })).max(5),
+  family: z.array(z.strictObject({ form: line(40), pos: line(40) })).max(5),
   collocations: z.array(line(60)).min(3).max(5),
   related: z.array(line(40)).min(3).max(5),
   checks: z
