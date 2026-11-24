@@ -144,9 +144,9 @@ describe("Bàn làm việc: practice", () => {
   const alertsHtml = (t: TodayData) =>
     render(createElement(DeskAlerts, { learnerId, items: deskAlerts({ learnerId, role: "tutor", todayIso: "2026-10-17", today: t, intakeMissing: false, curriculaCount: 1, flagCount: 0 }) }));
 
-  it("shows only the counts of open practice (the list lives on the assign page)", () => {
+  it("shows only the counts of open practice (the list lives on Bài đã giao)", () => {
     const html = render(createElement(SessionsBox, { learnerId, today: today([assignment()]), todayIso: "2026-10-17" }));
-    expect(html).toContain(`href="/learners/${learnerId}/assign#assigned-list"`);
+    expect(html).toContain(`href="/learners/${learnerId}/assigned"`);
     expect(html).toContain(deskCopy.practiceCounts(1, 0, 0));
   });
 
