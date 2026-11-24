@@ -109,6 +109,7 @@ describe("one turn of Tra từ (E2a)", () => {
     const { deps, store } = setup({ checks: [false, false] });
     expect((await go(deps)).body).toMatchObject({ kind: "fixed", fixed: "card_failed" });
     expect(store.saveCard).not.toHaveBeenCalled();
+    expect(store.record.mock.calls[0]![0].reasons).toEqual(["haiku_fail", "rewrite_haiku_fail"]); // kept for the parent's log and the test set
     const b = setup({ callError: true });
     expect((await go(b.deps)).body).toMatchObject({ kind: "fixed", fixed: "card_failed" });
     expect(b.store.record.mock.calls[0]![0]).toMatchObject({ usedAi: true });
