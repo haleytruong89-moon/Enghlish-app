@@ -2007,6 +2007,7 @@ export const studioAssignedCopy = {
   saving: "Đang lưu…",
   failed: "Chưa lưu được. Thử lại.",
   removedReason: (r: string) => `Lý do gỡ: ${r}`,
+  duplicateWarning: "Con đang có một bài cùng tên chưa nộp. Giao thêm sẽ thành hai bài; nếu bài cũ giao nhầm, gỡ nó ở Bài đã giao.",
 };
 
 // Bài đã giao (24/11): one place to follow every piece of work given to one child. Adults only.

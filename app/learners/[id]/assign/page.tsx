@@ -12,6 +12,9 @@ import { todayVn } from "@/lib/inquiries/dates";
 import { loadUnitChoices } from "@/lib/curriculum/load";
 import { loadPickerMap } from "@/lib/skillmap/load";
 import { loadDraftList } from "@/lib/studio/load";
+import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
+import { loadAssignments } from "@/lib/practice/load";
+import { openTitles } from "@/lib/assigned/duplicates";
 import { loadFrames, loadTags } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
@@ -30,12 +33,15 @@ export default async function AssignPracticePage({ params, searchParams }: { par
   // The other two ways live on their own pages (the forms are not copied); this page only points there.
   if (way === "studio" || way === "topic") redirect(wayHref(learner.id, way, prefill));
   const kind = way === "link" || way === "pdf" ? way : null;
-  const [tags, frames, map, unitChoices, drafts] = await Promise.all([
+  const [tags, frames, map, unitChoices, drafts, studio, assignments] = await Promise.all([
     loadTags(learner.trackId),
     loadFrames(learner.trackId, learner.id),
     loadPickerMap(learner.id),
     loadUnitChoices(learner.id),
     loadDraftList(learner.id).catch(() => []),
+    // Only for the "same title" warning of the link / PDF form: a failed read = no warning.
+    kind ? loadStudioAssigned(learner.id, todayVn()).catch(() => null) : Promise.resolve(null),
+    kind ? loadAssignments(learner.id).catch(() => []) : Promise.resolve([]),
   ]);
   const head = (
     <>
@@ -69,7 +75,7 @@ export default async function AssignPracticePage({ params, searchParams }: { par
           <WaysStrip learnerId={learner.id} current={kind} prefill={prefill} />
           <p className="mt-3 text-muted">{assignPage.intro}</p>
           <div className="mt-6 flex flex-col gap-8">
-            <AssignForm key={kind} learnerId={learner.id} alias={learner.alias} tags={tags} frames={frames} today={todayVn()} map={map} prefill={prefill} unitChoices={unitChoices} fixedKind={kind} />
+            <AssignForm key={kind} learnerId={learner.id} alias={learner.alias} tags={tags} frames={frames} today={todayVn()} map={map} prefill={prefill} unitChoices={unitChoices} fixedKind={kind} openTitles={openTitles(studio, assignments)} />
           </div>
         </>
       ) : (

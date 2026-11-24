@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AssignForm } from "@/components/practice/AssignForm";
 import { blockImplicitSubmit } from "@/lib/forms/enter";
-import { tagPicker, unitPickerCopy } from "@/lib/copy/vi";
+import { studioAssignedCopy, tagPicker, unitPickerCopy } from "@/lib/copy/vi";
 import type { UnitChoice } from "@/lib/curriculum/unitPicker";
 import type { TagInfo } from "@/lib/tutorwork/types";
 import { levelledMap } from "../unit/fixtures/skillMap";
@@ -175,6 +175,13 @@ describe("AssignForm · Giao theo Unit (4b)", () => {
 });
 
 describe("fixedKind and the order of the fields (U8)", () => {
+  it("a title the child already has open shows a warning (never blocks); another title does not (24/11)", () => {
+    render(<AssignForm learnerId="l1" alias="An" tags={TAGS} frames={[]} today="2026-11-13" map={levelledMap()} fixedKind="link" openTitles={["destination c1 c2"]} />);
+    fireEvent.change(screen.getByTestId("assign-title"), { target: { value: "Destination C1, C2" } });
+    expect(screen.getByTestId("assign-duplicate").textContent).toBe(studioAssignedCopy.duplicateWarning);
+    fireEvent.change(screen.getByTestId("assign-title"), { target: { value: "Unit 16" } });
+    expect(screen.queryByTestId("assign-duplicate")).toBeNull();
+  });
   it("fixedKind=pdf: no kind switch, the PDF boxes are there", () => {
     render(<AssignForm learnerId="l1" alias="An" tags={TAGS} frames={[]} today="2026-11-13" map={levelledMap()} fixedKind="pdf" />);
     expect(screen.queryByTestId("kind-link")).toBeNull();

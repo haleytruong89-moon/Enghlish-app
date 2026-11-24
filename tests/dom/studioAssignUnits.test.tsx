@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { AssignStudioForm } from "@/components/studio/AssignStudioForm";
 import { WorkUnitProposal } from "@/components/curriculum/WorkUnitProposal";
 import type { UnitChoice } from "@/lib/curriculum/unitPicker";
+import { studioAssignedCopy, studioCopy } from "@/lib/copy/vi";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
@@ -26,6 +27,16 @@ const CHOICES: UnitChoice[] = [{
 }];
 
 describe("Giao bài Studio with Units (0037)", () => {
+  it("a duplicate title shows a warning but still assigns (24/11)", async () => {
+    render(<AssignStudioForm draftId="d1" today="2026-11-21" learnerId="l1" unitChoices={[]} duplicate />);
+    expect(screen.getByTestId("assign-duplicate").textContent).toBe(studioAssignedCopy.duplicateWarning);
+    fireEvent.click(screen.getByRole("button", { name: studioCopy.assign }));
+    await waitFor(() => expect(studioSend).toHaveBeenCalled());
+  });
+  it("no duplicate: no warning", () => {
+    render(<AssignStudioForm draftId="d1" today="2026-11-21" learnerId="l1" unitChoices={[]} />);
+    expect(screen.queryByTestId("assign-duplicate")).toBeNull();
+  });
   it("no Unit ticked: the body has no units; ticked Units are sent with the assignment", async () => {
     render(<AssignStudioForm draftId="d1" today="2026-11-21" learnerId="l1" unitChoices={CHOICES} />);
     expect(screen.getByTestId("assign-units").textContent).toMatch(/không bắt buộc/);
