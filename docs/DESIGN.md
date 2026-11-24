@@ -635,8 +635,8 @@ Spec `docs/superpowers/specs/2026-11-22-gia-su-so-tay-design.md` (bản 0.2, ph�
      - có câu → Haiku `vocab-sense.v1` chỉ chọn số nghĩa; `-1` thì soạn bản mới (`supersedes`).
   6. Đồng ý `ai-studio-tutor-v3` → 30 lượt AI / ngày → model có giá → `eng_ai_gate` giữ 0,08 USD (`vocab_card` hoặc `vocab_sense`).
   7. Sonnet `vocab-card.v1` (tool `save_vocab_card`).
-  8. zod `strictObject`: có trường `ipa` là trượt (L3).
-  9. Code kiểm (`cardCodeReasons`): ví dụ chứa từ, đáp án tự kiểm, không URL / IPA, số dòng, nghĩa tiếng Việt.
+  8. zod chỉ giữ các trường của khuôn (trường lạ như `ipa` bị bỏ, không lưu, không hiện: L3); phần đầu của tool đọc dễ (thiếu `status` mà có thẻ vẫn nhận).
+  9. Code kiểm (`cardCodeReasons`): ví dụ chứa từ (cụm động từ tách được: "turn it down"), đáp án tự kiểm, không URL / IPA, số dòng, nghĩa tiếng Việt, không lặp 5 từ liền / một tên của câu con gõ.
   10. Haiku kiểm (`vocab-check.v1`); Haiku lỗi tính là trượt.
   11. Viết lại 1 lần → không được thì câu cố định `card_failed`.
   12. `eng_save_vocab_card` → ghi sổ AI ở cuối, trả chỗ giữ bằng lần chạy cuối cùng cùng mục đích → `eng_record_tutor_ask`.

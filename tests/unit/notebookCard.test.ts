@@ -12,8 +12,15 @@ describe("word card: shape (§4.5) and code checks before Haiku", () => {
     expect(cardToolOutputSchema.safeParse(FIX).success).toBe(true);
     expect(cardCodeReasons(GOOD, opts)).toEqual([]);
   });
-  it("an unknown field (e.g. ipa written by the model) is refused: L3", () => {
-    expect(cardContentSchema.safeParse({ ...GOOD, ipa: "/meɪk/" }).success).toBe(false);
+  it("an unknown field (e.g. ipa written by the model) is dropped, never shown: L3", () => {
+    const r = cardContentSchema.parse({ ...GOOD, ipa: "/meɪk/", checks: [{ ...GOOD.checks[0]!, explanation: "x" }] });
+    expect("ipa" in r).toBe(false);
+    expect("explanation" in r.checks[0]!).toBe(false);
+  });
+  it("a phrasal verb split by its object still counts in an example", () => {
+    const card = with_({ headword: "turn down", forms: ["turn down", "turned down"], family: [], examples: [{ en: "She turned the offer down.", vi: "x" }, { en: "Please turn it down.", vi: "y" }] });
+    expect(cardCodeReasons(card, { headword: "turn down", language: "vi" })).not.toContain("example_missing_word");
+    expect(cardCodeReasons(with_({ headword: "turn down", forms: ["turn down"], family: [], examples: [{ en: "Turn left, then go down the hill and further down.", vi: "x" }, { en: "x", vi: "y" }] }), { headword: "turn down", language: "vi" })).toContain("example_missing_word");
   });
   it("not_word carries suggestions only", () => {
     expect(cardToolOutputSchema.safeParse({ status: "not_word", suggestions: ["receive"] }).success).toBe(true);
@@ -35,7 +42,8 @@ describe("word card: shape (§4.5) and code checks before Haiku", () => {
     const ctx = "My friend Minh at Tô Hoàng makes cakes every Sunday.";
     expect(cardCodeReasons(GOOD, { ...opts, context: ctx })).toEqual([]);
     expect(copiesChildText({ e: "Minh makes tea." }, ctx, "make")).toBe(true);
-    expect(copiesChildText({ e: "She makes cakes every Sunday." }, ctx, "make")).toBe(true);
+    expect(copiesChildText({ e: "Minh at Tô Hoàng makes cakes." }, ctx, "make")).toBe(true);
+    expect(copiesChildText({ e: "She makes cakes every Sunday morning." }, "Mum makes cakes every Sunday.", "make")).toBe(true); // 5 words in a row
     expect(copiesChildText({ e: "She makes cakes at the weekend." }, ctx, "make")).toBe(false);
     expect(copiesChildText({ e: "We meet on Sunday." }, ctx, "make")).toBe(true); // strict: any capitalised word of the sentence
     expect(copiesChildText({ e: "I like it." }, "I make it.", "make")).toBe(false);
@@ -55,6 +63,8 @@ describe("tool top level is lenient, the card is strict", () => {
     expect(cardToolOutputSchema.parse({ status: "not_word" })).toEqual({ status: "not_word", suggestions: [] });
     expect(cardToolOutputSchema.parse({ status: "not_word", card: null, suggestions: null })).toEqual({ status: "not_word", suggestions: [] });
     expect(cardToolOutputSchema.parse({ status: "ok", card: GOOD, suggestions: [] })).toEqual({ status: "ok", card: GOOD });
-    expect(cardToolOutputSchema.safeParse({ status: "ok", card: { ...GOOD, ipa: "/x/" } }).success).toBe(false);
+    expect(cardToolOutputSchema.parse({ status: "ok", card: { ...GOOD, ipa: "/x/" } })).toEqual({ status: "ok", card: GOOD });
+    expect(cardToolOutputSchema.parse({ ...GOOD })).toEqual({ status: "ok", card: GOOD }); // no status wrapper
+    expect(cardToolOutputSchema.parse({ card: GOOD })).toEqual({ status: "ok", card: GOOD });
   });
 });

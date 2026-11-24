@@ -115,10 +115,10 @@ describe("one turn of Tra từ (E2a)", () => {
     expect(b.store.record.mock.calls[0]![0]).toMatchObject({ usedAi: true });
   });
 
-  it("an `ipa` field written by the model is refused like a bad card (L3)", async () => {
-    const { deps, calls } = setup({ cards: [{ status: "ok", card: { ...CARD, ipa: "/meɪk/" } }, { status: "ok", card: CARD }] });
+  it("an `ipa` field written by the model is dropped: never saved, never shown (L3)", async () => {
+    const { deps, store } = setup({ cards: [{ status: "ok", card: { ...CARD, ipa: "/meɪk/" } }] });
     await go(deps);
-    expect(tools(calls)).toEqual(["save_vocab_card", "save_vocab_card", "check_vocab_card"]);
+    expect("ipa" in store.saveCard.mock.calls[0]![0].content).toBe(false);
   });
 
   it("not_word: spelling suggestions only, symbols and blocked words filtered", async () => {
