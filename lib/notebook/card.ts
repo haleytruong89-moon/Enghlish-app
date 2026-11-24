@@ -36,9 +36,11 @@ export const cardContentSchema = z.strictObject({
 });
 export type CardContent = z.infer<typeof cardContentSchema>;
 
+// The tool's top level is read leniently (a model often adds `suggestions: []` to an ok card or `card: null` to not_word); the CARD itself
+// stays strict (an unknown field such as `ipa` refuses the card, L3).
 export const cardToolOutputSchema = z.discriminatedUnion("status", [
-  z.strictObject({ status: z.literal("ok"), card: cardContentSchema }),
-  z.strictObject({ status: z.literal("not_word"), suggestions: z.array(z.string()).max(5) }),
+  z.object({ status: z.literal("ok"), card: cardContentSchema }).transform(({ status, card }) => ({ status, card })),
+  z.object({ status: z.literal("not_word"), suggestions: z.array(z.string()).max(5).nullish() }).transform(({ status, suggestions }) => ({ status, suggestions: suggestions ?? [] })),
 ]);
 export type CardToolOutput = z.infer<typeof cardToolOutputSchema>;
 

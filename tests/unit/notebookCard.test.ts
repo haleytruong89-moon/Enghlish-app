@@ -49,3 +49,12 @@ describe("word card: shape (§4.5) and code checks before Haiku", () => {
     expect(linesOf("x".repeat(230))).toBe(3);
   });
 });
+
+describe("tool top level is lenient, the card is strict", () => {
+  it("not_word without suggestions or with card: null; ok with an extra suggestions: []", () => {
+    expect(cardToolOutputSchema.parse({ status: "not_word" })).toEqual({ status: "not_word", suggestions: [] });
+    expect(cardToolOutputSchema.parse({ status: "not_word", card: null, suggestions: null })).toEqual({ status: "not_word", suggestions: [] });
+    expect(cardToolOutputSchema.parse({ status: "ok", card: GOOD, suggestions: [] })).toEqual({ status: "ok", card: GOOD });
+    expect(cardToolOutputSchema.safeParse({ status: "ok", card: { ...GOOD, ipa: "/x/" } }).success).toBe(false);
+  });
+});

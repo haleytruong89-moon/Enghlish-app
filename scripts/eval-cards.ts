@@ -123,7 +123,9 @@ async function main() {
     const problems = caseProblems(c, { outcome, headword: card?.headword, firstSense: card?.senses[0]?.meaning_vi, suggestions, cardText: card ? JSON.stringify(card) : "" });
     results.push({ id: c.id, expect: c.expect, outcome, fixed, guard: rec?.guard ?? null, cost: rec?.cost ?? 0, ms: Date.now() - t0, problems, audit: auditOut });
     full.push({ case: c, outcome, fixed, card, suggestions, record: rec, audit: auditOut });
-    console.log(`${c.id} ${outcome}${fixed ? ` (${fixed})` : ""} ${problems.join(",")}`);
+    const failedAudit = auditOut ? AUDIT_KEYS.filter((k) => !auditOut![k]) : [];
+    // Reasons are codes only (no card text): safe for the public log, and they say why a card was refused.
+    console.log(`${c.id} ${outcome}${fixed ? ` (${fixed})` : ""} ${problems.join(",")}${rec?.reasons?.length ? ` reasons=${rec.reasons.join("|")}` : ""}${failedAudit.length ? ` audit=${failedAudit.join("|")}` : ""}`);
   }
   const dir = path.join(OUT, new Date().toISOString().replace(/[:.]/g, "-"));
   mkdirSync(dir, { recursive: true });
