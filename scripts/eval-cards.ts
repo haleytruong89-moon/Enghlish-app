@@ -32,6 +32,8 @@ const KEY = process.env.ANTHROPIC_API_KEY;
 const FAKE = process.env.AI_FAKE === "1";
 const models = notebookModels();
 let spent = 0;
+/** API errors by code (e.g. http_429, http_400 when the test-set key has no credit left): printed at the end. */
+const errors = new Map<string, number>();
 
 const auditTool: ToolSpec = {
   name: "audit_card",
@@ -56,6 +58,7 @@ async function callApi(c: ToolCall, timeoutMs = 45_000): Promise<ToolResult> {
       return r;
     } catch (err) {
       const code = err instanceof AiCallError ? err.code : "network";
+      errors.set(code, (errors.get(code) ?? 0) + 1);
       if (i >= 2 || !["http_429", "http_5xx"].includes(code)) throw err;
       await new Promise((r) => setTimeout(r, 4000 * (i + 1)));
     }
@@ -131,7 +134,7 @@ async function main() {
   mkdirSync(dir, { recursive: true });
   writeFileSync(path.join(dir, "summary.public.md"), summarize(file.version, results, spent));
   writeFileSync(path.join(dir, "results.jsonl"), full.map((x) => JSON.stringify(x)).join("\n") + "\n");
-  console.log(`written ${dir}`);
+  console.log(`written ${dir} · spent ${spent.toFixed(3)} USD · API errors ${JSON.stringify(Object.fromEntries(errors))}`);
 }
 
 main().catch((err: unknown) => {
