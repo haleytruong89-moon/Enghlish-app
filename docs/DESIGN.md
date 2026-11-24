@@ -684,3 +684,12 @@ Spec `docs/superpowers/specs/2026-11-22-gia-su-so-tay-design.md` (bản 0.2, ph�
 - Gỡ bài = `eng_activity_event(step, 'skip', null, lý do, người)`; Khôi phục = `unskip`. `eng_step_effective_date` trả null khi bước đang bỏ → `eng_activity_released` false → bước không có trong `eng_my_today` / `eng_my_today_count`, không mở được, không tính quá hạn (`studioOverdueCount` bỏ qua "skipped"). Test DB: `tests/db/studentDesk.test.ts` "Gỡ bài = skip".
 - Chỉ hiện nút Gỡ bài khi bài chưa có lần nộp nào (`lastAttemptId` null); `handleActivityEvent` từ chối `skip` khi bước đã có attempt (409 `has_work`, `InquiryStore.stepHasWork`) — DB (0007) không chặn nên chặn ở server. Bước đang bỏ luôn hiện "Đã gỡ" + Khôi phục, kể cả khi đã có bài nộp (status "skipped" thắng). `Schedule.skipReason` = lý do của lần gỡ đang hiệu lực. Sự kiện chỉ thêm, có người + lý do; quyền = `eng_actor_may_manage` (phụ huynh, thầy/cô của em).
 - `StudioAssignedRow.lateDays` = số ngày sau hạn (chỉ "overdue"); `sortStudioAssigned` đưa bài quá hạn lâu nhất lên đầu.
+
+### 19.35. Bài đã giao (không SQL)
+
+- Trang `/learners/[id]/assigned?tab=need|doing|done|removed` (thầy/cô của em hoặc phụ huynh, cùng cổng `practice:write` như Giao bài). `lib/assigned/board.ts` (thuần): `tabOfStudio` — đã gỡ → removed; chờ chấm → need; đã chấm mà chưa góp ý (khi 0037 đã áp) → need; đã chấm + góp ý → done; còn lại → doing. `tabOfPractice` — thu hồi → removed; chưa nộp → doing (kết quả ghi tay mà con không nộp → done); đã nộp mà chưa có kết quả hoặc chưa có góp ý còn hiệu lực → need; còn lại → done. `NEEDS_FEEDBACK_TO_FINISH` quyết phần "chưa góp ý".
+- Tab "Con đang làm": bài quá hạn lâu nhất trước (Studio theo `lateDays`, link / PDF theo hạn sớm nhất). `parseTab`: tab lạ → need nếu có việc, không thì doing.
+- Trang dùng lại `StudioAssignedTable` và `AssignmentTable` (lọc theo tab), không có nút mới ngoài Gỡ bài của §19.34. Đọc Studio lỗi → báo "chưa đọc được", không giả là trống.
+- Giao bài (`/assign`) và Tạo bài từ đề không còn danh sách đã giao; Giao bài hiện "Bản nháp đang soạn" (`eng_studio_drafts`: chưa giao, chưa bỏ, chưa bị thay).
+- `lib/assigned/duplicates.ts`: tên bài so sánh không phân biệt hoa thường / dấu cách / dấu phân cách; chỉ là cảnh báo, không chặn.
+
