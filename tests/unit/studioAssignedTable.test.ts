@@ -40,4 +40,18 @@ describe("Bài làm trên app đã giao: late days, removal", () => {
       expect(h).not.toContain(c.restore);
     }
   });
+
+  it("sent work says whether feedback was given", () => {
+    const base = { attempts: 1, lastAttemptId: "t1", lastSubmittedAt: "2026-11-16T02:00:00Z", episodeId: "e1", status: "checked" as const };
+    const without = html([row({ ...base, feedbackGiven: false })]);
+    expect(without).toContain(c.openWorkToFeedback);
+    expect(without).toContain(c.noFeedbackYet);
+    const fed = html([row({ ...base, feedbackGiven: true })]);
+    expect(fed).toContain(c.openWorkFed);
+    expect(fed).not.toContain(c.noFeedbackYet);
+    // before 0037 nobody can give feedback: no feedback words at all
+    const old = html([row({ ...base, feedbackReady: false })]);
+    expect(old).toContain(c.openWork);
+    expect(old).not.toContain(c.noFeedbackYet);
+  });
 });

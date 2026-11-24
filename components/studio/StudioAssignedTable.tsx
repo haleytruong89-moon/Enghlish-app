@@ -39,7 +39,9 @@ export function StudioAssignedTable({ rows, title = c.title }: { rows: StudioAss
                 {r.lastSubmittedAt ? ` · ${c.sent(`${formatHm(r.lastSubmittedAt)} ${formatDay(todayVn(new Date(r.lastSubmittedAt)))}`, r.attempts)}` : ""}
                 {r.firstResult ? ` · ${c.firstResult(r.firstResult.correct, r.firstResult.total)}` : ""}
                 {r.units.length > 0 ? <span data-testid={`studio-assigned-units-${r.instanceId}`}>{` · ${c.units(r.units)}`}</span> : null}
-                {r.feedbackGiven ? <span data-testid={`studio-assigned-fb-${r.instanceId}`}>{` · ${c.feedbackGiven}`}</span> : null}
+                {r.feedbackReady && r.lastAttemptId ? (
+                  <span data-testid={`studio-assigned-fb-${r.instanceId}`} data-given={r.feedbackGiven ? "yes" : "no"}>{` · ${r.feedbackGiven ? c.feedbackGiven : c.noFeedbackYet}`}</span>
+                ) : null}
               </p>
               {r.removedReason ? (
                 <p className="text-sm text-muted" data-testid={`studio-assigned-reason-${r.instanceId}`}>
@@ -56,7 +58,7 @@ export function StudioAssignedTable({ rows, title = c.title }: { rows: StudioAss
                 <p className="flex flex-wrap gap-x-5 text-sm">
                   {r.episodeId ? (
                     <Link href={`/review/${r.episodeId}`} data-testid={`studio-assigned-open-${r.instanceId}`} className="inline-flex min-h-11 items-center font-semibold text-accent underline">
-                      {r.feedbackReady ? c.openWorkFeedback : c.openWork}
+                      {!r.feedbackReady ? c.openWork : r.feedbackGiven ? c.openWorkFed : c.openWorkToFeedback}
                     </Link>
                   ) : null}
                   {r.status === "waiting" ? (
