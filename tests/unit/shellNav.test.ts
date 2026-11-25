@@ -9,7 +9,7 @@ const hrefs = (n: ReturnType<typeof buildNav>) => [...n.sections.flatMap((s) => 
 describe("staff sidebar model", () => {
   it("follows the prototype order with the agreed labels", () => {
     const n = buildNav("tutor", NG, { revisionsReady: true });
-    expect(n.sections.map((s) => s.key)).toEqual(["desk", "profile", "knowledge", "roadmap", "sessions", "assign", "assigned", "results", "curricula", "inbox"]);
+    expect(n.sections.map((s) => s.key)).toEqual(["desk", "profile", "knowledge", "roadmap", "sessions", "assign", "assigned", "progress", "results", "curricula", "inbox"]);
     expect(n.sections.map((s) => s.key)).toEqual([...SECTION_KEYS]);
     for (const s of n.sections) expect(s.label).toBe(shellCopy.sections[s.key]);
   });

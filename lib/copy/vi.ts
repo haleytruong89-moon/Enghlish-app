@@ -2015,6 +2015,76 @@ export const studioAssignedCopy = {
 };
 
 // Bài đã giao (24/11): one place to follow every piece of work given to one child. Adults only.
+// Kết quả + Việc nên làm (26/11, after the 25/11 audit). Adults only; the child never sees these numbers (D35).
+const pctText = (p: number) => `${p}%`;
+export const resultsCopy = {
+  title: (alias: string) => `Kết quả · ${alias}`,
+  intro: "Điểm từng bài, từng Unit và từng mục kiến thức. Chỉ tính lần làm đầu; câu chỉ làm trên giấy không tính. Con không thấy trang này.",
+  tabsLabel: "Xem kết quả theo",
+  tabs: { work: "Theo bài", unit: "Theo Unit", tag: "Theo mục kiến thức" } as Record<"work" | "unit" | "tag", string>,
+  unavailable: "Chưa đọc được kết quả. Tải lại trang.",
+  empty: "Con chưa nộp bài nào trên app.",
+  /** "đúng 16/39" (+ "· 1 câu chờ thầy/cô") */
+  score: (correct: number, decided: number) => `đúng ${correct}/${decided}`,
+  pending: (n: number) => `${n} câu chờ ${tutorHonorific}`,
+  provisional: "tạm",
+  official: "chính thức",
+  percent: pctText,
+  noneDecided: "chưa chấm được câu nào",
+  waiting: (days: number) => (days === 0 ? "nộp hôm nay" : `chờ ${days} ngày`),
+  feedbackMissing: "chưa góp ý",
+  feedbackGiven: "đã góp ý",
+  attempts: (n: number) => `làm ${n} lần (tính lần đầu)`,
+  cols: { work: "Bài", sent: "Nộp", score: "Kết quả", parts: "Từng phần", unit: "Unit", works: "Số bài", weakest: "Phần yếu nhất", tag: "Mục kiến thức", status: "Còn việc" },
+  openWork: "Mở bài",
+  unitWorks: (n: number) => `${n} bài`,
+  tagWorks: (n: number) => `qua ${n} bài`,
+  barLabel: (label: string, correct: number, decided: number) => `${label}: đúng ${correct} trên ${decided} câu`,
+  legend: { low: "dưới 50%", mid: "50–79%", high: "từ 80%" },
+  // "Việc nên làm"
+  actionsTitle: "Việc nên làm",
+  actionsIntro: `App gợi ý từ kết quả bài làm. Mỗi việc có lý do và một nút để làm ngay.`,
+  actionsEmpty: "Chưa có việc nào cần làm từ kết quả bài.",
+  actionsUnavailable: "Chưa đọc được kết quả để gợi ý việc nên làm.",
+  parentNote: `Đây là các việc của ${tutorHonorific}. Phụ huynh xem để nhắc khi cần.`,
+  seeAll: "Xem kết quả đầy đủ",
+  tone: { red: "Gấp", amber: "Nên làm", info: "Việc chờ", good: "Khen" } as Record<"red" | "amber" | "info" | "good", string>,
+  cards: {
+    grade: {
+      title: (works: number, oldestDays: number) => `${works} bài con đã nộp đang chờ ${tutorHonorific}${oldestDays > 0 ? ` · lâu nhất ${oldestDays} ngày` : ""}`,
+      line: (pendingItems: number, feedbackMissing: number) =>
+        [pendingItems > 0 ? `${pendingItems} câu cần ${tutorHonorific} chấm` : null, feedbackMissing > 0 ? `${feedbackMissing} bài chưa góp ý` : null].filter(Boolean).join(" · ") +
+        ". Con nộp xong mà chưa nhận được lời nhận xét nào.",
+      button: "Chấm bài cũ nhất",
+    },
+    fix_together: {
+      title: (title: string, part: string | null) => `Chữa bài cùng con: ${title}${part ? ` · phần ${part}` : ""}`,
+      line: (correct: number, decided: number, percent: number) => `Con đúng ${correct}/${decided} (${pctText(percent)}). Nên xem lại cùng con trong buổi tới để tìm chỗ hiểu sai.`,
+      button: "Ghi vào buổi học",
+    },
+    unit_review: {
+      title: (unit: string) => `Đề nghị con học kỹ lại ${unit} trước khi sang Unit mới`,
+      line: (correct: number, decided: number, percent: number, works: number) => `Gộp ${works} bài của Unit: đúng ${correct}/${decided} (${pctText(percent)}).`,
+      button: "Ghi vào buổi học",
+    },
+    practise: {
+      title: (tag: string) => `Cho con luyện thêm: ${tag}`,
+      line: (correct: number, decided: number, percent: number, works: number) => `Qua ${works} bài: đúng ${correct}/${decided} (${pctText(percent)}). Giao thêm một bài cùng dạng.`,
+      button: "Giao bài luyện",
+    },
+    praise: {
+      title: (title: string, part: string | null) => `Khen con: ${title}${part ? ` · phần ${part}` : ""}`,
+      line: (correct: number, decided: number, percent: number) => `Đúng ${correct}/${decided} (${pctText(percent)}). Mở đầu lời góp ý bằng điều cụ thể này.`,
+      button: "Mở bài để góp ý",
+    },
+  },
+  sessionTitle: "Gợi ý cho buổi này",
+  sessionIntro: "Từ kết quả bài làm gần đây. Ghi vào “Hôm nay học” hoặc “Lời nhắn cho em” nếu đã làm trong buổi.",
+  provisionalLine: (correct: number, decided: number, pending: number) =>
+    decided > 0 ? `tạm: đúng ${correct}/${decided}${pending > 0 ? ` · ${pending} câu chờ ${tutorHonorific}` : ""}` : `${pending} câu chờ ${tutorHonorific} chấm`,
+  notCounted: "giao lại · không tính vào tổng (chỉ tính lần làm đầu)",
+};
+
 export const assignedBoardCopy = {
   title: (alias: string) => `Bài đã giao · ${alias}`,
   intro: "Bài trên app, bài link, bài PDF đã giao ở một chỗ (bài chủ đề ở trang riêng).",
@@ -2416,6 +2486,7 @@ export const appFeedback = {
     inquiries: "Bài chủ đề đã giao",
     assign: "Giao bài",
     assigned: "Bài đã giao",
+    progress: "Kết quả",
     delete: "Xóa dữ liệu",
     baseline: "Cấp khởi điểm",
     adjust: "Điều chỉnh cấp",
@@ -2602,6 +2673,7 @@ export const shellCopy = {
     sessions: "Buổi học",
     assign: "Giao bài",
     assigned: "Bài đã giao",
+    progress: "Kết quả",
     results: "Ghi kết quả",
     curricula: "Giáo trình",
     inbox: "Chờ duyệt",

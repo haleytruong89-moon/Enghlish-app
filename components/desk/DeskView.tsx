@@ -12,6 +12,7 @@ import { CurriculumBox } from "./CurriculumBox";
 import { DeskAlerts } from "./DeskAlerts";
 import { DeskInbox } from "./DeskInbox";
 import { GoalBox } from "./GoalBox";
+import { ActionCards } from "@/components/results/ActionCards";
 import { ProfileBox } from "./ProfileBox";
 import { SessionsBox } from "./SessionsBox";
 
@@ -44,6 +45,9 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
           <Link href={`/learners/${id}/assign`} data-testid={`action-assign-${id}`} className={SECONDARY}>{todayPage.assignAction}</Link>
         </div>
       </div>
+      {data.actions === undefined || (data.actions !== null && data.actions.length === 0) ? null : (
+        <ActionCards learnerId={id} cards={data.actions} tagLabels={data.today?.tagLabels ?? {}} role={shell.role} />
+      )}
       <DeskInbox learnerId={id} pending={data.pending} />
       <DeskAlerts learnerId={id} items={alerts} />
       {data.goal ? (

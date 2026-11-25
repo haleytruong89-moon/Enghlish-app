@@ -17,6 +17,11 @@ export type StudioAssignedStatus = "not_yet" | "todo" | "overdue" | "skipped" | 
 export type StudioAssignedRow = {
   instanceId: string;
   activityId: string;
+  /** The Studio template of the test (per-item parts / tags live under it, in studio_item_meta). */
+  templateId?: string;
+  templateVersion?: number;
+  /** The child's first attempt (the one every measure counts), null before anything was sent. */
+  firstAttemptId?: string | null;
   title: string;
   items: number;
   startOn: string | null;
@@ -74,6 +79,9 @@ export function buildStudioAssigned(
     out.push({
       instanceId: q.id,
       activityId: step.activityId,
+      templateId: q.templateId,
+      templateVersion: q.templateVersion,
+      firstAttemptId: first?.id ?? null,
       title: q.titleVi,
       items: step.itemCount,
       startOn,

@@ -126,3 +126,19 @@ describe("one line with this month's sessions (U9/U10)", () => {
     expect(line(null)).toBeNull();
   });
 });
+
+describe("Bàn làm việc · Việc nên làm (26/11)", () => {
+  const card = { key: "grade", kind: "grade" as const, tone: "red" as const, facts: { works: 2, pendingItems: 9, feedbackMissing: 2, oldestDays: 10 }, href: "/review/e1" };
+  it("the cards stand at the top, above Chờ duyệt; nothing when there are none or the desk did not load them", () => {
+    const h = render("tutor", data({ actions: [card] }));
+    expect(h).toContain('data-testid="action-cards"');
+    expect(h.indexOf('data-testid="action-cards"')).toBeLessThan(h.indexOf('data-testid="desk-inbox"'));
+    expect(render("tutor", data({ actions: [] }))).not.toContain('data-testid="action-cards"');
+    expect(render("tutor", data())).not.toContain('data-testid="action-cards"');
+  });
+  it("the parent sees the cards without buttons", () => {
+    const h = render("parent", data({ actions: [card] }));
+    expect(h).toContain('data-testid="action-card-grade"');
+    expect(h).not.toContain('data-testid="action-button-grade"');
+  });
+});

@@ -29,6 +29,7 @@ const RULES: readonly Rule[] = [
   { re: lp("/notes(/month/[^/]+)?"), section: "sessions", child: "notes", screen: S.notes },
   { re: lp("/assign"), section: "assign", child: null, screen: S.assign },
   { re: lp("/assigned"), section: "assigned", child: null, screen: S.assigned },
+  { re: lp("/progress"), section: "progress", child: null, screen: S.progress },
   { re: /^\/studio\/new$/, section: "assign", child: null, screen: S.studioNew, switchTo: (to) => `/studio/new${learnerQuery(to)}` },
   { re: /^\/studio\/drafts\/[^/]+$/, section: "assign", child: null, screen: S.studioDraft, switchTo: (to) => `/learners/${to}/assign` },
   { re: lp("/inquiries"), section: "assign", child: null, screen: S.inquiries, switchTo: (to) => `/learners/${to}/inquiries` },
