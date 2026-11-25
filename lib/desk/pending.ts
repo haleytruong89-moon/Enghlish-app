@@ -210,7 +210,7 @@ export function mergeBySubmission(rows: readonly PendingRow[]): PendingRow[] {
       // The group of the first part, so "Cần xem câu" still lists a submission whose questions wait to be checked.
       key: `attempt-${r.attemptId}`, kind: first.kind, group: GROUP_OF[first.kind], label: pendingCopy.kinds.work, title,
       since: dated[0] ?? null,
-      need: sorted.map((p, n) => (n === 0 ? p.need : lowerFirst(p.need))).join(" · "),
+      need: sorted.flatMap((p) => p.need.split(" · ")).map((piece, n) => (n === 0 ? piece : lowerFirst(piece))).join(" · "),
       href: first.href,
       // Shown when any part waits for the tutor (e.g. a parent sees that the skill scoring is the tutor's, even if she can give feedback).
       waitingTutor: sorted.some((p) => p.waitingTutor),

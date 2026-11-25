@@ -157,6 +157,11 @@ describe("Q2 (audit 25/11): one row per submission", () => {
       href: "/review/studio#studio-s1", waitingTutor: false,
     });
   });
+  it("every piece after the first starts lower-case, even inside a part ('con thử lại … · con xem đáp án …')", () => {
+    const two = { ...retry, retries: [...retry.retries, { itemId: "q6", n: 6, stem: "y", given: "", retry: null, kind: "revealed", at: "2026-11-02T03:01:00Z" }] };
+    const rows = buildPendingRows(input({ work: [], studio: [studio()], retries: [two] as never, skills: [], drafts: [], curricula: [] }));
+    expect(rows[0]?.need).toBe(`${pendingCopy.need.studioCheck(1)} · con thử lại 1 câu · con xem đáp án 1 câu`);
+  });
   it("feedback alone is its own row; different attempts are never merged", () => {
     const rows = buildPendingRows(input({ work: [work()], studio: [], skills: [], drafts: [], curricula: [], feedback: [fb({ attemptId: "s7", href: "/review/e7" })] }));
     expect(rows.map((r) => [r.key, r.need, r.href])).toEqual([["feedback-s7", pendingCopy.need.feedback, "/review/e7"], ["work-e1", reviewPage.progress(0, 2), "/review/e1"]]);

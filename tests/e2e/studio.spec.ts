@@ -152,9 +152,13 @@ test("Nguyên retries one question once; he is told it went to the tutor, no sco
   await loginAs(tutor, "tutorNguyen");
   await tutor.goto(`/learners/${NGUYEN}/inbox`);
   const attemptId = (await q<{ id: string }>("select id from english.attempts where activity_instance_id = $1 order by attempt_no desc limit 1", [activityId]))[0]!.id;
-  await expect(tutor.getByTestId(`pending-row-retry-${attemptId}`)).toContainText(pendingCopy.need.retry(1));
-  await expect(tutor.getByTestId(`pending-row-retry-${attemptId}`)).toContainText(pendingCopy.need.reveal(1));
-  await tutor.getByTestId(`pending-open-retry-${attemptId}`).click();
+  // Q2 (audit 25/11): the retries of a submission share ONE row with its other parts (skill scoring, feedback): "attempt-<id>" when
+  // merged, "retry-<id>" when the retry is the only part. The retry text may be lower-cased when it is not the first part.
+  const row = tutor.locator(`[data-testid="pending-row-attempt-${attemptId}"], [data-testid="pending-row-retry-${attemptId}"]`);
+  const lc = (s: string) => new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+  await expect(row).toContainText(lc(pendingCopy.need.retry(1)));
+  await expect(row).toContainText(lc(pendingCopy.need.reveal(1)));
+  await tutor.goto(`/review/studio?learner=${NGUYEN}#retry-${attemptId}`);
   const card = tutor.getByTestId(`retry-card-${attemptId}`);
   // the card has two items (q2 retried, q6 gave up): every locator is scoped to its own item
   const q2 = card.getByTestId(`retry-item-${attemptId}-q2`);
@@ -171,6 +175,7 @@ test("Nguyên retries one question once; he is told it went to the tutor, no sco
   await tutor.goto(`/learners/${NGUYEN}/inbox`);
   await expect(tutor.getByTestId("pending-table")).toBeVisible();
   await expect(tutor.getByTestId(`pending-row-retry-${attemptId}`)).toHaveCount(0);
+  await expect(tutor.getByTestId("pending-table")).not.toContainText(lc(pendingCopy.need.retry(1)));
   // the child never sees the note
   await page.reload();
   expect(await studentVisibleText(page)).not.toContain("tự sửa được");
