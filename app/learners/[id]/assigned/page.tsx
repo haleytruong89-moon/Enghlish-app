@@ -3,6 +3,7 @@ import { BoardTabs } from "@/components/assigned/BoardTabs";
 import { AssignmentTable } from "@/components/practice/AssignmentTable";
 import { StudioAssignedTable } from "@/components/studio/StudioAssignedTable";
 import { buildBoard, parseTab } from "@/lib/assigned/board";
+import { likelyDuplicates } from "@/lib/assigned/duplicates";
 import { assignedBoardCopy as c, learnerWithTrack } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { maxPagesPerSubmission } from "@/lib/practice/capabilities";
@@ -47,7 +48,7 @@ export default async function AssignedBoardPage({ params, searchParams }: { para
       <p className="text-sm text-muted">{c.hint[tab]}</p>
       {board.studioFailed || studioRows.length > 0 ? (
         <div data-testid="board-studio">
-          <StudioAssignedTable rows={board.studioFailed ? null : studioRows} title={c.studioList} />
+          <StudioAssignedTable rows={board.studioFailed ? null : studioRows} title={c.studioList} duplicates={likelyDuplicates(studio ?? [])} />
         </div>
       ) : null}
       {practiceRows.length > 0 ? (

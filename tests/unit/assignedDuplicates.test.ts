@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isDuplicate, normTitle, openTitles } from "@/lib/assigned/duplicates";
+import { isDuplicate, likelyDuplicates, normTitle, openTitles, overdueFacts } from "@/lib/assigned/duplicates";
 import type { StudioAssignedRow } from "@/lib/studio/assigned";
 import type { AssignmentView } from "@/lib/practice/types";
 
@@ -20,5 +20,36 @@ describe("same work given twice", () => {
     expect(isDuplicate("Link B", open)).toBe(false);
     expect(isDuplicate("   ", open)).toBe(false);
     expect(openTitles(null, [])).toEqual([]);
+  });
+});
+
+describe("Q6 (audit 25/11): overdue tests that look given by mistake", () => {
+  // The case seen on 25/11: two identical tests overdue 8 days, and an overdue test with the same title as one the child already sent.
+  const row = (instanceId: string, title: string, status: StudioAssignedRow["status"], o: Partial<StudioAssignedRow> = {}) =>
+    ({ instanceId, title, status, attempts: 0, assignedAt: "2026-11-15T00:00:00Z", lateDays: status === "overdue" ? 3 : null, ...o }) as StudioAssignedRow;
+  const rows = [
+    row("a", "Destination C1 C2", "overdue", { lateDays: 8, assignedAt: "2026-11-15T01:00:00Z" }),
+    row("b", "Destination C1 C2", "overdue", { lateDays: 8, assignedAt: "2026-11-15T02:00:00Z" }),
+    row("c", "Destination C1&C2 · Unit 14 · Idioms (L)", "overdue", { assignedAt: "2026-11-20T00:00:00Z" }),
+    row("d", "Destination C1&C2 · Unit 14 · Idioms (L)", "checked", { attempts: 1, assignedAt: "2026-11-20T00:00:00Z", instanceId: "0d", lastSubmittedAt: "2026-11-20T16:02:00Z" }),
+    row("e", "Unit 15", "overdue"),
+    row("f", "Unit 15", "skipped", { attempts: 0, assignedAt: "2026-11-01T00:00:00Z" }),
+  ];
+  it("marks the later of two identical open tests and a test whose twin was sent; a removed twin does not count", () => {
+    expect([...likelyDuplicates(rows)].sort()).toEqual(["b", "c"]);
+  });
+  it("giving a test again AFTER the child sent it (retry, delayed check) is deliberate: never marked", () => {
+    const again = [
+      row("old", "Unit 9", "checked", { attempts: 1, assignedAt: "2026-11-01T00:00:00Z", lastSubmittedAt: "2026-11-02T10:00:00Z" }),
+      row("new", "Unit 9", "overdue", { assignedAt: "2026-11-16T00:00:00Z" }),
+    ];
+    expect(likelyDuplicates(again).size).toBe(0);
+  });
+  it("same assignment time: only one of the two is marked", () => {
+    expect(likelyDuplicates([row("x", "T", "overdue"), row("y", "T", "overdue")]).size).toBe(1);
+  });
+  it("overdueFacts: count, look-alikes, and tests more than 7 days late", () => {
+    expect(overdueFacts(rows)).toEqual({ overdue: 4, duplicates: 2, longLate: 2 });
+    expect(overdueFacts([])).toEqual({ overdue: 0, duplicates: 0, longLate: 0 });
   });
 });

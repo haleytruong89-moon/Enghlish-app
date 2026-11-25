@@ -1434,7 +1434,7 @@ export const studioFeedbackCopy = {
   errors: {
     feedback_unavailable: "Góp ý cho bài làm trên app chưa dùng được: cần áp bản cập nhật cơ sở dữ liệu 0037 trước.",
     not_found: "Không tìm thấy lần làm này. Bạn tải lại trang.",
-    attempt_replaced: "Con vừa làm lại bài này. Bạn mở lần làm mới nhất (Giao bài → Bài làm trên app đã giao) để góp ý.",
+    attempt_replaced: "Con vừa làm lại bài này. Bạn mở lần làm mới nhất (Bài đã giao → Cần thầy/cô xử lý) để góp ý.",
   } as Record<string, string>,
 } as const;
 
@@ -2010,6 +2010,7 @@ export const studioAssignedCopy = {
   failed: "Chưa lưu được. Thử lại.",
   stale: "Bài này vừa đổi trạng thái (con đã nộp, hoặc người khác đã gỡ / khôi phục). Trang đã tải lại.",
   removedReason: (r: string) => `Lý do gỡ: ${r}`,
+  likelyDuplicate: "Có thể giao trùng",
   duplicateWarning: "Con đang có một bài cùng tên chưa nộp. Giao thêm sẽ thành hai bài; nếu bài cũ giao nhầm, gỡ nó ở Bài đã giao.",
 };
 
@@ -2617,13 +2618,18 @@ export const pendingCopy = {
   title: (alias: string) => `Chờ duyệt · ${alias}`,
   intro: `Bài con nộp và nháp AI đang chờ ${tutorHonorific}. Mục cũ nhất ở trên. Mở từng mục ra xem, sửa rồi mới duyệt ở trang đó.`,
   filtersLabel: "Lọc việc chờ",
-  groups: { all: "Tất cả", work: "Bài nộp", check: "Cần xem câu", ai: "Nháp AI", skills: "Kỹ năng", roadmap: "Lộ trình", goals: "Mục tiêu tuần" },
+  groups: { all: "Tất cả", work: "Bài nộp", check: "Cần xem câu", ai: "Nháp AI", skills: "Kỹ năng", roadmap: "Lộ trình", goals: "Mục tiêu tuần", drafts: "Bài soạn sẵn" },
+  /** Q1 (audit 25/11): the drafts tab is the tutor's stock of work to check before giving it, not work the child waits on. */
+  draftsNote: "Bài soạn sẵn (đề nhập sẵn, nháp đang soạn) chờ soát trước khi giao. Không tính vào số Chờ duyệt: soát bài nào khi sắp giao bài đó.",
+  deskDrafts: (n: number) => `${n} bài soạn sẵn chờ soát trước khi giao (không tính vào số trên)`,
+  deskDraftsOpen: "Xem bài soạn sẵn",
   groupCount: (label: string, n: number, atLeast = false) => `${label} (${atLeast ? "≥ " : ""}${n})`,
   cols: { kind: "Loại", content: "Nội dung", since: "Từ ngày", need: "Cần làm" },
   kinds: {
     work: "Bài nộp",
     studioCheck: `Cần ${tutorHonorific} xem`,
     retry: "Thử lại",
+    feedback: "Bài nộp",
     studioDraft: "Nháp AI · đề",
     curriculumDraft: "Nháp AI · giáo trình",
     skill: "Đề xuất kỹ năng",
@@ -2638,6 +2644,7 @@ export const pendingCopy = {
     retry: (n: number) => `Con thử lại ${n} câu`,
     reveal: (n: number) => `Con xem đáp án ${n} câu`,
     studioDraft: "Xem nháp, sửa rồi duyệt",
+    feedback: "Chưa góp ý",
     curriculumDraft: "Duyệt Unit và bảng nối",
     aiFailed: "AI chưa đọc được · soạn tay",
     skill: "Xem điều kiện rồi xác nhận",
@@ -2656,7 +2663,7 @@ export const pendingCopy = {
   empty: "Không có gì chờ duyệt.",
   emptyGroup: "Không có mục nào ở nhóm này.",
   failed: (what: string) => `Chưa đọc được phần “${what}”. Các phần khác vẫn đúng.`,
-  sources: { work: "Bài làm", studio: `Cần ${tutorHonorific} xem`, retries: "Con thử lại", skills: "Kỹ năng", points: "Mục kiến thức", drafts: "Nháp đề", curricula: "Giáo trình", imports: "Bài nạp", roadmap: "Lộ trình", goals: "Mục tiêu tuần" },
+  sources: { work: "Bài làm", studio: `Cần ${tutorHonorific} xem`, retries: "Con thử lại", skills: "Kỹ năng", points: "Mục kiến thức", drafts: "Nháp đề", curricula: "Giáo trình", imports: "Bài nạp", roadmap: "Lộ trình", goals: "Mục tiêu tuần", feedback: "Góp ý bài nộp" },
   more: "Có thể còn bài cũ hơn chưa hiện ở đây.",
   fullInbox: "Mở danh sách đầy đủ",
   deskTitle: (n: number | string) => `Chờ duyệt · ${n}`,
@@ -2686,7 +2693,11 @@ export const deskCopy = {
     overdueTitle: (n: number) => `${n} bài luyện quá hạn`,
     overdueLine: "Em chưa gửi và chưa ai ghi kết quả. Con không thấy chữ “quá hạn”.",
     studioOverdueTitle: (n: number) => `${n} bài làm trên app quá hạn, em chưa nộp`,
-    studioOverdueLine: "Xem ở Giao bài → Bài làm trên app đã giao.",
+    studioOverdueLine: "Mở Bài đã giao → Con đang làm để nhắc con, hoặc gỡ bài giao nhầm.",
+    studioOverdueLineWith: (detail: string) => `${detail}. Mở Bài đã giao → Con đang làm để nhắc con, hoặc gỡ bài giao nhầm.`,
+    /** Q6 (audit 25/11): what stands out among the overdue tests; empty when nothing does. */
+    studioOverdueDetail: (duplicates: number, longLate: number, days: number) =>
+      [duplicates > 0 ? `${duplicates} bài trùng tên với bài khác (có thể giao nhầm)` : null, longLate > 0 ? `${longLate} bài quá hạn trên ${days} ngày` : null].filter(Boolean).join(" · "),
     flagsTitle: (n: number) => `${n} kỹ năng cần xem lại`,
     flagsLine: "Sai lặp lại sau khi đã lên bậc. App không tự hạ bậc.",
     orphanTitle: (n: number) => `${n} mốc gắn Unit không còn`,
@@ -2701,6 +2712,8 @@ export const deskCopy = {
   draftWaiting: "Có bản mục lục chờ duyệt",
   sessionsTitle: "Buổi học & bài giao",
   sessionsUnavailable: "Chưa đọc được buổi học và bài giao.",
+  /** Q3 (audit 25/11): the same counts as the tabs of "Bài đã giao". */
+  assignedCounts: (need: number, doing: number, late: number) => `Bài đã giao: ${need} cần ${tutorHonorific} xử lý · ${doing} con đang làm${late > 0 ? ` · ${late} quá hạn` : ""}`,
   practiceCounts: (open: number, sent: number, late: number) => `Bài giao: ${open} đang mở · ${sent} em đã gửi${late > 0 ? ` · ${late} quá hạn` : ""}`,
   seeAssignments: "Xem bài giao",
   monthLine: (month: number, n: number, last: string) => `Tháng ${month}: ${n} buổi · buổi gần nhất ${last}`,

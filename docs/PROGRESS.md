@@ -2137,3 +2137,20 @@ Nhánh `feature/assigned-board` (dựa trên PR 1). Kế hoạch `docs/superpowe
 - Bài đã nộp ghi rõ "chưa góp ý" / "đã góp ý"; nút "Xem bài và góp ý" / "Xem bài · đã góp ý".
 
 **Cách thử trên preview:** cột trái → Bài đã giao → bấm qua 4 tab (bài quá hạn ở tab Con đang làm, quá hạn lâu nhất trên cùng); Giao bài → không còn danh sách dài, có "Bản nháp đang soạn"; mở một bản nháp đã giao mà con chưa làm → thấy cảnh báo trùng.
+
+## Sửa nhanh sau audit UI/UX: Chờ duyệt gọn · số Bài đã giao · nhắc gỡ bài trùng (25/11/2026)
+
+Nhánh `fix/audit-quick-wins`. Nguồn: báo cáo audit UI/UX 25/11 (mục 7), phụ huynh duyệt 25/11: Q1, Q2, Q3, Q6. Kế hoạch `docs/superpowers/plans/2026-11-25-audit-quick-wins.md`. **Không có SQL**, không AI, không đổi quyền.
+
+**Có gì:**
+- **Q1 · Bài soạn sẵn không tính vào Chờ duyệt.** Nháp đề Studio sang tab mới "Bài soạn sẵn" của Chờ duyệt; không nằm trong "Tất cả", không tính vào số ở cột trái và ở Bàn làm việc. Bàn làm việc có dòng "n bài soạn sẵn chờ soát trước khi giao". Với dữ liệu 25/11: 30 nháp Destination U21–U26 + PT2 ra khỏi số 40.
+- **Q2 · Một bài nộp = một dòng.** Các việc của cùng một lần nộp (chấm câu tự luận, chấm kỹ năng, con thử lại / xem đáp án, **chưa góp ý**) gộp thành một dòng "Bài nộp"; "Cần làm" kể hết, ví dụ "8 câu cần xem · đã chấm 0/1 kỹ năng · chưa góp ý"; "Mở" dẫn tới phần đầu tiên còn dở. "Chưa góp ý" dùng đúng luật của tab "Cần thầy/cô xử lý" ở Bài đã giao, nên bài đã chấm mà chưa góp ý (vd U14 Word formation) nay hiện ở Chờ duyệt.
+- **Q3 · Số "Bài giao" trên Bàn làm việc** lấy cùng nguồn với Bài đã giao: "Bài đã giao: n cần thầy/cô xử lý · n con đang làm · n quá hạn" (trước chỉ đếm bài link / PDF nên ghi "0 đang mở"). Hai chỗ còn chỉ "Giao bài → Bài làm trên app đã giao" đã sửa.
+- **Q6 · Nhắc gỡ bài trùng / quá hạn lâu.** Cảnh báo quá hạn ghi thêm "n bài trùng tên với bài khác (có thể giao nhầm) · n bài quá hạn trên 7 ngày", dẫn tới Bài đã giao → Con đang làm. Ở đó bài nghi trùng có nhãn "Có thể giao trùng". Không tự gỡ: người lớn vẫn bấm Gỡ bài + ghi lý do.
+
+**Cách thử trên preview (Nguyên (thử)):** đăng nhập thầy/cô → Bàn làm việc: số Chờ duyệt không còn tính nháp; có dòng "bài soạn sẵn" nếu có nháp. Chờ duyệt → tab "Bài soạn sẵn". Nộp một bài Studio có câu tự luận bằng "Nguyên (thử)" → Chờ duyệt chỉ một dòng cho bài đó. Giao hai bài cùng tên, để quá hạn → Bàn làm việc báo "bài trùng tên", Bài đã giao có nhãn "Có thể giao trùng".
+
+**Sau rà soát (25/11) đã sửa:** dòng gộp giữ nhóm của phần đầu (tab "Cần xem câu" vẫn có bài chờ chấm câu); giao lại bài SAU khi con đã nộp (làm lại, kiểm tra sau ≥ 14 ngày) không bị gắn "Có thể giao trùng"; nguồn nháp đọc lỗi không làm mất số Chờ duyệt; phụ huynh vẫn thấy "Chờ thầy/cô duyệt" khi một phần của bài nộp là việc của thầy/cô; câu cảnh báo ghép trong `vi.ts`.
+**Còn để sau (ghi lại):** số "cần thầy/cô xử lý" ở Bàn làm việc tính cả bài link / PDF chưa góp ý, còn Chờ duyệt chỉ thêm "chưa góp ý" cho bài trên app (hai nhãn khác nhau, không sai). Mỗi lần đọc số Chờ duyệt nay đọc thêm danh sách bài trên app đã giao (thêm vài truy vấn).
+
+**Test:** typecheck, lint, 2069 test đơn vị xanh (test mới: gộp theo bài nộp, tab bài soạn sẵn, số đếm, bài trùng, dòng Bài đã giao). Không đổi SQL nên không chạy lại test DB trên máy.

@@ -5,6 +5,7 @@
 import { deskCopy, fallbackLabels, todayPage } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi } from "@/lib/inquiries/format";
+import { LONG_LATE_DAYS, type OverdueFacts } from "@/lib/assigned/duplicates";
 import { isOverdue } from "@/lib/practice/overdue";
 import { roadmapHref } from "@/lib/shell/paths";
 import { itemList } from "@/lib/tutorwork/frameScore";
@@ -29,6 +30,8 @@ export type DeskAlertInput = {
   roadmapOrphans?: number | null;
   /** Studio tests past their due day with nothing sent (21/11); null/undefined = unknown (no alert). */
   studioOverdue?: number | null;
+  /** Q6: how many overdue tests look given twice / are long late; null/undefined = only the count is known. */
+  studioOverdueFacts?: OverdueFacts | null;
 };
 
 export function deskAlerts(i: DeskAlertInput): DeskAlert[] {
@@ -44,7 +47,9 @@ export function deskAlerts(i: DeskAlertInput): DeskAlert[] {
     if (late > 0) out.push({ key: "overdue", tone: "warn", badge: todayPage.practiceOverdue, title: A.overdueTitle(late), line: A.overdueLine, href: `${base}/assigned?tab=doing` });
   }
   if (i.studioOverdue && i.studioOverdue > 0) {
-    out.push({ key: "studio-overdue", tone: "warn", badge: todayPage.practiceOverdue, title: A.studioOverdueTitle(i.studioOverdue), line: A.studioOverdueLine, href: `${base}/assigned?tab=doing` });
+    const f = i.studioOverdueFacts;
+    const detail = f ? A.studioOverdueDetail(f.duplicates, f.longLate, LONG_LATE_DAYS) : "";
+    out.push({ key: "studio-overdue", tone: "warn", badge: todayPage.practiceOverdue, title: A.studioOverdueTitle(i.studioOverdue), line: detail ? A.studioOverdueLineWith(detail) : A.studioOverdueLine, href: `${base}/assigned?tab=doing` });
   }
   if (t) {
     const label = (key: string) => t.tagLabels[key] ?? fallbackLabels.tag;

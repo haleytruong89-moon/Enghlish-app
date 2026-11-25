@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { pendingCopy } from "@/lib/copy/vi";
 import type { PendingRowsResult } from "@/lib/desk/load";
-import { pendingView } from "@/lib/desk/pending";
+import { countedRows, pendingView } from "@/lib/desk/pending";
 import { BadgeSeed } from "@/components/shell/BadgeSeed";
 
 export function DeskInbox({ learnerId, pending }: { learnerId: string; pending: PendingRowsResult }) {
-  const rows = pending.rows;
+  const rows = countedRows(pending.rows);
+  const drafts = pending.rows.filter((r) => r.group === "drafts").length;
   const v = pendingView(pending);
   return (
     <section data-testid="desk-inbox" aria-labelledby="desk-inbox-title" className="flex flex-col gap-2 rounded-2xl border border-dashed border-[#2f5d9e] bg-[#eef3fa] p-4">
@@ -27,6 +28,12 @@ export function DeskInbox({ learnerId, pending }: { learnerId: string; pending: 
         <p className="text-sm text-muted" data-testid="desk-inbox-more">
           {pendingCopy.more}{" "}
           <Link href={`/review?learner=${learnerId}`} className="inline-flex min-h-11 items-center font-semibold text-accent underline">{pendingCopy.fullInbox}</Link>
+        </p>
+      ) : null}
+      {drafts > 0 ? (
+        <p className="text-sm text-muted" data-testid="desk-inbox-drafts">
+          {pendingCopy.deskDrafts(drafts)}{" "}
+          <Link href={`/learners/${learnerId}/inbox?f=drafts`} className="inline-flex min-h-11 items-center font-semibold text-accent underline">{pendingCopy.deskDraftsOpen}</Link>
         </p>
       ) : null}
       {pending.failed.length > 0 ? <p className="text-xs text-muted">{pendingCopy.deskPartial}</p> : null}
