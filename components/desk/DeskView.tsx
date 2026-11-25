@@ -28,6 +28,7 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
     flagCount: data.pending.rows.filter((r) => r.kind === "flag").length,
     roadmapOrphans: data.roadmap ? data.roadmap.orphans : null,
     studioOverdue: data.studioOverdue ?? null,
+    studioOverdueFacts: data.studioOverdueFacts ?? null,
   });
   return (
     <div className="flex flex-col gap-5" data-testid="today-page">
@@ -68,7 +69,7 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
       <div className="grid items-start gap-4 lg:grid-cols-3">
         <ProfileBox learnerId={id} alias={learner.alias} profile={data.profile} weak={data.today?.weak.tags ?? []} />
         <CurriculumBox learnerId={id} cards={data.curricula} />
-        <SessionsBox learnerId={id} today={data.today} todayIso={todayIso} sessions={data.sessions} />
+        <SessionsBox learnerId={id} today={data.today} todayIso={todayIso} sessions={data.sessions} assigned={data.assigned ?? null} studioOverdue={data.studioOverdue ?? null} />
       </div>
       {parent && data.recent ? <RecentLevelChanges items={data.recent} /> : null}
       {parent && data.aiSettings ? <AiSoftCapBox settings={data.aiSettings} /> : null}

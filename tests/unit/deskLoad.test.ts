@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-const m = { loadWeekFactsResult: vi.fn(), loadInbox: vi.fn(), loadStudioPending: vi.fn(), loadRetryPending: vi.fn(), loadSkillInbox: vi.fn(), loadPointInbox: vi.fn(), loadDraftList: vi.fn(), loadCurriculumCards: vi.fn(), loadImportPending: vi.fn(), loadSessionFacts: vi.fn() };
+const m = { loadWeekFactsResult: vi.fn(), loadInbox: vi.fn(), loadStudioPending: vi.fn(), loadRetryPending: vi.fn(), loadSkillInbox: vi.fn(), loadPointInbox: vi.fn(), loadDraftList: vi.fn(), loadCurriculumCards: vi.fn(), loadImportPending: vi.fn(), loadSessionFacts: vi.fn(), loadStudioAssigned: vi.fn() };
 vi.mock("@/lib/review/load", () => ({ loadInbox: (...a: unknown[]) => m.loadInbox(...a) }));
 vi.mock("@/lib/studio/load", () => ({ loadStudioPending: (...a: unknown[]) => m.loadStudioPending(...a), loadRetryPending: (...a: unknown[]) => m.loadRetryPending(...a), loadDraftList: (...a: unknown[]) => m.loadDraftList(...a), loadAiSettings: vi.fn() }));
 vi.mock("@/lib/skills/load", () => ({ loadSkillInbox: (...a: unknown[]) => m.loadSkillInbox(...a) }));
@@ -14,6 +14,7 @@ vi.mock("@/lib/sessions/load", () => ({ loadSessionFacts: (...a: unknown[]) => m
 vi.mock("@/lib/roadmap/load", () => ({ loadRoadmap: vi.fn().mockResolvedValue({ kind: "unavailable" }) }));
 vi.mock("@/lib/student/weekLoad", () => ({ loadWeekFactsResult: (...a: unknown[]) => m.loadWeekFactsResult(...a) }));
 vi.mock("@/lib/levels/load", () => ({ loadLevelProfile: vi.fn(), loadRecentLevelChanges: vi.fn() }));
+vi.mock("@/lib/studio/assignedLoad", () => ({ loadStudioAssigned: (...a: unknown[]) => m.loadStudioAssigned(...a) }));
 
 import { loadDesk, loadPendingRows } from "@/lib/desk/load";
 import { PENDING_MAX_PAGES, PENDING_PAGE_SIZE } from "@/lib/desk/pending";
@@ -28,6 +29,7 @@ beforeEach(() => {
   m.loadCurriculumCards.mockResolvedValue([]);
   m.loadImportPending.mockResolvedValue([]);
   m.loadWeekFactsResult.mockResolvedValue({ kind: "unavailable" }); // 0035 not applied: not a fault
+  m.loadStudioAssigned.mockResolvedValue([]);
 });
 
 describe("loadPendingRows", () => {
@@ -126,5 +128,15 @@ describe("loadPendingRows · weekly goal (W4d)", () => {
     const d = await loadDesk(shell, learner);
     expect(d.goal).toMatchObject({ goal: null, pending: { id: "g1", pieces: 5 }, streak: 0 });
     expect(m.loadWeekFactsResult).toHaveBeenCalledTimes(2); // once per desk load (shared by the inbox row and the box)
+  });
+});
+
+describe("loadPendingRows · feedback (Q2, audit 25/11)", () => {
+  it("a Studio submission checked without feedback is a 'Chưa góp ý' row; an unreadable list is named `feedback`", async () => {
+    m.loadStudioAssigned.mockResolvedValue([{ instanceId: "i1", activityId: "a1", title: "Unit 14 test", items: 12, startOn: null, dueOn: "2026-11-22", assignedAt: "2026-11-20T00:00:00Z", status: "checked", lateDays: null, removedReason: null, attempts: 1, lastAttemptId: "t1", lastSubmittedAt: "2026-11-20T16:02:00Z", episodeId: "e1", feedbackGiven: false, feedbackReady: true, units: [], firstResult: null }]);
+    const r = await loadPendingRows("m1", "tutor", "L1");
+    expect(r.rows.map((x) => [x.key, x.href])).toEqual([["feedback-t1", "/review/e1"]]);
+    m.loadStudioAssigned.mockRejectedValue(new Error("rls"));
+    expect((await loadPendingRows("m1", "tutor", "L1")).failed).toEqual(["feedback"]);
   });
 });

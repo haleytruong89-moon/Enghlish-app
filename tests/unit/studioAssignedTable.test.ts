@@ -55,3 +55,12 @@ describe("Bài làm trên app đã giao: late days, removal", () => {
     expect(old).not.toContain(c.noFeedbackYet);
   });
 });
+
+describe("Q6 (audit 25/11): look-alike tests", () => {
+  it("a test in the duplicates set shows 'Có thể giao trùng'; others do not", () => {
+    const h = renderToStaticMarkup(createElement(StudioAssignedTable, { rows: [row({ status: "overdue", lateDays: 8 }), row({ instanceId: "i2", status: "overdue", lateDays: 8 })], duplicates: new Set(["i2"]) }));
+    expect(h).toContain('data-testid="studio-assigned-dup-i2"');
+    expect(h).not.toContain('data-testid="studio-assigned-dup-i1"');
+    expect(h).toContain(c.likelyDuplicate);
+  });
+});

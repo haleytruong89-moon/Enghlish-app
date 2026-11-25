@@ -16,7 +16,7 @@ const TONE: Record<StudioAssignedStatus, string> = {
 };
 
 /** "Bài làm trên app đã giao": each Studio test with its status and a way to see the whole work. Adults only (staff pages). */
-export function StudioAssignedTable({ rows, title = c.title }: { rows: StudioAssignedRow[] | null; title?: string }) {
+export function StudioAssignedTable({ rows, title = c.title, duplicates }: { rows: StudioAssignedRow[] | null; title?: string; /** Q6: overdue tests that look given twice. */ duplicates?: ReadonlySet<string> }) {
   return (
     <section className="flex flex-col gap-3" aria-labelledby="studio-assigned-title" id="studio-assigned" data-testid="studio-assigned">
       <h2 id="studio-assigned-title" className="text-lg font-semibold">{title}</h2>
@@ -29,7 +29,12 @@ export function StudioAssignedTable({ rows, title = c.title }: { rows: StudioAss
           {rows.map((r) => (
             <li key={r.instanceId} data-testid={`studio-assigned-${r.instanceId}`} data-status={r.status} data-late-days={r.lateDays ?? undefined} className="flex flex-col gap-1.5 rounded-xl border border-line bg-white px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-semibold">{r.title}</span>
+                <span className="font-semibold">
+                  {r.title}
+                  {duplicates?.has(r.instanceId) ? (
+                    <span className="ml-2 rounded-full border border-[#6B4600] px-2 py-0.5 text-xs font-semibold text-[#6B4600]" data-testid={`studio-assigned-dup-${r.instanceId}`}>{c.likelyDuplicate}</span>
+                  ) : null}
+                </span>
                 <span className={`rounded-full px-3 py-1 text-xs font-bold ${TONE[r.status]}`} data-testid={`studio-assigned-status-${r.instanceId}`}>
                   {r.status === "overdue" && r.lateDays !== null ? c.overdueDays(r.lateDays) : c.status[r.status]}
                 </span>

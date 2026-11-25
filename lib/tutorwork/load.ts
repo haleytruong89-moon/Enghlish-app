@@ -130,6 +130,8 @@ export type TodayData = {
   recent: RecentResult | null;
   /** Assignments given in the app that are not retracted and have no result yet (what the student still owes, or what waits for the tutor). */
   practice: AssignmentView[];
+  /** Every link / PDF assignment of the child, retracted and finished included (the counts of "Bài đã giao", Q3). */
+  assignments?: AssignmentView[];
   tagLabels: Record<string, string>;
 };
 
@@ -151,6 +153,7 @@ export async function loadToday(learnerId: string, trackId: string, viewer: { ro
     lastNote,
     recent,
     practice: assignments.filter((a) => !a.retractedAt && a.resultId === null),
+    assignments,
     tagLabels: Object.fromEntries(tags.map((t) => [t.key, t.label])),
   };
 }

@@ -75,7 +75,7 @@ describe("Chờ duyệt rows", () => {
     expect(r("work-e2")).toMatchObject({ label: revisionReviewCopy.inboxLabel(2), need: revisionReviewCopy.inboxProgress });
     expect(r("studio-s1")).toMatchObject({ label: pendingCopy.kinds.studioCheck, need: pendingCopy.need.studioCheck(1), group: "check" });
     expect(r("skill-k2")).toMatchObject({ kind: "flag", label: pendingCopy.kinds.flag, group: "skills" });
-    expect(r("draft-d1")).toMatchObject({ group: "ai", need: pendingCopy.need.studioDraft });
+    expect(r("draft-d1")).toMatchObject({ group: "drafts", need: pendingCopy.need.studioDraft });
     expect(r("curriculum-v1")).toMatchObject({ group: "ai", since: null, need: pendingCopy.need.curriculumDraft });
   });
   it("leaves out what does not wait: superseded / approved / reading drafts, approved curricula", () => {
@@ -96,9 +96,12 @@ describe("Chờ duyệt rows", () => {
   });
   it("filters, counts, parses the group", () => {
     const rows = buildPendingRows(input());
-    expect(countGroups(rows)).toEqual({ all: 6, work: 1, check: 1, ai: 2, skills: 2, roadmap: 0, goals: 0 });
-    expect(filterRows(rows, "ai").map((r) => r.kind)).toEqual(["studio_draft", "curriculum_draft"]);
-    expect(filterRows(rows, "all")).toHaveLength(6);
+    // Q1 (audit 25/11): drafts have their own tab and are not in "Tất cả" / the count.
+    expect(countGroups(rows)).toEqual({ all: 5, work: 1, check: 1, ai: 1, skills: 2, roadmap: 0, goals: 0, drafts: 1 });
+    expect(filterRows(rows, "ai").map((r) => r.kind)).toEqual(["curriculum_draft"]);
+    expect(filterRows(rows, "drafts").map((r) => r.kind)).toEqual(["studio_draft"]);
+    expect(filterRows(rows, "all")).toHaveLength(5);
+    expect(filterRows(rows, "all").some((r) => r.group === "drafts")).toBe(false);
     expect(parseGroup("skills")).toBe("skills");
     expect(parseGroup(["ai", "work"])).toBe("ai");
     expect(parseGroup("bogus")).toBe("all");
@@ -109,11 +112,11 @@ describe("Chờ duyệt rows", () => {
 describe("pendingView: what a Chờ duyệt surface may claim", () => {
   it("complete and healthy: exact count; empty text allowed when complete and healthy", () => {
     expect(pendingView({ rows: [], failed: [], more: false })).toMatchObject({ count: "0", showEmpty: true, showMore: false, partial: false });
-    expect(pendingView({ rows: [1, 2], failed: [], more: false }).count).toBe("2");
+    expect(pendingView({ rows: [{ group: "work" }, { group: "check" }], failed: [], more: false }).count).toBe("2");
   });
   it("page limit reached: '≥ n', never the empty text, shows the 'more' note", () => {
     expect(pendingView({ rows: [], failed: [], more: true })).toMatchObject({ count: "≥ 0", showEmpty: false, showMore: true, partial: true });
-    expect(pendingView({ rows: [1], failed: [], more: true }).count).toBe("≥ 1");
+    expect(pendingView({ rows: [{ group: "work" }], failed: [], more: true }).count).toBe("≥ 1");
   });
   it("a failed source: unknown count and never the empty text", () => {
     expect(pendingView({ rows: [], failed: ["studio"], more: false })).toMatchObject({ count: null, showEmpty: false, partial: true });
@@ -131,5 +134,35 @@ describe("Chờ duyệt — the child's retries (W4c2)", () => {
     expect(rows[0]).toMatchObject({ key: "retry-t1", kind: "retry", group: "check", label: pendingCopy.kinds.retry, need: `${pendingCopy.need.retry(1)} · ${pendingCopy.need.reveal(1)}`, href: `/review/studio?learner=${L}#retry-t1`, waitingTutor: false });
     expect(pendingCopy.need.retry(2)).toBe("Con thử lại 2 câu");
     expect(pendingCopy.need.reveal(1)).toBe("Con xem đáp án 1 câu");
+  });
+});
+
+describe("Q1 (audit 25/11): drafts do not count", () => {
+  it("the number beside Chờ duyệt leaves out the drafts tab", () => {
+    expect(pendingView({ rows: [{ group: "drafts" }, { group: "drafts" }, { group: "work" }], failed: [], more: false }).count).toBe("1");
+    expect(pendingView({ rows: [{ group: "drafts" }], failed: [], more: false })).toMatchObject({ count: "0", showEmpty: true });
+    expect(parseGroup("drafts")).toBe("drafts");
+  });
+});
+
+describe("Q2 (audit 25/11): one row per submission", () => {
+  const fb = (over: Record<string, unknown> = {}) => ({ attemptId: "s1", title: "Unit 5 test", since: "2026-11-01T03:00:00Z", href: "/review/e1", ...over });
+  const retry = { attemptId: "s1", learnerId: L, alias: "An (thử)", isTest: true, activityId: "act", title: "Unit 5 test", submittedAt: "2026-11-01T03:00:00Z", since: "2026-11-02T03:00:00Z", retries: [{ itemId: "q2", n: 2, stem: "x", given: "a", retry: "b", kind: "retry", at: "2026-11-02T03:00:00Z" }] };
+  it("questions to check + skills to score + retry + no feedback of ONE attempt become one 'Bài nộp' row opening the first part", () => {
+    const rows = buildPendingRows(input({ work: [work({ attemptId: "s1", titleVi: "Unit 5 test", submittedAt: "2026-11-01T03:05:00Z" })], studio: [studio()], retries: [retry] as never, skills: [], drafts: [], curricula: [], feedback: [fb()] }));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      key: "attempt-s1", group: "work", label: pendingCopy.kinds.work, title: "Unit 5 test", since: "2026-11-01T03:00:00Z",
+      need: `${pendingCopy.need.studioCheck(1)} · đã chấm 0/2 kỹ năng · con thử lại 1 câu · chưa góp ý`,
+      href: "/review/studio#studio-s1", waitingTutor: false,
+    });
+  });
+  it("feedback alone is its own row; different attempts are never merged", () => {
+    const rows = buildPendingRows(input({ work: [work()], studio: [], skills: [], drafts: [], curricula: [], feedback: [fb({ attemptId: "s7", href: "/review/e7" })] }));
+    expect(rows.map((r) => [r.key, r.need, r.href])).toEqual([["feedback-s7", pendingCopy.need.feedback, "/review/e7"], ["work-e1", reviewPage.progress(0, 2), "/review/e1"]]);
+  });
+  it("a merged row waits for the tutor only when every part does", () => {
+    const rows = buildPendingRows(input({ role: "parent", work: [work({ attemptId: "s1", canDecide: false })], studio: [studio()], skills: [], drafts: [], curricula: [] }));
+    expect(rows[0]).toMatchObject({ key: "attempt-s1", waitingTutor: false });
   });
 });

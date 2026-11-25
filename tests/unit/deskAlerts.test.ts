@@ -96,5 +96,14 @@ describe("level baseline alert", () => {
     expect(deskAlerts({ ...base, studioOverdue: 0 }).some((r) => r.key === "studio-overdue")).toBe(false);
     expect(deskAlerts({ ...base, studioOverdue: null }).some((r) => r.key === "studio-overdue")).toBe(false);
   });
+
+  it("Q6 (audit 25/11): the line says how many look given twice and how many are more than 7 days late, and points to Bài đã giao", () => {
+    const base = { learnerId: "L1", role: "tutor" as const, todayIso: "2026-11-25", today: null, intakeMissing: null, curriculaCount: null, flagCount: 0 };
+    const line = deskAlerts({ ...base, studioOverdue: 3, studioOverdueFacts: { overdue: 3, duplicates: 2, longLate: 2 } }).find((r) => r.key === "studio-overdue")?.line;
+    expect(line).toBe("2 bài trùng tên với bài khác (có thể giao nhầm) · 2 bài quá hạn trên 7 ngày. Mở Bài đã giao → Con đang làm để nhắc con, hoặc gỡ bài giao nhầm.");
+    const plain = deskAlerts({ ...base, studioOverdue: 1, studioOverdueFacts: { overdue: 1, duplicates: 0, longLate: 0 } }).find((r) => r.key === "studio-overdue")?.line;
+    expect(plain).toBe("Mở Bài đã giao → Con đang làm để nhắc con, hoặc gỡ bài giao nhầm.");
+    expect(plain).not.toContain("Giao bài →");
+  });
 });
 

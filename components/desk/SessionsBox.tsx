@@ -6,6 +6,7 @@ import { stats } from "@/lib/sessions/count";
 import type { SessionDay } from "@/lib/sessions/types";
 import { lastText } from "@/lib/sessions/view";
 import type { TodayData } from "@/lib/tutorwork/load";
+import type { BoardTab } from "@/lib/assigned/board";
 import { BOX, BOX_LINK } from "./ProfileBox";
 
 /** "Tháng 11: 5 buổi · buổi gần nhất 12/11" (one line; nothing when there is no session or the notes could not be read). */
@@ -16,7 +17,12 @@ function monthLine(days: SessionDay[] | null, todayIso: string): string | null {
   return s.thisMonth > 0 ? deskCopy.monthLine(month, s.thisMonth, lastText(s.last)) : deskCopy.monthLineNone(month, lastText(s.last));
 }
 
-export function SessionsBox({ learnerId, today, todayIso, sessions = null }: { learnerId: string; today: TodayData | null; todayIso: string; sessions?: SessionDay[] | null }) {
+export function SessionsBox({ learnerId, today, todayIso, sessions = null, assigned = null, studioOverdue = null }: {
+  learnerId: string; today: TodayData | null; todayIso: string; sessions?: SessionDay[] | null;
+  /** Q3: the tab counts of "Bài đã giao"; null = unknown (the old link / PDF line is shown). */
+  assigned?: Record<BoardTab, number> | null;
+  studioOverdue?: number | null;
+}) {
   const note = today?.lastNote ?? null;
   const line = monthLine(sessions, todayIso);
   return (
@@ -49,7 +55,9 @@ export function SessionsBox({ learnerId, today, todayIso, sessions = null }: { l
           </div>
           <div className="flex flex-wrap items-baseline justify-between gap-2 border-t border-[#eceee8] pt-2">
             <p className="text-sm" data-testid="desk-practice-counts">
-              {deskCopy.practiceCounts(today.practice.length, today.practice.filter((a) => a.submission !== null).length, today.practice.filter((a) => isOverdue(a, todayIso)).length)}
+              {assigned
+                ? deskCopy.assignedCounts(assigned.need, assigned.doing, (studioOverdue ?? 0) + today.practice.filter((a) => isOverdue(a, todayIso)).length)
+                : deskCopy.practiceCounts(today.practice.length, today.practice.filter((a) => a.submission !== null).length, today.practice.filter((a) => isOverdue(a, todayIso)).length)}
             </p>
             <Link href={`/learners/${learnerId}/assigned`} className={BOX_LINK}>{deskCopy.seeAssignments}</Link>
           </div>

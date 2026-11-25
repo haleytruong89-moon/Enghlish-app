@@ -21,6 +21,7 @@ export function PendingTable({ learnerId, rows, group, counts, partial = false, 
           </Link>
         ))}
       </nav>
+      {group === "drafts" ? <p className="mt-3 text-sm text-muted" data-testid="pending-drafts-note">{pendingCopy.draftsNote}</p> : null}
       <section className="mt-4 rounded-xl border border-line bg-white" data-testid="pending-table">
         <div aria-hidden="true" className={`hidden gap-3 border-b border-line px-4 py-2 text-xs font-semibold text-muted md:grid ${GRID}`}>
           <span>{c.kind}</span><span>{c.content}</span><span>{c.since}</span><span>{c.need}</span><span />
