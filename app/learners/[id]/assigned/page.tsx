@@ -4,6 +4,7 @@ import { AssignmentTable } from "@/components/practice/AssignmentTable";
 import { StudioAssignedTable } from "@/components/studio/StudioAssignedTable";
 import { buildBoard, parseTab } from "@/lib/assigned/board";
 import { likelyDuplicates } from "@/lib/assigned/duplicates";
+import { loadResults } from "@/lib/results/load";
 import { assignedBoardCopy as c, learnerWithTrack } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { maxPagesPerSubmission } from "@/lib/practice/capabilities";
@@ -27,6 +28,9 @@ export default async function AssignedBoardPage({ params, searchParams }: { para
     maxPagesPerSubmission(),
   ]);
   const board = buildBoard(studio, assignments, today);
+  // 26/11: the provisional score of each sent test (first attempt), so a test waiting for one question still shows how it went.
+  const results = studio ? await loadResults(learner.id, today, studio).catch(() => null) : null;
+  const scores = new Map((results?.works ?? []).map((w) => [w.instanceId, w.tally]));
   const tab = parseTab(sp.tab, board.counts);
   const tagLabels = Object.fromEntries(tags.map((t) => [t.key, t.label]));
   const studioRows = board.studio[tab];
@@ -48,7 +52,7 @@ export default async function AssignedBoardPage({ params, searchParams }: { para
       <p className="text-sm text-muted">{c.hint[tab]}</p>
       {board.studioFailed || studioRows.length > 0 ? (
         <div data-testid="board-studio">
-          <StudioAssignedTable rows={board.studioFailed ? null : studioRows} title={c.studioList} duplicates={likelyDuplicates(studio ?? [])} />
+          <StudioAssignedTable rows={board.studioFailed ? null : studioRows} title={c.studioList} duplicates={likelyDuplicates(studio ?? [])} scores={scores} />
         </div>
       ) : null}
       {practiceRows.length > 0 ? (

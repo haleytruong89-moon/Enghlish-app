@@ -5,7 +5,7 @@
  */
 import { aiSettingsCopy, importCopy, levelCopy, notesPage, purgePage, readingPage, resultPage, revisionReviewCopy, sessionNotePage, shellCopy, skillStateCopy, studioInboxCopy, targetsPage, tutorAsksCopy, weakPage } from "@/lib/copy/vi";
 
-export const SECTION_KEYS = ["desk", "profile", "knowledge", "roadmap", "sessions", "assign", "assigned", "results", "curricula", "inbox"] as const;
+export const SECTION_KEYS = ["desk", "profile", "knowledge", "roadmap", "sessions", "assign", "assigned", "progress", "results", "curricula", "inbox"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 export type NavStatus = "live" | "soon";
 export type NavRole = "tutor" | "parent";
@@ -49,6 +49,7 @@ export const SECTIONS: readonly SectionDef[] = [
   },
   { key: "assign", status: "live", lane: null, root: (id) => `${L(id)}/assign`, children: () => [] },
   { key: "assigned", status: "live", lane: null, root: (id) => `${L(id)}/assigned`, children: () => [] },
+  { key: "progress", status: "live", lane: null, root: (id) => `${L(id)}/progress`, children: () => [] },
   {
     key: "results", status: "live", lane: null, root: (id) => `${L(id)}/imports/new`,
     children: (id) => [

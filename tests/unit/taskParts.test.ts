@@ -94,3 +94,19 @@ describe("taskPartsFromRaw (what eng_my_task_parts returns)", () => {
     expect(taskPartsFromRaw([{ key: "A" }])).toBeNull();
   });
 });
+
+describe("word list in brackets (26/11, Destination U15 part E)", () => {
+  it("a bracketed list closing a line about the box becomes chips; the instruction stays", () => {
+    const t = "Complete with an appropriate comparative or superlative form of the words in the box. Add any other words you need. (demanding, few, funny, hard, long, observant, reliable, slight, ugly, valuable)";
+    expect(splitBanks(t)).toEqual({
+      text: "Complete with an appropriate comparative or superlative form of the words in the box. Add any other words you need.",
+      banks: [{ label: "Box", words: ["demanding", "few", "funny", "hard", "long", "observant", "reliable", "slight", "ugly", "valuable"] }],
+    });
+  });
+  it.each([
+    "Complete the sentences using the words in the brackets. (see page 4)",
+    "Write the answers (a, b or c).",
+    "Read the text (about 200 words).",
+    "Complete the sentences. (big, small, old)",
+  ])("%j stays text", (s) => expect(splitBanks(s).banks).toEqual([]));
+});

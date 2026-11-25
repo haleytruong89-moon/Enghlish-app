@@ -18,6 +18,8 @@ import type { ShellData } from "@/lib/shell/shell";
 import { loadAiSettings, loadDraftList, loadRetryPending, loadStudioPending } from "@/lib/studio/load";
 import { buildBoard, type BoardTab } from "@/lib/assigned/board";
 import { overdueFacts, type OverdueFacts } from "@/lib/assigned/duplicates";
+import type { ActionCard } from "@/lib/results/actions";
+import { loadResults } from "@/lib/results/load";
 import { todayVn } from "@/lib/inquiries/dates";
 import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
 import type { AiSettingsView } from "@/lib/studio/types";
@@ -120,6 +122,8 @@ export type DeskData = {
   studioOverdueFacts?: OverdueFacts | null;
   /** Q3: the tab counts of "Bài đã giao" (same `buildBoard` as that page); null = the Studio list could not be read. */
   assigned?: Record<BoardTab, number> | null;
+  /** "Việc nên làm" (26/11) from the results of the child's Studio tests; null = could not be read. */
+  actions?: ActionCard[] | null;
 };
 
 function roadmapFacts(r: Awaited<ReturnType<typeof loadRoadmap>> | null): DeskData["roadmap"] {
@@ -147,7 +151,10 @@ export async function loadDesk(shell: ShellData, learner: LearnerSummary): Promi
     studioLoad,
   ]);
   const overdue = studio ? overdueFacts(studio) : null;
+  // After the Studio list (shared): the per-question checks of the first attempts. Never takes the desk down.
+  const results = studio ? await settle(loadResults(learner.id, todayVn(), studio)) : null;
   return {
+    actions: results ? results.actions : null,
     studioOverdue: overdue ? overdue.overdue : null,
     studioOverdueFacts: overdue,
     assigned: studio && today ? buildBoard(studio, today.assignments ?? today.practice, todayVn()).counts : null,

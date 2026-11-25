@@ -2154,3 +2154,22 @@ Nhánh `fix/audit-quick-wins`. Nguồn: báo cáo audit UI/UX 25/11 (mục 7), p
 **Còn để sau (ghi lại):** số "cần thầy/cô xử lý" ở Bàn làm việc tính cả bài link / PDF chưa góp ý, còn Chờ duyệt chỉ thêm "chưa góp ý" cho bài trên app (hai nhãn khác nhau, không sai). Mỗi lần đọc số Chờ duyệt nay đọc thêm danh sách bài trên app đã giao (thêm vài truy vấn).
 
 **Test:** typecheck, lint, 2069 test đơn vị xanh (test mới: gộp theo bài nộp, tab bài soạn sẵn, số đếm, bài trùng, dòng Bài đã giao). Không đổi SQL nên không chạy lại test DB trên máy.
+
+## Kết quả + Việc nên làm (PR-A, 26/11/2026)
+
+Nhánh `feature/ket-qua-viec-nen-lam` (trên nhánh của PR #59). Kế hoạch `docs/superpowers/plans/2026-11-26-ket-qua-viec-nen-lam.md`. **Không có SQL**, không AI. Phụ huynh duyệt 25/11 (ngưỡng 50 / 60 / 80 %, màu chờ 2 / 5 ngày, PR-A trước PR-B).
+
+**Có gì:**
+- Mục mới **Kết quả** ở cột trái (`/learners/[id]/progress`), 3 tab: **Theo bài** (điểm tạm / chính thức, từng phần, chờ thầy/cô bao nhiêu câu, chưa góp ý), **Theo Unit** (gộp các bài, phần yếu nhất), **Theo mục kiến thức** (yếu nhất trên cùng). Thanh màu: đỏ < 50 %, vàng 50–79 %, xanh ≥ 80 %, kèm chữ (không chỉ màu).
+- Khối **Việc nên làm** ở đầu Bàn làm việc (trên Chờ duyệt): thẻ chấm bài (luôn đầu, đỏ khi chờ ≥ 5 ngày), chữa bài cùng con, học kỹ lại Unit, luyện thêm mục kiến thức, khen; mỗi thẻ có lý do kèm số và một nút. Phụ huynh thấy cùng thẻ, không nút.
+- Trang **Ghi buổi học**: khối "Gợi ý cho buổi này" (việc chữa / học lại / luyện thêm).
+- **Bài đã giao**: "tạm: đúng x/y · n câu chờ thầy/cô" khi bài chưa có điểm chính thức.
+- Hộp từ viết trong ngoặc ở cuối lời dẫn thành **chip từ** cho con (Destination U15 phần E).
+
+**Luật đo:** chỉ lần làm đầu; câu chỉ trên giấy không tính; câu app không chấm được = "chờ thầy/cô" cho tới khi người lớn bấm Đúng/Sai; bỏ trống = chưa đúng. Con không thấy gì mới.
+
+**Chạy thử trên số liệu thật (chỉ đọc, 25/11):** 6 thẻ — chấm 5 bài (14 câu, lâu nhất 11 ngày) · chữa U15 phần E 0/10 · chữa Review 1 phần C 1/8 · học lại U15 41 % · luyện thêm Dạng từ 42 % qua 3 bài · khen U15 phần A 11/11.
+
+**Cách thử trên preview:** đăng nhập thầy/cô của "Nguyên (thử)", cho "Nguyên (thử)" nộp một bài Studio → Bàn làm việc có khối Việc nên làm; cột trái → Kết quả → bấm qua 3 tab; Bài đã giao có dòng "tạm"; Ghi buổi học có "Gợi ý cho buổi này" khi có phần dưới 50 %.
+
+**Để PR-B (cần SQL):** "Đã làm" / "Bỏ qua (lý do)" trên thẻ, lưu lại để phụ huynh thấy thời gian xử lý.

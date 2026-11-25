@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { studioAssignedCopy as c } from "@/lib/copy/vi";
+import { resultsCopy, studioAssignedCopy as c } from "@/lib/copy/vi";
+import type { Tally } from "@/lib/results/score";
 import { formatDay } from "@/lib/review/format";
 import type { StudioAssignedRow, StudioAssignedStatus } from "@/lib/studio/assigned";
 import { formatHm } from "@/lib/work/view";
@@ -16,7 +17,13 @@ const TONE: Record<StudioAssignedStatus, string> = {
 };
 
 /** "Bài làm trên app đã giao": each Studio test with its status and a way to see the whole work. Adults only (staff pages). */
-export function StudioAssignedTable({ rows, title = c.title, duplicates }: { rows: StudioAssignedRow[] | null; title?: string; /** Q6: overdue tests that look given twice. */ duplicates?: ReadonlySet<string> }) {
+export function StudioAssignedTable({ rows, title = c.title, duplicates, scores }: {
+  rows: StudioAssignedRow[] | null; title?: string;
+  /** Q6: overdue tests that look given twice. */
+  duplicates?: ReadonlySet<string>;
+  /** 26/11: the score of the first attempt as it stands (shown while no official result exists), by instance id. */
+  scores?: ReadonlyMap<string, Tally>;
+}) {
   return (
     <section className="flex flex-col gap-3" aria-labelledby="studio-assigned-title" id="studio-assigned" data-testid="studio-assigned">
       <h2 id="studio-assigned-title" className="text-lg font-semibold">{title}</h2>
@@ -43,6 +50,11 @@ export function StudioAssignedTable({ rows, title = c.title, duplicates }: { row
                 {c.dates(r.startOn ? formatDay(r.startOn) : null, formatDay(r.dueOn))} · {c.items(r.items)}
                 {r.lastSubmittedAt ? ` · ${c.sent(`${formatHm(r.lastSubmittedAt)} ${formatDay(todayVn(new Date(r.lastSubmittedAt)))}`, r.attempts)}` : ""}
                 {r.firstResult ? ` · ${c.firstResult(r.firstResult.correct, r.firstResult.total)}` : ""}
+                {!r.firstResult && scores?.get(r.instanceId) ? (
+                  <b className="text-[#6b4600]" data-testid={`studio-assigned-provisional-${r.instanceId}`}>
+                    {` · ${resultsCopy.provisionalLine(scores.get(r.instanceId)!.correct, scores.get(r.instanceId)!.decided, scores.get(r.instanceId)!.pending)}`}
+                  </b>
+                ) : null}
                 {r.units.length > 0 ? <span data-testid={`studio-assigned-units-${r.instanceId}`}>{` · ${c.units(r.units)}`}</span> : null}
                 {r.feedbackReady && r.lastAttemptId ? (
                   <span data-testid={`studio-assigned-fb-${r.instanceId}`} data-given={r.feedbackGiven ? "yes" : "no"}>{` · ${r.feedbackGiven ? c.feedbackGiven : c.noFeedbackYet}`}</span>

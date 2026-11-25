@@ -46,7 +46,16 @@ export function splitBanks(text: string): { text: string; banks: WordBank[] } {
       const bank = bankOf(m[1]!, line.slice(at + m[0].length), line.slice(0, at));
       if (bank) cut = { at, bank };
     }
-    if (!cut) return line;
+    if (!cut) {
+      // 26/11: a list in brackets closing a line that speaks of a box / given words ("… the words in the box. (demanding, few, funny)")
+      // is a word bank too — the Destination U15 test hid its words this way and the child did not use them.
+      const paren = /\s*\(([^()]+)\)\s*\.?\s*$/.exec(line);
+      const before = paren ? line.slice(0, paren.index) : "";
+      const bank = paren && MENTIONS_LIST.test(before) ? bankOf("Box", paren[1]!, before) : null;
+      if (!paren || !bank) return line;
+      banks.push(bank);
+      return before.trimEnd();
+    }
     banks.push(cut.bank);
     return line.slice(0, cut.at).trimEnd();
   });
