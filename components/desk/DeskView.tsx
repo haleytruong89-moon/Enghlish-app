@@ -45,8 +45,8 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
           <Link href={`/learners/${id}/assign`} data-testid={`action-assign-${id}`} className={SECONDARY}>{todayPage.assignAction}</Link>
         </div>
       </div>
-      {data.actions === undefined || (data.actions !== null && data.actions.length === 0) ? null : (
-        <ActionCards learnerId={id} cards={data.actions} tagLabels={data.today?.tagLabels ?? {}} role={shell.role} />
+      {data.actions === undefined || (data.actions !== null && data.actions.length === 0 && !data.handledThisWeek) ? null : (
+        <ActionCards learnerId={id} cards={data.actions} tagLabels={data.today?.tagLabels ?? {}} role={shell.role} decisionsReady={data.decisionsReady ?? false} handledThisWeek={data.handledThisWeek ?? 0} />
       )}
       <DeskInbox learnerId={id} pending={data.pending} />
       <DeskAlerts learnerId={id} items={alerts} />

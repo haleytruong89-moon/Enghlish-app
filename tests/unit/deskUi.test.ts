@@ -128,7 +128,7 @@ describe("one line with this month's sessions (U9/U10)", () => {
 });
 
 describe("Bàn làm việc · Việc nên làm (26/11)", () => {
-  const card = { key: "grade", kind: "grade" as const, tone: "red" as const, facts: { works: 2, pendingItems: 9, feedbackMissing: 2, oldestDays: 10 }, href: "/review/e1" };
+  const card = { key: "grade", kind: "grade" as const, tone: "red" as const, facts: { works: 2, pendingItems: 9, feedbackMissing: 2, oldestDays: 10 }, href: "/review/e1", evidenceAt: "2026-11-16T03:00:00Z" };
   it("the cards stand at the top, above Chờ duyệt; nothing when there are none or the desk did not load them", () => {
     const h = render("tutor", data({ actions: [card] }));
     expect(h).toContain('data-testid="action-cards"');
@@ -140,5 +140,10 @@ describe("Bàn làm việc · Việc nên làm (26/11)", () => {
     const h = render("parent", data({ actions: [card] }));
     expect(h).toContain('data-testid="action-card-grade"');
     expect(h).not.toContain('data-testid="action-button-grade"');
+  });
+  it("every card marked this week: the box stays with one line to what was handled", () => {
+    const h = render("parent", data({ actions: [], handledThisWeek: 2, decisionsReady: true }));
+    expect(h).toContain('data-testid="handled-week"');
+    expect(h).toContain("Đã xử lý 2 việc trong 7 ngày qua");
   });
 });

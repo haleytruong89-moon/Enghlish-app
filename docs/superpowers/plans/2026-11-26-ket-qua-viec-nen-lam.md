@@ -34,3 +34,11 @@ Chạy thử trên số liệu thật của Nguyên (25/11, chỉ đọc): Bàn 
 ## Để PR-B (cần SQL)
 
 Nút "Đã làm" / "Bỏ qua (lý do)" trên thẻ, lưu chỉ thêm, để phụ huynh thấy cô đã xử lý thẻ nào và sau bao lâu; thẻ đã xử lý không hiện lại.
+
+## PR-B đã làm (26/11, nhánh `feature/viec-nen-lam-danh-dau`)
+
+1. `0043_action_card_decisions.sql`: bảng chỉ thêm + `eng_decide_action_card` + purge / preview (bản 0041 + bảng mới). Test DB `tests/db/actionCards.test.ts`.
+2. `ActionCard.evidenceAt` (bài mới nhất sau thẻ; `TagAgg.lastAt`), khóa thẻ chữa bài theo mã phần (không theo tên). `ActionOptions.isHandled` lọc TRƯỚC giới hạn từng loại.
+3. `lib/results/decisions.ts` (dòng mới nhất của thẻ thắng; ẩn khi bấm sau bài mới nhất; danh sách 30 ngày + số 7 ngày). `loadResults` đọc bảng (USER client; thiếu bảng → `decisionsReady=false`, không lỗi).
+4. API `POST /api/learners/[id]/action-cards` (`lib/actioncards/*`, mẫu then-now, quyền `tutorwork:write`).
+5. Giao diện: `CardDecision` (client), `HandledList`, dòng 7 ngày ở Bàn làm việc; chữ ở `resultsCopy.decide` / `resultsCopy.handled`; nhãn xóa dữ liệu.

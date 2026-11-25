@@ -129,8 +129,9 @@ export function partLabel(key: string, name: string, max = 40): string {
   return n.startsWith(`${key} `) || n.startsWith(`${key}·`) ? short : `${key} · ${short}`;
 }
 
+/** `lastAt` = the newest work with at least one decided question (work still waiting for the adult tells nothing new yet). */
 export type UnitScore = { key: string; tally: Tally; works: number; weakest: { title: string; part: PartScore } | null; lastAt: string };
-export type TagAgg = { key: string; tally: Tally; works: number };
+export type TagAgg = { key: string; tally: Tally; works: number; lastAt: string };
 
 /** Unit order: U1 < U2 < … < U26, then Reviews, then Progress Tests, then anything else. */
 function unitOrder(k: string): number {
@@ -154,7 +155,7 @@ export function byUnit(works: readonly WorkScore[], minItems: number): UnitScore
         if (r === null || p.tally.decided < minItems) continue;
         if (!weakest || r < (ratio(weakest.part.tally) ?? 1)) weakest = { title: w.title, part: p };
       }
-      return { key, tally: ws.map((w) => w.tally).reduce(add, ZERO), works: ws.length, weakest, lastAt: ws.map((w) => w.submittedAt).sort().at(-1) ?? "" };
+      return { key, tally: ws.map((w) => w.tally).reduce(add, ZERO), works: ws.length, weakest, lastAt: ws.filter((w) => w.tally.decided > 0).map((w) => w.submittedAt).sort().at(-1) ?? "" };
     })
     .sort((a, b) => unitOrder(a.key) - unitOrder(b.key) || a.key.localeCompare(b.key));
 }
@@ -162,8 +163,8 @@ export function byUnit(works: readonly WorkScore[], minItems: number): UnitScore
 export function byTag(works: readonly WorkScore[]): TagAgg[] {
   const out = new Map<string, TagAgg>();
   for (const w of works) for (const t of w.tags) {
-    const cur = out.get(t.key) ?? { key: t.key, tally: ZERO, works: 0 };
-    out.set(t.key, { key: t.key, tally: add(cur.tally, t.tally), works: cur.works + 1 });
+    const cur = out.get(t.key) ?? { key: t.key, tally: ZERO, works: 0, lastAt: "" };
+    out.set(t.key, { key: t.key, tally: add(cur.tally, t.tally), works: cur.works + 1, lastAt: t.tally.decided > 0 && w.submittedAt > cur.lastAt ? w.submittedAt : cur.lastAt });
   }
   return [...out.values()].sort((a, b) => (ratio(a.tally) ?? 2) - (ratio(b.tally) ?? 2) || a.key.localeCompare(b.key));
 }

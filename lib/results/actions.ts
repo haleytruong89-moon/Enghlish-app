@@ -48,7 +48,14 @@ export type ActionCard = {
     oldestDays?: number;
   };
   href: string;
+  /** When the newest submission behind the card was sent (ISO). A card marked done / skipped comes back only for newer work. */
+  evidenceAt: string;
 };
+
+/** Cards an adult can mark "Đã làm" / "Bỏ qua" (the grade card goes away by itself once the work is graded). */
+export const DECIDABLE_KINDS = ["fix_together", "unit_review", "practise", "praise"] as const;
+export type DecidableKind = (typeof DECIDABLE_KINDS)[number];
+export const isDecidable = (k: ActionKind): k is DecidableKind => (DECIDABLE_KINDS as readonly string[]).includes(k);
 
 export type ActionInput = {
   learnerId: string;
@@ -70,6 +77,8 @@ export type ActionOptions = {
   caps?: Partial<Record<ActionKind, number>>;
   /** Most one "go over it" card per test (the desk shows the weakest part of each test). */
   onePerWork?: boolean;
+  /** Cards already marked done / skipped since their newest evidence (left out BEFORE the caps, so another card takes the slot). */
+  isHandled?: (card: ActionCard) => boolean;
 };
 export const DESK_OPTIONS: ActionOptions = { limit: RESULT_RULES.maxCards, caps: RESULT_RULES.deskCaps, onePerWork: true };
 export const PAGE_OPTIONS: ActionOptions = { limit: 30 };
@@ -88,7 +97,7 @@ export function buildActions(i: ActionInput, opts: ActionOptions = DESK_OPTIONS)
     const feedbackMissing = waiting.filter((w) => w.feedbackReady && !w.feedbackGiven).length;
     // The pending questions are those of the scored attempt; the feedback goes on the latest one (Bài đã giao links it the same way).
     const href = oldest.tally.pending > 0 ? `/review/studio?learner=${i.learnerId}#studio-${oldest.firstAttemptId}` : oldest.episodeId ? `/review/${oldest.episodeId}` : `${base}/assigned`;
-    cards.push({ key: "grade", kind: "grade", tone: waitTone(oldest.waitingDays), facts: { works: waiting.length, pendingItems, feedbackMissing, oldestDays: oldest.waitingDays, title: oldest.title }, href });
+    cards.push({ key: "grade", kind: "grade", tone: waitTone(oldest.waitingDays), facts: { works: waiting.length, pendingItems, feedbackMissing, oldestDays: oldest.waitingDays, title: oldest.title }, href, evidenceAt: oldest.submittedAt });
   }
 
   // A test given again is shown on the Results page but makes no "go over it" / praise card (it is not the first attempt).
@@ -96,40 +105,46 @@ export function buildActions(i: ActionInput, opts: ActionOptions = DESK_OPTIONS)
   const sessionHref = `${base}/notes/new#goi-y-buoi-hoc`;
 
   // 2. Go over a weak part (or a weak test without parts) with the child. The weakest first.
-  const weakParts: { w: WorkScore; name: string | null; t: WorkScore["tally"] }[] = [];
+  // The card key uses the part KEY (stable), never its shown name (it may change when the test is edited).
+  const weakParts: { w: WorkScore; partKey: string | null; name: string | null; t: WorkScore["tally"] }[] = [];
   for (const w of recent) {
     const parts = w.parts.filter((p) => p.tally.decided >= R.minItems);
-    if (parts.length > 1) {
-      for (const p of parts) if ((ratio(p.tally) ?? 1) < R.fixTogetherBelow) weakParts.push({ w, name: p.name, t: p.tally });
+    // A test with several parts is judged part by part as soon as one part has enough decided questions (so the card key does not
+    // change as more parts get graded); with no such part, the whole test is judged.
+    if (w.parts.length > 1 && parts.length > 0) {
+      for (const p of parts) if ((ratio(p.tally) ?? 1) < R.fixTogetherBelow) weakParts.push({ w, partKey: p.key, name: p.name, t: p.tally });
     } else if (w.tally.decided >= R.minItems && (ratio(w.tally) ?? 1) < R.fixTogetherBelow) {
-      weakParts.push({ w, name: null, t: w.tally });
+      weakParts.push({ w, partKey: null, name: null, t: w.tally });
     }
   }
   // Weakest first; at equal share, the part with more questions (more evidence).
   weakParts.sort((a, b) => (ratio(a.t) ?? 1) - (ratio(b.t) ?? 1) || b.t.decided - a.t.decided);
   const seenWork = new Set<string>();
   for (const x of weakParts) {
+    const card: ActionCard = {
+      key: `fix-${x.w.instanceId}-${x.partKey ?? "all"}`, kind: "fix_together", tone: "red",
+      facts: { title: x.w.title, part: x.name ?? undefined, correct: x.t.correct, decided: x.t.decided, percent: pct(x.t) ?? 0 },
+      href: sessionHref, evidenceAt: x.w.submittedAt,
+    };
+    // A part already gone over leaves room for the next weak part of the same test.
+    if (opts.isHandled?.(card)) continue;
     if (opts.onePerWork) {
       if (seenWork.has(x.w.instanceId)) continue;
       seenWork.add(x.w.instanceId);
     }
-    cards.push({
-      key: `fix-${x.w.instanceId}-${x.name ?? "all"}`, kind: "fix_together", tone: "red",
-      facts: { title: x.w.title, part: x.name ?? undefined, correct: x.t.correct, decided: x.t.decided, percent: pct(x.t) ?? 0 },
-      href: sessionHref,
-    });
+    cards.push(card);
   }
 
   // 3. Go back over a weak Unit before moving on (a book Unit only: a Review / Progress Test is itself the going back). Weakest first.
   for (const u of [...i.units].sort((a, b) => (ratio(a.tally) ?? 1) - (ratio(b.tally) ?? 1))) {
     if (!/^U\d+$/.test(u.key) || u.tally.decided < R.minItems || (ratio(u.tally) ?? 1) >= R.unitReviewBelow) continue;
-    cards.push({ key: `unit-${u.key}`, kind: "unit_review", tone: "amber", facts: { unit: u.key, correct: u.tally.correct, decided: u.tally.decided, percent: pct(u.tally) ?? 0, works: u.works }, href: sessionHref });
+    cards.push({ key: `unit-${u.key}`, kind: "unit_review", tone: "amber", facts: { unit: u.key, correct: u.tally.correct, decided: u.tally.decided, percent: pct(u.tally) ?? 0, works: u.works }, href: sessionHref, evidenceAt: u.lastAt });
   }
 
   // 4. More practice on a knowledge item weak across ≥ 2 tests.
   for (const t of i.tags) {
     if (t.works < 2 || t.tally.decided < R.minItems || (ratio(t.tally) ?? 1) >= R.practiseBelow) continue;
-    cards.push({ key: `tag-${t.key}`, kind: "practise", tone: "amber", facts: { tag: t.key, correct: t.tally.correct, decided: t.tally.decided, percent: pct(t.tally) ?? 0, works: t.works }, href: `${base}/assign` });
+    cards.push({ key: `tag-${t.key}`, kind: "practise", tone: "amber", facts: { tag: t.key, correct: t.tally.correct, decided: t.tally.decided, percent: pct(t.tally) ?? 0, works: t.works }, href: `${base}/assign`, evidenceAt: t.lastAt });
   }
 
   // 5. Praise: the newest strong part or test (one card), so feedback starts with something true and specific.
@@ -140,12 +155,12 @@ export function buildActions(i: ActionInput, opts: ActionOptions = DESK_OPTIONS)
       return w.tally.decided >= R.minItems && (ratio(w.tally) ?? 0) >= R.praiseFrom ? [{ w, name: null, t: w.tally }] : [];
     })
     .sort((a, b) => b.w.submittedAt.localeCompare(a.w.submittedAt) || (ratio(b.t) ?? 0) - (ratio(a.t) ?? 0));
-  const best = strong[0];
+  const best = strong.find((x) => !opts.isHandled?.({ key: `praise-${x.w.instanceId}`, kind: "praise", tone: "good", facts: {}, href: "", evidenceAt: x.w.submittedAt }));
   if (best) {
     cards.push({
       key: `praise-${best.w.instanceId}`, kind: "praise", tone: "good",
       facts: { title: best.w.title, part: best.name ?? undefined, correct: best.t.correct, decided: best.t.decided, percent: pct(best.t) ?? 0 },
-      href: best.w.episodeId ? `/review/${best.w.episodeId}` : `${base}/assigned`,
+      href: best.w.episodeId ? `/review/${best.w.episodeId}` : `${base}/assigned`, evidenceAt: best.w.submittedAt,
     });
   }
 
@@ -153,7 +168,8 @@ export function buildActions(i: ActionInput, opts: ActionOptions = DESK_OPTIONS)
   // stable, so within a kind the order above (weakest first) stays.
   const rank = (c: ActionCard) => (c.kind === "grade" ? -1 : TONE_ORDER[c.tone]);
   const taken: Partial<Record<ActionKind, number>> = {};
-  const capped = cards.filter((c) => {
+  const open = opts.isHandled ? cards.filter((c) => !opts.isHandled!(c)) : cards;
+  const capped = open.filter((c) => {
     const cap = opts.caps?.[c.kind];
     taken[c.kind] = (taken[c.kind] ?? 0) + 1;
     return cap === undefined || (taken[c.kind] as number) <= cap;

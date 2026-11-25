@@ -2175,3 +2175,21 @@ Nhánh `feature/ket-qua-viec-nen-lam` (trên nhánh của PR #59). Kế hoạch 
 **Sau rà soát (26/11) đã sửa:** lần làm "đầu" lấy đúng cờ đo lường `episodes.is_first_attempt` (bài giao lại hiện ở Kết quả với ghi chú "giao lại · không tính", không vào tổng Unit / mục kiến thức, không sinh thẻ chữa / khen, không có dòng "tạm"); ngày nộp và liên kết dùng đúng lần làm được tính; Review giao theo Unit vẫn là "Review n" (không bị tính như Unit đầu của nó); câu đọc hiểu (`reading_skill_key`) có trong tab mục kiến thức; không còn "đúng 0/0"; chip từ trong ngoặc chỉ khi là danh sách từ thật (≥ 3 mục, mỗi mục ≤ 2 từ, không số, không chữ cái lựa chọn); trang Kết quả dùng quyền đọc `studio:read`.
 
 **Để PR-B (cần SQL):** "Đã làm" / "Bỏ qua (lý do)" trên thẻ, lưu lại để phụ huynh thấy thời gian xử lý.
+
+## Việc nên làm · PR-B: "Đã làm" / "Bỏ qua" + "Đã xử lý" (26/11/2026)
+
+Nhánh `feature/viec-nen-lam-danh-dau` (trên nhánh của PR-A). **Có SQL: `0043_action_card_decisions.sql`** (chỉ thêm; cần 0042). Không AI. Theo đề xuất phụ huynh duyệt 25/11 ("PR-B: nút Đã làm và Bỏ qua (có lý do) trên thẻ, lưu lại để phụ huynh thấy cô đã xử lý thẻ nào và mất bao lâu").
+
+**Có gì:**
+- Dưới mỗi thẻ chữa bài / học lại Unit / luyện thêm / khen, thầy/cô có **✓ Đã làm** và **Bỏ qua** (bỏ qua phải ghi lý do ≥ 3 ký tự). Thẻ chấm bài không có nút (tự mất khi chấm xong). Có ở Bàn làm việc, trang Kết quả và "Gợi ý cho buổi này" của Ghi buổi học.
+- Thẻ đã đánh dấu **ẩn đi cho tới khi con nộp bài mới liên quan** (bài nộp sau lúc bấm) thì hiện lại — không có gì bị giấu mãi. Chỗ trống được thẻ kế tiếp dùng (vd. chữa xong phần E thì hiện phần B của cùng bài).
+- Trang Kết quả có khối **Đã xử lý (30 ngày qua)**: việc gì, ai đánh dấu, đã làm hay bỏ qua, **sau bao nhiêu ngày con nộp**, lý do bỏ qua, "Có bài mới · việc đã hiện lại". Bàn làm việc có dòng "Đã xử lý n việc trong 7 ngày qua · Xem".
+- Phụ huynh xem, không có nút (database vẫn cho phụ huynh ghi nếu sau này cần). Con không thấy gì.
+
+**Dữ liệu:** bảng chỉ thêm `english.action_card_decisions` (khóa thẻ, loại, câu tiêu đề lúc bấm, lúc nộp của bài mới nhất sau thẻ, đã làm / bỏ qua, lý do, người bấm, vai) + hàm `eng_decide_action_card` (chỉ service_role; kiểm người bấm là thầy/cô hoặc phụ huynh của em; bấm lặp cùng mã = một dòng); RLS: người lớn của em đọc; xóa dữ liệu một em gồm bảng mới. Chưa áp 0043: thẻ vẫn hiện như PR-A, nút không hiện, thầy/cô thấy một dòng nhắc; API trả 409 `cards_unavailable`.
+
+**SQL cần phụ huynh áp (sau khi gộp #59 → #60 → PR này):** GitHub → Actions → "Apply database migrations" → gõ `APPLY`. Không sửa 0043 sau khi áp.
+
+**Cách thử trên preview:** đăng nhập thầy/cô của "Nguyên (thử)" có bài Studio đã nộp → Bàn làm việc → một thẻ "Chữa bài cùng con" → **✓ Đã làm** → thẻ biến mất, dòng "Đã xử lý 1 việc…" hiện → bấm Xem → thấy trong "Đã xử lý". Thử **Bỏ qua** không ghi lý do (nút xám), ghi lý do → lưu. Đăng nhập phụ huynh: thấy cùng danh sách, không có nút.
+
+**Sau rà soát (26/11) đã sửa:** thẻ chỉ ẩn bài mà thầy/cô **đã thấy** lúc bấm (bài con nộp trong lúc trang đang mở vẫn làm thẻ hiện lại); bài còn chờ chấm hết câu không làm thẻ Unit / mục kiến thức hiện lại; bài nhiều phần giữ khóa theo phần khi các phần khác đang được chấm; cùng mã bấm cho một việc khác bị từ chối (`client_id_reused`) và hai lần bấm cùng lúc không đụng nhau (khóa dòng của em); "7 ngày qua" = hôm nay và 6 ngày trước (giờ Việt Nam).
