@@ -2172,4 +2172,6 @@ Nhánh `feature/ket-qua-viec-nen-lam` (trên nhánh của PR #59). Kế hoạch 
 
 **Cách thử trên preview:** đăng nhập thầy/cô của "Nguyên (thử)", cho "Nguyên (thử)" nộp một bài Studio → Bàn làm việc có khối Việc nên làm; cột trái → Kết quả → bấm qua 3 tab; Bài đã giao có dòng "tạm"; Ghi buổi học có "Gợi ý cho buổi này" khi có phần dưới 50 %.
 
+**Sau rà soát (26/11) đã sửa:** lần làm "đầu" lấy đúng cờ đo lường `episodes.is_first_attempt` (bài giao lại hiện ở Kết quả với ghi chú "giao lại · không tính", không vào tổng Unit / mục kiến thức, không sinh thẻ chữa / khen, không có dòng "tạm"); ngày nộp và liên kết dùng đúng lần làm được tính; Review giao theo Unit vẫn là "Review n" (không bị tính như Unit đầu của nó); câu đọc hiểu (`reading_skill_key`) có trong tab mục kiến thức; không còn "đúng 0/0"; chip từ trong ngoặc chỉ khi là danh sách từ thật (≥ 3 mục, mỗi mục ≤ 2 từ, không số, không chữ cái lựa chọn); trang Kết quả dùng quyền đọc `studio:read`.
+
 **Để PR-B (cần SQL):** "Đã làm" / "Bỏ qua (lý do)" trên thẻ, lưu lại để phụ huynh thấy thời gian xử lý.

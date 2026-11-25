@@ -72,5 +72,6 @@ describe("Bài đã giao: provisional score", () => {
     const scores = new Map([["i1", { correct: 16, decided: 39, pending: 1 }]]);
     expect(renderToStaticMarkup(createElement(StudioAssignedTable, { rows: [row], scores }))).toContain(c.provisionalLine(16, 39, 1));
     expect(renderToStaticMarkup(createElement(StudioAssignedTable, { rows: [{ ...row, firstResult: { correct: 7, total: 23 } }], scores }))).not.toContain("studio-assigned-provisional");
+    expect(c.provisionalLine(0, 0, 8)).toBe("8 câu chờ thầy/cô chấm"); // never "đúng 0/0"
   });
 });

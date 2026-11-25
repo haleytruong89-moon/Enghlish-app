@@ -36,7 +36,10 @@ describe("scoreWork / units / tags", () => {
     expect(unitKeyOf([], "Destination C1&C2 · Review 11 (Units 21–22)")).toBe("Review 11");
     expect(unitKeyOf([], "Destination C1 C2 Review 1")).toBe("Review 1");
     expect(unitKeyOf([], "Destination C1&C2 · Progress Test 2 (Units 13–26) · Phần 1 (A–G)")).toBe("Progress Test 2");
-    expect(unitKeyOf(["U13", "U14"], "Review 7")).toBe("U13");
+    // "Giao theo Unit" saves the Units of a Review row: the Review still keeps its own name (never scored as its first Unit).
+    expect(unitKeyOf(["U13", "U14"], "Review 7")).toBe("Review 7");
+    expect(unitKeyOf(["U21", "U22"], "Destination C1&C2 · Review 11 (Units 21–22)")).toBe("Review 11");
+    expect(unitKeyOf(["U15"], "Destination C1, C2 - Unit 15 - A, B, C, E")).toBe("U15");
     expect(unitKeyOf([], "Tuần 1 — Bài tập về nhà")).toBeNull();
   });
   it("byUnit sums the tests of a Unit, names the weakest part, orders U1…U26 then Reviews; byTag goes weakest first", () => {
@@ -54,7 +57,7 @@ describe("Việc nên làm: rules approved 25/11 (50 / 60 / 80 %, 2 / 5 days)", 
   // The real picture of 25/11 in miniature: U15 part E 0/10, Word formation 3/13, a strong part A, work waiting for the tutor.
   const u15 = scoreWork(work({ items: [...items("11111111111?", "A"), ...items("0000000000", "E", "so-sanh", 31)] }), TODAY);
   const wf = scoreWork(work({ instanceId: "i2", title: "Unit 14 - Word formation", units: [], submittedAt: "2026-11-20T15:56:00Z", feedbackGiven: false, items: items("1110000000000", "M", "dang-tu"), partNames: new Map(), official: { correct: 3, total: 13 }, lastAttemptId: "t2", episodeId: "e2" }), TODAY);
-  const r1 = scoreWork(work({ instanceId: "i3", title: "Review 1", units: [], submittedAt: "2026-11-15T08:34:00Z", items: items("1100000000????????", "A", "so-sanh"), lastAttemptId: "t3", episodeId: "e3" }), TODAY);
+  const r1 = scoreWork(work({ instanceId: "i3", title: "Review 1", units: [], submittedAt: "2026-11-15T08:34:00Z", items: items("1100000000????????", "A", "so-sanh"), firstAttemptId: "t3", lastAttemptId: "t3", episodeId: "e3" }), TODAY);
   const works = [u15, wf, r1];
   const cards = buildActions({ learnerId: L, works, units: byUnit(works, RESULT_RULES.minItems), tags: byTag(works) });
 
@@ -118,5 +121,15 @@ describe("desk caps (26/11, after running the rules on the real data of 25/11)",
     expect(partLabel("H", "H · Phrases, patterns and collocations · tr.116")).toBe("H · Phrases, patterns and collocations…");
     expect(partLabel("E", "Complete with an appropriate comparative or superlative form of the words in the box.")).toBe("E · Complete with an appropriate…");
     expect(partLabel("C", "C")).toBe("C");
+  });
+});
+
+describe("a test given again (review 26/11)", () => {
+  it("is shown but never counted: no Unit / tag total, no go-over / praise card; its pending questions still wait for grading", () => {
+    const again = scoreWork(work({ instanceId: "g2", counted: false, items: [...items("0000000000", "E"), ...items("??", "A", "dang-tu", 11)] }), TODAY);
+    expect(again.counted).toBe(false);
+    const c = buildActions({ learnerId: L, works: [again], units: [], tags: [] }, PAGE_OPTIONS);
+    expect(c.map((x) => x.kind)).toEqual(["grade"]);
+    expect(c[0]!.href).toBe(`/review/studio?learner=${L}#studio-t1`);
   });
 });

@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function ProgressPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string | string[] }> }) {
   const { id } = await params;
   const sp = await searchParams;
-  const { learner, member } = await requireLearnerPage(id, "practice:write");
+  const { learner, member } = await requireLearnerPage(id, "studio:read");
   const tab = parseResultTab(Array.isArray(sp.tab) ? sp.tab[0] : sp.tab);
   const [data, tags] = await Promise.all([
     loadResults(learner.id, todayVn()).catch((): ResultsData | null => null),

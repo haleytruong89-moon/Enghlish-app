@@ -108,5 +108,11 @@ describe("word list in brackets (26/11, Destination U15 part E)", () => {
     "Write the answers (a, b or c).",
     "Read the text (about 200 words).",
     "Complete the sentences. (big, small, old)",
-  ])("%j stays text", (s) => expect(splitBanks(s).banks).toEqual([]));
+    // review 26/11: notes and option letters in brackets are not words to use
+    "Complete with the words in the box (one word is extra, two are used twice).",
+    "Choose the answer from the list (A, B or C).",
+    "Use the words from the box (2 points each, 10 points in total)",
+    "Complete with words in the box. (Use each word once, there is one extra)",
+    "Use the words in the box (big, small)",
+  ])("%j stays text", (s) => expect(splitBanks(s)).toEqual({ text: s, banks: [] }));
 });

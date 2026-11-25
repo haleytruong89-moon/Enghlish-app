@@ -30,7 +30,7 @@ export default async function AssignedBoardPage({ params, searchParams }: { para
   const board = buildBoard(studio, assignments, today);
   // 26/11: the provisional score of each sent test (first attempt), so a test waiting for one question still shows how it went.
   const results = studio ? await loadResults(learner.id, today, studio).catch(() => null) : null;
-  const scores = new Map((results?.works ?? []).map((w) => [w.instanceId, w.tally]));
+  const scores = new Map((results?.works ?? []).filter((w) => w.counted).map((w) => [w.instanceId, w.tally]));
   const tab = parseTab(sp.tab, board.counts);
   const tagLabels = Object.fromEntries(tags.map((t) => [t.key, t.label]));
   const studioRows = board.studio[tab];

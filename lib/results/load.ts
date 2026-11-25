@@ -10,7 +10,9 @@ export type ResultsData = { works: WorkScore[]; units: UnitScore[]; tags: TagAgg
 
 type CheckRow = { attempt_id: string; checks: AutoChecks };
 type DecisionRow = { attempt_id: string; item_id: string; result: "correct" | "incorrect" };
-type MetaRow = { template_id: string; template_version: number; item_id: string; n: number; part: string; tag_key: string | null; out_of_app: boolean };
+type MetaRow = { template_id: string; template_version: number; item_id: string; n: number; part: string; tag_key: string | null; reading_skill_key: string | null; out_of_app: boolean };
+type EpisodeFirstRow = { id: string; attempt_id: string; is_first_attempt: boolean };
+type AttemptDateRow = { id: string; submitted_at: string };
 type DraftRow = { template_id: string | null; template_version: number | null; parts: { key?: string; name?: string }[] | null };
 
 /**
@@ -23,15 +25,22 @@ export async function loadResults(learnerId: string, todayIso: string, studioRow
   const sent = rows.filter((r) => r.firstAttemptId && r.status !== "skipped");
   if (sent.length === 0) return { works: [], units: [], tags: [], actions: [], allActions: [] };
   const db = await createUserClient();
-  const [chk, dec, meta, drafts] = await Promise.all([
+  const [chk, dec, meta, drafts, eps, atts] = await Promise.all([
     db.from("attempt_auto_checks").select("attempt_id, checks").eq("learner_id", learnerId).returns<CheckRow[]>(),
     db.from("item_decisions").select("attempt_id, item_id, result").eq("learner_id", learnerId).returns<DecisionRow[]>(),
-    db.from("studio_item_meta").select("template_id, template_version, item_id, n, part, tag_key, out_of_app").eq("learner_id", learnerId).returns<MetaRow[]>(),
+    db.from("studio_item_meta").select("template_id, template_version, item_id, n, part, tag_key, reading_skill_key, out_of_app").eq("learner_id", learnerId).returns<MetaRow[]>(),
     db.from("studio_drafts").select("template_id, template_version, parts:payload->parts").eq("learner_id", learnerId).eq("status", "approved").returns<DraftRow[]>(),
+    // The measure's own "first attempt" (episodes.is_first_attempt, across every time the same test was given) and the sending times.
+    db.from("episodes").select("id, attempt_id, is_first_attempt").eq("learner_id", learnerId).returns<EpisodeFirstRow[]>(),
+    db.from("attempts").select("id, submitted_at").eq("learner_id", learnerId).returns<AttemptDateRow[]>(),
   ]);
   if (chk.error) throw new Error(`attempt_auto_checks lookup: ${chk.error.code ?? "error"}`);
   if (dec.error) throw new Error(`item_decisions lookup: ${dec.error.code ?? "error"}`);
   if (meta.error) throw new Error(`studio_item_meta lookup: ${meta.error.code ?? "error"}`);
+  if (eps.error) throw new Error(`episodes lookup: ${eps.error.code ?? "error"}`);
+  if (atts.error) throw new Error(`attempts lookup: ${atts.error.code ?? "error"}`);
+  const episodeOf = new Map((eps.data ?? []).map((e) => [e.attempt_id, e]));
+  const sentAtOf = new Map((atts.data ?? []).map((a) => [a.id, a.submitted_at]));
   // Part names are a nicety: without them the part letter is shown.
   const draftRows = drafts.error ? [] : (drafts.data ?? []);
 
@@ -42,7 +51,7 @@ export async function loadResults(learnerId: string, todayIso: string, studioRow
   const metaOf = new Map<string, Map<string, ItemMeta>>();
   for (const m of meta.data ?? []) {
     const k = tplKey(m.template_id, m.template_version);
-    metaOf.set(k, (metaOf.get(k) ?? new Map()).set(m.item_id, { n: m.n, part: m.part, tag: m.tag_key, outOfApp: m.out_of_app }));
+    metaOf.set(k, (metaOf.get(k) ?? new Map()).set(m.item_id, { n: m.n, part: m.part, tag: m.tag_key ?? m.reading_skill_key, outOfApp: m.out_of_app }));
   }
   const partNamesOf = new Map<string, Map<string, string>>();
   for (const d of draftRows) {
@@ -54,14 +63,18 @@ export async function loadResults(learnerId: string, todayIso: string, studioRow
   const works: WorkScore[] = [];
   for (const r of sent) {
     const first = r.firstAttemptId as string;
+    const ep = episodeOf.get(first);
+    if (!ep) continue; // not reviewed into an episode yet: nothing to measure
     const k = tplKey(r.templateId, r.templateVersion);
     const items = scoreItems(checksOf.get(first) ?? null, decisionsOf.get(first) ?? new Map(), metaOf.get(k) ?? new Map());
     if (items.length === 0) continue;
     works.push(
       scoreWork(
         {
-          instanceId: r.instanceId, activityId: r.activityId, title: r.title, units: r.units, submittedAt: firstSentAt(r), attempts: r.attempts,
-          firstAttemptId: first, lastAttemptId: r.lastAttemptId, episodeId: r.episodeId, feedbackGiven: r.feedbackGiven, feedbackReady: r.feedbackReady,
+          instanceId: r.instanceId, activityId: r.activityId, title: r.title, units: r.units, submittedAt: sentAtOf.get(first) ?? r.lastSubmittedAt ?? r.assignedAt,
+          attempts: r.attempts, firstAttemptId: first, lastAttemptId: r.lastAttemptId, episodeId: ep.id, feedbackGiven: r.feedbackGiven, feedbackReady: r.feedbackReady,
+          // A test given again: its first attempt here is a retry of the measure — shown, never counted (DOMAIN: first attempts only).
+          counted: ep.is_first_attempt,
           official: r.firstResult, items, partNames: partNamesOf.get(k) ?? new Map(),
         },
         todayIso,
@@ -69,11 +82,9 @@ export async function loadResults(learnerId: string, todayIso: string, studioRow
     );
   }
   works.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
-  const units = byUnit(works, RESULT_RULES.minItems);
-  const tags = byTag(works);
+  const counted = works.filter((w) => w.counted);
+  const units = byUnit(counted, RESULT_RULES.minItems);
+  const tags = byTag(counted);
   const input = { learnerId, works, units, tags };
   return { works, units, tags, actions: buildActions(input, DESK_OPTIONS), allActions: buildActions(input, PAGE_OPTIONS) };
 }
-
-/** The list keeps the latest sending; with one attempt it is also the first. A retake keeps the latest (close enough for "chờ n ngày"). */
-const firstSentAt = (r: StudioAssignedRow): string => r.lastSubmittedAt ?? r.assignedAt;

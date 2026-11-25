@@ -86,11 +86,13 @@ export function buildActions(i: ActionInput, opts: ActionOptions = DESK_OPTIONS)
     const oldest = waiting[0]!;
     const pendingItems = waiting.reduce((n, w) => n + w.tally.pending, 0);
     const feedbackMissing = waiting.filter((w) => w.feedbackReady && !w.feedbackGiven).length;
-    const href = oldest.tally.pending > 0 && oldest.lastAttemptId ? `/review/studio?learner=${i.learnerId}#studio-${oldest.lastAttemptId}` : oldest.episodeId ? `/review/${oldest.episodeId}` : `${base}/assigned`;
+    // The pending questions are those of the scored attempt; the feedback goes on the latest one (Bài đã giao links it the same way).
+    const href = oldest.tally.pending > 0 ? `/review/studio?learner=${i.learnerId}#studio-${oldest.firstAttemptId}` : oldest.episodeId ? `/review/${oldest.episodeId}` : `${base}/assigned`;
     cards.push({ key: "grade", kind: "grade", tone: waitTone(oldest.waitingDays), facts: { works: waiting.length, pendingItems, feedbackMissing, oldestDays: oldest.waitingDays, title: oldest.title }, href });
   }
 
-  const recent = i.works.filter((w) => w.waitingDays <= R.recentDays);
+  // A test given again is shown on the Results page but makes no "go over it" / praise card (it is not the first attempt).
+  const recent = i.works.filter((w) => w.counted && w.waitingDays <= R.recentDays);
   const sessionHref = `${base}/notes/new#goi-y-buoi-hoc`;
 
   // 2. Go over a weak part (or a weak test without parts) with the child. The weakest first.

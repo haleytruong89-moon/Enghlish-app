@@ -2080,7 +2080,9 @@ export const resultsCopy = {
   },
   sessionTitle: "Gợi ý cho buổi này",
   sessionIntro: "Từ kết quả bài làm gần đây. Ghi vào “Hôm nay học” hoặc “Lời nhắn cho em” nếu đã làm trong buổi.",
-  provisionalLine: (correct: number, decided: number, pending: number) => `tạm: đúng ${correct}/${decided}${pending > 0 ? ` · ${pending} câu chờ ${tutorHonorific}` : ""}`,
+  provisionalLine: (correct: number, decided: number, pending: number) =>
+    decided > 0 ? `tạm: đúng ${correct}/${decided}${pending > 0 ? ` · ${pending} câu chờ ${tutorHonorific}` : ""}` : `${pending} câu chờ ${tutorHonorific} chấm`,
+  notCounted: "giao lại · không tính vào tổng (chỉ tính lần làm đầu)",
 };
 
 export const assignedBoardCopy = {

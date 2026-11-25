@@ -51,6 +51,7 @@ function WorkList({ works }: { works: WorkScore[] }) {
                 {formatDay(todayVn(new Date(w.submittedAt)))} · {c.waiting(w.waitingDays)}
                 {w.unitKey ? ` · ${w.unitKey}` : ""}
                 {w.attempts > 1 ? ` · ${c.attempts(w.attempts)}` : ""}
+                {w.counted ? "" : ` · ${c.notCounted}`}
                 {w.feedbackReady ? (w.feedbackGiven ? ` · ${c.feedbackGiven}` : "") : ""}
                 {w.feedbackReady && !w.feedbackGiven ? <b className="text-[#b4402c]"> · {c.feedbackMissing}</b> : null}
               </p>

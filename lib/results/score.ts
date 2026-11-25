@@ -62,12 +62,15 @@ export type WorkInput = {
   feedbackGiven: boolean;
   feedbackReady: boolean;
   official: { correct: number; total: number } | null;
+  /** false for a test given again (its first attempt here is not the child's first attempt at this test): shown, not counted. */
+  counted?: boolean;
   items: readonly ItemRow[];
   /** Part key → its name as the test calls it ("Adjectives and adverbs"). */
   partNames: ReadonlyMap<string, string>;
 };
 
-export type WorkScore = Omit<WorkInput, "items" | "partNames"> & {
+export type WorkScore = Omit<WorkInput, "items" | "partNames" | "counted"> & {
+  counted: boolean;
   unitKey: string | null;
   tally: Tally;
   parts: PartScore[];
@@ -78,24 +81,26 @@ export type WorkScore = Omit<WorkInput, "items" | "partNames"> & {
   needsAdult: boolean;
 };
 
-/** "U14" from the Units given with the test; else from the title ("… Unit 14 …"); a Review / Progress Test keeps its own name. */
+/**
+ * A Review / Progress Test keeps its own name, even when it was given with its Units ("Giao theo Unit" saves them for a Review row);
+ * else "U14" from the Units given with the test; else from the title ("… Unit 14 …").
+ */
 export function unitKeyOf(units: readonly string[], title: string): string | null {
-  const own = units.find((u) => /^U\d+$/.test(u));
-  if (own) return own;
-  const m = /\bunits?\s*(\d{1,2})\b(?!\s*[–-]\s*\d)/i.exec(title);
-  if (m && !/\b(review|progress test)\b/i.test(title)) return `U${Number(m[1])}`;
   const r = /\breview\s*(\d{1,2})\b/i.exec(title);
   if (r) return `Review ${Number(r[1])}`;
   const p = /\bprogress test\s*(\d{1,2})\b/i.exec(title);
   if (p) return `Progress Test ${Number(p[1])}`;
-  return null;
+  const own = units.find((u) => /^U\d+$/.test(u));
+  if (own) return own;
+  const m = /\bunits?\s*(\d{1,2})\b(?!\s*[–-]\s*\d)/i.exec(title);
+  return m ? `U${Number(m[1])}` : null;
 }
 
 const dayMs = 86_400_000;
 const vnDay = (iso: string): number => Math.floor((Date.parse(iso) + 7 * 3_600_000) / dayMs);
 
 export function scoreWork(w: WorkInput, todayIso: string): WorkScore {
-  const { items, partNames, ...rest } = w;
+  const { items, partNames, counted, ...rest } = w;
   const byPart = new Map<string, ItemRow[]>();
   const byTag = new Map<string, ItemRow[]>();
   for (const r of items) {
@@ -106,6 +111,7 @@ export function scoreWork(w: WorkInput, todayIso: string): WorkScore {
   const today = Math.floor(Date.parse(`${todayIso}T00:00:00Z`) / dayMs);
   return {
     ...rest,
+    counted: counted ?? true,
     unitKey: unitKeyOf(w.units, w.title),
     tally,
     parts: [...byPart.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, rows]) => ({ key, name: partLabel(key, partNames.get(key) ?? key), tally: tallyOf(rows) })),
