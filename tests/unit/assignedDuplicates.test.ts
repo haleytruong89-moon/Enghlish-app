@@ -31,12 +31,19 @@ describe("Q6 (audit 25/11): overdue tests that look given by mistake", () => {
     row("a", "Destination C1 C2", "overdue", { lateDays: 8, assignedAt: "2026-11-15T01:00:00Z" }),
     row("b", "Destination C1 C2", "overdue", { lateDays: 8, assignedAt: "2026-11-15T02:00:00Z" }),
     row("c", "Destination C1&C2 · Unit 14 · Idioms (L)", "overdue", { assignedAt: "2026-11-20T00:00:00Z" }),
-    row("d", "Destination C1&C2 · Unit 14 · Idioms (L)", "checked", { attempts: 1, assignedAt: "2026-11-20T00:00:00Z" }),
+    row("d", "Destination C1&C2 · Unit 14 · Idioms (L)", "checked", { attempts: 1, assignedAt: "2026-11-20T00:00:00Z", instanceId: "0d", lastSubmittedAt: "2026-11-20T16:02:00Z" }),
     row("e", "Unit 15", "overdue"),
     row("f", "Unit 15", "skipped", { attempts: 0, assignedAt: "2026-11-01T00:00:00Z" }),
   ];
   it("marks the later of two identical open tests and a test whose twin was sent; a removed twin does not count", () => {
     expect([...likelyDuplicates(rows)].sort()).toEqual(["b", "c"]);
+  });
+  it("giving a test again AFTER the child sent it (retry, delayed check) is deliberate: never marked", () => {
+    const again = [
+      row("old", "Unit 9", "checked", { attempts: 1, assignedAt: "2026-11-01T00:00:00Z", lastSubmittedAt: "2026-11-02T10:00:00Z" }),
+      row("new", "Unit 9", "overdue", { assignedAt: "2026-11-16T00:00:00Z" }),
+    ];
+    expect(likelyDuplicates(again).size).toBe(0);
   });
   it("same assignment time: only one of the two is marked", () => {
     expect(likelyDuplicates([row("x", "T", "overdue"), row("y", "T", "overdue")]).size).toBe(1);

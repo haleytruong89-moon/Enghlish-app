@@ -23,6 +23,8 @@ export const PENDING_GROUPS = ["all", "work", "check", "ai", "skills", "roadmap"
 export type PendingGroup = (typeof PENDING_GROUPS)[number];
 /** Groups left out of "Tất cả" and of every count of "Chờ duyệt". */
 export const UNCOUNTED_GROUPS: readonly PendingGroup[] = ["drafts"];
+/** Sources (lib/desk/load.ts) that feed only uncounted groups: their failure does not make the count unknown. */
+export const UNCOUNTED_SOURCES = ["drafts"] as const;
 export type PendingKind = "work" | "studio_check" | "retry" | "feedback" | "studio_draft" | "curriculum_draft" | "skill" | "point" | "flag" | "import" | "milestone" | "goal";
 export type PendingRow = {
   key: string; kind: PendingKind; group: Exclude<PendingGroup, "all">; label: string; title: string; since: string | null; need: string; href: string; waitingTutor: boolean;
@@ -76,7 +78,8 @@ export const countedRows = <R extends Pick<PendingRow, "group">>(rows: readonly 
 
 /** What a "Chờ duyệt" surface may claim, given the rows and how complete they are. Pure. Uncounted groups never count. */
 export function pendingView(p: { rows: readonly Pick<PendingRow, "group">[]; failed: readonly unknown[]; more: boolean }): PendingView {
-  const failed = p.failed.length > 0;
+  // A source that never counts (the drafts) cannot make the count unknown.
+  const failed = p.failed.some((f) => !(UNCOUNTED_SOURCES as readonly unknown[]).includes(f));
   const n = countedRows(p.rows).length;
   return {
     count: failed ? null : p.more ? `≥ ${n}` : String(n),
@@ -182,7 +185,7 @@ const lowerFirst = (s: string): string => s.charAt(0).toLocaleLowerCase("vi") + 
 /**
  * Q2 (audit 25/11): one submission waits in several places (questions to check, skills to score, the child's retries, feedback). Its
  * rows become ONE row "Bài nộp" whose "Cần làm" lists every part ("8 câu cần xem · đã chấm 0/1 kỹ năng · chưa góp ý") and whose link
- * opens the first part. Rows of a single part are left as they are. Nothing is decided here.
+ * opens the first part; it stays in the group of that first part. Rows of a single part are left as they are. Nothing is decided here.
  */
 export function mergeBySubmission(rows: readonly PendingRow[]): PendingRow[] {
   const byAttempt = new Map<string, PendingRow[]>();
@@ -204,11 +207,13 @@ export function mergeBySubmission(rows: readonly PendingRow[]): PendingRow[] {
     // The Studio title is the test's own name; the work row adds the activity ("· Đọc hoặc nghe…"), so it is used only when alone.
     const title = sorted.find((p) => p.kind !== "work")?.title ?? first.title;
     out.push({
-      key: `attempt-${r.attemptId}`, kind: first.kind, group: "work", label: pendingCopy.kinds.work, title,
+      // The group of the first part, so "Cần xem câu" still lists a submission whose questions wait to be checked.
+      key: `attempt-${r.attemptId}`, kind: first.kind, group: GROUP_OF[first.kind], label: pendingCopy.kinds.work, title,
       since: dated[0] ?? null,
       need: sorted.map((p, n) => (n === 0 ? p.need : lowerFirst(p.need))).join(" · "),
       href: first.href,
-      waitingTutor: sorted.every((p) => p.waitingTutor),
+      // Shown when any part waits for the tutor (e.g. a parent sees that the skill scoring is the tutor's, even if she can give feedback).
+      waitingTutor: sorted.some((p) => p.waitingTutor),
       attemptId: r.attemptId,
     });
   }

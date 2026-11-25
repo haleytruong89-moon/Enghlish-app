@@ -152,7 +152,7 @@ describe("Q2 (audit 25/11): one row per submission", () => {
     const rows = buildPendingRows(input({ work: [work({ attemptId: "s1", titleVi: "Unit 5 test", submittedAt: "2026-11-01T03:05:00Z" })], studio: [studio()], retries: [retry] as never, skills: [], drafts: [], curricula: [], feedback: [fb()] }));
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
-      key: "attempt-s1", group: "work", label: pendingCopy.kinds.work, title: "Unit 5 test", since: "2026-11-01T03:00:00Z",
+      key: "attempt-s1", group: "check", label: pendingCopy.kinds.work, title: "Unit 5 test", since: "2026-11-01T03:00:00Z",
       need: `${pendingCopy.need.studioCheck(1)} · đã chấm 0/2 kỹ năng · con thử lại 1 câu · chưa góp ý`,
       href: "/review/studio#studio-s1", waitingTutor: false,
     });
@@ -161,8 +161,18 @@ describe("Q2 (audit 25/11): one row per submission", () => {
     const rows = buildPendingRows(input({ work: [work()], studio: [], skills: [], drafts: [], curricula: [], feedback: [fb({ attemptId: "s7", href: "/review/e7" })] }));
     expect(rows.map((r) => [r.key, r.need, r.href])).toEqual([["feedback-s7", pendingCopy.need.feedback, "/review/e7"], ["work-e1", reviewPage.progress(0, 2), "/review/e1"]]);
   });
-  it("a merged row waits for the tutor only when every part does", () => {
-    const rows = buildPendingRows(input({ role: "parent", work: [work({ attemptId: "s1", canDecide: false })], studio: [studio()], skills: [], drafts: [], curricula: [] }));
-    expect(rows[0]).toMatchObject({ key: "attempt-s1", waitingTutor: false });
+  it("a merged row stays in the group of its first part ('Cần xem câu' keeps open questions); work + feedback stays 'Bài nộp'", () => {
+    const rows = buildPendingRows(input({ work: [work({ attemptId: "s1" })], studio: [studio()], skills: [], drafts: [], curricula: [], feedback: [fb()] }));
+    expect(filterRows(rows, "check").map((r) => r.key)).toEqual(["attempt-s1"]);
+    const only = buildPendingRows(input({ work: [work({ attemptId: "s1" })], studio: [], skills: [], drafts: [], curricula: [], feedback: [fb()] }));
+    expect(only.map((r) => [r.key, r.group])).toEqual([["attempt-s1", "work"]]);
+  });
+  it("parent: a merged row shows 'waits for the tutor' when any part does (the skill scoring), even if feedback is hers to give", () => {
+    const rows = buildPendingRows(input({ role: "parent", work: [work({ attemptId: "s1", canDecide: false })], studio: [], skills: [], drafts: [], curricula: [], feedback: [fb()] }));
+    expect(rows[0]).toMatchObject({ key: "attempt-s1", waitingTutor: true });
+  });
+  it("a failing drafts source does not make the count unknown (drafts never count)", () => {
+    expect(pendingView({ rows: [{ group: "work" }], failed: ["drafts"], more: false }).count).toBe("1");
+    expect(pendingView({ rows: [{ group: "work" }], failed: ["drafts", "studio"], more: false }).count).toBe(null);
   });
 });

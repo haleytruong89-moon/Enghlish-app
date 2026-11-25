@@ -2694,6 +2694,7 @@ export const deskCopy = {
     overdueLine: "Em chưa gửi và chưa ai ghi kết quả. Con không thấy chữ “quá hạn”.",
     studioOverdueTitle: (n: number) => `${n} bài làm trên app quá hạn, em chưa nộp`,
     studioOverdueLine: "Mở Bài đã giao → Con đang làm để nhắc con, hoặc gỡ bài giao nhầm.",
+    studioOverdueLineWith: (detail: string) => `${detail}. Mở Bài đã giao → Con đang làm để nhắc con, hoặc gỡ bài giao nhầm.`,
     /** Q6 (audit 25/11): what stands out among the overdue tests; empty when nothing does. */
     studioOverdueDetail: (duplicates: number, longLate: number, days: number) =>
       [duplicates > 0 ? `${duplicates} bài trùng tên với bài khác (có thể giao nhầm)` : null, longLate > 0 ? `${longLate} bài quá hạn trên ${days} ngày` : null].filter(Boolean).join(" · "),

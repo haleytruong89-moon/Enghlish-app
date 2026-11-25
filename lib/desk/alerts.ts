@@ -49,7 +49,7 @@ export function deskAlerts(i: DeskAlertInput): DeskAlert[] {
   if (i.studioOverdue && i.studioOverdue > 0) {
     const f = i.studioOverdueFacts;
     const detail = f ? A.studioOverdueDetail(f.duplicates, f.longLate, LONG_LATE_DAYS) : "";
-    out.push({ key: "studio-overdue", tone: "warn", badge: todayPage.practiceOverdue, title: A.studioOverdueTitle(i.studioOverdue), line: detail ? `${detail}. ${A.studioOverdueLine}` : A.studioOverdueLine, href: `${base}/assigned?tab=doing` });
+    out.push({ key: "studio-overdue", tone: "warn", badge: todayPage.practiceOverdue, title: A.studioOverdueTitle(i.studioOverdue), line: detail ? A.studioOverdueLineWith(detail) : A.studioOverdueLine, href: `${base}/assigned?tab=doing` });
   }
   if (t) {
     const label = (key: string) => t.tagLabels[key] ?? fallbackLabels.tag;

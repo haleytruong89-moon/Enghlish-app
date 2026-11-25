@@ -24,18 +24,21 @@ export const isDuplicate = (title: string, open: readonly string[]): boolean => 
 export const LONG_LATE_DAYS = 7;
 
 /**
- * Q6 (audit 25/11): overdue Studio tests that look given by mistake — another test with the same title was already sent by the child,
- * or was given earlier and is still open. Returns their instance ids. A hint only: the adult decides and removes ("Gỡ bài"). Pure.
+ * Q6 (audit 25/11): overdue Studio tests that look given by mistake. A test is marked when another, not removed, test with the same title
+ * was given before it (or at the same moment) AND, at the time this one was given, that other one had not been sent yet — i.e. the same
+ * work was open twice. Giving a test again AFTER the child sent it (a retry, a delayed check) is deliberate and never marked.
+ * Returns instance ids. A hint only: the adult decides and removes ("Gỡ bài"). Pure.
  */
 export function likelyDuplicates(rows: readonly StudioAssignedRow[]): Set<string> {
   const out = new Set<string>();
   const live = rows.filter((r) => r.status !== "skipped");
+  const givenFirst = (o: StudioAssignedRow, r: StudioAssignedRow) => o.assignedAt < r.assignedAt || (o.assignedAt === r.assignedAt && o.instanceId < r.instanceId);
+  const openWhenGiven = (o: StudioAssignedRow, r: StudioAssignedRow) => !o.lastSubmittedAt || o.lastSubmittedAt >= r.assignedAt;
   for (const r of live) {
     if (r.status !== "overdue") continue;
     const t = normTitle(r.title);
     if (!t) continue;
-    const twin = live.some((o) => o.instanceId !== r.instanceId && normTitle(o.title) === t && (o.attempts > 0 || o.assignedAt < r.assignedAt || (o.assignedAt === r.assignedAt && o.instanceId < r.instanceId)));
-    if (twin) out.add(r.instanceId);
+    if (live.some((o) => o.instanceId !== r.instanceId && normTitle(o.title) === t && givenFirst(o, r) && openWhenGiven(o, r))) out.add(r.instanceId);
   }
   return out;
 }
