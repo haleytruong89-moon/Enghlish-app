@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ActionCards, cardText } from "@/components/results/ActionCards";
+import { HandledList } from "@/components/results/HandledList";
 import { parseResultTab, ResultsView } from "@/components/results/ResultsView";
 import { StudioAssignedTable } from "@/components/studio/StudioAssignedTable";
 import { fallbackLabels, resultsCopy as c } from "@/lib/copy/vi";
@@ -12,8 +13,8 @@ import type { StudioAssignedRow } from "@/lib/studio/assigned";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {}, push: () => {} }) }));
 
 const L = "f0000000-0000-4000-8000-00000000b001";
-const grade: ActionCard = { key: "grade", kind: "grade", tone: "red", facts: { works: 3, pendingItems: 14, feedbackMissing: 5, oldestDays: 10, title: "Review 1" }, href: "/review/studio#studio-t3" };
-const practise: ActionCard = { key: "tag-dang-tu", kind: "practise", tone: "amber", facts: { tag: "dang-tu", correct: 15, decided: 40, percent: 38, works: 3 }, href: `/learners/${L}/assign` };
+const grade: ActionCard = { key: "grade", kind: "grade", tone: "red", facts: { works: 3, pendingItems: 14, feedbackMissing: 5, oldestDays: 10, title: "Review 1" }, href: "/review/studio#studio-t3", evidenceAt: "2026-11-16T03:00:00Z" };
+const practise: ActionCard = { key: "tag-dang-tu", kind: "practise", tone: "amber", facts: { tag: "dang-tu", correct: 15, decided: 40, percent: 38, works: 3 }, href: `/learners/${L}/assign`, evidenceAt: "2026-11-24T04:53:00Z" };
 
 describe("Việc nên làm cards", () => {
   it("tutor: each card says why with its numbers and has one button; urgency is a word, not only a colour", () => {
@@ -35,6 +36,40 @@ describe("Việc nên làm cards", () => {
     expect(renderToStaticMarkup(createElement(ActionCards, { learnerId: L, cards: [grade], tagLabels: {}, role: "tutor", buttons: false }))).not.toContain("action-button-");
     expect(cardText(practise, {}).title).toBe(c.cards.practise.title(fallbackLabels.tag));
     expect(renderToStaticMarkup(createElement(ActionCards, { learnerId: L, cards: null, tagLabels: {}, role: "tutor" }))).toContain(c.actionsUnavailable);
+  });
+});
+
+describe("Đã làm / Bỏ qua (PR-B)", () => {
+  it("the tutor can mark every card but the grade card (it goes away once graded); the parent cannot", () => {
+    const t = renderToStaticMarkup(createElement(ActionCards, { learnerId: L, cards: [grade, practise], tagLabels: {}, role: "tutor" }));
+    expect(t).toContain('data-testid="card-decision-tag-dang-tu"');
+    expect(t).not.toContain('data-testid="card-decision-grade"');
+    expect(t).toContain(c.decide.done);
+    expect(t).toContain(c.decide.skip);
+    const p = renderToStaticMarkup(createElement(ActionCards, { learnerId: L, cards: [practise], tagLabels: {}, role: "parent" }));
+    expect(p).not.toContain("card-decision-");
+  });
+  it("on the session page the link is gone but the marks stay; before 0043 there are no marks and the tutor is told once", () => {
+    const s = renderToStaticMarkup(createElement(ActionCards, { learnerId: L, cards: [practise], tagLabels: {}, role: "tutor", buttons: false }));
+    expect(s).not.toContain("action-button-");
+    expect(s).toContain("card-decision-tag-dang-tu");
+    const off = renderToStaticMarkup(createElement(ActionCards, { learnerId: L, cards: [practise], tagLabels: {}, role: "tutor", decisionsReady: false }));
+    expect(off).not.toContain("card-decision-");
+    expect(off).toContain(c.handled.unavailable);
+  });
+  it("Đã xử lý: what, who, how long after the work, the reason, and a card brought back by newer work", () => {
+    const items = [
+      { cardKey: "tag-dang-tu", kind: "practise" as const, label: "Cho con luyện thêm: Dạng từ", decision: "skipped" as const, reason: "đã chữa ngoài app", byRole: "tutor" as const, at: "2026-11-25T17:30:00Z", evidenceAt: "2026-11-22T03:00:00Z", afterDays: 3, reopened: true },
+      { cardKey: "unit-U15", kind: "unit_review" as const, label: "Đề nghị con học kỹ lại U15", decision: "done" as const, reason: null, byRole: "tutor" as const, at: "2026-11-24T05:00:00Z", evidenceAt: "2026-11-24T04:53:00Z", afterDays: 0, reopened: false },
+    ];
+    const h = renderToStaticMarkup(createElement(HandledList, { items, ready: true }));
+    expect(h).toContain("Cho con luyện thêm: Dạng từ");
+    expect(h).toContain("26/11 · Thầy/cô bỏ qua · sau 3 ngày con nộp"); // 17:30 UTC = 00:30 the next day in Vietnam
+    expect(h).toContain(c.handled.reason("đã chữa ngoài app"));
+    expect(h).toContain('data-testid="handled-reopened"');
+    expect(h).toContain("Thầy/cô đã làm · trong ngày con nộp");
+    expect(renderToStaticMarkup(createElement(HandledList, { items: [], ready: true }))).toContain(c.handled.empty);
+    expect(renderToStaticMarkup(createElement(HandledList, { items: [], ready: false }))).toContain(c.handled.unavailable);
   });
 });
 

@@ -82,7 +82,7 @@ describe("migrations", () => {
       where n.nspname = 'english' and c.relkind = 'r'`);
     expect(rows.map((r) => r.relname).sort()).toEqual(
       [
-        "accepted_additions", "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
+        "accepted_additions", "action_card_decisions", "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
         "ai_runs", "ai_settings", "app_errors", "app_feedback", "app_feedback_events", "artifact_versions", "assessment_policies", "assignment_events", "assignment_units", "assignments", "assistance_events", "attempt_auto_checks",
         "attempts", "audit_log", "catalogue_versions", "competency_state", "consents", "curricula", "curriculum_unit_events", "curriculum_unit_points", "curriculum_units", "curriculum_versions", "dimensions", "engine_policy_map", "episode_marks", "episodes", "error_tags", "exposure_log", "external_results",
         "families", "feedback_notes", "files", "import_batches", "inquiry_instances", "inquiry_templates", "instance_item_keys", "ipa_lexicon", "item_decisions", "item_retries", "item_reveals", "learner_intake", "learners", "lesson_note_units", "lesson_notes", "level_decisions", "login_names", "mastery_decisions", "members",
@@ -115,7 +115,7 @@ describe("migrations", () => {
       where n.nspname = 'english' and c.relkind = 'r' order by 1`);
     const readable = rows.filter((r) => r.s).map((r) => r.relname);
     expect(readable).toEqual([
-      "accepted_additions", "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
+      "accepted_additions", "action_card_decisions", "activity_instance_events", "activity_instances", "activity_templates", "aggregate_indicators",
       "app_feedback", "app_feedback_events", "artifact_versions", "assessment_policies", "assignment_events", "assignment_units", "assignments", "assistance_events", "attempt_auto_checks", "attempts",
       "audit_log", "catalogue_versions", "competency_state", "consents", "curricula", "curriculum_unit_events", "curriculum_unit_points", "curriculum_units", "curriculum_versions", "dimensions", "episode_marks", "episodes", "error_tags", "exposure_log", "external_results", "families", "feedback_notes", "files",
       "import_batches", "inquiry_instances", "inquiry_templates", "instance_item_keys", "ipa_lexicon", "item_decisions", "item_retries", "item_reveals", "learner_intake", "learners", "lesson_note_units", "lesson_notes", "level_decisions", "mastery_decisions", "members", "observations",

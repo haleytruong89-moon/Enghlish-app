@@ -741,6 +741,7 @@ export const purgePage = {
     work_test_marks: "Dấu bài kiểm tra",
     weekly_goals: "Mục tiêu tuần",
     submission_work_weeks: "Tuần làm bài của bài nộp thay",
+    action_card_decisions: "Việc nên làm đã đánh dấu",
     login_names: "Tên đăng nhập ngắn",
     learners: "Hồ sơ của em",
     members: "Tài khoản của em trong app",
@@ -2083,6 +2084,42 @@ export const resultsCopy = {
   provisionalLine: (correct: number, decided: number, pending: number) =>
     decided > 0 ? `tạm: đúng ${correct}/${decided}${pending > 0 ? ` · ${pending} câu chờ ${tutorHonorific}` : ""}` : `${pending} câu chờ ${tutorHonorific} chấm`,
   notCounted: "giao lại · không tính vào tổng (chỉ tính lần làm đầu)",
+  // PR-B: "Đã làm" / "Bỏ qua" on a card, and what was handled (the parent reads it).
+  decide: {
+    done: "✓ Đã làm",
+    skip: "Bỏ qua",
+    groupLabel: "Đánh dấu việc này",
+    reasonLabel: "Lý do bỏ qua",
+    reasonHint: "Ít nhất 3 ký tự, ví dụ: đã chữa ngoài app, con đã hiểu.",
+    confirmSkip: "Bỏ qua việc này",
+    cancel: "Thôi",
+    busy: "Đang lưu…",
+    doneSaved: "Đã ghi là đã làm. Việc này ẩn đi cho tới khi con nộp bài mới liên quan.",
+    skipSaved: "Đã bỏ qua. Việc này ẩn đi cho tới khi con nộp bài mới liên quan.",
+    errors: {
+      generic: "Chưa lưu được. Thử lại sau ít phút.",
+      offline: "Mất mạng. Kiểm tra mạng rồi bấm lại.",
+      reason_required: "Ghi lý do bỏ qua (ít nhất 3 ký tự).",
+      reason_too_long: "Lý do dài quá 300 ký tự.",
+      cards_unavailable: "Nút này chưa dùng được: phụ huynh cần cập nhật cơ sở dữ liệu (0043).",
+      forbidden: "Tài khoản này không đánh dấu được việc của em này.",
+      client_id_reused: "Lần bấm trước chưa xong. Tải lại trang rồi bấm lại.",
+      conflict: "Lần bấm trước chưa xong. Tải lại trang rồi bấm lại.",
+    } as Record<string, string>,
+  },
+  handled: {
+    title: "Đã xử lý (30 ngày qua)",
+    intro: `Việc ${tutorHonorific} đã đánh dấu. Có bài mới liên quan thì việc hiện lại ở trên.`,
+    empty: "Chưa có việc nào được đánh dấu.",
+    by: { tutor: tutorHonorificCap, parent: "Phụ huynh" } as Record<"tutor" | "parent", string>,
+    decision: { done: "đã làm", skipped: "bỏ qua" } as Record<"done" | "skipped", string>,
+    after: (days: number | null) => (days === null ? "" : days === 0 ? " · trong ngày con nộp" : ` · sau ${days} ngày con nộp`),
+    reason: (r: string) => `Lý do: ${r}`,
+    reopened: "Có bài mới · việc đã hiện lại",
+    weekLine: (n: number) => `Đã xử lý ${n} việc trong 7 ngày qua`,
+    see: "Xem",
+    unavailable: "Chưa ghi được việc đã xử lý: phụ huynh cần cập nhật cơ sở dữ liệu (0043).",
+  },
 };
 
 export const assignedBoardCopy = {

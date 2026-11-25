@@ -1,4 +1,5 @@
 import { ActionCards } from "@/components/results/ActionCards";
+import { HandledList } from "@/components/results/HandledList";
 import { parseResultTab, ResultsView } from "@/components/results/ResultsView";
 import { learnerWithTrack, resultsCopy as c } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
@@ -26,7 +27,8 @@ export default async function ProgressPage({ params, searchParams }: { params: P
         <h1 className="text-2xl font-bold">{c.title(learner.alias)}</h1>
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)} · {c.intro}</p>
       </div>
-      <ActionCards learnerId={learner.id} cards={data ? data.allActions : null} tagLabels={tagLabels} role={role} />
+      <ActionCards learnerId={learner.id} cards={data ? data.allActions : null} tagLabels={tagLabels} role={role} decisionsReady={data?.decisionsReady ?? false} />
+      {data ? <HandledList items={data.handled} ready={data.decisionsReady} /> : null}
       {data === null ? (
         <p className="rounded-xl border border-line bg-white px-4 py-3 text-sm text-muted" data-testid="results-unavailable">{c.unavailable}</p>
       ) : (

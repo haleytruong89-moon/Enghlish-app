@@ -2,11 +2,45 @@ import "server-only";
 import { createUserClient } from "@/lib/supabase/server";
 import type { StudioAssignedRow } from "@/lib/studio/assigned";
 import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
-import { buildActions, DESK_OPTIONS, PAGE_OPTIONS, RESULT_RULES, type ActionCard } from "./actions";
+import { buildActions, DESK_OPTIONS, isDecidable, PAGE_OPTIONS, RESULT_RULES, type ActionCard } from "./actions";
+import { handledList, handledPredicate, type CardDecision, type HandledItem } from "./decisions";
 import { byTag, byUnit, scoreItems, scoreWork, type AutoChecks, type ItemMeta, type TagAgg, type UnitScore, type WorkScore } from "./score";
 
-/** `actions` = the few cards of the desk (capped by kind); `allActions` = every card (the Results page, the session page). */
-export type ResultsData = { works: WorkScore[]; units: UnitScore[]; tags: TagAgg[]; actions: ActionCard[]; allActions: ActionCard[] };
+/**
+ * `actions` = the few cards of the desk (capped by kind); `allActions` = every card (the Results page, the session page); both leave out
+ * the cards marked "Đã làm" / "Bỏ qua" since their newest work. `handled` = what was marked in the last 30 days (the parent reads it).
+ * `decisionsReady` = false before migration 0043 (the buttons say so; nothing breaks).
+ */
+export type ResultsData = {
+  works: WorkScore[]; units: UnitScore[]; tags: TagAgg[]; actions: ActionCard[]; allActions: ActionCard[]; handled: HandledItem[]; decisionsReady: boolean;
+};
+
+type CardDecisionRow = { card_key: string; kind: string; label: string; decision: "done" | "skipped"; reason: string | null; by_role: "tutor" | "parent"; at: string; evidence_at: string | null };
+
+/** "Table is missing" = migration 0043 not applied yet (PostgREST PGRST205 / PGRST200, Postgres 42P01). */
+const isMissingTable = (code?: string): boolean => code === "PGRST205" || code === "PGRST200" || code === "42P01";
+
+/** The marks of one child's cards (USER client: staff only by RLS). Never throws: without them every card simply shows. */
+async function loadCardDecisions(learnerId: string): Promise<{ rows: CardDecision[]; ready: boolean }> {
+  try {
+    const db = await createUserClient();
+    const { data, error } = await db
+      .from("action_card_decisions")
+      .select("card_key, kind, label, decision, reason, by_role, at, evidence_at")
+      .eq("learner_id", learnerId)
+      .order("at", { ascending: false }) // newest first: a row limit would drop the oldest marks, never the ones in force
+      .returns<CardDecisionRow[]>();
+    if (error) return { rows: [], ready: !isMissingTable(error.code) };
+    const rows = (data ?? []).flatMap((r): CardDecision[] =>
+      isDecidable(r.kind as ActionCard["kind"])
+        ? [{ cardKey: r.card_key, kind: r.kind as CardDecision["kind"], label: r.label, decision: r.decision, reason: r.reason, byRole: r.by_role, at: r.at, evidenceAt: r.evidence_at }]
+        : [],
+    );
+    return { rows, ready: true };
+  } catch {
+    return { rows: [], ready: false };
+  }
+}
 
 type CheckRow = { attempt_id: string; checks: AutoChecks };
 type DecisionRow = { attempt_id: string; item_id: string; result: "correct" | "incorrect" };
@@ -23,9 +57,9 @@ type DraftRow = { template_id: string | null; template_version: number | null; p
 export async function loadResults(learnerId: string, todayIso: string, studioRows?: StudioAssignedRow[] | null): Promise<ResultsData> {
   const rows = studioRows ?? (await loadStudioAssigned(learnerId, todayIso));
   const sent = rows.filter((r) => r.firstAttemptId && r.status !== "skipped");
-  if (sent.length === 0) return { works: [], units: [], tags: [], actions: [], allActions: [] };
+  if (sent.length === 0) return { works: [], units: [], tags: [], actions: [], allActions: [], handled: [], decisionsReady: true };
   const db = await createUserClient();
-  const [chk, dec, meta, drafts, eps, atts] = await Promise.all([
+  const [chk, dec, meta, drafts, eps, atts, marks] = await Promise.all([
     db.from("attempt_auto_checks").select("attempt_id, checks").eq("learner_id", learnerId).returns<CheckRow[]>(),
     db.from("item_decisions").select("attempt_id, item_id, result").eq("learner_id", learnerId).returns<DecisionRow[]>(),
     db.from("studio_item_meta").select("template_id, template_version, item_id, n, part, tag_key, reading_skill_key, out_of_app").eq("learner_id", learnerId).returns<MetaRow[]>(),
@@ -33,6 +67,7 @@ export async function loadResults(learnerId: string, todayIso: string, studioRow
     // The measure's own "first attempt" (episodes.is_first_attempt, across every time the same test was given) and the sending times.
     db.from("episodes").select("id, attempt_id, is_first_attempt").eq("learner_id", learnerId).returns<EpisodeFirstRow[]>(),
     db.from("attempts").select("id, submitted_at").eq("learner_id", learnerId).returns<AttemptDateRow[]>(),
+    loadCardDecisions(learnerId),
   ]);
   if (chk.error) throw new Error(`attempt_auto_checks lookup: ${chk.error.code ?? "error"}`);
   if (dec.error) throw new Error(`item_decisions lookup: ${dec.error.code ?? "error"}`);
@@ -86,5 +121,12 @@ export async function loadResults(learnerId: string, todayIso: string, studioRow
   const units = byUnit(counted, RESULT_RULES.minItems);
   const tags = byTag(counted);
   const input = { learnerId, works, units, tags };
-  return { works, units, tags, actions: buildActions(input, DESK_OPTIONS), allActions: buildActions(input, PAGE_OPTIONS) };
+  const isHandled = handledPredicate(marks.rows);
+  // Every card (no limit), to tell which marked cards newer work has brought back.
+  const handled = handledList(marks.rows, buildActions(input, { ...PAGE_OPTIONS, limit: Number.MAX_SAFE_INTEGER }), todayIso);
+  return {
+    works, units, tags, handled, decisionsReady: marks.ready,
+    actions: buildActions(input, { ...DESK_OPTIONS, isHandled }),
+    allActions: buildActions(input, { ...PAGE_OPTIONS, isHandled }),
+  };
 }

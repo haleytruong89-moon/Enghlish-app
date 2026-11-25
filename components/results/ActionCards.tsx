@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { fallbackLabels, resultsCopy as c } from "@/lib/copy/vi";
-import type { ActionCard, ActionTone } from "@/lib/results/actions";
+import { isDecidable, type ActionCard, type ActionTone } from "@/lib/results/actions";
+import { CardDecision } from "./CardDecision";
 
 const TONE: Record<ActionTone, { box: string; badge: string }> = {
   red: { box: "border-[#b4402c] bg-[#fbe9e6]", badge: "bg-[#b4402c] text-white" },
@@ -31,10 +32,14 @@ export function cardText(card: ActionCard, tagLabels: Readonly<Record<string, st
  * "Việc nên làm": the cards that turn results into action, coloured by urgency, each with one button. The tutor acts; the parent sees
  * the same cards without buttons (she reminds the tutor). `cards === null` = the results could not be read (said, never hidden).
  */
-export function ActionCards({ learnerId, cards, tagLabels, role, title = c.actionsTitle, id = "viec-nen-lam", buttons = true }: {
+export function ActionCards({ learnerId, cards, tagLabels, role, title = c.actionsTitle, id = "viec-nen-lam", buttons = true, decisionsReady = true, handledThisWeek = 0 }: {
   learnerId: string; cards: ActionCard[] | null; tagLabels: Readonly<Record<string, string>>; role: "tutor" | "parent"; title?: string; id?: string;
-  /** false on the session page itself (its buttons would only lead back to it). */
+  /** false on the session page itself (its buttons would only lead back to it). The "Đã làm" / "Bỏ qua" marks stay. */
   buttons?: boolean;
+  /** false before migration 0043: no marks (said once to the tutor). */
+  decisionsReady?: boolean;
+  /** Cards marked in the last 7 days: one line linking to the list on the Results page. */
+  handledThisWeek?: number;
 }) {
   const parent = role === "parent";
   return (
@@ -44,6 +49,12 @@ export function ActionCards({ learnerId, cards, tagLabels, role, title = c.actio
         <Link href={`/learners/${learnerId}/progress`} className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline">{c.seeAll}</Link>
       </div>
       {parent ? <p className="text-sm text-muted">{c.parentNote}</p> : null}
+      {handledThisWeek > 0 ? (
+        <p className="text-sm" data-testid="handled-week">
+          {c.handled.weekLine(handledThisWeek)} · <Link href={`/learners/${learnerId}/progress#da-xu-ly`} className="font-semibold text-accent underline">{c.handled.see}</Link>
+        </p>
+      ) : null}
+      {!parent && !decisionsReady && (cards ?? []).some((x) => isDecidable(x.kind)) ? <p className="text-xs text-muted" data-testid="decisions-unavailable">{c.handled.unavailable}</p> : null}
       {cards === null ? <p className="rounded-xl border border-line bg-white px-4 py-3 text-sm text-muted">{c.actionsUnavailable}</p> : null}
       {cards !== null && cards.length === 0 ? <p className="rounded-xl border border-line bg-white px-4 py-3 text-sm text-muted" data-testid="action-cards-empty">{c.actionsEmpty}</p> : null}
       {(cards ?? []).map((card) => {
@@ -63,6 +74,7 @@ export function ActionCards({ learnerId, cards, tagLabels, role, title = c.actio
                 {t.button}
               </Link>
             )}
+            {!parent && decisionsReady && isDecidable(card.kind) ? <CardDecision learnerId={learnerId} cardKey={card.key} kind={card.kind} label={t.title} evidenceAt={card.evidenceAt} /> : null}
           </article>
         );
       })}
