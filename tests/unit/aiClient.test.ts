@@ -25,6 +25,10 @@ describe("Messages API request (server only)", () => {
     expect(ok).toEqual({ input: { items: [] }, usage: { inputTokens: 10, outputTokens: 5 }, model: "claude-sonnet-5-5" });
     await expect(postToolCall(call, { apiKey: "secret-key", fetchImpl: reply(200, { usage: {}, content: [{ type: "text", text: "hi" }] }) })).rejects.toMatchObject({ code: "no_tool" });
     await expect(postToolCall(call, { apiKey: "k", fetchImpl: reply(400, { error: { message: "tool_choice is not supported" } }) })).rejects.toMatchObject({ code: "tool_choice" });
+    await expect(postToolCall(call, { apiKey: "k", fetchImpl: reply(400, { error: { type: "invalid_request_error", message: "messages: bad block" } }) })).rejects.toMatchObject({ code: "http_400" });
+    // Spend limits (workspace / organisation) and an empty credit balance come back as a 400 too: a code of their own, so the screen says so.
+    await expect(postToolCall(call, { apiKey: "k", fetchImpl: reply(400, { error: { type: "invalid_request_error", message: "You have reached your specified workspace API usage limits. You will regain access on 2026-12-01 at 00:00 UTC." } }) })).rejects.toMatchObject({ code: "spend_limit" });
+    await expect(postToolCall(call, { apiKey: "k", fetchImpl: reply(400, { error: { type: "invalid_request_error", message: "Your credit balance is too low to access the Anthropic API." } }) })).rejects.toMatchObject({ code: "spend_limit" });
     await expect(postToolCall(call, { apiKey: "k", fetchImpl: reply(429, {}) })).rejects.toMatchObject({ code: "http_429" });
     await expect(postToolCall(call, { apiKey: "k", fetchImpl: reply(529, {}) })).rejects.toMatchObject({ code: "http_5xx" });
     const err = await postToolCall(call, { apiKey: "secret-key", fetchImpl: async () => { throw new Error("boom secret-key"); } }).then(() => null, (e: unknown) => e as AiCallError);
