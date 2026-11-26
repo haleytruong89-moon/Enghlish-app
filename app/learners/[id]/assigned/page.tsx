@@ -4,9 +4,8 @@ import { DraftGroups } from "@/components/assigned/DraftGroups";
 import { AssignmentTable } from "@/components/practice/AssignmentTable";
 import { StudioAssignedTable } from "@/components/studio/StudioAssignedTable";
 import { buildBoard, parseWorkTab, type WorkCounts } from "@/lib/assigned/board";
-import { groupDraftsByUnit, openDrafts } from "@/lib/assigned/draftGroups";
-import { loadCurriculumCards, loadUnitAuto } from "@/lib/curriculum/load";
-import { mainCurriculum } from "@/lib/curriculum/main";
+import { draftBoard, openDrafts } from "@/lib/assigned/draftGroups";
+import { loadDraftUnitStatus } from "@/lib/assigned/draftStatus";
 import { loadDraftList } from "@/lib/studio/load";
 import { likelyDuplicates } from "@/lib/assigned/duplicates";
 import { loadResults } from "@/lib/results/load";
@@ -44,12 +43,7 @@ export default async function AssignedBoardPage({ params, searchParams }: { para
   const tab = parseWorkTab(sp.tab, counts);
   const listTab = tab === "drafts" ? null : tab;
   // The Unit statuses of the main curriculum, only to order the drafts (fail soft: groups still show, without "Đã học").
-  const statusOf =
-    tab === "drafts"
-      ? await loadUnitAuto(learner.id)
-          .then(async (auto) => mainCurriculum(await loadCurriculumCards(learner.id, auto), auto.mainId)?.progress?.statusOf ?? null)
-          .catch(() => null)
-      : null;
+  const statusOf = tab === "drafts" ? await loadDraftUnitStatus(learner.id) : null;
   const tagLabels = Object.fromEntries(tags.map((t) => [t.key, t.label]));
   const studioRows = listTab ? board.studio[listTab] : [];
   const practiceRows = listTab ? board.practice[listTab] : [];
@@ -80,7 +74,7 @@ export default async function AssignedBoardPage({ params, searchParams }: { para
         drafts === null ? (
           <p role="status" data-testid="board-drafts-failed" className="rounded-xl border border-line bg-white px-4 py-3 text-sm text-muted">{c.draftsFailed}</p>
         ) : (
-          <DraftGroups groups={groupDraftsByUnit(open, statusOf)} />
+          <DraftGroups board={draftBoard(open, statusOf)} />
         )
       ) : null}
       {listTab && (board.studioFailed || studioRows.length > 0) ? (

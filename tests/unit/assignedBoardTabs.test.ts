@@ -28,23 +28,40 @@ describe("Bài tập: the tab row (hướng B)", () => {
   });
 });
 
-describe("Bài tập › Bản nháp: groups by Unit", () => {
-  const g = (over: Partial<DraftGroup>): DraftGroup => ({ key: "U15", unitKey: "U15", status: "in_progress", next: true, drafts: [], ...over });
-  const draft = (id: string, title: string, status: "approved" | "draft" = "approved") => ({ id, title, status, updatedAt: "2026-11-20T00:00:00Z", templateId: null, templateVersion: null, superseded: false, assigned: 0 });
-  it("the next Unit first, badged; each draft links to its page; other groups folded", () => {
-    const h = renderToStaticMarkup(createElement(DraftGroups, {
-      groups: [g({ drafts: [draft("d1", "Unit 15 · Part 2")] }), g({ key: "U16", unitKey: "U16", status: "not_started", next: false, drafts: [draft("d2", "Unit 16 · Idioms", "draft")] }), g({ key: "other", unitKey: null, status: null, next: false, drafts: [draft("d3", "Mixed")] })],
-    }));
+describe("Bản nháp (Giao bài + Bài tập, v2): Sẵn sàng giao first, then by Unit", () => {
+  const g = (over: Partial<DraftGroup>): DraftGroup => ({ key: "U15", unitKey: "U15", status: "in_progress", next: true, closed: false, drafts: [], ...over });
+  const draft = (id: string, title: string, status: "approved" | "draft" | "extracting" = "draft") => ({ id, title, status, updatedAt: "2026-11-20T00:00:00Z", templateId: null, templateVersion: null, superseded: false, assigned: 0 });
+  const board = {
+    ready: [{ draft: draft("r1", "Unit 15 · 1 · Adjective", "approved"), unitKey: "U15", status: "in_progress" as const, next: true }],
+    groups: [
+      g({ drafts: [draft("d1", "Unit 15 · Part 2")] }),
+      g({ key: "U16", unitKey: "U16", status: "not_started", next: false, drafts: [draft("d2", "Unit 16 · Idioms"), draft("d4", "Unit 16 · 2", "extracting")] }),
+      g({ key: "review", unitKey: null, status: null, next: false, drafts: [draft("d5", "Review 13")] }),
+      g({ key: "other", unitKey: null, status: null, next: false, drafts: [draft("d3", "Mixed")] }),
+    ],
+  };
+  it("ready section on top with a strong 'Giao →' that opens the giving form; then Kế tiếp open, the rest folded", () => {
+    const h = renderToStaticMarkup(createElement(DraftGroups, { board }));
+    expect(h.indexOf('data-testid="drafts-ready"')).toBeLessThan(h.indexOf('data-testid="draft-group-U15"'));
+    expect(h).toContain(c.readyTitle(1));
+    expect(h).toMatch(/data-testid="draft-give-r1"[^>]*class="[^"]*bg-accent[^"]*text-white[^"]*"[^>]*href="\/studio\/drafts\/r1#assign"/);
+    expect(h).toContain(c.giveAction);
+    expect(h).toContain('data-testid="ready-next"');
     expect(h.indexOf('data-testid="draft-group-U15"')).toBeLessThan(h.indexOf('data-testid="draft-group-U16"'));
     expect(h).toContain('data-testid="draft-next"');
-    expect(h).toContain(c.draftNext);
-    expect(h).toContain('href="/studio/drafts/d1"');
-    expect(h).toContain(c.draftGroup("U16"));
-    expect(h).toContain(c.draftGroup("other"));
+    expect(h).toMatch(/<details open=""[^>]*data-testid="draft-group-U15"/);
     expect(h).toMatch(/<details[^>]*data-testid="draft-group-U16"/);
-    expect(h).toMatch(/<details[^>]*open=""[^>]*data-testid="draft-group-U15"|data-testid="draft-group-U15"[^>]*open=""/);
+    expect(h).not.toMatch(/<details open=""[^>]*data-testid="draft-group-U16"/);
+    expect(h).toContain(c.draftGroup("review"));
+    expect(h).toContain(c.draftGroup("other"));
   });
-  it("empty: the empty line", () => {
-    expect(renderToStaticMarkup(createElement(DraftGroups, { groups: [] }))).toContain(c.empty.drafts);
+  it("each draft has a visible action: Duyệt for a draft, Mở while it is being read; 44 px", () => {
+    const h = renderToStaticMarkup(createElement(DraftGroups, { board }));
+    expect(h).toMatch(new RegExp(`aria-label="${c.actionLabel(c.reviewAction, "Unit 15 · Part 2")}"[^>]*data-testid="draft-action-d1"[^>]*min-h-11`));
+    expect(h.match(/href="\/studio\/drafts\/d1"/g)).toHaveLength(1); // one link per row
+    expect(h).toMatch(new RegExp(`aria-label="${c.actionLabel(c.openAction, "Unit 16 · 2")}"`));
+  });
+  it("nothing to show: the empty line", () => {
+    expect(renderToStaticMarkup(createElement(DraftGroups, { board: { ready: [], groups: [] } }))).toContain(c.empty.drafts);
   });
 });

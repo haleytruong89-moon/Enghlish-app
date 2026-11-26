@@ -32,7 +32,7 @@ export function WayCards({ learnerId, prefill }: { learnerId: string; prefill?: 
               className={`flex flex-col gap-2 rounded-2xl border bg-white p-5 ${rec ? "border-2 border-accent" : "border-line"}`}
             >
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-semibold">{c.title}</h2>
+                <h3 className="text-lg font-semibold">{c.title}</h3>
                 {rec ? <span className="rounded-full bg-accent px-2.5 py-0.5 text-xs font-semibold text-white">{assignWaysCopy.recommended}</span> : null}
               </div>
               {w === "topic" ? (

@@ -2323,6 +2323,33 @@ Phụ huynh duyệt hướng B ngày 26/11. Thiết kế: `docs/superpowers/spec
 - Không trang nào bị xóa; đường dẫn cũ vẫn mở và sáng đúng mục mới.
 - Chi tiết: `docs/superpowers/specs/2026-11-26-ia-huong-b-design.md`, `docs/DESIGN.md` §19.38.
 
+## Hướng B v2: nút nổi bật + Giao bài xếp theo Unit (26/11/2026 tối)
+
+Sau khi phụ huynh xem bản đã lên app, có 2 góp ý:
+- Bài gần nhất cần giao không nằm trên cùng.
+- Các nút quan trọng chưa nổi.
+
+Bản phác: canvas hướng B, artboard "Bản 2". **Không có SQL**, không AI.
+
+- **Cột trái:**
+  - **Chấm bài:** đỏ có số, có bóng.
+  - **Giao bài:** nền xanh đậm, chữ trắng.
+  - **Ghi buổi học:** viền xanh dày.
+  - Cả 3 nút cao 48 px và có biểu tượng. Mỗi mục đều có biểu tượng; mục đang mở có vạch bên trái, nền xanh nhạt, chữ đậm.
+- **Bản nháp** (trang Giao bài và tab Bài tập › Bản nháp dùng chung `lib/assigned/draftGroups.ts` `draftBoard`):
+  1. **Sẵn sàng giao** (đã duyệt, chưa giao) lên đầu, theo cùng thứ tự với các nhóm bên dưới (Unit đang học trước, Unit đã học sau); bài của Unit đang học có nhãn "Kế tiếp". Mỗi dòng có nút đậm **Giao →**, mở trang bài ở đúng ô chọn ngày (`#assign`).
+  2. Unit **Kế tiếp**, mở sẵn.
+  3. Các Unit còn lại (gập).
+  4. Review và Progress Test chung một nhóm, xếp theo thứ tự trong sách (theo Unit cuối mà bài ôn).
+  5. Unit đã học hoặc bỏ qua.
+  6. Bài không có Unit.
+  - Mỗi dòng có nút **Duyệt**, hoặc **Mở** khi AI đang đọc. Trong một Unit, bài xếp theo số thứ tự như sách.
+- **Trang Giao bài:** khi có bản nháp, khối bản nháp đứng trước 4 cách tạo bài mới. Có nút "+ Tạo bài mới (4 cách)" để nhảy xuống. Đến từ Giáo trình ("Giao bài này") thì 4 cách tạo bài vẫn ở trên.
+
+**Cách thử:**
+1. Mở **Giao bài**: "Sẵn sàng giao" ở trên cùng. Bấm **Giao →** thì trang bài mở ở ô chọn ngày.
+2. Unit đang học có nhãn "Kế tiếp" và mở sẵn.
+3. Nút **Giao bài** ở cột trái có nền xanh đậm.
 ## Nhãn Global Success 6 cho Track A (26/11/2026)
 
 Nhánh `feature/tags-global-success-6`. **Có SQL: `0045_seed_tags_global_success_6_tap_1.sql` (23 nhãn, Unit 1–6) và `0046_seed_tags_global_success_6_tap_2.sql` (21 nhãn, Unit 7–12)** (chỉ thêm; cần 0042). Không AI, không đổi màn hình.

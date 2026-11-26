@@ -45,7 +45,7 @@ export function AssignStudioForm({ draftId, today, learnerId, unitChoices = [], 
     router.refresh();
   }
   return (
-    <form onSubmit={submit} className="mt-4 flex flex-wrap items-end gap-3" data-testid="assign-form">
+    <form id="assign" onSubmit={submit} className="mt-4 flex scroll-mt-4 flex-wrap items-end gap-3" data-testid="assign-form">
       <h3 className="w-full font-semibold">{studioCopy.assignTitle}</h3>
       {duplicate ? (
         <p role="note" className="w-full rounded-lg bg-[#FBF1DC] px-3 py-2 text-sm text-[#6B4600]" data-testid="assign-duplicate">

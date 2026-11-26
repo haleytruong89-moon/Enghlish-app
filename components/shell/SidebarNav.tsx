@@ -3,11 +3,17 @@ import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { GradeButton } from "./GradeButton";
+import { NavIcon } from "./NavIcon";
 import { appFeedback, shellCopy } from "@/lib/copy/vi";
 import type { NavLink, NavModel } from "@/lib/shell/nav";
 import { activeFor, feedbackHref } from "@/lib/shell/paths";
 
 const item = "flex min-h-11 items-center justify-between gap-2 rounded-lg px-3 no-underline";
+/** Hướng B v2 (26/11): the daily actions stand out — Giao bài filled (main), Ghi buổi học thick outline (often); Chấm bài is red (GradeButton). */
+/** A section row: icon + label; the open one has a bar on its left, a tint and bold text. */
+const SECTION = "flex min-h-11 items-center gap-2.5 text-[15px] no-underline";
+const QUICK_MAIN = "flex min-h-12 shrink-0 items-center gap-2.5 rounded-xl bg-accent px-3.5 text-[15px] font-bold text-white no-underline shadow-[0_2px_0_#1f4439] hover:bg-[#1f4439]";
+const QUICK_OFTEN = "flex min-h-12 shrink-0 items-center gap-2.5 rounded-xl border-2 border-accent bg-white px-3 text-[15px] font-bold text-accent no-underline hover:bg-[#eef5f1]";
 
 /**
  * The left column (spec §5 rule 5): sticky on a computer, a drawer under one button on a phone. One <nav> only (no duplicate test ids).
@@ -35,8 +41,9 @@ export function SidebarNav({ nav, learnerId }: { nav: NavModel; learnerId: strin
             q.key === "grade" ? (
               <GradeButton key={q.key} learnerId={learnerId} href={q.href} label={q.label} onClick={close} />
             ) : (
-              <Link key={q.key} href={q.href} onClick={close} data-testid={`quick-${q.key}`}
-                className="flex min-h-11 shrink-0 items-center rounded-xl border border-line bg-white px-3 text-[15px] font-semibold text-accent no-underline hover:border-accent">
+              <Link key={q.key} href={q.href} onClick={close} data-testid={`quick-${q.key}`} data-tone={q.key === "assign" ? "main" : "often"}
+                className={q.key === "assign" ? QUICK_MAIN : QUICK_OFTEN}>
+                <NavIcon name={q.key} />
                 {q.label}
               </Link>
             ),
@@ -56,11 +63,13 @@ export function SidebarNav({ nav, learnerId }: { nav: NavModel; learnerId: strin
               <li key={s.key}>
                 {s.href ? (
                   <Link href={s.href} onClick={close} data-testid={`nav-${s.key}`} data-level="section" aria-current={current ? "page" : undefined}
-                    className={`${item} text-[15px] ${current ? "bg-[#e3ece8] font-semibold text-[#1d4136]" : "font-medium text-ink hover:bg-[#eceee8]"}`}>
+                    className={`${SECTION} ${current ? "rounded-r-lg border-l-4 border-accent bg-[#e3ece8] pl-2 pr-3 font-bold text-[#1d4136]" : "rounded-lg px-3 font-medium text-[#3f4641] hover:bg-[#eceee8]"}`}>
+                    <NavIcon name={s.key} className={current ? "" : "text-muted"} />
                     {s.label}
                   </Link>
                 ) : (
-                  <span data-testid={`nav-${s.key}`} aria-disabled="true" data-status={s.status} data-level="section" className={`${item} cursor-default text-[15px] font-medium text-muted`}>
+                  <span data-testid={`nav-${s.key}`} aria-disabled="true" data-status={s.status} data-level="section" className={`${SECTION} cursor-default rounded-lg px-3 font-medium text-muted`}>
+                    <NavIcon name={s.key} />
                     {s.label}
                     {s.status === "soon" ? <span className="rounded-full bg-[#eceee8] px-2 py-0.5 text-xs font-semibold">{shellCopy.soon}</span> : null}
                   </span>
