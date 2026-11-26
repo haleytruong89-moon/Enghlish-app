@@ -3,9 +3,11 @@ import { createUserClient } from "@/lib/supabase/server";
 import type { StudioAssignedRow } from "@/lib/studio/assigned";
 import { loadCurriculumCards, loadUnitAuto } from "@/lib/curriculum/load";
 import { mainCurriculum } from "@/lib/curriculum/main";
+import type { CurriculumCard } from "@/lib/curriculum/shape";
 import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
 import { buildActions, DESK_OPTIONS, isDecidable, PAGE_OPTIONS, RESULT_RULES, type ActionCard } from "./actions";
 import { handledList, handledPredicate, type CardDecision, type HandledItem } from "./decisions";
+import type { MainUnits } from "./overview";
 import { byTag, byUnit, scoreItems, scoreWork, unitKeyOf, type AutoChecks, type ItemMeta, type TagAgg, type UnitScore, type WorkScore } from "./score";
 
 /**
@@ -14,6 +16,8 @@ import { byTag, byUnit, scoreItems, scoreWork, unitKeyOf, type AutoChecks, type 
  * `decisionsReady` = false before migration 0043 (the buttons say so; nothing breaks).
  */
 export type ResultsData = {
+  /** The main curriculum's coverage (Tiến bộ › Tổng quan); null = none or unreadable. */
+  main: MainUnits | null;
   works: WorkScore[]; units: UnitScore[]; tags: TagAgg[]; actions: ActionCard[]; allActions: ActionCard[]; handled: HandledItem[]; decisionsReady: boolean;
 };
 
@@ -44,6 +48,11 @@ async function loadCardDecisions(learnerId: string): Promise<{ rows: CardDecisio
   }
 }
 
+/** Coverage of the main curriculum for the Tổng quan tile (null = no main curriculum with progress). */
+function mainUnitsOf(c: CurriculumCard | undefined): MainUnits | null {
+  return c?.progress ? { title: c.title, currentCode: c.progress.current?.code ?? null, currentTitle: c.progress.current?.title ?? null, done: c.progress.done, total: c.progress.total } : null;
+}
+
 type CheckRow = { attempt_id: string; checks: AutoChecks };
 type DecisionRow = { attempt_id: string; item_id: string; result: "correct" | "incorrect" };
 type MetaRow = { template_id: string; template_version: number; item_id: string; n: number; part: string; tag_key: string | null; reading_skill_key: string | null; out_of_app: boolean };
@@ -61,7 +70,10 @@ export async function loadResults(learnerId: string, todayIso: string, studioRow
   const unitInfo = loadUnitAuto(learnerId).then(async (auto) => ({ auto, cards: await loadCurriculumCards(learnerId, auto) })).catch(() => null);
   const rows = studioRows ?? (await loadStudioAssigned(learnerId, todayIso));
   const sent = rows.filter((r) => r.firstAttemptId && r.status !== "skipped");
-  if (sent.length === 0) return { works: [], units: [], tags: [], actions: [], allActions: [], handled: [], decisionsReady: true };
+  if (sent.length === 0) {
+    const info = await unitInfo;
+    return { main: mainUnitsOf(mainCurriculum(info?.cards ?? [], info?.auto.mainId ?? null)), works: [], units: [], tags: [], actions: [], allActions: [], handled: [], decisionsReady: true };
+  }
   const db = await createUserClient();
   const [chk, dec, meta, drafts, eps, atts, marks] = await Promise.all([
     db.from("attempt_auto_checks").select("attempt_id, checks").eq("learner_id", learnerId).returns<CheckRow[]>(),
@@ -143,6 +155,7 @@ export async function loadResults(learnerId: string, todayIso: string, studioRow
   // Every card (no limit), to tell which marked cards newer work has brought back.
   const handled = handledList(marks.rows, buildActions(input, { ...PAGE_OPTIONS, limit: Number.MAX_SAFE_INTEGER }), todayIso);
   return {
+    main: mainUnitsOf(main),
     works, units, tags, handled, decisionsReady: marks.ready,
     actions: buildActions(input, { ...DESK_OPTIONS, isHandled }),
     allActions: buildActions(input, { ...PAGE_OPTIONS, isHandled }),
