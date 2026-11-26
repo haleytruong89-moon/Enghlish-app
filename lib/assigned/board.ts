@@ -62,7 +62,10 @@ export const WORK_TABS = ["need", "doing", "done", "drafts"] as const;
 export type WorkTab = BoardTab | "drafts";
 const ALL_WORK_TABS: readonly string[] = [...BOARD_TABS, "drafts"];
 
-export function parseWorkTab(v: unknown, counts: Record<WorkTab, number>): WorkTab {
+/** Tab counts of Bài tập; drafts is null when the drafts list could not be read (the tab then shows no number, never a false 0). */
+export type WorkCounts = Record<BoardTab, number> & { drafts: number | null };
+
+export function parseWorkTab(v: unknown, counts: WorkCounts): WorkTab {
   if (typeof v === "string" && ALL_WORK_TABS.includes(v)) return v as WorkTab;
   return counts.need > 0 ? "need" : "doing";
 }

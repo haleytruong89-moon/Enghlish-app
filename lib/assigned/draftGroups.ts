@@ -25,7 +25,8 @@ export function groupDraftsByUnit(drafts: readonly DraftListItem[], statusOf: Re
   const keys = [...groups.keys()].sort((a, b) => (a === OTHER ? 1 : b === OTHER ? -1 : unitOrder(a) - unitOrder(b) || a.localeCompare(b)));
   const isUnit = (k: string) => /^U\d+$/.test(k);
   const closed = (k: string) => statusOf?.[k] === "done" || statusOf?.[k] === "skipped";
-  const next = keys.find((k) => isUnit(k) && !closed(k)) ?? null;
+  // Unknown statuses (no main curriculum, or it could not be read): no "Kế tiếp" claim — groups keep the Unit order only.
+  const next = statusOf === null ? null : (keys.find((k) => isUnit(k) && !closed(k)) ?? null);
   const ordered = next ? [next, ...keys.filter((k) => k !== next)] : keys;
   return ordered.map((k) => ({
     key: k,

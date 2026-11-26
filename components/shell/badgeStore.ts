@@ -1,7 +1,7 @@
 "use client";
 import { usePathname } from "next/navigation";
 import { useEffect, useSyncExternalStore } from "react";
-import { type BadgeMemo, shouldFetch } from "@/lib/shell/badgeMemo";
+import { type BadgeMemo, isDecisionPath, shouldFetch } from "@/lib/shell/badgeMemo";
 
 export type BadgeCounts = { count: string | null; work: string | null };
 type Memo = BadgeMemo & BadgeCounts;
@@ -44,6 +44,7 @@ export function useBadgeCounts(learnerId: string | null): BadgeCounts {
     lastPath = pathname;
     if (!shouldFetch(memos.get(learnerId) ?? null, learnerId, Date.now(), left)) return;
     const ctl = new AbortController();
+    let done = false;
     (async () => {
       try {
         const res = await fetch(`/api/learners/${learnerId}/pending-count`, { signal: ctl.signal, cache: "no-store" });
@@ -51,6 +52,7 @@ export function useBadgeCounts(learnerId: string | null): BadgeCounts {
         const body = (await res.json()) as { count?: unknown; work?: unknown };
         const s = (v: unknown) => (typeof v === "string" ? v : null);
         memos.set(learnerId, { learnerId, at: Date.now(), count: s(body.count), work: s(body.work) });
+        done = true;
         notify();
       } catch {
         if (!ctl.signal.aborted) {
@@ -59,7 +61,12 @@ export function useBadgeCounts(learnerId: string | null): BadgeCounts {
         }
       }
     })();
-    return () => ctl.abort();
+    return () => {
+      ctl.abort();
+      // Left a decision page and moved on before the new numbers came: keep the old ones on screen but read again next time.
+      const m = memos.get(learnerId);
+      if (!done && isDecisionPath(left) && m) memos.set(learnerId, { ...m, at: 0 });
+    };
   }, [learnerId, pathname]);
   return counts;
 }

@@ -45,9 +45,10 @@ const RULES: readonly Rule[] = [
   { re: lp("/imports/new"), section: "work", child: null, screen: S.importNew, ...same((to) => `${L(to)}/imports/new`) },
   { re: lp("/imports(/.*)?"), section: "work", child: null, screen: S.importNew, ...same((to) => `${L(to)}/imports/new`) },
   { re: /^\/imports\/[^/]+$/, section: "work", child: null, screen: S.importConfirm },
-  { re: /^\/review$/, section: "work", child: null, screen: S.review },
-  { re: /^\/review\/studio$/, section: "work", child: null, screen: S.reviewStudio },
-  { re: /^\/review\/skills$/, section: "desk", child: null, screen: S.reviewSkills, ...same((to) => `${L(to)}/inbox`) },
+  // The review pages list every child; ?learner only picks the sidebar: switching keeps the page.
+  { re: /^\/review$/, section: "work", child: null, screen: S.review, ...same((to) => `/review${learnerQuery(to)}`) },
+  { re: /^\/review\/studio$/, section: "work", child: null, screen: S.reviewStudio, ...same((to) => `/review/studio${learnerQuery(to)}`) },
+  { re: /^\/review\/skills$/, section: "desk", child: null, screen: S.reviewSkills, ...same((to) => `/review/skills${learnerQuery(to)}`) },
   { re: /^\/review\/[^/]+$/, section: "work", child: null, screen: S.reviewEpisode },
   { re: lp("/revisions"), section: "work", child: null, screen: S.revisions, ...same((to) => `${L(to)}/revisions`) },
   { re: lp("/revisions/[^/]+"), section: "work", child: null, screen: S.revisionOne, ...same((to) => `${L(to)}/revisions`) },

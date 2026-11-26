@@ -72,4 +72,22 @@ describe("GradeButton (hướng B): the number of submissions waiting", () => {
     expect((await screen.findByTestId("grade-badge")).textContent).toBe("3");
     expect(f).toHaveBeenCalledTimes(1);
   });
+  it("leaving a grading page and moving on before the answer: the next page reads again", async () => {
+    const f = reply("2");
+    vi.stubGlobal("fetch", f);
+    const { rerender } = render(btn("A"));
+    await screen.findByTestId("grade-badge");
+    pathname = "/learners/A/finish/x1";
+    rerender(btn("A"));
+    let release: (v: unknown) => void = () => {};
+    const slow = vi.fn(() => new Promise((r) => { release = r; }));
+    vi.stubGlobal("fetch", slow);
+    pathname = "/learners/A/weak"; // left the decision page: a read starts
+    rerender(btn("A"));
+    expect(slow).toHaveBeenCalledTimes(1);
+    pathname = "/learners/A/levels"; // moved on before it answered: it is aborted
+    rerender(btn("A"));
+    await waitFor(() => expect(slow).toHaveBeenCalledTimes(2));
+    release({ ok: true, json: async () => ({ count: "1", work: "1" }) });
+  });
 });

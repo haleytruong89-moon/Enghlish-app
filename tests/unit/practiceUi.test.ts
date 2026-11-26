@@ -167,7 +167,7 @@ describe("Bàn làm việc: practice", () => {
   it("Q3 (audit 25/11): with the counts of Bài đã giao, the line says what the tabs say (Studio tests included)", () => {
     const html = render(createElement(SessionsBox, { learnerId, today: today([]), todayIso: "2026-11-25", assigned: { need: 5, doing: 3, done: 0, removed: 1 }, studioOverdue: 3 }));
     expect(html).toContain(deskCopy.assignedCounts(5, 3, 3));
-    expect(deskCopy.assignedCounts(5, 3, 3)).toBe("Bài đã giao: 5 cần thầy/cô xử lý · 3 con đang làm · 3 quá hạn");
+    expect(deskCopy.assignedCounts(5, 3, 3)).toBe("Bài tập: 5 cần chấm · 3 con đang làm · 3 quá hạn");
   });
 });
 

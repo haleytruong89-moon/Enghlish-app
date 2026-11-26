@@ -2236,7 +2236,10 @@ Phụ huynh duyệt hướng B ngày 26/11. Thiết kế: `docs/superpowers/spec
   - Dưới đó là 5 mục **Hôm nay · Bài tập · Buổi học · Tiến bộ · Kế hoạch**, rồi **Hồ sơ học sinh**.
   - Mục Chờ duyệt riêng bị bỏ. Danh sách vẫn mở từ Hôm nay, ở nút "Mở tất cả".
   - Trên điện thoại, 3 nút việc chính hiện ngay, không cần mở menu.
-- **Số trên nút Chấm bài:** route chỉ đọc `pending-count` trả thêm `work`, là số dòng bài nộp (bài nộp, câu cần xem, con thử lại, chưa góp ý). Cùng một nguồn với Chờ duyệt nên hai số không lệch nhau. Hàm `submissionView` nằm ở `lib/desk/pending.ts`.
+- **Số trên nút Chấm bài:**
+  - Bằng đúng số của tab **Cần chấm** ở Bài tập: route chỉ đọc `pending-count` trả thêm `work`, tính bằng `lib/assigned/needCount.ts` với cùng `buildBoard` như tab.
+  - Hôm nay đưa sẵn số này cho cột trái, nên không phải đọc lại.
+  - Nút mở bài cũ nhất trên app. Hết bài trên app mà còn bài link / PDF thì nút chuyển sang Cần chấm.
 - **Bài tập** (`/learners/[id]/assigned`, giữ đường dẫn cũ):
   - 4 tab: **Cần chấm · Con đang làm · Đã xong · Bản nháp**. "Đã gỡ" là liên kết ở tab Đã xong.
   - Đầu trang có nút: + Giao bài mới · Ghi kết quả bài giấy / link · Nạp bài đã làm.
@@ -2249,7 +2252,13 @@ Phụ huynh duyệt hướng B ngày 26/11. Thiết kế: `docs/superpowers/spec
   - "Bàn làm việc" đổi tên thành **Hôm nay**.
   - Bỏ 3 nút ở đầu trang vì cột trái đã có.
   - "Ghi điểm nhanh (bài link)" chuyển sang Bài tập.
-- **Hàng chờ Chấm bài trống:** có liên kết sang Bài tập › Cần chấm, cho bài link / PDF.
+- **Rà PR1:**
+  - Tab Bản nháp không hiện số khi chưa đọc được danh sách.
+  - Không ghi "Kế tiếp" khi không biết trạng thái Unit.
+  - Đổi chữ cũ "Bàn làm việc" / "Bài đã giao" ở các nơi người lớn thấy.
+  - Trang Giáo trình vẫn hiện tab khi đọc lỗi.
+  - Đổi em ở Hộp duyệt vẫn giữ trang.
+  - Mục con ở cột trái cao 44 px.
 - **Đường dẫn cũ:** vẫn mở và sáng đúng mục mới (bảng trong spec). Chưa có tự chuyển nào ở PR này.
 - **Tạm ở PR1:** Tiến bộ có 2 mục con (Kết quả, Bản đồ kiến thức). Hồ sơ học sinh giữ 5 mục con cũ. PR2 thay bằng tab.
 

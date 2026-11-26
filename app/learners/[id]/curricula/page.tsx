@@ -2,7 +2,7 @@ import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { AddCurriculumForm } from "@/components/curriculum/AddCurriculumForm";
 import { CurriculumCard } from "@/components/curriculum/CurriculumCard";
-import { curriculumCopy, learnerWithTrack, shellCopy } from "@/lib/copy/vi";
+import { curriculumCopy, deskCopy, learnerWithTrack, shellCopy } from "@/lib/copy/vi";
 import { SectionTabs } from "@/components/shell/SectionTabs";
 import { planTabs } from "@/lib/shell/tabs";
 import { loadCurriculumCards } from "@/lib/curriculum/load";
@@ -15,7 +15,8 @@ export const dynamic = "force-dynamic";
 export default async function CurriculaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { learner } = await requireLearnerPage(id, "curriculum:read");
-  const [cards, gate] = await Promise.all([loadCurriculumCards(learner.id), loadStudioGate(learner.id)]);
+  // A failed read still shows the page with its tabs (Lộ trình stays one click away), never a bare error page.
+  const [cards, gate] = await Promise.all([loadCurriculumCards(learner.id).catch(() => null), loadStudioGate(learner.id)]);
   return (
     <>
       <div className="mx-auto max-w-[1240px]" data-testid="curricula-page">
@@ -27,8 +28,9 @@ export default async function CurriculaPage({ params }: { params: Promise<{ id: 
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
         <p className="mt-3 max-w-3xl text-[15px]">{curriculumCopy.intro}</p>
         <div className="mt-6 grid gap-4 xl:grid-cols-2">
-          {cards.length === 0 ? <p className="text-muted">{curriculumCopy.empty}</p> : null}
-          {cards.map((c) => (
+          {cards === null ? <p role="status" data-testid="curricula-failed" className="text-muted">{deskCopy.curriculaUnavailable}</p> : null}
+          {cards !== null && cards.length === 0 ? <p className="text-muted">{curriculumCopy.empty}</p> : null}
+          {(cards ?? []).map((c) => (
             <CurriculumCard key={c.id} card={c} learnerId={learner.id} aiAllowed={gate.allowed} aiReason={gate.reason} />
           ))}
         </div>
