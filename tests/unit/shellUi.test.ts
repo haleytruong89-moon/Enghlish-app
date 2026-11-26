@@ -60,10 +60,11 @@ describe("staff shell", () => {
     expect(html.match(/data-testid="nav-desk"/g)).toHaveLength(1);
     expect(html).toMatch(/data-testid="nav-menu-toggle"[^>]*aria-expanded="false"|aria-expanded="false"[^>]*data-testid="nav-menu-toggle"/);
   });
-  it("hierarchy: sections 500 (open: 600), children indented with a rule, lighter, accent when open", () => {
+  it("hierarchy: sections 500 with an icon; the open one bold with a bar on its left; children indented, lighter, accent when open", () => {
     const html = render(shell(), `/learners/${an.id}/tutor-asks`);
     expect(html).toMatch(/<a[^>]*data-level="section"[^>]*font-medium[^>]*>(?:(?!<\/a>)[\s\S])*Tiến bộ/);
-    expect(html).toMatch(/<a[^>]*data-testid="nav-profile"[^>]*font-semibold/);
+    expect(html).toMatch(/<a[^>]*data-testid="nav-profile"[^>]*border-l-4[^>]*font-bold/);
+    expect(html).toMatch(/<a[^>]*data-testid="nav-work"[^>]*>\s*<svg aria-hidden="true"/);
     expect(html).toMatch(/<ul data-level="children"[^>]*border-l[^>]*ml-3|<ul data-level="children"[^>]*ml-3[^>]*border-l/);
     expect(html).toMatch(/data-testid="nav-profile-tutorAsks"[^>]*data-level="child"[^>]*text-\[13px\][^>]*text-accent[^>]*font-semibold|data-testid="nav-profile-tutorAsks"[^>]*data-level="child"[^>]*font-semibold[^>]*text-accent/);
     expect(html).toMatch(/data-testid="nav-profile-profile"[^>]*text-muted/);
@@ -109,5 +110,12 @@ describe("staff shell", () => {
   it("no child yet: no quick buttons", () => {
     const html = render(shell({ role: "tutor", learners: [], current: null }), "/");
     expect(html).not.toContain('data-testid="nav-quick"');
+  });
+  it("v2 (26/11): Giao bài is the filled main action, Ghi buổi học a thick outline; both at least 48 px with an icon", () => {
+    counts = { count: "0", work: "0" };
+    const html = render(shell({ role: "tutor", learners: [ng], current: ng }), "/");
+    expect(html).toMatch(/data-testid="quick-assign"[^>]*data-tone="main"[^>]*class="[^"]*bg-accent[^"]*text-white/);
+    expect(html).toMatch(/data-testid="quick-note"[^>]*data-tone="often"[^>]*class="[^"]*border-2 border-accent/);
+    for (const k of ["grade", "assign", "note"]) expect(html).toMatch(new RegExp(`data-testid="quick-${k}"[^>]*min-h-12[^>]*>\\s*<svg aria-hidden="true"`));
   });
 });

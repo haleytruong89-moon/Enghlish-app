@@ -5,7 +5,9 @@ import { WayCards } from "@/components/assign/WayCards";
 import { WaysStrip } from "@/components/assign/WaysStrip";
 import { parseWay, wayHref } from "@/lib/assign/ways";
 import { AssignForm } from "@/components/practice/AssignForm";
-import { DraftList } from "@/components/studio/DraftList";
+import { DraftGroups } from "@/components/assigned/DraftGroups";
+import { draftBoard } from "@/lib/assigned/draftGroups";
+import { loadDraftUnitStatus } from "@/lib/assigned/draftStatus";
 import { readPrefill } from "@/lib/prefill";
 import { assignPage, assignWaysCopy, learnerWithTrack } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
@@ -33,7 +35,7 @@ export default async function AssignPracticePage({ params, searchParams }: { par
   // The other two ways live on their own pages (the forms are not copied); this page only points there.
   if (way === "studio" || way === "topic") redirect(wayHref(learner.id, way, prefill));
   const kind = way === "link" || way === "pdf" ? way : null;
-  const [tags, frames, map, unitChoices, drafts, studio, assignments] = await Promise.all([
+  const [tags, frames, map, unitChoices, drafts, studio, assignments, unitStatus] = await Promise.all([
     loadTags(learner.trackId),
     loadFrames(learner.trackId, learner.id),
     loadPickerMap(learner.id),
@@ -42,6 +44,7 @@ export default async function AssignPracticePage({ params, searchParams }: { par
     // Only for the "same title" warning of the link / PDF form: a failed read = no warning.
     kind ? loadStudioAssigned(learner.id, todayVn()).catch(() => null) : Promise.resolve(null),
     kind ? loadAssignments(learner.id).catch(() => []) : Promise.resolve([]),
+    kind ? Promise.resolve(null) : loadDraftUnitStatus(learner.id),
   ]);
   const head = (
     <>
@@ -58,15 +61,21 @@ export default async function AssignPracticePage({ params, searchParams }: { par
       </p>
     </>
   );
-  // Drafts being prepared: not given yet (the child does not see them), not discarded, not replaced by a newer version.
-  const open = drafts.filter((d) => d.status !== "discarded" && !d.superseded && d.assigned === 0);
-  const draftsBlock =
-    open.length > 0 ? (
-      <div data-testid="assign-drafts">
-        <DraftList drafts={open} title={assignWaysCopy.draftsTitle(open.length)} />
-        <p className="mt-2 text-sm text-muted" data-testid="assign-drafts-help">{assignWaysCopy.draftsHelp}</p>
-      </div>
-    ) : null;
+  // Hướng B v2: drafts not given yet come FIRST (approved ones on top, one click from giving), then the ways to make a new piece.
+  const board = draftBoard(drafts, unitStatus);
+  const hasDrafts = board.ready.length > 0 || board.groups.length > 0;
+  const draftsBlock = hasDrafts ? (
+    <div data-testid="assign-drafts">
+      <DraftGroups board={board} />
+      <p className="mt-2 text-sm text-muted" data-testid="assign-drafts-help">{assignWaysCopy.draftsHelp}</p>
+    </div>
+  ) : null;
+  const ways = (
+    <section id="ways" aria-labelledby="ways-title" className="scroll-mt-4">
+      {hasDrafts ? <h2 id="ways-title" className="mb-2 text-lg font-semibold">{assignWaysCopy.newTitle}</h2> : <h2 id="ways-title" className="sr-only">{assignWaysCopy.newTitle}</h2>}
+      <WayCards learnerId={learner.id} prefill={prefill} />
+    </section>
+  );
   return (
     <div className="mx-auto max-w-4xl" data-testid="assign-page">
       {head}
@@ -80,10 +89,16 @@ export default async function AssignPracticePage({ params, searchParams }: { par
         </>
       ) : (
         <>
-          <p className="mt-3 text-muted">{assignWaysCopy.intro}</p>
-          <div className="mt-6 flex flex-col gap-6">
-            <WayCards learnerId={learner.id} prefill={prefill} />
+          <p className="mt-3 flex flex-wrap items-center justify-between gap-2 text-muted">
+            <span>{hasDrafts ? assignWaysCopy.introDrafts : assignWaysCopy.intro}</span>
+            {hasDrafts ? (
+              <a href="#ways" data-testid="assign-new-link" className="inline-flex min-h-11 items-center rounded-xl border border-line bg-white px-4 text-sm font-semibold text-accent no-underline hover:border-accent">{assignWaysCopy.newLink}</a>
+            ) : null}
+          </p>
+          <div className="mt-6 flex flex-col gap-8">
+            {prefill ? ways : null}
             {draftsBlock}
+            {prefill ? null : ways}
             <p className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
               <Link href={`/studio/new?learner=${learner.id}#drafts`} data-testid="see-studio" className="inline-flex min-h-11 items-center text-accent underline">
                 {assignWaysCopy.seeStudio}
