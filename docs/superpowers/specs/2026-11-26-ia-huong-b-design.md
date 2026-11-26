@@ -73,7 +73,7 @@ Không trang nào bị xóa. Mọi đường dẫn cũ vẫn mở trang của n�
 
 Có 3 chỗ tự chuyển:
 
-- `/inbox?f=work` chuyển sang `/assigned?tab=need`.
+- `/inbox?f=drafts` chuyển sang `/assigned?tab=drafts`. (`/inbox?f=work` vẫn mở danh sách cũ, vì nhóm này còn có bài chờ chấm kỹ năng ở Hộp duyệt, mà Cần chấm không có.)
 - `/progress?tab=work` mở Tổng quan.
 - Nút cảnh báo "Hồ sơ đầu vào" trỏ `/profile#intake` (thay cho `/levels#intake`).
 
@@ -83,7 +83,7 @@ Có 3 chỗ tự chuyển:
 |---|---|
 | 1 | Cột trái mới (3 nút, 5 mục, Hồ sơ), bảng mục theo đường dẫn, số bài chờ trên nút Chấm bài, trang Bài tập 4 tab và Bản nháp theo Unit, tab Kế hoạch, đổi tên Hôm nay. |
 | 2 | Trang Tiến bộ: tab, Tổng quan và biểu đồ. Việc nên làm chuyển hết về Hôm nay. |
-| 3 | Trang Hồ sơ học sinh, Việc khác ở Hôm nay, tự chuyển `/inbox?f=work`, tài liệu. |
+| 3 | Việc nên làm và Việc khác về Hôm nay, tự chuyển `/inbox?f=drafts`, tài liệu. (Trang Hồ sơ học sinh đã làm ở PR 2.) |
 
 ## Những chỗ tôi tự quyết (phụ huynh xem lại khi đọc)
 

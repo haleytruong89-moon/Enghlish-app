@@ -69,16 +69,16 @@ describe("Hôm nay (was Bàn làm việc)", () => {
   });
   it("Chờ duyệt box never says 'nothing waiting' when a source failed or the list may be incomplete", () => {
     const failed = render("tutor", data({ pending: { rows: [], failed: ["studio"], more: false } }));
-    expect(failed).not.toContain(pendingCopy.empty);
+    expect(failed).not.toContain(pendingCopy.deskEmpty);
     expect(failed).toContain(pendingCopy.deskPartial);
     expect(failed).not.toContain(pendingCopy.deskTitle(0));
     const more = render("tutor", data({ pending: { rows: [], failed: [], more: true } }));
-    expect(more).not.toContain(pendingCopy.empty);
+    expect(more).not.toContain(pendingCopy.deskEmpty);
     expect(more).toContain(pendingCopy.deskTitle("≥ 0"));
     expect(more).toContain(pendingCopy.more);
     expect(more).toContain(`href="/review?learner=${L}"`);
     const ok = render("tutor", data({ pending: { rows: [], failed: [], more: false } }));
-    expect(ok).toContain(pendingCopy.empty);
+    expect(ok).toContain(pendingCopy.deskEmpty);
   });
   it("Buổi học box: last session without a raw tag key, last result, practice counts only (spec §5 rule 6), no schedule yet", () => {
     const h = render("tutor", data({ today: today({ practice: [asg({ id: "c1", dueOn: "2026-10-10" }), asg({ id: "c2", dueOn: "2026-10-30" })] }) }));
@@ -151,5 +151,16 @@ describe("Bàn làm việc · Việc nên làm (26/11)", () => {
     expect(render("tutor", data({ actions: [card], moreActions: [] }))).not.toContain('data-testid="desk-more-actions"');
     const handled = [{ cardKey: "tag-x", kind: "practise" as const, label: "Cho con luyện thêm: X", decision: "done" as const, reason: null, byRole: "tutor" as const, at: "2026-11-25T03:00:00Z", evidenceAt: "2026-11-24T03:00:00Z", afterDays: 1, reopened: false }];
     expect(render("parent", data({ actions: [card], handled, decisionsReady: true }))).toContain('data-testid="handled-list"');
+  });
+  it("hướng B: Việc khác lists what is not grading; one line sends the submissions to Bài tập › Cần chấm", () => {
+    const row = (key: string, kind: "studio_check" | "skill", group: "check" | "skills") => ({ key, kind, group, label: "X", title: `T-${key}`, since: null, need: "N", href: `/x/${key}`, waitingTutor: false });
+    const h = render("tutor", data({ pending: { rows: [row("s1", "studio_check", "check"), row("k1", "skill", "skills")], failed: [], more: false }, assigned: { need: 2, doing: 0, done: 0, removed: 0 } }));
+    expect(h).toContain(pendingCopy.deskTitle("1"));
+    expect(h).toContain('data-testid="desk-inbox-row-k1"');
+    expect(h).not.toContain('data-testid="desk-inbox-row-s1"');
+    expect(h).toContain('data-testid="desk-inbox-submissions"');
+    expect(h).toContain(pendingCopy.deskSubmissions(2));
+    expect(h).toContain(`href="/learners/${L}/assigned?tab=need"`);
+    expect(render("tutor", data({ assigned: { need: 0, doing: 0, done: 0, removed: 0 } }))).not.toContain('data-testid="desk-inbox-submissions"');
   });
 });

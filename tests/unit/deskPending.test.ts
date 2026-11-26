@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { pendingCopy, reviewPage, revisionReviewCopy } from "@/lib/copy/vi";
 import type { CurriculumCard } from "@/lib/curriculum/shape";
-import { buildPendingRows, countGroups, filterRows, parseGroup, pendingView, type PendingInput } from "@/lib/desk/pending";
+import { buildPendingRows, countGroups, filterRows, parseGroup, pendingView, otherRows, otherView, type PendingInput } from "@/lib/desk/pending";
 import type { InboxItem } from "@/lib/review/types";
 import type { SkillInboxItem } from "@/lib/skills/types";
 import type { DraftListItem, PendingAttempt } from "@/lib/studio/types";
@@ -190,3 +190,17 @@ describe("Q2 (audit 25/11): one row per submission", () => {
   });
 });
 
+
+describe("otherRows / otherView: Việc khác on Hôm nay (hướng B)", () => {
+  it("counted rows that are not app submissions to grade (those are on Bài tập › Cần chấm)", () => {
+    const rows = [
+      { group: "check", kind: "studio_check" }, { group: "check", kind: "retry" }, { group: "work", kind: "feedback" },
+      { group: "work", kind: "work" }, { group: "skills", kind: "skill" }, { group: "ai", kind: "curriculum_draft" }, { group: "drafts", kind: "studio_draft" },
+    ] as const;
+    expect(otherRows(rows).map((r) => r.kind)).toEqual(["work", "skill", "curriculum_draft"]);
+    expect(otherView({ rows, failed: [], more: false })).toBe("3");
+    expect(otherView({ rows, failed: [], more: true })).toBe("≥ 3");
+    expect(otherView({ rows, failed: ["skills"], more: false })).toBeNull();
+    expect(otherView({ rows, failed: ["drafts"], more: false })).toBe("3");
+  });
+});

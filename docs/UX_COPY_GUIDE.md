@@ -412,3 +412,16 @@ Khác với kế hoạch: câu giới thiệu "Mỗi điều là một việc {t
 - Tên mục: **Hôm nay · Bài tập · Buổi học · Tiến bộ · Kế hoạch · Hồ sơ học sinh**. Ba nút việc chính: **Chấm bài · Giao bài · Ghi buổi học**.
 - Tab Bài tập: **Cần chấm · Con đang làm · Đã xong · Bản nháp**. "Đã gỡ" chỉ là liên kết "Xem bài đã gỡ (n)". Nhóm bản nháp viết "Unit 15" (không viết "U15"), và nhóm đứng đầu có nhãn **Kế tiếp**.
 - Nhãn đọc màn hình của số trên nút Chấm bài: "n bài con đã nộp đang chờ chấm". Chưa đọc được số thì không hiện số, không bao giờ hiện 0.
+
+## Hướng B · PR2–PR3 (26/11/2026) — Tiến bộ, Hồ sơ học sinh, Hôm nay
+
+- **Tab Tiến bộ:** Tổng quan · Theo Unit · Mục kiến thức · Cấp và kỹ năng.
+- **4 ô số:** "Bài nộp · 4 tuần", "Đúng lần đầu · 4 tuần", "Chờ chấm", "Đang học".
+  - Chênh lệch viết "tăng / giảm n điểm % so với 4 tuần trước".
+  - Số chưa có viết "—".
+- **Hôm nay:**
+  - Ô "Việc khác · n": việc chờ không phải chấm bài.
+  - Dòng "n bài con nộp chờ chấm → Bài tập › Cần chấm".
+  - "Xem thêm n việc nên làm".
+- **Trang danh sách đầy đủ:** "Việc chờ · tên em".
+- **Hồ sơ học sinh:** mục con "Đầu vào và ghi chú dạy học".

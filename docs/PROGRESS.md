@@ -2293,3 +2293,31 @@ Phụ huynh duyệt hướng B ngày 26/11. Thiết kế: `docs/superpowers/spec
 2. Bấm một bài: thấy từng phần.
 3. Tab Cấp và kỹ năng mở Hồ sơ cấp.
 4. Bấm Hồ sơ học sinh: thấy Hồ sơ đầu vào và Ghi chú dạy học.
+
+## Hướng B · PR3: Hôm nay gom Việc nên làm + Việc khác (26/11/2026)
+
+**Không có SQL**, không AI.
+
+- **Việc nên làm chỉ ở Hôm nay:**
+  - Hôm nay hiện tối đa 6 thẻ như trước. Các thẻ còn lại nằm trong "Xem thêm n việc nên làm" (gập lại).
+  - Danh sách "Đã xử lý" (30 ngày) chuyển từ Kết quả về Hôm nay; liên kết "Đã xử lý n việc trong 7 ngày" trỏ về đây.
+  - Trang Tiến bộ không còn thẻ, chỉ còn một dòng "n việc nên làm · xem ở Hôm nay".
+- **Ô "Chờ duyệt" trên Hôm nay đổi thành "Việc khác":**
+  - Chỉ còn việc không phải chấm bài trên app: bài chờ chấm kỹ năng ở Hộp duyệt, kỹ năng, mức mục kiến thức, nháp AI, mốc lộ trình, mục tiêu tuần, bài nạp.
+  - Câu cần xem, con thử lại và chưa góp ý nằm ở **Bài tập › Cần chấm** (nút Chấm bài).
+  - Có một dòng "n bài con nộp chờ chấm → Bài tập › Cần chấm"; n là số của tab đó.
+- **Trang danh sách đầy đủ** (`/learners/[id]/inbox`, mở bằng "Mở tất cả"):
+  - Tên mới là "Việc chờ". Vẫn đủ mọi nhóm, kể cả bài nộp.
+  - Đường dẫn cũ `?f=drafts` tự chuyển sang Bài tập › Bản nháp.
+- **Luật đếm:** `otherRows` / `otherView` (`lib/desk/pending.ts`) bỏ đi các loại `studio_check`, `retry`, `feedback` (`GRADING_KINDS`). Luật "đủ / thiếu" giống `pendingView`.
+
+**Cách thử trên preview:**
+1. Hôm nay: thẻ Việc nên làm, rồi "Xem thêm".
+2. Ô "Việc khác · n" có dòng trỏ sang Cần chấm.
+3. Tiến bộ chỉ có một dòng trỏ về Hôm nay.
+4. Mở `/learners/<id>/inbox?f=drafts`: tự chuyển sang Bản nháp.
+
+**Tổng 3 PR hướng B:**
+- Không có SQL.
+- Không trang nào bị xóa; đường dẫn cũ vẫn mở và sáng đúng mục mới.
+- Chi tiết: `docs/superpowers/specs/2026-11-26-ia-huong-b-design.md`, `docs/DESIGN.md` §19.38.

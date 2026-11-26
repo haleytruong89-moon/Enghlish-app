@@ -52,7 +52,7 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
           <ActionCards learnerId={id} cards={data.moreActions} tagLabels={data.today?.tagLabels ?? {}} role={shell.role} decisionsReady={data.decisionsReady ?? false} title={deskCopy.moreActionsTitle} id="viec-nen-lam-them" />
         </details>
       ) : null}
-      <DeskInbox learnerId={id} pending={data.pending} />
+      <DeskInbox learnerId={id} pending={data.pending} need={data.assigned ? data.assigned.need : null} />
       <DeskAlerts learnerId={id} items={alerts} />
       {data.goal ? (
         <GoalBox

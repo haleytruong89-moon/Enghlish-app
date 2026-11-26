@@ -90,6 +90,18 @@ export function pendingView(p: { rows: readonly Pick<PendingRow, "group">[]; fai
   };
 }
 
+/** Hướng B: rows "Chấm bài" and Bài tập › Cần chấm already hold (app submissions: questions to check, retries, feedback). */
+export const GRADING_KINDS: readonly PendingKind[] = ["studio_check", "retry", "feedback"];
+/** "Việc khác" on Hôm nay: what waits that is not grading an app submission. */
+export const otherRows = <R extends Pick<PendingRow, "group" | "kind">>(rows: readonly R[]): R[] => countedRows(rows).filter((r) => !GRADING_KINDS.includes(r.kind));
+/** Same completeness rules as `pendingView`, counting `otherRows`. */
+export function otherView(p: { rows: readonly Pick<PendingRow, "group" | "kind">[]; failed: readonly unknown[]; more: boolean }): string | null {
+  const failed = p.failed.some((f) => !(UNCOUNTED_SOURCES as readonly unknown[]).includes(f));
+  if (failed) return null;
+  const n = otherRows(p.rows).length;
+  return p.more ? `≥ ${n}` : String(n);
+}
+
 const GROUP_OF: Record<PendingKind, Exclude<PendingGroup, "all">> = { work: "work", studio_check: "check", retry: "check", feedback: "work", studio_draft: "drafts", curriculum_draft: "ai", skill: "skills", point: "skills", flag: "skills", import: "check", milestone: "roadmap", goal: "goals" };
 const WAITING = ["draft", "ai_failed"] as const;
 const isWaiting = (s: string) => (WAITING as readonly string[]).includes(s);

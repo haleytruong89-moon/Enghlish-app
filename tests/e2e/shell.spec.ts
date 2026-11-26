@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { deskCopy } from "@/lib/copy/vi";
+import { deskCopy, pendingCopy } from "@/lib/copy/vi";
 import { buildNav, type NavRole } from "@/lib/shell/nav";
 import { LEARNER_IDS, loginAs, type AccountKey } from "./helpers";
 
@@ -24,6 +24,7 @@ test.describe("workdesk shell", () => {
     await expect(page.getByTestId("quick-grade")).toBeVisible();
     await expect(page.getByTestId("learner-switcher")).toHaveCount(0);
     await expect(page.getByTestId("shell-learner")).toContainText("Nguyên (thử)");
+    await expect(page.locator("#desk-inbox-title")).toContainText(pendingCopy.deskTitleUnknown);
     const box = await page.getByTestId("desk-inbox").boundingBox();
     expect(box && box.y + 40).toBeLessThan(768);
     await expect(page.getByTestId("feedback-link")).toBeInViewport();
@@ -62,6 +63,7 @@ test.describe("workdesk shell", () => {
     await loginAs(page, "tutorNguyen");
     await page.getByTestId("nav-progress").click();
     await expect(page).toHaveURL(new RegExp(`/learners/${NG}/progress$`));
+    await expect(page.getByTestId("action-cards")).toHaveCount(0); // Việc nên làm lives only on Hôm nay
     const view = page.getByTestId("results-view");
     if ((await page.getByTestId("results-unavailable").count()) === 0) {
       await expect(view).toHaveAttribute("data-tab", "overview");
