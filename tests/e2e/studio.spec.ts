@@ -158,6 +158,12 @@ test("Nguyên retries one question once; he is told it went to the tutor, no sco
   const lc = (s: string) => new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
   await expect(row).toContainText(lc(pendingCopy.need.retry(1)));
   await expect(row).toContainText(lc(pendingCopy.need.reveal(1)));
+  // L1: the row opens "Xong một bài": the retry beside the first answer, and the feedback form, on one screen.
+  await expect(row.locator(`a[href="/learners/${NGUYEN}/finish/${attemptId}"]`)).toHaveCount(1);
+  await tutor.goto(`/learners/${NGUYEN}/finish/${attemptId}`);
+  await expect(tutor.getByTestId("finish-page")).toBeVisible();
+  await expect(tutor.getByTestId("finish-retry-q2")).toContainText("A. must");
+  await expect(tutor.getByTestId("finish-feedback")).toBeVisible();
   await tutor.goto(`/review/studio?learner=${NGUYEN}#retry-${attemptId}`);
   const card = tutor.getByTestId(`retry-card-${attemptId}`);
   // the card has two items (q2 retried, q6 gave up): every locator is scoped to its own item
