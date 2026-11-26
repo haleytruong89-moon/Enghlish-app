@@ -2376,3 +2376,12 @@ Nhánh `feature/tags-global-success-6`. **Có SQL: `0045_seed_tags_global_succes
 Sau rà soát: chữ dải đổi thành "cần chấm hoặc góp ý" (hàng chờ gồm cả bài chỉ thiếu góp ý); đọc lỗi danh sách thì hiện "Chưa đọc được…", không bao giờ báo "không còn bài"; "‹ Bài trước" vào cùng dải; mở từ thẻ gợi ý một bài đã xong thì nút là "Mở bài chờ lâu nhất ›"; phụ huynh cũng thấy liên kết mở bài (chỉ xem, không có nút hành động). **Biết trước:** dải đếm theo **lần nộp** (như "Bài 1 / n" có sẵn), nên một bài nộp lại mà cả hai lần còn việc sẽ có 2 chip cùng tên, và số có thể khác thẻ "Chấm bài" ở Hôm nay (đếm theo bài).
 
 Cách thử trên preview: mở bài nộp chờ chấm → thấy dải đỏ + chip; Tiến bộ › Từng bài → cột thẳng; Buổi học → hai nút trên cùng, bấm "Ghi buổi nghỉ" → khung mở; Hôm nay / Buổi học có thẻ "Cần chữa cùng con" → "Mở phần … để chữa →".
+
+## Xóa giáo trình nạp hỏng (27/11/2026)
+
+**Không có SQL**, không AI. Phụ huynh báo không xóa được 2 lần nạp "Global English" lỗi (AI `http_400`). Phụ huynh duyệt "ok đề xuất"; đề xuất ban đầu cần SQL 0047 (bảng "đã ẩn"), khi làm thấy **không cần SQL**:
+- Giáo trình mà **mọi phiên bản đều đã bỏ** không còn hiện ở danh sách nào (`isRemovedCurriculum`, `lib/curriculum/shape.ts`). Giáo trình như vậy chưa từng có Unit, nên không có Unit đã dạy / Unit của bài / trạng thái nào trỏ tới.
+- Thẻ **chưa từng có mục lục đã duyệt** có nút **"Xóa giáo trình này"** (hỏi lại một lần) = "Bỏ nháp" sẵn có (thầy/cô hoặc phụ huynh). Thẻ có bản đang dùng không có nút này.
+- Không xóa dòng nào trong database; phiên bản ghi `discarded` + người bỏ.
+
+Dữ liệu thật 27/11: An có "Global English 6" (chỉ còn bản đã bỏ, tự biến mất khi gộp) và "Global english" (AI lỗi, bấm "Xóa giáo trình này").

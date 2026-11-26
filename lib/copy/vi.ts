@@ -2653,6 +2653,10 @@ export const curriculumCopy = {
     discarded: "Đã bỏ",
   } as const,
   continueReview: "Tiếp tục duyệt mục lục",
+  /** 27/11: only on a card that never had an approved table of contents (nothing of the child points to it). */
+  remove: "Xóa giáo trình này",
+  removeConfirm: (title: string) => `Xóa giáo trình “${title}”? Giáo trình này chưa có mục lục đã duyệt nên không có dữ liệu nào của em bị mất.`,
+  removing: "Đang xóa…",
   viewMap: "Xem bảng nối",
   unitsLink: "Cập nhật trạng thái Unit",
   editMap: "Sửa mục lục / bảng nối",

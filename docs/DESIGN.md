@@ -732,3 +732,8 @@ Thiết kế: `docs/superpowers/specs/2026-11-26-ia-huong-b-design.md`.
   - **Mục kiến thức:** chỉ xét mục có ≥ `minItems` câu đã chấm. Yếu nhất là 3 mục dưới 80 %, mạnh nhất là 3 mục từ 80 %. Một mục không nằm ở cả hai.
   - `?tab=work` cũ mở Tổng quan.
 - **Hồ sơ học sinh (`/learners/[id]/profile`):** Hồ sơ đầu vào, Ghi chú dạy học và "Ngày ấy – bây giờ" chuyển nguyên từ Hồ sơ cấp, cùng cổng `tutorwork:read`. Cảnh báo "Hồ sơ đầu vào" trỏ `/profile#intake`.
+
+### 19.40. Xóa giáo trình nạp hỏng (không SQL)
+
+- `isRemovedCurriculum(statuses)`: có ít nhất một phiên bản và mọi phiên bản `discarded` → `buildCards` bỏ khỏi danh sách (mọi nơi dùng `loadCurriculumCards`: Giáo trình, Ghi buổi, Giao theo Unit, Bàn làm việc, Lộ trình).
+- `components/curriculum/RemoveCurriculumButton.tsx` trên thẻ `open && !current`: `POST /api/curricula/versions/:id/discard` (đã có; thầy/cô hoặc phụ huynh, `eng_discard_curriculum_draft`), hỏi lại bằng `curriculumCopy.removeConfirm`.
