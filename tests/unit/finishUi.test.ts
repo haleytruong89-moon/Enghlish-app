@@ -106,3 +106,12 @@ describe("L1 · Xong một bài screen", () => {
     expect(h).toContain(c.scoreEmpty);
   });
 });
+
+describe("Bản 3: each part has the anchor the session cards link to", () => {
+  it("part E is `#part-E`, the same id `partAnchor` gives the card", async () => {
+    const { partAnchor } = await import("@/lib/finish/paths");
+    const h = render();
+    expect(h).toContain(`id="${partAnchor("E")}"`);
+    expect(h).toContain('id="part-A"');
+  });
+});

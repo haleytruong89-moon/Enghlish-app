@@ -3,7 +3,11 @@
  * child, give more practice on a weak knowledge item, go back over a weak Unit, praise what went well. Fixed rules (no AI): each card
  * says why, with its numbers, and has one button to the page where the adult acts. Nothing is decided here. Pure.
  */
-import { finishHref } from "@/lib/finish/paths";
+import { finishHref, partAnchor } from "@/lib/finish/paths";
+
+/** The "Xong một bài" screen of a test at one part (no attempt known: no link). */
+const workOpenHref = (learnerId: string, attemptId: string | null | undefined, partKey: string | null): string | undefined =>
+  attemptId ? `${finishHref(learnerId, attemptId)}${partKey ? `#${partAnchor(partKey)}` : ""}` : undefined;
 import { pct, ratio, type TagAgg, type UnitScore, type WorkScore } from "./score";
 
 /** Thresholds approved by the parent (25/11). */
@@ -50,8 +54,12 @@ export type ActionCard = {
     oldestDays?: number;
     /** unit_ready: the curriculum the Unit belongs to (the button marks it Đã học there). */
     curriculumId?: string;
+    /** fix_together: the key of the weak part ("E"), for the "Mở phần E" button. */
+    partKey?: string;
   };
   href: string;
+  /** fix_together: the test itself, open at the weak part, to go over it with the child (on the session page, beside Đã làm). */
+  workHref?: string;
   /** When the newest submission behind the card was sent (ISO). A card marked done / skipped comes back only for newer work. */
   evidenceAt: string;
 };
@@ -134,8 +142,10 @@ export function buildActions(i: ActionInput, opts: ActionOptions = DESK_OPTIONS)
   for (const x of weakParts) {
     const card: ActionCard = {
       key: `fix-${x.w.instanceId}-${x.partKey ?? "all"}`, kind: "fix_together", tone: "red",
-      facts: { title: x.w.title, part: x.name ?? undefined, correct: x.t.correct, decided: x.t.decided, percent: pct(x.t) ?? 0 },
+      facts: { title: x.w.title, part: x.name ?? undefined, partKey: x.partKey ?? undefined, correct: x.t.correct, decided: x.t.decided, percent: pct(x.t) ?? 0 },
       href: sessionHref, evidenceAt: x.w.submittedAt,
+      // The measured (first) attempt is the one that was weak; open it at the part.
+      workHref: workOpenHref(i.learnerId, x.w.firstAttemptId, x.partKey),
     };
     // A part already gone over leaves room for the next weak part of the same test.
     if (opts.isHandled?.(card)) continue;

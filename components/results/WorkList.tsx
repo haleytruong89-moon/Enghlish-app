@@ -12,7 +12,7 @@ export function WorkList({ works }: { works: WorkScore[] }) {
       {works.map((w) => {
         const head = (
           <>
-              <span className="min-w-0">
+              <span className="min-w-0 text-left">
                 <span className="block font-semibold">{w.title}</span>
                 <span className="block text-sm text-muted">
                   {formatDay(todayVn(new Date(w.submittedAt)))} · {c.waiting(w.waitingDays)}
@@ -23,20 +23,21 @@ export function WorkList({ works }: { works: WorkScore[] }) {
                   {w.feedbackReady && !w.feedbackGiven ? <b className="text-[#b4402c]"> · {c.feedbackMissing}</b> : null}
                 </span>
               </span>
-              <span className="flex flex-col items-end gap-1">
-                <span className="rounded-full bg-[#eceee8] px-2.5 py-0.5 text-xs font-semibold">{w.official ? c.official : c.provisional}</span>
-                <Score t={w.tally} label={w.title} />
+              <span className="col-start-2 flex w-full flex-col items-stretch gap-1 sm:col-start-3 sm:text-right" data-testid={`results-work-score-${w.instanceId}`}>
+                <span className="self-start rounded-full bg-[#eceee8] px-2.5 py-0.5 text-xs font-semibold sm:self-end">{w.official ? c.official : c.provisional}</span>
+                <Score t={w.tally} label={w.title} wide />
               </span>
           </>
         );
         const hasBody = w.parts.length > 0 || w.episodeId !== null;
-        const ROW = "flex min-h-11 flex-wrap items-start justify-between gap-2 px-4 py-3";
+        // Bản 3 (26/11): fixed columns, so every title starts at the left edge and every score lines up on the right.
+        const ROW = "grid min-h-11 grid-cols-[1rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-[1rem_minmax(0,1fr)_minmax(11rem,15rem)]";
         return (
         <li key={w.instanceId} data-testid={`results-work-${w.instanceId}`} className="rounded-xl border border-line bg-white">
           {hasBody ? (
           <details className="group">
             <summary className={`${ROW} cursor-pointer list-none`}>
-              <span aria-hidden="true" className="mt-0.5 text-muted transition-transform group-open:rotate-90">▸</span>
+              <span aria-hidden="true" className="text-muted transition-transform group-open:rotate-90">▸</span>
               {head}
             </summary>
             <div className="flex flex-col gap-2 border-t border-[#eceee8] px-4 py-3">
@@ -56,7 +57,7 @@ export function WorkList({ works }: { works: WorkScore[] }) {
             </div>
           </details>
           ) : (
-            <div className={ROW}>{head}</div>
+            <div className={ROW}><span aria-hidden="true" />{head}</div>
           )}
         </li>
         );

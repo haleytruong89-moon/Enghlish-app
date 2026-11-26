@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { FinishWork } from "@/components/finish/FinishWork";
+import { QueueStrip } from "@/components/finish/QueueStrip";
 import { finishCopy as c, learnerWithTrack } from "@/lib/copy/vi";
 import { loadFinish } from "@/lib/finish/load";
 import { finishHref } from "@/lib/finish/paths";
@@ -43,16 +44,17 @@ export default async function FinishPage({ params }: { params: Promise<{ id: str
         <p className="text-sm text-muted">
           <Link href={deskHref(learner.id)} className="text-accent underline">{c.backDesk}</Link> · {c.crumb(learnerWithTrack(learner.alias, learner.trackId))}
         </p>
-        <nav aria-label={c.queueLabel} className="flex flex-wrap items-center gap-2 text-sm">
+        <p className="flex flex-wrap items-center gap-2 text-sm">
           <span className="text-muted" data-testid="finish-place">{place.index !== null ? c.place(place.index, place.total) : c.placeDone(place.total)}</span>
-          {place.prev ? <Link href={finishHref(learner.id, place.prev.attemptId)} className="inline-flex min-h-11 items-center rounded-xl border border-line bg-white px-3 no-underline">{c.prev}</Link> : null}
-          {place.index !== null && place.next ? <Link href={finishHref(learner.id, place.next.attemptId)} className="inline-flex min-h-11 items-center rounded-xl border border-line bg-white px-3 no-underline">{c.next}</Link> : null}
-        </nav>
+        </p>
       </div>
+      <QueueStrip learnerId={learner.id} currentId={data.attemptId} known={data.queueKnown} nextHref={next ? finishHref(learner.id, next.attemptId) : null}
+        prevHref={place.prev ? finishHref(learner.id, place.prev.attemptId) : null}
+        entries={data.queue.map((e) => ({ attemptId: e.attemptId, title: e.title, waited: daysBetween(e.since, today) }))} />
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold">{data.title}</h1>
         <ul className="flex flex-wrap gap-2 text-sm">
-          <li className="rounded-full bg-[#fde7d9] px-3 py-1 font-semibold text-[#8a3410]">{c.sent(formatDay(data.submittedAt), daysBetween(data.submittedAt, today))}</li>
+          <li className="rounded-full bg-[#fde7d9] px-3 py-1 font-semibold text-[#8a3410]">{c.sent(formatDay(vnDay(data.submittedAt)), daysBetween(data.submittedAt, today))}</li>
           <li className={chip}>{data.counted ? c.counted : c.notCounted}</li>
           <li className={chip}>{c.inApp(inApp)}</li>
         </ul>

@@ -114,6 +114,16 @@ describe("3B on the sessions page", () => {
     expect(screen.getByTestId("absence-form")).toBeTruthy();
     expect(screen.getByTestId("billing-rule")).toBeTruthy();
   });
+  it("Bản 3: the absence form sits in a folded #ghi-nghi box; it opens when the page asks (?nghi=1)", () => {
+    render(<SessionStats learnerId={L} days={nd} today={TODAY} cards={[]} absences={absences} billing />);
+    const fold = screen.getByTestId("absence-fold") as HTMLDetailsElement;
+    expect(fold.id).toBe("ghi-nghi");
+    expect(fold.open).toBe(false);
+    expect(within(fold).getByTestId("absence-form")).toBeTruthy();
+    cleanup();
+    render(<SessionStats learnerId={L} days={nd} today={TODAY} cards={[]} absences={absences} billing absenceOpen />);
+    expect((screen.getByTestId("absence-fold") as HTMLDetailsElement).open).toBe(true);
+  });
   it("before 0030: the 3A block as it was, plus one line saying the part is not ready; no 3B columns, no form", () => {
     render(<SessionStats learnerId={L} days={nd} today={TODAY} cards={[]} />);
     expect(screen.getByTestId("billing-unavailable").textContent).toContain("chưa sẵn sàng");
