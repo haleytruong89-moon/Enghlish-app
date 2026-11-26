@@ -38,7 +38,7 @@ export function deskAlerts(i: DeskAlertInput): DeskAlert[] {
   const base = `/learners/${i.learnerId}`;
   const out: DeskAlert[] = [];
   const A = deskCopy.alerts;
-  if (i.intakeMissing === true) out.push({ key: "intake", tone: "warn", badge: A.missingBadge, title: A.intakeTitle, line: i.role === "tutor" ? A.intakeLineTutor : A.intakeLineParent, href: `${base}/levels#intake` });
+  if (i.intakeMissing === true) out.push({ key: "intake", tone: "warn", badge: A.missingBadge, title: A.intakeTitle, line: i.role === "tutor" ? A.intakeLineTutor : A.intakeLineParent, href: `${base}/profile#intake` });
   if (i.role === "tutor" && i.levelsAssumed === true) out.push({ key: "levels", tone: "warn", badge: A.missingBadge, title: A.levelsTitle, line: A.levelsLine, href: `${base}/levels/baseline` });
   if (i.curriculaCount === 0) out.push({ key: "curricula", tone: "info", badge: A.missingBadge, title: A.curriculaTitle, line: A.curriculaLine, href: `${base}/curricula` });
   const t = i.today;

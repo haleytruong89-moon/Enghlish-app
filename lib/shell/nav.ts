@@ -2,7 +2,7 @@
  * The staff sidebar as data (pure, unit-tested). Hướng B (26/11, docs/superpowers/specs/2026-11-26-ia-huong-b-design.md): three quick
  * buttons for the daily work, five sections, then Hồ sơ học sinh. No track branching: the same model for every child.
  */
-import { aiSettingsCopy, levelCopy, purgePage, readingPage, shellCopy, targetsPage, tutorAsksCopy, weakPage } from "@/lib/copy/vi";
+import { aiSettingsCopy, profilePage, purgePage, readingPage, shellCopy, tutorAsksCopy } from "@/lib/copy/vi";
 
 export const SECTION_KEYS = ["desk", "work", "sessions", "progress", "plan", "profile"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
@@ -37,22 +37,14 @@ export const SECTIONS: readonly SectionDef[] = [
   { key: "desk", status: "live", lane: null, root: (id) => `/${learnerQuery(id)}`, children: () => [] },
   { key: "work", status: "live", lane: null, root: (id) => `${L(id)}/assigned`, children: () => [] },
   { key: "sessions", status: "live", lane: null, root: (id) => `${L(id)}/notes`, children: () => [] },
-  {
-    key: "progress", status: "live", lane: null, root: (id) => `${L(id)}/progress`,
-    children: (id) => [
-      { key: "results", label: shellCopy.progressResults, href: `${L(id)}/progress` },
-      { key: "knowledge", label: shellCopy.progressKnowledge, href: `${L(id)}/knowledge` },
-    ],
-  },
+  { key: "progress", status: "live", lane: null, root: (id) => `${L(id)}/progress`, children: () => [] },
   { key: "plan", status: "live", lane: null, root: (id) => `${L(id)}/curricula`, children: () => [] },
   {
-    key: "profile", status: "live", lane: null, root: (id) => `${L(id)}/levels`,
+    key: "profile", status: "live", lane: null, root: (id) => `${L(id)}/profile`,
     children: (id) => [
-      { key: "levels", label: levelCopy.link, href: `${L(id)}/levels` },
-      { key: "weak", label: weakPage.link, href: `${L(id)}/weak` },
-      { key: "targets", label: targetsPage.link, href: `${L(id)}/targets` },
-      { key: "reading", label: readingPage.link, href: `${L(id)}/reading/new` },
+      { key: "profile", label: profilePage.link, href: `${L(id)}/profile` },
       { key: "tutorAsks", label: tutorAsksCopy.link, href: `${L(id)}/tutor-asks` },
+      { key: "reading", label: readingPage.link, href: `${L(id)}/reading/new` },
     ],
   },
 ];

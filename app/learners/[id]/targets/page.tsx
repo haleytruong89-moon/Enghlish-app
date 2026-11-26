@@ -1,6 +1,7 @@
 import { loadCriteria } from "@/lib/skills/criteria";
 import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
+import { ProgressTabs } from "@/components/progress/ProgressTabs";
 import { notFound, redirect } from "next/navigation";
 import { RebuildButton } from "@/components/skills/RebuildButton";
 import { SkillRow } from "@/components/skills/SkillRow";
@@ -38,6 +39,7 @@ export default async function TargetsPage({ params }: { params: Promise<{ id: st
           {targetsPage.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{targetsPage.title(learner.alias)}</h1>
+        <ProgressTabs learnerId={learner.id} current="levels" sub="targets" />
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
 
         {view === null ? (

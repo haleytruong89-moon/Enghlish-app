@@ -35,15 +35,14 @@ describe("staff sidebar model (hướng B, 26/11)", () => {
     expect(root("sessions")).toBe(`/learners/${NG}/notes`);
     expect(root("progress")).toBe(`/learners/${NG}/progress`);
     expect(root("plan")).toBe(`/learners/${NG}/curricula`);
-    expect(root("profile")).toBe(`/learners/${NG}/levels`);
+    expect(root("profile")).toBe(`/learners/${NG}/profile`);
   });
 
-  it("PR1 interim children: Tiến bộ = Kết quả + Bản đồ kiến thức; Hồ sơ keeps its 5 pages; the rest has none", () => {
+  it("only Hồ sơ học sinh has sub-pages (Đầu vào và ghi chú · Con hỏi Gia sư · Nhập kỹ năng đọc); Tiến bộ and Kế hoạch use tabs", () => {
     const n = buildNav("tutor", NG, F);
     const kids = (k: string) => n.sections.find((s) => s.key === k)!.children.map((c) => c.key);
-    expect(kids("progress")).toEqual(["results", "knowledge"]);
-    expect(kids("profile")).toEqual(["levels", "weak", "targets", "reading", "tutorAsks"]);
-    for (const k of ["desk", "work", "sessions", "plan"]) expect(kids(k), k).toEqual([]);
+    expect(kids("profile")).toEqual(["profile", "tutorAsks", "reading"]);
+    for (const k of ["desk", "work", "sessions", "progress", "plan"]) expect(kids(k), k).toEqual([]);
   });
 
   it("no 'Chờ duyệt', 'Giao bài', 'Bài đã giao', 'Ghi kết quả' section any more", () => {

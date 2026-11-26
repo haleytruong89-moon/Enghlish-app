@@ -44,8 +44,9 @@ test.describe("parent: tracked skills of both learners", () => {
       await loginAs(page, "parent");
       await page.goto(`/?learner=${LEARNER_IDS[who]}`);
       await expect(page.getByTestId(`learner-option-${LEARNER_IDS[who]}`)).toContainText(learnerWithTrack(alias, track));
-      await page.getByTestId("nav-profile").click();
-      await page.getByTestId("nav-profile-targets").click();
+      await page.getByTestId("nav-progress").click();
+      await page.getByTestId("section-tab-levels").click();
+      await page.getByTestId("levels-sub-targets").click();
       await expect(page).toHaveURL(new RegExp(`${targetsUrl(who)}$`));
       await expectTargetsPage(page, who);
     });

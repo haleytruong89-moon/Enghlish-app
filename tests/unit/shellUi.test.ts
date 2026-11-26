@@ -36,10 +36,12 @@ describe("staff shell", () => {
     expect(html).not.toContain('data-testid="nav-delete"');
   });
   it("marks the open section and child; shows children of the open section only", () => {
-    const html = render(shell(), `/learners/${an.id}/weak`);
+    const html = render(shell(), `/learners/${an.id}/tutor-asks`);
     expect(html).toMatch(/data-testid="nav-profile"[^>]*aria-current="page"|aria-current="page"[^>]*data-testid="nav-profile"/);
-    expect(html).toContain('data-testid="nav-profile-weak"');
-    expect(html).not.toContain('data-testid="nav-progress-results"');
+    expect(html).toContain('data-testid="nav-profile-tutorAsks"');
+    const weak = render(shell(), `/learners/${an.id}/weak`);
+    expect(weak).toMatch(/data-testid="nav-progress"[^>]*aria-current="page"|aria-current="page"[^>]*data-testid="nav-progress"/);
+    expect(weak).not.toContain('data-testid="nav-profile-tutorAsks"');
   });
   it("Kế hoạch opens the curricula (Lộ trình is its second tab); no 'Sắp có' left", () => {
     const html = render(shell(), "/");
@@ -59,12 +61,12 @@ describe("staff shell", () => {
     expect(html).toMatch(/data-testid="nav-menu-toggle"[^>]*aria-expanded="false"|aria-expanded="false"[^>]*data-testid="nav-menu-toggle"/);
   });
   it("hierarchy: sections 500 (open: 600), children indented with a rule, lighter, accent when open", () => {
-    const html = render(shell(), `/learners/${an.id}/weak`);
+    const html = render(shell(), `/learners/${an.id}/tutor-asks`);
     expect(html).toMatch(/<a[^>]*data-level="section"[^>]*font-medium[^>]*>(?:(?!<\/a>)[\s\S])*Tiến bộ/);
     expect(html).toMatch(/<a[^>]*data-testid="nav-profile"[^>]*font-semibold/);
     expect(html).toMatch(/<ul data-level="children"[^>]*border-l[^>]*ml-3|<ul data-level="children"[^>]*ml-3[^>]*border-l/);
-    expect(html).toMatch(/data-testid="nav-profile-weak"[^>]*data-level="child"[^>]*text-\[13px\][^>]*text-accent[^>]*font-semibold|data-testid="nav-profile-weak"[^>]*data-level="child"[^>]*font-semibold[^>]*text-accent/);
-    expect(html).toMatch(/data-testid="nav-profile-levels"[^>]*text-muted/);
+    expect(html).toMatch(/data-testid="nav-profile-tutorAsks"[^>]*data-level="child"[^>]*text-\[13px\][^>]*text-accent[^>]*font-semibold|data-testid="nav-profile-tutorAsks"[^>]*data-level="child"[^>]*font-semibold[^>]*text-accent/);
+    expect(html).toMatch(/data-testid="nav-profile-profile"[^>]*text-muted/);
   });
   it("printing: the top bar and the left column are hidden, the page body is not", () => {
     const html = render(shell(), `/learners/${an.id}/notes/month/2026-11`);

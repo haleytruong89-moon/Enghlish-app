@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ProgressTabs } from "@/components/progress/ProgressTabs";
 import { PointMap } from "@/components/points/PointMap";
 import { PointRebuildButton } from "@/components/points/PointRebuildButton";
 import { learnerWithTrack, pointMapCopy } from "@/lib/copy/vi";
@@ -19,6 +20,7 @@ export default async function KnowledgeMapPage({ params }: { params: Promise<{ i
         {pointMapCopy.back}
       </Link>
       <h1 className="mt-2 text-2xl font-bold">{pointMapCopy.title}</h1>
+      <ProgressTabs learnerId={learner.id} current="tag" />
       <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
       <p className="mt-3 max-w-3xl text-[15px]">{pointMapCopy.intro(learner.alias)}</p>
       <div className="mt-3 flex flex-wrap gap-3">

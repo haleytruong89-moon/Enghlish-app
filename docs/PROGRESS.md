@@ -2267,3 +2267,29 @@ Phụ huynh duyệt hướng B ngày 26/11. Thiết kế: `docs/superpowers/spec
 2. Bấm Bài tập. Có 4 tab. Mở tab Bản nháp: Unit kế tiếp nằm trên cùng.
 3. Bấm Kế hoạch, rồi tab Lộ trình.
 4. Mở `/learners/<id>/inbox`: trang vẫn mở, mục Hôm nay sáng.
+
+## Hướng B · PR2: Tiến bộ có Tổng quan + Hồ sơ học sinh (26/11/2026)
+
+**Không có SQL**, không AI. Chi tiết luật tính: `docs/DESIGN.md` §19.38.
+
+- **Tiến bộ:** 4 tab, là liên kết giữa các trang có sẵn.
+  - **Tổng quan** (`/progress`).
+  - **Theo Unit** (`/progress?tab=unit`).
+  - **Mục kiến thức** (`/progress?tab=tag`), kèm liên kết sang Bản đồ kiến thức. Trang bản đồ cũng sáng tab này.
+  - **Cấp và kỹ năng**: Hồ sơ cấp, có dòng phụ Hồ sơ cấp · Mục cần chú ý · Kỹ năng đang theo dõi.
+  - Đường dẫn cũ `?tab=work` mở Tổng quan.
+- **Tổng quan:**
+  - 4 ô: bài nộp 4 tuần, đúng lần đầu 4 tuần (kèm chênh so với 4 tuần trước), bài chờ chấm, Unit đang học.
+  - Biểu đồ đúng lần đầu theo từng bài, có vùng dưới 50 % và từ 80 %; rê chuột hoặc chạm vào chấm để xem tên bài.
+  - Thanh theo Unit; mục yếu nhất và mạnh nhất.
+  - Mỗi bài một dòng, bấm để xổ ra từng phần.
+  - Số nào chưa có thì hiện "—", không hiện 0.
+- **Hồ sơ học sinh** (`/learners/[id]/profile`, mới): Hồ sơ đầu vào, Ghi chú dạy học và "Ngày ấy – bây giờ" chuyển từ Hồ sơ cấp sang. Mục con: Đầu vào và ghi chú · Con hỏi Gia sư · Nhập kỹ năng đọc tháng.
+- **Ô "Hồ sơ cấp" trên Hôm nay:** đổi tên thành "Cấp và kỹ năng".
+- **Việc nên làm:** PR này vẫn để ở Tiến bộ; PR3 chuyển về Hôm nay.
+
+**Cách thử trên preview:**
+1. Bấm Tiến bộ: thấy 4 ô và biểu đồ.
+2. Bấm một bài: thấy từng phần.
+3. Tab Cấp và kỹ năng mở Hồ sơ cấp.
+4. Bấm Hồ sơ học sinh: thấy Hồ sơ đầu vào và Ghi chú dạy học.

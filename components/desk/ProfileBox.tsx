@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { deskCopy, levelCopy, shellCopy, todayPage } from "@/lib/copy/vi";
+import { deskCopy, levelCopy, resultsCopy, todayPage } from "@/lib/copy/vi";
 import { strongestWeakest } from "@/lib/levels/scale";
 import type { LevelProfile } from "@/lib/levels/types";
 import { boxValue, profileSummary } from "@/lib/levels/view";
@@ -13,7 +13,7 @@ export function ProfileBox({ learnerId, alias, profile, weak }: { learnerId: str
   return (
     <section data-testid="desk-profile" className={BOX}>
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-lg font-semibold">{shellCopy.sections.profile}</h2>
+        <h2 className="text-lg font-semibold">{resultsCopy.tabs.levels}</h2>
         <Link href={`/learners/${learnerId}/levels`} className={BOX_LINK}>{deskCopy.seeAll}</Link>
       </div>
       {profile && sw ? (

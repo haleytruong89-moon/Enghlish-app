@@ -64,11 +64,11 @@ test.describe("W4e levels, can-do, then-now", () => {
     await ctx.close();
   });
 
-  test("the tutor sees the picker on Hồ sơ cấp; the parent only reads it; the other child's tutor cannot reach it", async ({ browser }) => {
+  test("the tutor sees the picker on Hồ sơ học sinh; the parent only reads it; the other child's tutor cannot reach it", async ({ browser }) => {
     const tCtx = await browser.newContext();
     const tp = await tCtx.newPage();
     await loginAs(tp, "tutorNguyen");
-    await tp.goto(`/learners/${NG}/levels`);
+    await tp.goto(`/learners/${NG}/profile`);
     const picker = tp.getByTestId("then-now-picker");
     await expect(picker).toBeVisible();
     await expect(picker).toContainText(thenNowPickerCopy.title);
@@ -79,7 +79,7 @@ test.describe("W4e levels, can-do, then-now", () => {
     const pCtx = await browser.newContext();
     const pp = await pCtx.newPage();
     await loginAs(pp, "parent");
-    await pp.goto(`/learners/${NG}/levels`);
+    await pp.goto(`/learners/${NG}/profile`);
     await expect(pp.getByTestId("then-now-picker")).toBeVisible();
     await expect(pp.getByTestId("then-now-form")).toHaveCount(0);
     await expect(pp.getByTestId("then-now-picker")).toContainText(thenNowPickerCopy.parentReadOnly);

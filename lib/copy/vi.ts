@@ -2019,10 +2019,40 @@ export const studioAssignedCopy = {
 // Kết quả + Việc nên làm (26/11, after the 25/11 audit). Adults only; the child never sees these numbers (D35).
 const pctText = (p: number) => `${p}%`;
 export const resultsCopy = {
-  title: (alias: string) => `Kết quả · ${alias}`,
+  title: (alias: string) => `Tiến bộ · ${alias}`,
+  knowledgeLink: "Mở Bản đồ kiến thức (mức 1–4 của từng mục) →",
   intro: "Điểm từng bài, từng Unit và từng mục kiến thức. Chỉ tính lần làm đầu; câu chỉ làm trên giấy không tính. Con không thấy trang này.",
   tabsLabel: "Xem kết quả theo",
-  tabs: { work: "Theo bài", unit: "Theo Unit", tag: "Theo mục kiến thức" } as Record<"work" | "unit" | "tag", string>,
+  tabs: { overview: "Tổng quan", unit: "Theo Unit", tag: "Mục kiến thức", levels: "Cấp và kỹ năng" },
+  overview: {
+    sent: "Bài trên app · 4 tuần",
+    sentBefore: (n: number) => `4 tuần trước: ${n}`,
+    firstTry: "Đúng lần đầu · 4 tuần",
+    diff: (d: number) => (d === 0 ? "bằng 4 tuần trước" : `${d > 0 ? "tăng" : "giảm"} ${Math.abs(d)} điểm % so với 4 tuần trước`),
+    waiting: "Chờ chấm",
+    waitingWorks: (n: number) => `${n} bài`,
+    oldest: (d: number) => (d === 0 ? "bài trên app nộp hôm nay" : `bài trên app chờ lâu nhất ${d} ngày`),
+    sentNote: "Bài trên app được đo (lần làm đầu). Bài giấy / link xem ở Bài tập.",
+    unitsEmpty: "Chưa có bài nào gắn Unit.",
+    tagLine: (name: string, p: string) => `${name} ${p}`,
+    unit: "Đang học",
+    unitDone: (done: number, total: number) => `${done} / ${total} Unit đã học`,
+    unknown: "—",
+    chartTitle: "Đúng lần đầu theo từng bài (theo ngày nộp)",
+    chartNote: "Mỗi chấm là một bài (lần làm đầu). Rê chuột hoặc chạm vào chấm để xem tên bài.",
+    chartEmpty: "Chưa có bài nào chấm được câu để vẽ.",
+    chartLabel: (n: number) => `Biểu đồ đúng lần đầu của ${n} bài gần nhất`,
+    dotLabel: (day: string, title: string, p: number, correct: number, decided: number) => `${day} · ${title} · ${p}% (đúng ${correct}/${decided})`,
+    bandLow: "dưới 50 %: chữa cùng con",
+    bandHigh: "từ 80 %: tốt",
+    unitsTitle: "Theo Unit (lần làm đầu)",
+    tagsTitle: "Mục kiến thức",
+    weakest: "Yếu nhất:",
+    strongest: "Mạnh nhất:",
+    none: "chưa đủ câu để nói",
+    worksTitle: "Từng bài · mỗi bài một dòng (bấm để xem theo phần)",
+    actionsLine: (n: number) => `${n} việc nên làm · xem ở Hôm nay`,
+  },
   unavailable: "Chưa đọc được kết quả. Tải lại trang.",
   empty: "Con chưa nộp bài nào trên app.",
   /** "đúng 16/39" (+ "· 1 câu chờ thầy/cô") */
@@ -2524,6 +2554,7 @@ export const appFeedback = {
   screenDefault: "Hôm nay",
   screens: {
     home: "Hôm nay",
+    profile: "Hồ sơ học sinh",
     finish: "Xong một bài",
     roadmap: "Lộ trình",
     review: "Hộp duyệt",
@@ -2724,6 +2755,15 @@ export const curriculumCopy = {
 } as const;
 
 // ---------- Khung bàn làm việc (cột trái + thanh trên; lát "Khung bàn làm việc", 08/11/2026) ----------
+/** Hồ sơ học sinh (hướng B, 26/11): the tutor's notes about the child, moved out of Hồ sơ cấp. */
+export const profilePage = {
+  link: "Đầu vào và ghi chú dạy học",
+  title: (alias: string) => `Hồ sơ học sinh · ${alias}`,
+  intro: `Những điều ${tutorHonorific} cần nhớ về con: hồ sơ đầu vào, ghi chú dạy học, “Ngày ấy – bây giờ”. Cấp và kỹ năng nằm ở Tiến bộ.`,
+  levelsLink: "Cấp và kỹ năng ở Tiến bộ →",
+  moved: "Hồ sơ đầu vào và ghi chú dạy học ở Hồ sơ học sinh →",
+};
+
 export const shellCopy = {
   navLabel: "Các phần",
   menu: "Các phần",
@@ -2739,9 +2779,6 @@ export const shellCopy = {
   /** Hướng B (26/11): the three things done every day, above the sections. */
   quick: { label: "Việc chính", grade: "Chấm bài", assign: "Giao bài", note: "Ghi buổi học" },
   planTabs: { label: "Kế hoạch", curricula: "Giáo trình", roadmap: "Lộ trình" },
-  /** PR1 interim children (removed in PR2 when Tiến bộ gets its tabs). */
-  progressResults: "Kết quả",
-  progressKnowledge: "Bản đồ kiến thức",
   soon: "Sắp có",
   gradeBadge: (n: string) => `${n} bài con đã nộp đang chờ chấm`,
   parentGroup: "Phụ huynh",
@@ -2839,7 +2876,7 @@ export const deskCopy = {
     orphanTitle: (n: number) => `${n} mốc gắn Unit không còn`,
     orphanLine: "Giáo trình đã đổi bản. Gắn lại mốc vào Unit khác ở trang Lộ trình, nếu không con thấy mốc ở mục “Mốc khác”.",
   },
-  profileUnavailable: "Chưa đọc được hồ sơ cấp. Mở Hồ sơ học sinh để xem.",
+  profileUnavailable: "Chưa đọc được hồ sơ cấp. Mở Tiến bộ › Cấp và kỹ năng để xem.",
   attentionNone: "Chưa có mục nào sai lặp lại.",
   curriculaUnavailable: "Chưa đọc được giáo trình.",
   curriculaEmpty: "Chưa có giáo trình.",
