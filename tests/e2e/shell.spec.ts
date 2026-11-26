@@ -69,6 +69,8 @@ test.describe("workdesk shell", () => {
       await expect(view).toHaveAttribute("data-tab", "overview");
       for (const id of ["tile-sent", "tile-firsttry", "tile-waiting", "tile-unit"]) await expect(page.getByTestId(id), id).toBeVisible();
     }
+    await page.goto(`/learners/${NG}/progress?tab=work`); // the old tab opens Tổng quan
+    if ((await page.getByTestId("results-unavailable").count()) === 0) await expect(page.getByTestId("results-view")).toHaveAttribute("data-tab", "overview");
     await page.getByTestId("section-tab-unit").click();
     await expect(page).toHaveURL(new RegExp(`/learners/${NG}/progress\\?tab=unit$`));
     await page.getByTestId("section-tab-tag").click();

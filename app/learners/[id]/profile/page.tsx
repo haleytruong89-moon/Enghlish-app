@@ -19,7 +19,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const { member, learner } = await requireLearnerPage(id, "tutorwork:read");
   const [profile, notes, intake, thenNow] = await Promise.all([
-    loadLevelProfile(learner.id),
+    loadLevelProfile(learner.id).catch(() => null), // only for the intake card's "Bước tiếp": never takes the page down
     loadTeachingNotes(learner.id),
     loadIntake(learner.id),
     loadThenNowCandidates(learner.id),
@@ -35,7 +35,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ id: st
       </Link>
       {intake.available && notes.available ? (
         <>
-          <IntakeCard learnerId={learner.id} view={intake.data} canEdit={canDecide} levelsAssumed={canDecide && levelsAction(profile.domains) === "confirm"} domains={profile.domains.map((d) => ({ key: d.key, name: d.name }))} />
+          <IntakeCard learnerId={learner.id} view={intake.data} canEdit={canDecide} levelsAssumed={canDecide && profile !== null && levelsAction(profile.domains) === "confirm"} domains={(profile?.domains ?? []).map((d) => ({ key: d.key, name: d.name }))} />
           <TeachingNotesCard learnerId={learner.id} alias={learner.alias} view={notes.data} canEdit={canDecide} />
         </>
       ) : (

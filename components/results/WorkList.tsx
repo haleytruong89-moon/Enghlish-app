@@ -9,10 +9,9 @@ import { Score } from "./Score";
 export function WorkList({ works }: { works: WorkScore[] }) {
   return (
     <ul className="flex flex-col gap-2" data-testid="results-works">
-      {works.map((w) => (
-        <li key={w.instanceId} data-testid={`results-work-${w.instanceId}`} className="rounded-xl border border-line bg-white">
-          <details>
-            <summary className="flex min-h-11 cursor-pointer flex-wrap items-start justify-between gap-2 px-4 py-3">
+      {works.map((w) => {
+        const head = (
+          <>
               <span className="min-w-0">
                 <span className="block font-semibold">{w.title}</span>
                 <span className="block text-sm text-muted">
@@ -28,6 +27,17 @@ export function WorkList({ works }: { works: WorkScore[] }) {
                 <span className="rounded-full bg-[#eceee8] px-2.5 py-0.5 text-xs font-semibold">{w.official ? c.official : c.provisional}</span>
                 <Score t={w.tally} label={w.title} />
               </span>
+          </>
+        );
+        const hasBody = w.parts.length > 0 || w.episodeId !== null;
+        const ROW = "flex min-h-11 flex-wrap items-start justify-between gap-2 px-4 py-3";
+        return (
+        <li key={w.instanceId} data-testid={`results-work-${w.instanceId}`} className="rounded-xl border border-line bg-white">
+          {hasBody ? (
+          <details className="group">
+            <summary className={`${ROW} cursor-pointer list-none`}>
+              <span aria-hidden="true" className="mt-0.5 text-muted transition-transform group-open:rotate-90">▸</span>
+              {head}
             </summary>
             <div className="flex flex-col gap-2 border-t border-[#eceee8] px-4 py-3">
               {w.parts.length > 0 ? (
@@ -45,8 +55,12 @@ export function WorkList({ works }: { works: WorkScore[] }) {
               ) : null}
             </div>
           </details>
+          ) : (
+            <div className={ROW}>{head}</div>
+          )}
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }
