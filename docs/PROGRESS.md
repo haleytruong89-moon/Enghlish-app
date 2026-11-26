@@ -2206,3 +2206,5 @@ Nhánh `feature/l2-tien-do-tu-chay`. **Có SQL: `0044_unit_progress_auto.sql`** 
 **SQL cần phụ huynh áp:** sau khi gộp, GitHub → Actions → "Apply database migrations" → `APPLY` (áp 0043 trước nếu chưa; workflow áp lần lượt cả hai). Chưa áp 0044: mọi thứ như cũ.
 
 **Cách thử:** đăng nhập thầy/cô của "Nguyên (thử)" (giáo trình có U14, U15…), cho em nộp một bài tên "… Unit 15 …" → Giáo trình → Trạng thái Unit: U15 "Đang học" kèm nhãn app đặt; chấm hết bài (≥ 60 %) → Bàn làm việc có thẻ "U15 có thể đánh dấu Đã học" → bấm; đăng nhập "Nguyên (thử)" → Hành trình lên U15.
+
+**Sau rà soát (26/11) đã sửa:** thẻ "có thể Đã học" chỉ xét giáo trình chính và ghi tên giáo trình (hai sách cùng mã U5 không nhầm); một bài giao nhiều Unit chưa nộp chặn đủ mọi Unit của nó; câu chữ nói rõ chỉ tính bài trên app; trang Trạng thái Unit không đề xuất lại "Đang học" khi người lớn vừa đặt "Chưa bắt đầu" sau bài nộp; tên bài có khoảng trắng đặc biệt (dán từ Word / PDF) vẫn nhận Unit; núi của con tính trạng thái tự chạy một lần. Còn để ngỏ: thẻ "có thể Đã học" chưa có nút "Bỏ qua" (cần thêm loại thẻ vào 0043 bằng SQL mới) — hỏi phụ huynh.

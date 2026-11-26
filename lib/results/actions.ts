@@ -69,7 +69,7 @@ export type ActionInput = {
    * L2: the status of each book Unit (as the Giáo trình page shows it, the app's "Đang học" included) and its curriculum; tests of each
    * Unit not sent yet. Without them no "unit_ready" card.
    */
-  unitStatus?: Readonly<Record<string, { curriculumId: string; status: string }>>;
+  unitStatus?: Readonly<Record<string, { curriculumId: string; curriculumTitle?: string; status: string }>>;
   unsent?: Readonly<Record<string, number>>;
 };
 
@@ -158,7 +158,7 @@ export function buildActions(i: ActionInput, opts: ActionOptions = DESK_OPTIONS)
     if ((i.unsent?.[u.key] ?? 0) > 0 || u.tally.pending > 0 || u.tally.decided < R.minItems || (ratio(u.tally) ?? 0) < R.unitReviewBelow) continue;
     cards.push({
       key: `ready-${u.key}`, kind: "unit_ready", tone: "info",
-      facts: { unit: u.key, correct: u.tally.correct, decided: u.tally.decided, percent: pct(u.tally) ?? 0, works: u.works, curriculumId: st.curriculumId },
+      facts: { unit: u.key, title: st.curriculumTitle, correct: u.tally.correct, decided: u.tally.decided, percent: pct(u.tally) ?? 0, works: u.works, curriculumId: st.curriculumId },
       href: `${base}/curricula/${st.curriculumId}`, evidenceAt: u.lastAt,
     });
   }

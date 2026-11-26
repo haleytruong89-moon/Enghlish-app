@@ -33,7 +33,7 @@ describe("eng_unit_auto_events / eng_unit_auto / eng_my_roadmap (migration 0044)
     asUser(s.users.studentNguyen, "select english.eng_submit_attempt($1, $2, $3::jsonb, $4::text[], 'in_app') as r", [activity, randomUUID(), JSON.stringify({ answers: { q1: "k1", q2: "k2" } }), ["none"]]);
   const setStatus = (code: string, status: string) =>
     svc("select english.eng_set_unit_status($1,$2,$3,null,$4,$5) as r", [cur, code, status, M().tutorNguyen, randomUUID()]);
-  const auto = async (user = s.users.tutorNguyen) => (await asUser<{ unit_code: string; curriculum_id: string; at: string }[]>(user, "select english.eng_unit_auto($1) as r", [NG()])).map((a) => a.unit_code).sort();
+  const auto = async (user = s.users.tutorNguyen) => (await asUser<{ main_id: string | null; events: { unit_code: string; curriculum_id: string; at: string }[] }>(user, "select english.eng_unit_auto($1) as r", [NG()])).events.map((a) => a.unit_code).sort();
   const mountain = async () =>
     Object.fromEntries((await asUser<{ units: { code: string; status: string }[] }>(s.users.studentNguyen, "select english.eng_my_roadmap() as r")).units.map((u) => [u.code, u.status]));
   const updatedAt = async (v: string) => (await db.client.query<{ t: string }>("select updated_at::text as t from english.curriculum_versions where id = $1", [v])).rows[0]!.t;
@@ -73,6 +73,11 @@ describe("eng_unit_auto_events / eng_unit_auto / eng_my_roadmap (migration 0044)
     expect(await auto()).toEqual(["U14", "U16"]); // the Unit given with the test (U16), not the title (U13)
   });
 
+  it("a title with a non-breaking space still counts", async () => {
+    await submit(await test("Destination · Unit\u00a013 · pasted"));
+    expect(await auto()).toContain("U13");
+  });
+
   it("never down: a Unit the adult marked Đã học stays so when more work comes in", async () => {
     await setStatus("U15", "done");
     await submit(await test("Destination · Unit 15 · listening"));
@@ -88,9 +93,11 @@ describe("eng_unit_auto_events / eng_unit_auto / eng_my_roadmap (migration 0044)
   });
 
   it("only the child's adults read it (outsiders and the child get nothing); anon cannot call it", async () => {
-    expect(await auto(s.users.parent)).toEqual(["U14", "U16"]);
+    expect(await auto(s.users.parent)).toEqual(["U13", "U14", "U16"]);
     expect(await auto(s.users.tutorAn)).toEqual([]);
     expect(await auto(s.users.studentNguyen)).toEqual([]);
+    expect((await asUser<{ main_id: string | null }>(s.users.tutorNguyen, "select english.eng_unit_auto($1) as r", [NG()])).main_id).toBe(cur);
+    expect((await asUser<{ main_id: string | null }>(s.users.tutorAn, "select english.eng_unit_auto($1) as r", [NG()])).main_id).toBeNull();
     const err = await rowsAs(db.client, "anon", null, "select english.eng_unit_auto($1)", [NG()]).then(() => null, (e: { code?: string }) => e);
     expect(err?.code).toBe("42501");
     const inner = await rowsAs(db.client, "authenticated", s.users.tutorNguyen, "select * from english.eng_unit_auto_events($1)", [NG()]).then(() => null, (e: { code?: string }) => e);

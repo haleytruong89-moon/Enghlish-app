@@ -11,7 +11,7 @@ describe("migration 0044 (L2) is additive and closed", () => {
   });
   it("the inner function is nobody's to call; the adults' read checks staff; the child's read stays authenticated only", () => {
     expect(sql).toMatch(/revoke execute on function english\.eng_unit_auto_events\(uuid\) from public, anon, authenticated, service_role;/);
-    expect(sql).toMatch(/where english\.eng_is_staff_of\(p_learner\)/);
+    expect(sql).toMatch(/case when english\.eng_is_staff_of\(p_learner\) then/);
     expect(sql).toMatch(/revoke execute on function english\.eng_my_roadmap\(\) from public, anon, service_role;\s+grant execute on function english\.eng_my_roadmap\(\) to authenticated;/);
   });
   it("the title rule is the one of lib/results/score.ts unitKeyOf (Reviews / Progress Tests / ranges left out)", () => {

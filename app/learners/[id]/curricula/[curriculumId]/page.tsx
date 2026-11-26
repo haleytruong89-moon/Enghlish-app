@@ -18,7 +18,12 @@ export default async function CurriculumUnitsPage({ params }: { params: Promise<
   const [cards, sent] = await Promise.all([loadCurriculumCards(learner.id), loadSentWorkUnits(learner.id).catch(() => [])]);
   const card = cards.find((c) => c.id === curriculumId);
   if (!card || !card.current || !card.progress) notFound();
-  const proposals = proposeFromSentWork(card.id, sent, card.progress.statusOf, new Set(card.current.units.filter((u) => u.skipped).map((u) => u.code)));
+  // L2: the app already sets "Đang học" from work sent; what is left "Chưa bắt đầu" with work sent is the adult's choice made AFTER that
+  // work — never proposed again until newer work comes in (the adult wins).
+  const lastAdult = new Map<string, string>();
+  for (const e of card.events) if ((lastAdult.get(e.unitCode) ?? "") < e.at) lastAdult.set(e.unitCode, e.at);
+  const proposals = proposeFromSentWork(card.id, sent, card.progress.statusOf, new Set(card.current.units.filter((u) => u.skipped).map((u) => u.code)))
+    .filter((p) => !(lastAdult.get(p.code) && (lastAdult.get(p.code) as string) >= p.lastSentAt));
   const recent = [...card.events].sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 10);
   return (
     <>

@@ -17,5 +17,5 @@ export async function loadRoadmap(learnerId: string): Promise<RoadmapLoad> {
     if (isMissingFunction(error.code)) return { kind: "unavailable" };
     throw new ReviewDbError(error.code ?? "unknown", `eng_roadmap: ${error.message ?? "error"}`);
   }
-  return { kind: "ok", view: parseRoadmap(data, await loadUnitAuto(learnerId)) };
+  return { kind: "ok", view: parseRoadmap(data, (await loadUnitAuto(learnerId)).events) };
 }

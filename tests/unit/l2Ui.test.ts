@@ -22,7 +22,7 @@ describe("L2 screens", () => {
   it("'có thể Đã học': the tutor gets the one-click button, the parent only reads", () => {
     const card: ActionCard = { key: "ready-U15", kind: "unit_ready", tone: "info", facts: { unit: "U15", correct: 15, decided: 20, percent: 75, works: 2, curriculumId: "c1" }, href: `/learners/${L}/curricula/c1`, evidenceAt: "2026-11-24T03:00:00Z" };
     const t = renderToStaticMarkup(createElement(ActionCards, { learnerId: L, cards: [card], tagLabels: {}, role: "tutor" }));
-    expect(t).toContain(resultsCopy.cards.unit_ready.title("U15"));
+    expect(t).toContain(resultsCopy.cards.unit_ready.title("U15", null));
     expect(t).toContain('data-testid="unit-done-U15"');
     expect(t).not.toContain("card-decision-"); // not a Đã làm / Bỏ qua card
     const p = renderToStaticMarkup(createElement(ActionCards, { learnerId: L, cards: [card], tagLabels: {}, role: "parent" }));

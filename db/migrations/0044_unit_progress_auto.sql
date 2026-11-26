@@ -46,19 +46,22 @@ as $$
       and not exists (select 1 from english.assignment_events ev where ev.assignment_id = au.assignment_id and ev.kind = 'retracted')
     union all
     -- (c) Studio tests given WITHOUT Units: "Unit N" in the title → UN of the main curriculum (rule of lib/results/score.ts unitKeyOf)
-    select m.id, 'U' || ((pg_catalog.regexp_match(pg_catalog.lower(i.snapshot -> 'template' ->> 'title_vi'), '\munits?\s*(\d{1,2})\y(?!\s*[–-]\s*\d)'))[1])::int::text,
+    select m.id, 'U' || ((pg_catalog.regexp_match(i.t, '\munits?\s*(\d{1,2})\y(?!\s*[–-]\s*\d)'))[1])::int::text,
            t.submitted_at
     from main m
-    join english.inquiry_instances i on i.learner_id = p_learner
+    -- The title in lower case, non-breaking spaces as spaces (a title pasted from Word / PDF), as the app reads it.
+    join (select x.id, x.template_id, x.template_version,
+                 pg_catalog.replace(pg_catalog.lower(coalesce(x.snapshot -> 'template' ->> 'title_vi', '')), pg_catalog.chr(160), ' ') as t
+          from english.inquiry_instances x where x.learner_id = p_learner) i on true
     join english.inquiry_templates tp on tp.id = i.template_id and tp.version = i.template_version and tp.kind = 'studio'
     join english.activity_instances ai on ai.inquiry_instance_id = i.id
     join english.attempts t on t.activity_instance_id = ai.id
     where m.id is not null
       and ai.id not in (select id from skipped_step)
       and not exists (select 1 from english.studio_assignment_units su where su.inquiry_instance_id = i.id)
-      and pg_catalog.lower(coalesce(i.snapshot -> 'template' ->> 'title_vi', '')) !~ '\mreview\s*\d'
-      and pg_catalog.lower(coalesce(i.snapshot -> 'template' ->> 'title_vi', '')) !~ '\mprogress test\s*\d'
-      and pg_catalog.regexp_match(pg_catalog.lower(coalesce(i.snapshot -> 'template' ->> 'title_vi', '')), '\munits?\s*(\d{1,2})\y(?!\s*[–-]\s*\d)') is not null
+      and i.t !~ '\mreview\s*\d'
+      and i.t !~ '\mprogress test\s*\d'
+      and pg_catalog.regexp_match(i.t, '\munits?\s*(\d{1,2})\y(?!\s*[–-]\s*\d)') is not null
   ),
   latest as (select s.curriculum_id, s.unit_code, pg_catalog.max(s.submitted_at) as at from sent s group by s.curriculum_id, s.unit_code)
   select l.curriculum_id, l.unit_code, l.at
@@ -74,13 +77,16 @@ $$;
 revoke execute on function english.eng_unit_auto_events(uuid) from public, anon, authenticated, service_role;
 
 -- 2. Đọc cho người lớn của em (user client; ngoài phạm vi: rỗng) -----------------------------------------------------------------
+-- { main_id: the main curriculum (where a title "Unit N" counts), events: [{curriculum_id, unit_code, at}] }.
 create or replace function english.eng_unit_auto(p_learner uuid) returns jsonb
 language sql stable security definer set search_path = ''
 as $$
-  select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('curriculum_id', a.curriculum_id, 'unit_code', a.unit_code, 'at', a.at)
-                                       order by a.at, a.unit_code), '[]'::jsonb)
-  from english.eng_unit_auto_events(p_learner) a
-  where english.eng_is_staff_of(p_learner)
+  select case when english.eng_is_staff_of(p_learner) then pg_catalog.jsonb_build_object(
+    'main_id', english.eng_roadmap_main_id(p_learner),
+    'events', coalesce((select pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('curriculum_id', a.curriculum_id, 'unit_code', a.unit_code, 'at', a.at)
+                                                    order by a.at, a.unit_code)
+                        from english.eng_unit_auto_events(p_learner) a), '[]'::jsonb))
+  else pg_catalog.jsonb_build_object('main_id', null, 'events', '[]'::jsonb) end
 $$;
 revoke execute on function english.eng_unit_auto(uuid) from public, anon;
 grant execute on function english.eng_unit_auto(uuid) to authenticated, service_role;
@@ -93,6 +99,7 @@ declare
   v_learner uuid;
   v_main uuid;
   v_ver uuid;
+  v_auto jsonb;
 begin
   select l.id into v_learner
   from english.members m join english.learners l on l.member_id = m.id
@@ -101,6 +108,9 @@ begin
     return pg_catalog.jsonb_build_object('main', null, 'units', '[]'::jsonb, 'others', '[]'::jsonb, 'milestones', '[]'::jsonb);
   end if;
   v_main := english.eng_roadmap_main_id(v_learner);
+  -- 0044: the app's "Đang học" of the main curriculum, computed once.
+  select coalesce(pg_catalog.jsonb_agg(pg_catalog.jsonb_build_object('unit_code', a.unit_code, 'at', a.at)), '[]'::jsonb) into v_auto
+  from english.eng_unit_auto_events(v_learner) a where a.curriculum_id = v_main;
   select v.id into v_ver from english.curriculum_versions v where v.curriculum_id = v_main and v.status = 'approved';
   return pg_catalog.jsonb_build_object(
     'main', (select pg_catalog.jsonb_build_object('id', c.id, 'title', c.title) from english.curricula c where c.id = v_main),
@@ -115,8 +125,8 @@ begin
                            select e.status, e.created_at, e.id::text as k from english.curriculum_unit_events e
                            where e.curriculum_id = v_main and e.unit_code = u.code
                            union all
-                           select 'in_progress', a.at, 'auto' from english.eng_unit_auto_events(v_learner) a
-                           where a.curriculum_id = v_main and a.unit_code = u.code
+                           select 'in_progress', a.at, 'auto' from pg_catalog.jsonb_to_recordset(v_auto) as a(unit_code text, at timestamptz)
+                           where a.unit_code = u.code
                          ) x order by x.created_at desc, x.k desc limit 1) le on true
       where u.version_id = v_ver), '[]'::jsonb),
     'others', coalesce((

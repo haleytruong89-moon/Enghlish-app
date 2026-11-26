@@ -24,19 +24,21 @@ export async function loadTocContext(learnerId: string, trackId: string): Promis
  * L2 (0044): the app's "Đang học" from work the child sent (english.eng_unit_auto, USER client: the child's adults only, else empty).
  * Before 0044 / on any error: none (statuses stay as the adults set them).
  */
-export async function loadUnitAuto(learnerId: string): Promise<{ curriculum_id: string; unit_code: string; at: string }[]> {
+export type UnitAuto = { mainId: string | null; events: { curriculum_id: string; unit_code: string; at: string }[] };
+export async function loadUnitAuto(learnerId: string): Promise<UnitAuto> {
   try {
     const db = await createUserClient();
     const { data, error } = await db.rpc("eng_unit_auto", { p_learner: learnerId });
-    if (error || !Array.isArray(data)) return [];
-    return data as { curriculum_id: string; unit_code: string; at: string }[];
+    const d = data as { main_id?: unknown; events?: unknown } | null;
+    if (error || !d || !Array.isArray(d.events)) return { mainId: null, events: [] };
+    return { mainId: typeof d.main_id === "string" ? d.main_id : null, events: d.events as UnitAuto["events"] };
   } catch {
-    return [];
+    return { mainId: null, events: [] };
   }
 }
 
 /** Every curriculum of one child with the version in use, its units, points and unit events (RLS: adults of that child only). */
-export async function loadCurriculumCards(learnerId: string): Promise<CurriculumCard[]> {
+export async function loadCurriculumCards(learnerId: string, auto?: UnitAuto): Promise<CurriculumCard[]> {
   const db = await createUserClient();
   const q = async (table: string, columns: string) => {
     const { data, error } = await db.from(table).select(columns).eq("learner_id", learnerId);
@@ -50,7 +52,7 @@ export async function loadCurriculumCards(learnerId: string): Promise<Curriculum
     q("curriculum_unit_points", "version_id, code, tag_key, ord"),
     q("curriculum_unit_events", "id, curriculum_id, unit_code, status, created_at"),
   ]);
-  return buildCards({ curricula, versions, units, points, events, auto: await loadUnitAuto(learnerId) });
+  return buildCards({ curricula, versions, units, points, events, auto: (auto ?? (await loadUnitAuto(learnerId))).events });
 }
 
 /** "Unit đã dạy hôm nay" of the session note. [] when 0026 is not applied yet (the session note must still open). */

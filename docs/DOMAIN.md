@@ -95,7 +95,8 @@ Ngày = **ngày lịch Việt Nam (UTC+7)** cho mọi phép tính (như S7a).
 - Độ phủ = số Unit *đã học* ÷ số Unit **không bị bỏ qua** trong phiên bản đang dùng.
 - Ghi buổi có chọn Unit thì app **đề xuất** chuyển Unit đó sang "đang học" (gia sư bấm, không tự đổi).
 - **Đổi so với bản trước (L2, phụ huynh duyệt 26/11/2026, cách B):** con **nộp bài** của một Unit đang "chưa học" (hoặc chưa có sự kiện) → Unit đó **tự là "đang học"**, ghi "app đặt theo bài nộp" (dẫn xuất, không lưu sự kiện; migration 0044). Unit của bài = Unit giao kèm bài; bài Studio không gắn Unit thì lấy "Unit N" trong tên bài (không tính "Review n", "Progress Test n", "Unit 1–2"). **"Đã học" vẫn chỉ người lớn đặt** (độ phủ không tự nhảy). App **không bao giờ hạ** (Unit đã học / đang học / bỏ qua trước bài nộp thì giữ nguyên). Người lớn đổi **sau** bài nộp thì người lớn thắng, tới khi con nộp bài mới của Unit đó. Núi Hành trình của con đi theo trạng thái này.
-- App **đề xuất "Đã học"** (thẻ ở Việc nên làm, gia sư bấm một lần) khi mọi bài giao của Unit đã nộp, đã chấm hết, lần làm đầu đúng **≥ 60 %** (cùng ngưỡng "Học kỹ lại Unit"); dưới ngưỡng thì giữ thẻ "Học kỹ lại Unit".
+- App **đề xuất "Đã học"** (thẻ ở Việc nên làm, gia sư bấm một lần) khi mọi bài **trên app** giao cho Unit đã nộp, đã chấm hết, lần làm đầu đúng **≥ 60 %** (cùng ngưỡng "Học kỹ lại Unit"); dưới ngưỡng thì giữ thẻ "Học kỹ lại Unit". Chỉ xét giáo trình chính (bài chỉ mang mã Unit). Bài giấy / link không vào phép tính này.
+- "Bài nộp" ở đây gồm bài con nộp và bài người lớn nộp thay; một lần "Thử lại" cũng là bài mới (cùng luật đề xuất "Đang học" cũ). Ngưỡng 60 % đang là hằng số trong code (`RESULT_RULES`), chuyển vào chính sách có phiên bản khi làm lại phần ngưỡng.
 
 | Ví dụ | Kết quả |
 |---|---|

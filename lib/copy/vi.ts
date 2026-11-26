@@ -2074,9 +2074,9 @@ export const resultsCopy = {
       button: "Giao bài luyện",
     },
     unit_ready: {
-      title: (unit: string) => `${unit} có thể đánh dấu Đã học`,
+      title: (unit: string, curriculum: string | null) => `${unit}${curriculum ? ` (${curriculum})` : ""} có thể đánh dấu Đã học`,
       line: (correct: number, decided: number, percent: number, works: number) =>
-        `Con đã nộp ${works} bài của Unit, đã chấm hết · lần làm đầu đúng ${correct}/${decided} (${pctText(percent)}). App không tự đặt Đã học: ${tutorHonorific} bấm nếu đồng ý.`,
+        `Con đã nộp đủ ${works} bài trên app của Unit, đã chấm hết · lần làm đầu đúng ${correct}/${decided} (${pctText(percent)}). Bài giấy / link không được tính ở đây. App không tự đặt Đã học: ${tutorHonorific} bấm nếu đồng ý.`,
       button: "Xem Trạng thái Unit",
       mark: "Đánh dấu Đã học",
       marking: "Đang lưu…",

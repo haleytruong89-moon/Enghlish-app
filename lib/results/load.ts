@@ -1,7 +1,7 @@
 import "server-only";
 import { createUserClient } from "@/lib/supabase/server";
 import type { StudioAssignedRow } from "@/lib/studio/assigned";
-import { loadCurriculumCards } from "@/lib/curriculum/load";
+import { loadCurriculumCards, loadUnitAuto } from "@/lib/curriculum/load";
 import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
 import { buildActions, DESK_OPTIONS, isDecidable, PAGE_OPTIONS, RESULT_RULES, type ActionCard } from "./actions";
 import { handledList, handledPredicate, type CardDecision, type HandledItem } from "./decisions";
@@ -56,6 +56,8 @@ type DraftRow = { template_id: string | null; template_version: number | null; p
  * No answer text and no answer key is read. `studioRows` may be passed when the caller already loaded them (one read per page).
  */
 export async function loadResults(learnerId: string, todayIso: string, studioRows?: StudioAssignedRow[] | null): Promise<ResultsData> {
+  // (Unit statuses for the "có thể Đã học" card: read once, in parallel with the work below.)
+  const unitInfo = loadUnitAuto(learnerId).then(async (auto) => ({ auto, cards: await loadCurriculumCards(learnerId, auto) })).catch(() => null);
   const rows = studioRows ?? (await loadStudioAssigned(learnerId, todayIso));
   const sent = rows.filter((r) => r.firstAttemptId && r.status !== "skipped");
   if (sent.length === 0) return { works: [], units: [], tags: [], actions: [], allActions: [], handled: [], decisionsReady: true };
@@ -121,15 +123,19 @@ export async function loadResults(learnerId: string, todayIso: string, studioRow
   const counted = works.filter((w) => w.counted);
   const units = byUnit(counted, RESULT_RULES.minItems);
   const tags = byTag(counted);
-  // L2: Unit statuses (the app's "Đang học" included) and tests of each Unit not sent yet, for the "có thể Đã học" card. Fail soft.
-  const cards = await loadCurriculumCards(learnerId).catch(() => []);
-  const unitStatus: Record<string, { curriculumId: string; status: string }> = {};
-  for (const c of cards) for (const [code, status] of Object.entries(c.progress?.statusOf ?? {})) unitStatus[code] ??= { curriculumId: c.id, status };
+  // L2: Unit statuses of the MAIN curriculum (where a title "Unit N" counts; the app's "Đang học" included) and the Studio tests of each
+  // Unit not sent yet, for the "có thể Đã học" card. Works carry Unit codes only, so one curriculum is used. Fail soft.
+  const info = await unitInfo;
+  const cards = info?.cards ?? [];
+  const main = cards.find((c) => c.id === info?.auto.mainId) ?? (cards.filter((c) => c.progress).length === 1 ? cards.find((c) => c.progress) : undefined);
+  const unitStatus: Record<string, { curriculumId: string; curriculumTitle: string; status: string }> = {};
+  for (const [code, status] of Object.entries(main?.progress?.statusOf ?? {})) unitStatus[code] = { curriculumId: main!.id, curriculumTitle: main!.title, status };
   const unsent: Record<string, number> = {};
   for (const r of rows) {
     if (r.firstAttemptId || r.status === "skipped") continue;
-    const k = unitKeyOf(r.units, r.title);
-    if (k) unsent[k] = (unsent[k] ?? 0) + 1;
+    // Every Unit the test was given with (or the one in its title): a test not sent keeps each of them from "ready".
+    const keys = r.units.length > 0 ? r.units : [unitKeyOf([], r.title)].filter((k): k is string => k !== null);
+    for (const k of keys) unsent[k] = (unsent[k] ?? 0) + 1;
   }
   const input = { learnerId, works, units, tags, unitStatus, unsent };
   const isHandled = handledPredicate(marks.rows);

@@ -245,6 +245,11 @@ describe("L2: 'U15 có thể đánh dấu Đã học'", () => {
     expect(buildActions({ learnerId: L, works: weak, units: byUnit(weak, 4), tags: [], unitStatus: st("in_progress") }, PAGE_OPTIONS).map((c) => c.kind)).toContain("unit_review");
     expect(buildActions({ learnerId: L, works: weak, units: byUnit(weak, 4), tags: [], unitStatus: st("in_progress") }, PAGE_OPTIONS).map((c) => c.kind)).not.toContain("unit_ready");
   });
+  it("names the curriculum; the Units of a test not sent yet each block 'ready'", () => {
+    const c = ready({ unitStatus: { U15: { curriculumId: "cur-1", curriculumTitle: "Destination", status: "in_progress" } } });
+    expect(c[0]!.facts.title).toBe("Destination");
+    expect(ready({ unitStatus: st("in_progress"), unsent: { U15: 2 } })).toEqual([]);
+  });
   it("is never a 'Đã làm / Bỏ qua' card (the database keeps no such kind) and is not a lesson card", () => {
     const c = ready({ unitStatus: st("in_progress") });
     expect(sessionCards(c)).toEqual([]);
