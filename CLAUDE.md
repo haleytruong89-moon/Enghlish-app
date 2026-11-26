@@ -43,7 +43,8 @@ Next.js (App Router) + TypeScript strict + Tailwind · Supabase (Postgres + Auth
 - Không đưa audio ra khỏi máy (kể cả Web Speech API, STT cloud).
 - Không dùng `service_role`/`ANTHROPIC_API_KEY` ở client. Không commit secret.
 - Không cho AI tự xác nhận/đổi bậc; không cho học sinh thấy điểm thô; không chép đề thi chính thức.
-- **Không commit tài liệu sách / đề do thầy/cô tải lên** (kể cả làm bộ test): chúng nằm trong kho file riêng của app (bucket private `eval-sources` cho bộ test, `english-work` cho Studio). Nội dung tự soạn (mẫu chủ đề, bộ phụ lục D, câu dạng đề tự viết) vẫn ở repo. Repo này **luôn private**.
+- **Không commit tài liệu sách / đề do thầy/cô tải lên** (kể cả làm bộ test): chúng nằm trong kho file riêng của app (bucket private `eval-sources` cho bộ test, `english-work` cho Studio). Nội dung tự soạn (mẫu chủ đề, bộ phụ lục D, câu dạng đề tự viết) vẫn ở repo. Repo đang **công khai** (phụ huynh quyết giữ public 27/11), nên mọi file trong git, kể cả nhánh phụ, ai cũng đọc được.
+- Không để workflow gọi AI chạy theo `push` (kể cả nhánh `eval/**`): chỉ bấm tay, báo phụ huynh ước tính trước.
 - Không thêm bảng xếp hạng, so sánh hai em, chat mở với AI, dịch vụ trả phí hay bên thứ ba nhận dữ liệu của con. **Chuỗi tuần mềm** (các tuần liền đạt mục tiêu tuần, tính trên bài đã nộp; lỡ một tuần thì tính lại, không phạt) **được phép** (PRD D34); chuỗi theo ngày, xu, điểm thưởng thì không.
 - Không bật build đêm tự động trừ khi phụ huynh yêu cầu.
 - Thấy spec thiếu/mâu thuẫn → dừng, ghi vào PR + `docs/PROGRESS.md`, hỏi phụ huynh.
@@ -79,7 +80,7 @@ npm run doctor            # kiểm tra cài đặt cloud 1 lần: bảng ✓/✗
 
 ## Current status
 
-- Repo: `haleytruong89-moon/Enghlish-app` (private). **Đã gộp vào `main` (xong, CI xanh): S0, S1, S2 (+ 4 mẫu Track B), S4, S5, S1b (tạo gia đình thật), S5b-1 PR A và PR B, S5c, Studio 1 PR A, SM-1, SM-2, S6, S7a, Studio B1.** Các migration **0001–0039 đã áp** trên Supabase thật (chi tiết từng lát: `docs/PROGRESS.md`). **Chưa có dữ liệu thật của con** (07/11): chỉ learner thử; sao lưu chạy lại khi bắt đầu dùng thật.
+- Repo: `haleytruong89-moon/Enghlish-app` (công khai từ trước; phụ huynh giữ public 27/11). **Đã gộp vào `main` (xong, CI xanh): S0, S1, S2 (+ 4 mẫu Track B), S4, S5, S1b (tạo gia đình thật), S5b-1 PR A và PR B, S5c, Studio 1 PR A, SM-1, SM-2, S6, S7a, Studio B1.** Các migration **0001–0039 đã áp** trên Supabase thật (chi tiết từng lát: `docs/PROGRESS.md`). **Chưa có dữ liệu thật của con** (07/11): chỉ learner thử; sao lưu chạy lại khi bắt đầu dùng thật.
 - **S5c (Sẵn sàng dùng thật) — ĐÃ GỘP (PR #15, 19/10) và `0017` ĐÃ ÁP** (sao lưu thật có "Restore check PASSED"). Chi tiết: mục S5c trong `docs/PROGRESS.md`.
 - **Studio 1 · PR A (Kỹ năng đọc) — ĐÃ GỘP (PR #16) và `0018` ĐÃ ÁP**: 14 (Track B) / 6 (Track A) nhãn "Kỹ năng đọc", bảng append-only `reading_reports` (gia sư/phụ huynh nhập tháng: số câu + % mỗi kỹ năng), bảng "Kỹ năng đọc" trên Điểm cần chú ý (< 4 câu = "chưa đủ dữ liệu"; ngưỡng ở `tutorwork_settings`), xóa dữ liệu một em gồm bảng mới. Tín hiệu, không phải bằng chứng; không AI. Kế hoạch `docs/superpowers/plans/2026-10-20-studio-1a-reading-skills.md`; chi tiết `docs/PROGRESS.md`. PR B (Studio: đề → bài trong app) làm tiếp.
 - **Công cụ đặt lại mật khẩu — PR #17** (mở, chờ phụ huynh quyết gộp hay đóng).

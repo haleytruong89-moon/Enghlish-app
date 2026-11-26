@@ -1896,6 +1896,7 @@ export const studioCopy = {
     ai_model: "Máy chủ đang dùng mô hình AI chưa có bảng giá nên không gọi AI.",
     http_401: "Máy chủ chưa có khóa AI.",
     http_400: "AI không nhận yêu cầu này.",
+    spend_limit: "Hết hạn mức chi tiêu bên Anthropic (giới hạn của workspace hoặc hết credit). Phụ huynh kiểm tra Anthropic Console → Spend limits.",
     tool_choice: "AI không nhận yêu cầu này.",
     http_429: "AI đang bận.",
     http_5xx: "AI đang bận.",

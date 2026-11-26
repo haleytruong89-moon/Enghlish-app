@@ -142,7 +142,7 @@ export async function runExtraction(deps: ExtractDeps, job: ExtractJob): Promise
         toolChoice = "auto";
         continue;
       }
-      if (e.code === "http_401" || e.code === "http_400") break; // retrying cannot help
+      if (e.code === "http_401" || e.code === "http_400" || e.code === "spend_limit") break; // retrying cannot help
     }
   }
   await deps.store.fail(job.draftId, lastCode, lastRun);

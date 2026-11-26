@@ -119,7 +119,7 @@ export async function runTocExtraction(deps: TocDeps, job: TocJob): Promise<TocO
         toolChoice = "auto";
         continue;
       }
-      if (e.code === "http_401" || e.code === "http_400") break;
+      if (e.code === "http_401" || e.code === "http_400" || e.code === "spend_limit") break;
     }
   }
   await deps.store.fail(job.versionId, lastCode, lastRun);
