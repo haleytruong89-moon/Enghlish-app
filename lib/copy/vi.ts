@@ -3210,7 +3210,6 @@ export const assignWaysCopy = {
   title: (alias: string) => `Giao bài · ${alias}`,
   followBanner: "Muốn xem con làm đến đâu, bài nào quá hạn?",
   followLink: "Mở Bài tập →",
-  draftsTitle: (n: number) => `Bản nháp đang soạn · ${n}`,
   draftsHelp: "Bài chưa giao: con chưa thấy. Duyệt xong mới chọn hạn và giao.",
   intro: "Chọn một cách giao. Cách nào cũng chọn được Unit của giáo trình (trừ Bài chủ đề).",
   introDrafts: "Bài đã duyệt nằm trên cùng, giao được ngay. Muốn soạn bài mới thì kéo xuống “Tạo bài mới”.",

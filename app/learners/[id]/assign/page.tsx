@@ -64,6 +64,9 @@ export default async function AssignPracticePage({ params, searchParams }: { par
   // Hướng B v2: drafts not given yet come FIRST (approved ones on top, one click from giving), then the ways to make a new piece.
   const board = draftBoard(drafts, unitStatus);
   const hasDrafts = board.ready.length > 0 || board.groups.length > 0;
+  // Came from Giáo trình / a book ("Giao bài này"): the ways stay first, prefilled. `readPrefill` always returns an object.
+  const fromBook = prefill.title !== null || prefill.pages !== null || prefill.units.length > 0;
+  const draftsFirst = hasDrafts && !fromBook;
   const draftsBlock = hasDrafts ? (
     <div data-testid="assign-drafts">
       <DraftGroups board={board} />
@@ -72,7 +75,7 @@ export default async function AssignPracticePage({ params, searchParams }: { par
   ) : null;
   const ways = (
     <section id="ways" aria-labelledby="ways-title" className="scroll-mt-4">
-      {hasDrafts ? <h2 id="ways-title" className="mb-2 text-lg font-semibold">{assignWaysCopy.newTitle}</h2> : <h2 id="ways-title" className="sr-only">{assignWaysCopy.newTitle}</h2>}
+      <h2 id="ways-title" className={draftsFirst ? "mb-2 text-lg font-semibold" : "sr-only"}>{assignWaysCopy.newTitle}</h2>
       <WayCards learnerId={learner.id} prefill={prefill} />
     </section>
   );
@@ -90,15 +93,15 @@ export default async function AssignPracticePage({ params, searchParams }: { par
       ) : (
         <>
           <p className="mt-3 flex flex-wrap items-center justify-between gap-2 text-muted">
-            <span>{hasDrafts ? assignWaysCopy.introDrafts : assignWaysCopy.intro}</span>
-            {hasDrafts ? (
+            <span>{draftsFirst ? assignWaysCopy.introDrafts : assignWaysCopy.intro}</span>
+            {draftsFirst ? (
               <a href="#ways" data-testid="assign-new-link" className="inline-flex min-h-11 items-center rounded-xl border border-line bg-white px-4 text-sm font-semibold text-accent no-underline hover:border-accent">{assignWaysCopy.newLink}</a>
             ) : null}
           </p>
           <div className="mt-6 flex flex-col gap-8">
-            {prefill ? ways : null}
+            {draftsFirst ? null : ways}
             {draftsBlock}
-            {prefill ? null : ways}
+            {draftsFirst ? ways : null}
             <p className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
               <Link href={`/studio/new?learner=${learner.id}#drafts`} data-testid="see-studio" className="inline-flex min-h-11 items-center text-accent underline">
                 {assignWaysCopy.seeStudio}

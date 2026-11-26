@@ -1,20 +1,19 @@
 import Link from "next/link";
 import { assignedBoardCopy as c, studioCopy } from "@/lib/copy/vi";
 import type { DraftBoard, DraftGroup } from "@/lib/assigned/draftGroups";
-import { unitKeyOf } from "@/lib/results/score";
 import type { DraftListItem } from "@/lib/studio/types";
 
 const ROW = "flex min-h-12 flex-wrap items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-[#f2f7f4] focus-within:bg-[#f2f7f4]";
 const GIVE = "inline-flex min-h-11 items-center rounded-xl bg-accent px-4 text-[15px] font-bold text-white no-underline shadow-[0_2px_0_#1f4439] hover:bg-[#1f4439]";
 const REVIEW = "inline-flex min-h-11 items-center rounded-xl border-2 border-accent bg-white px-3.5 text-sm font-bold text-accent no-underline hover:bg-[#eef5f1]";
 
-/** One draft: the title opens it; the button on the right says what to do next (Duyệt a draft, open one still being read). */
+/** One draft: the button on the right opens it and says what to do next (Duyệt a draft, Mở one still being read). One link per row. */
 function DraftRow({ d }: { d: DraftListItem }) {
   const action = d.status === "draft" ? c.reviewAction : c.openAction;
   return (
     <li className={ROW} data-testid={`draft-${d.id}`}>
-      <Link href={`/studio/drafts/${d.id}`} className="min-w-0 flex-1 basis-72 font-medium text-ink no-underline hover:underline">{d.title}</Link>
-      <span className="text-sm text-[#8a6d1f]">{studioCopy.statusLabels[d.status]}</span>
+      <span className="min-w-0 flex-1 basis-72 font-medium text-ink">{d.title}</span>
+      <span className="text-sm text-[#7a5f17]">{studioCopy.statusLabels[d.status]}</span>
       <Link href={`/studio/drafts/${d.id}`} aria-label={c.actionLabel(action, d.title)} data-testid={`draft-action-${d.id}`} className={REVIEW}>{action}</Link>
     </li>
   );
@@ -51,18 +50,20 @@ export function DraftGroups({ board }: { board: DraftBoard }) {
           </div>
           <p className="mt-0.5 text-sm text-muted">{c.readyHint}</p>
           <ul className="mt-2 flex flex-col gap-0.5">
-            {board.ready.map((d) => {
-              const unit = unitKeyOf([], d.title);
-              return (
-                <li key={d.id} className={`${ROW} border-t border-[#eceee8]`} data-testid={`draft-${d.id}`}>
-                  <span className="min-w-0 flex-1 basis-72">
-                    <Link href={`/studio/drafts/${d.id}`} className="font-semibold text-ink no-underline hover:underline">{d.title}</Link>
-                    {unit ? <span className="block text-sm text-muted">{c.draftGroup(/^U\d+$/.test(unit) ? unit : "review")}</span> : null}
-                  </span>
-                  <Link href={`/studio/drafts/${d.id}#assign`} aria-label={c.giveLabel(d.title)} data-testid={`draft-give-${d.id}`} className={GIVE}>{c.giveAction}</Link>
-                </li>
-              );
-            })}
+            {board.ready.map(({ draft: d, next, status }) => (
+              <li key={d.id} className={`${ROW} border-t border-[#eceee8]`} data-testid={`draft-${d.id}`}>
+                <span className="min-w-0 flex-1 basis-72">
+                  <span className="font-semibold text-ink">{d.title}</span>
+                  {next || status ? (
+                    <span className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-muted">
+                      {next ? <span data-testid="ready-next" className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-white">{c.draftNext}</span> : null}
+                      {status ? <span>{c.unitStatus[status]}</span> : null}
+                    </span>
+                  ) : null}
+                </span>
+                <Link href={`/studio/drafts/${d.id}#assign`} aria-label={c.giveLabel(d.title)} data-testid={`draft-give-${d.id}`} className={GIVE}>{c.giveAction}</Link>
+              </li>
+            ))}
           </ul>
         </section>
       ) : null}

@@ -32,6 +32,20 @@ const run = async (sp: Record<string, string>) => {
   }
 };
 
+describe("hướng B v2: drafts before the ways, unless coming from a book", () => {
+  it("plain page: Bản nháp first, then Tạo bài mới; the jump link is there", async () => {
+    const { html } = await run({});
+    expect(html.indexOf('data-testid="assign-drafts"')).toBeGreaterThan(-1);
+    expect(html.indexOf('data-testid="assign-drafts"')).toBeLessThan(html.indexOf('data-testid="way-cards"'));
+    expect(html).toContain('data-testid="assign-new-link"');
+  });
+  it("from Giáo trình (prefill): the ways first, no jump link", async () => {
+    const { html } = await run({ title: "Review 2", units: "U3,U4" });
+    expect(html.indexOf('data-testid="way-cards"')).toBeLessThan(html.indexOf('data-testid="assign-drafts"'));
+    expect(html).not.toContain('data-testid="assign-new-link"');
+  });
+});
+
 describe("Giao bài page", () => {
   it("no way: the four cards, the follow banner and the drafts being prepared — no assigned lists (24/11)", async () => {
     const r = await run({});

@@ -32,7 +32,7 @@ describe("Bản nháp (Giao bài + Bài tập, v2): Sẵn sàng giao first, then
   const g = (over: Partial<DraftGroup>): DraftGroup => ({ key: "U15", unitKey: "U15", status: "in_progress", next: true, closed: false, drafts: [], ...over });
   const draft = (id: string, title: string, status: "approved" | "draft" | "extracting" = "draft") => ({ id, title, status, updatedAt: "2026-11-20T00:00:00Z", templateId: null, templateVersion: null, superseded: false, assigned: 0 });
   const board = {
-    ready: [draft("r1", "Unit 15 · 1 · Adjective", "approved")],
+    ready: [{ draft: draft("r1", "Unit 15 · 1 · Adjective", "approved"), unitKey: "U15", status: "in_progress" as const, next: true }],
     groups: [
       g({ drafts: [draft("d1", "Unit 15 · Part 2")] }),
       g({ key: "U16", unitKey: "U16", status: "not_started", next: false, drafts: [draft("d2", "Unit 16 · Idioms"), draft("d4", "Unit 16 · 2", "extracting")] }),
@@ -46,6 +46,7 @@ describe("Bản nháp (Giao bài + Bài tập, v2): Sẵn sàng giao first, then
     expect(h).toContain(c.readyTitle(1));
     expect(h).toMatch(/data-testid="draft-give-r1"[^>]*class="[^"]*bg-accent[^"]*text-white[^"]*"[^>]*href="\/studio\/drafts\/r1#assign"/);
     expect(h).toContain(c.giveAction);
+    expect(h).toContain('data-testid="ready-next"');
     expect(h.indexOf('data-testid="draft-group-U15"')).toBeLessThan(h.indexOf('data-testid="draft-group-U16"'));
     expect(h).toContain('data-testid="draft-next"');
     expect(h).toMatch(/<details open=""[^>]*data-testid="draft-group-U15"/);
@@ -57,6 +58,7 @@ describe("Bản nháp (Giao bài + Bài tập, v2): Sẵn sàng giao first, then
   it("each draft has a visible action: Duyệt for a draft, Mở while it is being read; 44 px", () => {
     const h = renderToStaticMarkup(createElement(DraftGroups, { board }));
     expect(h).toMatch(new RegExp(`aria-label="${c.actionLabel(c.reviewAction, "Unit 15 · Part 2")}"[^>]*data-testid="draft-action-d1"[^>]*min-h-11`));
+    expect(h.match(/href="\/studio\/drafts\/d1"/g)).toHaveLength(1); // one link per row
     expect(h).toMatch(new RegExp(`aria-label="${c.actionLabel(c.openAction, "Unit 16 · 2")}"`));
   });
   it("nothing to show: the empty line", () => {

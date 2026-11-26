@@ -2337,10 +2337,10 @@ Bản phác: canvas hướng B, artboard "Bản 2". **Không có SQL**, không A
   - **Ghi buổi học:** viền xanh dày.
   - Cả 3 nút cao 48 px và có biểu tượng. Mỗi mục đều có biểu tượng; mục đang mở có vạch bên trái, nền xanh nhạt, chữ đậm.
 - **Bản nháp** (trang Giao bài và tab Bài tập › Bản nháp dùng chung `lib/assigned/draftGroups.ts` `draftBoard`):
-  1. **Sẵn sàng giao** (đã duyệt, chưa giao) lên đầu, xếp theo Unit. Mỗi dòng có nút đậm **Giao →**, mở trang bài ở đúng ô chọn ngày (`#assign`).
+  1. **Sẵn sàng giao** (đã duyệt, chưa giao) lên đầu, theo cùng thứ tự với các nhóm bên dưới (Unit đang học trước, Unit đã học sau); bài của Unit đang học có nhãn "Kế tiếp". Mỗi dòng có nút đậm **Giao →**, mở trang bài ở đúng ô chọn ngày (`#assign`).
   2. Unit **Kế tiếp**, mở sẵn.
   3. Các Unit còn lại (gập).
-  4. Review và Progress Test chung một nhóm.
+  4. Review và Progress Test chung một nhóm, xếp theo thứ tự trong sách (theo Unit cuối mà bài ôn).
   5. Unit đã học hoặc bỏ qua.
   6. Bài không có Unit.
   - Mỗi dòng có nút **Duyệt**, hoặc **Mở** khi AI đang đọc. Trong một Unit, bài xếp theo số thứ tự như sách.
