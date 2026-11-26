@@ -58,6 +58,28 @@ test.describe("workdesk shell", () => {
     if ((await badge.count()) > 0) await expect(badge).toHaveText(/^(≥ )?[1-9]\d*$/);
   });
 
+  test("hướng B: Tiến bộ opens Tổng quan (4 tiles); its tabs reach Theo Unit, Bản đồ kiến thức and Hồ sơ cấp; Hồ sơ học sinh holds the notes", async ({ page }) => {
+    await loginAs(page, "tutorNguyen");
+    await page.getByTestId("nav-progress").click();
+    await expect(page).toHaveURL(new RegExp(`/learners/${NG}/progress$`));
+    const view = page.getByTestId("results-view");
+    if ((await page.getByTestId("results-unavailable").count()) === 0) {
+      await expect(view).toHaveAttribute("data-tab", "overview");
+      for (const id of ["tile-sent", "tile-firsttry", "tile-waiting", "tile-unit"]) await expect(page.getByTestId(id), id).toBeVisible();
+    }
+    await page.getByTestId("section-tab-unit").click();
+    await expect(page).toHaveURL(new RegExp(`/learners/${NG}/progress\\?tab=unit$`));
+    await page.getByTestId("section-tab-tag").click();
+    await page.getByTestId("results-knowledge-link").click();
+    await expect(page).toHaveURL(new RegExp(`/learners/${NG}/knowledge$`));
+    await expect(page.getByTestId("section-tab-tag")).toHaveAttribute("aria-current", "page");
+    await page.getByTestId("section-tab-levels").click();
+    await expect(page).toHaveURL(new RegExp(`/learners/${NG}/levels$`));
+    await page.getByTestId("nav-profile").click();
+    await expect(page).toHaveURL(new RegExp(`/learners/${NG}/profile$`));
+    await expect(page.getByTestId("profile-page")).toBeVisible();
+  });
+
   for (const t of [{ key: "tutorNguyen", own: NG, other: AN }, { key: "tutorAn", own: AN, other: NG }] as const) {
     test(`${t.key}: every sidebar link opens (200); the same links for the other child are 404; parent-only pages are 404`, async ({ page }) => {
       test.setTimeout(120_000);
@@ -77,7 +99,8 @@ test.describe("workdesk shell", () => {
     await expect(page.getByTestId("learner-switcher")).toBeVisible();
     await page.getByTestId(`learner-option-${NG}`).click();
     await expect(page).toHaveURL(new RegExp(`/learners/${NG}/weak$`));
-    await expect(page.getByTestId("nav-profile-weak")).toHaveAttribute("aria-current", "page");
+    await expect(page.getByTestId("nav-progress")).toHaveAttribute("aria-current", "page");
+    await expect(page.getByTestId("levels-sub-weak")).toHaveAttribute("aria-current", "page");
   });
 
   for (const key of ["studentAn", "studentNguyen"] as const) {
@@ -92,7 +115,7 @@ test.describe("workdesk shell", () => {
 
   test("old deep links still open, inside the shell", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
-    for (const h of ["/review", "/review/skills", "/review/studio", `/learners/${NG}/levels`, `/learners/${NG}/weak`, `/learners/${NG}/notes/new`, `/learners/${NG}/assign`, `/learners/${NG}/inbox`, `/learners/${NG}/knowledge`, `/learners/${NG}/curricula`, `/learners/${NG}/roadmap`, `/learners/${NG}/progress`, `/studio/new?learner=${NG}`, "/feedback"]) {
+    for (const h of ["/review", "/review/skills", "/review/studio", `/learners/${NG}/levels`, `/learners/${NG}/weak`, `/learners/${NG}/notes/new`, `/learners/${NG}/assign`, `/learners/${NG}/inbox`, `/learners/${NG}/knowledge`, `/learners/${NG}/curricula`, `/learners/${NG}/roadmap`, `/learners/${NG}/progress`, `/learners/${NG}/progress?tab=work`, `/learners/${NG}/profile`, `/studio/new?learner=${NG}`, "/feedback"]) {
       expect(await status(page, h), h).toBe(200);
       await expect(page.getByTestId("staff-shell"), h).toBeVisible();
     }

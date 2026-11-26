@@ -20,13 +20,15 @@ const same = (path: (to: string) => string) => ({ switchTo: path });
 /** Hướng B (26/11): every adult page lights one of the six sections (spec "Đường dẫn"); no page was removed. */
 const RULES: readonly Rule[] = [
   { re: /^\/$/, section: "desk", child: null, screen: S.home },
-  // Hồ sơ học sinh (PR2 moves levels / weak / targets to Tiến bộ)
-  { re: lp("/levels/baseline"), section: "profile", child: "levels", screen: S.baseline },
-  { re: lp("/levels/adjust"), section: "profile", child: "levels", screen: S.adjust },
-  { re: lp("/levels/external/new"), section: "profile", child: "levels", screen: S.external },
-  { re: lp("/levels"), section: "profile", child: "levels", screen: S.levels },
-  { re: lp("/weak"), section: "profile", child: "weak", screen: S.weak },
-  { re: lp("/targets"), section: "profile", child: "targets", screen: S.targets },
+  // Tiến bộ › Cấp và kỹ năng (Hồ sơ cấp, Mục cần chú ý, Kỹ năng đang theo dõi)
+  { re: lp("/levels/baseline"), section: "progress", child: null, screen: S.baseline, ...same((to) => `${L(to)}/levels`) },
+  { re: lp("/levels/adjust"), section: "progress", child: null, screen: S.adjust, ...same((to) => `${L(to)}/levels`) },
+  { re: lp("/levels/external/new"), section: "progress", child: null, screen: S.external, ...same((to) => `${L(to)}/levels`) },
+  { re: lp("/levels"), section: "progress", child: null, screen: S.levels, ...same((to) => `${L(to)}/levels`) },
+  { re: lp("/weak"), section: "progress", child: null, screen: S.weak, ...same((to) => `${L(to)}/weak`) },
+  { re: lp("/targets"), section: "progress", child: null, screen: S.targets, ...same((to) => `${L(to)}/targets`) },
+  // Hồ sơ học sinh
+  { re: lp("/profile"), section: "profile", child: "profile", screen: S.profile, ...same((to) => `${L(to)}/profile`) },
   { re: lp("/reading/new"), section: "profile", child: "reading", screen: S.reading },
   { re: lp("/tutor-asks(/.*)?"), section: "profile", child: "tutorAsks", screen: S.tutorAsks },
   // Buổi học
@@ -49,9 +51,9 @@ const RULES: readonly Rule[] = [
   { re: /^\/review\/[^/]+$/, section: "work", child: null, screen: S.reviewEpisode },
   { re: lp("/revisions"), section: "work", child: null, screen: S.revisions, ...same((to) => `${L(to)}/revisions`) },
   { re: lp("/revisions/[^/]+"), section: "work", child: null, screen: S.revisionOne, ...same((to) => `${L(to)}/revisions`) },
-  // Tiến bộ (PR2 drops the children)
-  { re: lp("/progress"), section: "progress", child: "results", screen: S.progress },
-  { re: lp("/knowledge(/.*)?"), section: "progress", child: "knowledge", screen: S.knowledgeMap },
+  // Tiến bộ
+  { re: lp("/progress"), section: "progress", child: null, screen: S.progress },
+  { re: lp("/knowledge(/.*)?"), section: "progress", child: null, screen: S.knowledgeMap, ...same((to) => `${L(to)}/knowledge`) },
   // Kế hoạch
   { re: lp("/curricula(/[^/]+)?"), section: "plan", child: null, screen: curriculumCopy.screenLabel },
   { re: /^\/curricula\/versions\/[^/]+$/, section: "plan", child: null, screen: curriculumCopy.screenLabel },

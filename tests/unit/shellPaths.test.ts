@@ -9,12 +9,12 @@ const S = appFeedback.screens;
 describe("activeFor: every existing page keeps the feedback screen it passed to AppHeader", () => {
   const table: [string, string | null, string | null, string][] = [
     ["/", "desk", null, S.home],
-    [`/learners/${X}/levels`, "profile", "levels", S.levels],
-    [`/learners/${X}/levels/baseline`, "profile", "levels", S.baseline],
-    [`/learners/${X}/levels/adjust`, "profile", "levels", S.adjust],
-    [`/learners/${X}/levels/external/new`, "profile", "levels", S.external],
-    [`/learners/${X}/weak`, "profile", "weak", S.weak],
-    [`/learners/${X}/targets`, "profile", "targets", S.targets],
+    [`/learners/${X}/levels`, "progress", null, S.levels],
+    [`/learners/${X}/levels/baseline`, "progress", null, S.baseline],
+    [`/learners/${X}/levels/adjust`, "progress", null, S.adjust],
+    [`/learners/${X}/levels/external/new`, "progress", null, S.external],
+    [`/learners/${X}/weak`, "progress", null, S.weak],
+    [`/learners/${X}/targets`, "progress", null, S.targets],
     [`/learners/${X}/reading/new`, "profile", "reading", S.reading],
     [`/learners/${X}/tutor-asks`, "profile", "tutorAsks", S.tutorAsks],
     [`/learners/${X}/notes/new`, "sessions", null, S.notesNew],
@@ -35,8 +35,9 @@ describe("activeFor: every existing page keeps the feedback screen it passed to 
     ["/review/e1", "work", null, S.reviewEpisode],
     [`/learners/${X}/revisions`, "work", null, S.revisions],
     [`/learners/${X}/revisions/a1`, "work", null, S.revisionOne],
-    [`/learners/${X}/progress`, "progress", "results", S.progress],
-    [`/learners/${X}/knowledge`, "progress", "knowledge", S.knowledgeMap],
+    [`/learners/${X}/progress`, "progress", null, S.progress],
+    [`/learners/${X}/profile`, "profile", "profile", S.profile],
+    [`/learners/${X}/knowledge`, "progress", null, S.knowledgeMap],
     [`/learners/${X}/curricula`, "plan", null, curriculumCopy.screenLabel],
     [`/learners/${X}/curricula/c1`, "plan", null, curriculumCopy.screenLabel],
     ["/curricula/versions/v1", "plan", null, curriculumCopy.screenLabel],
@@ -51,7 +52,7 @@ describe("activeFor: every existing page keeps the feedback screen it passed to 
     it(path, () => expect(activeFor(path)).toEqual({ section, child, screen }));
   }
   it("a trailing slash does not matter; an unknown page has no section and the default screen", () => {
-    expect(activeFor(`/learners/${X}/weak/`).section).toBe("profile");
+    expect(activeFor(`/learners/${X}/weak/`).section).toBe("progress");
     expect(activeFor("/somewhere")).toEqual({ section: null, child: null, screen: appFeedback.screenDefault });
   });
 });
@@ -59,6 +60,9 @@ describe("activeFor: every existing page keeps the feedback screen it passed to 
 describe("switchHref keeps the part of the app that is open", () => {
   it("same child page when every child has it; the section root otherwise", () => {
     expect(switchHref(`/learners/${X}/weak`, Y)).toBe(`/learners/${Y}/weak`);
+    expect(switchHref(`/learners/${X}/targets`, Y)).toBe(`/learners/${Y}/targets`);
+    expect(switchHref(`/learners/${X}/profile`, Y)).toBe(`/learners/${Y}/profile`);
+    expect(switchHref(`/learners/${X}/progress`, Y)).toBe(`/learners/${Y}/progress`);
     expect(switchHref(`/learners/${X}/levels/baseline`, Y)).toBe(`/learners/${Y}/levels`);
     expect(switchHref(`/learners/${X}/curricula/c1`, Y)).toBe(`/learners/${Y}/curricula`);
     expect(switchHref("/curricula/versions/v1", Y)).toBe(`/learners/${Y}/curricula`);

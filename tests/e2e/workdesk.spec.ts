@@ -10,7 +10,7 @@ test.describe.serial("W1 teaching notes", () => {
 
   test("the tutor edits the 'focus' field and sees it saved", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
-    await page.goto(`/learners/${NG}/levels`);
+    await page.goto(`/learners/${NG}/profile`);
     await page.getByTestId("notes-edit").click();
     await page.locator("#tn_focus").fill(text);
     await page.getByTestId("notes-save").click();
@@ -20,14 +20,14 @@ test.describe.serial("W1 teaching notes", () => {
 
   test("the parent reads the note but has no edit button", async ({ page }) => {
     await loginAs(page, "parent");
-    await page.goto(`/learners/${NG}/levels`);
+    await page.goto(`/learners/${NG}/profile`);
     await expect(page.getByTestId("note-focus")).toContainText(text);
     await expect(page.getByTestId("notes-edit")).toHaveCount(0);
   });
 
   test("the student cannot open the profile page", async ({ page }) => {
     await loginAs(page, "studentNguyen");
-    const res = await page.goto(`/learners/${NG}/levels`);
+    const res = await page.goto(`/learners/${NG}/profile`);
     expect(res?.status()).toBe(404);
   });
 });

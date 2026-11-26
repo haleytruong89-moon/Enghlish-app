@@ -1,43 +1,35 @@
 import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
+import { ProgressTabs } from "@/components/progress/ProgressTabs";
 import { DomainDetail } from "@/components/levels/DomainDetail";
 import { LevelBars } from "@/components/levels/LevelBars";
 import { LevelSummaryCard } from "@/components/levels/LevelSummaryCard";
-import { IntakeCard } from "@/components/workdesk/IntakeCard";
-import { TeachingNotesCard } from "@/components/workdesk/TeachingNotesCard";
-import { ThenNowPicker } from "@/components/workdesk/ThenNowPicker";
 import { Milestones } from "@/components/levels/Milestones";
-import { learnerWithTrack, levelCopy, pointStateCopy, skillStateCopy, teachingNotes, thenNowPickerCopy } from "@/lib/copy/vi";
+import { learnerWithTrack, levelCopy, pointStateCopy, profilePage, skillStateCopy } from "@/lib/copy/vi";
 import { loadLevelProfile } from "@/lib/levels/load";
-import { levelsAction } from "@/lib/levels/view";
 import { strongestWeakest } from "@/lib/levels/scale";
 import { groupWeakPoints } from "@/lib/skillmap/group";
 import { loadSkillMap } from "@/lib/skillmap/load";
 import { loadSkillStatesSoft } from "@/lib/skills/load";
 import { domainSkills, solidByDomain } from "@/lib/skills/view";
-import { loadThenNowCandidates } from "@/lib/thennow/load";
 import { loadWeakPoints } from "@/lib/tutorwork/load";
-import { loadIntake, loadTeachingNotes } from "@/lib/workdesk/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
 export const dynamic = "force-dynamic";
 
 /**
- * "Hồ sơ cấp" of one child (parent and tutor; students get 404): where the child is, 7 bars, the detail of one domain (?domain=,
+ * "Hồ sơ cấp" (Tiến bộ › Cấp và kỹ năng, hướng B) of one child (parent and tutor; students get 404): where the child is, 7 bars, the detail of one domain (?domain=,
  * default the "Cần tập trung" domain, else Ngữ pháp), external milestones and the history of level decisions.
  */
 export default async function LevelsPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ domain?: string }> }) {
   const { id } = await params;
   const { domain } = await searchParams;
   const { member, learner } = await requireLearnerPage(id, "tutorwork:read");
-  const [profile, map, weak, { skills, failed }, notes, intake, thenNow] = await Promise.all([
+  const [profile, map, weak, { skills, failed }] = await Promise.all([
     loadLevelProfile(learner.id),
     loadSkillMap(learner.id),
     loadWeakPoints(learner.id, "8"),
     loadSkillStatesSoft(learner.id, "GET /learners/[id]/levels"),
-    loadTeachingNotes(learner.id),
-    loadIntake(learner.id),
-    loadThenNowCandidates(learner.id),
   ]);
   const focus = strongestWeakest(profile.domains).weakest[0]?.key;
   const active = profile.domains.find((d) => d.key === domain) ?? profile.domains.find((d) => d.key === focus) ?? profile.domains[0]!;
@@ -52,28 +44,15 @@ export default async function LevelsPage({ params, searchParams }: { params: Pro
           {levelCopy.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{levelCopy.title(learner.alias)}</h1>
+        <ProgressTabs learnerId={learner.id} current="levels" sub="levels" />
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
         <p className="mt-3 text-muted">{levelCopy.intro}</p>
         <Link href={`/learners/${learner.id}/knowledge`} data-testid="levels-knowledge-link" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-accent underline">
           {pointStateCopy.seeMap}
         </Link>
-        {intake.available && notes.available ? (
-          <>
-            <IntakeCard learnerId={learner.id} view={intake.data} canEdit={canDecide} levelsAssumed={canDecide && levelsAction(profile.domains) === "confirm"} domains={profile.domains.map((d) => ({ key: d.key, name: d.name }))} />
-            <TeachingNotesCard learnerId={learner.id} alias={learner.alias} view={notes.data} canEdit={canDecide} />
-          </>
-        ) : (
-          <p role="status" data-testid="workdesk-unavailable" className="mt-6 rounded-xl border border-line bg-white px-5 py-3 text-sm text-muted">
-            {teachingNotes.unavailable}
-          </p>
-        )}
-        {thenNow.available ? (
-          <ThenNowPicker learnerId={learner.id} alias={learner.alias} view={thenNow.data} canEdit={canDecide} />
-        ) : (
-          <p role="status" data-testid="then-now-unavailable" className="mt-6 rounded-xl border border-line bg-white px-5 py-3 text-sm text-muted">
-            {thenNow.failed ? thenNowPickerCopy.loadFailed : thenNowPickerCopy.unavailable}
-          </p>
-        )}
+        <Link href={`/learners/${learner.id}/profile`} data-testid="levels-profile-link" className="inline-flex min-h-11 items-center text-sm text-accent underline md:ml-4">
+          {profilePage.moved}
+        </Link>
         <LevelSummaryCard alias={learner.alias} profile={profile} />
         {failed ? (
           <p role="status" data-testid="skills-unavailable" className="mt-4 rounded-xl border border-line bg-white px-5 py-3 text-sm text-muted">

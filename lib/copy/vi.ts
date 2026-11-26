@@ -2019,7 +2019,8 @@ export const studioAssignedCopy = {
 // Kết quả + Việc nên làm (26/11, after the 25/11 audit). Adults only; the child never sees these numbers (D35).
 const pctText = (p: number) => `${p}%`;
 export const resultsCopy = {
-  title: (alias: string) => `Kết quả · ${alias}`,
+  title: (alias: string) => `Tiến bộ · ${alias}`,
+  knowledgeLink: "Mở Bản đồ kiến thức (mức 1–4 của từng mục) →",
   intro: "Điểm từng bài, từng Unit và từng mục kiến thức. Chỉ tính lần làm đầu; câu chỉ làm trên giấy không tính. Con không thấy trang này.",
   tabsLabel: "Xem kết quả theo",
   tabs: { overview: "Tổng quan", unit: "Theo Unit", tag: "Mục kiến thức", levels: "Cấp và kỹ năng" },
@@ -2550,6 +2551,7 @@ export const appFeedback = {
   screenDefault: "Hôm nay",
   screens: {
     home: "Hôm nay",
+    profile: "Hồ sơ học sinh",
     finish: "Xong một bài",
     roadmap: "Lộ trình",
     review: "Hộp duyệt",
@@ -2750,6 +2752,15 @@ export const curriculumCopy = {
 } as const;
 
 // ---------- Khung bàn làm việc (cột trái + thanh trên; lát "Khung bàn làm việc", 08/11/2026) ----------
+/** Hồ sơ học sinh (hướng B, 26/11): the tutor's notes about the child, moved out of Hồ sơ cấp. */
+export const profilePage = {
+  link: "Đầu vào và ghi chú dạy học",
+  title: (alias: string) => `Hồ sơ học sinh · ${alias}`,
+  intro: `Những điều ${tutorHonorific} cần nhớ về con: hồ sơ đầu vào, ghi chú dạy học, “Ngày ấy – bây giờ”. Cấp và kỹ năng nằm ở Tiến bộ.`,
+  levelsLink: "Cấp và kỹ năng ở Tiến bộ →",
+  moved: "Hồ sơ đầu vào và ghi chú dạy học ở Hồ sơ học sinh →",
+};
+
 export const shellCopy = {
   navLabel: "Các phần",
   menu: "Các phần",
@@ -2765,9 +2776,6 @@ export const shellCopy = {
   /** Hướng B (26/11): the three things done every day, above the sections. */
   quick: { label: "Việc chính", grade: "Chấm bài", assign: "Giao bài", note: "Ghi buổi học" },
   planTabs: { label: "Kế hoạch", curricula: "Giáo trình", roadmap: "Lộ trình" },
-  /** PR1 interim children (removed in PR2 when Tiến bộ gets its tabs). */
-  progressResults: "Kết quả",
-  progressKnowledge: "Bản đồ kiến thức",
   soon: "Sắp có",
   gradeBadge: (n: string) => `${n} bài con đã nộp đang chờ chấm`,
   parentGroup: "Phụ huynh",

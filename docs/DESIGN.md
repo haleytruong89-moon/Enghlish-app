@@ -704,3 +704,31 @@ Một màn cho một lần làm bài Studio: `/learners/[id]/finish/[attemptId]`
 - **SQL (0044, chỉ hàm).** `eng_unit_auto_events(learner)` (nội bộ, không ai gọi trực tiếp): mỗi Unit của giáo trình đã duyệt (không bỏ qua) có bài nộp → lúc nộp mới nhất, chỉ khi trạng thái người lớn tới lúc đó là rỗng / "Chưa bắt đầu". Unit của bài: `studio_assignment_units`, `assignment_units`, hoặc "Unit N" trong tên bài Studio không gắn Unit → mã `UN` của giáo trình chính (`eng_roadmap_main_id`; cùng luật `unitKeyOf`). `eng_unit_auto(learner)` cho người lớn (authenticated, `eng_is_staff_of`, ngoài phạm vi = rỗng). `eng_my_roadmap()` = 0031 + gộp sự kiện tự chạy.
 - **App.** `curriculumProgress(units, events, auto)` + `mergeAutoEvents` (thuần; kiểm lại luật "chỉ lên"); `autoOf` → nhãn "App đặt theo bài nộp · dd/mm" trên Trạng thái Unit; Lộ trình (`parseRoadmap(raw, auto)`) và mọi nơi dùng thẻ giáo trình đi theo. Trước 0044: `loadUnitAuto` trả rỗng, mọi thứ như cũ.
 - **Thẻ "có thể Đã học"** (`unit_ready`, `lib/results/actions.ts`): Unit sách đang "Đang học", không còn bài giao chưa nộp, không còn câu chờ, ≥ 4 câu đã chấm, lần làm đầu ≥ 60 % → thẻ ở Việc nên làm với nút "Đánh dấu Đã học" (gọi `POST /api/curricula/:id/unit-events` sẵn có; chỉ thầy/cô thấy nút). Không phải thẻ "Đã làm / Bỏ qua" (0043 không có loại này).
+
+### 19.38. Hướng B: cột trái, Bài tập, Tiến bộ › Tổng quan (không SQL)
+
+Thiết kế: `docs/superpowers/specs/2026-11-26-ia-huong-b-design.md`.
+
+- **Cột trái (`lib/shell/nav.ts`)** là dữ liệu thuần:
+  - `quick`: 3 nút. Chấm bài → `/learners/[id]/finish`; Giao bài → `/assign`; Ghi buổi học → `/notes/new`.
+  - `sections`: Hôm nay · Bài tập · Buổi học · Tiến bộ · Kế hoạch · Hồ sơ học sinh.
+  - Mỗi đường dẫn thuộc đúng một mục theo bảng `RULES` (`lib/shell/paths.ts`). Không trang nào bị xóa.
+- **Tab:** Kế hoạch và Tiến bộ là tab dạng liên kết giữa các trang có sẵn (`lib/shell/tabs.ts`, `components/shell/SectionTabs.tsx`). Vì vậy URL luôn cho biết đang mở tab nào và trang chạy được không cần JS.
+- **Số trên nút Chấm bài:** route chỉ đọc `GET /api/learners/:id/pending-count` trả `{ count, work }`.
+  - `work = submissionView(rows)`: số dòng bài nộp của Chờ duyệt (`work`, `studio_check`, `retry`, `feedback`).
+  - Cùng luật đủ / thiếu với `pendingView`: nguồn đếm lỗi thì `null`, chạm giới hạn trang thì `≥ n`.
+  - Trình duyệt nhớ 30 giây cho mỗi em (`components/shell/badgeStore.ts`), và đọc lại sau khi rời trang Xong một bài hoặc Bài tập.
+- **Bài tập › Bản nháp (`lib/assigned/draftGroups.ts`):**
+  - Lấy bản nháp chưa bỏ, chưa bị thay, chưa giao (`openDrafts`), gom theo `unitKeyOf([], title)`.
+  - "Kế tiếp" = Unit (`U\d+`) có số nhỏ nhất mà ở giáo trình chính chưa `done` / `skipped`.
+  - Giáo trình chính chọn bằng `mainCurriculum` (`lib/curriculum/main.ts`), dùng chung với Kết quả. Chỉ đọc khi mở tab này; lỗi thì nhóm vẫn hiện, chỉ không có trạng thái.
+- **Tiến bộ › Tổng quan (`lib/results/overview.ts`)** dùng cùng thước đo với Kết quả: chỉ tính bài được đo (lần làm đầu), câu chỉ làm trên giấy không tính, câu chờ người không tính đúng hay sai.
+  - **4 tuần** = 28 ngày giờ Việt Nam tính đến hôm nay, so với 28 ngày liền trước.
+  - **Ô "Bài nộp":** số bài được đo đã nộp trong 4 tuần.
+  - **Ô "Đúng lần đầu":** tổng đúng / tổng câu đã chấm của các bài đó. Chưa chấm câu nào thì hiện "—". Độ chênh tính bằng điểm %.
+  - **Ô "Chờ chấm":** bài còn việc của người lớn, kèm số ngày của bài chờ lâu nhất.
+  - **Ô "Đang học":** Unit đang học của giáo trình chính, kèm số Unit đã học / tổng.
+  - **Biểu đồ:** mỗi bài được đo có ít nhất 1 câu đã chấm là một chấm, xếp cũ → mới, tối đa 20 bài. Có nền dưới 50 % và từ 80 % (ngưỡng `RESULT_RULES`). Rê chuột hoặc bấm phím vào chấm thì thấy tên bài. Bảng "Từng bài" ngay dưới là bản đọc được của biểu đồ.
+  - **Mục kiến thức:** chỉ xét mục có ≥ `minItems` câu đã chấm. Yếu nhất là 3 mục dưới 80 %, mạnh nhất là 3 mục từ 80 %. Một mục không nằm ở cả hai.
+  - `?tab=work` cũ mở Tổng quan.
+- **Hồ sơ học sinh (`/learners/[id]/profile`):** Hồ sơ đầu vào, Ghi chú dạy học và "Ngày ấy – bây giờ" chuyển nguyên từ Hồ sơ cấp, cùng cổng `tutorwork:read`. Cảnh báo "Hồ sơ đầu vào" trỏ `/profile#intake`.

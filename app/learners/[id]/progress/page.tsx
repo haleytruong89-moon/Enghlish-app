@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ProgressTabs } from "@/components/progress/ProgressTabs";
 import { ActionCards } from "@/components/results/ActionCards";
 import { HandledList } from "@/components/results/HandledList";
 import { parseResultTab, ResultsView } from "@/components/results/ResultsView";
@@ -10,7 +12,7 @@ import { requireLearnerPage } from "@/lib/tutorwork/page";
 
 export const dynamic = "force-dynamic";
 
-/** "Kết quả" (26/11): what the child got right, by test / Unit / knowledge item, and what to do about it. The child's tutor or the parent. */
+/** "Tiến bộ" (hướng B; was "Kết quả", 26/11): what the child got right, by test / Unit / knowledge item, and what to do about it. The child's tutor or the parent. */
 export default async function ProgressPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string | string[] }> }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -27,6 +29,12 @@ export default async function ProgressPage({ params, searchParams }: { params: P
       <div>
         <h1 className="text-2xl font-bold">{c.title(learner.alias)}</h1>
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)} · {c.intro}</p>
+        <ProgressTabs learnerId={learner.id} current={tab} />
+        {tab === "tag" ? (
+          <Link href={`/learners/${learner.id}/knowledge`} data-testid="results-knowledge-link" className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-accent underline">
+            {c.knowledgeLink}
+          </Link>
+        ) : null}
       </div>
       <ActionCards learnerId={learner.id} cards={data ? data.allActions : null} tagLabels={tagLabels} role={role} decisionsReady={data?.decisionsReady ?? false} />
       {data ? <HandledList items={data.handled} ready={data.decisionsReady} /> : null}

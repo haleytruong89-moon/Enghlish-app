@@ -1,5 +1,6 @@
 import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
+import { ProgressTabs } from "@/components/progress/ProgressTabs";
 import { DomainTiles } from "@/components/tutor/DomainTiles";
 import { ReadingSkillsTable } from "@/components/tutor/ReadingSkillsTable";
 import { WeakTable } from "@/components/tutor/WeakTable";
@@ -48,6 +49,7 @@ export default async function WeakPage({ params, searchParams }: { params: Promi
           {weakPage.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{weakPage.title(learner.alias)}</h1>
+        <ProgressTabs learnerId={learner.id} current="levels" sub="weak" />
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
         <p className="mt-3 text-muted">{weakPage.intro}</p>
 
