@@ -52,7 +52,7 @@ function TagList({ tags, labels }: { tags: TagAgg[]; labels: Readonly<Record<str
 
 /** The views of Tiến bộ. Presentational; the page loads the data after the gate. The tab row is the page's (SectionTabs). */
 export function ResultsView({ learnerId, tab, works, units, tags, tagLabels, overview }: {
-  learnerId: string; tab: ResultTab; works: WorkScore[]; units: UnitScore[]; tags: TagAgg[]; tagLabels: Readonly<Record<string, string>>; overview?: Overview;
+  learnerId: string; tab: ResultTab; works: WorkScore[]; units: UnitScore[]; tags: TagAgg[]; tagLabels: Readonly<Record<string, string>>; overview: Overview;
 }) {
   return (
     <div className="flex flex-col gap-3" data-testid="results-view" data-tab={tab}>
@@ -63,7 +63,7 @@ export function ResultsView({ learnerId, tab, works, units, tags, tagLabels, ove
           <span><i className="mr-1 inline-block h-2 w-3 rounded-sm bg-[#2f7d4f]" />{c.legend.high}</span>
         </p>
       ) : null}
-      {tab === "overview" && overview ? <OverviewView learnerId={learnerId} overview={overview} works={works} units={units} tagLabels={tagLabels} /> : null}
+      {tab === "overview" ? <OverviewView learnerId={learnerId} overview={overview} works={works} units={units} tagLabels={tagLabels} /> : null}
       {tab !== "overview" && works.length === 0 ? <p className="rounded-xl border border-line bg-white px-4 py-3 text-sm text-muted" data-testid="results-empty">{c.empty}</p> : null}
       {works.length > 0 && tab === "unit" ? <UnitList units={units} /> : null}
       {works.length > 0 && tab === "tag" ? <TagList tags={tags} labels={tagLabels} /> : null}

@@ -5,6 +5,7 @@ import { learnerWithTrack, resultsCopy as c } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { loadResults, type ResultsData } from "@/lib/results/load";
 import { buildOverview } from "@/lib/results/overview";
+import { loadNeedCount } from "@/lib/assigned/needCount";
 import { loadTags } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 import { deskHref } from "@/lib/shell/paths";
@@ -17,9 +18,11 @@ export default async function ProgressPage({ params, searchParams }: { params: P
   const sp = await searchParams;
   const { learner } = await requireLearnerPage(id, "studio:read");
   const tab = parseResultTab(Array.isArray(sp.tab) ? sp.tab[0] : sp.tab);
-  const [data, tags] = await Promise.all([
-    loadResults(learner.id, todayVn()).catch((): ResultsData | null => null),
+  const today = todayVn(); // one day for every number of the page
+  const [data, tags, need] = await Promise.all([
+    loadResults(learner.id, today).catch((): ResultsData | null => null),
     loadTags(learner.trackId).catch(() => []),
+    loadNeedCount(learner.id, today).catch(() => null),
   ]);
   const tagLabels = Object.fromEntries(tags.map((t) => [t.key, t.label]));
   return (
@@ -42,7 +45,7 @@ export default async function ProgressPage({ params, searchParams }: { params: P
       {data === null ? (
         <p className="rounded-xl border border-line bg-white px-4 py-3 text-sm text-muted" data-testid="results-unavailable">{c.unavailable}</p>
       ) : (
-        <ResultsView learnerId={learner.id} tab={tab} works={data.works} units={data.units} tags={data.tags} tagLabels={tagLabels} overview={buildOverview(data.works, data.tags, data.main, todayVn())} />
+        <ResultsView learnerId={learner.id} tab={tab} works={data.works} units={data.units} tags={data.tags} tagLabels={tagLabels} overview={buildOverview(data.works, data.tags, data.main, today, need)} />
       )}
     </div>
   );

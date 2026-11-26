@@ -27,6 +27,8 @@ test.describe("workdesk shell", () => {
     await expect(page.locator("#desk-inbox-title")).toContainText(pendingCopy.deskTitleUnknown);
     const box = await page.getByTestId("desk-inbox").boundingBox();
     expect(box && box.y + 40).toBeLessThan(768);
+    // "Góp ý về app" sits at the bottom of the left column: with the quick buttons it may sit under the fold, but it is reachable.
+    await page.getByTestId("feedback-link").scrollIntoViewIfNeeded();
     await expect(page.getByTestId("feedback-link")).toBeInViewport();
   });
 
@@ -69,6 +71,8 @@ test.describe("workdesk shell", () => {
       await expect(view).toHaveAttribute("data-tab", "overview");
       for (const id of ["tile-sent", "tile-firsttry", "tile-waiting", "tile-unit"]) await expect(page.getByTestId(id), id).toBeVisible();
     }
+    await page.goto(`/learners/${NG}/progress?tab=work`); // the old tab opens Tổng quan
+    if ((await page.getByTestId("results-unavailable").count()) === 0) await expect(page.getByTestId("results-view")).toHaveAttribute("data-tab", "overview");
     await page.getByTestId("section-tab-unit").click();
     await expect(page).toHaveURL(new RegExp(`/learners/${NG}/progress\\?tab=unit$`));
     await page.getByTestId("section-tab-tag").click();

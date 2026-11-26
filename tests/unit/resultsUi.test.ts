@@ -83,11 +83,10 @@ describe("Kết quả page views", () => {
     instanceId: "i1", activityId: "a1", title: "Unit 15 - A, B, C, E", units: ["U15"], submittedAt: "2026-11-24T04:53:00Z", attempts: 1, firstAttemptId: "t1", lastAttemptId: "t1",
     episodeId: "e1", feedbackGiven: false, feedbackReady: true, official: null, items: [...items("1111?", "A", "dang-tu"), ...items("0000", "E", "so-sanh")], partNames: new Map([["A", "Adjectives"], ["E", "Comparatives"]]),
   }, "2026-11-26");
-  const props = { learnerId: L, works: [w], units: byUnit([w], 4), tags: byTag([w]), tagLabels: { "dang-tu": "Dạng từ" } };
+  const props = { learnerId: L, works: [w], units: byUnit([w], 4), tags: byTag([w]), tagLabels: { "dang-tu": "Dạng từ" }, overview: buildOverview([w], byTag([w]), null, "2026-11-26", 0) };
   it("Tổng quan › every work on one line that folds out: provisional score, pending questions, each part, missing feedback", () => {
-    const overview = buildOverview(props.works, props.tags, null, "2026-11-26");
-    const h = renderToStaticMarkup(createElement(ResultsView, { ...props, tab: "overview", overview }));
-    expect(h).toMatch(/<li[^>]*data-testid="results-work-i1"[^>]*><details>/);
+    const h = renderToStaticMarkup(createElement(ResultsView, { ...props, tab: "overview" }));
+    expect(h).toMatch(/<li[^>]*data-testid="results-work-i1"[^>]*><details/);
     expect(h).toContain(c.provisional);
     expect(h).toContain(c.score(4, 8));
     expect(h).toContain(c.pending(1));
@@ -104,7 +103,7 @@ describe("Kết quả page views", () => {
   it("tab parsing and the empty state", () => {
     expect([parseResultTab("unit"), parseResultTab("tag"), parseResultTab("x"), parseResultTab(undefined), parseResultTab("work")]).toEqual(["unit", "tag", "overview", "overview", "overview"]);
     expect(renderToStaticMarkup(createElement(ResultsView, { ...props, works: [], tab: "unit" }))).toContain(c.empty);
-    expect(renderToStaticMarkup(createElement(ResultsView, { ...props, works: [], tab: "overview", overview: buildOverview([], [], null, "2026-11-26") }))).toContain(c.empty);
+    expect(renderToStaticMarkup(createElement(ResultsView, { ...props, works: [], tab: "overview", overview: buildOverview([], [], null, "2026-11-26", 0) }))).toContain(c.empty);
   });
 });
 
@@ -124,7 +123,7 @@ describe("Bài đã giao: provisional score", () => {
 const ov = (over: Partial<Overview> = {}): Overview => ({
   sent: { now: 7, before: 3 }, firstTry: { now: 55, before: 49, diff: 6 }, waiting: { works: 5, oldestDays: 11 },
   main: { title: "Destination B2", currentCode: "U15", currentTitle: "Unit 15", done: 14, total: 26 },
-  points: [{ instanceId: "i1", title: "Unit 15 · Bài 1", unitKey: "U15", day: "2026-11-24", pct: 41, correct: 16, decided: 39 }, { instanceId: "i2", title: "Unit 15 · Bài 2", unitKey: "U15", day: "2026-11-26", pct: 58, correct: 7, decided: 12 }],
+  points: [{ instanceId: "i1", episodeId: "e1", title: "Unit 15 · Bài 1", unitKey: "U15", day: "2026-11-24", pct: 41, correct: 16, decided: 39 }, { instanceId: "i2", episodeId: null, title: "Unit 15 · Bài 2", unitKey: "U15", day: "2026-11-26", pct: 58, correct: 7, decided: 12 }],
   weakest: [{ key: "t1", tally: { correct: 5, decided: 12, pending: 0 }, works: 3, lastAt: "" }], strongest: [], ...over,
 });
 
@@ -140,13 +139,18 @@ describe("Tiến bộ › Tổng quan (hướng B)", () => {
     expect(h).toContain("Dạng từ");
   });
   it("unknown numbers show a dash, never 0", () => {
-    const h = render(ov({ firstTry: { now: null, before: null, diff: null }, main: null, waiting: { works: 0, oldestDays: null } }));
+    const h = render(ov({ firstTry: { now: null, before: null, diff: null }, main: null, waiting: { works: null, oldestDays: null } }));
     expect(h).toContain(c.overview.unknown);
+    for (const id of ["tile-firsttry", "tile-waiting", "tile-unit"]) expect(h).toMatch(new RegExp(`data-testid="${id}"[\\s\\S]*?>—<`));
+    expect(h).not.toContain(c.percent(0));
     expect(h).not.toContain(c.overview.diff(0));
   });
   it("the chart: one dot per work with an accessible label, the 50 / 80 lines labelled", () => {
     const h = renderToStaticMarkup(createElement(FirstTryChart, { points: ov().points }));
     expect(h).toContain('data-testid="chart-dot-i1"');
+    expect(h).toMatch(/<a href="\/review\/e1"[^>]*data-testid="chart-dot-i1"/); // a dot with a work is a link to it
+    expect(h).toMatch(/role="img"[^>]*tabindex="0"[^>]*data-testid="chart-dot-i2"|tabindex="0"[^>]*data-testid="chart-dot-i2"/);
+    expect(h).toContain('data-testid="chart-live"');
     expect(h).toContain(c.overview.dotLabel("24/11", "Unit 15 · Bài 1", 41, 16, 39));
     expect(h).toContain(c.overview.bandLow);
     expect(h).toContain(c.overview.bandHigh);
