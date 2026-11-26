@@ -31,7 +31,7 @@ export function WorkList({ works }: { works: WorkScore[] }) {
         );
         const hasBody = w.parts.length > 0 || w.episodeId !== null;
         // Bản 3 (26/11): fixed columns, so every title starts at the left edge and every score lines up on the right.
-        const ROW = "grid min-h-11 grid-cols-[1rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-[1rem_minmax(0,1fr)_15rem]";
+        const ROW = "grid min-h-11 grid-cols-[1rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-[1rem_minmax(0,1fr)_minmax(11rem,15rem)]";
         return (
         <li key={w.instanceId} data-testid={`results-work-${w.instanceId}`} className="rounded-xl border border-line bg-white">
           {hasBody ? (

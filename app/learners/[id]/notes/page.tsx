@@ -1,5 +1,6 @@
 import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
+import { OpenFoldLink } from "@/components/sessions/OpenFoldLink";
 import { notFound, redirect } from "next/navigation";
 import { SessionStats } from "@/components/sessions/SessionStats";
 import { LessonNotes } from "@/components/review/LessonNotes";
@@ -62,11 +63,11 @@ export default async function NotesPage({ params, searchParams }: { params: Prom
               <span className="text-sm">{notesPage.writeNewHint}</span>
             </Link>
             {facts?.billing ? (
-              <Link href={`/learners/${learner.id}/notes?nghi=1#ghi-nghi`} data-testid="notes-absence"
+              <OpenFoldLink href={`/learners/${learner.id}/notes?nghi=1#ghi-nghi`} foldId="ghi-nghi" testId="notes-absence"
                 className="flex min-h-16 flex-[1_1_12rem] flex-col justify-center rounded-2xl border-2 border-accent bg-white px-4 py-2 text-accent no-underline hover:bg-[#eef5f1]">
                 <b className="text-base">{notesPage.absenceAction}</b>
                 <span className="text-sm">{notesPage.absenceHint}</span>
-              </Link>
+              </OpenFoldLink>
             ) : null}
           </div>
         ) : null}

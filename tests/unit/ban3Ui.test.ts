@@ -31,6 +31,21 @@ describe("Bản 3 · 1: the queue at the top of Chấm và góp ý", () => {
     expect(h).toMatch(/data-testid="finish-next-top"[^>]*class="[^"]*bg-accent/);
     expect(h).toContain(`href="/learners/${L}/finish/a3"`);
   });
+  it("the open work is not in the queue (already done): no chip marked, the button says it opens the oldest one", () => {
+    const h = renderToStaticMarkup(createElement(QueueStrip, { learnerId: L, entries, currentId: "zz", nextHref: `/learners/${L}/finish/a1` }));
+    expect(h).not.toContain("aria-current");
+    expect(h).toContain(finishCopy.queueNextOldest);
+    expect(h).not.toContain(`>${finishCopy.next}<`);
+  });
+  it("‹ Bài trước sits beside Bài sau › in the strip", () => {
+    const h = renderToStaticMarkup(createElement(QueueStrip, { learnerId: L, entries, currentId: "a2", nextHref: `/learners/${L}/finish/a3`, prevHref: `/learners/${L}/finish/a1` }));
+    expect(h.indexOf("finish-prev-top")).toBeLessThan(h.indexOf("finish-next-top"));
+  });
+  it("a list that could not be read is never 'nothing left'", () => {
+    const h = renderToStaticMarkup(createElement(QueueStrip, { learnerId: L, entries: [], currentId: "a1", nextHref: null, known: false }));
+    expect(h).toContain(finishCopy.queueUnknown);
+    expect(h).not.toContain(finishCopy.queueEmpty);
+  });
   it("nothing left: one green line, no chips", () => {
     const h = renderToStaticMarkup(createElement(QueueStrip, { learnerId: L, entries: [], currentId: "a1", nextHref: null }));
     expect(h).toContain(finishCopy.queueEmpty);
@@ -48,6 +63,11 @@ describe("Bản 3 · 2: a fix-together suggestion opens the test at the weak par
     expect(h).toContain(resultsCopy.openFix("E"));
     expect(h).toMatch(/data-testid="action-open-fix-i1-E"[^>]*class="[^"]*bg-accent[^"]*"[^>]*href="[^"]*\/finish\/a1#part-E"/);
   });
+  it("the parent (no action buttons) still gets the link to open the work, as the main one", () => {
+    const h = renderToStaticMarkup(createElement(ActionCards, { learnerId: L, cards: [card], tagLabels: {}, role: "parent" }));
+    expect(h).toMatch(/data-testid="action-open-fix-i1-E"[^>]*class="[^"]*bg-accent/);
+    expect(h).not.toContain("action-button-fix_together");
+  });
   it("on Hôm nay it sits beside the main button as a second one", () => {
     const h = renderToStaticMarkup(createElement(ActionCards, { learnerId: L, cards: [card], tagLabels: {}, role: "tutor" }));
     expect(h).toMatch(/data-testid="action-open-fix-i1-E"[^>]*class="[^"]*border-2 border-accent/);
@@ -55,7 +75,8 @@ describe("Bản 3 · 2: a fix-together suggestion opens the test at the weak par
   it("the part anchor is a safe id", () => {
     expect(partAnchor("E")).toBe("part-E");
     expect(partAnchor("Phần 2 (H–N)")).toBe("part-Ph-n-2--H-N-");
-    expect(partAnchor("")).toBe("part-all");
+    expect(partAnchor("")).toBe("part-_whole");
+    expect(partAnchor("all")).not.toBe(partAnchor(""));
   });
 });
 
@@ -67,8 +88,9 @@ describe("Bản 3 · 3: Từng bài, fixed columns", () => {
   } as WorkScore;
   it("a three-column grid (marker · title · score) so titles start on the left and scores line up on the right", () => {
     const h = renderToStaticMarkup(createElement(WorkList, { works: [w, { ...w, instanceId: "i2", parts: [{ key: "A", name: "A", tally: { correct: 1, decided: 2, pending: 0 } }] } as WorkScore] }));
-    expect(h.match(/grid-cols-\[1rem_minmax\(0,1fr\)\][^"]*sm:grid-cols-\[1rem_minmax\(0,1fr\)_15rem\]/g)).toHaveLength(2);
-    expect(h).toMatch(/data-testid="results-work-score-i1"[^>]*|class="col-start-2[^"]*sm:col-start-3[^"]*sm:text-right[^"]*" data-testid="results-work-score-i1"/);
+    expect(h.match(/grid-cols-\[1rem_minmax\(0,1fr\)\][^"]*sm:grid-cols-\[1rem_minmax\(0,1fr\)_minmax\(11rem,15rem\)\]/g)).toHaveLength(2);
+    const score = h.match(/<span[^>]*data-testid="results-work-score-i1"[^>]*>/)?.[0] ?? "";
+    expect(score).toMatch(/class="[^"]*col-start-2[^"]*sm:col-start-3[^"]*sm:text-right/);
     expect(h).not.toContain("justify-between");
   });
 });

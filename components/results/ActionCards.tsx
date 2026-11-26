@@ -34,7 +34,8 @@ export function cardText(card: ActionCard, tagLabels: Readonly<Record<string, st
 
 /**
  * "Việc nên làm": the cards that turn results into action, coloured by urgency, each with one button. The tutor acts; the parent sees
- * the same cards without buttons (she reminds the tutor). `cards === null` = the results could not be read (said, never hidden).
+ * the same cards without action buttons (she reminds the tutor). Bản 3: a fix-together card also links to the work itself (read only,
+ * opens for both roles), so anyone sitting with the child can open the weak part. `cards === null` = the results could not be read (said, never hidden).
  */
 export function ActionCards({ learnerId, cards, tagLabels, role, title = c.actionsTitle, id = "viec-nen-lam", buttons = true, decisionsReady = true, handledThisWeek = 0 }: {
   learnerId: string; cards: ActionCard[] | null; tagLabels: Readonly<Record<string, string>>; role: "tutor" | "parent"; title?: string; id?: string;
@@ -75,7 +76,7 @@ export function ActionCards({ learnerId, cards, tagLabels, role, title = c.actio
             </div>
             {card.workHref ? (
               <Link href={card.workHref} data-testid={`action-open-${card.key}`}
-                className={buttons ? "inline-flex min-h-11 items-center rounded-xl border-2 border-accent bg-white px-4 text-sm font-bold text-accent no-underline" : "inline-flex min-h-11 items-center rounded-xl bg-accent px-4 text-sm font-bold text-white no-underline shadow-[0_2px_0_#1f4439]"}>
+                className={buttons && !parent ? "inline-flex min-h-11 items-center rounded-xl border-2 border-accent bg-white px-4 text-sm font-bold text-accent no-underline" : "inline-flex min-h-11 items-center rounded-xl bg-accent px-4 text-sm font-bold text-white no-underline shadow-[0_2px_0_#1f4439]"}>
                 {c.openFix(card.facts.partKey ?? null)}
               </Link>
             ) : null}

@@ -6,4 +6,4 @@ export const finishHref = (learnerId: string, attemptId?: string | null): string
 export const isFinishHref = (href: string): boolean => /^\/learners\/[^/]+\/finish(\/|$)/.test(href);
 
 /** The anchor of one part on the "Xong một bài" screen (ids allow only a safe set of characters). */
-export const partAnchor = (key: string): string => `part-${key.replace(/[^A-Za-z0-9_-]/g, "-") || "all"}`;
+export const partAnchor = (key: string): string => `part-${key.replace(/[^A-Za-z0-9_-]/g, "-") || "_whole"}`;

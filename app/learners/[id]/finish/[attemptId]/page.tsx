@@ -46,10 +46,10 @@ export default async function FinishPage({ params }: { params: Promise<{ id: str
         </p>
         <p className="flex flex-wrap items-center gap-2 text-sm">
           <span className="text-muted" data-testid="finish-place">{place.index !== null ? c.place(place.index, place.total) : c.placeDone(place.total)}</span>
-          {place.prev ? <Link href={finishHref(learner.id, place.prev.attemptId)} className="inline-flex min-h-11 items-center rounded-xl border border-line bg-white px-3 no-underline">{c.prev}</Link> : null}
         </p>
       </div>
-      <QueueStrip learnerId={learner.id} currentId={data.attemptId} nextHref={next ? finishHref(learner.id, next.attemptId) : null}
+      <QueueStrip learnerId={learner.id} currentId={data.attemptId} known={data.queueKnown} nextHref={next ? finishHref(learner.id, next.attemptId) : null}
+        prevHref={place.prev ? finishHref(learner.id, place.prev.attemptId) : null}
         entries={data.queue.map((e) => ({ attemptId: e.attemptId, title: e.title, waited: daysBetween(e.since, today) }))} />
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold">{data.title}</h1>

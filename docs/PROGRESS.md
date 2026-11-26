@@ -2373,4 +2373,6 @@ Nhánh `feature/tags-global-success-6`. **Có SQL: `0045_seed_tags_global_succes
 | 3 | Tiến bộ › Từng bài: tên và điểm lệch nhau | Lưới 3 cột cố định (dấu · tên căn trái · điểm căn phải rộng 15rem); điện thoại: điểm xuống dòng dưới tên. |
 | 4 | Ghi buổi: việc hay làm phải tìm | Đầu trang Buổi học: nút lớn "✎ Ghi buổi học hôm nay" + "Ghi buổi nghỉ" cạnh nhau; khung ghi nghỉ gập lại (mở khi bấm, `?nghi=1#ghi-nghi`); thống kê ở dưới. |
 
+Sau rà soát: chữ dải đổi thành "cần chấm hoặc góp ý" (hàng chờ gồm cả bài chỉ thiếu góp ý); đọc lỗi danh sách thì hiện "Chưa đọc được…", không bao giờ báo "không còn bài"; "‹ Bài trước" vào cùng dải; mở từ thẻ gợi ý một bài đã xong thì nút là "Mở bài chờ lâu nhất ›"; phụ huynh cũng thấy liên kết mở bài (chỉ xem, không có nút hành động). **Biết trước:** dải đếm theo **lần nộp** (như "Bài 1 / n" có sẵn), nên một bài nộp lại mà cả hai lần còn việc sẽ có 2 chip cùng tên, và số có thể khác thẻ "Chấm bài" ở Hôm nay (đếm theo bài).
+
 Cách thử trên preview: mở bài nộp chờ chấm → thấy dải đỏ + chip; Tiến bộ › Từng bài → cột thẳng; Buổi học → hai nút trên cùng, bấm "Ghi buổi nghỉ" → khung mở; Hôm nay / Buổi học có thẻ "Cần chữa cùng con" → "Mở phần … để chữa →".

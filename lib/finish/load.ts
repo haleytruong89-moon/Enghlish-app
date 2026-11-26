@@ -36,6 +36,8 @@ export type FinishData = {
   retrySeenThrough: string | null;
   retryCount: number;
   queue: QueueEntry[];
+  /** false = one of the lists behind the queue could not be read: the queue may be short, never say "nothing left". */
+  queueKnown: boolean;
 };
 
 type MetaRow = { item_id: string; n: number; part: string | null; tag_key: string | null; reading_skill_key: string | null; out_of_app: boolean };
@@ -103,5 +105,6 @@ export async function loadFinish(learnerId: string, attemptId: string, memberId:
     retrySeenThrough: mine ? (newestAt(mine.retries.map((r) => r.at)) ?? mine.since) : null,
     retryCount: mine?.retries.length ?? 0,
     queue,
+    queueKnown: pending !== null && retries !== null && assigned !== null,
   };
 }
