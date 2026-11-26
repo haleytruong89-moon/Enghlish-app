@@ -71,6 +71,16 @@ describe("27/11: a curriculum that never had an approved table of contents can b
     const o = renderToStaticMarkup(createElement(CurriculumCard, { card: ok!, learnerId: L, aiAllowed: true, aiReason: null }));
     expect(o).not.toContain("curriculum-remove-");
   });
+  it("the button never shows while the AI reads, on a hand-made draft, or beside an approved version with a draft open", () => {
+    const card = (status: string, approved: boolean) => {
+      const c = { ...extra, versions: [...(approved ? [{ id: "va", curriculum_id: C2, version: 1, status: "approved", error_code: null }] : []), { id: "vb", curriculum_id: C2, version: approved ? 2 : 1, status, error_code: null }] };
+      return renderToStaticMarkup(createElement(CurriculumCard, { card: buildCards(c).find((x) => x.id === C2)!, learnerId: L, aiAllowed: true, aiReason: null }));
+    };
+    expect(card("extracting", false)).not.toContain("curriculum-remove-");
+    expect(card("draft", false)).not.toContain("curriculum-remove-");
+    expect(card("draft", true)).not.toContain("curriculum-remove-");
+    expect(card("ai_failed", false)).toContain("curriculum-remove-");
+  });
   it("isRemovedCurriculum: all discarded (at least one) only", async () => {
     const { isRemovedCurriculum } = await import("@/lib/curriculum/shape");
     expect(isRemovedCurriculum(["discarded", "discarded"])).toBe(true);

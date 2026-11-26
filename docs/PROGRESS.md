@@ -2381,7 +2381,8 @@ Cách thử trên preview: mở bài nộp chờ chấm → thấy dải đỏ +
 
 **Không có SQL**, không AI. Phụ huynh báo không xóa được 2 lần nạp "Global English" lỗi (AI `http_400`). Phụ huynh duyệt "ok đề xuất"; đề xuất ban đầu cần SQL 0047 (bảng "đã ẩn"), khi làm thấy **không cần SQL**:
 - Giáo trình mà **mọi phiên bản đều đã bỏ** không còn hiện ở danh sách nào (`isRemovedCurriculum`, `lib/curriculum/shape.ts`). Giáo trình như vậy chưa từng có Unit, nên không có Unit đã dạy / Unit của bài / trạng thái nào trỏ tới.
-- Thẻ **chưa từng có mục lục đã duyệt** có nút **"Xóa giáo trình này"** (hỏi lại một lần) = "Bỏ nháp" sẵn có (thầy/cô hoặc phụ huynh). Thẻ có bản đang dùng không có nút này.
+- Thẻ **chưa từng có mục lục đã duyệt mà AI đọc lỗi** có nút **"Xóa giáo trình này"** (hỏi lại một lần) = "Bỏ nháp" sẵn có (thầy/cô hoặc phụ huynh). Thẻ có bản đang dùng không có nút này.
 - Không xóa dòng nào trong database; phiên bản ghi `discarded` + người bỏ.
+- Hệ quả (sau rà soát): "Bỏ nháp" ở trang duyệt một giáo trình chưa từng được duyệt cũng làm thẻ rời danh sách; chữ xác nhận và lời gợi ý khi AI lỗi đã nói rõ, muốn nạp file khác thì thêm lại giáo trình.
 
 Dữ liệu thật 27/11: An có "Global English 6" (chỉ còn bản đã bỏ, tự biến mất khi gộp) và "Global english" (AI lỗi, bấm "Xóa giáo trình này").

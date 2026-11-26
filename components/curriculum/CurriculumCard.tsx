@@ -41,7 +41,7 @@ export function CurriculumCard({ card, learnerId, aiAllowed, aiReason }: { card:
             {curriculumCopy.continueReview} ({curriculumCopy.statusLabels[open.status]})
           </Link>
         ) : null}
-        {open && !current ? <RemoveCurriculumButton versionId={open.versionId} title={card.title} curriculumId={card.id} /> : null}
+        {open?.status === "ai_failed" && !current ? <RemoveCurriculumButton versionId={open.versionId} title={card.title} curriculumId={card.id} /> : null}
         {current ? (
           <>
             <Link href={`/curricula/versions/${current.versionId}`} data-testid={`curriculum-map-${card.id}`} className={link}>

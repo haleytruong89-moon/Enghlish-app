@@ -7,7 +7,7 @@ import { curriculumCopy } from "@/lib/copy/vi";
 import { curriculumErrorText, sendJson } from "@/lib/curriculum/client";
 
 /**
- * 27/11 "Xóa giáo trình này": on a card that never had an approved table of contents (a failed or abandoned upload). It gives up the
+ * 27/11 "Xóa giáo trình này": on a card that never had an approved table of contents and whose AI read failed. It gives up the
  * open draft (the existing "Bỏ nháp", tutor or parent); a curriculum with only given-up versions leaves every list (`isRemovedCurriculum`).
  * Nothing is deleted from the database, and nothing of the child points to such a curriculum.
  */

@@ -124,7 +124,8 @@ export type CurriculumCard = {
 
 /**
  * A curriculum whose every version was given up ("Bỏ nháp", or "Xóa giáo trình này" on a card that never had an approved table of
- * contents) is gone from every list (27/11). It never had Units, so nothing (taught units, Unit of a work, statuses) points to it.
+ * contents) is gone from every list (27/11). It never had Units, so nothing (taught units, Unit of a work, statuses) points to it
+ * (roadmap_milestones.curriculum_id is only written with a Unit of an approved version, lib/roadmap/view.ts).
  */
 export function isRemovedCurriculum(statuses: readonly VersionStatus[]): boolean {
   return statuses.length > 0 && statuses.every((s) => s === "discarded");
