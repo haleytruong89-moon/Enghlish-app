@@ -2205,3 +2205,5 @@ Nhánh `feature/l1-xong-mot-bai`. **Không có SQL**, không AI. Phụ huynh duy
 - Con không thấy gì mới (chỉ thấy lời góp ý như trước).
 
 **Cách thử trên preview:** đăng nhập thầy/cô của "Nguyên (thử)", cho em nộp một bài Studio có câu viết lại câu → Bàn làm việc → thẻ đỏ "Chấm bài" → màn Chấm và góp ý: bấm Đúng / Sai, bấm một gợi ý, bấm **Xong bài** → khối "Đã xong" + "Sang bài tiếp"; đăng nhập "Nguyên (thử)" → Đã xem có lời góp ý, không có điểm.
+
+**Sau rà soát (26/11) đã sửa:** lần làm cũ (con đã làm lại) chỉ chấm câu + xem thử lại, góp ý chuyển sang lần làm mới nhất (có nút mở); bài còn kỹ năng cần chấm báo rõ ngay đầu màn và khi xong không nói "rời Chờ duyệt"; bấm Xong lần nữa sau khi lỗi nửa chừng không gửi trùng góp ý; lưu phần đã chấm không làm mất góp ý đang gõ; câu không có kết quả chấm của app không chặn Xong; lỗi đọc dữ liệu báo "tải lại" thay vì 404; không đọc được góp ý thì không cho gửi; không hiện "0/0"; lần làm lại không gọi là "điểm chính thức"; góp ý của người khác chỉ xem; gợi ý không bao giờ chứa chữ dạng điểm; ngưỡng màu dùng chung với Việc nên làm.

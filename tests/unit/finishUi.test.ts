@@ -76,7 +76,33 @@ describe("L1 · Xong một bài screen", () => {
     expect(h).toContain(c.goNext("Unit 14 · Word formation"));
     expect(render({ done: true, next: null })).toContain(c.backWhenEmpty);
   });
-  it("before 0037 the feedback cannot be sent: said once, Xong stays off", () => {
+  it("before 0037, or when the feedback could not be read, nothing is sent: Xong stays off", () => {
     expect(render({ feedbackReady: false })).toMatch(/data-testid="finish-submit"[^>]*disabled/);
+    expect(render({ feedbackKnown: false })).toContain('data-testid="finish-feedback-unknown"');
+  });
+  it("an older attempt: no feedback form here, a link to the latest; Xong needs only the grading", () => {
+    const h = render({ latestHref: `/learners/${L}/finish/new` });
+    expect(h).toContain('data-testid="finish-not-latest"');
+    expect(h).not.toContain('data-testid="finish-feedback"');
+    expect(h).toContain(`href="/learners/${L}/finish/new"`);
+    expect(h).toContain(c.readyFeedback(true));
+  });
+  it("skills still to score are said up front, with the old page; a repeat attempt is never called official", () => {
+    expect(render({ skillsLeft: 2 })).toContain(c.skillsLeft(2));
+    expect(render({ done: true, counted: false })).toContain("lần làm lại");
+    expect(render({ done: true, skillsLeft: 1 })).toContain(c.doneBodySkills);
+  });
+  it("feedback written by another adult is read-only and counts as given", () => {
+    const fb = { id: "f1", submissionId: A, assignmentId: "x", praise: "Tốt lắm.", items: [], authorMember: "m-tutor", authorRole: "tutor" as const, authorName: "Cô Hà", createdAt: "2026-11-25T03:00:00Z", live: true };
+    const h = render({ feedback: fb, viewerMemberId: "m-parent" });
+    expect(h).toMatch(/<textarea[^>]*readOnly=""[^>]*data-testid="finish-praise"/);
+    expect(h).toContain(c.readyFeedback(true));
+    expect(h).not.toContain('data-testid="finish-suggestions"');
+  });
+  it("nothing decided yet: a dash, never 0/0", () => {
+    const allWaiting = buildFinishParts({ items: [{ id: "q1", stem: "x" }], answers: {}, checks: { total: 1, checked: 0, correct: 0, items: { q1: R("needs_person") } }, keys: [], decisions: {}, meta: new Map(), partNames: new Map(), retries: [] });
+    const h = render({ parts: allWaiting });
+    expect(h).not.toContain("0/0");
+    expect(h).toContain(c.scoreEmpty);
   });
 });

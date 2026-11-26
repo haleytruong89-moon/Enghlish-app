@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { finishHref } from "@/lib/finish/paths";
-import { resultsCopy, studioAssignedCopy as c } from "@/lib/copy/vi";
+import { finishCopy, resultsCopy, studioAssignedCopy as c } from "@/lib/copy/vi";
 import type { Tally } from "@/lib/results/score";
 import { formatDay } from "@/lib/review/format";
 import type { StudioAssignedRow, StudioAssignedStatus } from "@/lib/studio/assigned";
@@ -78,7 +78,7 @@ export function StudioAssignedTable({ rows, title = c.title, duplicates, scores,
                 <p className="flex flex-wrap gap-x-5 text-sm">
                   {r.episodeId ? (
                     <Link href={learnerId && r.lastAttemptId ? finishHref(learnerId, r.lastAttemptId) : `/review/${r.episodeId}`} data-testid={`studio-assigned-open-${r.instanceId}`} className="inline-flex min-h-11 items-center font-semibold text-accent underline">
-                      {!r.feedbackReady ? c.openWork : r.feedbackGiven ? c.openWorkFed : c.openWorkToFeedback}
+                      {!r.feedbackReady ? c.openWork : r.feedbackGiven ? c.openWorkFed : learnerId ? finishCopy.openFromTable : c.openWorkToFeedback}
                     </Link>
                   ) : null}
                   {r.status === "waiting" ? (

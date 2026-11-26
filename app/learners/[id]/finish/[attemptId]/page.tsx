@@ -25,10 +25,15 @@ export default async function FinishPage({ params }: { params: Promise<{ id: str
   const data = await loadFinish(learner.id, attemptId, member.id, today);
   if (data === null) notFound();
   if ("notStudio" in data) redirect(`/review/${data.notStudio}`);
+  if ("unavailable" in data) {
+    return <p className="mx-auto max-w-3xl rounded-xl border border-line bg-white px-4 py-3" data-testid="finish-unavailable">{c.unavailable}</p>;
+  }
 
   const place = queuePlace(data.queue, data.attemptId);
   const total = tallyParts(data.parts);
-  const done = data.feedback !== null && total.pending === 0 && data.retryCount === 0;
+  const isLatest = data.latestAttemptId === data.attemptId;
+  // Done = nothing left on THIS screen: no question waiting, the retries looked at, and (on the latest attempt) feedback given.
+  const done = total.pending === 0 && data.retryCount === 0 && (!isLatest || data.feedback !== null);
   const next = place.next;
   const inApp = data.parts.reduce((n, p) => n + p.items.filter((i) => i.state !== "paper").length, 0);
   const chip = "rounded-full bg-[#E3ECE8] px-3 py-1 text-[#1F4439]";
@@ -38,7 +43,7 @@ export default async function FinishPage({ params }: { params: Promise<{ id: str
         <p className="text-sm text-muted">
           <Link href={deskHref(learner.id)} className="text-accent underline">{c.backDesk}</Link> · {c.crumb(learnerWithTrack(learner.alias, learner.trackId))}
         </p>
-        <nav aria-label={c.title} className="flex flex-wrap items-center gap-2 text-sm">
+        <nav aria-label={c.queueLabel} className="flex flex-wrap items-center gap-2 text-sm">
           <span className="text-muted" data-testid="finish-place">{place.index !== null ? c.place(place.index, place.total) : c.placeDone(place.total)}</span>
           {place.prev ? <Link href={finishHref(learner.id, place.prev.attemptId)} className="inline-flex min-h-11 items-center rounded-xl border border-line bg-white px-3 no-underline">{c.prev}</Link> : null}
           {place.index !== null && place.next ? <Link href={finishHref(learner.id, place.next.attemptId)} className="inline-flex min-h-11 items-center rounded-xl border border-line bg-white px-3 no-underline">{c.next}</Link> : null}
@@ -53,12 +58,17 @@ export default async function FinishPage({ params }: { params: Promise<{ id: str
         </ul>
       </header>
       <FinishWork
-        key={`${data.attemptId}-${data.feedback?.id ?? "none"}-${total.pending}`}
+        key={`${data.attemptId}-${data.feedback?.id ?? "none"}`}
         learnerId={learner.id}
         attemptId={data.attemptId}
         parts={data.parts}
         feedback={data.feedback}
         feedbackReady={data.feedbackReady}
+        feedbackKnown={data.feedbackKnown}
+        viewerMemberId={member.id}
+        counted={data.counted}
+        latestHref={isLatest ? null : finishHref(learner.id, data.latestAttemptId)}
+        skillsLeft={data.skillsLeft}
         retrySeenThrough={data.retrySeenThrough}
         retryCount={data.retryCount}
         done={done}

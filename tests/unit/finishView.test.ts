@@ -84,6 +84,21 @@ describe("L1 suggestions (app-made, words only)", () => {
   });
 });
 
+describe("L1 after review", () => {
+  it("a question the app has no check for is 'unchecked': never counted, never blocks", () => {
+    const b = base();
+    const p = buildFinishParts({ ...b, checks: null, decisions: {} });
+    expect(p.flatMap((x) => x.items).every((i) => i.state === "unchecked" || i.state === "paper")).toBe(true);
+    expect(tallyParts(p)).toEqual({ correct: 0, decided: 0, pending: 0 });
+  });
+  it("a part name that looks like a score is never suggested; key kinds are kept", () => {
+    const b = base();
+    const p = buildFinishParts({ ...b, partNames: new Map([["E", "Listening 1/2"]]) });
+    expect(feedbackSuggestions(p).fixes.some((t) => t.includes("1/2"))).toBe(false);
+    expect(p[2]!.items[0]!.keyKind).toBe("answer");
+  });
+});
+
 describe("L1 readiness", () => {
   it("needs no waiting question and some feedback", () => {
     expect(finishReady({ waiting: 0, hasFeedback: true })).toEqual({ ready: true, missing: [] });
