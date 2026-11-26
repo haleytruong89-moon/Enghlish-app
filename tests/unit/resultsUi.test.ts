@@ -9,6 +9,10 @@ import { fallbackLabels, resultsCopy as c } from "@/lib/copy/vi";
 import type { ActionCard } from "@/lib/results/actions";
 import { byTag, byUnit, scoreWork, type ItemRow } from "@/lib/results/score";
 import type { StudioAssignedRow } from "@/lib/studio/assigned";
+import { OverviewView } from "@/components/results/OverviewView";
+import { FirstTryChart } from "@/components/results/FirstTryChart";
+import type { Overview } from "@/lib/results/overview";
+import { buildOverview } from "@/lib/results/overview";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {}, push: () => {} }) }));
 
@@ -80,8 +84,10 @@ describe("Kết quả page views", () => {
     episodeId: "e1", feedbackGiven: false, feedbackReady: true, official: null, items: [...items("1111?", "A", "dang-tu"), ...items("0000", "E", "so-sanh")], partNames: new Map([["A", "Adjectives"], ["E", "Comparatives"]]),
   }, "2026-11-26");
   const props = { learnerId: L, works: [w], units: byUnit([w], 4), tags: byTag([w]), tagLabels: { "dang-tu": "Dạng từ" } };
-  it("Theo bài: provisional score, pending questions, each part, missing feedback", () => {
-    const h = renderToStaticMarkup(createElement(ResultsView, { ...props, tab: "work" }));
+  it("Tổng quan › every work on one line that folds out: provisional score, pending questions, each part, missing feedback", () => {
+    const overview = buildOverview(props.works, props.tags, null, "2026-11-26");
+    const h = renderToStaticMarkup(createElement(ResultsView, { ...props, tab: "overview", overview }));
+    expect(h).toMatch(/<li[^>]*data-testid="results-work-i1"[^>]*><details>/);
     expect(h).toContain(c.provisional);
     expect(h).toContain(c.score(4, 8));
     expect(h).toContain(c.pending(1));
@@ -96,8 +102,9 @@ describe("Kết quả page views", () => {
     expect(t).toContain(fallbackLabels.tag); // so-sanh has no label in this map
   });
   it("tab parsing and the empty state", () => {
-    expect([parseResultTab("unit"), parseResultTab("tag"), parseResultTab("x"), parseResultTab(undefined)]).toEqual(["unit", "tag", "work", "work"]);
-    expect(renderToStaticMarkup(createElement(ResultsView, { ...props, works: [], tab: "work" }))).toContain(c.empty);
+    expect([parseResultTab("unit"), parseResultTab("tag"), parseResultTab("x"), parseResultTab(undefined), parseResultTab("work")]).toEqual(["unit", "tag", "overview", "overview", "overview"]);
+    expect(renderToStaticMarkup(createElement(ResultsView, { ...props, works: [], tab: "unit" }))).toContain(c.empty);
+    expect(renderToStaticMarkup(createElement(ResultsView, { ...props, works: [], tab: "overview", overview: buildOverview([], [], null, "2026-11-26") }))).toContain(c.empty);
   });
 });
 
@@ -111,5 +118,43 @@ describe("Bài đã giao: provisional score", () => {
     expect(renderToStaticMarkup(createElement(StudioAssignedTable, { rows: [row], learnerId: L }))).toContain(`href="/learners/${L}/finish/${row.lastAttemptId}"`);
     expect(renderToStaticMarkup(createElement(StudioAssignedTable, { rows: [row] }))).toContain(`href="/review/${row.episodeId}"`);
     expect(c.provisionalLine(0, 0, 8)).toBe("8 câu chờ thầy/cô chấm"); // never "đúng 0/0"
+  });
+});
+
+const ov = (over: Partial<Overview> = {}): Overview => ({
+  sent: { now: 7, before: 3 }, firstTry: { now: 55, before: 49, diff: 6 }, waiting: { works: 5, oldestDays: 11 },
+  main: { title: "Destination B2", currentCode: "U15", currentTitle: "Unit 15", done: 14, total: 26 },
+  points: [{ instanceId: "i1", title: "Unit 15 · Bài 1", unitKey: "U15", day: "2026-11-24", pct: 41, correct: 16, decided: 39 }, { instanceId: "i2", title: "Unit 15 · Bài 2", unitKey: "U15", day: "2026-11-26", pct: 58, correct: 7, decided: 12 }],
+  weakest: [{ key: "t1", tally: { correct: 5, decided: 12, pending: 0 }, works: 3, lastAt: "" }], strongest: [], ...over,
+});
+
+describe("Tiến bộ › Tổng quan (hướng B)", () => {
+  const render = (o: Overview) => renderToStaticMarkup(createElement(OverviewView, { learnerId: "L1", overview: o, works: [], units: [], tagLabels: { t1: "Dạng từ" } }));
+  it("four tiles with their words; the change in % points", () => {
+    const h = render(ov());
+    for (const id of ["tile-sent", "tile-firsttry", "tile-waiting", "tile-unit"]) expect(h).toContain(`data-testid="${id}"`);
+    expect(h).toContain(c.overview.sentBefore(3));
+    expect(h).toContain(c.overview.diff(6));
+    expect(h).toContain(c.overview.oldest(11));
+    expect(h).toContain(c.overview.unitDone(14, 26));
+    expect(h).toContain("Dạng từ");
+  });
+  it("unknown numbers show a dash, never 0", () => {
+    const h = render(ov({ firstTry: { now: null, before: null, diff: null }, main: null, waiting: { works: 0, oldestDays: null } }));
+    expect(h).toContain(c.overview.unknown);
+    expect(h).not.toContain(c.overview.diff(0));
+  });
+  it("the chart: one dot per work with an accessible label, the 50 / 80 lines labelled", () => {
+    const h = renderToStaticMarkup(createElement(FirstTryChart, { points: ov().points }));
+    expect(h).toContain('data-testid="chart-dot-i1"');
+    expect(h).toContain(c.overview.dotLabel("24/11", "Unit 15 · Bài 1", 41, 16, 39));
+    expect(h).toContain(c.overview.bandLow);
+    expect(h).toContain(c.overview.bandHigh);
+  });
+  it("no points: the empty line instead of an empty chart", () => {
+    expect(renderToStaticMarkup(createElement(FirstTryChart, { points: [] }))).toContain(c.overview.chartEmpty);
+  });
+  it("old ?tab=work opens Tổng quan", () => {
+    expect(parseResultTab("work")).toBe("overview");
   });
 });

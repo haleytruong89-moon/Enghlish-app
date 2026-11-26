@@ -4,6 +4,7 @@ import { parseResultTab, ResultsView } from "@/components/results/ResultsView";
 import { learnerWithTrack, resultsCopy as c } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
 import { loadResults, type ResultsData } from "@/lib/results/load";
+import { buildOverview } from "@/lib/results/overview";
 import { loadTags } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
 
@@ -32,7 +33,7 @@ export default async function ProgressPage({ params, searchParams }: { params: P
       {data === null ? (
         <p className="rounded-xl border border-line bg-white px-4 py-3 text-sm text-muted" data-testid="results-unavailable">{c.unavailable}</p>
       ) : (
-        <ResultsView learnerId={learner.id} tab={tab} works={data.works} units={data.units} tags={data.tags} tagLabels={tagLabels} />
+        <ResultsView learnerId={learner.id} tab={tab} works={data.works} units={data.units} tags={data.tags} tagLabels={tagLabels} overview={buildOverview(data.works, data.tags, data.main, todayVn())} />
       )}
     </div>
   );
