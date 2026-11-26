@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { levelCopy, resultPage, studentReviewCopy, sessionNotePage, tagPicker, weakPage, deskCopy, shellCopy } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi } from "@/lib/inquiries/format";
-import { LEARNER_IDS, loginAs } from "./helpers";
+import { openSessionMore, LEARNER_IDS, loginAs } from "./helpers";
 
 // S5b-1 PR A: "Hôm nay", "Ghi kết quả bài" (framed + quick), "Chờ gắn nhãn", "Ghi buổi học", "Điểm cần chú ý".
 // The dev seed imports the Destination U1-12 frame into the test family (60 items, 7 parts, a scale) and gives Nguyên track B tags (0015).
@@ -103,7 +103,7 @@ test.describe.serial("S5b-1 tutor work", () => {
     const label = `Đảo ngữ thử ${Date.now()}`;
     await loginAs(page, "tutorNguyen");
     await page.goto(`/learners/${NG}/notes/new`);
-    await page.getByTestId("session-more-summary").click(); // Q5: the optional fields are folded
+    await openSessionMore(page); // Q5: the optional fields are folded
     await page.getByTestId("add-tag-input").fill(label);
     await page.getByTestId("add-tag-domain").selectOption("grammar");
     await page.getByTestId("add-tag-group").selectOption("gr-emphasis");
@@ -115,7 +115,7 @@ test.describe.serial("S5b-1 tutor work", () => {
   test("session note: an unaccented search finds the tag, and the count of chosen skills shows", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
     await page.goto(`/learners/${NG}/notes/new`);
-    await page.getByTestId("session-more-summary").click(); // Q5: the optional fields are folded
+    await openSessionMore(page); // Q5: the optional fields are folded
     await page.getByTestId("search-session-tags").fill("dang tu");
     await page.getByTestId("tag-chip-dang-tu").click();
     await expect(page.getByTestId("session-tags-chosen")).toContainText("Dạng từ");
@@ -128,7 +128,7 @@ test.describe.serial("S5b-1 tutor work", () => {
     await loginAs(page, "tutorNguyen");
     await page.goto(`/learners/${NG}/notes/new`);
     await expect(page.getByRole("heading", { level: 1, name: sessionNotePage.title("Nguyên (thử)") })).toBeVisible();
-    await page.getByTestId("session-more-summary").click(); // Q5: the optional fields are folded
+    await openSessionMore(page); // Q5: the optional fields are folded
     await page.getByTestId("session-studied").fill(studied);
     // "practised today" (optional) - logged as an exposure. Only the open tab's panel counts (the others are hidden).
     await page.getByTestId("session-practised").getByRole("tabpanel").locator('button[data-testid^="session-practised-"]').first().click();
@@ -159,7 +159,7 @@ test.describe.serial("S5b-1 tutor work", () => {
     for (const d of days) {
       await page.goto(`/learners/${NG}/notes/new`);
       await page.getByTestId("session-date").fill(d);
-      await page.getByTestId("session-more-summary").click(); // Q5: "Hôm nay học" is in the fold
+      await openSessionMore(page); // Q5: the optional fields are folded
       await page.getByTestId("session-studied").fill(`Buổi đếm ${d}`);
       await page.getByTestId("session-save").click();
       await expect(page.getByTestId("session-saved")).toBeVisible();

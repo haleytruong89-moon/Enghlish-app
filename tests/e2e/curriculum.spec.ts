@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { Client } from "pg";
 import { curriculumCopy } from "@/lib/copy/vi";
 import { pgConfigFromUrl } from "../../scripts/lib/pg";
-import { LEARNER_IDS, loginAs } from "./helpers";
+import { openSessionMore, LEARNER_IDS, loginAs } from "./helpers";
 
 // W2 · Giáo trình end to end on the TEST family with AI_FAKE=1 (CI): the fake answer is tests/fixtures/curriculum/fake-toc.json
 // (Destination C1&C2, 26 units, 8 rows "cần xem"). Serial: each step builds on the previous one.
@@ -80,7 +80,7 @@ test("unit statuses drive 'đang học đến'; the session note offers the unit
 test("listening question-type tags can be picked in the session note", async ({ page }) => {
   await loginAs(page, "tutorNguyen");
   await page.goto(`/learners/${NGUYEN}/notes/new`);
-  await page.getByTestId("session-more-summary").click();
+  await openSessionMore(page); // Q5: the optional fields are folded
   await page.getByTestId("tab-session-tags-listening").click();
   await expect(page.getByTestId("panel-session-tags-listening")).toContainText("Nghe · Main idea — Ý chính");
 });

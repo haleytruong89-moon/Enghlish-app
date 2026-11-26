@@ -5,7 +5,7 @@ import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { blockImplicitSubmit } from "@/lib/forms/enter";
 import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { curriculumCopy, fallbackLabels, sessionKindCopy, sessionNotePage } from "@/lib/copy/vi";
 import { sessionFailText } from "@/lib/sessions/client";
 import { formatDateVi } from "@/lib/inquiries/format";
@@ -82,8 +82,16 @@ export function SessionNoteForm({
   const skillBuckets = useMemo(() => groupTargets(map, skills), [map, skills]);
   const [skillTab, setSkillTab] = useState<string>(() => firstTab(skillBuckets));
   const [saved, setSaved] = useState(false);
-  const [taught, setTaught] = useState<TaughtUnit[]>(() => presetTaught(taughtChoices, CURRICULUM_LIMITS.taughtPerNote));
+  // Q5: the "Đang học" unit is pre-ticked for a session of today only; once the tutor touches the units, the pre-tick stops following the date.
+  const preset = useMemo(() => presetTaught(taughtChoices, CURRICULUM_LIMITS.taughtPerNote), [taughtChoices]);
+  const [taught, setTaughtRaw] = useState<TaughtUnit[]>(preset);
+  const [taughtTouched, setTaughtTouched] = useState(false);
+  const setTaught = (v: TaughtUnit[]) => { setTaughtTouched(true); setTaughtRaw(v); };
   const [more, setMore] = useState(false);
+  const [hintOff, setHintOff] = useState(false);
+  const [rechecksOpen, setRechecksOpen] = useState(due.length > 0);
+  const makeupSelect = useRef<HTMLSelectElement>(null);
+  const focusMakeup = useRef(false);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [sameNote, setSameNote] = useState<{ practised: string; weak: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -93,6 +101,11 @@ export function SessionNoteForm({
   const { state: saveState, track } = useSaveStatus({ date, studied, weak, practised, message, parentNote, rechecks, taught, kind, makeupFor });
   const clientId = useRef<string>(crypto.randomUUID());
   const labelOf = new Map(tags.map((t) => [t.key, t.label]));
+
+  // After "Đánh dấu học bù" the hint button is gone: focus goes to the absence select, once it is rendered and visible.
+  useEffect(() => {
+    if (focusMakeup.current && more && kind === "makeup") { focusMakeup.current = false; makeupSelect.current?.focus(); }
+  }, [more, kind]);
 
   const sameResult = useMemo(() => {
     if (!previous) return null;
@@ -118,8 +131,8 @@ export function SessionNoteForm({
     e.preventDefault();
     setError(null);
     const answered = Object.entries(rechecks).flatMap(([tag_key, result]) => (result ? [{ tag_key, result }] : []));
-    if (!studied.trim() && weak.length === 0 && practised.length === 0 && !message.trim() && !parentNote.trim() && answered.length === 0 && taught.length === 0) return setError(sessionNotePage.empty);
-    if (answered.some((a) => a.result === "ok" && weak.includes(a.tag_key))) return setError(sessionNotePage.recheckConflict);
+    if (!studied.trim() && weak.length === 0 && practised.length === 0 && !message.trim() && !parentNote.trim() && answered.length === 0 && taught.length === 0) { setMore(true); return setError(sessionNotePage.empty); }
+    if (answered.some((a) => a.result === "ok" && weak.includes(a.tag_key))) { setMore(true); setRechecksOpen(true); return setError(sessionNotePage.recheckConflict); }
     setBusy(true);
     const r = await track(() => postJson<{ id: string }>(`/api/learners/${learnerId}/session-notes`, {
       client_id: clientId.current,
@@ -154,7 +167,7 @@ export function SessionNoteForm({
             min={minDate}
             max={today}
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={(e) => { setDate(e.target.value); if (!taughtTouched) setTaughtRaw(e.target.value === today ? preset : []); }}
             data-testid="session-date"
             className={`min-h-11 max-w-56 ${field}`}
           />
@@ -164,7 +177,7 @@ export function SessionNoteForm({
           <div className="flex flex-col gap-1">
             <h2 className="text-base font-semibold">{curriculumCopy.taughtTitle}</h2>
             <p className="text-sm text-muted">{curriculumCopy.taughtHelp}</p>
-            {presetTaught(taughtChoices, CURRICULUM_LIMITS.taughtPerNote).length > 0 ? <p className="text-xs text-muted" data-testid="taught-preset">{sessionNotePage.taughtPreset}</p> : null}
+            {preset.length > 0 && !taughtTouched && taught.length > 0 ? <p className="text-xs text-muted" data-testid="taught-preset">{sessionNotePage.taughtPreset}</p> : null}
             <TaughtUnitsPicker choices={taughtChoices} value={taught} onChange={setTaught} disabled={saved} />
           </div>
         ) : null}
@@ -183,21 +196,36 @@ export function SessionNoteForm({
           <span className="text-xs text-muted">{sessionNotePage.messageCount(message.length, MESSAGE_MAX)}</span>
         </label>
 
-        {kind === "regular" && makeupChoices.length > 0 && !saved ? (
+        {kind === "regular" && makeupChoices.length > 0 && !saved && !hintOff ? (
           <p className="flex flex-wrap items-center gap-2 rounded-lg bg-[#fff4e0] px-3 py-2 text-sm text-[#6B4600]" data-testid="session-makeup-hint">
             {sessionNotePage.makeupHint(makeupChoices.length)}
             <button type="button" data-testid="session-makeup-hint-button" className="min-h-11 rounded-lg border border-[#6B4600] bg-white px-3 font-semibold"
-              onClick={() => { clientId.current = crypto.randomUUID(); setKind("makeup"); setMore(true); }}>
+              onClick={() => {
+                clientId.current = crypto.randomUUID();
+                setKind("makeup");
+                // One absence waiting: it is the one being made up (without the link the month would bill both). Several: the tutor picks.
+                if (makeupChoices.length === 1) setMakeupFor(makeupChoices[0]!.id);
+                setMore(true);
+                focusMakeup.current = true;
+              }}>
               {sessionNotePage.makeupHintButton}
+            </button>
+            <button type="button" data-testid="session-makeup-hint-no" className="min-h-11 rounded-lg px-3 underline" onClick={() => setHintOff(true)}>
+              {sessionNotePage.makeupHintNo}
             </button>
           </p>
         ) : null}
 
-        <details open={more} onToggle={(e) => setMore(e.currentTarget.open)} data-testid="session-more" className="rounded-xl border border-line">
-          <summary data-testid="session-more-summary" className="flex min-h-11 cursor-pointer flex-col justify-center gap-0.5 px-4 py-2">
-            <span className="font-semibold">{sessionNotePage.moreTitle}</span>
-            <span className="text-xs text-muted" data-testid="session-more-line">
-              {sessionNotePage.moreLine(kind === "makeup" ? sessionKindCopy.makeup : sessionKindCopy.regularSession, practised.length, weak.length, parentNote.trim().length > 0)}
+        <details open={more} onToggle={(e) => setMore(e.currentTarget.open)} data-testid="session-more" className="group rounded-xl border border-line">
+          <summary data-testid="session-more-summary" className="flex min-h-11 cursor-pointer list-none items-center gap-3 px-4 py-2">
+            <span aria-hidden="true" className="text-accent transition-transform group-open:rotate-90">▸</span>
+            <span className="flex flex-col gap-0.5">
+              <span className="font-semibold text-accent">{sessionNotePage.moreTitle}</span>
+              <span className="sr-only">{sessionNotePage.separator}</span>
+              <span className="text-xs text-muted" data-testid="session-more-line">
+                {sessionNotePage.moreLine(kind === "makeup" ? sessionKindCopy.makeup : sessionKindCopy.regularSession, practised.length, weak.length, parentNote.trim().length > 0)}
+                {kind === "makeup" && makeupChoices.length > 0 && !makeupFor ? ` · ${sessionNotePage.makeupUnlinked}` : ""}
+              </span>
             </span>
           </summary>
           <div className="flex flex-col gap-5 border-t border-line p-4">
@@ -237,7 +265,7 @@ export function SessionNoteForm({
               {kind === "makeup" && makeupChoices.length > 0 ? (
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="text-muted">{sessionKindCopy.makeupFor}</span>
-                  <select value={makeupFor} onChange={(e) => { clientId.current = crypto.randomUUID(); setMakeupFor(e.target.value); }} data-testid="session-makeup-for" className={`min-h-11 max-w-72 ${field}`}>
+                  <select ref={makeupSelect} value={makeupFor} onChange={(e) => { clientId.current = crypto.randomUUID(); setMakeupFor(e.target.value); }} data-testid="session-makeup-for" className={`min-h-11 max-w-72 ${field}`}>
                     <option value="">{sessionKindCopy.makeupForNone}</option>
                     {makeupChoices.map((c) => (
                       <option key={c.id} value={c.id}>{c.label}</option>
@@ -359,11 +387,16 @@ export function SessionNoteForm({
 
         {saved && savedId ? <UnitProposal choices={taughtChoices} taught={taught} lessonNoteId={savedId} /> : null}
 
-        <details className="flex flex-col gap-3 rounded-xl border border-line bg-white p-4" data-testid="recheck-panel">
-          <summary className="flex min-h-11 cursor-pointer flex-col justify-center" data-testid="recheck-summary">
-            <span className="text-base font-semibold">{sessionNotePage.recheckTitle}</span>
-            <span className="text-xs text-muted">{sessionNotePage.recheckCount(due.length)}</span>
+        <details open={rechecksOpen} onToggle={(e) => setRechecksOpen(e.currentTarget.open)} className="group rounded-xl border border-line bg-white p-4" data-testid="recheck-panel">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3" data-testid="recheck-summary">
+            <span aria-hidden="true" className="text-accent transition-transform group-open:rotate-90">▸</span>
+            <span className="flex flex-col">
+              <span className="text-base font-semibold">{sessionNotePage.recheckTitle}</span>
+              <span className="sr-only">{sessionNotePage.separator}</span>
+              <span className={due.length > 0 ? "text-xs font-semibold text-[#8a3410]" : "text-xs text-muted"}>{sessionNotePage.recheckCount(due.length)}</span>
+            </span>
           </summary>
+          <div className="mt-3 flex flex-col gap-3">
           {due.length === 0 ? (
             <p className="text-sm text-muted">{sessionNotePage.recheckNone}</p>
           ) : (
@@ -391,6 +424,7 @@ export function SessionNoteForm({
               <p className="text-xs text-muted">{sessionNotePage.recheckNote}</p>
             </>
           )}
+          </div>
         </details>
 
         <section className="flex flex-col gap-2 rounded-xl border border-line bg-white p-4">

@@ -273,7 +273,7 @@ test.describe.serial("S5 review", () => {
     await expect(step.getByTestId(`offline-done-${activityId}`)).toBeVisible();
   });
 
-  test("a lesson note with 3 next actions; the parent sees it only when shared", async ({ page }) => {
+  test("an older lesson note (3 next actions) lists and edits on Buổi học; the parent sees it only when shared", async ({ page }) => {
     const marker = `Buổi thử ${Date.now()}`;
     await loginAs(page, "tutorAn");
     await page.goto(`/learners/${LEARNER_IDS.an}/notes`);
@@ -301,7 +301,11 @@ test.describe.serial("S5 review", () => {
     await expect(note.getByTestId("note-actions").locator("li")).toHaveCount(3);
     await expect(note).toContainText(notesPage.privateTag);
     await note.locator(`[data-testid^="note-edit-"]`).click();
-    await expect(page.getByTestId("note-form")).toBeVisible();
+    await expect(page.getByTestId("note-form")).toBeInViewport();
+    await page.getByTestId("note-goals").fill(`${marker} (sửa)`);
+    await page.getByTestId("note-save").click();
+    await expect(page.getByTestId("note-edit-saved")).toBeVisible();
+    await expect(page.getByTestId("notes-list")).toContainText(`${marker} (sửa)`);
 
     // not shared → the parent does not see it
     await page.context().clearCookies();

@@ -42,7 +42,7 @@ export default async function NewSessionNotePage({ params }: { params: Promise<{
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{sessionNotePage.title(learner.alias)}</h1>
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
-        <p className="mt-3 text-muted">{sessionNotePage.intro}</p>
+        <p className="mt-3 text-muted">{sessionNotePage.intro(taughtChoices.length > 0)}</p>
         {plan.length > 0 ? (
           <div className="mt-5" data-testid="session-plan">
             <ActionCards id="goi-y-buoi-hoc" title={resultsCopy.sessionTitle} learnerId={learner.id} cards={plan} tagLabels={Object.fromEntries(tags.map((t) => [t.key, t.label]))} role={member.role === "parent" ? "parent" : "tutor"} buttons={false} decisionsReady={results?.decisionsReady ?? false} />

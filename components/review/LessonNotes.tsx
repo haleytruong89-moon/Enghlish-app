@@ -38,6 +38,7 @@ export function LessonNotes({
   makeupChoicesByNote?: Record<string, { id: string; label: string }[]>;
 }) {
   const [editing, setEditing] = useState<LessonNoteView | null>(null);
+  const [editSaved, setEditSaved] = useState(false);
   const titleOf = new Map(targets.map((t) => [t.id, t.title]));
   const current = notes.filter((n) => n.current);
   const older = notes.filter((n) => !n.current);
@@ -46,8 +47,9 @@ export function LessonNotes({
     <div className="mt-6 flex flex-col gap-6">
       {/* Q5 (26/11): new notes are written only on "Ghi buổi học"; this older form stays for editing an older note. */}
       {canWrite && editing ? (
-        <LessonNoteForm key={editing.id} learnerId={learnerId} targets={targets} today={today} minDate={minDate} editing={editing} onDone={() => setEditing(null)} />
+        <LessonNoteForm key={editing.id} learnerId={learnerId} targets={targets} today={today} minDate={minDate} editing={editing} onDone={(saved) => { setEditing(null); setEditSaved(saved); }} />
       ) : null}
+      {editSaved && !editing ? <p role="status" className="text-sm font-semibold text-accent" data-testid="note-edit-saved">{notesPage.editSaved}</p> : null}
 
       {current.length === 0 ? (
         <p className="rounded-xl border border-line bg-white px-5 py-4" data-testid="notes-empty">
@@ -102,7 +104,7 @@ export function LessonNotes({
               ) : null}
               {marks ? <NoteMarkMenu learnerId={learnerId} noteId={n.id} current={marks[n.id]?.kind ?? "regular"} currentMakeupFor={marks[n.id]?.makeupFor ?? null} makeupChoices={makeupChoicesByNote[n.id] ?? makeupChoices} parentNote={n.authorRole === "parent"} /> : null}
               {canWrite && n.tutorMemberId === memberId && n.supportLevel !== null ? (
-                <button type="button" data-testid={`note-edit-${n.id}`} onClick={() => setEditing(n)} className="mt-2 min-h-11 rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent">
+                <button type="button" data-testid={`note-edit-${n.id}`} onClick={() => { setEditSaved(false); setEditing(n); }} className="mt-2 min-h-11 rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent">
                   {notesPage.edit}
                 </button>
               ) : null}

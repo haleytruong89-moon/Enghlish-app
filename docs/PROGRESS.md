@@ -2389,4 +2389,6 @@ Cách thử trên preview: mở bài nộp chờ chấm → thấy dải đỏ +
 | Cột phải | "Đến hạn hỏi lại mục còn yếu" gập, tiêu đề có số mục |
 | Trang Buổi học | Bỏ form cũ "Viết ghi chú mới"; form cũ chỉ mở khi bấm "Sửa" một ghi chú cũ. Chữ khi chưa có buổi trỏ lên nút "✎ Ghi buổi học hôm nay" |
 
-e2e đã sửa theo: mở phần gập trước khi điền ô gập; bài "ghi chú 3 việc" tạo ghi chú qua API rồi mở form cũ bằng "Sửa".
+Sau rà soát: (1) **tick sẵn chỉ Unit "Đang học" do người đặt**, không phải Unit app tự đặt từ bài con nộp (L2), vì Unit đã dạy lưu lại là bằng chứng "đã dạy" đẩy mọi mục kiến thức của Unit lên mức 1, không hạ được — **chờ phụ huynh xác nhận giữ tick sẵn**; (2) tick sẵn chỉ cho buổi hôm nay (ghi buổi tuần trước thì bỏ tick); (3) "Đánh dấu học bù" tự nối buổi nghỉ khi chỉ có một, có nút "Không phải"; (4) "Đến hạn hỏi lại" tự mở khi có mục; (5) bấm "Sửa" cuộn tới form, lưu xong báo trên danh sách.
+
+e2e đã sửa theo: mở phần gập trước khi điền ô gập (`openSessionMore`, chỉ mở khi đang đóng); bài "ghi chú 3 việc" tạo ghi chú qua API rồi mở form cũ bằng "Sửa".
