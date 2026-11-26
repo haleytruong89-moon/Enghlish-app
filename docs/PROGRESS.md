@@ -2376,3 +2376,17 @@ Nhánh `feature/tags-global-success-6`. **Có SQL: `0045_seed_tags_global_succes
 Sau rà soát: chữ dải đổi thành "cần chấm hoặc góp ý" (hàng chờ gồm cả bài chỉ thiếu góp ý); đọc lỗi danh sách thì hiện "Chưa đọc được…", không bao giờ báo "không còn bài"; "‹ Bài trước" vào cùng dải; mở từ thẻ gợi ý một bài đã xong thì nút là "Mở bài chờ lâu nhất ›"; phụ huynh cũng thấy liên kết mở bài (chỉ xem, không có nút hành động). **Biết trước:** dải đếm theo **lần nộp** (như "Bài 1 / n" có sẵn), nên một bài nộp lại mà cả hai lần còn việc sẽ có 2 chip cùng tên, và số có thể khác thẻ "Chấm bài" ở Hôm nay (đếm theo bài).
 
 Cách thử trên preview: mở bài nộp chờ chấm → thấy dải đỏ + chip; Tiến bộ › Từng bài → cột thẳng; Buổi học → hai nút trên cùng, bấm "Ghi buổi nghỉ" → khung mở; Hôm nay / Buổi học có thẻ "Cần chữa cùng con" → "Mở phần … để chữa →".
+
+## Q5 · Ghi buổi còn 3 ô (26/11/2026 đêm)
+
+**Không có SQL**, không AI. Audit 25/11 mục Q5; phụ huynh duyệt "Ok" 26/11 (2 câu bắt buộc theo đề xuất: tick sẵn Unit đang học, bỏ form cũ).
+
+| Phần | Sau sửa |
+|---|---|
+| Luôn hiện | **Ngày** · **Unit đã dạy** (tick sẵn Unit "Đang học" của từng giáo trình, bấm lại để bỏ; giáo trình mà Unit hiện tại chưa "Đang học" thì không tick gì) · **Lời nhắn cho em** · Lưu |
+| Gập "Thêm chi tiết (không bắt buộc)" | Giống buổi trước · Loại buổi · Hôm nay học · Kỹ năng đã luyện · Mục cần củng cố · Ghi chú cho phụ huynh. Dòng dưới tiêu đề ghi đang chọn gì ("Buổi thường · 0 kỹ năng đã luyện · 0 mục cần củng cố") |
+| Học bù | Còn buổi nghỉ chưa bù → một dòng ngoài phần gập: "Còn n buổi nghỉ chưa được bù. Buổi này là học bù?" + nút "Đánh dấu học bù" (chọn Học bù, mở phần gập). Đổi so với đề xuất: không so ngày (buổi bù luôn khác ngày buổi nghỉ) |
+| Cột phải | "Đến hạn hỏi lại mục còn yếu" gập, tiêu đề có số mục |
+| Trang Buổi học | Bỏ form cũ "Viết ghi chú mới"; form cũ chỉ mở khi bấm "Sửa" một ghi chú cũ. Chữ khi chưa có buổi trỏ lên nút "✎ Ghi buổi học hôm nay" |
+
+e2e đã sửa theo: mở phần gập trước khi điền ô gập; bài "ghi chú 3 việc" tạo ghi chú qua API rồi mở form cũ bằng "Sửa".

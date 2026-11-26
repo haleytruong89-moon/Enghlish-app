@@ -279,19 +279,29 @@ test.describe.serial("S5 review", () => {
     await page.goto(`/learners/${LEARNER_IDS.an}/notes`);
     await expect(page.getByRole("heading", { level: 1, name: notesPage.title(AN) })).toBeVisible();
 
-    await page.getByTestId("note-goals").fill(marker);
-    await page.getByTestId("note-observed").fill("Em nói được hai câu có từ nối.");
-    for (const [i, text] of ["Luyện thêm từ nối", "Viết lại đoạn ngắn", "Đọc to bài mẫu"].entries()) {
-      await page.getByTestId(`note-action-${i + 1}`).fill(text);
-    }
-    await page.locator('[data-testid^="note-practised-"]').first().check();
-    await page.getByTestId("note-save").click();
-    await expect(page.getByTestId("note-saved")).toBeVisible();
+    // Q5: new notes are written on "Ghi buổi học" only; the older form is not on this page any more (it opens to edit an older note).
+    await expect(page.getByTestId("note-form")).toHaveCount(0);
+    const made = await page.request.post(`/api/learners/${LEARNER_IDS.an}/lesson-notes`, {
+      data: {
+        client_id: randomUUID(),
+        session_date: todayVn(),
+        goals: marker,
+        observed: "Em nói được hai câu có từ nối.",
+        support_level: "light",
+        next_actions: ["Luyện thêm từ nối", "Viết lại đoạn ngắn", "Đọc to bài mẫu"],
+        practised_target_ids: [],
+        published: false,
+      },
+    });
+    expect(made.status(), await made.text()).toBe(201);
+    await page.reload();
 
     const note = page.getByTestId("notes-list").locator('[data-testid^="note-"]').filter({ hasText: marker }).first();
     await expect(note).toBeVisible();
     await expect(note.getByTestId("note-actions").locator("li")).toHaveCount(3);
     await expect(note).toContainText(notesPage.privateTag);
+    await note.locator(`[data-testid^="note-edit-"]`).click();
+    await expect(page.getByTestId("note-form")).toBeVisible();
 
     // not shared → the parent does not see it
     await page.context().clearCookies();

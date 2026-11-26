@@ -65,6 +65,8 @@ test("unit statuses drive 'đang học đến'; the session note offers the unit
   await page.getByTestId("unit-U2-in_progress").click();
   await expect(page.getByTestId("units-current")).toHaveText(curriculumCopy.currentLine("U2", "Thinking and learning"));
   await page.goto(`/learners/${NGUYEN}/notes/new`);
+  // Q5: the "Đang học" unit (U2) is ticked when the form opens
+  await expect(page.getByTestId(`taught-${curriculumId}-U2`)).toHaveAttribute("aria-checked", "true");
   await page.getByTestId(`taught-${curriculumId}-U3`).click();
   await page.getByTestId("session-save").click();
   await expect(page.getByTestId("session-saved")).toBeVisible();
@@ -78,6 +80,7 @@ test("unit statuses drive 'đang học đến'; the session note offers the unit
 test("listening question-type tags can be picked in the session note", async ({ page }) => {
   await loginAs(page, "tutorNguyen");
   await page.goto(`/learners/${NGUYEN}/notes/new`);
+  await page.getByTestId("session-more-summary").click();
   await page.getByTestId("tab-session-tags-listening").click();
   await expect(page.getByTestId("panel-session-tags-listening")).toContainText("Nghe · Main idea — Ý chính");
 });

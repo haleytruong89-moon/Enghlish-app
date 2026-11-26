@@ -44,8 +44,9 @@ export function LessonNotes({
 
   return (
     <div className="mt-6 flex flex-col gap-6">
-      {canWrite ? (
-        <LessonNoteForm key={editing?.id ?? "new"} learnerId={learnerId} targets={targets} today={today} minDate={minDate} editing={editing} onDone={() => setEditing(null)} />
+      {/* Q5 (26/11): new notes are written only on "Ghi buổi học"; this older form stays for editing an older note. */}
+      {canWrite && editing ? (
+        <LessonNoteForm key={editing.id} learnerId={learnerId} targets={targets} today={today} minDate={minDate} editing={editing} onDone={() => setEditing(null)} />
       ) : null}
 
       {current.length === 0 ? (

@@ -169,3 +169,13 @@ export function taughtChoices(cards: CurriculumCard[]): TaughtChoice[] {
       : [],
   );
 }
+
+/**
+ * Q5 (26/11): the units ticked when "Ghi buổi học" opens: per curriculum, the unit it is at ("đang học đến") when that unit is
+ * "Đang học". A curriculum whose current unit is not started or done ticks nothing, so a session never claims a book by default.
+ */
+export function presetTaught(choices: readonly TaughtChoice[], max: number): { curriculum_id: string; unit_code: string }[] {
+  return choices
+    .flatMap((c) => (c.currentCode && c.units.some((u) => u.code === c.currentCode && u.status === "in_progress") ? [{ curriculum_id: c.curriculumId, unit_code: c.currentCode }] : []))
+    .slice(0, max);
+}
