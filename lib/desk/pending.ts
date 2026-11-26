@@ -90,15 +90,18 @@ export function pendingView(p: { rows: readonly Pick<PendingRow, "group">[]; fai
   };
 }
 
-/** Hướng B: rows "Chấm bài" and Bài tập › Cần chấm already hold (app submissions: questions to check, retries, feedback). */
-export const GRADING_KINDS: readonly PendingKind[] = ["studio_check", "retry", "feedback"];
-/** "Việc khác" on Hôm nay: what waits that is not grading an app submission. */
-export const otherRows = <R extends Pick<PendingRow, "group" | "kind">>(rows: readonly R[]): R[] => countedRows(rows).filter((r) => !GRADING_KINDS.includes(r.kind));
+/**
+ * Hướng B · "Việc khác" on Hôm nay: what waits besides the submissions Bài tập › Cần chấm already holds. A row is left out only when
+ * its submission IS counted there (`held` = the attempts of the "Cần chấm" tab): a retry made after the feedback, or a submission the
+ * tab does not hold, stays here. `held === null` (tab unreadable): nothing is left out (never hide work on a guess).
+ */
+export const otherRows = <R extends Pick<PendingRow, "group" | "attemptId">>(rows: readonly R[], held: ReadonlySet<string> | null): R[] =>
+  countedRows(rows).filter((r) => !(held && r.attemptId && held.has(r.attemptId)));
 /** Same completeness rules as `pendingView`, counting `otherRows`. */
-export function otherView(p: { rows: readonly Pick<PendingRow, "group" | "kind">[]; failed: readonly unknown[]; more: boolean }): string | null {
+export function otherView(p: { rows: readonly Pick<PendingRow, "group" | "attemptId">[]; failed: readonly unknown[]; more: boolean }, held: ReadonlySet<string> | null): string | null {
   const failed = p.failed.some((f) => !(UNCOUNTED_SOURCES as readonly unknown[]).includes(f));
   if (failed) return null;
-  const n = otherRows(p.rows).length;
+  const n = otherRows(p.rows, held).length;
   return p.more ? `≥ ${n}` : String(n);
 }
 

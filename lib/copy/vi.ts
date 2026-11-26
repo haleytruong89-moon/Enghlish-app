@@ -2843,8 +2843,9 @@ export const pendingCopy = {
   deskTitleUnknown: "Việc khác",
   deskEmpty: "Không có việc khác.",
   /** Hướng B: under Việc khác, the submissions to grade are one line to Bài tập › Cần chấm. */
-  deskSubmissions: (n: number) => `${n} bài con nộp chờ chấm → Bài tập › Cần chấm`,
-  deskIntro: "Việc chờ không phải chấm bài: kỹ năng, mức mục kiến thức, nháp AI, mốc lộ trình, mục tiêu tuần, bài nạp.",
+  deskSubmissions: (n: number) => `${n} bài chờ chấm ở Bài tập › Cần chấm (gồm cả bài giấy / link) →`,
+  deskSubmissionsUnknown: "Chưa đọc được số bài chờ chấm. Mở Bài tập › Cần chấm →",
+  deskIntro: "Việc chờ ngoài tab Cần chấm: bài chờ chấm kỹ năng ở Hộp duyệt, con thử lại sau khi đã có góp ý, kỹ năng, mức mục kiến thức, nháp AI, mốc lộ trình, mục tiêu tuần, bài nạp.",
   deskOpenAll: "Mở tất cả",
   deskMore: (n: number) => `+ ${n} mục nữa`,
   deskPartial: "Có phần chưa đọc được; bấm “Mở tất cả” để xem.",

@@ -52,7 +52,7 @@ Mục tiêu: cô mở app thấy ngay việc phải làm, bấm tối đa 1 lầ
   - Tab Mục kiến thức gồm danh sách theo mục và liên kết tới Bản đồ kiến thức.
   - Tab Cấp và kỹ năng gồm Hồ sơ cấp, Mục cần chú ý và Kỹ năng đang theo dõi.
 - **Việc nên làm** chỉ nằm ở Hôm nay. Hôm nay hiện tối đa 6 việc, các việc còn lại ở mục "Xem thêm". Trang Tiến bộ chỉ có một dòng trỏ về Hôm nay.
-- **Hôm nay:** "Chờ duyệt" đổi thành **Việc khác**, gồm các việc không phải chấm bài (kỹ năng, mức mục kiến thức, giáo trình nháp, mốc lộ trình, mục tiêu tuần, bài nạp). Bài con nộp nằm ở Bài tập › Cần chấm. Việc khác có một dòng trỏ tới Cần chấm.
+- **Hôm nay:** "Chờ duyệt" đổi thành **Việc khác**, gồm các việc không phải chấm bài (kỹ năng, mức mục kiến thức, giáo trình nháp, mốc lộ trình, mục tiêu tuần, bài nạp). Bài con nộp nằm ở Bài tập › Cần chấm. Việc khác có một dòng trỏ tới Cần chấm. *(Điều chỉnh khi làm PR3, ở mục 6 bên dưới.)*
 - **Hồ sơ học sinh** (trang mới `/learners/[id]/profile`):
   - Gồm Hồ sơ đầu vào, Ghi chú dạy học và "Ngày ấy – bây giờ" (chuyển từ trang Hồ sơ cấp), Con hỏi Gia sư, Nhập kỹ năng đọc tháng.
   - Hồ sơ cấp chuyển sang Tiến bộ › Cấp và kỹ năng.
@@ -92,3 +92,5 @@ Có 3 chỗ tự chuyển:
 3. Số trên nút Chấm bài **bằng đúng số của tab Cần chấm** (cùng hàm `buildBoard`). Vì thế nút, tab và Hôm nay không lệch nhau. Đây là sửa sau bản rà PR1: bản đầu đếm theo dòng Chờ duyệt, nên có lúc nút đỏ mà trang mở ra lại báo "không còn bài".
 4. Bỏ 3 nút việc chính đang nằm trên đầu trang Hôm nay, vì cột trái đã có.
 5. Cách tính "4 tuần": 28 ngày giờ Việt Nam tính đến hôm nay, so với 28 ngày liền trước. Chỉ tính bài được đo (lần làm đầu).
+6. *(PR3, chờ phụ huynh xác nhận)* "Việc khác" chỉ bỏ ra những bài nộp mà tab Cần chấm đang giữ. Hai loại việc vẫn ở lại Việc khác vì tab Cần chấm không có chúng: bài chờ chấm kỹ năng ở Hộp duyệt, và con thử lại sau khi đã có góp ý. Nếu bỏ hai loại này ra, chúng sẽ không còn hiện ở đâu trên Hôm nay.
+7. *(PR3, chờ phụ huynh xác nhận)* `/inbox?f=work` **không** tự chuyển sang Cần chấm như bản đầu, vì nhóm "Bài nộp" còn có bài chờ chấm kỹ năng mà Cần chấm không có. Chỉ `?f=drafts` tự chuyển sang Bản nháp.

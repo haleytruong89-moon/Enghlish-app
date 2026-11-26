@@ -192,15 +192,23 @@ describe("Q2 (audit 25/11): one row per submission", () => {
 
 
 describe("otherRows / otherView: Việc khác on Hôm nay (hướng B)", () => {
-  it("counted rows that are not app submissions to grade (those are on Bài tập › Cần chấm)", () => {
-    const rows = [
-      { group: "check", kind: "studio_check" }, { group: "check", kind: "retry" }, { group: "work", kind: "feedback" },
-      { group: "work", kind: "work" }, { group: "skills", kind: "skill" }, { group: "ai", kind: "curriculum_draft" }, { group: "drafts", kind: "studio_draft" },
-    ] as const;
-    expect(otherRows(rows).map((r) => r.kind)).toEqual(["work", "skill", "curriculum_draft"]);
-    expect(otherView({ rows, failed: [], more: false })).toBe("3");
-    expect(otherView({ rows, failed: [], more: true })).toBe("≥ 3");
-    expect(otherView({ rows, failed: ["skills"], more: false })).toBeNull();
-    expect(otherView({ rows, failed: ["drafts"], more: false })).toBe("3");
+  const rows = [
+    { group: "check", kind: "studio_check", attemptId: "a1" }, // held by Cần chấm
+    { group: "work", kind: "work", attemptId: "a2" }, // merged work + feedback of a held submission
+    { group: "check", kind: "retry", attemptId: "a3" }, // a retry made after the feedback: the tab says "done"
+    { group: "work", kind: "work", attemptId: "a4" }, // skill scoring of a submission not in the tab
+    { group: "skills", kind: "skill" },
+    { group: "drafts", kind: "studio_draft" },
+  ] as const;
+  const held = new Set(["a1", "a2"]);
+  it("leaves out only the submissions the Cần chấm tab holds; a late retry and other work stay", () => {
+    expect(otherRows(rows, held).map((r) => ("attemptId" in r ? r.attemptId : r.kind))).toEqual(["a3", "a4", "skill"]);
+    expect(otherView({ rows, failed: [], more: false }, held)).toBe("3");
+    expect(otherView({ rows, failed: [], more: true }, held)).toBe("≥ 3");
+  });
+  it("tab unreadable: nothing is hidden on a guess; a failed source: unknown; drafts failing changes nothing", () => {
+    expect(otherRows(rows, null)).toHaveLength(5);
+    expect(otherView({ rows, failed: ["skills"], more: false }, held)).toBeNull();
+    expect(otherView({ rows, failed: ["drafts"], more: false }, held)).toBe("3");
   });
 });

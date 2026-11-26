@@ -4,9 +4,10 @@ import type { PendingRowsResult } from "@/lib/desk/load";
 import { otherRows, otherView, pendingView } from "@/lib/desk/pending";
 
 /** Hướng B: "Việc khác" (was Chờ duyệt) — what waits that is not grading; the submissions to grade are one line to Bài tập › Cần chấm. */
-export function DeskInbox({ learnerId, pending, need = null }: { learnerId: string; pending: PendingRowsResult; need?: number | null }) {
-  const rows = otherRows(pending.rows);
-  const other = otherView(pending);
+export function DeskInbox({ learnerId, pending, need = null, needAttempts = null }: { learnerId: string; pending: PendingRowsResult; need?: number | null; needAttempts?: readonly string[] | null }) {
+  const held = needAttempts ? new Set(needAttempts) : null;
+  const rows = otherRows(pending.rows, held);
+  const other = otherView(pending, held);
   const drafts = pending.rows.filter((r) => r.group === "drafts").length;
   const v = pendingView(pending);
   return (
@@ -16,9 +17,9 @@ export function DeskInbox({ learnerId, pending, need = null }: { learnerId: stri
         <Link href={`/learners/${learnerId}/inbox`} data-testid="desk-inbox-open" className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline">{pendingCopy.deskOpenAll}</Link>
       </div>
       <p className="text-sm text-muted">{pendingCopy.deskIntro}</p>
-      {need !== null && need > 0 ? (
+      {need === null || need > 0 ? (
         <Link href={`/learners/${learnerId}/assigned?tab=need`} data-testid="desk-inbox-submissions" className="inline-flex min-h-11 items-center self-start text-sm font-semibold text-accent underline">
-          {pendingCopy.deskSubmissions(need)}
+          {need === null ? pendingCopy.deskSubmissionsUnknown : pendingCopy.deskSubmissions(need)}
         </Link>
       ) : null}
       {rows.length === 0 && v.showEmpty ? <p className="text-sm text-muted">{pendingCopy.deskEmpty}</p> : null}

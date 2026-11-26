@@ -2309,7 +2309,8 @@ Phụ huynh duyệt hướng B ngày 26/11. Thiết kế: `docs/superpowers/spec
 - **Trang danh sách đầy đủ** (`/learners/[id]/inbox`, mở bằng "Mở tất cả"):
   - Tên mới là "Việc chờ". Vẫn đủ mọi nhóm, kể cả bài nộp.
   - Đường dẫn cũ `?f=drafts` tự chuyển sang Bài tập › Bản nháp.
-- **Luật đếm:** `otherRows` / `otherView` (`lib/desk/pending.ts`) bỏ đi các loại `studio_check`, `retry`, `feedback` (`GRADING_KINDS`). Luật "đủ / thiếu" giống `pendingView`.
+- **Luật đếm** (sau bản rà): `otherRows` / `otherView` (`lib/desk/pending.ts`) chỉ bỏ dòng có bài nộp mà tab Cần chấm đang giữ (`needAttempts`, cùng `buildBoard`). Bài chờ chấm kỹ năng, và con thử lại sau khi đã có góp ý, vẫn ở Việc khác. Không đọc được tab thì không bỏ dòng nào. Luật "đủ / thiếu" giống `pendingView`.
+- **Chờ phụ huynh xác nhận:** quyết định 6 và 7 trong spec (Việc khác giữ hai loại việc trên; `?f=work` không tự chuyển).
 
 **Cách thử trên preview:**
 1. Hôm nay: thẻ Việc nên làm, rồi "Xem thêm".
