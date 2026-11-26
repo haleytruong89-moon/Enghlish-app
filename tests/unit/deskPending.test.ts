@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { pendingCopy, reviewPage, revisionReviewCopy } from "@/lib/copy/vi";
 import type { CurriculumCard } from "@/lib/curriculum/shape";
-import { buildPendingRows, countGroups, filterRows, parseGroup, pendingView, type PendingInput } from "@/lib/desk/pending";
+import { buildPendingRows, countGroups, filterRows, parseGroup, pendingView, submissionView, type PendingInput } from "@/lib/desk/pending";
 import type { InboxItem } from "@/lib/review/types";
 import type { SkillInboxItem } from "@/lib/skills/types";
 import type { DraftListItem, PendingAttempt } from "@/lib/studio/types";
@@ -187,5 +187,20 @@ describe("Q2 (audit 25/11): one row per submission", () => {
   it("a failing drafts source does not make the count unknown (drafts never count)", () => {
     expect(pendingView({ rows: [{ group: "work" }], failed: ["drafts"], more: false }).count).toBe("1");
     expect(pendingView({ rows: [{ group: "work" }], failed: ["drafts", "studio"], more: false }).count).toBe(null);
+  });
+});
+
+describe("submissionView: the number on 'Chấm bài' (hướng B)", () => {
+  it("counts only rows about something the child sent", () => {
+    const rows = [
+      { group: "work", kind: "work" }, { group: "check", kind: "studio_check" }, { group: "check", kind: "retry" }, { group: "work", kind: "feedback" },
+      { group: "skills", kind: "skill" }, { group: "ai", kind: "curriculum_draft" }, { group: "check", kind: "import" }, { group: "drafts", kind: "studio_draft" },
+    ] as const;
+    expect(submissionView({ rows, failed: [], more: false })).toBe("4");
+  });
+  it("'≥ n' when the list stopped early; null when a source failed; drafts failing changes nothing", () => {
+    expect(submissionView({ rows: [{ group: "work", kind: "work" }], failed: [], more: true })).toBe("≥ 1");
+    expect(submissionView({ rows: [], failed: ["studio"], more: false })).toBeNull();
+    expect(submissionView({ rows: [], failed: ["drafts"], more: false })).toBe("0");
   });
 });

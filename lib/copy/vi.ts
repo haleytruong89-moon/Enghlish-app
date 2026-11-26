@@ -2730,7 +2730,7 @@ export const shellCopy = {
   progressResults: "Kết quả",
   progressKnowledge: "Bản đồ kiến thức",
   soon: "Sắp có",
-  inboxBadge: (n: string) => `${n} việc đang chờ duyệt`,
+  gradeBadge: (n: string) => `${n} bài con đã nộp đang chờ chấm`,
   parentGroup: "Phụ huynh",
   inquiriesChild: "Bài chủ đề trong app",
   inboxAll: "Tất cả việc chờ",

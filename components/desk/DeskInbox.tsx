@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { pendingCopy } from "@/lib/copy/vi";
 import type { PendingRowsResult } from "@/lib/desk/load";
-import { countedRows, pendingView } from "@/lib/desk/pending";
+import { countedRows, pendingView, submissionView } from "@/lib/desk/pending";
 import { BadgeSeed } from "@/components/shell/BadgeSeed";
 
 export function DeskInbox({ learnerId, pending }: { learnerId: string; pending: PendingRowsResult }) {
@@ -10,7 +10,7 @@ export function DeskInbox({ learnerId, pending }: { learnerId: string; pending: 
   const v = pendingView(pending);
   return (
     <section data-testid="desk-inbox" aria-labelledby="desk-inbox-title" className="flex flex-col gap-2 rounded-2xl border border-dashed border-[#2f5d9e] bg-[#eef3fa] p-4">
-      <BadgeSeed learnerId={learnerId} count={v.count} />
+      <BadgeSeed learnerId={learnerId} count={v.count} work={submissionView(pending)} />
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="desk-inbox-title" className="text-lg font-semibold">{v.count === null ? pendingCopy.deskTitleUnknown : pendingCopy.deskTitle(v.count)}</h2>
         <Link href={`/learners/${learnerId}/inbox`} data-testid="desk-inbox-open" className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline">{pendingCopy.deskOpenAll}</Link>

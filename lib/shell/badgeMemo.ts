@@ -1,4 +1,4 @@
-/** When the number beside "Chờ duyệt" must be read again (pure). U1: remembered 30 s per child per tab; always re-read after a review page. */
+/** When the sidebar numbers (Chấm bài, Việc khác) must be read again (pure). U1: remembered 30 s per child per tab; always re-read after a review page. */
 export const BADGE_TTL_MS = 30_000;
 
 /** Pages where something gets decided: leaving one of them changes the number. */
@@ -8,6 +8,8 @@ export const DECISION_PATHS: RegExp[] = [
   /^\/imports\/[^/]+$/,
   /^\/curricula\/versions\/[^/]+$/,
   /^\/learners\/[^/]+\/inbox$/,
+  /^\/learners\/[^/]+\/finish(\/.*)?$/,
+  /^\/learners\/[^/]+\/assigned$/,
 ];
 
 export type BadgeMemo = { learnerId: string; at: number };

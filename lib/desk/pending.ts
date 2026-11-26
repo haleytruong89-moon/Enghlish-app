@@ -90,6 +90,18 @@ export function pendingView(p: { rows: readonly Pick<PendingRow, "group">[]; fai
   };
 }
 
+/** Rows about something the child SENT (hướng B: the number on "Chấm bài"; the rest is "Việc khác" on Hôm nay). */
+export const SUBMISSION_KINDS: readonly PendingKind[] = ["work", "studio_check", "retry", "feedback"];
+export const isSubmissionRow = (r: Pick<PendingRow, "kind">): boolean => SUBMISSION_KINDS.includes(r.kind);
+
+/** Same completeness rules as `pendingView` (a failed counted source → unknown; page limit → "≥ n"). */
+export function submissionView(p: { rows: readonly Pick<PendingRow, "group" | "kind">[]; failed: readonly unknown[]; more: boolean }): string | null {
+  const failed = p.failed.some((f) => !(UNCOUNTED_SOURCES as readonly unknown[]).includes(f));
+  if (failed) return null;
+  const n = p.rows.filter(isSubmissionRow).length;
+  return p.more ? `≥ ${n}` : String(n);
+}
+
 const GROUP_OF: Record<PendingKind, Exclude<PendingGroup, "all">> = { work: "work", studio_check: "check", retry: "check", feedback: "work", studio_draft: "drafts", curriculum_draft: "ai", skill: "skills", point: "skills", flag: "skills", import: "check", milestone: "roadmap", goal: "goals" };
 const WAITING = ["draft", "ai_failed"] as const;
 const isWaiting = (s: string) => (WAITING as readonly string[]).includes(s);
