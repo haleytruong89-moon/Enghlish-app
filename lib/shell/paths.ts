@@ -3,7 +3,7 @@
  * matters (specific paths before /review/[id]). Paths of later slices (W3 knowledge / imports, W4a roadmap) are registered already
  * so their pages light up the right entry as soon as they exist.
  */
-import { appFeedback, curriculumCopy, shellCopy } from "@/lib/copy/vi";
+import { appFeedback, curriculumCopy } from "@/lib/copy/vi";
 import { learnerQuery, SECTIONS, type SectionKey } from "./nav";
 
 export type ActiveKey = SectionKey | "aiSettings" | "delete" | "feedback";
@@ -13,8 +13,14 @@ const S = appFeedback.screens;
 const lp = (rest: string) => new RegExp(`^/learners/[^/]+${rest}$`);
 type Rule = { re: RegExp; section: ActiveKey; child: string | null; screen: string; switchTo?: (to: string) => string };
 
+const L = (to: string) => `/learners/${to}`;
+/** The same page for the other child (when it is not the section root). */
+const same = (path: (to: string) => string) => ({ switchTo: path });
+
+/** Hướng B (26/11): every adult page lights one of the six sections (spec "Đường dẫn"); no page was removed. */
 const RULES: readonly Rule[] = [
   { re: /^\/$/, section: "desk", child: null, screen: S.home },
+  // Hồ sơ học sinh (PR2 moves levels / weak / targets to Tiến bộ)
   { re: lp("/levels/baseline"), section: "profile", child: "levels", screen: S.baseline },
   { re: lp("/levels/adjust"), section: "profile", child: "levels", screen: S.adjust },
   { re: lp("/levels/external/new"), section: "profile", child: "levels", screen: S.external },
@@ -23,29 +29,35 @@ const RULES: readonly Rule[] = [
   { re: lp("/targets"), section: "profile", child: "targets", screen: S.targets },
   { re: lp("/reading/new"), section: "profile", child: "reading", screen: S.reading },
   { re: lp("/tutor-asks(/.*)?"), section: "profile", child: "tutorAsks", screen: S.tutorAsks },
-  { re: lp("/knowledge(/.*)?"), section: "knowledge", child: null, screen: S.knowledgeMap },
-  { re: lp("/roadmap(/.*)?"), section: "roadmap", child: null, screen: shellCopy.sections.roadmap },
-  { re: lp("/notes/new"), section: "sessions", child: "notesNew", screen: S.notesNew },
-  { re: lp("/notes(/month/[^/]+)?"), section: "sessions", child: "notes", screen: S.notes },
-  { re: lp("/assign"), section: "assign", child: null, screen: S.assign },
-  { re: lp("/assigned"), section: "assigned", child: null, screen: S.assigned },
-  { re: lp("/progress"), section: "progress", child: null, screen: S.progress },
-  { re: /^\/studio\/new$/, section: "assign", child: null, screen: S.studioNew, switchTo: (to) => `/studio/new${learnerQuery(to)}` },
-  { re: /^\/studio\/drafts\/[^/]+$/, section: "assign", child: null, screen: S.studioDraft, switchTo: (to) => `/learners/${to}/assign` },
-  { re: lp("/inquiries"), section: "assign", child: null, screen: S.inquiries, switchTo: (to) => `/learners/${to}/inquiries` },
-  { re: lp("/results/new"), section: "results", child: "results", screen: S.resultsNew },
-  { re: lp("/imports/new"), section: "results", child: "import", screen: S.importNew },
-  { re: lp("/imports(/.*)?"), section: "results", child: "import", screen: S.importNew },
-  { re: /^\/imports\/[^/]+$/, section: "results", child: "import", screen: S.importConfirm },
-  { re: lp("/curricula(/[^/]+)?"), section: "curricula", child: null, screen: curriculumCopy.screenLabel },
-  { re: /^\/curricula\/versions\/[^/]+$/, section: "curricula", child: null, screen: curriculumCopy.screenLabel },
-  { re: lp("/inbox"), section: "inbox", child: "all", screen: S.inbox },
-  { re: /^\/review$/, section: "inbox", child: "work", screen: S.review },
-  { re: /^\/review\/skills$/, section: "inbox", child: "skills", screen: S.reviewSkills },
-  { re: /^\/review\/studio$/, section: "inbox", child: "studio", screen: S.reviewStudio },
-  { re: /^\/review\/[^/]+$/, section: "inbox", child: "work", screen: S.reviewEpisode },
-  { re: lp("/revisions"), section: "inbox", child: "revisions", screen: S.revisions },
-  { re: lp("/revisions/[^/]+"), section: "inbox", child: "revisions", screen: S.revisionOne },
+  // Buổi học
+  { re: lp("/notes/new"), section: "sessions", child: null, screen: S.notesNew, ...same((to) => `${L(to)}/notes/new`) },
+  { re: lp("/notes(/month/[^/]+)?"), section: "sessions", child: null, screen: S.notes },
+  // Bài tập
+  { re: lp("/assign"), section: "work", child: null, screen: S.assign, ...same((to) => `${L(to)}/assign`) },
+  { re: lp("/assigned"), section: "work", child: null, screen: S.assigned },
+  { re: lp("/finish(/[^/]+)?"), section: "work", child: null, screen: S.finish, ...same((to) => `${L(to)}/finish`) },
+  { re: /^\/studio\/new$/, section: "work", child: null, screen: S.studioNew, ...same((to) => `/studio/new${learnerQuery(to)}`) },
+  { re: /^\/studio\/drafts\/[^/]+$/, section: "work", child: null, screen: S.studioDraft, ...same((to) => `${L(to)}/assigned?tab=drafts`) },
+  { re: lp("/inquiries"), section: "work", child: null, screen: S.inquiries, ...same((to) => `${L(to)}/inquiries`) },
+  { re: lp("/results/new"), section: "work", child: null, screen: S.resultsNew, ...same((to) => `${L(to)}/results/new`) },
+  { re: lp("/imports/new"), section: "work", child: null, screen: S.importNew, ...same((to) => `${L(to)}/imports/new`) },
+  { re: lp("/imports(/.*)?"), section: "work", child: null, screen: S.importNew, ...same((to) => `${L(to)}/imports/new`) },
+  { re: /^\/imports\/[^/]+$/, section: "work", child: null, screen: S.importConfirm },
+  { re: /^\/review$/, section: "work", child: null, screen: S.review },
+  { re: /^\/review\/studio$/, section: "work", child: null, screen: S.reviewStudio },
+  { re: /^\/review\/skills$/, section: "desk", child: null, screen: S.reviewSkills, ...same((to) => `${L(to)}/inbox`) },
+  { re: /^\/review\/[^/]+$/, section: "work", child: null, screen: S.reviewEpisode },
+  { re: lp("/revisions"), section: "work", child: null, screen: S.revisions, ...same((to) => `${L(to)}/revisions`) },
+  { re: lp("/revisions/[^/]+"), section: "work", child: null, screen: S.revisionOne, ...same((to) => `${L(to)}/revisions`) },
+  // Tiến bộ (PR2 drops the children)
+  { re: lp("/progress"), section: "progress", child: "results", screen: S.progress },
+  { re: lp("/knowledge(/.*)?"), section: "progress", child: "knowledge", screen: S.knowledgeMap },
+  // Kế hoạch
+  { re: lp("/curricula(/[^/]+)?"), section: "plan", child: null, screen: curriculumCopy.screenLabel },
+  { re: /^\/curricula\/versions\/[^/]+$/, section: "plan", child: null, screen: curriculumCopy.screenLabel },
+  { re: lp("/roadmap(/.*)?"), section: "plan", child: null, screen: S.roadmap, ...same((to) => `${L(to)}/roadmap`) },
+  // Việc khác (the old Chờ duyệt list; reached from Hôm nay)
+  { re: lp("/inbox"), section: "desk", child: null, screen: S.inbox, ...same((to) => `${L(to)}/inbox`) },
   { re: /^\/settings\/ai$/, section: "aiSettings", child: null, screen: S.settingsAi },
   { re: lp("/delete"), section: "delete", child: null, screen: S.delete },
   { re: /^\/feedback$/, section: "feedback", child: null, screen: S.feedback },

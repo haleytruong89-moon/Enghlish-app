@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appFeedback, curriculumCopy, shellCopy } from "@/lib/copy/vi";
+import { appFeedback, curriculumCopy } from "@/lib/copy/vi";
 import { activeFor, feedbackHref, switchHref, deskHref } from "@/lib/shell/paths";
 
 const X = "a0000000-0000-4000-8000-000000000001";
@@ -16,33 +16,36 @@ describe("activeFor: every existing page keeps the feedback screen it passed to 
     [`/learners/${X}/weak`, "profile", "weak", S.weak],
     [`/learners/${X}/targets`, "profile", "targets", S.targets],
     [`/learners/${X}/reading/new`, "profile", "reading", S.reading],
-    [`/learners/${X}/notes/new`, "sessions", "notesNew", S.notesNew],
-    [`/learners/${X}/notes`, "sessions", "notes", S.notes],
-    [`/learners/${X}/notes/month/2026-11`, "sessions", "notes", S.notes],
-    [`/learners/${X}/assign`, "assign", null, S.assign],
-    [`/learners/${X}/assigned`, "assigned", null, S.assigned],
-    ["/studio/new", "assign", null, S.studioNew],
-    ["/studio/drafts/d1", "assign", null, S.studioDraft],
-    [`/learners/${X}/inquiries`, "assign", null, S.inquiries],
-    [`/learners/${X}/results/new`, "results", "results", S.resultsNew],
-    [`/learners/${X}/curricula`, "curricula", null, curriculumCopy.screenLabel],
-    [`/learners/${X}/curricula/c1`, "curricula", null, curriculumCopy.screenLabel],
-    ["/curricula/versions/v1", "curricula", null, curriculumCopy.screenLabel],
-    [`/learners/${X}/inbox`, "inbox", "all", S.inbox],
-    ["/review", "inbox", "work", S.review],
-    ["/review/skills", "inbox", "skills", S.reviewSkills],
-    ["/review/studio", "inbox", "studio", S.reviewStudio],
-    ["/review/e1", "inbox", "work", S.reviewEpisode],
-    [`/learners/${X}/revisions`, "inbox", "revisions", S.revisions],
-    [`/learners/${X}/revisions/a1`, "inbox", "revisions", S.revisionOne],
+    [`/learners/${X}/tutor-asks`, "profile", "tutorAsks", S.tutorAsks],
+    [`/learners/${X}/notes/new`, "sessions", null, S.notesNew],
+    [`/learners/${X}/notes`, "sessions", null, S.notes],
+    [`/learners/${X}/notes/month/2026-11`, "sessions", null, S.notes],
+    [`/learners/${X}/assign`, "work", null, S.assign],
+    [`/learners/${X}/assigned`, "work", null, S.assigned],
+    [`/learners/${X}/finish`, "work", null, S.finish],
+    [`/learners/${X}/finish/a1`, "work", null, S.finish],
+    ["/studio/new", "work", null, S.studioNew],
+    ["/studio/drafts/d1", "work", null, S.studioDraft],
+    [`/learners/${X}/inquiries`, "work", null, S.inquiries],
+    [`/learners/${X}/results/new`, "work", null, S.resultsNew],
+    [`/learners/${X}/imports/new`, "work", null, S.importNew],
+    ["/imports/b1", "work", null, S.importConfirm],
+    ["/review", "work", null, S.review],
+    ["/review/studio", "work", null, S.reviewStudio],
+    ["/review/e1", "work", null, S.reviewEpisode],
+    [`/learners/${X}/revisions`, "work", null, S.revisions],
+    [`/learners/${X}/revisions/a1`, "work", null, S.revisionOne],
+    [`/learners/${X}/progress`, "progress", "results", S.progress],
+    [`/learners/${X}/knowledge`, "progress", "knowledge", S.knowledgeMap],
+    [`/learners/${X}/curricula`, "plan", null, curriculumCopy.screenLabel],
+    [`/learners/${X}/curricula/c1`, "plan", null, curriculumCopy.screenLabel],
+    ["/curricula/versions/v1", "plan", null, curriculumCopy.screenLabel],
+    [`/learners/${X}/roadmap`, "plan", null, S.roadmap],
+    [`/learners/${X}/inbox`, "desk", null, S.inbox],
+    ["/review/skills", "desk", null, S.reviewSkills],
     ["/settings/ai", "aiSettings", null, S.settingsAi],
     [`/learners/${X}/delete`, "delete", null, S.delete],
     ["/feedback", "feedback", null, S.feedback],
-    // W3 (knowledge map, import) is live; the roadmap is reserved for a later slice
-    [`/learners/${X}/knowledge`, "knowledge", null, S.knowledgeMap],
-    [`/learners/${X}/roadmap`, "roadmap", null, shellCopy.sections.roadmap],
-    [`/learners/${X}/imports/new`, "results", "import", S.importNew],
-    ["/imports/b1", "results", "import", S.importConfirm],
   ];
   for (const [path, section, child, screen] of table) {
     it(path, () => expect(activeFor(path)).toEqual({ section, child, screen }));
@@ -59,8 +62,11 @@ describe("switchHref keeps the part of the app that is open", () => {
     expect(switchHref(`/learners/${X}/levels/baseline`, Y)).toBe(`/learners/${Y}/levels`);
     expect(switchHref(`/learners/${X}/curricula/c1`, Y)).toBe(`/learners/${Y}/curricula`);
     expect(switchHref("/curricula/versions/v1", Y)).toBe(`/learners/${Y}/curricula`);
-    expect(switchHref("/review/e1", Y)).toBe(`/review?learner=${Y}`);
-    expect(switchHref("/studio/drafts/d1", Y)).toBe(`/learners/${Y}/assign`);
+    expect(switchHref("/review/e1", Y)).toBe(`/learners/${Y}/assigned`);
+    expect(switchHref("/studio/drafts/d1", Y)).toBe(`/learners/${Y}/assigned?tab=drafts`);
+    expect(switchHref(`/learners/${X}/finish/a1`, Y)).toBe(`/learners/${Y}/finish`);
+    expect(switchHref(`/learners/${X}/assign`, Y)).toBe(`/learners/${Y}/assign`);
+    expect(switchHref(`/learners/${X}/notes/new`, Y)).toBe(`/learners/${Y}/notes/new`);
     expect(switchHref("/studio/new", Y)).toBe(`/studio/new?learner=${Y}`);
     expect(switchHref(`/learners/${X}/assigned`, Y)).toBe(`/learners/${Y}/assigned`);
     expect(switchHref(`/learners/${X}/inquiries`, Y)).toBe(`/learners/${Y}/inquiries`);
