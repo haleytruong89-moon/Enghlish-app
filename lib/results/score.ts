@@ -134,7 +134,7 @@ export type UnitScore = { key: string; tally: Tally; works: number; weakest: { t
 export type TagAgg = { key: string; tally: Tally; works: number; lastAt: string };
 
 /** Unit order: U1 < U2 < … < U26, then Reviews, then Progress Tests, then anything else. */
-function unitOrder(k: string): number {
+export function unitOrder(k: string): number {
   const u = /^U(\d+)$/.exec(k);
   if (u) return Number(u[1]);
   const r = /^Review (\d+)$/.exec(k);
