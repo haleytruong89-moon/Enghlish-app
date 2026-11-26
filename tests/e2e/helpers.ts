@@ -92,3 +92,10 @@ export function solidPng(width: number, height: number, grey = 200): Buffer {
   const raw = Buffer.concat(Array.from({ length: height }, () => row));
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk("IHDR", ihdr), chunk("IDAT", deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
 }
+
+/** Q5: "Ghi buổi học" keeps the optional fields in one fold; open it only when it is closed (a blind click would close an open one). */
+export async function openSessionMore(page: Page): Promise<void> {
+  const fold = page.getByTestId("session-more");
+  if (!(await fold.evaluate((el) => (el as HTMLDetailsElement).open))) await page.getByTestId("session-more-summary").click();
+  await expect(fold).toHaveAttribute("open", "");
+}

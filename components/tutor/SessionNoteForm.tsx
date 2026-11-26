@@ -5,7 +5,7 @@ import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { blockImplicitSubmit } from "@/lib/forms/enter";
 import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { curriculumCopy, fallbackLabels, sessionKindCopy, sessionNotePage } from "@/lib/copy/vi";
 import { sessionFailText } from "@/lib/sessions/client";
 import { formatDateVi } from "@/lib/inquiries/format";
@@ -38,6 +38,8 @@ import { useTags } from "./useTags";
 /**
  * "Ghi buổi học" (v2): date, what was studied, up to 3 tags to reinforce, a message the student can read, a note only the parent
  * sees, and the answer to "did you ask again?" for every tag that is due for a re-check. Saved as one shared note.
+ * Q5 (26/11): three fields stay open (date, Unit đã dạy with the "Đang học" unit first and marked, the message); the rest is one fold whose
+ * summary says what is in it. A live absence without a makeup shows one line outside the fold ("Đánh dấu học bù").
  */
 export function SessionNoteForm({
   learnerId,
@@ -79,7 +81,14 @@ export function SessionNoteForm({
   const skillBuckets = useMemo(() => groupTargets(map, skills), [map, skills]);
   const [skillTab, setSkillTab] = useState<string>(() => firstTab(skillBuckets));
   const [saved, setSaved] = useState(false);
+  // Q5 (parent, 27/11, option b): nothing is pre-ticked. A saved unit is "taught at a session" evidence (points mức 1, never lowered),
+  // so it only comes from the tutor's own tap; the "Đang học" unit is the first chip, marked, one tap away.
   const [taught, setTaught] = useState<TaughtUnit[]>([]);
+  const [more, setMore] = useState(false);
+  const [hintOff, setHintOff] = useState(false);
+  const [rechecksOpen, setRechecksOpen] = useState(due.length > 0);
+  const makeupSelect = useRef<HTMLSelectElement>(null);
+  const focusMakeup = useRef(false);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [sameNote, setSameNote] = useState<{ practised: string; weak: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -89,6 +98,11 @@ export function SessionNoteForm({
   const { state: saveState, track } = useSaveStatus({ date, studied, weak, practised, message, parentNote, rechecks, taught, kind, makeupFor });
   const clientId = useRef<string>(crypto.randomUUID());
   const labelOf = new Map(tags.map((t) => [t.key, t.label]));
+
+  // After "Đánh dấu học bù" the hint button is gone: focus goes to the absence select, once it is rendered and visible.
+  useEffect(() => {
+    if (focusMakeup.current && more && kind === "makeup") { focusMakeup.current = false; makeupSelect.current?.focus(); }
+  }, [more, kind]);
 
   const sameResult = useMemo(() => {
     if (!previous) return null;
@@ -114,8 +128,8 @@ export function SessionNoteForm({
     e.preventDefault();
     setError(null);
     const answered = Object.entries(rechecks).flatMap(([tag_key, result]) => (result ? [{ tag_key, result }] : []));
-    if (!studied.trim() && weak.length === 0 && practised.length === 0 && !message.trim() && !parentNote.trim() && answered.length === 0 && taught.length === 0) return setError(sessionNotePage.empty);
-    if (answered.some((a) => a.result === "ok" && weak.includes(a.tag_key))) return setError(sessionNotePage.recheckConflict);
+    if (!studied.trim() && weak.length === 0 && practised.length === 0 && !message.trim() && !parentNote.trim() && answered.length === 0 && taught.length === 0) { setMore(true); return setError(sessionNotePage.empty); }
+    if (answered.some((a) => a.result === "ok" && weak.includes(a.tag_key))) { setMore(true); setRechecksOpen(true); return setError(sessionNotePage.recheckConflict); }
     setBusy(true);
     const r = await track(() => postJson<{ id: string }>(`/api/learners/${learnerId}/session-notes`, {
       client_id: clientId.current,
@@ -143,29 +157,6 @@ export function SessionNoteForm({
   return (
     <form onSubmit={submit} onKeyDown={blockImplicitSubmit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]" data-testid="session-form">
       <fieldset disabled={saved} className="m-0 flex min-w-0 flex-col gap-5 rounded-xl border border-line bg-white p-4">
-        {canAddFromPrevious || sameNoteText ? (
-          <div className="flex flex-col gap-1">
-            {canAddFromPrevious ? (
-              <>
-                <button
-                  type="button"
-                  onClick={fillFromPrevious}
-                  data-testid="session-same-as-last"
-                  className="min-h-11 self-start rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent"
-                >
-                  {sessionNotePage.sameAsLast}
-                </button>
-                <p className="text-xs text-muted">{sessionNotePage.sameAsLastHelp}</p>
-              </>
-            ) : null}
-            {sameNoteText ? (
-              <p role="status" className="text-sm text-accent" data-testid="session-same-as-last-note">
-                {sameNoteText}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-muted">{sessionNotePage.date}</span>
           <input
@@ -179,29 +170,6 @@ export function SessionNoteForm({
           />
         </label>
 
-        <div className="flex flex-col gap-2" data-testid="session-kind">
-          <span className="text-sm text-muted" id="session-kind-label">{sessionKindCopy.label}</span>
-          <div role="radiogroup" aria-labelledby="session-kind-label" className="flex flex-wrap gap-2">
-            {([["regular", sessionKindCopy.regular], ["makeup", sessionKindCopy.makeup]] as const).map(([k, text]) => (
-              <button key={k} type="button" role="radio" aria-checked={kind === k} data-testid={`session-kind-${k}`} className={seg(kind === k)}
-                onClick={() => { if (k !== kind) clientId.current = crypto.randomUUID(); setKind(k); if (k === "regular") setMakeupFor(""); }}>
-                {text}
-              </button>
-            ))}
-          </div>
-          {kind === "makeup" && makeupChoices.length > 0 ? (
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-muted">{sessionKindCopy.makeupFor}</span>
-              <select value={makeupFor} onChange={(e) => { clientId.current = crypto.randomUUID(); setMakeupFor(e.target.value); }} data-testid="session-makeup-for" className={`min-h-11 max-w-72 ${field}`}>
-                <option value="">{sessionKindCopy.makeupForNone}</option>
-                {makeupChoices.map((c) => (
-                  <option key={c.id} value={c.id}>{c.label}</option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-        </div>
-
         {taughtChoices.length > 0 ? (
           <div className="flex flex-col gap-1">
             <h2 className="text-base font-semibold">{curriculumCopy.taughtTitle}</h2>
@@ -209,70 +177,6 @@ export function SessionNoteForm({
             <TaughtUnitsPicker choices={taughtChoices} value={taught} onChange={setTaught} disabled={saved} />
           </div>
         ) : null}
-
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-muted">{sessionNotePage.studied}</span>
-          <input
-            type="text"
-            maxLength={STUDIED_MAX}
-            value={studied}
-            placeholder={sessionNotePage.studiedHint}
-            onChange={(e) => setStudied(e.target.value)}
-            data-testid="session-studied"
-            className={`min-h-11 ${field}`}
-          />
-        </label>
-
-        <div className="flex flex-col gap-1" data-testid="session-practised">
-          <h2 className="text-base font-semibold">{sessionNotePage.practisedTitle}</h2>
-          <p className="text-sm text-muted">{sessionNotePage.practisedHelp}</p>
-          {skills.length === 0 ? (
-            <p className="text-sm text-muted">{sessionNotePage.practisedNone}</p>
-          ) : (
-            <div className="mt-2 flex flex-col gap-3">
-              {saved ? null : (
-                <PractisedChosen
-                  chosen={practised.map((id) => ({ id, title: skills.find((x) => x.id === id)?.title ?? id }))}
-                  onRemove={(id) => setPractised((cur) => cur.filter((k) => k !== id))}
-                  testId="session-practised"
-                />
-              )}
-              <DomainTabs
-                buckets={skillBuckets}
-                active={skillTab}
-                onActive={setSkillTab}
-                testId="session-practised"
-                itemKey={(t) => t.id}
-                itemText={(t) => t.title}
-                renderItem={(t) => {
-                  const on = practised.includes(t.id);
-                  return (
-                    <button
-                      type="button"
-                      role="checkbox"
-                      aria-checked={on}
-                      disabled={!on && practised.length >= MAX_PRACTISED_PER_NOTE}
-                      onClick={() => setPractised((cur) => (cur.includes(t.id) ? cur.filter((k) => k !== t.id) : [...cur, t.id]))}
-                      data-testid={`session-practised-${t.id}`}
-                      className={`min-h-11 rounded-full border px-4 text-sm ${
-                        on ? "border-accent bg-accent font-semibold text-white" : "border-line bg-white text-ink hover:border-accent"
-                      }`}
-                    >
-                      {on ? "✓ " : ""}
-                      {t.title}
-                    </button>
-                  );
-                }}
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <h2 className="text-base font-semibold">{sessionNotePage.weakTitle}</h2>
-          <p className="text-sm text-muted">{sessionNotePage.weakHelp}</p>
-          <TagChips tags={tags} map={map} selected={weak} onChange={setWeak} max={MAX_WEAK_TAGS_PER_NOTE} onAdd={add} onSetGroup={setGroup} testId="session-tags" />
-        </div>
 
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-semibold">{sessionNotePage.message}</span>
@@ -288,18 +192,163 @@ export function SessionNoteForm({
           <span className="text-xs text-muted">{sessionNotePage.messageCount(message.length, MESSAGE_MAX)}</span>
         </label>
 
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-semibold">{sessionNotePage.noteForParent}</span>
-          <span className="text-muted">{sessionNotePage.noteForParentHelp}</span>
-          <textarea
-            rows={3}
-            maxLength={PARENT_NOTE_MAX}
-            value={parentNote}
-            onChange={(e) => setParentNote(e.target.value)}
-            data-testid="session-parent-note"
-            className={`py-2 ${field}`}
-          />
-        </label>
+        {kind === "regular" && makeupChoices.length > 0 && !saved && !hintOff ? (
+          <p className="flex flex-wrap items-center gap-2 rounded-lg bg-[#fff4e0] px-3 py-2 text-sm text-[#6B4600]" data-testid="session-makeup-hint">
+            {sessionNotePage.makeupHint(makeupChoices.length)}
+            <button type="button" data-testid="session-makeup-hint-button" className="min-h-11 rounded-lg border border-[#6B4600] bg-white px-3 font-semibold"
+              onClick={() => {
+                clientId.current = crypto.randomUUID();
+                setKind("makeup");
+                // One absence waiting: it is the one being made up (without the link the month would bill both). Several: the tutor picks.
+                if (makeupChoices.length === 1) setMakeupFor(makeupChoices[0]!.id);
+                setMore(true);
+                focusMakeup.current = true;
+              }}>
+              {sessionNotePage.makeupHintButton}
+            </button>
+            <button type="button" data-testid="session-makeup-hint-no" className="min-h-11 rounded-lg px-3 underline" onClick={() => setHintOff(true)}>
+              {sessionNotePage.makeupHintNo}
+            </button>
+          </p>
+        ) : null}
+
+        <details open={more} onToggle={(e) => setMore(e.currentTarget.open)} data-testid="session-more" className="group rounded-xl border border-line">
+          <summary data-testid="session-more-summary" className="flex min-h-11 cursor-pointer list-none items-center gap-3 px-4 py-2">
+            <span aria-hidden="true" className="text-accent transition-transform group-open:rotate-90">▸</span>
+            <span className="flex flex-col gap-0.5">
+              <span className="font-semibold text-accent">{sessionNotePage.moreTitle}</span>
+              <span className="sr-only">{sessionNotePage.separator}</span>
+              <span className="text-xs text-muted" data-testid="session-more-line">
+                {sessionNotePage.moreLine(kind === "makeup" ? sessionKindCopy.makeup : sessionKindCopy.regularSession, practised.length, weak.length, parentNote.trim().length > 0)}
+                {kind === "makeup" && makeupChoices.length > 0 && !makeupFor ? ` · ${sessionNotePage.makeupUnlinked}` : ""}
+              </span>
+            </span>
+          </summary>
+          <div className="flex flex-col gap-5 border-t border-line p-4">
+            {canAddFromPrevious || sameNoteText ? (
+              <div className="flex flex-col gap-1">
+                {canAddFromPrevious ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={fillFromPrevious}
+                      data-testid="session-same-as-last"
+                      className="min-h-11 self-start rounded-lg border border-accent bg-white px-4 text-sm font-semibold text-accent"
+                    >
+                      {sessionNotePage.sameAsLast}
+                    </button>
+                    <p className="text-xs text-muted">{sessionNotePage.sameAsLastHelp}</p>
+                  </>
+                ) : null}
+                {sameNoteText ? (
+                  <p role="status" className="text-sm text-accent" data-testid="session-same-as-last-note">
+                    {sameNoteText}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="flex flex-col gap-2" data-testid="session-kind">
+              <span className="text-sm text-muted" id="session-kind-label">{sessionKindCopy.label}</span>
+              <div role="radiogroup" aria-labelledby="session-kind-label" className="flex flex-wrap gap-2">
+                {([["regular", sessionKindCopy.regular], ["makeup", sessionKindCopy.makeup]] as const).map(([k, text]) => (
+                  <button key={k} type="button" role="radio" aria-checked={kind === k} data-testid={`session-kind-${k}`} className={seg(kind === k)}
+                    onClick={() => { if (k !== kind) clientId.current = crypto.randomUUID(); setKind(k); if (k === "regular") setMakeupFor(""); }}>
+                    {text}
+                  </button>
+                ))}
+              </div>
+              {kind === "makeup" && makeupChoices.length > 0 ? (
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-muted">{sessionKindCopy.makeupFor}</span>
+                  <select ref={makeupSelect} value={makeupFor} onChange={(e) => { clientId.current = crypto.randomUUID(); setMakeupFor(e.target.value); }} data-testid="session-makeup-for" className={`min-h-11 max-w-72 ${field}`}>
+                    <option value="">{sessionKindCopy.makeupForNone}</option>
+                    {makeupChoices.map((c) => (
+                      <option key={c.id} value={c.id}>{c.label}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+            </div>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-muted">{sessionNotePage.studied}</span>
+              <input
+                type="text"
+                maxLength={STUDIED_MAX}
+                value={studied}
+                placeholder={sessionNotePage.studiedHint}
+                onChange={(e) => setStudied(e.target.value)}
+                data-testid="session-studied"
+                className={`min-h-11 ${field}`}
+              />
+            </label>
+
+            <div className="flex flex-col gap-1" data-testid="session-practised">
+              <h2 className="text-base font-semibold">{sessionNotePage.practisedTitle}</h2>
+              <p className="text-sm text-muted">{sessionNotePage.practisedHelp}</p>
+              {skills.length === 0 ? (
+                <p className="text-sm text-muted">{sessionNotePage.practisedNone}</p>
+              ) : (
+                <div className="mt-2 flex flex-col gap-3">
+                  {saved ? null : (
+                    <PractisedChosen
+                      chosen={practised.map((id) => ({ id, title: skills.find((x) => x.id === id)?.title ?? id }))}
+                      onRemove={(id) => setPractised((cur) => cur.filter((k) => k !== id))}
+                      testId="session-practised"
+                    />
+                  )}
+                  <DomainTabs
+                    buckets={skillBuckets}
+                    active={skillTab}
+                    onActive={setSkillTab}
+                    testId="session-practised"
+                    itemKey={(t) => t.id}
+                    itemText={(t) => t.title}
+                    renderItem={(t) => {
+                      const on = practised.includes(t.id);
+                      return (
+                        <button
+                          type="button"
+                          role="checkbox"
+                          aria-checked={on}
+                          disabled={!on && practised.length >= MAX_PRACTISED_PER_NOTE}
+                          onClick={() => setPractised((cur) => (cur.includes(t.id) ? cur.filter((k) => k !== t.id) : [...cur, t.id]))}
+                          data-testid={`session-practised-${t.id}`}
+                          className={`min-h-11 rounded-full border px-4 text-sm ${
+                            on ? "border-accent bg-accent font-semibold text-white" : "border-line bg-white text-ink hover:border-accent"
+                          }`}
+                        >
+                          {on ? "✓ " : ""}
+                          {t.title}
+                        </button>
+                      );
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <h2 className="text-base font-semibold">{sessionNotePage.weakTitle}</h2>
+              <p className="text-sm text-muted">{sessionNotePage.weakHelp}</p>
+              <TagChips tags={tags} map={map} selected={weak} onChange={setWeak} max={MAX_WEAK_TAGS_PER_NOTE} onAdd={add} onSetGroup={setGroup} testId="session-tags" />
+            </div>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-semibold">{sessionNotePage.noteForParent}</span>
+              <span className="text-muted">{sessionNotePage.noteForParentHelp}</span>
+              <textarea
+                rows={3}
+                maxLength={PARENT_NOTE_MAX}
+                value={parentNote}
+                onChange={(e) => setParentNote(e.target.value)}
+                data-testid="session-parent-note"
+                className={`py-2 ${field}`}
+              />
+            </label>
+          </div>
+        </details>
 
         {error ? (
           <p role="alert" className="text-sm text-red-700" data-testid="session-error">
@@ -334,8 +383,16 @@ export function SessionNoteForm({
 
         {saved && savedId ? <UnitProposal choices={taughtChoices} taught={taught} lessonNoteId={savedId} /> : null}
 
-        <section className="flex flex-col gap-3 rounded-xl border border-line bg-white p-4" data-testid="recheck-panel">
-          <h2 className="text-base font-semibold">{sessionNotePage.recheckTitle}</h2>
+        <details open={rechecksOpen} onToggle={(e) => setRechecksOpen(e.currentTarget.open)} className="group rounded-xl border border-line bg-white p-4" data-testid="recheck-panel">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3" data-testid="recheck-summary">
+            <span aria-hidden="true" className="text-accent transition-transform group-open:rotate-90">▸</span>
+            <span className="flex flex-col">
+              <span className="text-base font-semibold">{sessionNotePage.recheckTitle}</span>
+              <span className="sr-only">{sessionNotePage.separator}</span>
+              <span className={due.length > 0 ? "text-xs font-semibold text-[#8a3410]" : "text-xs text-muted"}>{sessionNotePage.recheckCount(due.length)}</span>
+            </span>
+          </summary>
+          <div className="mt-3 flex flex-col gap-3">
           {due.length === 0 ? (
             <p className="text-sm text-muted">{sessionNotePage.recheckNone}</p>
           ) : (
@@ -363,7 +420,8 @@ export function SessionNoteForm({
               <p className="text-xs text-muted">{sessionNotePage.recheckNote}</p>
             </>
           )}
-        </section>
+          </div>
+        </details>
 
         <section className="flex flex-col gap-2 rounded-xl border border-line bg-white p-4">
           <h2 className="text-base font-semibold">{sessionNotePage.homeworkTitle}</h2>

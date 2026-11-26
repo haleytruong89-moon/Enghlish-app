@@ -2377,6 +2377,37 @@ Sau rà soát: chữ dải đổi thành "cần chấm hoặc góp ý" (hàng ch
 
 Cách thử trên preview: mở bài nộp chờ chấm → thấy dải đỏ + chip; Tiến bộ › Từng bài → cột thẳng; Buổi học → hai nút trên cùng, bấm "Ghi buổi nghỉ" → khung mở; Hôm nay / Buổi học có thẻ "Cần chữa cùng con" → "Mở phần … để chữa →".
 
+## Báo rõ khi hết hạn mức chi tiêu bên Anthropic + rà chi phí 20–21/11 (27/11/2026)
+
+Nhánh `fix/ai-spend-limit-message`. **Không có SQL**, không bảng mới, không đổi prompt.
+
+- **Sự cố 26/11:** "Cho AI đọc mục lục" (GS6) báo "AI không nhận yêu cầu này". Nguyên nhân: workspace `learning-os` trong Anthropic Console có giới hạn chi tiêu **$20/tháng** và đã dùng hết ($20.06). Anthropic trả lỗi 400, app gộp vào `http_400`. Trần trong Cài đặt AI của app ($50) không biết giới hạn này.
+- **Sửa:** lỗi 400 có chữ "usage limit" / "spend limit" / "credit balance" thành mã riêng `spend_limit`. Màn hình báo "Hết hạn mức chi tiêu bên Anthropic… Phụ huynh kiểm tra Anthropic Console → Spend limits". Studio, Nạp bài và Giáo trình **không thử lại** khi gặp mã này (thử lại vô ích). Test: `tests/unit/aiClient.test.ts`, `tests/unit/curriculumAi.test.ts`.
+- **Rà chi phí 20–21/11 (≈ $14.6):** 2 lần chạy bộ kiểm thử "Eval AI tutor hints" bản đầy đủ ($6.83 + $7.72) trên nhánh `eval/e1`. Hai nhánh `eval/e1` và `eval/e1-smoke` giữ bản workflow cũ `on: push` (mặc định 3 lượt mỗi ca, trần $15). Lần merge thứ hai vào `eval/e1` tự chạy lại cả bộ, không ai bấm. Bản trên `main` đã chỉ chạy bằng tay.
+- **Quyết định 27/11 (phụ huynh):**
+  - Xóa 3 nhánh `eval/e1`, `eval/e1-smoke`, `eval-results`. Hai nhánh đầu có thể tự chạy AI; `eval/e1` và `eval-results` có chữ của sách Destination. Đã sao lưu bằng git bundle ngoài repo. Phụ huynh xóa tay trên GitHub (proxy của Claude không được xóa nhánh).
+  - Giữ repo công khai. Vì vậy càng không được commit tài liệu sách hay đề.
+  - Mọi lần chạy AI trên CI phải báo phụ huynh ước tính chi phí trước.
+- **Việc phụ huynh làm trong Console:**
+  - Nâng giới hạn workspace `learning-os` lên khoảng $40. Giới hạn bên Anthropic phải cao hơn hoặc bằng trần của app.
+  - Nên tách key của GitHub (`learning-os-github`) sang workspace riêng `learning-os-eval`, trần khoảng $10, để kiểm thử không ăn vào phần ngân sách của các con.
+
+## Q5 · Ghi buổi còn 3 ô (26/11/2026 đêm)
+
+**Không có SQL**, không AI. Audit 25/11 mục Q5; phụ huynh duyệt "Ok" 26/11 (2 câu bắt buộc theo đề xuất: tick sẵn Unit đang học, bỏ form cũ).
+
+| Phần | Sau sửa |
+|---|---|
+| Luôn hiện | **Ngày** · **Unit đã dạy** (Unit "Đang học" đứng đầu, có chữ "đang học"; **không tick sẵn**, cô bấm một lần) · **Lời nhắn cho em** · Lưu |
+| Gập "Thêm chi tiết (không bắt buộc)" | Giống buổi trước · Loại buổi · Hôm nay học · Kỹ năng đã luyện · Mục cần củng cố · Ghi chú cho phụ huynh. Dòng dưới tiêu đề ghi đang chọn gì ("Buổi thường · 0 kỹ năng đã luyện · 0 mục cần củng cố") |
+| Học bù | Còn buổi nghỉ chưa bù → một dòng ngoài phần gập: "Còn n buổi nghỉ chưa được bù. Buổi này là học bù?" + nút "Đánh dấu học bù" (chọn Học bù, mở phần gập). Đổi so với đề xuất: không so ngày (buổi bù luôn khác ngày buổi nghỉ) |
+| Cột phải | "Đến hạn hỏi lại mục còn yếu" gập, tiêu đề có số mục |
+| Trang Buổi học | Bỏ form cũ "Viết ghi chú mới"; form cũ chỉ mở khi bấm "Sửa" một ghi chú cũ. Chữ khi chưa có buổi trỏ lên nút "✎ Ghi buổi học hôm nay" |
+
+Sau rà soát: (1) **không tick sẵn Unit** (phụ huynh chọn phương án b, 27/11): Unit đã dạy lưu lại là bằng chứng "đã dạy" đẩy mọi mục kiến thức của Unit lên mức 1, không hạ được, nên chỉ ghi khi cô tự bấm; (3) "Đánh dấu học bù" tự nối buổi nghỉ khi chỉ có một, có nút "Không phải"; (4) "Đến hạn hỏi lại" tự mở khi có mục; (5) bấm "Sửa" cuộn tới form, lưu xong báo trên danh sách.
+
+e2e đã sửa theo: mở phần gập trước khi điền ô gập (`openSessionMore`, chỉ mở khi đang đóng); bài "ghi chú 3 việc" tạo ghi chú qua API rồi mở form cũ bằng "Sửa".
+
 ## Xóa giáo trình nạp hỏng (27/11/2026)
 
 **Không có SQL**, không AI. Phụ huynh báo không xóa được 2 lần nạp "Global English" lỗi (AI `http_400`). Phụ huynh duyệt "ok đề xuất"; đề xuất ban đầu cần SQL 0047 (bảng "đã ẩn"), khi làm thấy **không cần SQL**:

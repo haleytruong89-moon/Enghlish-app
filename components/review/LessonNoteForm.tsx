@@ -3,7 +3,7 @@
 import { SaveStatus } from "@/components/ui/SaveStatus";
 import { useSaveStatus } from "@/components/ui/useSaveStatus";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { notesPage } from "@/lib/copy/vi";
 import { SUPPORT_LEVELS, type LessonNoteView, type SupportLevel } from "@/lib/review/types";
 
@@ -24,7 +24,8 @@ export function LessonNoteForm({
   today: string;
   minDate: string;
   editing: LessonNoteView | null;
-  onDone: () => void;
+  /** `true` after a save (the list then says so), `false` on cancel. */
+  onDone: (saved: boolean) => void;
 }) {
   const router = useRouter();
   const [date, setDate] = useState(editing?.sessionDate ?? today);
@@ -35,6 +36,9 @@ export function LessonNoteForm({
   const [practised, setPracticed] = useState<string[]>(editing?.practisedTargetIds ?? []);
   const [published, setPublished] = useState(editing?.published ?? false);
   const [error, setError] = useState<string | null>(null);
+  // Q5: the form opens above the list when "Sửa" is pressed on an older note further down: bring it into view once.
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => { formRef.current?.scrollIntoView?.({ block: "start" }); }, []);
   const [busy, setBusy] = useState(false);
   const [round, setRound] = useState(0);
   const { state: saveState, track } = useSaveStatus({ date, goals, observed, level, actions, practised, published }, { resetKey: round });
@@ -77,7 +81,7 @@ export function LessonNoteForm({
         setRound((n) => n + 1);
       }
       router.refresh();
-      onDone();
+      onDone(true);
     } catch {
       setError(notesPage.error);
     } finally {
@@ -87,8 +91,8 @@ export function LessonNoteForm({
 
   const input = "min-h-11 rounded-lg border border-line px-3";
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4 rounded-xl border border-line bg-white p-4" data-testid="note-form">
-      <h2 className="text-lg font-semibold">{editing ? notesPage.editTitle : notesPage.newTitle}</h2>
+    <form ref={formRef} onSubmit={submit} className="flex scroll-mt-4 flex-col gap-4 rounded-xl border border-line bg-white p-4" data-testid="note-form">
+      <h2 className="text-lg font-semibold">{notesPage.editTitle}</h2>
 
       <div className="flex flex-col gap-1">
         <label htmlFor="note-date" className="text-sm text-muted">
@@ -180,7 +184,7 @@ export function LessonNoteForm({
           {busy ? notesPage.saving : notesPage.save}
         </button>
         {editing ? (
-          <button type="button" onClick={onDone} className="min-h-12 rounded-xl border border-line bg-white px-5 text-sm font-medium">
+          <button type="button" onClick={() => onDone(false)} className="min-h-12 rounded-xl border border-line bg-white px-5 text-sm font-medium">
             {notesPage.cancel}
           </button>
         ) : null}
