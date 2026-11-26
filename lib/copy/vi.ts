@@ -2073,6 +2073,15 @@ export const resultsCopy = {
       line: (correct: number, decided: number, percent: number, works: number) => `Qua ${works} bài: đúng ${correct}/${decided} (${pctText(percent)}). Giao thêm một bài cùng dạng.`,
       button: "Giao bài luyện",
     },
+    unit_ready: {
+      title: (unit: string, curriculum: string | null) => `${unit}${curriculum ? ` (${curriculum})` : ""} có thể đánh dấu Đã học`,
+      line: (correct: number, decided: number, percent: number, works: number) =>
+        `Con đã nộp đủ ${works} bài trên app của Unit, đã chấm hết · lần làm đầu đúng ${correct}/${decided} (${pctText(percent)}). Bài giấy / link không được tính ở đây. App không tự đặt Đã học: ${tutorHonorific} bấm nếu đồng ý.`,
+      button: "Xem Trạng thái Unit",
+      mark: "Đánh dấu Đã học",
+      marking: "Đang lưu…",
+      marked: (unit: string) => `Đã đặt ${unit} là Đã học.`,
+    },
     praise: {
       title: (title: string, part: string | null) => `Khen con: ${title}${part ? ` · phần ${part}` : ""}`,
       line: (correct: number, decided: number, percent: number) => `Đúng ${correct}/${decided} (${pctText(percent)}). Mở đầu lời góp ý bằng điều cụ thể này.`,
@@ -2646,6 +2655,9 @@ export const curriculumCopy = {
   skip: "Không dạy Unit này",
   unskip: "Có dạy Unit này",
   skippedBadge: "Bỏ qua",
+  /** L2 (0044): a unit "Đang học" because the child sent work of it (the app set it; the adult may change it). */
+  autoBadge: (day: string) => `App đặt theo bài nộp · ${day}`,
+  autoRule: `Con nộp bài của một Unit chưa bắt đầu → app tự đặt "Đang học". "Đã học" vẫn do ${tutorHonorific} bấm. App không bao giờ tự hạ; bạn đổi thì lựa chọn của bạn thắng.`,
   drop: "Bỏ dòng",
   undrop: "Lấy lại dòng",
   droppedBadge: "Đã bỏ dòng",

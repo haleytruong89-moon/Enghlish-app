@@ -106,6 +106,8 @@ const cardRows = z.object({
   units: z.array(z.object({ version_id: text, code: text, ord: int, title: text, section: text.nullable(), page: int.nullable(), skipped: z.boolean() })),
   points: z.array(z.object({ version_id: text, code: text, tag_key: text, ord: int })),
   events: z.array(z.object({ id: text, curriculum_id: text, unit_code: text, status: z.enum(UNIT_STATUSES), created_at: text })),
+  /** L2 (0044): the app's "Đang học" from work the child sent; absent / empty before 0044. */
+  auto: z.array(z.object({ curriculum_id: text, unit_code: text, at: text })).default([]),
 });
 export type CardUnit = ProgressUnit & { section: string | null; page: number | null; points: string[] };
 export type CurriculumCard = {
@@ -145,7 +147,7 @@ export function buildCards(raw: unknown): CurriculumCard[] {
         title: c.title,
         levelNote: c.level_note,
         current: cur ? { versionId: cur.id, version: cur.version, units } : null,
-        progress: cur ? curriculumProgress(units, events) : null,
+        progress: cur ? curriculumProgress(units, events, r.auto.filter((a) => a.curriculum_id === c.id).map((a) => ({ unitCode: a.unit_code, at: a.at }))) : null,
         open: open ? { versionId: open.id, version: open.version, status: open.status, errorCode: open.error_code } : null,
         events,
       };

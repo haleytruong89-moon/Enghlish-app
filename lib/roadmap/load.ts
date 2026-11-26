@@ -1,4 +1,5 @@
 import "server-only";
+import { loadUnitAuto } from "@/lib/curriculum/load";
 import { ReviewDbError } from "@/lib/review/handlers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isMissingFunction } from "./errors";
@@ -16,5 +17,5 @@ export async function loadRoadmap(learnerId: string): Promise<RoadmapLoad> {
     if (isMissingFunction(error.code)) return { kind: "unavailable" };
     throw new ReviewDbError(error.code ?? "unknown", `eng_roadmap: ${error.message ?? "error"}`);
   }
-  return { kind: "ok", view: parseRoadmap(data) };
+  return { kind: "ok", view: parseRoadmap(data, (await loadUnitAuto(learnerId)).events) };
 }

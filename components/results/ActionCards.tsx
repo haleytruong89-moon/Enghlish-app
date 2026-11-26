@@ -2,6 +2,7 @@ import Link from "next/link";
 import { fallbackLabels, resultsCopy as c } from "@/lib/copy/vi";
 import { isDecidable, type ActionCard, type ActionTone } from "@/lib/results/actions";
 import { CardDecision } from "./CardDecision";
+import { UnitDoneButton } from "./UnitDoneButton";
 
 const TONE: Record<ActionTone, { box: string; badge: string }> = {
   red: { box: "border-[#b4402c] bg-[#fbe9e6]", badge: "bg-[#b4402c] text-white" },
@@ -23,6 +24,8 @@ export function cardText(card: ActionCard, tagLabels: Readonly<Record<string, st
       return { title: c.cards.unit_review.title(f.unit ?? ""), line: c.cards.unit_review.line(n(f.correct), n(f.decided), n(f.percent), n(f.works)), button: c.cards.unit_review.button };
     case "practise":
       return { title: c.cards.practise.title(tagLabels[f.tag ?? ""] ?? fallbackLabels.tag), line: c.cards.practise.line(n(f.correct), n(f.decided), n(f.percent), n(f.works)), button: c.cards.practise.button };
+    case "unit_ready":
+      return { title: c.cards.unit_ready.title(f.unit ?? "", f.title ?? null), line: c.cards.unit_ready.line(n(f.correct), n(f.decided), n(f.percent), n(f.works)), button: c.cards.unit_ready.button };
     case "praise":
       return { title: c.cards.praise.title(f.title ?? "", f.part ?? null), line: c.cards.praise.line(n(f.correct), n(f.decided), n(f.percent)), button: c.cards.praise.button };
   }
@@ -74,6 +77,7 @@ export function ActionCards({ learnerId, cards, tagLabels, role, title = c.actio
                 {t.button}
               </Link>
             )}
+            {!parent && card.kind === "unit_ready" && card.facts.curriculumId && card.facts.unit ? <UnitDoneButton curriculumId={card.facts.curriculumId} unit={card.facts.unit} /> : null}
             {!parent && decisionsReady && isDecidable(card.kind) ? <CardDecision learnerId={learnerId} cardKey={card.key} kind={card.kind} label={t.title} evidenceAt={card.evidenceAt} /> : null}
           </article>
         );

@@ -1,10 +1,11 @@
 import "server-only";
 import { createUserClient } from "@/lib/supabase/server";
 import type { StudioAssignedRow } from "@/lib/studio/assigned";
+import { loadCurriculumCards, loadUnitAuto } from "@/lib/curriculum/load";
 import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
 import { buildActions, DESK_OPTIONS, isDecidable, PAGE_OPTIONS, RESULT_RULES, type ActionCard } from "./actions";
 import { handledList, handledPredicate, type CardDecision, type HandledItem } from "./decisions";
-import { byTag, byUnit, scoreItems, scoreWork, type AutoChecks, type ItemMeta, type TagAgg, type UnitScore, type WorkScore } from "./score";
+import { byTag, byUnit, scoreItems, scoreWork, unitKeyOf, type AutoChecks, type ItemMeta, type TagAgg, type UnitScore, type WorkScore } from "./score";
 
 /**
  * `actions` = the few cards of the desk (capped by kind); `allActions` = every card (the Results page, the session page); both leave out
@@ -55,6 +56,8 @@ type DraftRow = { template_id: string | null; template_version: number | null; p
  * No answer text and no answer key is read. `studioRows` may be passed when the caller already loaded them (one read per page).
  */
 export async function loadResults(learnerId: string, todayIso: string, studioRows?: StudioAssignedRow[] | null): Promise<ResultsData> {
+  // (Unit statuses for the "có thể Đã học" card: read once, in parallel with the work below.)
+  const unitInfo = loadUnitAuto(learnerId).then(async (auto) => ({ auto, cards: await loadCurriculumCards(learnerId, auto) })).catch(() => null);
   const rows = studioRows ?? (await loadStudioAssigned(learnerId, todayIso));
   const sent = rows.filter((r) => r.firstAttemptId && r.status !== "skipped");
   if (sent.length === 0) return { works: [], units: [], tags: [], actions: [], allActions: [], handled: [], decisionsReady: true };
@@ -120,7 +123,21 @@ export async function loadResults(learnerId: string, todayIso: string, studioRow
   const counted = works.filter((w) => w.counted);
   const units = byUnit(counted, RESULT_RULES.minItems);
   const tags = byTag(counted);
-  const input = { learnerId, works, units, tags };
+  // L2: Unit statuses of the MAIN curriculum (where a title "Unit N" counts; the app's "Đang học" included) and the Studio tests of each
+  // Unit not sent yet, for the "có thể Đã học" card. Works carry Unit codes only, so one curriculum is used. Fail soft.
+  const info = await unitInfo;
+  const cards = info?.cards ?? [];
+  const main = cards.find((c) => c.id === info?.auto.mainId) ?? (cards.filter((c) => c.progress).length === 1 ? cards.find((c) => c.progress) : undefined);
+  const unitStatus: Record<string, { curriculumId: string; curriculumTitle: string; status: string }> = {};
+  for (const [code, status] of Object.entries(main?.progress?.statusOf ?? {})) unitStatus[code] = { curriculumId: main!.id, curriculumTitle: main!.title, status };
+  const unsent: Record<string, number> = {};
+  for (const r of rows) {
+    if (r.firstAttemptId || r.status === "skipped") continue;
+    // Every Unit the test was given with (or the one in its title): a test not sent keeps each of them from "ready".
+    const keys = r.units.length > 0 ? r.units : [unitKeyOf([], r.title)].filter((k): k is string => k !== null);
+    for (const k of keys) unsent[k] = (unsent[k] ?? 0) + 1;
+  }
+  const input = { learnerId, works, units, tags, unitStatus, unsent };
   const isHandled = handledPredicate(marks.rows);
   // Every card (no limit), to tell which marked cards newer work has brought back.
   const handled = handledList(marks.rows, buildActions(input, { ...PAGE_OPTIONS, limit: Number.MAX_SAFE_INTEGER }), todayIso);

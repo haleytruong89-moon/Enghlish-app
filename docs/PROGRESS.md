@@ -2211,3 +2211,18 @@ Nhánh `feature/l1-xong-mot-bai`. **Không có SQL**, không AI. Phụ huynh duy
 ## Sửa gấp: bản nháp Studio bị cắt ở 30 bài (26/11/2026)
 
 Nhánh `fix/studio-drafts-all`. **Không có SQL**, không AI. Thầy/cô của Nguyên báo 26/11: bản nháp Destination từ khoảng Unit 16 không thấy nữa. Nguyên nhân: hàm đọc danh sách nháp của database (`eng_studio_drafts`, từ 0024) chỉ trả **30 bản mới nhất**; sau khi nhập cả sách (65 bản nháp + 6 bản đã duyệt) thì Unit 14–21 + Review 7–10 và các bản đã duyệt bị đẩy ra khỏi danh sách ở Chờ duyệt (tab Bài soạn sẵn), Giao bài và Studio. Không mất dữ liệu (kiểm 26/11: 65 bản nháp còn nguyên). Sửa: app đọc thẳng bảng `studio_drafts` bằng quyền của người lớn (RLS: chỉ thầy/cô, phụ huynh của em), không giới hạn; cùng các trường như cũ. Hàm cũ để nguyên (không ai gọi nữa).
+
+## L2 · Tiến độ tự chạy (26/11/2026)
+
+Nhánh `feature/l2-tien-do-tu-chay`. **Có SQL: `0044_unit_progress_auto.sql`** (chỉ thêm hàm, không bảng mới; cần 0043). Không AI. Phụ huynh duyệt cách B 26/11 08:40 ("ok"): bản phác https://claude.ai/artifact/Jtag5Rp1ESBRn7rMvRd1E9. Kế hoạch `docs/superpowers/plans/2026-11-26-l2-tien-do-tu-chay.md`; luật DOMAIN §5.1 bản 0.11; thiết kế DESIGN §19.37.
+
+**Có gì:**
+- Con nộp bài của một Unit "Chưa bắt đầu" → Unit tự thành **"Đang học"**, ghi "App đặt theo bài nộp · dd/mm" trên Trạng thái Unit. "Đang học đến", Lộ trình và **núi Hành trình của con** đi theo. Bài Studio không gắn Unit thì lấy "Unit N" trong tên bài.
+- "Đã học" vẫn do thầy/cô bấm: thẻ mới **"U15 có thể đánh dấu Đã học"** ở Việc nên làm khi mọi bài của Unit đã nộp + chấm hết + lần làm đầu ≥ 60 %, nút "Đánh dấu Đã học" một lần.
+- Không bao giờ hạ; thầy/cô đổi thì thầy/cô thắng (tới khi con nộp bài mới của Unit đó). Độ phủ chỉ đếm "Đã học" do người lớn đặt.
+
+**SQL cần phụ huynh áp:** sau khi gộp, GitHub → Actions → "Apply database migrations" → `APPLY` (áp 0043 trước nếu chưa; workflow áp lần lượt cả hai). Chưa áp 0044: mọi thứ như cũ.
+
+**Cách thử:** đăng nhập thầy/cô của "Nguyên (thử)" (giáo trình có U14, U15…), cho em nộp một bài tên "… Unit 15 …" → Giáo trình → Trạng thái Unit: U15 "Đang học" kèm nhãn app đặt; chấm hết bài (≥ 60 %) → Bàn làm việc có thẻ "U15 có thể đánh dấu Đã học" → bấm; đăng nhập "Nguyên (thử)" → Hành trình lên U15.
+
+**Sau rà soát (26/11) đã sửa:** thẻ "có thể Đã học" chỉ xét giáo trình chính và ghi tên giáo trình (hai sách cùng mã U5 không nhầm); một bài giao nhiều Unit chưa nộp chặn đủ mọi Unit của nó; câu chữ nói rõ chỉ tính bài trên app; trang Trạng thái Unit không đề xuất lại "Đang học" khi người lớn vừa đặt "Chưa bắt đầu" sau bài nộp; tên bài có khoảng trắng đặc biệt (dán từ Word / PDF) vẫn nhận Unit; núi của con tính trạng thái tự chạy một lần. Còn để ngỏ: thẻ "có thể Đã học" chưa có nút "Bỏ qua" (cần thêm loại thẻ vào 0043 bằng SQL mới) — hỏi phụ huynh.

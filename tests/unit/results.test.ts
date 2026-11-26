@@ -222,3 +222,36 @@ describe("PR-B after review: what the adult saw, waiting work, stable keys, wind
     expect(handledThisWeek([at("2026-11-19T16:59:00Z")], TODAY)).toBe(0); // 19/11 23:59 in Vietnam
   });
 });
+
+describe("L2: 'U15 có thể đánh dấu Đã học'", () => {
+  const w = (id: string, spec: string, at: string) => scoreWork(work({ instanceId: id, title: `Destination · Unit 15 · ${id}`, units: [], submittedAt: at, items: items(spec), lastAttemptId: `t-${id}`, episodeId: `e-${id}` }), TODAY);
+  const works = [w("a", "1111111000", "2026-11-22T03:00:00Z"), w("b", "1111111100", "2026-11-24T03:00:00Z")];
+  const base = { learnerId: L, works, units: byUnit(works, RESULT_RULES.minItems), tags: [] };
+  const st = (status: string) => ({ U15: { curriculumId: "cur-1", status } });
+  const ready = (o: Partial<Parameters<typeof buildActions>[0]> = {}) => buildActions({ ...base, ...o }, PAGE_OPTIONS).filter((c) => c.kind === "unit_ready");
+  it("every test of the Unit sent and graded, first attempts ≥ 60 %, still Đang học → one card opening the Unit page", () => {
+    const c = ready({ unitStatus: st("in_progress") });
+    expect(c).toHaveLength(1);
+    expect(c[0]).toMatchObject({ key: "ready-U15", facts: { unit: "U15", correct: 15, decided: 20, percent: 75, works: 2, curriculumId: "cur-1" }, href: `/learners/${L}/curricula/cur-1` });
+  });
+  it("no card when already Đã học / not started, a test of the Unit not sent yet, a question still waiting, or below 60 %", () => {
+    expect(ready({ unitStatus: st("done") })).toEqual([]);
+    expect(ready({ unitStatus: st("not_started") })).toEqual([]);
+    expect(ready({ unitStatus: st("in_progress"), unsent: { U15: 1 } })).toEqual([]);
+    expect(ready()).toEqual([]);
+    const waiting = [w("c", "11111111??", "2026-11-25T03:00:00Z")];
+    expect(buildActions({ learnerId: L, works: waiting, units: byUnit(waiting, 4), tags: [], unitStatus: st("in_progress") }, PAGE_OPTIONS).some((c) => c.kind === "unit_ready")).toBe(false);
+    const weak = [w("d", "1110000000", "2026-11-25T03:00:00Z")];
+    expect(buildActions({ learnerId: L, works: weak, units: byUnit(weak, 4), tags: [], unitStatus: st("in_progress") }, PAGE_OPTIONS).map((c) => c.kind)).toContain("unit_review");
+    expect(buildActions({ learnerId: L, works: weak, units: byUnit(weak, 4), tags: [], unitStatus: st("in_progress") }, PAGE_OPTIONS).map((c) => c.kind)).not.toContain("unit_ready");
+  });
+  it("names the curriculum; the Units of a test not sent yet each block 'ready'", () => {
+    const c = ready({ unitStatus: { U15: { curriculumId: "cur-1", curriculumTitle: "Destination", status: "in_progress" } } });
+    expect(c[0]!.facts.title).toBe("Destination");
+    expect(ready({ unitStatus: st("in_progress"), unsent: { U15: 2 } })).toEqual([]);
+  });
+  it("is never a 'Đã làm / Bỏ qua' card (the database keeps no such kind) and is not a lesson card", () => {
+    const c = ready({ unitStatus: st("in_progress") });
+    expect(sessionCards(c)).toEqual([]);
+  });
+});
