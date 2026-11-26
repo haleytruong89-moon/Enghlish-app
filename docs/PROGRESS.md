@@ -2226,3 +2226,35 @@ Nhánh `feature/l2-tien-do-tu-chay`. **Có SQL: `0044_unit_progress_auto.sql`** 
 **Cách thử:** đăng nhập thầy/cô của "Nguyên (thử)" (giáo trình có U14, U15…), cho em nộp một bài tên "… Unit 15 …" → Giáo trình → Trạng thái Unit: U15 "Đang học" kèm nhãn app đặt; chấm hết bài (≥ 60 %) → Bàn làm việc có thẻ "U15 có thể đánh dấu Đã học" → bấm; đăng nhập "Nguyên (thử)" → Hành trình lên U15.
 
 **Sau rà soát (26/11) đã sửa:** thẻ "có thể Đã học" chỉ xét giáo trình chính và ghi tên giáo trình (hai sách cùng mã U5 không nhầm); một bài giao nhiều Unit chưa nộp chặn đủ mọi Unit của nó; câu chữ nói rõ chỉ tính bài trên app; trang Trạng thái Unit không đề xuất lại "Đang học" khi người lớn vừa đặt "Chưa bắt đầu" sau bài nộp; tên bài có khoảng trắng đặc biệt (dán từ Word / PDF) vẫn nhận Unit; núi của con tính trạng thái tự chạy một lần. Còn để ngỏ: thẻ "có thể Đã học" chưa có nút "Bỏ qua" (cần thêm loại thẻ vào 0043 bằng SQL mới) — hỏi phụ huynh.
+
+## Hướng B · PR1: cột trái mới + Bài tập (26/11/2026)
+
+Phụ huynh duyệt hướng B ngày 26/11. Thiết kế: `docs/superpowers/specs/2026-11-26-ia-huong-b-design.md`. Kế hoạch: `docs/superpowers/plans/2026-11-26-ia-huong-b.md` (3 PR). **Không có SQL**, không AI, màn của con không đổi.
+
+- **Cột trái:**
+  - 3 nút việc chính ở đầu: **Chấm bài** (màu đỏ, có số bài con đã nộp đang chờ; màu thường khi không có hoặc chưa đọc được số) · **Giao bài** · **Ghi buổi học**.
+  - Dưới đó là 5 mục **Hôm nay · Bài tập · Buổi học · Tiến bộ · Kế hoạch**, rồi **Hồ sơ học sinh**.
+  - Mục Chờ duyệt riêng bị bỏ. Danh sách vẫn mở từ Hôm nay, ở nút "Mở tất cả".
+  - Trên điện thoại, 3 nút việc chính hiện ngay, không cần mở menu.
+- **Số trên nút Chấm bài:** route chỉ đọc `pending-count` trả thêm `work`, là số dòng bài nộp (bài nộp, câu cần xem, con thử lại, chưa góp ý). Cùng một nguồn với Chờ duyệt nên hai số không lệch nhau. Hàm `submissionView` nằm ở `lib/desk/pending.ts`.
+- **Bài tập** (`/learners/[id]/assigned`, giữ đường dẫn cũ):
+  - 4 tab: **Cần chấm · Con đang làm · Đã xong · Bản nháp**. "Đã gỡ" là liên kết ở tab Đã xong.
+  - Đầu trang có nút: + Giao bài mới · Ghi kết quả bài giấy / link · Nạp bài đã làm.
+  - Cuối trang có liên kết: Hộp duyệt, Bài con đã sửa lại (thay 2 mục con cũ của Chờ duyệt).
+- **Bản nháp theo Unit** (`lib/assigned/draftGroups.ts`):
+  - Bài chưa giao, chưa bỏ và chưa bị thay được gom theo Unit đọc từ tên bài (cùng luật `unitKeyOf`).
+  - Unit **kế tiếp** là Unit đầu tiên (theo số) chưa "Đã học" hay "Bỏ qua" ở giáo trình chính. Unit này đứng đầu và mở sẵn; các nhóm khác gập lại.
+- **Kế hoạch** có 2 tab: Giáo trình · Lộ trình.
+- **Hôm nay:**
+  - "Bàn làm việc" đổi tên thành **Hôm nay**.
+  - Bỏ 3 nút ở đầu trang vì cột trái đã có.
+  - "Ghi điểm nhanh (bài link)" chuyển sang Bài tập.
+- **Hàng chờ Chấm bài trống:** có liên kết sang Bài tập › Cần chấm, cho bài link / PDF.
+- **Đường dẫn cũ:** vẫn mở và sáng đúng mục mới (bảng trong spec). Chưa có tự chuyển nào ở PR này.
+- **Tạm ở PR1:** Tiến bộ có 2 mục con (Kết quả, Bản đồ kiến thức). Hồ sơ học sinh giữ 5 mục con cũ. PR2 thay bằng tab.
+
+**Cách thử trên preview:**
+1. Đăng nhập gia sư thử. Thấy 3 nút ở đầu cột trái.
+2. Bấm Bài tập. Có 4 tab. Mở tab Bản nháp: Unit kế tiếp nằm trên cùng.
+3. Bấm Kế hoạch, rồi tab Lộ trình.
+4. Mở `/learners/<id>/inbox`: trang vẫn mở, mục Hôm nay sáng.

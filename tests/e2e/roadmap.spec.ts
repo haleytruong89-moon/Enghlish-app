@@ -45,11 +45,12 @@ test("setup: an approved curriculum for Nguyên", async () => {
   await prepareCurriculum();
 });
 
-test("the tutor sees the app's proposals, confirms 'Progress Test 1', and Lộ trình lights up in the sidebar", async ({ page }) => {
+test("the tutor sees the app's proposals, confirms 'Progress Test 1', and Kế hoạch lights up in the sidebar", async ({ page }) => {
   await loginAs(page, "tutorNguyen");
-  await page.getByTestId("nav-roadmap").click();
+  await page.getByTestId("nav-plan").click();
+  await page.getByTestId("section-tab-roadmap").click();
   await expect(page).toHaveURL(new RegExp(`/learners/${NGUYEN}/roadmap$`));
-  await expect(page.getByTestId("nav-roadmap")).toHaveAttribute("aria-current", "page");
+  await expect(page.getByTestId("nav-plan")).toHaveAttribute("aria-current", "page");
   await expect(page.getByTestId("roadmap-page")).toBeVisible();
   const pt = page.locator('[data-testid="proposal"][data-key^="pt:"]');
   await expect(pt).toContainText("Progress Test 1");

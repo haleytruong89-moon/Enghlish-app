@@ -2163,6 +2163,8 @@ export const assignedBoardCopy = {
   removedLink: (n: number) => `Xem bài đã gỡ (${n})`,
   resultLink: "Ghi kết quả bài giấy / link",
   importLink: "Nạp bài đã làm",
+  reviewLink: "Hộp duyệt (mọi bài nộp, cả bài cũ) →",
+  revisionsLink: "Bài con đã sửa lại →",
 };
 
 // Nhập bài soạn sẵn (16/11): a draft made outside the app → a normal Studio draft. Adults only; no AI.
@@ -2808,9 +2810,9 @@ export const pendingCopy = {
 } as const;
 
 export const deskCopy = {
-  titlePrefix: "Bàn làm việc",
-  title: (alias: string) => `Bàn làm việc · ${alias}`,
-  titleEmpty: "Bàn làm việc",
+  titlePrefix: "Hôm nay",
+  title: (alias: string) => `Hôm nay · ${alias}`,
+  titleEmpty: "Hôm nay",
   subtitle: (learnerLine: string, todayLine: string) => `${learnerLine} · ${todayLine}`,
   logToday: "Ghi buổi học hôm nay",
   seeAll: "Xem đầy đủ",
@@ -3954,6 +3956,7 @@ export const finishCopy = {
   backWhenEmpty: "Về Bàn làm việc",
   oldPage: "Chấm kỹ năng · mức hỗ trợ (màn cũ)",
   emptyTitle: "Không còn bài nào cần chấm hay góp ý",
+  emptyOther: "Bài link / PDF con đã nộp nằm ở Bài tập › Cần chấm →",
   emptyBody: `Khi con nộp bài mới, bài sẽ hiện ở đây và trên Bàn làm việc.`,
   openFromTable: "Chấm và góp ý",
   unavailable: "Chưa đọc được bài này. Tải lại trang sau ít phút.",

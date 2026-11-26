@@ -65,8 +65,8 @@ test.describe.serial("S5 review", () => {
 
   test("An's tutor: the inbox lists An's submitted work, and opening it shows the work next to the skills, without deciding", async ({ page }) => {
     await loginAs(page, "tutorAn");
-    await page.getByTestId("nav-inbox").click();
-    await page.getByTestId("nav-inbox-work").click();
+    await page.getByTestId("nav-work").click();
+    await page.getByTestId("board-review").click();
     await expect(page).toHaveURL(/\/review(\?.*)?$/);
     await expect(page.getByRole("heading", { level: 1, name: reviewPage.inboxTitle })).toBeVisible();
     const items = page.getByTestId("inbox-list").locator('[data-testid^="inbox-item-"]');
@@ -561,8 +561,8 @@ test.describe.serial("S6 feedback and revision", () => {
 
   test("the parent reads the pair under 'Bài đã sửa' (no buttons); the child cannot open that page", async ({ page, browser }) => {
     await loginAs(page, "parent");
-    await page.goto(`/learners/${LEARNER_IDS.an}/inbox`);
-    await page.getByTestId("nav-inbox-revisions").click();
+    await page.goto(`/learners/${LEARNER_IDS.an}/assigned`);
+    await page.getByTestId("board-revisions").click();
     const pair = page.getByTestId(`revision-pair-${revisionAttempt}`);
     await expect(pair).toContainText(revisionReviewCopy.stateDone);
     await pair.getByRole("link").click();

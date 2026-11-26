@@ -7,48 +7,54 @@ const AN = LEARNER_IDS.an;
 const NG = LEARNER_IDS.nguyen;
 const allHrefs = (role: NavRole, id: string) => {
   const n = buildNav(role, id, { revisionsReady: true });
-  return [...n.sections.flatMap((s) => [s.href, ...s.children.map((c) => c.href)]), ...n.parent.map((p) => p.href)].filter((h): h is string => h !== null);
+  return [...n.quick.map((q) => q.href), ...n.sections.flatMap((s) => [s.href, ...s.children.map((c) => c.href)]), ...n.parent.map((p) => p.href)].filter((h): h is string => h !== null);
 };
 const childScoped = (h: string) => h.startsWith("/learners/") || h.startsWith("/studio/new");
 // Many links per test: ask for the status without rendering/waiting for "load" (the cold server made two tests hit the 30 s limit).
 async function status(page: Page, href: string) { return (await page.request.get(href)).status(); }
 
 test.describe("workdesk shell", () => {
-  test("the tutor lands on Bàn làm việc with the sidebar; Chờ duyệt is above the fold at 1366×768", async ({ page }) => {
+  test("the tutor lands on Hôm nay with the sidebar; quick buttons and Chờ duyệt are above the fold at 1366×768", async ({ page }) => {
     await page.setViewportSize({ width: 1366, height: 768 });
     await loginAs(page, "tutorNguyen");
     await expect(page.getByTestId("staff-sidebar")).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: deskCopy.title("Nguyên (thử)") })).toBeVisible();
     await expect(page.getByTestId("nav-desk")).toHaveAttribute("aria-current", "page");
-    await expect(page.getByTestId("nav-roadmap")).not.toHaveAttribute("aria-disabled", "true");
+    await expect(page.getByTestId("nav-plan")).not.toHaveAttribute("aria-disabled", "true");
+    await expect(page.getByTestId("quick-grade")).toBeVisible();
     await expect(page.getByTestId("learner-switcher")).toHaveCount(0);
     await expect(page.getByTestId("shell-learner")).toContainText("Nguyên (thử)");
     const box = await page.getByTestId("desk-inbox").boundingBox();
     expect(box && box.y + 40).toBeLessThan(768);
-    await expect(page.getByTestId("feedback-link")).toBeVisible();
+    await expect(page.getByTestId("feedback-link")).toBeInViewport();
   });
 
-  test("UX vòng 3A: 9 sections (Giao bài has no sub-pages; Ghi kết quả is a group); the pending number appears after the page", async ({ page }) => {
+  test("hướng B: 3 quick buttons + 6 sections; Bài tập has the result buttons; the Chấm bài number appears after the page", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
     await expect(page.getByTestId("staff-sidebar")).toBeVisible();
-    for (const k of ["desk", "profile", "knowledge", "roadmap", "sessions", "assign", "results", "curricula", "inbox"]) await expect(page.getByTestId(`nav-${k}`), k).toBeVisible();
-    await page.getByTestId("nav-assign").click();
+    for (const k of ["grade", "assign", "note"]) await expect(page.getByTestId(`quick-${k}`), k).toBeVisible();
+    for (const k of ["desk", "work", "sessions", "progress", "plan", "profile"]) await expect(page.getByTestId(`nav-${k}`), k).toBeVisible();
+    await page.getByTestId("quick-assign").click();
     await expect(page).toHaveURL(new RegExp(`/learners/${NG}/assign$`));
     await expect(page.getByTestId("way-cards")).toBeVisible();
-    await expect(page.locator('[data-testid^="nav-assign-"]')).toHaveCount(0);
-    await page.getByTestId("nav-results").click();
+    await expect(page.getByTestId("nav-work")).toHaveAttribute("aria-current", "page");
+    await page.getByTestId("nav-work").click();
+    await expect(page).toHaveURL(new RegExp(`/learners/${NG}/assigned$`));
+    await page.getByTestId("board-tab-drafts").click();
+    await expect(page.getByTestId("assigned-board")).toHaveAttribute("data-tab", "drafts");
+    await page.getByTestId("board-import").click();
     await expect(page).toHaveURL(new RegExp(`/learners/${NG}/imports/new$`));
-    await expect(page.getByTestId("nav-results-import")).toHaveAttribute("aria-current", "page");
-    await expect(page.getByTestId("nav-results-results")).toBeVisible();
-    await page.getByTestId("nav-results-results").click();
-    await expect(page).toHaveURL(new RegExp(`/learners/${NG}/results/new$`));
-    // The number comes from the read-only route (other specs may leave nothing waiting: then no badge at all, never a false one).
+    await expect(page.getByTestId("nav-work")).toHaveAttribute("aria-current", "page");
+    await page.getByTestId("nav-plan").click();
+    await page.getByTestId("section-tab-roadmap").click();
+    await expect(page).toHaveURL(new RegExp(`/learners/${NG}/roadmap$`));
     // Other specs run in parallel and may change the number, so assert only the format, after a fresh page load (never a false or empty badge).
     const res = await page.request.get(`/api/learners/${NG}/pending-count`);
     expect(res.status()).toBe(200);
+    expect(Object.keys(await res.json()).sort()).toEqual(["count", "work"]);
     await page.reload();
     await expect(page.getByTestId("staff-sidebar")).toBeVisible();
-    const badge = page.getByTestId("inbox-badge");
+    const badge = page.getByTestId("grade-badge");
     if ((await badge.count()) > 0) await expect(badge).toHaveText(/^(≥ )?[1-9]\d*$/);
   });
 
@@ -86,15 +92,15 @@ test.describe("workdesk shell", () => {
 
   test("old deep links still open, inside the shell", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
-    for (const h of ["/review", "/review/skills", "/review/studio", `/learners/${NG}/levels`, `/learners/${NG}/weak`, `/learners/${NG}/notes/new`, `/learners/${NG}/assign`, `/studio/new?learner=${NG}`, "/feedback"]) {
+    for (const h of ["/review", "/review/skills", "/review/studio", `/learners/${NG}/levels`, `/learners/${NG}/weak`, `/learners/${NG}/notes/new`, `/learners/${NG}/assign`, `/learners/${NG}/inbox`, `/learners/${NG}/knowledge`, `/learners/${NG}/curricula`, `/learners/${NG}/roadmap`, `/learners/${NG}/progress`, `/studio/new?learner=${NG}`, "/feedback"]) {
       expect(await status(page, h), h).toBe(200);
       await expect(page.getByTestId("staff-shell"), h).toBeVisible();
     }
   });
 
-  test("Chờ duyệt: a compact table with no button; a row opens the existing review page", async ({ page }) => {
+  test("Chờ duyệt (from Hôm nay): a compact table with no button; a row opens the existing review page", async ({ page }) => {
     await loginAs(page, "tutorAn");
-    await page.getByTestId("nav-inbox").click();
+    await page.getByTestId("desk-inbox-open").click();
     await expect(page).toHaveURL(new RegExp(`/learners/${AN}/inbox$`));
     await expect(page.getByTestId("pending-page")).toBeVisible();
     await expect(page.getByTestId("pending-table").getByRole("button")).toHaveCount(0);
@@ -117,6 +123,7 @@ test.describe("workdesk shell", () => {
       expect(sw, h).toBeLessThanOrEqual(cw);
     }
     await page.goto("/");
+    await expect(page.getByTestId("quick-grade")).toBeVisible();
     await expect(page.getByTestId("staff-sidebar")).toBeHidden();
     const toggle = page.getByTestId("nav-menu-toggle");
     expect((await toggle.boundingBox())!.height).toBeGreaterThanOrEqual(44);

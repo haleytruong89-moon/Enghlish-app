@@ -26,26 +26,22 @@ const today = (over: Partial<TodayData> = {}): TodayData => ({
 const data = (over: Partial<DeskData> = {}): DeskData => ({ today: today(), pending: { rows: [], failed: [], more: false }, intakeMissing: false, curricula: [], profile: null, recent: null, aiSettings: null, sessions: null, roadmap: null, ...over });
 const render = (role: "tutor" | "parent", d: DeskData) => renderToStaticMarkup(createElement(DeskView, { shell: shell(role), learner, data: d, todayIso: "2026-10-18" }));
 
-describe("Bàn làm việc", () => {
-  it("order (spec §5 rule 2): title + main action → Chờ duyệt → Cần chú ý → 3 boxes", () => {
+describe("Hôm nay (was Bàn làm việc)", () => {
+  it("order (spec §5 rule 2): title → Chờ duyệt → Cần chú ý → 3 boxes", () => {
     const h = render("tutor", data());
     const at = (s: string) => h.indexOf(s);
     expect(h).toContain(deskCopy.title("Nguyên (thử)"));
-    expect(at('data-testid="desk-title"')).toBeLessThan(at(`data-testid="action-note-${L}"`));
-    expect(at(`data-testid="action-note-${L}"`)).toBeLessThan(at('data-testid="desk-inbox"'));
+    expect(deskCopy.title("An")).toBe("Hôm nay · An");
+    expect(at('data-testid="desk-title"')).toBeLessThan(at('data-testid="desk-inbox"'));
     expect(at('data-testid="desk-inbox"')).toBeLessThan(at(`data-testid="attention-${L}"`));
     expect(at(`data-testid="attention-${L}"`)).toBeLessThan(at('data-testid="desk-profile"'));
     expect(at('data-testid="desk-profile"')).toBeLessThan(at('data-testid="desk-curricula"'));
     expect(at('data-testid="desk-curricula"')).toBeLessThan(at('data-testid="desk-sessions"'));
   });
-  it("quick actions keep their old targets and test ids", () => {
+  it("hướng B: the three action buttons moved to the left column (quick buttons); the title says Hôm nay once", () => {
     const h = render("tutor", data());
-    expect(h).toContain(`href="/learners/${L}/notes/new"`);
-    expect(h).toContain(`href="/learners/${L}/results/new"`);
-    expect(h).toContain(`href="/learners/${L}/assign"`);
-    expect(h).toContain(deskCopy.logToday);
-    expect(h).toContain(todayPage.resultAction);
-    expect(h).toContain(todayPage.assignAction);
+    expect(h).not.toMatch(/data-testid="action-(note|result|assign)-/);
+    expect(h.match(/Hôm nay/g)).toHaveLength(1);
   });
   it("Chờ duyệt box: count, first 3 rows as links, 'Mở tất cả' → the child's inbox; no button", () => {
     const rows = ["a", "b", "c", "d"].map((k) => ({ key: k, kind: "work" as const, group: "work" as const, label: "Bài nộp", title: `T-${k}`, since: null, need: "N", href: `/review/${k}`, waitingTutor: false }));

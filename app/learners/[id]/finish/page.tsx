@@ -20,6 +20,7 @@ export default async function FinishQueuePage({ params }: { params: Promise<{ id
       <h1 className="text-2xl font-bold">{c.emptyTitle}</h1>
       <p className="text-muted">{c.emptyBody}</p>
       <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center self-start rounded-xl bg-accent px-4 font-semibold text-white no-underline">{c.backWhenEmpty}</Link>
+      <Link href={`/learners/${learner.id}/assigned?tab=need`} data-testid="finish-empty-other" className="inline-flex min-h-11 items-center self-start text-sm text-accent underline">{c.emptyOther}</Link>
     </div>
   );
 }

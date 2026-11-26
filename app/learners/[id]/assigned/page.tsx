@@ -17,6 +17,7 @@ import { loadAssignments } from "@/lib/practice/load";
 import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
 import { loadTags } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
+import { revisionsAvailable } from "@/lib/revision/load";
 
 export const dynamic = "force-dynamic";
 
@@ -26,12 +27,13 @@ export default async function AssignedBoardPage({ params, searchParams }: { para
   const sp = await searchParams;
   const { learner, member } = await requireLearnerPage(id, "practice:write");
   const today = todayVn();
-  const [studio, assignments, tags, maxFiles, drafts] = await Promise.all([
+  const [studio, assignments, tags, maxFiles, drafts, revisionsReady] = await Promise.all([
     loadStudioAssigned(learner.id, today).catch(() => null),
     loadAssignments(learner.id),
     loadTags(learner.trackId),
     maxPagesPerSubmission(),
     loadDraftList(learner.id).catch(() => null),
+    revisionsAvailable().catch(() => false),
   ]);
   const board = buildBoard(studio, assignments, today);
   const open = drafts ? openDrafts(drafts) : [];
@@ -102,9 +104,19 @@ export default async function AssignedBoardPage({ params, searchParams }: { para
           {c.removedLink(counts.removed)}
         </Link>
       ) : null}
-      <Link href={`/learners/${learner.id}/inquiries#assigned`} data-testid="board-topic" className="inline-flex min-h-11 items-center text-sm text-accent underline">
-        {c.topicLink}
-      </Link>
+      <p className="flex flex-wrap gap-x-6 text-sm">
+        <Link href={`/learners/${learner.id}/inquiries#assigned`} data-testid="board-topic" className="inline-flex min-h-11 items-center text-accent underline">
+          {c.topicLink}
+        </Link>
+        <Link href={`/review?learner=${learner.id}`} data-testid="board-review" className="inline-flex min-h-11 items-center text-accent underline">
+          {c.reviewLink}
+        </Link>
+        {revisionsReady ? (
+          <Link href={`/learners/${learner.id}/revisions`} data-testid="board-revisions" className="inline-flex min-h-11 items-center text-accent underline">
+            {c.revisionsLink}
+          </Link>
+        ) : null}
+      </p>
     </div>
   );
 }

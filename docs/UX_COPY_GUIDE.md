@@ -406,3 +406,9 @@ Khác với kế hoạch: câu giới thiệu "Mỗi điều là một việc {t
 
 - Nhãn trên Unit do app đặt: **"App đặt theo bài nộp · dd/mm"**. Dòng luật ở đầu trang Trạng thái Unit: con nộp bài → app đặt "Đang học"; "Đã học" do thầy/cô bấm; app không tự hạ; người lớn đổi thì người lớn thắng.
 - Thẻ Việc nên làm: **"U15 có thể đánh dấu Đã học"**, dòng giải thích ghi số bài, "đã chấm hết", tỉ lệ lần làm đầu và câu "App không tự đặt Đã học". Nút: **"Đánh dấu Đã học"**, liên kết "Xem Trạng thái Unit". Con không thấy thẻ này, không thấy số.
+
+## Hướng B · PR1 (26/11/2026) — cột trái mới, Bài tập
+
+- Tên mục: **Hôm nay · Bài tập · Buổi học · Tiến bộ · Kế hoạch · Hồ sơ học sinh**. Ba nút việc chính: **Chấm bài · Giao bài · Ghi buổi học**.
+- Tab Bài tập: **Cần chấm · Con đang làm · Đã xong · Bản nháp**. "Đã gỡ" chỉ là liên kết "Xem bài đã gỡ (n)". Nhóm bản nháp viết "Unit 15" (không viết "U15"), và nhóm đứng đầu có nhãn **Kế tiếp**.
+- Nhãn đọc màn hình của số trên nút Chấm bài: "n bài con đã nộp đang chờ chấm". Chưa đọc được số thì không hiện số, không bao giờ hiện 0.

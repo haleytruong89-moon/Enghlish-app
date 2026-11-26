@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
-import { levelCopy, resultPage, studentReviewCopy, sessionNotePage, tagPicker, todayPage, weakPage, deskCopy } from "@/lib/copy/vi";
+import { levelCopy, resultPage, studentReviewCopy, sessionNotePage, tagPicker, weakPage, deskCopy, shellCopy } from "@/lib/copy/vi";
 import { addDays, todayVn } from "@/lib/inquiries/dates";
 import { formatDateVi } from "@/lib/inquiries/format";
 import { LEARNER_IDS, loginAs } from "./helpers";
@@ -17,13 +17,14 @@ async function notFound(page: Page, target: string) {
 }
 
 test.describe.serial("S5b-1 tutor work", () => {
-  test("the tutor's home is 'Hôm nay' with the two main actions for the child", async ({ page }) => {
+  test("the tutor's home is 'Hôm nay'; the daily actions are the quick buttons; Ghi kết quả is on Bài tập", async ({ page }) => {
     await loginAs(page, "tutorNguyen");
     await expect(page.getByRole("heading", { level: 1, name: new RegExp(`^${deskCopy.titlePrefix}`) })).toBeVisible();
-    await expect(page.getByTestId(`action-note-${NG}`)).toContainText(todayPage.noteAction);
-    await expect(page.getByTestId(`action-result-${NG}`)).toContainText(todayPage.resultAction);
+    await expect(page.getByTestId("quick-note")).toContainText(shellCopy.quick.note);
+    await expect(page.getByTestId("quick-grade")).toContainText(shellCopy.quick.grade);
     await expect(page.getByTestId(`attention-${NG}`)).toBeVisible();
-    await page.getByTestId(`action-result-${NG}`).click();
+    await page.getByTestId("nav-work").click();
+    await page.getByTestId("board-result").click();
     await expect(page).toHaveURL(new RegExp(`/learners/${NG}/results/new`));
   });
 
