@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 import { createToolCaller } from "@/lib/ai/anthropic";
+import { AiCallError } from "@/lib/ai/request";
 import { fakeFixtureFor } from "@/lib/ai/config";
 import { CURRICULUM_PROMPT, loadPrompt } from "@/lib/ai/prompts";
 import type { TocContext } from "@/lib/curriculum/context";
@@ -60,5 +61,12 @@ describe("runTocExtraction", () => {
     const call = vi.fn();
     expect(await runTocExtraction({ ...base, store: s, call }, job)).toMatchObject({ status: "failed", code: "ai_cap", tries: 0 });
     expect(call).not.toHaveBeenCalled();
+  });
+  it("a spend limit on the Anthropic side is not retried and is kept as its own code (the screen names it)", async () => {
+    const s = store();
+    const call = vi.fn(async () => Promise.reject(new AiCallError("spend_limit")));
+    expect(await runTocExtraction({ ...base, store: s, call }, job)).toEqual({ status: "failed", code: "spend_limit", tries: 1 });
+    expect(call).toHaveBeenCalledTimes(1);
+    expect(s.fail).toHaveBeenCalledWith("v", "spend_limit", "run-1");
   });
 });

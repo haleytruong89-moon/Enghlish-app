@@ -2376,3 +2376,18 @@ Nhánh `feature/tags-global-success-6`. **Có SQL: `0045_seed_tags_global_succes
 Sau rà soát: chữ dải đổi thành "cần chấm hoặc góp ý" (hàng chờ gồm cả bài chỉ thiếu góp ý); đọc lỗi danh sách thì hiện "Chưa đọc được…", không bao giờ báo "không còn bài"; "‹ Bài trước" vào cùng dải; mở từ thẻ gợi ý một bài đã xong thì nút là "Mở bài chờ lâu nhất ›"; phụ huynh cũng thấy liên kết mở bài (chỉ xem, không có nút hành động). **Biết trước:** dải đếm theo **lần nộp** (như "Bài 1 / n" có sẵn), nên một bài nộp lại mà cả hai lần còn việc sẽ có 2 chip cùng tên, và số có thể khác thẻ "Chấm bài" ở Hôm nay (đếm theo bài).
 
 Cách thử trên preview: mở bài nộp chờ chấm → thấy dải đỏ + chip; Tiến bộ › Từng bài → cột thẳng; Buổi học → hai nút trên cùng, bấm "Ghi buổi nghỉ" → khung mở; Hôm nay / Buổi học có thẻ "Cần chữa cùng con" → "Mở phần … để chữa →".
+
+## Báo rõ khi hết hạn mức chi tiêu bên Anthropic + rà chi phí 20–21/11 (27/11/2026)
+
+Nhánh `fix/ai-spend-limit-message`. **Không có SQL**, không bảng mới, không đổi prompt.
+
+- **Sự cố 26/11:** "Cho AI đọc mục lục" (GS6) báo "AI không nhận yêu cầu này". Nguyên nhân: workspace `learning-os` trong Anthropic Console có giới hạn chi tiêu **$20/tháng** và đã dùng hết ($20.06). Anthropic trả lỗi 400, app gộp vào `http_400`. Trần trong Cài đặt AI của app ($50) không biết giới hạn này.
+- **Sửa:** lỗi 400 có chữ "usage limit" / "spend limit" / "credit balance" thành mã riêng `spend_limit`. Màn hình báo "Hết hạn mức chi tiêu bên Anthropic… Phụ huynh kiểm tra Anthropic Console → Spend limits". Studio, Nạp bài và Giáo trình **không thử lại** khi gặp mã này (thử lại vô ích). Test: `tests/unit/aiClient.test.ts`, `tests/unit/curriculumAi.test.ts`.
+- **Rà chi phí 20–21/11 (≈ $14.6):** 2 lần chạy bộ kiểm thử "Eval AI tutor hints" bản đầy đủ ($6.83 + $7.72) trên nhánh `eval/e1`. Hai nhánh `eval/e1` và `eval/e1-smoke` giữ bản workflow cũ `on: push` (mặc định 3 lượt mỗi ca, trần $15). Lần merge thứ hai vào `eval/e1` tự chạy lại cả bộ, không ai bấm. Bản trên `main` đã chỉ chạy bằng tay.
+- **Quyết định 27/11 (phụ huynh):**
+  - Xóa 3 nhánh `eval/e1`, `eval/e1-smoke`, `eval-results`. Hai nhánh đầu có thể tự chạy AI; `eval/e1` và `eval-results` có chữ của sách Destination. Đã sao lưu bằng git bundle ngoài repo. Phụ huynh xóa tay trên GitHub (proxy của Claude không được xóa nhánh).
+  - Giữ repo công khai. Vì vậy càng không được commit tài liệu sách hay đề.
+  - Mọi lần chạy AI trên CI phải báo phụ huynh ước tính chi phí trước.
+- **Việc phụ huynh làm trong Console:**
+  - Nâng giới hạn workspace `learning-os` lên khoảng $40. Giới hạn bên Anthropic phải cao hơn hoặc bằng trần của app.
+  - Nên tách key của GitHub (`learning-os-github`) sang workspace riêng `learning-os-eval`, trần khoảng $10, để kiểm thử không ăn vào phần ngân sách của các con.

@@ -17,7 +17,9 @@ export type ToolCall = { model: string; documents: AiDocument[]; instructions: s
 export type Usage = { inputTokens: number; outputTokens: number };
 export type CallOptions = { timeoutMs?: number };
 export type ToolResult = { input: unknown; usage: Usage; model: string };
-export type AiErrorCode = "http_400" | "tool_choice" | "http_401" | "http_429" | "http_5xx" | "network" | "timeout" | "no_tool";
+export type AiErrorCode = "http_400" | "spend_limit" | "tool_choice" | "http_401" | "http_429" | "http_5xx" | "network" | "timeout" | "no_tool";
+
+const SPEND_LIMIT_RE = /usage limit|spend limit|credit balance/;
 
 export class AiCallError extends Error {
   constructor(
@@ -76,6 +78,8 @@ export async function postToolCall(c: ToolCall, opts: { apiKey: string; fetchImp
   if (!res.ok) {
     const msg = JSON.stringify(body?.error ?? "").toLowerCase();
     if (res.status === 400 && msg.includes("tool_choice")) throw new AiCallError("tool_choice", usage);
+    // A spend limit (workspace / organisation, set in the Anthropic Console) or an empty credit balance is also a 400: name it, retrying cannot help.
+    if (res.status === 400 && SPEND_LIMIT_RE.test(msg)) throw new AiCallError("spend_limit", usage);
     if (res.status === 401 || res.status === 403) throw new AiCallError("http_401", usage);
     if (res.status === 429) throw new AiCallError("http_429", usage);
     throw new AiCallError(res.status >= 500 ? "http_5xx" : "http_400", usage);
