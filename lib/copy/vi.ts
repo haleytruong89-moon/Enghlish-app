@@ -2788,8 +2788,8 @@ export const shellCopy = {
 } as const;
 
 export const pendingCopy = {
-  title: (alias: string) => `Chờ duyệt · ${alias}`,
-  intro: `Bài con nộp và nháp AI đang chờ ${tutorHonorific}. Mục cũ nhất ở trên. Mở từng mục ra xem, sửa rồi mới duyệt ở trang đó.`,
+  title: (alias: string) => `Việc chờ · ${alias}`,
+  intro: `Mọi việc đang chờ ${tutorHonorific}, mục cũ nhất ở trên. Mở từng mục ra xem, sửa rồi mới duyệt ở trang đó. Chấm bài con nộp thì dùng nút “Chấm bài” hoặc Bài tập › Cần chấm.`,
   filtersLabel: "Lọc việc chờ",
   groups: { all: "Tất cả", work: "Bài nộp", check: "Cần xem câu", ai: "Nháp AI", skills: "Kỹ năng", roadmap: "Lộ trình", goals: "Mục tiêu tuần", drafts: "Bài soạn sẵn" },
   /** Q1 (audit 25/11): the drafts tab is the tutor's stock of work to check before giving it, not work the child waits on. */
@@ -2839,11 +2839,16 @@ export const pendingCopy = {
   sources: { work: "Bài làm", studio: `Cần ${tutorHonorific} xem`, retries: "Con thử lại", skills: "Kỹ năng", points: "Mục kiến thức", drafts: "Nháp đề", curricula: "Giáo trình", imports: "Bài nạp", roadmap: "Lộ trình", goals: "Mục tiêu tuần", feedback: "Góp ý bài nộp" },
   more: "Có thể còn bài cũ hơn chưa hiện ở đây.",
   fullInbox: "Mở danh sách đầy đủ",
-  deskTitle: (n: number | string) => `Chờ duyệt · ${n}`,
-  deskTitleUnknown: "Chờ duyệt",
+  deskTitle: (n: number | string) => `Việc khác · ${n}`,
+  deskTitleUnknown: "Việc khác",
+  deskEmpty: "Không có việc khác.",
+  /** Hướng B: under Việc khác, the submissions to grade are one line to Bài tập › Cần chấm. */
+  deskSubmissions: (n: number) => `${n} bài chờ chấm ở Bài tập › Cần chấm (gồm cả bài giấy / link) →`,
+  deskSubmissionsUnknown: "Chưa đọc được số bài chờ chấm. Mở Bài tập › Cần chấm →",
+  deskIntro: "Việc chờ ngoài tab Cần chấm: bài chờ chấm kỹ năng ở Hộp duyệt, con thử lại sau khi đã có góp ý, kỹ năng, mức mục kiến thức, nháp AI, mốc lộ trình, mục tiêu tuần, bài nạp.",
   deskOpenAll: "Mở tất cả",
   deskMore: (n: number) => `+ ${n} mục nữa`,
-  deskPartial: "Có phần chưa đọc được; mở Chờ duyệt để xem.",
+  deskPartial: "Có phần chưa đọc được; bấm “Mở tất cả” để xem.",
 } as const;
 
 export const deskCopy = {
@@ -2852,6 +2857,8 @@ export const deskCopy = {
   titleEmpty: "Hôm nay",
   subtitle: (learnerLine: string, todayLine: string) => `${learnerLine} · ${todayLine}`,
   logToday: "Ghi buổi học hôm nay",
+  moreActions: (n: number) => `Xem thêm ${n} việc nên làm`,
+  moreActionsTitle: "Các việc nên làm còn lại",
   seeAll: "Xem đầy đủ",
   alerts: {
     missingBadge: "Chưa có",

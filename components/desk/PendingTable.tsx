@@ -15,7 +15,7 @@ export function PendingTable({ learnerId, rows, group, counts, partial = false, 
     <>
       <nav aria-label={pendingCopy.filtersLabel} className="flex flex-wrap gap-2">
         {PENDING_GROUPS.map((g) => (
-          <Link key={g} href={g === "all" ? base : `${base}?f=${g}`} aria-current={g === group ? "true" : undefined} data-testid={`pending-filter-${g}`}
+          <Link key={g} href={g === "all" ? base : g === "drafts" ? `/learners/${learnerId}/assigned?tab=drafts` : `${base}?f=${g}`} aria-current={g === group ? "true" : undefined} data-testid={`pending-filter-${g}`}
             className={`inline-flex min-h-11 items-center rounded-full border px-4 text-sm no-underline ${g === group ? "border-accent bg-accent font-semibold text-white" : "border-line bg-white text-ink hover:border-accent"}`}>
             {pendingCopy.groupCount(pendingCopy.groups[g], counts[g], partial)}
           </Link>

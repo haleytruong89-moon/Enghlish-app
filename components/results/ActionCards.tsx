@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { fallbackLabels, resultsCopy as c } from "@/lib/copy/vi";
 import { isDecidable, type ActionCard, type ActionTone } from "@/lib/results/actions";
+import { deskHref } from "@/lib/shell/paths";
 import { CardDecision } from "./CardDecision";
 import { UnitDoneButton } from "./UnitDoneButton";
 
@@ -41,12 +42,12 @@ export function ActionCards({ learnerId, cards, tagLabels, role, title = c.actio
   buttons?: boolean;
   /** false before migration 0043: no marks (said once to the tutor). */
   decisionsReady?: boolean;
-  /** Cards marked in the last 7 days: one line linking to the list on the Results page. */
+  /** Cards marked in the last 7 days: one line linking to the list on Hôm nay. */
   handledThisWeek?: number;
 }) {
   const parent = role === "parent";
   return (
-    <section id={id} data-testid="action-cards" aria-labelledby={`${id}-title`} className="flex flex-col gap-2">
+    <section id={id} data-testid={id === "viec-nen-lam" ? "action-cards" : `action-cards-${id}`} aria-labelledby={`${id}-title`} className="flex flex-col gap-2">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id={`${id}-title`} className="text-lg font-semibold">{title}</h2>
         <Link href={`/learners/${learnerId}/progress`} className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline">{c.seeAll}</Link>
@@ -54,7 +55,7 @@ export function ActionCards({ learnerId, cards, tagLabels, role, title = c.actio
       {parent ? <p className="text-sm text-muted">{c.parentNote}</p> : null}
       {handledThisWeek > 0 ? (
         <p className="text-sm" data-testid="handled-week">
-          {c.handled.weekLine(handledThisWeek)} · <Link href={`/learners/${learnerId}/progress#da-xu-ly`} className="font-semibold text-accent underline">{c.handled.see}</Link>
+          {c.handled.weekLine(handledThisWeek)} · <Link href={`${deskHref(learnerId)}#da-xu-ly`} className="font-semibold text-accent underline">{c.handled.see}</Link>
         </p>
       ) : null}
       {!parent && !decisionsReady && (cards ?? []).some((x) => isDecidable(x.kind)) ? <p className="text-xs text-muted" data-testid="decisions-unavailable">{c.handled.unavailable}</p> : null}

@@ -52,7 +52,7 @@ Mục tiêu: cô mở app thấy ngay việc phải làm, bấm tối đa 1 lầ
   - Tab Mục kiến thức gồm danh sách theo mục và liên kết tới Bản đồ kiến thức.
   - Tab Cấp và kỹ năng gồm Hồ sơ cấp, Mục cần chú ý và Kỹ năng đang theo dõi.
 - **Việc nên làm** chỉ nằm ở Hôm nay. Hôm nay hiện tối đa 6 việc, các việc còn lại ở mục "Xem thêm". Trang Tiến bộ chỉ có một dòng trỏ về Hôm nay.
-- **Hôm nay:** "Chờ duyệt" đổi thành **Việc khác**, gồm các việc không phải chấm bài (kỹ năng, mức mục kiến thức, giáo trình nháp, mốc lộ trình, mục tiêu tuần, bài nạp). Bài con nộp nằm ở Bài tập › Cần chấm. Việc khác có một dòng trỏ tới Cần chấm.
+- **Hôm nay:** "Chờ duyệt" đổi thành **Việc khác**, gồm các việc không phải chấm bài (kỹ năng, mức mục kiến thức, giáo trình nháp, mốc lộ trình, mục tiêu tuần, bài nạp). Bài con nộp nằm ở Bài tập › Cần chấm. Việc khác có một dòng trỏ tới Cần chấm. *(Điều chỉnh khi làm PR3, ở mục 6 bên dưới.)*
 - **Hồ sơ học sinh** (trang mới `/learners/[id]/profile`):
   - Gồm Hồ sơ đầu vào, Ghi chú dạy học và "Ngày ấy – bây giờ" (chuyển từ trang Hồ sơ cấp), Con hỏi Gia sư, Nhập kỹ năng đọc tháng.
   - Hồ sơ cấp chuyển sang Tiến bộ › Cấp và kỹ năng.
@@ -73,7 +73,7 @@ Không trang nào bị xóa. Mọi đường dẫn cũ vẫn mở trang của n�
 
 Có 3 chỗ tự chuyển:
 
-- `/inbox?f=work` chuyển sang `/assigned?tab=need`.
+- `/inbox?f=drafts` chuyển sang `/assigned?tab=drafts`. (`/inbox?f=work` vẫn mở danh sách cũ, vì nhóm này còn có bài chờ chấm kỹ năng ở Hộp duyệt, mà Cần chấm không có.)
 - `/progress?tab=work` mở Tổng quan.
 - Nút cảnh báo "Hồ sơ đầu vào" trỏ `/profile#intake` (thay cho `/levels#intake`).
 
@@ -83,7 +83,7 @@ Có 3 chỗ tự chuyển:
 |---|---|
 | 1 | Cột trái mới (3 nút, 5 mục, Hồ sơ), bảng mục theo đường dẫn, số bài chờ trên nút Chấm bài, trang Bài tập 4 tab và Bản nháp theo Unit, tab Kế hoạch, đổi tên Hôm nay. |
 | 2 | Trang Tiến bộ: tab, Tổng quan và biểu đồ. Việc nên làm chuyển hết về Hôm nay. |
-| 3 | Trang Hồ sơ học sinh, Việc khác ở Hôm nay, tự chuyển `/inbox?f=work`, tài liệu. |
+| 3 | Việc nên làm và Việc khác về Hôm nay, tự chuyển `/inbox?f=drafts`, tài liệu. (Trang Hồ sơ học sinh đã làm ở PR 2.) |
 
 ## Những chỗ tôi tự quyết (phụ huynh xem lại khi đọc)
 
@@ -92,3 +92,5 @@ Có 3 chỗ tự chuyển:
 3. Số trên nút Chấm bài **bằng đúng số của tab Cần chấm** (cùng hàm `buildBoard`). Vì thế nút, tab và Hôm nay không lệch nhau. Đây là sửa sau bản rà PR1: bản đầu đếm theo dòng Chờ duyệt, nên có lúc nút đỏ mà trang mở ra lại báo "không còn bài".
 4. Bỏ 3 nút việc chính đang nằm trên đầu trang Hôm nay, vì cột trái đã có.
 5. Cách tính "4 tuần": 28 ngày giờ Việt Nam tính đến hôm nay, so với 28 ngày liền trước. Chỉ tính bài được đo (lần làm đầu).
+6. *(PR3, chờ phụ huynh xác nhận)* "Việc khác" chỉ bỏ ra những bài nộp mà tab Cần chấm đang giữ. Hai loại việc vẫn ở lại Việc khác vì tab Cần chấm không có chúng: bài chờ chấm kỹ năng ở Hộp duyệt, và con thử lại sau khi đã có góp ý. Nếu bỏ hai loại này ra, chúng sẽ không còn hiện ở đâu trên Hôm nay.
+7. *(PR3, chờ phụ huynh xác nhận)* `/inbox?f=work` **không** tự chuyển sang Cần chấm như bản đầu, vì nhóm "Bài nộp" còn có bài chờ chấm kỹ năng mà Cần chấm không có. Chỉ `?f=drafts` tự chuyển sang Bản nháp.

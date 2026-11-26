@@ -109,6 +109,13 @@ npm run doctor            # kiểm tra cài đặt cloud 1 lần: bảng ✓/✗
 - **Tắt "Hỏi" trong bài (22/11, nhánh `fix/tutor-off-in-work`, không SQL):** phụ huynh quyết không có gợi ý trong lúc làm bài; công tắc `TUTOR_IN_WORK` (mặc định tắt), route hints 404 `tutor_off`; code E1 giữ cho mục "Gia sư" + "Sổ tay" riêng (E2, spec làm tiếp).
 - **E2a (Gia sư tra từ + Sổ tay) — code trên nhánh `feature/e2a-gia-su-so-tay`** (23/11; **có SQL `0041_tutor_notebook.sql`**, phụ huynh áp sau khi gộp; sau đó workflow "Seed IPA lexicon", bấm lại "Đồng ý và bật" (bản `ai-studio-tutor-v3`), chạy "Eval vocab cards" trước khi cho con dùng): mục **Gia sư** riêng (tra từ → thẻ theo khuôn §4.5, phiên âm từ ipa-dict không do AI, giọng đọc trên máy), mục **Sổ tay** (Từ vựng), "Con hỏi Gia sư" cho mẹ + thầy/cô của em; thẻ dùng chung `vocab_cards`, `tutor_asks` chỉ thêm. Chi tiết `docs/PROGRESS.md` mục "E2a", `docs/DESIGN.md` §19.32, `docs/DOMAIN.md` bản 0.10.
 - **Bài đã giao (24/11, không SQL):** PR 1 (#57) gỡ bài / khôi phục / "Quá hạn n ngày" cho bài trên app (dùng lại `skip`/`unskip`, server chặn gỡ bài đã nộp); PR 2 mục mới **Bài đã giao** (4 tab), Giao bài chỉ để tạo bài + "Bản nháp đang soạn", cảnh báo giao trùng. Kế hoạch `docs/superpowers/plans/2026-11-24-bai-da-giao.md`; `docs/DESIGN.md` §19.34–19.35.
+- **Hướng B: sắp xếp lại trang người lớn — 3 PR (#66 cột trái + Bài tập; PR2 Tiến bộ + Hồ sơ học sinh; PR3 Hôm nay), 26/11, không SQL.**
+  - **Cột trái:** 3 nút Chấm bài (số = tab Cần chấm) · Giao bài · Ghi buổi học; 5 mục Hôm nay · Bài tập · Buổi học · Tiến bộ · Kế hoạch; cuối là Hồ sơ học sinh.
+  - **Bài tập** (`/assigned`): 4 tab, Bản nháp gom theo Unit, có "Kế tiếp".
+  - **Tiến bộ:** Tổng quan có 4 ô và biểu đồ.
+  - **Hôm nay:** Việc nên làm và Việc khác chỉ nằm ở đây.
+  - Không trang nào bị xóa.
+  - Chi tiết: `docs/superpowers/specs/2026-11-26-ia-huong-b-design.md`, `docs/PROGRESS.md`, `docs/DESIGN.md` §19.38.
 - **Session-log quick fix (PR #23) — ĐÃ GỘP** (không có migration).
 - Thứ tự tiếp theo (PRD D31 = E8, phụ huynh đã đồng ý 18/10): **S5c → spike AI (nhánh `feature/spike-studio-ai`, không gộp) → đưa gia sư vào + mockup Studio → Studio bước 1 (đề PDF/Word + đáp án → bài trong app, tự chấm, tự gắn nhãn) → Studio bước 2 (gợi ý bài bổ sung theo "Thư viện kiểu luyện", gộp S5b-2) → S6 → S7 → S8**. AI chỉ soạn **nháp** cho gia sư duyệt; không gửi danh tính của em; trần $10/tháng; chỉ bật sau khi phụ huynh duyệt `ai_text` (E6).
 - Văn bản đồng ý `docs/CONSENT_pilot-2026-10.md` **đã được phụ huynh duyệt 21/10** (bật AI vẫn cần đồng ý `ai_text` riêng, E6).

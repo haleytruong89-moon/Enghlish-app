@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { PendingTable } from "@/components/desk/PendingTable";
 import { pendingCopy } from "@/lib/copy/vi";
 import { loadPendingRows } from "@/lib/desk/load";
@@ -7,12 +8,15 @@ import { requireLearnerPage } from "@/lib/tutorwork/page";
 
 export const dynamic = "force-dynamic";
 
-/** "Chờ duyệt" of one child (tutor and parent; students 404 in the layout). Lists and links only — decisions stay on the detail pages. */
+/** "Việc chờ" (was "Chờ duyệt"; opened from Hôm nay › Việc khác) of one child (tutor and parent; students 404 in the layout). Lists and links only — decisions stay on the detail pages. */
 export default async function PendingPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ f?: string | string[] }> }) {
   const { id } = await params;
   const sp = await searchParams;
   const { member, learner } = await requireLearnerPage(id, "work:review");
   await requireLearnerPage(id, "goals:read");
+  // Hướng B: the drafts now live on Bài tập › Bản nháp (old links keep working). "Bài nộp" (?f=work) stays here: besides what
+  // Cần chấm holds, it lists work waiting for skills to be scored in Hộp duyệt.
+  if ((Array.isArray(sp.f) ? sp.f[0] : sp.f) === "drafts") redirect(`/learners/${learner.id}/assigned?tab=drafts`);
   const group = parseGroup(sp.f);
   const pending = await loadPendingRows(member.id, member.role === "parent" ? "parent" : "tutor", learner.id);
   const { rows, failed, more } = pending;

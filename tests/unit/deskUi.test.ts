@@ -69,16 +69,16 @@ describe("Hôm nay (was Bàn làm việc)", () => {
   });
   it("Chờ duyệt box never says 'nothing waiting' when a source failed or the list may be incomplete", () => {
     const failed = render("tutor", data({ pending: { rows: [], failed: ["studio"], more: false } }));
-    expect(failed).not.toContain(pendingCopy.empty);
+    expect(failed).not.toContain(pendingCopy.deskEmpty);
     expect(failed).toContain(pendingCopy.deskPartial);
     expect(failed).not.toContain(pendingCopy.deskTitle(0));
     const more = render("tutor", data({ pending: { rows: [], failed: [], more: true } }));
-    expect(more).not.toContain(pendingCopy.empty);
+    expect(more).not.toContain(pendingCopy.deskEmpty);
     expect(more).toContain(pendingCopy.deskTitle("≥ 0"));
     expect(more).toContain(pendingCopy.more);
     expect(more).toContain(`href="/review?learner=${L}"`);
     const ok = render("tutor", data({ pending: { rows: [], failed: [], more: false } }));
-    expect(ok).toContain(pendingCopy.empty);
+    expect(ok).toContain(pendingCopy.deskEmpty);
   });
   it("Buổi học box: last session without a raw tag key, last result, practice counts only (spec §5 rule 6), no schedule yet", () => {
     const h = render("tutor", data({ today: today({ practice: [asg({ id: "c1", dueOn: "2026-10-10" }), asg({ id: "c2", dueOn: "2026-10-30" })] }) }));
@@ -141,5 +141,30 @@ describe("Bàn làm việc · Việc nên làm (26/11)", () => {
     const h = render("parent", data({ actions: [], handledThisWeek: 2, decisionsReady: true }));
     expect(h).toContain('data-testid="handled-week"');
     expect(h).toContain("Đã xử lý 2 việc trong 7 ngày qua");
+  });
+  it("hướng B: Việc nên làm lives only here — the rest of the cards fold under 'Xem thêm'; what was handled is listed below", () => {
+    const more = { ...card, key: "unit-U15", kind: "unit_review" as const, tone: "amber" as const, facts: { unit: "U15", correct: 4, decided: 10, percent: 40, works: 2 } };
+    const h = render("tutor", data({ actions: [card], moreActions: [more], decisionsReady: true }));
+    expect(h).toMatch(/<details[^>]*data-testid="desk-more-actions"/);
+    expect(h).toContain(deskCopy.moreActions(1));
+    expect(h).toContain('data-testid="action-card-unit_review"');
+    expect(render("tutor", data({ actions: [card], moreActions: [] }))).not.toContain('data-testid="desk-more-actions"');
+    const handled = [{ cardKey: "tag-x", kind: "practise" as const, label: "Cho con luyện thêm: X", decision: "done" as const, reason: null, byRole: "tutor" as const, at: "2026-11-25T03:00:00Z", evidenceAt: "2026-11-24T03:00:00Z", afterDays: 1, reopened: false }];
+    expect(render("parent", data({ actions: [card], handled, decisionsReady: true }))).toContain('data-testid="handled-list"');
+  });
+  it("hướng B: Việc khác leaves out what Cần chấm holds; one line sends there; unknown count says so", () => {
+    const row = (key: string, kind: "studio_check" | "skill" | "retry", group: "check" | "skills", attemptId?: string) => ({ key, kind, group, label: "X", title: `T-${key}`, since: null, need: "N", href: `/x/${key}`, waitingTutor: false, attemptId });
+    const pending = { rows: [row("s1", "studio_check", "check", "a1"), row("r9", "retry", "check", "a9"), row("k1", "skill", "skills")], failed: [], more: false };
+    const h = render("tutor", data({ pending, assigned: { need: 2, doing: 0, done: 0, removed: 0 }, needAttempts: ["a1"] }));
+    expect(h).toContain(pendingCopy.deskTitle("2"));
+    expect(h).toContain('data-testid="desk-inbox-row-k1"');
+    expect(h).toContain('data-testid="desk-inbox-row-r9"'); // a retry after feedback is not in the tab: it stays
+    expect(h).not.toContain('data-testid="desk-inbox-row-s1"');
+    expect(h).toContain(pendingCopy.deskSubmissions(2));
+    expect(h).toContain(`href="/learners/${L}/assigned?tab=need"`);
+    expect(render("tutor", data({ assigned: { need: 0, doing: 0, done: 0, removed: 0 }, needAttempts: [] }))).not.toContain('data-testid="desk-inbox-submissions"');
+    const unknown = render("tutor", data({ pending, assigned: null, needAttempts: null }));
+    expect(unknown).toContain(pendingCopy.deskSubmissionsUnknown);
+    expect(unknown).toContain('data-testid="desk-inbox-row-s1"'); // nothing hidden on a guess
   });
 });

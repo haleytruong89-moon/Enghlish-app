@@ -90,6 +90,21 @@ export function pendingView(p: { rows: readonly Pick<PendingRow, "group">[]; fai
   };
 }
 
+/**
+ * Hướng B · "Việc khác" on Hôm nay: what waits besides the submissions Bài tập › Cần chấm already holds. A row is left out only when
+ * its submission IS counted there (`held` = the attempts of the "Cần chấm" tab): a retry made after the feedback, or a submission the
+ * tab does not hold, stays here. `held === null` (tab unreadable): nothing is left out (never hide work on a guess).
+ */
+export const otherRows = <R extends Pick<PendingRow, "group" | "attemptId">>(rows: readonly R[], held: ReadonlySet<string> | null): R[] =>
+  countedRows(rows).filter((r) => !(held && r.attemptId && held.has(r.attemptId)));
+/** Same completeness rules as `pendingView`, counting `otherRows`. */
+export function otherView(p: { rows: readonly Pick<PendingRow, "group" | "attemptId">[]; failed: readonly unknown[]; more: boolean }, held: ReadonlySet<string> | null): string | null {
+  const failed = p.failed.some((f) => !(UNCOUNTED_SOURCES as readonly unknown[]).includes(f));
+  if (failed) return null;
+  const n = otherRows(p.rows, held).length;
+  return p.more ? `≥ ${n}` : String(n);
+}
+
 const GROUP_OF: Record<PendingKind, Exclude<PendingGroup, "all">> = { work: "work", studio_check: "check", retry: "check", feedback: "work", studio_draft: "drafts", curriculum_draft: "ai", skill: "skills", point: "skills", flag: "skills", import: "check", milestone: "roadmap", goal: "goals" };
 const WAITING = ["draft", "ai_failed"] as const;
 const isWaiting = (s: string) => (WAITING as readonly string[]).includes(s);

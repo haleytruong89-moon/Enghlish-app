@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { ProgressTabs } from "@/components/progress/ProgressTabs";
-import { ActionCards } from "@/components/results/ActionCards";
-import { HandledList } from "@/components/results/HandledList";
 import { parseResultTab, ResultsView } from "@/components/results/ResultsView";
 import { learnerWithTrack, resultsCopy as c } from "@/lib/copy/vi";
 import { todayVn } from "@/lib/inquiries/dates";
@@ -10,14 +8,15 @@ import { buildOverview } from "@/lib/results/overview";
 import { loadNeedCount } from "@/lib/assigned/needCount";
 import { loadTags } from "@/lib/tutorwork/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
+import { deskHref } from "@/lib/shell/paths";
 
 export const dynamic = "force-dynamic";
 
-/** "Tiến bộ" (hướng B; was "Kết quả", 26/11): what the child got right, by test / Unit / knowledge item, and what to do about it. The child's tutor or the parent. */
+/** "Tiến bộ" (hướng B; was "Kết quả", 26/11): what the child got right, by test / Unit / knowledge item. "Việc nên làm" lives on Hôm nay (one line points there). The child's tutor or the parent. */
 export default async function ProgressPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string | string[] }> }) {
   const { id } = await params;
   const sp = await searchParams;
-  const { learner, member } = await requireLearnerPage(id, "studio:read");
+  const { learner } = await requireLearnerPage(id, "studio:read");
   const tab = parseResultTab(Array.isArray(sp.tab) ? sp.tab[0] : sp.tab);
   const today = todayVn(); // one day for every number of the page
   const [data, tags, need] = await Promise.all([
@@ -26,7 +25,6 @@ export default async function ProgressPage({ params, searchParams }: { params: P
     loadNeedCount(learner.id, today).catch(() => null),
   ]);
   const tagLabels = Object.fromEntries(tags.map((t) => [t.key, t.label]));
-  const role = member.role === "parent" ? "parent" : "tutor";
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-5" data-testid="progress-page">
       <div>
@@ -39,8 +37,11 @@ export default async function ProgressPage({ params, searchParams }: { params: P
           </Link>
         ) : null}
       </div>
-      <ActionCards learnerId={learner.id} cards={data ? data.allActions : null} tagLabels={tagLabels} role={role} decisionsReady={data?.decisionsReady ?? false} />
-      {data ? <HandledList items={data.handled} ready={data.decisionsReady} /> : null}
+      {data && data.allActions.length > 0 ? (
+        <Link href={`${deskHref(learner.id)}#viec-nen-lam`} data-testid="progress-actions-line" className="inline-flex min-h-11 items-center self-start rounded-xl bg-[#FBF1DC] px-4 text-sm font-semibold text-[#6B4600] no-underline">
+          {c.overview.actionsLine(data.allActions.length)}
+        </Link>
+      ) : null}
       {data === null ? (
         <p className="rounded-xl border border-line bg-white px-4 py-3 text-sm text-muted" data-testid="results-unavailable">{c.unavailable}</p>
       ) : (
