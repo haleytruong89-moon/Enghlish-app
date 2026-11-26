@@ -1435,7 +1435,7 @@ export const studioFeedbackCopy = {
   errors: {
     feedback_unavailable: "Góp ý cho bài làm trên app chưa dùng được: cần áp bản cập nhật cơ sở dữ liệu 0037 trước.",
     not_found: "Không tìm thấy lần làm này. Bạn tải lại trang.",
-    attempt_replaced: "Con vừa làm lại bài này. Bạn mở lần làm mới nhất (Bài đã giao → Cần thầy/cô xử lý) để góp ý.",
+    attempt_replaced: "Con vừa làm lại bài này. Bạn mở lần làm mới nhất (Bài tập → Cần chấm) để góp ý.",
   } as Record<string, string>,
 } as const;
 
@@ -2012,7 +2012,7 @@ export const studioAssignedCopy = {
   stale: "Bài này vừa đổi trạng thái (con đã nộp, hoặc người khác đã gỡ / khôi phục). Trang đã tải lại.",
   removedReason: (r: string) => `Lý do gỡ: ${r}`,
   likelyDuplicate: "Có thể giao trùng",
-  duplicateWarning: "Con đang có một bài cùng tên chưa nộp. Giao thêm sẽ thành hai bài; nếu bài cũ giao nhầm, gỡ nó ở Bài đã giao.",
+  duplicateWarning: "Con đang có một bài cùng tên chưa nộp. Giao thêm sẽ thành hai bài; nếu bài cũ giao nhầm, gỡ nó ở Bài tập.",
 };
 
 // Bài đã giao (24/11): one place to follow every piece of work given to one child. Adults only.
@@ -2132,27 +2132,39 @@ export const resultsCopy = {
 };
 
 export const assignedBoardCopy = {
-  title: (alias: string) => `Bài đã giao · ${alias}`,
-  intro: "Bài trên app, bài link, bài PDF đã giao ở một chỗ (bài chủ đề ở trang riêng).",
+  title: (alias: string) => `Bài tập · ${alias}`,
+  intro: "Mọi bài đã giao và bản nháp chưa giao của con ở một chỗ (bài chủ đề ở trang riêng). Một bài đi từ Bản nháp → Con đang làm → Cần chấm → Đã xong.",
   newWork: "+ Giao bài mới",
   tabsLabel: "Tình trạng bài",
-  tab: { need: `Cần ${tutorHonorific} xử lý`, doing: "Con đang làm", done: "Đã xong", removed: "Đã gỡ" } as Record<"need" | "doing" | "done" | "removed", string>,
+  tab: { need: "Cần chấm", doing: "Con đang làm", done: "Đã xong", removed: "Đã gỡ", drafts: "Bản nháp" } as Record<"need" | "doing" | "done" | "removed" | "drafts", string>,
   tabCount: (label: string, n: number) => `${label} · ${n}`,
   hint: {
-    need: `Con đã nộp, đang chờ ${tutorHonorific}: chấm câu tự luận, ghi kết quả hoặc góp ý.`,
+    need: `Con đã nộp, đang chờ ${tutorHonorific}: chấm câu tự luận, ghi kết quả hoặc góp ý. Nút “Chấm bài” ở cột trái mở bài cũ nhất.`,
     doing: "Con chưa nộp. Bài quá hạn lâu nhất nằm trên cùng; gỡ bài giao nhầm hoặc giao thử ở đây.",
     done: "Đã có kết quả và đã góp ý (hoặc không cần góp ý). Không còn việc gì.",
     removed: "Bài đã gỡ hoặc đã thu hồi. Con không thấy các bài này.",
-  } as Record<"need" | "doing" | "done" | "removed", string>,
+    drafts: "Bài đã soạn nhưng chưa giao, gom theo Unit. Unit kế tiếp nằm trên cùng. Mở một bài để xem lại rồi giao.",
+  } as Record<"need" | "doing" | "done" | "removed" | "drafts", string>,
   empty: {
     need: `Không có bài nào chờ ${tutorHonorific}.`,
     doing: "Con không còn bài nào đang mở.",
     done: "Chưa có bài nào xong hẳn.",
     removed: "Chưa có bài nào bị gỡ hay thu hồi.",
-  } as Record<"need" | "doing" | "done" | "removed", string>,
+    drafts: "Không có bản nháp nào chưa giao.",
+  } as Record<"need" | "doing" | "done" | "removed" | "drafts", string>,
   studioList: "Bài trên app",
   practiceList: "Bài link / PDF",
   topicLink: "Bài chủ đề đã giao →",
+  draftGroup: (key: string) => (key === "other" ? "Bài khác" : /^U\d+$/.test(key) ? `Unit ${key.slice(1)}` : key),
+  draftNext: "Kế tiếp",
+  draftCount: (n: number) => `${n} bài`,
+  unitStatus: { not_started: "Chưa bắt đầu", in_progress: "Đang học", done: "Đã học", skipped: "Bỏ qua" } as Record<"not_started" | "in_progress" | "done" | "skipped", string>,
+  draftsFailed: "Chưa đọc được danh sách bản nháp. Tải lại trang.",
+  removedLink: (n: number) => `Xem bài đã gỡ (${n})`,
+  resultLink: "Ghi điểm nhanh (bài giấy / link)",
+  importLink: "Nạp bài đã làm",
+  reviewLink: "Hộp duyệt (mọi bài nộp, cả bài cũ) →",
+  revisionsLink: "Bài con đã sửa lại →",
 };
 
 // Nhập bài soạn sẵn (16/11): a draft made outside the app → a normal Studio draft. Adults only; no AI.
@@ -2512,6 +2524,8 @@ export const appFeedback = {
   screenDefault: "Hôm nay",
   screens: {
     home: "Hôm nay",
+    finish: "Xong một bài",
+    roadmap: "Lộ trình",
     review: "Hộp duyệt",
     levels: "Hồ sơ cấp",
     reviewSkills: "Hộp duyệt · Kỹ năng",
@@ -2531,7 +2545,7 @@ export const appFeedback = {
     revisionOne: "Bài sửa lại",
     inquiries: "Bài chủ đề đã giao",
     assign: "Giao bài",
-    assigned: "Bài đã giao",
+    assigned: "Bài tập",
     progress: "Kết quả",
     delete: "Xóa dữ liệu",
     baseline: "Cấp khởi điểm",
@@ -2715,20 +2729,21 @@ export const shellCopy = {
   menu: "Các phần",
   switcherLabel: "Chọn học sinh",
   sections: {
-    desk: "Bàn làm việc",
-    profile: "Hồ sơ học sinh",
-    knowledge: "Bản đồ kiến thức",
-    roadmap: "Lộ trình",
+    desk: "Hôm nay",
+    work: "Bài tập",
     sessions: "Buổi học",
-    assign: "Giao bài",
-    assigned: "Bài đã giao",
-    progress: "Kết quả",
-    results: "Ghi kết quả",
-    curricula: "Giáo trình",
-    inbox: "Chờ duyệt",
+    progress: "Tiến bộ",
+    plan: "Kế hoạch",
+    profile: "Hồ sơ học sinh",
   },
+  /** Hướng B (26/11): the three things done every day, above the sections. */
+  quick: { label: "Việc chính", grade: "Chấm bài", assign: "Giao bài", note: "Ghi buổi học" },
+  planTabs: { label: "Kế hoạch", curricula: "Giáo trình", roadmap: "Lộ trình" },
+  /** PR1 interim children (removed in PR2 when Tiến bộ gets its tabs). */
+  progressResults: "Kết quả",
+  progressKnowledge: "Bản đồ kiến thức",
   soon: "Sắp có",
-  inboxBadge: (n: string) => `${n} việc đang chờ duyệt`,
+  gradeBadge: (n: string) => `${n} bài con đã nộp đang chờ chấm`,
   parentGroup: "Phụ huynh",
   inquiriesChild: "Bài chủ đề trong app",
   inboxAll: "Tất cả việc chờ",
@@ -2777,7 +2792,7 @@ export const pendingCopy = {
     milestone: (n: number) => `${n} mốc nháp chờ xác nhận`,
     milestoneNeed: "Xem rồi xác nhận từng mốc",
     goal: (pieces: number) => `Con đề xuất ${pieces} bài mỗi tuần`,
-    goalNeed: "Đồng ý hoặc điều chỉnh trên Bàn làm việc",
+    goalNeed: "Đồng ý hoặc điều chỉnh trên Hôm nay",
   },
   open: "Mở",
   noDate: "—",
@@ -2795,9 +2810,9 @@ export const pendingCopy = {
 } as const;
 
 export const deskCopy = {
-  titlePrefix: "Bàn làm việc",
-  title: (alias: string) => `Bàn làm việc · ${alias}`,
-  titleEmpty: "Bàn làm việc",
+  titlePrefix: "Hôm nay",
+  title: (alias: string) => `Hôm nay · ${alias}`,
+  titleEmpty: "Hôm nay",
   subtitle: (learnerLine: string, todayLine: string) => `${learnerLine} · ${todayLine}`,
   logToday: "Ghi buổi học hôm nay",
   seeAll: "Xem đầy đủ",
@@ -2814,8 +2829,8 @@ export const deskCopy = {
     overdueTitle: (n: number) => `${n} bài luyện quá hạn`,
     overdueLine: "Em chưa gửi và chưa ai ghi kết quả. Con không thấy chữ “quá hạn”.",
     studioOverdueTitle: (n: number) => `${n} bài làm trên app quá hạn, em chưa nộp`,
-    studioOverdueLine: "Mở Bài đã giao → Con đang làm để nhắc con, hoặc gỡ bài giao nhầm.",
-    studioOverdueLineWith: (detail: string) => `${detail}. Mở Bài đã giao → Con đang làm để nhắc con, hoặc gỡ bài giao nhầm.`,
+    studioOverdueLine: "Mở Bài tập → Con đang làm để nhắc con, hoặc gỡ bài giao nhầm.",
+    studioOverdueLineWith: (detail: string) => `${detail}. Mở Bài tập → Con đang làm để nhắc con, hoặc gỡ bài giao nhầm.`,
     /** Q6 (audit 25/11): what stands out among the overdue tests; empty when nothing does. */
     studioOverdueDetail: (duplicates: number, longLate: number, days: number) =>
       [duplicates > 0 ? `${duplicates} bài trùng tên với bài khác (có thể giao nhầm)` : null, longLate > 0 ? `${longLate} bài quá hạn trên ${days} ngày` : null].filter(Boolean).join(" · "),
@@ -2834,7 +2849,7 @@ export const deskCopy = {
   sessionsTitle: "Buổi học & bài giao",
   sessionsUnavailable: "Chưa đọc được buổi học và bài giao.",
   /** Q3 (audit 25/11): the same counts as the tabs of "Bài đã giao". */
-  assignedCounts: (need: number, doing: number, late: number) => `Bài đã giao: ${need} cần ${tutorHonorific} xử lý · ${doing} con đang làm${late > 0 ? ` · ${late} quá hạn` : ""}`,
+  assignedCounts: (need: number, doing: number, late: number) => `Bài tập: ${need} cần chấm · ${doing} con đang làm${late > 0 ? ` · ${late} quá hạn` : ""}`,
   practiceCounts: (open: number, sent: number, late: number) => `Bài giao: ${open} đang mở · ${sent} em đã gửi${late > 0 ? ` · ${late} quá hạn` : ""}`,
   seeAssignments: "Xem bài giao",
   monthLine: (month: number, n: number, last: string) => `Tháng ${month}: ${n} buổi · buổi gần nhất ${last}`,
@@ -2923,7 +2938,7 @@ export const pointStateCopy = {
 } as const;
 
 export const pointMapCopy = {
-  back: "← Bàn làm việc",
+  back: "← Hôm nay",
   title: "Bản đồ kiến thức",
   intro: (name: string) => `Mức từng mục kiến thức của ${name}, gom theo mảng và nhóm. Con không thấy trang này.`,
   levels: { NOT_OBSERVED: "Chưa thấy", SUPPORTED: "Đã gặp", DEVELOPING: "Đang tiến bộ", INDEPENDENT: "Tự làm được", TRANSFERABLE: "Vận dụng được" } as const,
@@ -2949,7 +2964,7 @@ export const pointMapCopy = {
 } as const;
 
 export const importCopy = {
-  back: "← Bàn làm việc",
+  back: "← Hôm nay",
   link: "Nạp bài đã làm",
   title: "Nạp bài đã làm",
   intro: `Tải bài con đã làm trên giấy (ảnh hoặc PDF) và file đáp án. AI đọc câu trả lời, app so với đáp án, ${tutorHonorific} xem và xác nhận. Con không thấy gì ở đây.`,
@@ -3141,7 +3156,7 @@ export const prefillCopy = {
 export const assignWaysCopy = {
   title: (alias: string) => `Giao bài · ${alias}`,
   followBanner: "Muốn xem con làm đến đâu, bài nào quá hạn?",
-  followLink: "Mở Bài đã giao →",
+  followLink: "Mở Bài tập →",
   draftsTitle: (n: number) => `Bản nháp đang soạn · ${n}`,
   draftsHelp: "Bài chưa giao: con chưa thấy. Duyệt xong mới chọn hạn và giao.",
   intro: "Chọn một cách giao. Cách nào cũng chọn được Unit của giáo trình (trừ Bài chủ đề).",
@@ -3296,7 +3311,7 @@ export const roadmapCopy = {
   title: (alias: string) => `Lộ trình · ${alias}`,
   intro: `Các mốc ở đây hiện trên đường lên đỉnh của con khi ${tutorHonorific} bấm Xác nhận. Con chỉ thấy mốc đã xác nhận.`,
   readOnly: `Phụ huynh xem; chỉ ${tutorHonorific} của em sửa mốc.`,
-  back: "← Bàn làm việc",
+  back: "← Hôm nay",
   unavailable: "Lộ trình chưa dùng được vì cơ sở dữ liệu chưa cập nhật. Nhờ phụ huynh áp bản cập nhật mới nhất.",
   loadFailed: "Chưa đọc được lộ trình. Tải lại trang sau ít phút.",
   main: {
@@ -3599,7 +3614,7 @@ export const tutorAsksCopy = {
   link: "Con hỏi Gia sư",
   title: (alias: string) => `${alias} hỏi Gia sư`,
   intro: `Mọi lượt con tra ở mục Gia sư, mới nhất trước. Chỉ mẹ và ${tutorHonorific} của em xem được; con được báo điều này trên trang Gia sư.`,
-  back: "← Bàn làm việc",
+  back: "← Hôm nay",
   backList: "← Con hỏi Gia sư",
   cols: { at: "Lúc", kind: "Loại", asked: "Con gõ", answer: "Gia sư trả lời", saved: "Sổ tay", rating: "Con chấm" },
   kinds: { lookup: "Tra từ", again: "Chưa hiểu, giải thích lại" } as Record<string, string>,
@@ -3852,7 +3867,7 @@ export const workWeekCopy = {
 export const finishCopy = {
   title: "Chấm và góp ý",
   crumb: (alias: string) => `Chấm và góp ý · ${alias}`,
-  backDesk: "← Bàn làm việc",
+  backDesk: "← Hôm nay",
   place: (n: number, total: number) => `Bài ${n} / ${total} cần xử lý (cũ nhất trước)`,
   placeDone: (left: number) => (left > 0 ? `Còn ${left} bài cần xử lý` : "Không còn bài nào cần xử lý"),
   prev: "‹ Bài trước",
@@ -3938,10 +3953,10 @@ export const finishCopy = {
   doneBodySkills: "Con thấy lời góp ý ở mục Đã xem (không thấy điểm). Bài còn ở Chờ duyệt cho tới khi chấm xong kỹ năng.",
   doneBodyNotLatest: "Đã chấm xong lần làm này. Góp ý cho con ở lần làm mới nhất.",
   goNext: (title: string) => `Sang bài tiếp: ${title} ›`,
-  backWhenEmpty: "Về Bàn làm việc",
+  backWhenEmpty: "Về Hôm nay",
   oldPage: "Chấm kỹ năng · mức hỗ trợ (màn cũ)",
   emptyTitle: "Không còn bài nào cần chấm hay góp ý",
-  emptyBody: `Khi con nộp bài mới, bài sẽ hiện ở đây và trên Bàn làm việc.`,
+  emptyBody: `Khi con nộp bài mới, bài sẽ hiện ở đây và trên Hôm nay.`,
   openFromTable: "Chấm và góp ý",
   unavailable: "Chưa đọc được bài này. Tải lại trang sau ít phút.",
   errors: {

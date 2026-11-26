@@ -3,7 +3,9 @@ import { MainCurriculumPicker } from "@/components/roadmap/MainCurriculumPicker"
 import { MilestoneList } from "@/components/roadmap/MilestoneList";
 import { PathStrip } from "@/components/roadmap/PathStrip";
 import { ProposalList } from "@/components/roadmap/ProposalList";
-import { learnerWithTrack, roadmapCopy } from "@/lib/copy/vi";
+import { learnerWithTrack, roadmapCopy, shellCopy } from "@/lib/copy/vi";
+import { SectionTabs } from "@/components/shell/SectionTabs";
+import { planTabs } from "@/lib/shell/tabs";
 import { loadRoadmap } from "@/lib/roadmap/load";
 import { buildStrip } from "@/lib/roadmap/strip";
 import { summitOf } from "@/lib/roadmap/visible";
@@ -30,6 +32,7 @@ export default async function RoadmapPage({ params }: { params: Promise<{ id: st
     <div className="mx-auto max-w-[980px]" data-testid="roadmap-page">
       <Link href={deskHref(learner.id)} className="inline-flex min-h-11 items-center text-sm text-accent underline">{roadmapCopy.back}</Link>
       <h1 className="mt-2 text-2xl font-bold">{roadmapCopy.title(learner.alias)}</h1>
+      <SectionTabs label={shellCopy.planTabs.label} tabs={planTabs(learner.id)} current="roadmap" />
       <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
       <p className="mt-3 max-w-3xl text-[15px]">{roadmapCopy.intro}</p>
       {!canWrite ? <p className="mt-3 rounded-xl border border-line bg-white px-4 py-3 text-sm font-medium" data-testid="roadmap-readonly">{roadmapCopy.readOnly}</p> : null}

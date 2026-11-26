@@ -2,6 +2,7 @@ import "server-only";
 import { createUserClient } from "@/lib/supabase/server";
 import type { StudioAssignedRow } from "@/lib/studio/assigned";
 import { loadCurriculumCards, loadUnitAuto } from "@/lib/curriculum/load";
+import { mainCurriculum } from "@/lib/curriculum/main";
 import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
 import { buildActions, DESK_OPTIONS, isDecidable, PAGE_OPTIONS, RESULT_RULES, type ActionCard } from "./actions";
 import { handledList, handledPredicate, type CardDecision, type HandledItem } from "./decisions";
@@ -127,7 +128,7 @@ export async function loadResults(learnerId: string, todayIso: string, studioRow
   // Unit not sent yet, for the "có thể Đã học" card. Works carry Unit codes only, so one curriculum is used. Fail soft.
   const info = await unitInfo;
   const cards = info?.cards ?? [];
-  const main = cards.find((c) => c.id === info?.auto.mainId) ?? (cards.filter((c) => c.progress).length === 1 ? cards.find((c) => c.progress) : undefined);
+  const main = mainCurriculum(cards, info?.auto.mainId ?? null);
   const unitStatus: Record<string, { curriculumId: string; curriculumTitle: string; status: string }> = {};
   for (const [code, status] of Object.entries(main?.progress?.statusOf ?? {})) unitStatus[code] = { curriculumId: main!.id, curriculumTitle: main!.title, status };
   const unsent: Record<string, number> = {};

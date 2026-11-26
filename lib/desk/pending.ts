@@ -32,7 +32,7 @@ export type PendingRow = {
   /** The submission this row is about (work, Studio check, retry, feedback); rows of one submission are merged into one (Q2). */
   attemptId?: string;
 };
-/** A Studio submission whose latest attempt has no feedback yet (same rule as the "Cần thầy/cô xử lý" tab of Bài đã giao). */
+/** A Studio submission whose latest attempt has no feedback yet (same rule as the "Cần chấm" tab of Bài tập). */
 export type FeedbackWaiting = { attemptId: string; title: string; since: string; href: string };
 export type PendingInput = {
   learnerId: string;

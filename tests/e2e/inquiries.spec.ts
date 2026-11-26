@@ -38,7 +38,7 @@ test.describe("parent: assign and schedule", () => {
     await loginAs(page, "parent");
     await page.goto(`/?learner=${LEARNER_IDS.an}`);
     await expect(page.getByTestId(`learner-option-${LEARNER_IDS.an}`)).toContainText(learnerWithTrack(AN, "A"));
-    await page.getByTestId("nav-assign").click();
+    await page.getByTestId("quick-assign").click();
     await page.getByTestId("way-choose-topic").click();
     await expect(page).toHaveURL(new RegExp(`${url("an")}$`));
     await expect(page.getByRole("heading", { level: 1, name: inquiriesPage.title(AN) })).toBeVisible();

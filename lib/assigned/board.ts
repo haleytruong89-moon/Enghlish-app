@@ -8,7 +8,7 @@ import { sortStudioAssigned, type StudioAssignedRow } from "@/lib/studio/assigne
 
 export const BOARD_TABS = ["need", "doing", "done", "removed"] as const;
 export type BoardTab = (typeof BOARD_TABS)[number];
-/** D-d (24/11): checked work the adult has not given feedback on is still "Cần thầy/cô xử lý". */
+/** D-d (24/11): checked work the adult has not given feedback on is still "Cần chấm". */
 export const NEEDS_FEEDBACK_TO_FINISH = true;
 
 export function tabOfStudio(r: StudioAssignedRow): BoardTab {
@@ -54,5 +54,18 @@ export function buildBoard(studio: readonly StudioAssignedRow[] | null, practice
 /** The tab in the URL when it is one of the four; otherwise "need" when it has work, else "doing". */
 export function parseTab(v: unknown, counts: Record<BoardTab, number>): BoardTab {
   if (typeof v === "string" && (BOARD_TABS as readonly string[]).includes(v)) return v as BoardTab;
+  return counts.need > 0 ? "need" : "doing";
+}
+
+/** Hướng B: the Bài tập page shows four tabs; "removed" stays reachable from a link under Đã xong. */
+export const WORK_TABS = ["need", "doing", "done", "drafts"] as const;
+export type WorkTab = BoardTab | "drafts";
+const ALL_WORK_TABS: readonly string[] = [...BOARD_TABS, "drafts"];
+
+/** Tab counts of Bài tập; drafts is null when the drafts list could not be read (the tab then shows no number, never a false 0). */
+export type WorkCounts = Record<BoardTab, number> & { drafts: number | null };
+
+export function parseWorkTab(v: unknown, counts: WorkCounts): WorkTab {
+  if (typeof v === "string" && ALL_WORK_TABS.includes(v)) return v as WorkTab;
   return counts.need > 0 ? "need" : "doing";
 }

@@ -9,7 +9,7 @@ export function CurriculumBox({ learnerId, cards }: { learnerId: string; cards: 
   return (
     <section data-testid="desk-curricula" className={BOX}>
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-lg font-semibold">{shellCopy.sections.curricula}</h2>
+        <h2 className="text-lg font-semibold">{shellCopy.planTabs.curricula}</h2>
         <Link href={`/learners/${learnerId}/curricula`} className={BOX_LINK}>{deskCopy.seeAll}</Link>
       </div>
       {cards === null ? <p className="text-sm text-muted">{deskCopy.curriculaUnavailable}</p> : null}

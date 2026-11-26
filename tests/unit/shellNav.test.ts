@@ -1,78 +1,73 @@
 import { describe, expect, it } from "vitest";
-import { aiSettingsCopy, purgePage, revisionReviewCopy, shellCopy } from "@/lib/copy/vi";
-import { buildNav, SECTION_KEYS } from "@/lib/shell/nav";
+import { aiSettingsCopy, purgePage, shellCopy } from "@/lib/copy/vi";
+import { buildNav, QUICK_KEYS, SECTION_KEYS } from "@/lib/shell/nav";
 
 const NG = "b0000000-0000-4000-8000-000000000002";
 const AN = "a0000000-0000-4000-8000-000000000001";
-const hrefs = (n: ReturnType<typeof buildNav>) => [...n.sections.flatMap((s) => [s.href, ...s.children.map((c) => c.href)]), ...n.parent.map((p) => p.href)].filter((h): h is string => h !== null);
+const F = { revisionsReady: true };
+const hrefs = (n: ReturnType<typeof buildNav>) =>
+  [...n.quick.map((q) => q.href), ...n.sections.flatMap((s) => [s.href, ...s.children.map((c) => c.href)]), ...n.parent.map((p) => p.href)].filter((h): h is string => h !== null);
 
-describe("staff sidebar model", () => {
-  it("follows the prototype order with the agreed labels", () => {
-    const n = buildNav("tutor", NG, { revisionsReady: true });
-    expect(n.sections.map((s) => s.key)).toEqual(["desk", "profile", "knowledge", "roadmap", "sessions", "assign", "assigned", "progress", "results", "curricula", "inbox"]);
+describe("staff sidebar model (hướng B, 26/11)", () => {
+  it("3 quick buttons first: Chấm bài · Giao bài · Ghi buổi học", () => {
+    const n = buildNav("tutor", NG, F);
+    expect(n.quick.map((q) => q.key)).toEqual([...QUICK_KEYS]);
+    expect(n.quick.map((q) => [q.label, q.href])).toEqual([
+      [shellCopy.quick.grade, `/learners/${NG}/finish`],
+      [shellCopy.quick.assign, `/learners/${NG}/assign`],
+      [shellCopy.quick.note, `/learners/${NG}/notes/new`],
+    ]);
+  });
+
+  it("5 sections then Hồ sơ học sinh, with the agreed labels", () => {
+    const n = buildNav("tutor", NG, F);
+    expect(n.sections.map((s) => s.key)).toEqual(["desk", "work", "sessions", "progress", "plan", "profile"]);
     expect(n.sections.map((s) => s.key)).toEqual([...SECTION_KEYS]);
+    expect(n.sections.map((s) => s.label)).toEqual(["Hôm nay", "Bài tập", "Buổi học", "Tiến bộ", "Kế hoạch", "Hồ sơ học sinh"]);
     for (const s of n.sections) expect(s.label).toBe(shellCopy.sections[s.key]);
   });
 
-  it("'Giao bài' is one entry without children; 'Ghi kết quả' groups the two result entries", () => {
-    const n = buildNav("tutor", NG, { revisionsReady: true });
-    const a = n.sections.find((x) => x.key === "assign")!;
-    expect(a.children).toEqual([]);
-    expect(a.href).toBe(`/learners/${NG}/assign`);
-    const r = n.sections.find((x) => x.key === "results")!;
-    expect(r.label).toBe("Ghi kết quả");
-    expect(r.children.map((c) => c.key)).toEqual(["import", "results"]);
-    expect(r.children.map((c) => c.href)).toEqual([`/learners/${NG}/imports/new`, `/learners/${NG}/results/new`]);
+  it("section roots", () => {
+    const n = buildNav("tutor", NG, F);
+    const root = (k: string) => n.sections.find((s) => s.key === k)!.href;
+    expect(root("desk")).toBe(`/?learner=${NG}`);
+    expect(root("work")).toBe(`/learners/${NG}/assigned`);
+    expect(root("sessions")).toBe(`/learners/${NG}/notes`);
+    expect(root("progress")).toBe(`/learners/${NG}/progress`);
+    expect(root("plan")).toBe(`/learners/${NG}/curricula`);
+    expect(root("profile")).toBe(`/learners/${NG}/levels`);
   });
 
-  it("Bài đã giao sits right after Giao bài and opens the child's list (24/11)", () => {
-    const s = buildNav("parent", NG, { revisionsReady: true }).sections.find((x) => x.key === "assigned")!;
-    expect(s).toMatchObject({ label: "Bài đã giao", status: "live", href: `/learners/${NG}/assigned`, children: [] });
+  it("PR1 interim children: Tiến bộ = Kết quả + Bản đồ kiến thức; Hồ sơ keeps its 5 pages; the rest has none", () => {
+    const n = buildNav("tutor", NG, F);
+    const kids = (k: string) => n.sections.find((s) => s.key === k)!.children.map((c) => c.key);
+    expect(kids("progress")).toEqual(["results", "knowledge"]);
+    expect(kids("profile")).toEqual(["levels", "weak", "targets", "reading", "tutorAsks"]);
+    for (const k of ["desk", "work", "sessions", "plan"]) expect(kids(k), k).toEqual([]);
   });
 
-  it("every section is live since W4a (Lộ trình opens /roadmap); Bản đồ kiến thức is live since W3", () => {
-    const n = buildNav("tutor", NG, { revisionsReady: true });
-    for (const s of n.sections) expect(s.status, s.key).toBe("live");
-    const r = n.sections.find((x) => x.key === "roadmap")!;
-    expect([r.status, r.lane, r.href, r.children]).toEqual(["live", null, `/learners/${NG}/roadmap`, []]);
-    const k = n.sections.find((x) => x.key === "knowledge")!;
-    expect([k.status, k.href]).toEqual(["live", `/learners/${NG}/knowledge`]);
+  it("no 'Chờ duyệt', 'Giao bài', 'Bài đã giao', 'Ghi kết quả' section any more", () => {
+    const keys = buildNav("tutor", NG, F).sections.map((s) => s.key as string);
+    for (const gone of ["inbox", "assign", "assigned", "results", "curricula", "roadmap", "knowledge"]) expect(keys).not.toContain(gone);
   });
 
   it("every link is about the chosen child and no other", () => {
-    const all = hrefs(buildNav("parent", NG, { revisionsReady: true }));
-    expect(all.length).toBeGreaterThan(15);
+    const all = hrefs(buildNav("parent", NG, F));
     for (const h of all) {
       expect(h, h).not.toContain(AN);
-      if (h !== "/feedback") expect(h.includes(NG) || h.startsWith("/settings/ai"), h).toBe(true);
+      expect(h.includes(NG) || h.startsWith("/settings/ai"), h).toBe(true);
     }
-    expect(all).toContain(`/?learner=${NG}`);
-    expect(all).toContain(`/learners/${NG}/inbox`);
-    expect(all).toContain(`/learners/${NG}/assign`);
-    expect(all).toContain(`/review/skills?learner=${NG}`);
   });
 
-  it("only the parent gets the 'Phụ huynh' group (AI settings, delete the child's data)", () => {
-    expect(buildNav("tutor", NG, { revisionsReady: true }).parent).toEqual([]);
-    const p = buildNav("parent", NG, { revisionsReady: true }).parent;
-    expect(p.map((x) => [x.key, x.label])).toEqual([["aiSettings", aiSettingsCopy.navLink], ["delete", purgePage.link]]);
-    expect(p.find((x) => x.key === "delete")!.href).toBe(`/learners/${NG}/delete`);
-    expect(hrefs(buildNav("tutor", NG, { revisionsReady: true })).some((h) => h.endsWith("/delete"))).toBe(false);
+  it("only the parent gets the 'Phụ huynh' group", () => {
+    expect(buildNav("tutor", NG, F).parent).toEqual([]);
+    expect(buildNav("parent", NG, F).parent.map((x) => [x.key, x.label])).toEqual([["aiSettings", aiSettingsCopy.navLink], ["delete", purgePage.link]]);
   });
 
-  it("'Bài đã sửa' is left out until migration 0021 is readable (was the N7 test of the learner card)", () => {
-    const off = buildNav("tutor", NG, { revisionsReady: false });
-    expect(hrefs(off).some((h) => h.includes("/revisions"))).toBe(false);
-    const on = buildNav("tutor", NG, { revisionsReady: true }).sections.find((s) => s.key === "inbox")!;
-    expect(on.children.find((c) => c.key === "revisions")).toEqual({ key: "revisions", label: revisionReviewCopy.link, href: `/learners/${NG}/revisions` });
-  });
-
-  it("with no child yet only the desk has a link", () => {
-    const n = buildNav("tutor", null, { revisionsReady: true });
+  it("with no child yet: no quick buttons, only the desk has a link", () => {
+    const n = buildNav("tutor", null, F);
+    expect(n.quick).toEqual([]);
     expect(n.sections.find((s) => s.key === "desk")!.href).toBe("/");
-    for (const s of n.sections.filter((x) => x.key !== "desk")) {
-      expect(s.href, s.key).toBeNull();
-      expect(s.children, s.key).toEqual([]);
-    }
+    for (const s of n.sections.filter((x) => x.key !== "desk")) expect([s.href, s.children], s.key).toEqual([null, []]);
   });
 });

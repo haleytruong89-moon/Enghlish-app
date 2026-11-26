@@ -2,7 +2,7 @@
 import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { InboxBadge } from "./InboxBadge";
+import { GradeButton } from "./GradeButton";
 import { appFeedback, shellCopy } from "@/lib/copy/vi";
 import type { NavLink, NavModel } from "@/lib/shell/nav";
 import { activeFor, feedbackHref } from "@/lib/shell/paths";
@@ -22,19 +22,33 @@ export function SidebarNav({ nav, learnerId }: { nav: NavModel; learnerId: strin
   const child = (c: NavLink, testid: string, current: boolean) => (
     <li key={c.key}>
       <Link href={c.href} onClick={close} data-testid={testid} data-level="child" aria-current={current ? "page" : undefined}
-        className={`${item} text-[13px] md:min-h-9 ${current ? "font-semibold text-accent" : "text-muted hover:bg-[#eceee8]"}`}>
+        className={`${item} text-[13px] ${current ? "font-semibold text-accent" : "text-muted hover:bg-[#eceee8]"}`}>
         {c.label}
       </Link>
     </li>
   );
   return (
-    <div className="border-b border-line bg-[#fbfbf8] md:border-b-0 md:border-r">
+    <div className="border-b border-line bg-[#fbfbf8] md:sticky md:top-0 md:flex md:h-dvh md:flex-col md:border-b-0 md:border-r">
+      {nav.quick.length > 0 && learnerId ? (
+        <div role="group" aria-label={shellCopy.quick.label} data-testid="nav-quick" className="flex gap-2 overflow-x-auto px-3 pt-3 md:flex-col md:overflow-visible md:pb-1">
+          {nav.quick.map((q) =>
+            q.key === "grade" ? (
+              <GradeButton key={q.key} learnerId={learnerId} href={q.href} label={q.label} onClick={close} />
+            ) : (
+              <Link key={q.key} href={q.href} onClick={close} data-testid={`quick-${q.key}`}
+                className="flex min-h-11 shrink-0 items-center rounded-xl border border-line bg-white px-3 text-[15px] font-semibold text-accent no-underline hover:border-accent">
+                {q.label}
+              </Link>
+            ),
+          )}
+        </div>
+      ) : null}
       <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="staff-nav" data-testid="nav-menu-toggle"
         className="flex min-h-11 w-full items-center px-4 text-left text-sm font-semibold md:hidden">
         {shellCopy.menu} · {openLabel}
       </button>
       <nav id="staff-nav" aria-label={shellCopy.navLabel} data-testid="staff-sidebar"
-        className={`${open ? "flex" : "hidden"} flex-col gap-1 px-3 pb-4 md:sticky md:top-0 md:flex md:h-dvh md:overflow-y-auto md:py-4`}>
+        className={`${open ? "flex" : "hidden"} flex-col gap-1 px-3 pb-4 md:flex md:min-h-0 md:flex-1 md:overflow-y-auto md:py-3`}>
         <ul className="flex flex-col gap-1">
           {nav.sections.map((s) => {
             const current = active.section === s.key;
@@ -44,7 +58,6 @@ export function SidebarNav({ nav, learnerId }: { nav: NavModel; learnerId: strin
                   <Link href={s.href} onClick={close} data-testid={`nav-${s.key}`} data-level="section" aria-current={current ? "page" : undefined}
                     className={`${item} text-[15px] ${current ? "bg-[#e3ece8] font-semibold text-[#1d4136]" : "font-medium text-ink hover:bg-[#eceee8]"}`}>
                     {s.label}
-                    {s.key === "inbox" && learnerId ? <InboxBadge learnerId={learnerId} /> : null}
                   </Link>
                 ) : (
                   <span data-testid={`nav-${s.key}`} aria-disabled="true" data-status={s.status} data-level="section" className={`${item} cursor-default text-[15px] font-medium text-muted`}>
