@@ -11,7 +11,7 @@ import { loadTags } from "@/lib/tutorwork/load";
 import { buildStudioContext, type StudioContext } from "./context";
 import { docxToText } from "./docx";
 import { handleGetDraft, type StudioDeps } from "./handlers";
-import { parseAiSettings, parseDraftList, parsePending, parseRetryPending } from "./shape";
+import { buildDraftList, parseAiSettings, parsePending, parseRetryPending, type DraftRow } from "./shape";
 import { createSupabaseStudioStore } from "./supabaseStore";
 import type { AiSettingsView, DraftListItem, DraftPageData, PendingInbox, RetryInbox } from "./types";
 
@@ -45,10 +45,19 @@ export async function loadStudioGate(learnerId: string): Promise<{ allowed: bool
   const g = parseGate(data);
   return { allowed: g.allowed, reason: g.reason };
 }
+/**
+ * Every Studio draft of one child (not discarded), newest first. USER client: RLS lets only the child's tutor or parent read them.
+ * (The database list eng_studio_drafts stops at 30 drafts; a whole book imported at once has more — fix 26/11.)
+ */
 export async function loadDraftList(learnerId: string): Promise<DraftListItem[]> {
-  const { data, error } = await createAdminClient().rpc("eng_studio_drafts", { p_learner: learnerId });
-  if (error) throw new Error(`eng_studio_drafts failed: ${error.code ?? "error"}`);
-  return parseDraftList(data);
+  const db = await createUserClient();
+  const [drafts, instances] = await Promise.all([
+    db.from("studio_drafts").select("id, title, status, updated_at, template_id, template_version, supersedes_draft_id").eq("learner_id", learnerId).neq("status", "discarded").returns<DraftRow[]>(),
+    db.from("inquiry_instances").select("template_id, template_version").eq("learner_id", learnerId).returns<{ template_id: string; template_version: number }[]>(),
+  ]);
+  if (drafts.error) throw new Error(`studio_drafts lookup: ${drafts.error.code ?? "error"}`);
+  if (instances.error) throw new Error(`inquiry_instances lookup: ${instances.error.code ?? "error"}`);
+  return buildDraftList(drafts.data ?? [], instances.data ?? []);
 }
 
 /** Discarded drafts of one child, newest first (Khôi phục). USER client: RLS lets only the child's tutor or parent read them. */
