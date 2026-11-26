@@ -2208,6 +2208,10 @@ Nhánh `feature/l1-xong-mot-bai`. **Không có SQL**, không AI. Phụ huynh duy
 
 **Sau rà soát (26/11) đã sửa:** lần làm cũ (con đã làm lại) chỉ chấm câu + xem thử lại, góp ý chuyển sang lần làm mới nhất (có nút mở); bài còn kỹ năng cần chấm báo rõ ngay đầu màn và khi xong không nói "rời Chờ duyệt"; bấm Xong lần nữa sau khi lỗi nửa chừng không gửi trùng góp ý; lưu phần đã chấm không làm mất góp ý đang gõ; câu không có kết quả chấm của app không chặn Xong; lỗi đọc dữ liệu báo "tải lại" thay vì 404; không đọc được góp ý thì không cho gửi; không hiện "0/0"; lần làm lại không gọi là "điểm chính thức"; góp ý của người khác chỉ xem; gợi ý không bao giờ chứa chữ dạng điểm; ngưỡng màu dùng chung với Việc nên làm.
 
+## Sửa gấp: bản nháp Studio bị cắt ở 30 bài (26/11/2026)
+
+Nhánh `fix/studio-drafts-all`. **Không có SQL**, không AI. Thầy/cô của Nguyên báo 26/11: bản nháp Destination từ khoảng Unit 16 không thấy nữa. Nguyên nhân: hàm đọc danh sách nháp của database (`eng_studio_drafts`, từ 0024) chỉ trả **30 bản mới nhất**; sau khi nhập cả sách (65 bản nháp + 6 bản đã duyệt) thì Unit 14–21 + Review 7–10 và các bản đã duyệt bị đẩy ra khỏi danh sách ở Chờ duyệt (tab Bài soạn sẵn), Giao bài và Studio. Không mất dữ liệu (kiểm 26/11: 65 bản nháp còn nguyên). Sửa: app đọc thẳng bảng `studio_drafts` bằng quyền của người lớn (RLS: chỉ thầy/cô, phụ huynh của em), không giới hạn; cùng các trường như cũ. Hàm cũ để nguyên (không ai gọi nữa).
+
 ## L2 · Tiến độ tự chạy (26/11/2026)
 
 Nhánh `feature/l2-tien-do-tu-chay`. **Có SQL: `0044_unit_progress_auto.sql`** (chỉ thêm hàm, không bảng mới; cần 0043). Không AI. Phụ huynh duyệt cách B 26/11 08:40 ("ok"): bản phác https://claude.ai/artifact/Jtag5Rp1ESBRn7rMvRd1E9. Kế hoạch `docs/superpowers/plans/2026-11-26-l2-tien-do-tu-chay.md`; luật DOMAIN §5.1 bản 0.11; thiết kế DESIGN §19.37.
