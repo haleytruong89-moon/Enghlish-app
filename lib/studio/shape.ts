@@ -34,6 +34,28 @@ export function parseDraft(raw: unknown, opts: { showCost: boolean }): { view: D
   };
 }
 
+/** A row of english.studio_drafts as the list needs it (read with the USER client: RLS = staff of the child). */
+export type DraftRow = { id: string; title: string; status: DraftListItem["status"]; updated_at: string; template_id: string | null; template_version: number | null; supersedes_draft_id: string | null };
+
+/**
+ * The drafts list of one child, newest first, EVERY draft (fix 26/11: the old database list stopped at 30, so a book imported at once —
+ * Destination U14–U26, 65 drafts — lost its older half from Chờ duyệt, Giao bài and Studio). Same fields as eng_studio_drafts:
+ * discarded ones left out; superseded = an approved draft replaces it; assigned = how many times its test was given to this child.
+ */
+export function buildDraftList(rows: readonly DraftRow[], instances: readonly { template_id: string; template_version: number }[]): DraftListItem[] {
+  const given = new Map<string, number>();
+  for (const i of instances) given.set(`${i.template_id}@${i.template_version}`, (given.get(`${i.template_id}@${i.template_version}`) ?? 0) + 1);
+  const replaced = new Set(rows.filter((r) => r.status === "approved" && r.supersedes_draft_id).map((r) => r.supersedes_draft_id as string));
+  return rows
+    .filter((r) => r.status !== "discarded")
+    .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at) || a.id.localeCompare(b.id))
+    .map((r) => ({
+      id: r.id, title: r.title, status: r.status, updatedAt: r.updated_at, templateId: r.template_id, templateVersion: r.template_version,
+      superseded: replaced.has(r.id),
+      assigned: r.template_id !== null && r.template_version !== null ? (given.get(`${r.template_id}@${r.template_version}`) ?? 0) : 0,
+    }));
+}
+
 export function parseDraftList(raw: unknown): DraftListItem[] {
   return z
     .array(z.object({ id: z.string(), title: z.string(), status, updated_at: z.string(), template_id: z.string().nullable(), template_version: z.number().int().nullable(), superseded: z.boolean(), assigned: num }))
