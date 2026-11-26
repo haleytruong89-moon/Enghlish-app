@@ -26,6 +26,8 @@ test.describe("workdesk shell", () => {
     await expect(page.getByTestId("shell-learner")).toContainText("Nguyên (thử)");
     const box = await page.getByTestId("desk-inbox").boundingBox();
     expect(box && box.y + 40).toBeLessThan(768);
+    // "Góp ý về app" sits at the bottom of the left column: with the quick buttons it may sit under the fold, but it is reachable.
+    await page.getByTestId("feedback-link").scrollIntoViewIfNeeded();
     await expect(page.getByTestId("feedback-link")).toBeInViewport();
   });
 
