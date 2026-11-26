@@ -1,0 +1,29 @@
+{
+  "track": "A",
+  "note": "Global Success 6 Tập 1 (Unit 1–6) grammar, vocabulary and pronunciation tags for Track A (An), read from the Book Map of the school textbook. Seed tags of migration 0045 with a skill-map group (SM-1 is published, so no leaf). Keys are fixed for ever: exercise files prepared outside the app use them.",
+  "tags": [
+    {"key": "trang-tu-tan-suat", "label_vi": "Trạng từ chỉ tần suất (always, usually, never…)", "group_vi": "Ngữ pháp", "group_key": "gr-compare-prep"},
+    {"key": "so-huu-cach", "label_vi": "Sở hữu cách 's", "group_vi": "Ngữ pháp", "group_key": "gr-noun-det"},
+    {"key": "gioi-tu-noi-chon", "label_vi": "Giới từ chỉ nơi chốn (in, on, under, next to…)", "group_vi": "Ngữ pháp", "group_key": "gr-compare-prep"},
+    {"key": "hien-tai-tiep-dien", "label_vi": "Hiện tại tiếp diễn", "group_vi": "Ngữ pháp", "group_key": "gr-tense"},
+    {"key": "hien-tai-don-va-tiep-dien", "label_vi": "Phân biệt hiện tại đơn và hiện tại tiếp diễn", "group_vi": "Ngữ pháp", "group_key": "gr-tense"},
+    {"key": "danh-tu-dem-khong-dem", "label_vi": "Danh từ đếm được / không đếm được", "group_vi": "Ngữ pháp", "group_key": "gr-noun-det"},
+    {"key": "must-mustnt", "label_vi": "Must / Mustn't (bắt buộc, cấm đoán)", "group_vi": "Ngữ pháp", "group_key": "gr-modal"},
+    {"key": "should-shouldnt", "label_vi": "Should / Shouldn't (lời khuyên)", "group_vi": "Ngữ pháp", "group_key": "gr-modal"},
+    {"key": "some-any-chi-luong", "label_vi": "Some / Any (chỉ lượng)", "group_vi": "Ngữ pháp", "group_key": "gr-noun-det"},
+    {"key": "tv-truong-hoc", "label_vi": "Từ vựng: Trường học (đồ dùng, môn học, hoạt động)", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "tv-cum-play-do-have-study", "label_vi": "Cụm động từ + danh từ: play / do / have / study", "group_vi": "Từ vựng", "group_key": "vo-colloc-idiom"},
+    {"key": "tv-nha-cua", "label_vi": "Từ vựng: Nhà cửa (loại nhà, phòng, nội thất)", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "tv-ngoai-hinh", "label_vi": "Từ vựng: Ngoại hình và bộ phận cơ thể", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "tv-tinh-cach", "label_vi": "Từ vựng: Tính từ chỉ tính cách", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "tv-khu-pho", "label_vi": "Từ vựng: Địa điểm trong khu phố", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "tv-thien-nhien-du-lich", "label_vi": "Từ vựng: Thiên nhiên và đồ dùng du lịch", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "tv-tet", "label_vi": "Từ vựng: Ngày Tết (đồ vật, hoạt động)", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "pa-aa-uh", "label_vi": "Phát âm: /ɑː/ - /ʌ/", "group_vi": "Phát âm", "group_key": "sp-pron"},
+    {"key": "pa-s-z-cuoi-tu", "label_vi": "Phát âm: âm cuối /s/ - /z/", "group_vi": "Phát âm", "group_key": "sp-pron"},
+    {"key": "pa-b-p", "label_vi": "Phát âm: /b/ - /p/", "group_vi": "Phát âm", "group_key": "sp-pron"},
+    {"key": "pa-i-ee", "label_vi": "Phát âm: /ɪ/ - /iː/", "group_vi": "Phát âm", "group_key": "sp-pron"},
+    {"key": "pa-t-d", "label_vi": "Phát âm: /t/ - /d/", "group_vi": "Phát âm", "group_key": "sp-pron"},
+    {"key": "pa-s-sh", "label_vi": "Phát âm: /s/ - /ʃ/", "group_vi": "Phát âm", "group_key": "sp-pron"}
+  ]
+}
