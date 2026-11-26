@@ -715,12 +715,12 @@ Thiết kế: `docs/superpowers/specs/2026-11-26-ia-huong-b-design.md`.
   - Mỗi đường dẫn thuộc đúng một mục theo bảng `RULES` (`lib/shell/paths.ts`). Không trang nào bị xóa.
 - **Tab:** Kế hoạch và Tiến bộ là tab dạng liên kết giữa các trang có sẵn (`lib/shell/tabs.ts`, `components/shell/SectionTabs.tsx`). Vì vậy URL luôn cho biết đang mở tab nào và trang chạy được không cần JS.
 - **Số trên nút Chấm bài:** route chỉ đọc `GET /api/learners/:id/pending-count` trả `{ count, work }`.
-  - `work = submissionView(rows)`: số dòng bài nộp của Chờ duyệt (`work`, `studio_check`, `retry`, `feedback`).
-  - Cùng luật đủ / thiếu với `pendingView`: nguồn đếm lỗi thì `null`, chạm giới hạn trang thì `≥ n`.
-  - Trình duyệt nhớ 30 giây cho mỗi em (`components/shell/badgeStore.ts`), và đọc lại sau khi rời trang Xong một bài hoặc Bài tập.
+  - `work` = số tab **Cần chấm** của Bài tập (`lib/assigned/needCount.ts`, cùng `buildBoard`), nên nút, tab và Hôm nay không lệch nhau. Một trong hai danh sách không đọc được thì `null`.
+  - Hôm nay đưa sẵn số của mình (`BadgeSeed`). Trình duyệt nhớ 30 giây cho mỗi em (`components/shell/badgeStore.ts`), và đọc lại sau khi rời trang Xong một bài hoặc Bài tập, kể cả khi rời tiếp trước lúc có câu trả lời.
+  - Nút mở hàng chờ Xong một bài. Hết bài trên app mà còn bài link / PDF chờ thì chuyển sang Cần chấm.
 - **Bài tập › Bản nháp (`lib/assigned/draftGroups.ts`):**
   - Lấy bản nháp chưa bỏ, chưa bị thay, chưa giao (`openDrafts`), gom theo `unitKeyOf([], title)`.
-  - "Kế tiếp" = Unit (`U\d+`) có số nhỏ nhất mà ở giáo trình chính chưa `done` / `skipped`.
+  - "Kế tiếp" = Unit (`U\d+`) có số nhỏ nhất mà ở giáo trình chính chưa `done` / `skipped`. Không biết trạng thái (không có giáo trình chính, hoặc đọc lỗi) thì không ghi "Kế tiếp".
   - Giáo trình chính chọn bằng `mainCurriculum` (`lib/curriculum/main.ts`), dùng chung với Kết quả. Chỉ đọc khi mở tab này; lỗi thì nhóm vẫn hiện, chỉ không có trạng thái.
 - **Tiến bộ › Tổng quan (`lib/results/overview.ts`)** dùng cùng thước đo với Kết quả: chỉ tính bài được đo (lần làm đầu), câu chỉ làm trên giấy không tính, câu chờ người không tính đúng hay sai.
   - **4 tuần** = 28 ngày giờ Việt Nam tính đến hôm nay, so với 28 ngày liền trước.
