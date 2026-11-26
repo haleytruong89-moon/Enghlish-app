@@ -5,6 +5,7 @@ import type { CurriculumCard as Card } from "@/lib/curriculum/shape";
 import { AddCurriculumForm } from "./AddCurriculumForm";
 import { CoverageBar } from "./CoverageBar";
 import { EditMapButton } from "./EditMapButton";
+import { RemoveCurriculumButton } from "./RemoveCurriculumButton";
 
 const pill = "inline-flex items-center rounded-full border border-line px-2.5 py-0.5 text-xs font-medium";
 const link = "inline-flex min-h-11 items-center text-sm font-medium text-accent underline";
@@ -40,6 +41,7 @@ export function CurriculumCard({ card, learnerId, aiAllowed, aiReason }: { card:
             {curriculumCopy.continueReview} ({curriculumCopy.statusLabels[open.status]})
           </Link>
         ) : null}
+        {open?.status === "ai_failed" && !current ? <RemoveCurriculumButton versionId={open.versionId} title={card.title} curriculumId={card.id} /> : null}
         {current ? (
           <>
             <Link href={`/curricula/versions/${current.versionId}`} data-testid={`curriculum-map-${card.id}`} className={link}>

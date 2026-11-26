@@ -740,3 +740,8 @@ Thiết kế: `docs/superpowers/specs/2026-11-26-ia-huong-b-design.md`.
 - **Học bù:** còn buổi nghỉ chưa bù → dòng nhắc ngoài phần gập; "Đánh dấu học bù" chọn Học bù, tự nối buổi nghỉ khi chỉ có một (không nối thì tháng tính phí cả hai), chuyển focus vào ô chọn; "Không phải" ẩn dòng cho ghi chú này.
 - Cột phải "Đến hạn hỏi lại" là `<details>`, tự mở khi có mục đến hạn.
 - `components/review/LessonNotes.tsx`: form cũ chỉ hiện khi bấm "Sửa" (cuộn tới form; lưu xong báo "Đã lưu bản sửa của ghi chú.").
+
+### 19.40. Xóa giáo trình nạp hỏng (không SQL)
+
+- `isRemovedCurriculum(statuses)`: có ít nhất một phiên bản và mọi phiên bản `discarded` → `buildCards` bỏ khỏi danh sách (mọi nơi dùng `loadCurriculumCards`: Giáo trình, Ghi buổi, Giao theo Unit, Bàn làm việc, trang tháng, Tiến bộ, Bài tập › Bản nháp). Hệ quả: "Bỏ nháp" giáo trình chưa từng được duyệt cũng làm nó rời danh sách (chữ xác nhận đã nói rõ).
+- `components/curriculum/RemoveCurriculumButton.tsx` trên thẻ có phiên bản `ai_failed` và chưa có bản đang dùng (không hiện lúc AI đang đọc, không hiện cho nháp soạn tay): `POST /api/curricula/versions/:id/discard` (đã có; thầy/cô hoặc phụ huynh, `eng_discard_curriculum_draft`), hỏi lại bằng `curriculumCopy.removeConfirm`.

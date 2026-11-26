@@ -47,3 +47,45 @@ describe("Giáo trình screens", () => {
     expect(html).not.toContain(">U3 · Unit 3<");
   });
 });
+
+describe("27/11: a curriculum that never had an approved table of contents can be removed", () => {
+  const C2 = "c0000000-0000-4000-8000-0000000000c2";
+  const C3 = "c0000000-0000-4000-8000-0000000000c3";
+  const extra = {
+    ...rows,
+    curricula: [...rows.curricula, { id: C2, title: "Global english", level_note: null, created_at: "2026-11-26T00:00:00Z" }, { id: C3, title: "Global English 6", level_note: null, created_at: "2026-11-26T01:00:00Z" }],
+    versions: [
+      ...rows.versions,
+      { id: "v2", curriculum_id: C2, version: 1, status: "ai_failed", error_code: "http_400" },
+      { id: "v3", curriculum_id: C3, version: 1, status: "discarded", error_code: "http_400" },
+    ],
+  };
+  it("a curriculum whose every version was given up leaves the list; the failed one stays until removed", () => {
+    expect(buildCards(extra).map((c) => c.id)).toEqual([C, C2]);
+  });
+  it("the failed card has 'Xóa giáo trình này'; a card with an approved table of contents never has it", () => {
+    const [ok, failed] = buildCards(extra);
+    const f = renderToStaticMarkup(createElement(CurriculumCard, { card: failed!, learnerId: L, aiAllowed: true, aiReason: null }));
+    expect(f).toContain(`data-testid="curriculum-remove-${C2}"`);
+    expect(f).toContain(curriculumCopy.remove);
+    const o = renderToStaticMarkup(createElement(CurriculumCard, { card: ok!, learnerId: L, aiAllowed: true, aiReason: null }));
+    expect(o).not.toContain("curriculum-remove-");
+  });
+  it("the button never shows while the AI reads, on a hand-made draft, or beside an approved version with a draft open", () => {
+    const card = (status: string, approved: boolean) => {
+      const c = { ...extra, versions: [...(approved ? [{ id: "va", curriculum_id: C2, version: 1, status: "approved", error_code: null }] : []), { id: "vb", curriculum_id: C2, version: approved ? 2 : 1, status, error_code: null }] };
+      return renderToStaticMarkup(createElement(CurriculumCard, { card: buildCards(c).find((x) => x.id === C2)!, learnerId: L, aiAllowed: true, aiReason: null }));
+    };
+    expect(card("extracting", false)).not.toContain("curriculum-remove-");
+    expect(card("draft", false)).not.toContain("curriculum-remove-");
+    expect(card("draft", true)).not.toContain("curriculum-remove-");
+    expect(card("ai_failed", false)).toContain("curriculum-remove-");
+  });
+  it("isRemovedCurriculum: all discarded (at least one) only", async () => {
+    const { isRemovedCurriculum } = await import("@/lib/curriculum/shape");
+    expect(isRemovedCurriculum(["discarded", "discarded"])).toBe(true);
+    expect(isRemovedCurriculum(["discarded", "draft"])).toBe(false);
+    expect(isRemovedCurriculum(["superseded", "discarded"])).toBe(false);
+    expect(isRemovedCurriculum([])).toBe(false);
+  });
+});
