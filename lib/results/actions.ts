@@ -3,6 +3,7 @@
  * child, give more practice on a weak knowledge item, go back over a weak Unit, praise what went well. Fixed rules (no AI): each card
  * says why, with its numbers, and has one button to the page where the adult acts. Nothing is decided here. Pure.
  */
+import { finishHref } from "@/lib/finish/paths";
 import { pct, ratio, type TagAgg, type UnitScore, type WorkScore } from "./score";
 
 /** Thresholds approved by the parent (25/11). */
@@ -96,7 +97,8 @@ export function buildActions(i: ActionInput, opts: ActionOptions = DESK_OPTIONS)
     const pendingItems = waiting.reduce((n, w) => n + w.tally.pending, 0);
     const feedbackMissing = waiting.filter((w) => w.feedbackReady && !w.feedbackGiven).length;
     // The pending questions are those of the scored attempt; the feedback goes on the latest one (Bài đã giao links it the same way).
-    const href = oldest.tally.pending > 0 ? `/review/studio?learner=${i.learnerId}#studio-${oldest.firstAttemptId}` : oldest.episodeId ? `/review/${oldest.episodeId}` : `${base}/assigned`;
+    // L1: the "Xong một bài" queue (oldest first: questions to check, retries, feedback in one screen per submission).
+    const href = finishHref(i.learnerId);
     cards.push({ key: "grade", kind: "grade", tone: waitTone(oldest.waitingDays), facts: { works: waiting.length, pendingItems, feedbackMissing, oldestDays: oldest.waitingDays, title: oldest.title }, href, evidenceAt: oldest.submittedAt });
   }
 
@@ -160,7 +162,8 @@ export function buildActions(i: ActionInput, opts: ActionOptions = DESK_OPTIONS)
     cards.push({
       key: `praise-${best.w.instanceId}`, kind: "praise", tone: "good",
       facts: { title: best.w.title, part: best.name ?? undefined, correct: best.t.correct, decided: best.t.decided, percent: pct(best.t) ?? 0 },
-      href: best.w.episodeId ? `/review/${best.w.episodeId}` : `${base}/assigned`, evidenceAt: best.w.submittedAt,
+      // The praise is written as feedback, on the screen of the latest attempt (feedback goes on the latest one only).
+      href: finishHref(i.learnerId, best.w.lastAttemptId ?? best.w.firstAttemptId), evidenceAt: best.w.submittedAt,
     });
   }
 

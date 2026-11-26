@@ -60,7 +60,7 @@ describe("Chờ duyệt rows", () => {
   it("every row opens an existing detail page (no decision in the table)", () => {
     const byKey = Object.fromEntries(buildPendingRows(input()).map((r) => [r.key, r.href]));
     expect(byKey).toEqual({
-      "studio-s1": "/review/studio#studio-s1",
+      "studio-s1": `/learners/${L}/finish/s1`, // L1: one screen per submission
       "work-e1": "/review/e1",
       "skill-k1": "/review/skills#skill-k1",
       "skill-k2": "/review/skills#skill-k2",
@@ -131,7 +131,7 @@ describe("Chờ duyệt — the child's retries (W4c2)", () => {
   it("is one link-only row per attempt of THIS child, in the 'check' group, saying how many questions", () => {
     const rows = buildPendingRows(input({ work: [], studio: [], skills: [], drafts: [], curricula: [], retries: [retry(), retry({ attemptId: "t2", learnerId: O })] as never }));
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ key: "retry-t1", kind: "retry", group: "check", label: pendingCopy.kinds.retry, need: `${pendingCopy.need.retry(1)} · ${pendingCopy.need.reveal(1)}`, href: `/review/studio?learner=${L}#retry-t1`, waitingTutor: false });
+    expect(rows[0]).toMatchObject({ key: "retry-t1", kind: "retry", group: "check", label: pendingCopy.kinds.retry, need: `${pendingCopy.need.retry(1)} · ${pendingCopy.need.reveal(1)}`, href: `/learners/${L}/finish/t1`, waitingTutor: false });
     expect(pendingCopy.need.retry(2)).toBe("Con thử lại 2 câu");
     expect(pendingCopy.need.reveal(1)).toBe("Con xem đáp án 1 câu");
   });
@@ -145,6 +145,14 @@ describe("Q1 (audit 25/11): drafts do not count", () => {
   });
 });
 
+describe("L1: a submission with a Studio part opens 'Xong một bài'", () => {
+  it("skills to score + no feedback (no question to check) still open the finish screen, not the old review page", () => {
+    const rows = buildPendingRows(input({ work: [work({ attemptId: "s1" })], studio: [], skills: [], drafts: [], curricula: [], feedback: [{ attemptId: "s1", title: "Unit 5 test", since: "2026-11-01T03:00:00Z", href: `/learners/${L}/finish/s1` }] }));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ key: "attempt-s1", href: `/learners/${L}/finish/s1` });
+  });
+});
+
 describe("Q2 (audit 25/11): one row per submission", () => {
   const fb = (over: Record<string, unknown> = {}) => ({ attemptId: "s1", title: "Unit 5 test", since: "2026-11-01T03:00:00Z", href: "/review/e1", ...over });
   const retry = { attemptId: "s1", learnerId: L, alias: "An (thử)", isTest: true, activityId: "act", title: "Unit 5 test", submittedAt: "2026-11-01T03:00:00Z", since: "2026-11-02T03:00:00Z", retries: [{ itemId: "q2", n: 2, stem: "x", given: "a", retry: "b", kind: "retry", at: "2026-11-02T03:00:00Z" }] };
@@ -154,7 +162,7 @@ describe("Q2 (audit 25/11): one row per submission", () => {
     expect(rows[0]).toMatchObject({
       key: "attempt-s1", group: "check", label: pendingCopy.kinds.work, title: "Unit 5 test", since: "2026-11-01T03:00:00Z",
       need: `${pendingCopy.need.studioCheck(1)} · đã chấm 0/2 kỹ năng · con thử lại 1 câu · chưa góp ý`,
-      href: "/review/studio#studio-s1", waitingTutor: false,
+      href: `/learners/${L}/finish/s1`, waitingTutor: false,
     });
   });
   it("every piece after the first starts lower-case, even inside a part ('con thử lại … · con xem đáp án …')", () => {
