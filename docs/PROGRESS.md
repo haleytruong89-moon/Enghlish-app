@@ -2350,3 +2350,14 @@ Bản phác: canvas hướng B, artboard "Bản 2". **Không có SQL**, không A
 1. Mở **Giao bài**: "Sẵn sàng giao" ở trên cùng. Bấm **Giao →** thì trang bài mở ở ô chọn ngày.
 2. Unit đang học có nhãn "Kế tiếp" và mở sẵn.
 3. Nút **Giao bài** ở cột trái có nền xanh đậm.
+## Nhãn Global Success 6 cho Track A (26/11/2026)
+
+Nhánh `feature/tags-global-success-6`. **Có SQL: `0045_seed_tags_global_success_6_tap_1.sql` (23 nhãn, Unit 1–6) và `0046_seed_tags_global_success_6_tap_2.sql` (21 nhãn, Unit 7–12)** (chỉ thêm; cần 0042). Không AI, không đổi màn hình.
+
+- Phụ huynh duyệt danh sách 26/11 ("ok"). Nguồn: Book Map của sách giáo khoa Global Success 6 (Tập 1 và Tập 2): ngữ pháp, từ vựng theo chủ đề, phát âm. Mục đích: để AI đọc Mục lục của sách (giáo trình của An) gắn Unit với đúng mục kiến thức, thay vì đánh dấu "cần xem lại" cho mọi Unit.
+- 44 nhãn mới, mã CỐ ĐỊNH (file bài soạn ngoài app dùng đúng các mã này): `content/tags/gs6_t1_A.json`, `content/tags/gs6_t2_A.json`. Ngữ pháp 18, từ vựng 14, phát âm 12 (nhóm `sp-pron`). Từ vựng theo chủ đề → `vo-topic`; cụm play/do/have/study → `vo-colloc-idiom`.
+- Dùng lại nhãn có sẵn, không thêm: `hien-tai-don`, `hien-tai-don-s-es`, `so-sanh` (so sánh hơn, Unit 4), `qua-khu-don` (Unit 8), `phat-am`, `tu-vung-chu-de`, và nhãn riêng "Tương lai với Will" của gia đình (Unit 10).
+- Cùng cách với 0042: cột `seed_group_key` và các hàm đọc nhóm đã có từ 0042, nên migration chỉ thêm dòng; SM-1 (đã công bố) không đổi.
+- Test: `tests/unit/gs6Tags.test.ts` (đối chiếu từng dòng file ↔ SQL, không trùng mã / tên với nhãn khác); `tests/db/curriculum.test.ts` mục 4c (nhãn nằm đúng nhóm trong Bản đồ của An, không có ở Nguyên, chạy lại không thêm dòng); hai test cũ đếm nhãn Track A (`skillMap`, `tutorWork`) cập nhật số.
+
+**SQL cần phụ huynh áp:** GitHub → Actions → "Apply database migrations" → gõ `APPLY` (áp luôn 0043 và 0044 nếu chưa; chạy theo thứ tự số). Không sửa 0045 / 0046 sau khi áp. **Sau khi áp mới tải Mục lục GS6 vào Giáo trình của An** (Tập 1 trước; ngày thi HK1 dự kiến 24/12, chưa được trường thông báo).

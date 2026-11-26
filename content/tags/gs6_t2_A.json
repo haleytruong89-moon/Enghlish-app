@@ -1,0 +1,27 @@
+{
+  "track": "A",
+  "note": "Global Success 6 Tập 2 (Unit 7–12) grammar, vocabulary and pronunciation tags for Track A (An), read from the Book Map of the school textbook. Seed tags of migration 0046 with a skill-map group (SM-1 is published, so no leaf). Keys are fixed for ever: exercise files prepared outside the app use them.",
+  "tags": [
+    {"key": "tu-hoi-wh", "label_vi": "Từ để hỏi Wh- (what, where, when, who, why, how…)", "group_vi": "Ngữ pháp", "group_key": "gr-clause"},
+    {"key": "lien-tu-and-but-so", "label_vi": "Liên từ trong câu ghép: and / but / so", "group_vi": "Ngữ pháp", "group_key": "gr-clause"},
+    {"key": "cau-menh-lenh", "label_vi": "Câu mệnh lệnh", "group_vi": "Ngữ pháp", "group_key": "gr-clause"},
+    {"key": "tinh-tu-so-huu", "label_vi": "Tính từ sở hữu (my, your, his…)", "group_vi": "Ngữ pháp", "group_key": "gr-noun-det"},
+    {"key": "dai-tu-so-huu", "label_vi": "Đại từ sở hữu (mine, yours, his…)", "group_vi": "Ngữ pháp", "group_key": "gr-noun-det"},
+    {"key": "might-kha-nang", "label_vi": "Might (khả năng)", "group_vi": "Ngữ pháp", "group_key": "gr-modal"},
+    {"key": "mao-tu-a-an-the", "label_vi": "Mạo từ a / an / the", "group_vi": "Ngữ pháp", "group_key": "gr-noun-det"},
+    {"key": "dieu-kien-loai-1", "label_vi": "Câu điều kiện loại 1", "group_vi": "Ngữ pháp", "group_key": "gr-conditional"},
+    {"key": "so-sanh-nhat", "label_vi": "So sánh nhất (tính từ ngắn)", "group_vi": "Ngữ pháp", "group_key": "gr-compare-prep"},
+    {"key": "tv-chuong-trinh-tv", "label_vi": "Từ vựng: Chương trình TV", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "tv-the-thao-tro-choi", "label_vi": "Từ vựng: Thể thao và trò chơi", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "tv-thanh-pho-dia-danh", "label_vi": "Từ vựng: Thành phố và địa danh", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "tv-nha-tuong-lai-do-gia-dung", "label_vi": "Từ vựng: Nhà tương lai và đồ gia dụng", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "tv-reduce-reuse-recycle", "label_vi": "Từ vựng: Reduce / Reuse / Recycle (giảm thải, tái sử dụng, tái chế)", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "tv-hoat-dong-hang-ngay", "label_vi": "Từ vựng: Hoạt động hằng ngày", "group_vi": "Từ vựng", "group_key": "vo-topic"},
+    {"key": "pa-th-dh", "label_vi": "Phát âm: /θ/ - /ð/", "group_vi": "Phát âm", "group_key": "sp-pron"},
+    {"key": "pa-e-ae", "label_vi": "Phát âm: /e/ - /æ/", "group_vi": "Phát âm", "group_key": "sp-pron"},
+    {"key": "pa-ou-au", "label_vi": "Phát âm: /əʊ/ - /aʊ/", "group_vi": "Phát âm", "group_key": "sp-pron"},
+    {"key": "pa-trong-am-2-am-tiet", "label_vi": "Phát âm: trọng âm từ hai âm tiết", "group_vi": "Phát âm", "group_key": "sp-pron"},
+    {"key": "pa-nhip-dieu-cau", "label_vi": "Phát âm: nhịp điệu trong câu", "group_vi": "Phát âm", "group_key": "sp-pron"},
+    {"key": "pa-ngu-dieu-xuong", "label_vi": "Phát âm: ngữ điệu xuống ở câu khẳng định", "group_vi": "Phát âm", "group_key": "sp-pron"}
+  ]
+}
