@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { finishHref } from "@/lib/finish/paths";
 import { resultsCopy, studioAssignedCopy as c } from "@/lib/copy/vi";
 import type { Tally } from "@/lib/results/score";
 import { formatDay } from "@/lib/review/format";
@@ -17,8 +18,10 @@ const TONE: Record<StudioAssignedStatus, string> = {
 };
 
 /** "Bài làm trên app đã giao": each Studio test with its status and a way to see the whole work. Adults only (staff pages). */
-export function StudioAssignedTable({ rows, title = c.title, duplicates, scores }: {
+export function StudioAssignedTable({ rows, title = c.title, duplicates, scores, learnerId }: {
   rows: StudioAssignedRow[] | null; title?: string;
+  /** L1: with the child's id, a submission opens the "Xong một bài" screen (check + feedback in one place). */
+  learnerId?: string;
   /** Q6: overdue tests that look given twice. */
   duplicates?: ReadonlySet<string>;
   /** 26/11: the score of the first attempt as it stands (shown while no official result exists), by instance id. */
@@ -74,7 +77,7 @@ export function StudioAssignedTable({ rows, title = c.title, duplicates, scores 
               {r.lastAttemptId ? (
                 <p className="flex flex-wrap gap-x-5 text-sm">
                   {r.episodeId ? (
-                    <Link href={`/review/${r.episodeId}`} data-testid={`studio-assigned-open-${r.instanceId}`} className="inline-flex min-h-11 items-center font-semibold text-accent underline">
+                    <Link href={learnerId && r.lastAttemptId ? finishHref(learnerId, r.lastAttemptId) : `/review/${r.episodeId}`} data-testid={`studio-assigned-open-${r.instanceId}`} className="inline-flex min-h-11 items-center font-semibold text-accent underline">
                       {!r.feedbackReady ? c.openWork : r.feedbackGiven ? c.openWorkFed : c.openWorkToFeedback}
                     </Link>
                   ) : null}

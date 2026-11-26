@@ -63,7 +63,7 @@ describe("Việc nên làm: rules approved 25/11 (50 / 60 / 80 %, 2 / 5 days)", 
   const cards = buildActions({ learnerId: L, works, units: byUnit(works, RESULT_RULES.minItems), tags: byTag(works) });
 
   it("the grading card leads, red after 5 days, counts the questions and the missing feedback, opens the oldest test's questions", () => {
-    expect(cards[0]).toMatchObject({ kind: "grade", tone: "red", facts: { works: 3, pendingItems: 9, feedbackMissing: 3, oldestDays: 11, title: "Review 1" }, href: `/review/studio?learner=${L}#studio-t3` });
+    expect(cards[0]).toMatchObject({ kind: "grade", tone: "red", facts: { works: 3, pendingItems: 9, feedbackMissing: 3, oldestDays: 11, title: "Review 1" }, href: `/learners/${L}/finish` }); // L1: the queue, oldest first
     expect([waitTone(0), waitTone(2), waitTone(4), waitTone(5)]).toEqual(["info", "amber", "amber", "red"]);
   });
   it("go over the weakest part with the child (part E 0/10 before Word formation 3/13); only parts with ≥ 4 decided questions", () => {
@@ -131,7 +131,7 @@ describe("a test given again (review 26/11)", () => {
     expect(again.counted).toBe(false);
     const c = buildActions({ learnerId: L, works: [again], units: [], tags: [] }, PAGE_OPTIONS);
     expect(c.map((x) => x.kind)).toEqual(["grade"]);
-    expect(c[0]!.href).toBe(`/review/studio?learner=${L}#studio-t1`);
+    expect(c[0]!.href).toBe(`/learners/${L}/finish`);
   });
 });
 
