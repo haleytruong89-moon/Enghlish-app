@@ -439,4 +439,4 @@ Khác với kế hoạch: câu giới thiệu "Mỗi điều là một việc {t
 
 ## Q5 (26/11/2026) — Ghi buổi còn 3 ô
 - `sessionNotePage.moreTitle` "Thêm chi tiết (không bắt buộc)"; `moreLine(kind, skills, weak, parentNote)` nói đang chọn gì, không nói "điểm".
-- `makeupHint(n)` + `makeupHintButton` "Đánh dấu học bù"; `recheckCount(n)`; `taughtPreset`; `sessionKindCopy.regularSession` "Buổi thường".
+- `makeupHint(n)` + `makeupHintButton` "Đánh dấu học bù"; `recheckCount(n)`; `curriculumCopy.taughtNow` "đang học" trên chip Unit; `sessionKindCopy.regularSession` "Buổi thường".

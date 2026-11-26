@@ -29,8 +29,7 @@ import { applySameAsLast } from "@/lib/tutorwork/sameAsLast";
 import { TaughtUnitsPicker } from "@/components/curriculum/TaughtUnitsPicker";
 import { UnitProposal } from "@/components/curriculum/UnitProposal";
 import type { TaughtUnit } from "@/lib/curriculum/schema";
-import { presetTaught, type TaughtChoice } from "@/lib/curriculum/shape";
-import { CURRICULUM_LIMITS } from "@/lib/curriculum/types";
+import type { TaughtChoice } from "@/lib/curriculum/shape";
 import { DomainTabs } from "./DomainTabs";
 import { PractisedChosen } from "./PractisedChosen";
 import { TagChips } from "./TagChips";
@@ -39,7 +38,7 @@ import { useTags } from "./useTags";
 /**
  * "Ghi buổi học" (v2): date, what was studied, up to 3 tags to reinforce, a message the student can read, a note only the parent
  * sees, and the answer to "did you ask again?" for every tag that is due for a re-check. Saved as one shared note.
- * Q5 (26/11): three fields stay open (date, Unit đã dạy with the "Đang học" unit ticked, the message); the rest is one fold whose
+ * Q5 (26/11): three fields stay open (date, Unit đã dạy with the "Đang học" unit first and marked, the message); the rest is one fold whose
  * summary says what is in it. A live absence without a makeup shows one line outside the fold ("Đánh dấu học bù").
  */
 export function SessionNoteForm({
@@ -82,11 +81,9 @@ export function SessionNoteForm({
   const skillBuckets = useMemo(() => groupTargets(map, skills), [map, skills]);
   const [skillTab, setSkillTab] = useState<string>(() => firstTab(skillBuckets));
   const [saved, setSaved] = useState(false);
-  // Q5: the "Đang học" unit is pre-ticked for a session of today only; once the tutor touches the units, the pre-tick stops following the date.
-  const preset = useMemo(() => presetTaught(taughtChoices, CURRICULUM_LIMITS.taughtPerNote), [taughtChoices]);
-  const [taught, setTaughtRaw] = useState<TaughtUnit[]>(preset);
-  const [taughtTouched, setTaughtTouched] = useState(false);
-  const setTaught = (v: TaughtUnit[]) => { setTaughtTouched(true); setTaughtRaw(v); };
+  // Q5 (parent, 27/11, option b): nothing is pre-ticked. A saved unit is "taught at a session" evidence (points mức 1, never lowered),
+  // so it only comes from the tutor's own tap; the "Đang học" unit is the first chip, marked, one tap away.
+  const [taught, setTaught] = useState<TaughtUnit[]>([]);
   const [more, setMore] = useState(false);
   const [hintOff, setHintOff] = useState(false);
   const [rechecksOpen, setRechecksOpen] = useState(due.length > 0);
@@ -167,7 +164,7 @@ export function SessionNoteForm({
             min={minDate}
             max={today}
             value={date}
-            onChange={(e) => { setDate(e.target.value); if (!taughtTouched) setTaughtRaw(e.target.value === today ? preset : []); }}
+            onChange={(e) => setDate(e.target.value)}
             data-testid="session-date"
             className={`min-h-11 max-w-56 ${field}`}
           />
@@ -177,7 +174,6 @@ export function SessionNoteForm({
           <div className="flex flex-col gap-1">
             <h2 className="text-base font-semibold">{curriculumCopy.taughtTitle}</h2>
             <p className="text-sm text-muted">{curriculumCopy.taughtHelp}</p>
-            {preset.length > 0 && !taughtTouched && taught.length > 0 ? <p className="text-xs text-muted" data-testid="taught-preset">{sessionNotePage.taughtPreset}</p> : null}
             <TaughtUnitsPicker choices={taughtChoices} value={taught} onChange={setTaught} disabled={saved} />
           </div>
         ) : null}

@@ -65,8 +65,9 @@ test("unit statuses drive 'đang học đến'; the session note offers the unit
   await page.getByTestId("unit-U2-in_progress").click();
   await expect(page.getByTestId("units-current")).toHaveText(curriculumCopy.currentLine("U2", "Thinking and learning"));
   await page.goto(`/learners/${NGUYEN}/notes/new`);
-  // Q5: the "Đang học" unit (U2) is ticked when the form opens
-  await expect(page.getByTestId(`taught-${curriculumId}-U2`)).toHaveAttribute("aria-checked", "true");
+  // Q5 (option b): the "Đang học" unit (U2) is marked but not ticked
+  await expect(page.getByTestId(`taught-now-${curriculumId}`)).toBeVisible();
+  await expect(page.getByTestId(`taught-${curriculumId}-U2`)).toHaveAttribute("aria-checked", "false");
   await page.getByTestId(`taught-${curriculumId}-U3`).click();
   await page.getByTestId("session-save").click();
   await expect(page.getByTestId("session-saved")).toBeVisible();

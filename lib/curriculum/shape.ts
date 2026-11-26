@@ -157,8 +157,6 @@ export function buildCards(raw: unknown): CurriculumCard[] {
 /** "Unit đã dạy hôm nay" chooser: curricula with an approved version, their units (not skipped) and current statuses. */
 export type TaughtChoice = {
   curriculumId: string; title: string; currentCode: string | null; units: { code: string; title: string; status: string }[]; statusOf: CurriculumProgress["statusOf"];
-  /** L2: units whose status the app set from the child's work (never pre-ticked as "taught", Q5). */
-  autoOf?: CurriculumProgress["autoOf"];
 };
 export function taughtChoices(cards: CurriculumCard[]): TaughtChoice[] {
   return cards.flatMap((c) =>
@@ -169,19 +167,8 @@ export function taughtChoices(cards: CurriculumCard[]): TaughtChoice[] {
           currentCode: c.progress.current?.code ?? null,
           units: c.current.units.filter((u) => !u.skipped && c.progress?.statusOf[u.code] !== "skipped").map((u) => ({ code: u.code, title: u.title, status: c.progress?.statusOf[u.code] ?? "not_started" })),
           statusOf: c.progress.statusOf,
-          autoOf: c.progress.autoOf,
         }]
       : [],
   );
 }
 
-/**
- * Q5 (26/11): the units ticked when "Ghi buổi học" opens: per curriculum, the unit it is at ("đang học đến") when a person set it
- * "Đang học". A unit the app set from the child's work (L2, `autoOf`) is not pre-ticked: a saved tick is "taught at a session"
- * evidence (points mức 1, never lowered), so it must come from what the tutor set, not from homework. Nothing else is ticked.
- */
-export function presetTaught(choices: readonly TaughtChoice[], max: number): { curriculum_id: string; unit_code: string }[] {
-  return choices
-    .flatMap((c) => (c.currentCode && !c.autoOf?.[c.currentCode] && c.units.some((u) => u.code === c.currentCode && u.status === "in_progress") ? [{ curriculum_id: c.curriculumId, unit_code: c.currentCode }] : []))
-    .slice(0, max);
-}

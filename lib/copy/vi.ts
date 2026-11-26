@@ -1012,7 +1012,6 @@ export const sessionNotePage = {
   makeupUnlinked: "chưa chọn buổi nghỉ được bù",
   separator: ". ",
   recheckCount: (n: number) => (n > 0 ? `${n} mục đến hạn` : "Không có mục nào"),
-  taughtPreset: "Đã chọn sẵn Unit đang học do thầy/cô đặt. Bấm lại để bỏ nếu hôm nay dạy Unit khác.",
   date: "Ngày",
   studied: "Hôm nay học",
   studiedHint: "Ví dụ: Unit 7 · câu điều kiện hỗn hợp",
@@ -2767,6 +2766,8 @@ export const curriculumCopy = {
   // Ghi buổi
   taughtTitle: "Unit đã dạy hôm nay",
   taughtHelp: "Chọn Unit của giáo trình đã duyệt (tối đa 6). Không ghi gì ở “Hôm nay học” thì app ghi tên Unit vào đó.",
+  /** Q5: the chip of the unit the book is at ("Đang học"), first in the row; never pre-ticked. */
+  taughtNow: "đang học",
   taughtNone: "Chưa có giáo trình đã duyệt.",
   taughtNext: "Unit tiếp theo",
   taughtOther: "Unit khác…",

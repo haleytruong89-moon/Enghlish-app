@@ -2383,12 +2383,12 @@ Cách thử trên preview: mở bài nộp chờ chấm → thấy dải đỏ +
 
 | Phần | Sau sửa |
 |---|---|
-| Luôn hiện | **Ngày** · **Unit đã dạy** (tick sẵn Unit "Đang học" của từng giáo trình, bấm lại để bỏ; giáo trình mà Unit hiện tại chưa "Đang học" thì không tick gì) · **Lời nhắn cho em** · Lưu |
+| Luôn hiện | **Ngày** · **Unit đã dạy** (Unit "Đang học" đứng đầu, có chữ "đang học"; **không tick sẵn**, cô bấm một lần) · **Lời nhắn cho em** · Lưu |
 | Gập "Thêm chi tiết (không bắt buộc)" | Giống buổi trước · Loại buổi · Hôm nay học · Kỹ năng đã luyện · Mục cần củng cố · Ghi chú cho phụ huynh. Dòng dưới tiêu đề ghi đang chọn gì ("Buổi thường · 0 kỹ năng đã luyện · 0 mục cần củng cố") |
 | Học bù | Còn buổi nghỉ chưa bù → một dòng ngoài phần gập: "Còn n buổi nghỉ chưa được bù. Buổi này là học bù?" + nút "Đánh dấu học bù" (chọn Học bù, mở phần gập). Đổi so với đề xuất: không so ngày (buổi bù luôn khác ngày buổi nghỉ) |
 | Cột phải | "Đến hạn hỏi lại mục còn yếu" gập, tiêu đề có số mục |
 | Trang Buổi học | Bỏ form cũ "Viết ghi chú mới"; form cũ chỉ mở khi bấm "Sửa" một ghi chú cũ. Chữ khi chưa có buổi trỏ lên nút "✎ Ghi buổi học hôm nay" |
 
-Sau rà soát: (1) **tick sẵn chỉ Unit "Đang học" do người đặt**, không phải Unit app tự đặt từ bài con nộp (L2), vì Unit đã dạy lưu lại là bằng chứng "đã dạy" đẩy mọi mục kiến thức của Unit lên mức 1, không hạ được — **chờ phụ huynh xác nhận giữ tick sẵn**; (2) tick sẵn chỉ cho buổi hôm nay (ghi buổi tuần trước thì bỏ tick); (3) "Đánh dấu học bù" tự nối buổi nghỉ khi chỉ có một, có nút "Không phải"; (4) "Đến hạn hỏi lại" tự mở khi có mục; (5) bấm "Sửa" cuộn tới form, lưu xong báo trên danh sách.
+Sau rà soát: (1) **không tick sẵn Unit** (phụ huynh chọn phương án b, 27/11): Unit đã dạy lưu lại là bằng chứng "đã dạy" đẩy mọi mục kiến thức của Unit lên mức 1, không hạ được, nên chỉ ghi khi cô tự bấm; (3) "Đánh dấu học bù" tự nối buổi nghỉ khi chỉ có một, có nút "Không phải"; (4) "Đến hạn hỏi lại" tự mở khi có mục; (5) bấm "Sửa" cuộn tới form, lưu xong báo trên danh sách.
 
 e2e đã sửa theo: mở phần gập trước khi điền ô gập (`openSessionMore`, chỉ mở khi đang đóng); bài "ghi chú 3 việc" tạo ghi chú qua API rồi mở form cũ bằng "Sửa".

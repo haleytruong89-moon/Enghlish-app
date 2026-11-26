@@ -33,6 +33,7 @@ export function TaughtUnitsPicker({ choices, value, onChange, disabled }: { choi
                     className={`min-h-11 rounded-full border px-4 text-sm ${on ? "border-accent bg-accent font-semibold text-white" : "border-line bg-white hover:border-accent"}`}>
                     {on ? "✓ " : ""}
                     {u.code} · {u.title}
+                    {u.code === c.currentCode && u.status === "in_progress" ? <span className={on ? "font-normal" : "font-semibold text-accent"} data-testid={`taught-now-${c.curriculumId}`}> · {curriculumCopy.taughtNow}</span> : null}
                   </button>
                 );
               })}
