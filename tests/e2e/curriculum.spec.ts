@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { Client } from "pg";
 import { curriculumCopy } from "@/lib/copy/vi";
 import { pgConfigFromUrl } from "../../scripts/lib/pg";
-import { LEARNER_IDS, loginAs } from "./helpers";
+import { openSessionMore, LEARNER_IDS, loginAs } from "./helpers";
 
 // W2 · Giáo trình end to end on the TEST family with AI_FAKE=1 (CI): the fake answer is tests/fixtures/curriculum/fake-toc.json
 // (Destination C1&C2, 26 units, 8 rows "cần xem"). Serial: each step builds on the previous one.
@@ -65,6 +65,9 @@ test("unit statuses drive 'đang học đến'; the session note offers the unit
   await page.getByTestId("unit-U2-in_progress").click();
   await expect(page.getByTestId("units-current")).toHaveText(curriculumCopy.currentLine("U2", "Thinking and learning"));
   await page.goto(`/learners/${NGUYEN}/notes/new`);
+  // Q5 (option b): the "Đang học" unit (U2) is marked but not ticked
+  await expect(page.getByTestId(`taught-now-${curriculumId}`)).toBeVisible();
+  await expect(page.getByTestId(`taught-${curriculumId}-U2`)).toHaveAttribute("aria-checked", "false");
   await page.getByTestId(`taught-${curriculumId}-U3`).click();
   await page.getByTestId("session-save").click();
   await expect(page.getByTestId("session-saved")).toBeVisible();
@@ -78,6 +81,7 @@ test("unit statuses drive 'đang học đến'; the session note offers the unit
 test("listening question-type tags can be picked in the session note", async ({ page }) => {
   await loginAs(page, "tutorNguyen");
   await page.goto(`/learners/${NGUYEN}/notes/new`);
+  await openSessionMore(page); // Q5: the optional fields are folded
   await page.getByTestId("tab-session-tags-listening").click();
   await expect(page.getByTestId("panel-session-tags-listening")).toContainText("Nghe · Main idea — Ý chính");
 });

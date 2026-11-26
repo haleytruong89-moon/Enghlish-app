@@ -155,7 +155,9 @@ export function buildCards(raw: unknown): CurriculumCard[] {
 }
 
 /** "Unit đã dạy hôm nay" chooser: curricula with an approved version, their units (not skipped) and current statuses. */
-export type TaughtChoice = { curriculumId: string; title: string; currentCode: string | null; units: { code: string; title: string; status: string }[]; statusOf: CurriculumProgress["statusOf"] };
+export type TaughtChoice = {
+  curriculumId: string; title: string; currentCode: string | null; units: { code: string; title: string; status: string }[]; statusOf: CurriculumProgress["statusOf"];
+};
 export function taughtChoices(cards: CurriculumCard[]): TaughtChoice[] {
   return cards.flatMap((c) =>
     c.current && c.progress
@@ -169,3 +171,4 @@ export function taughtChoices(cards: CurriculumCard[]): TaughtChoice[] {
       : [],
   );
 }
+

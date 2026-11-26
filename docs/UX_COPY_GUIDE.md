@@ -436,3 +436,7 @@ Khác với kế hoạch: câu giới thiệu "Mỗi điều là một việc {t
 - Hàng chờ: `finishCopy.queueTitle(n)` "Còn n bài con nộp cần chấm hoặc góp ý", `queueWhy`, `queueWaited(d)` ("chờ d ngày" / "nộp hôm nay"), `queueEmpty`; đọc lỗi: `queueUnknown` (không bao giờ nói "không còn bài"); bài đang mở đã xong: `queueNextOldest`. Không nói "điểm", không so hai em.
 - Thẻ gợi ý: `resultsCopy.openFix(part)` "Mở phần E để chữa →" (không có phần: "Mở bài để chữa →").
 - Buổi học: `notesPage.writeNew` "✎ Ghi buổi học hôm nay" + `writeNewHint`; `absenceAction` "Ghi buổi nghỉ" + `absenceHint`; khung gập `sessionBillingCopy.foldTitle(n)`.
+
+## Q5 (26/11/2026) — Ghi buổi còn 3 ô
+- `sessionNotePage.moreTitle` "Thêm chi tiết (không bắt buộc)"; `moreLine(kind, skills, weak, parentNote)` nói đang chọn gì, không nói "điểm".
+- `makeupHint(n)` + `makeupHintButton` "Đánh dấu học bù"; `recheckCount(n)`; `curriculumCopy.taughtNow` "đang học" trên chip Unit; `sessionKindCopy.regularSession` "Buổi thường".

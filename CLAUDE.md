@@ -117,6 +117,8 @@ npm run doctor            # kiểm tra cài đặt cloud 1 lần: bảng ✓/✗
   - **Hôm nay:** Việc nên làm và Việc khác chỉ nằm ở đây.
   - Không trang nào bị xóa.
   - Chi tiết: `docs/superpowers/specs/2026-11-26-ia-huong-b-design.md`, `docs/PROGRESS.md`, `docs/DESIGN.md` §19.38.
+- **Bản 3 (#71, 26/11, không SQL) — ĐÃ GỘP:** dải "Còn n bài con nộp cần chấm hoặc góp ý" ở Chấm và góp ý, "Mở phần E để chữa →" trên thẻ gợi ý buổi học, Từng bài thẳng cột, 2 nút lớn ở đầu Buổi học.
+- **Q5 · Ghi buổi còn 3 ô — nhánh `feature/q5-ghi-buoi-3o`** (27/11, không SQL): Ngày · Unit đã dạy · Lời nhắn cho em luôn hiện, phần còn lại gập; **không tick sẵn Unit** (phụ huynh chọn 27/11: Unit đã dạy = bằng chứng "đã dạy", đẩy mục kiến thức lên mức 1, không hạ), chip Unit đang học đứng đầu; form cũ "Viết ghi chú mới" chỉ còn để sửa. `docs/DESIGN.md` §19.39.
 - **Session-log quick fix (PR #23) — ĐÃ GỘP** (không có migration).
 - Thứ tự tiếp theo (PRD D31 = E8, phụ huynh đã đồng ý 18/10): **S5c → spike AI (nhánh `feature/spike-studio-ai`, không gộp) → đưa gia sư vào + mockup Studio → Studio bước 1 (đề PDF/Word + đáp án → bài trong app, tự chấm, tự gắn nhãn) → Studio bước 2 (gợi ý bài bổ sung theo "Thư viện kiểu luyện", gộp S5b-2) → S6 → S7 → S8**. AI chỉ soạn **nháp** cho gia sư duyệt; không gửi danh tính của em; trần $10/tháng; chỉ bật sau khi phụ huynh duyệt `ai_text` (E6).
 - Văn bản đồng ý `docs/CONSENT_pilot-2026-10.md` **đã được phụ huynh duyệt 21/10** (bật AI vẫn cần đồng ý `ai_text` riêng, E6).

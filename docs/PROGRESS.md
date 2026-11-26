@@ -2391,3 +2391,19 @@ Nhánh `fix/ai-spend-limit-message`. **Không có SQL**, không bảng mới, kh
 - **Việc phụ huynh làm trong Console:**
   - Nâng giới hạn workspace `learning-os` lên khoảng $40. Giới hạn bên Anthropic phải cao hơn hoặc bằng trần của app.
   - Nên tách key của GitHub (`learning-os-github`) sang workspace riêng `learning-os-eval`, trần khoảng $10, để kiểm thử không ăn vào phần ngân sách của các con.
+
+## Q5 · Ghi buổi còn 3 ô (26/11/2026 đêm)
+
+**Không có SQL**, không AI. Audit 25/11 mục Q5; phụ huynh duyệt "Ok" 26/11 (2 câu bắt buộc theo đề xuất: tick sẵn Unit đang học, bỏ form cũ).
+
+| Phần | Sau sửa |
+|---|---|
+| Luôn hiện | **Ngày** · **Unit đã dạy** (Unit "Đang học" đứng đầu, có chữ "đang học"; **không tick sẵn**, cô bấm một lần) · **Lời nhắn cho em** · Lưu |
+| Gập "Thêm chi tiết (không bắt buộc)" | Giống buổi trước · Loại buổi · Hôm nay học · Kỹ năng đã luyện · Mục cần củng cố · Ghi chú cho phụ huynh. Dòng dưới tiêu đề ghi đang chọn gì ("Buổi thường · 0 kỹ năng đã luyện · 0 mục cần củng cố") |
+| Học bù | Còn buổi nghỉ chưa bù → một dòng ngoài phần gập: "Còn n buổi nghỉ chưa được bù. Buổi này là học bù?" + nút "Đánh dấu học bù" (chọn Học bù, mở phần gập). Đổi so với đề xuất: không so ngày (buổi bù luôn khác ngày buổi nghỉ) |
+| Cột phải | "Đến hạn hỏi lại mục còn yếu" gập, tiêu đề có số mục |
+| Trang Buổi học | Bỏ form cũ "Viết ghi chú mới"; form cũ chỉ mở khi bấm "Sửa" một ghi chú cũ. Chữ khi chưa có buổi trỏ lên nút "✎ Ghi buổi học hôm nay" |
+
+Sau rà soát: (1) **không tick sẵn Unit** (phụ huynh chọn phương án b, 27/11): Unit đã dạy lưu lại là bằng chứng "đã dạy" đẩy mọi mục kiến thức của Unit lên mức 1, không hạ được, nên chỉ ghi khi cô tự bấm; (3) "Đánh dấu học bù" tự nối buổi nghỉ khi chỉ có một, có nút "Không phải"; (4) "Đến hạn hỏi lại" tự mở khi có mục; (5) bấm "Sửa" cuộn tới form, lưu xong báo trên danh sách.
+
+e2e đã sửa theo: mở phần gập trước khi điền ô gập (`openSessionMore`, chỉ mở khi đang đóng); bài "ghi chú 3 việc" tạo ghi chú qua API rồi mở form cũ bằng "Sửa".
