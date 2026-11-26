@@ -1435,7 +1435,7 @@ export const studioFeedbackCopy = {
   errors: {
     feedback_unavailable: "Góp ý cho bài làm trên app chưa dùng được: cần áp bản cập nhật cơ sở dữ liệu 0037 trước.",
     not_found: "Không tìm thấy lần làm này. Bạn tải lại trang.",
-    attempt_replaced: "Con vừa làm lại bài này. Bạn mở lần làm mới nhất (Bài đã giao → Cần thầy/cô xử lý) để góp ý.",
+    attempt_replaced: "Con vừa làm lại bài này. Bạn mở lần làm mới nhất (Bài tập → Cần chấm) để góp ý.",
   } as Record<string, string>,
 } as const;
 
@@ -2132,27 +2132,37 @@ export const resultsCopy = {
 };
 
 export const assignedBoardCopy = {
-  title: (alias: string) => `Bài đã giao · ${alias}`,
-  intro: "Bài trên app, bài link, bài PDF đã giao ở một chỗ (bài chủ đề ở trang riêng).",
+  title: (alias: string) => `Bài tập · ${alias}`,
+  intro: "Mọi bài đã giao và bản nháp chưa giao của con ở một chỗ (bài chủ đề ở trang riêng). Một bài đi từ Bản nháp → Con đang làm → Cần chấm → Đã xong.",
   newWork: "+ Giao bài mới",
   tabsLabel: "Tình trạng bài",
-  tab: { need: `Cần ${tutorHonorific} xử lý`, doing: "Con đang làm", done: "Đã xong", removed: "Đã gỡ" } as Record<"need" | "doing" | "done" | "removed", string>,
+  tab: { need: "Cần chấm", doing: "Con đang làm", done: "Đã xong", removed: "Đã gỡ", drafts: "Bản nháp" } as Record<"need" | "doing" | "done" | "removed" | "drafts", string>,
   tabCount: (label: string, n: number) => `${label} · ${n}`,
   hint: {
-    need: `Con đã nộp, đang chờ ${tutorHonorific}: chấm câu tự luận, ghi kết quả hoặc góp ý.`,
+    need: `Con đã nộp, đang chờ ${tutorHonorific}: chấm câu tự luận, ghi kết quả hoặc góp ý. Nút “Chấm bài” ở cột trái mở bài cũ nhất.`,
     doing: "Con chưa nộp. Bài quá hạn lâu nhất nằm trên cùng; gỡ bài giao nhầm hoặc giao thử ở đây.",
     done: "Đã có kết quả và đã góp ý (hoặc không cần góp ý). Không còn việc gì.",
     removed: "Bài đã gỡ hoặc đã thu hồi. Con không thấy các bài này.",
-  } as Record<"need" | "doing" | "done" | "removed", string>,
+    drafts: "Bài đã soạn nhưng chưa giao, gom theo Unit. Unit kế tiếp nằm trên cùng. Mở một bài để xem lại rồi giao.",
+  } as Record<"need" | "doing" | "done" | "removed" | "drafts", string>,
   empty: {
     need: `Không có bài nào chờ ${tutorHonorific}.`,
     doing: "Con không còn bài nào đang mở.",
     done: "Chưa có bài nào xong hẳn.",
     removed: "Chưa có bài nào bị gỡ hay thu hồi.",
-  } as Record<"need" | "doing" | "done" | "removed", string>,
+    drafts: "Không có bản nháp nào chưa giao.",
+  } as Record<"need" | "doing" | "done" | "removed" | "drafts", string>,
   studioList: "Bài trên app",
   practiceList: "Bài link / PDF",
   topicLink: "Bài chủ đề đã giao →",
+  draftGroup: (key: string) => (key === "other" ? "Bài khác" : /^U\d+$/.test(key) ? `Unit ${key.slice(1)}` : key),
+  draftNext: "Kế tiếp",
+  draftCount: (n: number) => `${n} bài`,
+  unitStatus: { not_started: "Chưa bắt đầu", in_progress: "Đang học", done: "Đã học", skipped: "Bỏ qua" } as Record<"not_started" | "in_progress" | "done" | "skipped", string>,
+  draftsFailed: "Chưa đọc được danh sách bản nháp. Tải lại trang.",
+  removedLink: (n: number) => `Xem bài đã gỡ (${n})`,
+  resultLink: "Ghi kết quả bài giấy / link",
+  importLink: "Nạp bài đã làm",
 };
 
 // Nhập bài soạn sẵn (16/11): a draft made outside the app → a normal Studio draft. Adults only; no AI.
@@ -2726,6 +2736,7 @@ export const shellCopy = {
   },
   /** Hướng B (26/11): the three things done every day, above the sections. */
   quick: { label: "Việc chính", grade: "Chấm bài", assign: "Giao bài", note: "Ghi buổi học" },
+  planTabs: { label: "Kế hoạch", curricula: "Giáo trình", roadmap: "Lộ trình" },
   /** PR1 interim children (removed in PR2 when Tiến bộ gets its tabs). */
   progressResults: "Kết quả",
   progressKnowledge: "Bản đồ kiến thức",

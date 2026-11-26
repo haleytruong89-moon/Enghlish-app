@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildBoard, parseTab, tabOfPractice, tabOfStudio } from "@/lib/assigned/board";
+import { buildBoard, parseTab, parseWorkTab, tabOfPractice, tabOfStudio } from "@/lib/assigned/board";
 import type { StudioAssignedRow } from "@/lib/studio/assigned";
 import type { AssignmentView, SubmissionFeedbackView, SubmissionView } from "@/lib/practice/types";
 
@@ -60,5 +60,16 @@ describe("Bài đã giao: which tab a piece of work is in", () => {
     expect(parseTab("x", counts)).toBe("doing");
     expect(parseTab(["need"], counts)).toBe("doing");
     expect(parseTab(undefined, { ...counts, need: 1 })).toBe("need");
+  });
+});
+
+describe("parseWorkTab (hướng B)", () => {
+  const counts = { need: 0, doing: 1, done: 0, removed: 0, drafts: 3 };
+  it("accepts the four tabs and 'removed'; else Cần chấm when work waits, else Con đang làm", () => {
+    expect(parseWorkTab("drafts", counts)).toBe("drafts");
+    expect(parseWorkTab("removed", counts)).toBe("removed");
+    expect(parseWorkTab("x", counts)).toBe("doing");
+    expect(parseWorkTab(["drafts"], counts)).toBe("doing");
+    expect(parseWorkTab(undefined, { ...counts, need: 2 })).toBe("need");
   });
 });

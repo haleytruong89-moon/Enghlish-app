@@ -2,7 +2,9 @@ import { deskHref } from "@/lib/shell/paths";
 import Link from "next/link";
 import { AddCurriculumForm } from "@/components/curriculum/AddCurriculumForm";
 import { CurriculumCard } from "@/components/curriculum/CurriculumCard";
-import { curriculumCopy, learnerWithTrack } from "@/lib/copy/vi";
+import { curriculumCopy, learnerWithTrack, shellCopy } from "@/lib/copy/vi";
+import { SectionTabs } from "@/components/shell/SectionTabs";
+import { planTabs } from "@/lib/shell/tabs";
 import { loadCurriculumCards } from "@/lib/curriculum/load";
 import { loadStudioGate } from "@/lib/studio/load";
 import { requireLearnerPage } from "@/lib/tutorwork/page";
@@ -21,6 +23,7 @@ export default async function CurriculaPage({ params }: { params: Promise<{ id: 
           {curriculumCopy.back}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{curriculumCopy.title(learner.alias)}</h1>
+        <SectionTabs label={shellCopy.planTabs.label} tabs={planTabs(learner.id)} current="curricula" />
         <p className="mt-1 text-sm text-muted">{learnerWithTrack(learner.alias, learner.trackId)}</p>
         <p className="mt-3 max-w-3xl text-[15px]">{curriculumCopy.intro}</p>
         <div className="mt-6 grid gap-4 xl:grid-cols-2">
