@@ -19,6 +19,7 @@ import { loadAiSettings, loadDraftList, loadRetryPending, loadStudioPending } fr
 import { buildBoard, type BoardTab } from "@/lib/assigned/board";
 import { overdueFacts, type OverdueFacts } from "@/lib/assigned/duplicates";
 import type { ActionCard } from "@/lib/results/actions";
+import { handledThisWeek } from "@/lib/results/decisions";
 import { loadResults } from "@/lib/results/load";
 import { todayVn } from "@/lib/inquiries/dates";
 import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
@@ -124,6 +125,9 @@ export type DeskData = {
   assigned?: Record<BoardTab, number> | null;
   /** "Việc nên làm" (26/11) from the results of the child's Studio tests; null = could not be read. */
   actions?: ActionCard[] | null;
+  /** PR-B: the marks of those cards — false before migration 0043; how many were marked in the last 7 days. */
+  decisionsReady?: boolean;
+  handledThisWeek?: number;
 };
 
 function roadmapFacts(r: Awaited<ReturnType<typeof loadRoadmap>> | null): DeskData["roadmap"] {
@@ -155,6 +159,8 @@ export async function loadDesk(shell: ShellData, learner: LearnerSummary): Promi
   const results = studio ? await settle(loadResults(learner.id, todayVn(), studio)) : null;
   return {
     actions: results ? results.actions : null,
+    decisionsReady: results ? results.decisionsReady : false,
+    handledThisWeek: results ? handledThisWeek(results.handled, todayVn()) : 0,
     studioOverdue: overdue ? overdue.overdue : null,
     studioOverdueFacts: overdue,
     assigned: studio && today ? buildBoard(studio, today.assignments ?? today.practice, todayVn()).counts : null,
