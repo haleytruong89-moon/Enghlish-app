@@ -2417,3 +2417,17 @@ e2e đã sửa theo: mở phần gập trước khi điền ô gập (`openSessi
 - Hệ quả (sau rà soát): "Bỏ nháp" ở trang duyệt một giáo trình chưa từng được duyệt cũng làm thẻ rời danh sách; chữ xác nhận và lời gợi ý khi AI lỗi đã nói rõ, muốn nạp file khác thì thêm lại giáo trình.
 
 Dữ liệu thật 27/11: An có "Global English 6" (chỉ còn bản đã bỏ, tự biến mất khi gộp) và "Global english" (AI lỗi, bấm "Xóa giáo trình này").
+
+## Nhãn Oxford Discover 3 cho Track A (27/11/2026)
+
+Nhánh `feature/tags-oxford-discover-3`. **Có SQL: `0047_seed_tags_oxford_discover_3.sql` (20 nhãn, Unit 1–18)**, chỉ thêm dòng, cần 0042. Không AI, không đổi màn hình.
+
+- **Duyệt và nguồn:** phụ huynh duyệt danh sách ngày 27/11 ("ok duyệt"). Nguồn là trang Scope and Sequence của Student Book Oxford Discover 3. Sách có 18 Unit (9 câu hỏi lớn). Trong app, giáo trình OD3 cũ chỉ có 8 Unit và bảng nối thiếu ý chính ở Unit 1 (tính từ -ed/-ing), Unit 2 (cụm get) và Unit 5 (quá khứ tiếp diễn).
+- **20 nhãn mới, mã CỐ ĐỊNH:** `content/tags/od3_A.json`. Gồm 14 nhãn ngữ pháp (nhóm `gr-compare-prep`, `gr-clause`, `gr-noun-det`, `gr-modal`) và 6 nhãn từ vựng / Word Study (nhóm `vo-colloc-idiom`, `vo-word-form`, `vo-context`).
+- **Dùng lại, không thêm:** so-sanh, so-sanh-nhat, so-huu-cach, dai-tu-so-huu, tinh-tu-so-huu, mao-tu-a-an-the, danh-tu-dem-khong-dem, gioi-tu-noi-chon, might-kha-nang (dùng cho cả may), lien-tu-and-but-so, cùng các nhãn riêng của gia đình cho Unit 1–8.
+- **Cố ý không thêm:** chính tả và âm vụn (-le, -dge, -th, âm g cứng, âm tiết, viết hoa).
+- **Test:** `tests/unit/od3Tags.test.ts`. `tests/db/curriculum.test.ts` có mục 4d mới và mục 4c đếm 64 nhãn. `tests/db/skillMap.test.ts`: An có 85 nhãn.
+
+**SQL cần phụ huynh áp:** GitHub → Actions → "Apply database migrations" → gõ `APPLY`. Không sửa 0047 sau khi áp.
+
+**Sau khi áp:** cô mở thẻ Oxford Discover, bấm "Nạp mục lục", chọn file Scope and Sequence 4 trang, rồi duyệt bản mới 18 Unit. Bản cũ 8 Unit tự lưu thành lịch sử. Bản cũ chưa có tiến độ, chưa gắn bài giao hay mốc nào, nên không mất gì.
