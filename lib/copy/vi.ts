@@ -484,7 +484,11 @@ export const notesPage = {
   reinforceTitle: "Củng cố",
   messageTitle: "Lời nhắn cho em",
   noteForParentTitle: "Ghi chú cho phụ huynh",
-  writeNew: "Ghi buổi học (mẫu mới, nhanh hơn)",
+  writeNew: "✎ Ghi buổi học hôm nay",
+  writeNewHint: "Khoảng 3 phút · có gợi ý cho buổi này",
+  absenceAction: "Ghi buổi nghỉ",
+  absenceHint: `Con hoặc ${tutorHonorific} nghỉ, học bù`,
+  actionsLabel: "Việc hay làm",
 } as const;
 
 /** Nhãn bước theo loại hoạt động (UX guide chưa liệt kê — đặt cùng giọng với §3.3). Mã chỉ hiện trong "Thông tin kỹ thuật". */
@@ -2020,6 +2024,8 @@ export const studioAssignedCopy = {
 const pctText = (p: number) => `${p}%`;
 export const resultsCopy = {
   title: (alias: string) => `Tiến bộ · ${alias}`,
+  /** Bản 3: the fix-together card opens the test at the weak part. */
+  openFix: (part: string | null) => (part ? `Mở phần ${part} để chữa →` : "Mở bài để chữa →"),
   knowledgeLink: "Mở Bản đồ kiến thức (mức 1–4 của từng mục) →",
   intro: "Điểm từng bài, từng Unit và từng mục kiến thức. Chỉ tính lần làm đầu; câu chỉ làm trên giấy không tính. Con không thấy trang này.",
   tabsLabel: "Xem kết quả theo",
@@ -3269,6 +3275,7 @@ export const sessionStatsCopy = {
 /** Trang tháng để in / sao chép. */
 /** 3B: buổi nghỉ, học bù, buổi tính phí (rule S-1). Không có số tiền. */
 export const sessionBillingCopy = {
+  foldTitle: (n: number) => (n > 0 ? `Ghi buổi nghỉ · đã ghi ${n} buổi nghỉ` : "Ghi buổi nghỉ"),
   billable: "tính phí",
   notBillable: "không tính phí",
   partyShort: { student: "con", tutor: tutorHonorific, other: "khác" },
@@ -3933,7 +3940,12 @@ export const finishCopy = {
   inApp: (n: number) => `${n} câu trên app`,
   stepsLabel: "Các bước của bài này",
   steps: { grade: (done: number, all: number) => `1 · Chấm câu chờ (${done}/${all})`, gradeNone: "1 · Không có câu chờ", review: "2 · Xem câu sai + thử lại", feedback: "3 · Góp ý cho con", feedbackLatest: "3 · Góp ý ở lần làm mới nhất", done: "4 · Xong bài" },
-  queueLabel: "Bài trước và bài sau",
+  queueLabel: "Các bài con nộp đang chờ chấm",
+  queueTitle: (n: number) => `Còn ${n} bài con nộp chờ chấm`,
+  queueWhy: "Chấm hết thì con mới nhận được góp ý.",
+  queueWaited: (d: number) => (d > 0 ? `chờ ${d} ngày` : "nộp hôm nay"),
+  queueOpen: (d: number) => (d > 0 ? `chờ ${d} ngày · đang mở` : "nộp hôm nay · đang mở"),
+  queueEmpty: "Không còn bài nào chờ chấm. Con đã nhận đủ góp ý.",
   itemsTitle: "Các câu của con",
   filterLabel: "Lọc câu",
   onlyIssues: "Câu chờ + câu sai",

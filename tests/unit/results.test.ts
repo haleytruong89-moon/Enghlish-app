@@ -68,7 +68,9 @@ describe("Việc nên làm: rules approved 25/11 (50 / 60 / 80 %, 2 / 5 days)", 
   });
   it("go over the weakest part with the child (part E 0/10 before Word formation 3/13); only parts with ≥ 4 decided questions", () => {
     const fix = cards.filter((c) => c.kind === "fix_together");
-    expect(fix[0]).toMatchObject({ tone: "red", facts: { part: "E · Comparatives", correct: 0, decided: 10, percent: 0 }, href: `/learners/${L}/notes/new#goi-y-buoi-hoc` });
+    expect(fix[0]).toMatchObject({ tone: "red", facts: { part: "E · Comparatives", partKey: "E", correct: 0, decided: 10, percent: 0 }, href: `/learners/${L}/notes/new#goi-y-buoi-hoc` });
+    // Bản 3 (26/11): the card opens the test itself at the weak part (the measured first attempt).
+    expect(fix[0]!.workHref).toMatch(new RegExp(`^/learners/${L}/finish/[^#]+#part-E$`));
     const page = buildActions({ learnerId: L, works, units: [], tags: [] }, PAGE_OPTIONS).filter((c) => c.kind === "fix_together");
     expect(page.map((c) => c.facts.title)).toContain("Unit 14 - Word formation");
   });

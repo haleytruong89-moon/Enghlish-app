@@ -2361,3 +2361,16 @@ Nhánh `feature/tags-global-success-6`. **Có SQL: `0045_seed_tags_global_succes
 - Test: `tests/unit/gs6Tags.test.ts` (đối chiếu từng dòng file ↔ SQL, không trùng mã / tên với nhãn khác); `tests/db/curriculum.test.ts` mục 4c (nhãn nằm đúng nhóm trong Bản đồ của An, không có ở Nguyên, chạy lại không thêm dòng); hai test cũ đếm nhãn Track A (`skillMap`, `tutorWork`) cập nhật số.
 
 **SQL cần phụ huynh áp:** GitHub → Actions → "Apply database migrations" → gõ `APPLY` (áp luôn 0043 và 0044 nếu chưa; chạy theo thứ tự số). Không sửa 0045 / 0046 sau khi áp. **Sau khi áp mới tải Mục lục GS6 vào Giáo trình của An** (Tập 1 trước; ngày thi HK1 dự kiến 24/12, chưa được trường thông báo).
+
+## Bản 3: Chấm bài thấy rõ bài còn chờ · gợi ý buổi học mở bài · Từng bài thẳng cột · Ghi buổi dễ tìm (26/11/2026 tối)
+
+**Không có SQL**, không AI, không bảng mới. Từ 4 ảnh chụp của phụ huynh (thầy/cô dùng thật).
+
+| # | Vấn đề | Đã sửa |
+|---|---|---|
+| 1 | Chấm và góp ý: cô không thấy mình còn mấy bài chờ chấm | Dải đỏ trên cùng "Còn n bài con nộp chờ chấm" + "Chấm hết thì con mới nhận được góp ý" + chip **mọi** bài trong hàng (cũ nhất trước, bài đang mở có dấu) + nút đậm "Bài sau ›". Hết bài: một dòng xanh. Ngày "Đã gửi" ở đầu bài trước đây hiện dạng thô (ISO), nay theo ngày Việt Nam. |
+| 2 | Gợi ý buổi học (Cần chữa cùng con) chỉ có "Bỏ qua / Đã xong" | Thêm liên kết "Mở phần E để chữa →" mở màn Chấm và góp ý của **lần làm đầu** bài đó, cuộn tới phần yếu (`#part-E`). Ở trang Buổi học là nút chính; ở Hôm nay là nút thứ hai. |
+| 3 | Tiến bộ › Từng bài: tên và điểm lệch nhau | Lưới 3 cột cố định (dấu · tên căn trái · điểm căn phải rộng 15rem); điện thoại: điểm xuống dòng dưới tên. |
+| 4 | Ghi buổi: việc hay làm phải tìm | Đầu trang Buổi học: nút lớn "✎ Ghi buổi học hôm nay" + "Ghi buổi nghỉ" cạnh nhau; khung ghi nghỉ gập lại (mở khi bấm, `?nghi=1#ghi-nghi`); thống kê ở dưới. |
+
+Cách thử trên preview: mở bài nộp chờ chấm → thấy dải đỏ + chip; Tiến bộ › Từng bài → cột thẳng; Buổi học → hai nút trên cùng, bấm "Ghi buổi nghỉ" → khung mở; Hôm nay / Buổi học có thẻ "Cần chữa cùng con" → "Mở phần … để chữa →".

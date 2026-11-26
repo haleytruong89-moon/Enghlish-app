@@ -73,6 +73,12 @@ export function ActionCards({ learnerId, cards, tagLabels, role, title = c.actio
               </p>
               <p className="mt-1 text-sm">{t.line}</p>
             </div>
+            {card.workHref ? (
+              <Link href={card.workHref} data-testid={`action-open-${card.key}`}
+                className={buttons ? "inline-flex min-h-11 items-center rounded-xl border-2 border-accent bg-white px-4 text-sm font-bold text-accent no-underline" : "inline-flex min-h-11 items-center rounded-xl bg-accent px-4 text-sm font-bold text-white no-underline shadow-[0_2px_0_#1f4439]"}>
+                {c.openFix(card.facts.partKey ?? null)}
+              </Link>
+            ) : null}
             {parent || !buttons ? null : (
               <Link href={card.href} data-testid={`action-button-${card.kind}`} className="inline-flex min-h-11 items-center rounded-xl bg-accent px-4 text-sm font-semibold text-white no-underline">
                 {t.button}

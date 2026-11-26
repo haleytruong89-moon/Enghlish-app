@@ -431,3 +431,8 @@ Khác với kế hoạch: câu giới thiệu "Mỗi điều là một việc {t
 - Khối đầu: "Sẵn sàng giao · n", nhãn "đã duyệt, chưa giao". Nút "Giao →"; nhãn cho trình đọc màn hình: "Giao bài “tên bài”".
 - Nhóm: "Unit 15", "Review và Progress Test", "Bài khác". Nút trên mỗi dòng: "Duyệt" (bản nháp), "Mở" (AI đang đọc / chưa đọc được).
 - Giao bài: "Tạo bài mới", "+ Tạo bài mới (4 cách)".
+
+## Bản 3 (26/11/2026 tối) — hàng chờ chấm, mở bài để chữa, Ghi buổi
+- Hàng chờ: `finishCopy.queueTitle(n)` "Còn n bài con nộp chờ chấm", `queueWhy`, `queueWaited(d)` ("chờ d ngày" / "nộp hôm nay"), `queueEmpty`. Không nói "điểm", không so hai em.
+- Thẻ gợi ý: `resultsCopy.openFix(part)` "Mở phần E để chữa →" (không có phần: "Mở bài để chữa →").
+- Buổi học: `notesPage.writeNew` "✎ Ghi buổi học hôm nay" + `writeNewHint`; `absenceAction` "Ghi buổi nghỉ" + `absenceHint`; khung gập `sessionBillingCopy.foldTitle(n)`.

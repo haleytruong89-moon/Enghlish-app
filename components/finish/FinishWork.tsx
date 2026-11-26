@@ -1,5 +1,6 @@
 "use client";
 
+import { partAnchor } from "@/lib/finish/paths";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
@@ -215,7 +216,7 @@ export function FinishWork(p: FinishWorkProps) {
             const t = partTally(pt, local);
             const rows = only ? pt.items.filter((it) => isIssue(it, local) || (it.needsAdult && local[it.id])) : pt.items;
             return (
-              <section key={pt.key || "_"} className="overflow-hidden rounded-2xl border border-line bg-white" data-testid={`finish-part-${pt.key || "all"}`}>
+              <section key={pt.key || "_"} id={partAnchor(pt.key)} className="scroll-mt-4 overflow-hidden rounded-2xl border border-line bg-white" data-testid={`finish-part-${pt.key || "all"}`}>
                 <div className="flex flex-wrap justify-between gap-2 border-b border-line bg-paper px-4 py-3">
                   <p className="font-bold">{pt.label}</p>
                   <p className={`text-sm font-semibold ${tone(t)}`}>{t.decided > 0 ? score(t) : ""}{t.pending > 0 ? `${t.decided > 0 ? " · " : ""}${c.pills.waiting} ${t.pending}` : ""}</p>

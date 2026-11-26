@@ -189,6 +189,7 @@ test.describe.serial("S5b-1 tutor work", () => {
     await loginAs(page, "tutorNguyen");
     const before = await billableOf(absentOn);
     await page.goto(`/learners/${NG}/notes`);
+    await page.getByTestId("notes-absence").click(); // Bản 3: the absence form opens from the button at the top
     await page.getByTestId("absence-date").fill(absentOn);
     await page.getByTestId("absence-by-student").click();
     await page.getByTestId("absence-billable-yes").click();

@@ -13,7 +13,7 @@ type Cards = Parameters<typeof currentUnitLines>[0];
 const card = "flex flex-col gap-1 rounded-2xl border border-line bg-white p-4";
 
 /** "Tổng quan buổi học": four number cards, the 12-week calendar and the monthly table. The same for tutor and parent (U9). */
-export function SessionStats({ learnerId, days, today, cards, absences = [], billing = false }: { learnerId: string; days: SessionDay[]; today: string; cards: Cards; absences?: AbsenceRow[]; billing?: boolean }) {
+export function SessionStats({ learnerId, days, today, cards, absences = [], billing = false, absenceOpen = false }: { learnerId: string; days: SessionDay[]; today: string; cards: Cards; absences?: AbsenceRow[]; billing?: boolean; absenceOpen?: boolean }) {
   const s = statsOf(days, today);
   const unit = currentUnitLines(cards);
   return (
@@ -62,7 +62,14 @@ export function SessionStats({ learnerId, days, today, cards, absences = [], bil
         </>
       )}
       {billing ? (
-        <AbsenceForm learnerId={learnerId} absences={absences} today={today} minDate={addDays(today, -120)} maxDate={addDays(today, 60)} />
+        // Bản 3 (26/11): recording a lesson is the daily job; an absence is rarer, so its form stays folded until asked for
+        // (the "Ghi buổi nghỉ" button at the top of the page opens it with ?nghi=1#ghi-nghi, no script needed).
+        <details id="ghi-nghi" open={absenceOpen} data-testid="absence-fold" className="scroll-mt-4 rounded-2xl border border-line bg-white">
+          <summary className="flex min-h-12 cursor-pointer items-center px-4 font-semibold text-accent">{sessionBillingCopy.foldTitle(liveAbsences(absences).length)}</summary>
+          <div className="border-t border-line p-2">
+            <AbsenceForm learnerId={learnerId} absences={absences} today={today} minDate={addDays(today, -120)} maxDate={addDays(today, 60)} />
+          </div>
+        </details>
       ) : (
         <p className="rounded-xl border border-line bg-white px-5 py-4 text-sm text-muted" data-testid="billing-unavailable">{sessionBillingCopy.unavailable}</p>
       )}
