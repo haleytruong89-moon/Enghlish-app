@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { MIGRATIONS_DIR } from "../../scripts/lib/migrate";
 import { asCommit, createTestDb, migrate, rowsAs, seed, type Seeded, type TestDb } from "./helpers";
 
 /** W2 · Giáo trình (migration 0026): tables, guards, RLS, functions, listening tags, AI purpose, lesson note v3, purge. One database. */
@@ -240,6 +243,35 @@ describe("W2 curriculum (migration 0026)", () => {
       await fail(q1("insert into english.error_tags(track_id, key, label_vi, group_vi, family_id, origin, seed_group_key) values ('B', 'rieng-x', 'x', 'Ngữ pháp', $1, 'custom', 'gr-tense')", [s.familyId]), "23514");
       await fail(q1("update english.error_tags set group_key = 'gr-tense' where track_id = 'B' and key = 'thi-hien-tai'"), "23514");
       await fail(q1("update english.error_tags set seed_group_key = 'li-sound' where track_id = 'B' and key = 'nghe-main-idea'"), "23514", /error_tags_seed_group_key_shape/);
+    });
+  });
+
+  describe("4c. Global Success 6 tags of Track A (0045, 0046)", () => {
+    it("44 seed tags with a group are placed in An's map (not in Nguyên's, not loose); a second run adds nothing", async () => {
+      const count = "select count(*)::int as n from english.error_tags where track_id = 'A' and origin = 'seed' and family_id is null and group_key is null and retired_at is null and seed_group_key ~ '^(gr|vo|sp)-' and key not in ('phat-am')";
+      expect(await q1(count)).toEqual([{ n: 44 }]);
+      type Map = { domains: { key: string; groups: { key: string; leaves: { ref_key: string; custom: boolean }[] }[] }[]; unassigned: { ref_key: string }[] };
+      const an = await svc<Map>("select english.eng_skill_map($1) as r", [AN()]);
+      const grp = (m: Map, d: string, g: string) => m.domains.find((x) => x.key === d)!.groups.find((x) => x.key === g)!.leaves.map((l) => l.ref_key);
+      expect(grp(an, "grammar", "gr-modal")).toEqual(expect.arrayContaining(["must-mustnt", "should-shouldnt", "might-kha-nang"]));
+      expect(grp(an, "grammar", "gr-tense")).toEqual(expect.arrayContaining(["hien-tai-tiep-dien", "hien-tai-don-va-tiep-dien"]));
+      expect(grp(an, "grammar", "gr-conditional")).toContain("dieu-kien-loai-1");
+      expect(grp(an, "vocab", "vo-topic")).toEqual(expect.arrayContaining(["tv-truong-hoc", "tv-tet", "tv-reduce-reuse-recycle"]));
+      expect(grp(an, "vocab", "vo-colloc-idiom")).toContain("tv-cum-play-do-have-study");
+      expect(grp(an, "speaking", "sp-pron").filter((k) => k.startsWith("pa-"))).toHaveLength(12);
+      const all = an.domains.flatMap((d) => d.groups.flatMap((g) => g.leaves.map((l) => l.ref_key)));
+      const approved = ["gs6_t1_A.json", "gs6_t2_A.json"].flatMap((f) => (JSON.parse(readFileSync(path.join("content", "tags", f), "utf8")) as { tags: { key: string }[] }).tags.map((t) => t.key));
+      expect(approved).toHaveLength(44);
+      for (const k of approved) expect(all, k).toContain(k);
+      expect(an.unassigned.some((l) => ["must-mustnt", "pa-s-sh", "tv-tet", "so-sanh-nhat"].includes(l.ref_key))).toBe(false);
+      // Track B does not get them.
+      const ng = await svc<Map>("select english.eng_skill_map($1) as r", [NG()]);
+      expect(ng.domains.flatMap((d) => d.groups.flatMap((g) => g.leaves)).some((l) => l.ref_key === "must-mustnt" || l.ref_key === "pa-s-sh")).toBe(false);
+      // Running both migrations again changes nothing.
+      for (const f of ["0045_seed_tags_global_success_6_tap_1.sql", "0046_seed_tags_global_success_6_tap_2.sql"]) {
+        await db.client.query(readFileSync(path.join(MIGRATIONS_DIR, f), "utf8"));
+      }
+      expect(await q1(count)).toEqual([{ n: 44 }]);
     });
   });
 

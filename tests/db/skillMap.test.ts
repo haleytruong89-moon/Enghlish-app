@@ -231,7 +231,7 @@ describe("SM-1 skill map (migration 0019)", () => {
       const m = await mapOf(AN());
       expect(m.assumed).toEqual({ grammar: "A2", vocab: "A2", reading: "A2", listening: "A2", writing: "A2", speaking: "A2", thinking: 1 });
       const all = leavesOf(m);
-      expect(all.filter((l) => l.kind === "tag")).toHaveLength(21); // 16 + 5 listening tags of 0026
+      expect(all.filter((l) => l.kind === "tag")).toHaveLength(65); // 16 + 5 listening tags of 0026 + 44 Global Success 6 tags of 0045/0046 (seed_group_key)
       expect(all.filter((l) => l.hidden_in_picker).map((l) => [l.ref_key, l.label_vi, l.group])).toEqual([["doc-hieu", "Đọc hiểu (KET Reading)", "re-gist-detail"]]);
       expect(all.filter((l) => l.in_set)).toHaveLength(12);
       expect(all.some((l) => l.custom)).toBe(false);
