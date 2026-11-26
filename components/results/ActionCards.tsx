@@ -54,7 +54,7 @@ export function ActionCards({ learnerId, cards, tagLabels, role, title = c.actio
       {parent ? <p className="text-sm text-muted">{c.parentNote}</p> : null}
       {handledThisWeek > 0 ? (
         <p className="text-sm" data-testid="handled-week">
-          {c.handled.weekLine(handledThisWeek)} · <Link href={`/learners/${learnerId}/progress#da-xu-ly`} className="font-semibold text-accent underline">{c.handled.see}</Link>
+          {c.handled.weekLine(handledThisWeek)} · <Link href={`/?learner=${learnerId}#da-xu-ly`} className="font-semibold text-accent underline">{c.handled.see}</Link>
         </p>
       ) : null}
       {!parent && !decisionsReady && (cards ?? []).some((x) => isDecidable(x.kind)) ? <p className="text-xs text-muted" data-testid="decisions-unavailable">{c.handled.unavailable}</p> : null}

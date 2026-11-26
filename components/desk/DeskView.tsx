@@ -15,6 +15,7 @@ import { BadgeSeed } from "@/components/shell/BadgeSeed";
 import { pendingView } from "@/lib/desk/pending";
 import { GoalBox } from "./GoalBox";
 import { ActionCards } from "@/components/results/ActionCards";
+import { HandledList } from "@/components/results/HandledList";
 import { ProfileBox } from "./ProfileBox";
 import { SessionsBox } from "./SessionsBox";
 
@@ -45,6 +46,12 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
       {data.actions === undefined || (data.actions !== null && data.actions.length === 0 && !data.handledThisWeek) ? null : (
         <ActionCards learnerId={id} cards={data.actions} tagLabels={data.today?.tagLabels ?? {}} role={shell.role} decisionsReady={data.decisionsReady ?? false} handledThisWeek={data.handledThisWeek ?? 0} />
       )}
+      {data.moreActions && data.moreActions.length > 0 ? (
+        <details data-testid="desk-more-actions" className="rounded-2xl border border-line bg-white p-3">
+          <summary className="flex min-h-11 cursor-pointer items-center font-semibold text-accent">{deskCopy.moreActions(data.moreActions.length)}</summary>
+          <ActionCards learnerId={id} cards={data.moreActions} tagLabels={data.today?.tagLabels ?? {}} role={shell.role} decisionsReady={data.decisionsReady ?? false} title={deskCopy.moreActionsTitle} id="viec-nen-lam-them" />
+        </details>
+      ) : null}
       <DeskInbox learnerId={id} pending={data.pending} />
       <DeskAlerts learnerId={id} items={alerts} />
       {data.goal ? (
@@ -72,6 +79,7 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
         <CurriculumBox learnerId={id} cards={data.curricula} />
         <SessionsBox learnerId={id} today={data.today} todayIso={todayIso} sessions={data.sessions} assigned={data.assigned ?? null} studioOverdue={data.studioOverdue ?? null} />
       </div>
+      {data.handled && data.handled.length > 0 ? <HandledList items={data.handled} ready={data.decisionsReady ?? false} /> : null}
       {parent && data.recent ? <RecentLevelChanges items={data.recent} /> : null}
       {parent && data.aiSettings ? <AiSoftCapBox settings={data.aiSettings} /> : null}
     </div>

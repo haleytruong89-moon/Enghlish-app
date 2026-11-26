@@ -19,7 +19,7 @@ import { loadAiSettings, loadDraftList, loadRetryPending, loadStudioPending } fr
 import { buildBoard, type BoardTab } from "@/lib/assigned/board";
 import { overdueFacts, type OverdueFacts } from "@/lib/assigned/duplicates";
 import type { ActionCard } from "@/lib/results/actions";
-import { handledThisWeek } from "@/lib/results/decisions";
+import { handledThisWeek, type HandledItem } from "@/lib/results/decisions";
 import { loadResults } from "@/lib/results/load";
 import { todayVn } from "@/lib/inquiries/dates";
 import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
@@ -128,6 +128,9 @@ export type DeskData = {
   /** PR-B: the marks of those cards — false before migration 0043; how many were marked in the last 7 days. */
   decisionsReady?: boolean;
   handledThisWeek?: number;
+  /** Hướng B: "Việc nên làm" lives only on Hôm nay — the cards past the desk's few (folded), and what was marked in 30 days. */
+  moreActions?: ActionCard[] | null;
+  handled?: HandledItem[];
 };
 
 function roadmapFacts(r: Awaited<ReturnType<typeof loadRoadmap>> | null): DeskData["roadmap"] {
@@ -161,6 +164,8 @@ export async function loadDesk(shell: ShellData, learner: LearnerSummary): Promi
     actions: results ? results.actions : null,
     decisionsReady: results ? results.decisionsReady : false,
     handledThisWeek: results ? handledThisWeek(results.handled, todayVn()) : 0,
+    moreActions: results ? results.allActions.filter((a) => !results.actions.some((b) => b.key === a.key)) : null,
+    handled: results ? results.handled : [],
     studioOverdue: overdue ? overdue.overdue : null,
     studioOverdueFacts: overdue,
     assigned: studio && today ? buildBoard(studio, today.assignments ?? today.practice, todayVn()).counts : null,

@@ -142,4 +142,14 @@ describe("Bàn làm việc · Việc nên làm (26/11)", () => {
     expect(h).toContain('data-testid="handled-week"');
     expect(h).toContain("Đã xử lý 2 việc trong 7 ngày qua");
   });
+  it("hướng B: Việc nên làm lives only here — the rest of the cards fold under 'Xem thêm'; what was handled is listed below", () => {
+    const more = { ...card, key: "unit-U15", kind: "unit_review" as const, tone: "amber" as const, facts: { unit: "U15", correct: 4, decided: 10, percent: 40, works: 2 } };
+    const h = render("tutor", data({ actions: [card], moreActions: [more], decisionsReady: true }));
+    expect(h).toMatch(/<details[^>]*data-testid="desk-more-actions"/);
+    expect(h).toContain(deskCopy.moreActions(1));
+    expect(h).toContain('data-testid="action-card-unit_review"');
+    expect(render("tutor", data({ actions: [card], moreActions: [] }))).not.toContain('data-testid="desk-more-actions"');
+    const handled = [{ cardKey: "tag-x", kind: "practise" as const, label: "Cho con luyện thêm: X", decision: "done" as const, reason: null, byRole: "tutor" as const, at: "2026-11-25T03:00:00Z", evidenceAt: "2026-11-24T03:00:00Z", afterDays: 1, reopened: false }];
+    expect(render("parent", data({ actions: [card], handled, decisionsReady: true }))).toContain('data-testid="handled-list"');
+  });
 });

@@ -2849,6 +2849,8 @@ export const deskCopy = {
   titleEmpty: "Hôm nay",
   subtitle: (learnerLine: string, todayLine: string) => `${learnerLine} · ${todayLine}`,
   logToday: "Ghi buổi học hôm nay",
+  moreActions: (n: number) => `Xem thêm ${n} việc nên làm`,
+  moreActionsTitle: "Các việc nên làm còn lại",
   seeAll: "Xem đầy đủ",
   alerts: {
     missingBadge: "Chưa có",
