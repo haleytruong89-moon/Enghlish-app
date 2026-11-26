@@ -135,7 +135,7 @@ describe("loadPendingRows · feedback (Q2, audit 25/11)", () => {
   it("a Studio submission checked without feedback is a 'Chưa góp ý' row; an unreadable list is named `feedback`", async () => {
     m.loadStudioAssigned.mockResolvedValue([{ instanceId: "i1", activityId: "a1", title: "Unit 14 test", items: 12, startOn: null, dueOn: "2026-11-22", assignedAt: "2026-11-20T00:00:00Z", status: "checked", lateDays: null, removedReason: null, attempts: 1, lastAttemptId: "t1", lastSubmittedAt: "2026-11-20T16:02:00Z", episodeId: "e1", feedbackGiven: false, feedbackReady: true, units: [], firstResult: null }]);
     const r = await loadPendingRows("m1", "tutor", "L1");
-    expect(r.rows.map((x) => [x.key, x.href])).toEqual([["feedback-t1", "/review/e1"]]);
+    expect(r.rows.map((x) => [x.key, x.href])).toEqual([["feedback-t1", "/learners/L1/finish/t1"]]);
     m.loadStudioAssigned.mockRejectedValue(new Error("rls"));
     expect((await loadPendingRows("m1", "tutor", "L1")).failed).toEqual(["feedback"]);
   });

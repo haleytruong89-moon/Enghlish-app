@@ -395,6 +395,13 @@ Khác với kế hoạch: câu giới thiệu "Mỗi điều là một việc {t
 - `studioAssignedCopy.duplicateWarning` (cảnh báo giao trùng, không chặn); `openWorkToFeedback` "Xem bài và góp ý", `openWorkFed` "Xem bài · đã góp ý", `feedbackGiven` "đã góp ý", `noFeedbackYet` "chưa góp ý" (thay `openWorkFeedback`).
 
 
+## L1 · "Xong một bài" (26/11/2026) — Chấm và góp ý
+
+- Tên màn: **Chấm và góp ý**. Nút cuối: **Xong bài · gửi góp ý cho con** (chưa đủ điều kiện: "Chấm nốt câu chờ và viết góp ý để xong bài"). Bài tiếp: "Sang bài tiếp: <tên bài> ›".
+- Trạng thái từng câu: "Đúng · app chấm", "Sai · app chấm", "Bỏ trống", "Chờ thầy/cô", "Đúng · thầy/cô chấm", "Sai · thầy/cô chấm", "Chỉ trên giấy · không tính", "Chưa chấm được · không tính".
+- Điểm chỉ người lớn thấy, dạng "đúng/đã chấm"; chưa có câu nào chấm thì "–" (không bao giờ "0/0"). Lời đánh giá: "Cần chữa cùng con" (< 50 %), "Tạm được", "Tốt" (≥ 80 %) — cùng ngưỡng của Việc nên làm (phụ huynh duyệt 25/11). Lần làm lại: "không tính vào tổng", không gọi là "điểm chính thức".
+- Gợi ý góp ý do app soạn từ câu sai, ghi rõ "app soạn sẵn, không dùng AI"; chỉ lời, không phân số, không "%", không "điểm" (cùng luật chữ dạng điểm). Dạng: "Phần E · So sánh: xem lại câu 11, 12." / "Phần A: con làm đúng hết, rất chắc tay."
+
 ## L2 · Tiến độ tự chạy (26/11/2026)
 
 - Nhãn trên Unit do app đặt: **"App đặt theo bài nộp · dd/mm"**. Dòng luật ở đầu trang Trạng thái Unit: con nộp bài → app đặt "Đang học"; "Đã học" do thầy/cô bấm; app không tự hạ; người lớn đổi thì người lớn thắng.

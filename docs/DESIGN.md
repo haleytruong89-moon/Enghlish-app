@@ -694,6 +694,10 @@ Spec `docs/superpowers/specs/2026-11-22-gia-su-so-tay-design.md` (bản 0.2, ph�
 - `lib/assigned/duplicates.ts`: tên bài so sánh không phân biệt hoa thường / dấu cách / dấu phân cách; chỉ là cảnh báo, không chặn.
 
 
+### 19.36. "Xong một bài" (L1, không SQL)
+
+Một màn cho một lần làm bài Studio: `/learners/[id]/finish/[attemptId]` (cổng `work:review`, thầy/cô hoặc phụ huynh của em; con và người ngoài 404). Dữ liệu đọc từ những gì đã có: `loadEpisode`, `item_decisions`, `studio_item_meta` + tên phần của bản nháp đã duyệt, `eng_retry_pending`, `eng_studio_feedback`. Mô hình thuần `lib/finish/view.ts` (dùng chung server / client). Màn chỉ gọi 3 API cũ: chấm câu (`/api/review/studio/attempts/[id]`), góp ý (`/api/learners/[id]/studio/attempts/[attemptId]/feedback`), đã xem lần thử lại (`…/retry-seen`). Xong bài = hết câu chờ + có góp ý; bấm Xong ghi luôn "đã xem" lần thử lại. Hàng đợi (`lib/finish/queue.ts`): cùng ba phần Studio của Chờ duyệt, cũ nhất trước; `/learners/[id]/finish` mở bài cũ nhất. Thẻ "Chấm bài", dòng Studio ở Chờ duyệt, Bài đã giao và thẻ Khen mở màn này. Gợi ý góp ý do app soạn từ câu sai (không AI, không ghi điểm). Chấm kỹ năng / mức hỗ trợ vẫn ở màn cũ (liên kết).
+
 ### 19.37. Tiến độ tự chạy (L2, migration 0044)
 
 - **Luật** (DOMAIN §5.1 bản 0.11): bài con nộp đặt Unit "Chưa bắt đầu" thành "Đang học" (app đặt); "Đã học" chỉ người lớn; không bao giờ hạ; người lớn đổi sau bài nộp thì thắng tới bài nộp mới.

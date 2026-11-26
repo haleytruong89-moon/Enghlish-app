@@ -52,7 +52,7 @@ export default async function AssignedBoardPage({ params, searchParams }: { para
       <p className="text-sm text-muted">{c.hint[tab]}</p>
       {board.studioFailed || studioRows.length > 0 ? (
         <div data-testid="board-studio">
-          <StudioAssignedTable rows={board.studioFailed ? null : studioRows} title={c.studioList} duplicates={likelyDuplicates(studio ?? [])} scores={scores} />
+          <StudioAssignedTable rows={board.studioFailed ? null : studioRows} title={c.studioList} duplicates={likelyDuplicates(studio ?? [])} scores={scores} learnerId={learner.id} />
         </div>
       ) : null}
       {practiceRows.length > 0 ? (

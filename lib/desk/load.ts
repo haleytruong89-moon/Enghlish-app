@@ -90,7 +90,7 @@ export async function loadPendingRows(
   if (goal === null) failed.push("goals"); // only a real fault: migration 0035 not applied is { kind: "unavailable" }
   if (assigned === null) failed.push("feedback");
   return {
-    rows: buildPendingRows({ learnerId, role, work: work?.items ?? [], studio: studio?.attempts ?? [], retries: retries?.attempts ?? [], skills: skills?.items ?? [], points: points?.items ?? [], drafts: drafts ?? [], curricula: curricula ?? [], imports: imports ?? [], roadmapDrafts: roadmap && roadmap.kind === "ok" ? draftCount(roadmap.view) : 0, goal: goalProposal(goal), feedback: feedbackWaiting(assigned ?? []) }),
+    rows: buildPendingRows({ learnerId, role, work: work?.items ?? [], studio: studio?.attempts ?? [], retries: retries?.attempts ?? [], skills: skills?.items ?? [], points: points?.items ?? [], drafts: drafts ?? [], curricula: curricula ?? [], imports: imports ?? [], roadmapDrafts: roadmap && roadmap.kind === "ok" ? draftCount(roadmap.view) : 0, goal: goalProposal(goal), feedback: feedbackWaiting(assigned ?? [], learnerId) }),
     failed,
     more: work?.more ?? false,
   };

@@ -2,6 +2,7 @@
  * "Chờ duyệt" of one child as one compact list (spec §3, §5 rule 4): every source that already waits for an adult, oldest first.
  * Pure. A row only LINKS to the page where the decision is made (DOMAIN R1, spec §3: no one-click approval) — it decides nothing.
  */
+import { finishHref, isFinishHref } from "@/lib/finish/paths";
 import { deskHref, roadmapHref } from "@/lib/shell/paths";
 import { activityLabels, curriculumCopy, fallbackLabels, pendingCopy, reviewPage, revisionReviewCopy } from "@/lib/copy/vi";
 import type { CurriculumCard } from "@/lib/curriculum/shape";
@@ -121,11 +122,11 @@ export function buildPendingRows(i: PendingInput): PendingRow[] {
   }
   for (const a of i.studio) {
     if (a.learnerId !== i.learnerId) continue;
-    push({ key: `studio-${a.attemptId}`, kind: "studio_check", label: pendingCopy.kinds.studioCheck, title: a.title, since: a.submittedAt, need: pendingCopy.need.studioCheck(a.items.length), href: `/review/studio#studio-${a.attemptId}`, waitingTutor: false, attemptId: a.attemptId });
+    push({ key: `studio-${a.attemptId}`, kind: "studio_check", label: pendingCopy.kinds.studioCheck, title: a.title, since: a.submittedAt, need: pendingCopy.need.studioCheck(a.items.length), href: finishHref(a.learnerId, a.attemptId), waitingTutor: false, attemptId: a.attemptId });
   }
   for (const a of i.retries ?? []) {
     if (a.learnerId !== i.learnerId) continue;
-    push({ key: `retry-${a.attemptId}`, kind: "retry", label: pendingCopy.kinds.retry, title: a.title, since: a.since, need: retryNeed(a.retries), href: `/review/studio?learner=${a.learnerId}#retry-${a.attemptId}`, waitingTutor: false, attemptId: a.attemptId });
+    push({ key: `retry-${a.attemptId}`, kind: "retry", label: pendingCopy.kinds.retry, title: a.title, since: a.since, need: retryNeed(a.retries), href: finishHref(a.learnerId, a.attemptId), waitingTutor: false, attemptId: a.attemptId });
   }
   for (const f of i.feedback ?? []) {
     push({ key: `feedback-${f.attemptId}`, kind: "feedback", label: pendingCopy.kinds.feedback, title: f.title, since: f.since, need: pendingCopy.need.feedback, href: f.href, waitingTutor: false, attemptId: f.attemptId });
@@ -211,7 +212,8 @@ export function mergeBySubmission(rows: readonly PendingRow[]): PendingRow[] {
       key: `attempt-${r.attemptId}`, kind: first.kind, group: GROUP_OF[first.kind], label: pendingCopy.kinds.work, title,
       since: dated[0] ?? null,
       need: sorted.flatMap((p) => p.need.split(" · ")).map((piece, n) => (n === 0 ? piece : lowerFirst(piece))).join(" · "),
-      href: first.href,
+      // L1: a submission with a Studio part opens the "Xong một bài" screen (questions, retries and feedback in one place).
+      href: sorted.find((p) => isFinishHref(p.href))?.href ?? first.href,
       // Shown when any part waits for the tutor (e.g. a parent sees that the skill scoring is the tutor's, even if she can give feedback).
       waitingTutor: sorted.some((p) => p.waitingTutor),
       attemptId: r.attemptId,
@@ -221,10 +223,10 @@ export function mergeBySubmission(rows: readonly PendingRow[]): PendingRow[] {
 }
 
 /** Studio submissions without feedback on their latest attempt, as "Chờ duyệt" lists them (Q2). Same rule as Bài đã giao. Pure. */
-export function feedbackWaiting(rows: readonly StudioAssignedRow[]): FeedbackWaiting[] {
+export function feedbackWaiting(rows: readonly StudioAssignedRow[], learnerId: string): FeedbackWaiting[] {
   return rows
     .filter((r) => tabOfStudio(r) === "need" && r.feedbackReady && !r.feedbackGiven && r.lastAttemptId && r.lastSubmittedAt && r.episodeId)
-    .map((r) => ({ attemptId: r.lastAttemptId as string, title: r.title, since: r.lastSubmittedAt as string, href: `/review/${r.episodeId}` }));
+    .map((r) => ({ attemptId: r.lastAttemptId as string, title: r.title, since: r.lastSubmittedAt as string, href: finishHref(learnerId, r.lastAttemptId) }));
 }
 
 export function filterRows(rows: readonly PendingRow[], g: PendingGroup): PendingRow[] {
