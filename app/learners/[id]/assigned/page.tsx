@@ -3,7 +3,7 @@ import { BoardTabs } from "@/components/assigned/BoardTabs";
 import { DraftGroups } from "@/components/assigned/DraftGroups";
 import { AssignmentTable } from "@/components/practice/AssignmentTable";
 import { StudioAssignedTable } from "@/components/studio/StudioAssignedTable";
-import { buildBoard, parseWorkTab } from "@/lib/assigned/board";
+import { buildBoard, parseWorkTab, type WorkCounts } from "@/lib/assigned/board";
 import { groupDraftsByUnit, openDrafts } from "@/lib/assigned/draftGroups";
 import { loadCurriculumCards, loadUnitAuto } from "@/lib/curriculum/load";
 import { mainCurriculum } from "@/lib/curriculum/main";
@@ -37,7 +37,7 @@ export default async function AssignedBoardPage({ params, searchParams }: { para
   ]);
   const board = buildBoard(studio, assignments, today);
   const open = drafts ? openDrafts(drafts) : [];
-  const counts = { ...board.counts, drafts: open.length };
+  const counts: WorkCounts = { ...board.counts, drafts: drafts ? open.length : null };
   // 26/11: the provisional score of each sent test (first attempt), so a test waiting for one question still shows how it went.
   const results = studio ? await loadResults(learner.id, today, studio).catch(() => null) : null;
   const scores = new Map((results?.works ?? []).filter((w) => w.counted).map((w) => [w.instanceId, w.tally]));

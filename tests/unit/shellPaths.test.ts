@@ -63,6 +63,10 @@ describe("switchHref keeps the part of the app that is open", () => {
     expect(switchHref(`/learners/${X}/curricula/c1`, Y)).toBe(`/learners/${Y}/curricula`);
     expect(switchHref("/curricula/versions/v1", Y)).toBe(`/learners/${Y}/curricula`);
     expect(switchHref("/review/e1", Y)).toBe(`/learners/${Y}/assigned`);
+    expect(switchHref("/review", Y)).toBe(`/review?learner=${Y}`);
+    expect(switchHref("/review/studio", Y)).toBe(`/review/studio?learner=${Y}`);
+    expect(switchHref("/review/skills", Y)).toBe(`/review/skills?learner=${Y}`);
+    expect(switchHref(`/learners/${X}/revisions/a1`, Y)).toBe(`/learners/${Y}/revisions`);
     expect(switchHref("/studio/drafts/d1", Y)).toBe(`/learners/${Y}/assigned?tab=drafts`);
     expect(switchHref(`/learners/${X}/finish/a1`, Y)).toBe(`/learners/${Y}/finish`);
     expect(switchHref(`/learners/${X}/assign`, Y)).toBe(`/learners/${Y}/assign`);

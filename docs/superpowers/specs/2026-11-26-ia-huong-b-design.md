@@ -88,7 +88,7 @@ Có 3 chỗ tự chuyển:
 ## Những chỗ tôi tự quyết (phụ huynh xem lại khi đọc)
 
 1. Bài tập giữ đường dẫn `/assigned`, không đổi sang `/work`, để không phải chuyển hướng.
-2. Nút Chấm bài mở hàng chờ "Xong một bài". Hàng chờ này chỉ có bài trên app. Nếu hàng chờ trống mà còn bài link / PDF chờ, trang đó có liên kết sang Bài tập › Cần chấm.
-3. Số trên nút Chấm bài đếm các dòng bài nộp của Chờ duyệt cũ (bài nộp, câu cần xem, con thử lại, chưa góp ý). Đếm cùng một chỗ với Việc khác nên hai số không lệch nhau.
+2. Nút Chấm bài mở hàng chờ "Xong một bài". Hàng chờ này chỉ có bài trên app. Khi hàng chờ trống mà còn bài link / PDF chờ, nút tự chuyển sang Bài tập › Cần chấm.
+3. Số trên nút Chấm bài **bằng đúng số của tab Cần chấm** (cùng hàm `buildBoard`). Vì thế nút, tab và Hôm nay không lệch nhau. Đây là sửa sau bản rà PR1: bản đầu đếm theo dòng Chờ duyệt, nên có lúc nút đỏ mà trang mở ra lại báo "không còn bài".
 4. Bỏ 3 nút việc chính đang nằm trên đầu trang Hôm nay, vì cột trái đã có.
 5. Cách tính "4 tuần": 28 ngày giờ Việt Nam tính đến hôm nay, so với 28 ngày liền trước. Chỉ tính bài được đo (lần làm đầu).

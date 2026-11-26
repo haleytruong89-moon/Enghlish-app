@@ -24,15 +24,20 @@ describe("groupDraftsByUnit", () => {
     expect(g[0]!.status).toBe("in_progress");
   });
   it("drafts inside a group in natural title order (Part 2 before Part 10)", () => {
-    const g = groupDraftsByUnit(drafts, null);
+    const g = groupDraftsByUnit(drafts, {});
     expect(g.find((x) => x.key === "U15")!.drafts.map((x) => x.id)).toEqual(["2", "3"]);
   });
-  it("without a curriculum the lowest Unit is next; skipped Units are never next", () => {
-    expect(groupDraftsByUnit(drafts, null)[0]!.key).toBe("U14");
+  it("statuses known but empty: the lowest Unit is next; skipped Units are never next", () => {
+    expect(groupDraftsByUnit(drafts, {})[0]!.key).toBe("U14");
     expect(groupDraftsByUnit(drafts, { U14: "skipped" })[0]!.key).toBe("U15");
   });
+  it("statuses unknown (no main curriculum / unreadable): Unit order, nothing claimed as next", () => {
+    const g = groupDraftsByUnit(drafts, null);
+    expect(g.map((x) => x.key)).toEqual(["U14", "U15", "U16", "Review 4", "other"]);
+    expect(g.some((x) => x.next)).toBe(false);
+  });
   it("no Unit drafts: nothing is marked next; no drafts: no groups", () => {
-    expect(groupDraftsByUnit([d("4", "Review 4")], null).map((x) => x.next)).toEqual([false]);
+    expect(groupDraftsByUnit([d("4", "Review 4")], {}).map((x) => x.next)).toEqual([false]);
     expect(groupDraftsByUnit([], null)).toEqual([]);
   });
 });

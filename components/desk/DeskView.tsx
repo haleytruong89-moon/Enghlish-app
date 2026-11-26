@@ -11,6 +11,8 @@ import type { ShellData } from "@/lib/shell/shell";
 import { CurriculumBox } from "./CurriculumBox";
 import { DeskAlerts } from "./DeskAlerts";
 import { DeskInbox } from "./DeskInbox";
+import { BadgeSeed } from "@/components/shell/BadgeSeed";
+import { pendingView } from "@/lib/desk/pending";
 import { GoalBox } from "./GoalBox";
 import { ActionCards } from "@/components/results/ActionCards";
 import { ProfileBox } from "./ProfileBox";
@@ -31,6 +33,8 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
   });
   return (
     <div className="flex flex-col gap-5" data-testid="today-page">
+      {/* Hands the numbers this page already has to the left column (Chấm bài = Cần chấm of Bài tập; same buildBoard). */}
+      <BadgeSeed learnerId={id} count={pendingView(data.pending).count} work={data.assigned ? String(data.assigned.need) : null} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold" data-testid="desk-title">{deskCopy.title(learner.alias)}</h1>

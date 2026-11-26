@@ -22,7 +22,7 @@ export function SidebarNav({ nav, learnerId }: { nav: NavModel; learnerId: strin
   const child = (c: NavLink, testid: string, current: boolean) => (
     <li key={c.key}>
       <Link href={c.href} onClick={close} data-testid={testid} data-level="child" aria-current={current ? "page" : undefined}
-        className={`${item} text-[13px] md:min-h-9 ${current ? "font-semibold text-accent" : "text-muted hover:bg-[#eceee8]"}`}>
+        className={`${item} text-[13px] ${current ? "font-semibold text-accent" : "text-muted hover:bg-[#eceee8]"}`}>
         {c.label}
       </Link>
     </li>

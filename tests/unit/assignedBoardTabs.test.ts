@@ -18,6 +18,10 @@ describe("Bài tập: the tab row (hướng B)", () => {
     expect(h.match(/aria-current="page"/g)).toHaveLength(1);
     expect(h).toContain("min-h-11");
   });
+  it("drafts unreadable: the tab shows its name without a number (never a false 0)", () => {
+    const h = renderToStaticMarkup(createElement(BoardTabs, { learnerId: "L1", tab: "need", counts: { ...counts, drafts: null } }));
+    expect(h).toMatch(/data-testid="board-tab-drafts"[^>]*>Bản nháp<\/a>/);
+  });
   it("the 'removed' tab, opened from its link, still marks nothing wrong", () => {
     const h = renderToStaticMarkup(createElement(BoardTabs, { learnerId: "L1", tab: "removed", counts }));
     expect(h.match(/aria-current="page"/g) ?? []).toHaveLength(0);

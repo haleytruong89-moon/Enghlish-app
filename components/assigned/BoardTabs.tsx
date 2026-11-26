@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { assignedBoardCopy as c } from "@/lib/copy/vi";
-import { WORK_TABS, type WorkTab } from "@/lib/assigned/board";
+import { WORK_TABS, type WorkCounts, type WorkTab } from "@/lib/assigned/board";
 
 /** The four tabs of Bài tập (hướng B) as plain links (?tab=): works without JS and keeps the tab in the URL for links from "Bàn làm việc". */
-export function BoardTabs({ learnerId, tab, counts }: { learnerId: string; tab: WorkTab; counts: Record<WorkTab, number> }) {
+export function BoardTabs({ learnerId, tab, counts }: { learnerId: string; tab: WorkTab; counts: WorkCounts }) {
   return (
     <nav aria-label={c.tabsLabel} className="flex flex-wrap gap-2" data-testid="board-tabs">
       {WORK_TABS.map((t) => {
@@ -19,7 +19,7 @@ export function BoardTabs({ learnerId, tab, counts }: { learnerId: string; tab: 
               on ? "border-accent bg-accent text-white" : warn ? "border-[#e2c98f] bg-[#FBF1DC] text-[#6B4600]" : "border-line bg-white text-ink"
             }`}
           >
-            {c.tabCount(c.tab[t], counts[t])}
+            {counts[t] === null ? c.tab[t] : c.tabCount(c.tab[t], counts[t])}
           </Link>
         );
       })}
