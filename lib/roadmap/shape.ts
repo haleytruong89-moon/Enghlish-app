@@ -3,6 +3,8 @@
  * half-right screen), then the rules of visible.ts / proposals.ts / mainCurriculum.ts on the facts. Nothing here talks to the database.
  */
 import { z } from "zod";
+import { mergeAutoEvents, type AutoUnitEvent } from "@/lib/curriculum/progress";
+import type { UnitStatus } from "@/lib/curriculum/types";
 import { buildProposals } from "./proposals";
 import { MILESTONE_KINDS, MILESTONE_ROLES, MILESTONE_STATUSES, type MilestoneCard, type MilestoneVersion, type Proposal } from "./types";
 import { buildCards, draftCards } from "./visible";
@@ -41,9 +43,12 @@ export type RoadmapCurriculum = {
 };
 
 /** Latest event per Unit wins (same order as the SQL: created_at, id). "skipped" in the table of contents always wins. */
-function unitStatesOf(c: { units: { code: string; skipped: boolean }[]; events: { unit_code: string; status: string; at: string; id: string }[] }): Record<string, UnitState> {
+function unitStatesOf(c: { units: { code: string; skipped: boolean }[]; events: { unit_code: string; status: string; at: string; id: string }[] }, auto: readonly AutoUnitEvent[] = []): Record<string, UnitState> {
   const latest = new Map<string, { status: string; at: string; id: string }>();
-  for (const e of c.events) {
+  // L2 (0044): the app's "Đang học" from work the child sent, as on the Giáo trình page.
+  const merged = mergeAutoEvents(c.events.map((e) => ({ unitCode: e.unit_code, status: e.status as UnitStatus, at: e.at, id: e.id })), auto)
+    .map((e) => ({ unit_code: e.unitCode, status: e.status, at: e.at, id: e.id }));
+  for (const e of merged) {
     const cur = latest.get(e.unit_code);
     if (!cur || e.at > cur.at || (e.at === cur.at && e.id > cur.id)) latest.set(e.unit_code, e);
   }
@@ -73,7 +78,7 @@ const toVersion = (m: z.infer<typeof milestone>): MilestoneVersion => ({
   targetMonth: m.target_month, approx: m.approx, status: m.status, reason: m.reason, proposalKey: m.proposal_key, createdAt: m.created_at,
 });
 
-export function parseRoadmap(input: unknown): RoadmapView {
+export function parseRoadmap(input: unknown, auto: readonly { curriculum_id: string; unit_code: string; at: string }[] = []): RoadmapView {
   const r = raw.parse(input);
   const goals = goalsSchema.safeParse(r.intake_goals);
   const cards = buildCards(r.milestones.map(toVersion), new Map(Object.entries(r.visible_ids)));
@@ -95,7 +100,7 @@ export function parseRoadmap(input: unknown): RoadmapView {
     trackId: r.track_id,
     mainId: r.main_id,
     mainChosen: r.chosen_id !== null && r.chosen_id === r.main_id,
-    curricula: r.curricula.map((c) => ({ id: c.id, title: c.title, units: c.units, unitStates: unitStatesOf(c) })),
+    curricula: r.curricula.map((c) => ({ id: c.id, title: c.title, units: c.units, unitStates: unitStatesOf(c, auto.filter((a) => a.curriculum_id === c.id).map((a) => ({ unitCode: a.unit_code, at: a.at }))) })),
     cards,
     proposals,
     orphanIds,

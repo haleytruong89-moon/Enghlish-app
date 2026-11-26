@@ -20,6 +20,21 @@ export async function loadTocContext(learnerId: string, trackId: string): Promis
   return buildTocContext(map, tags);
 }
 
+/**
+ * L2 (0044): the app's "Đang học" from work the child sent (english.eng_unit_auto, USER client: the child's adults only, else empty).
+ * Before 0044 / on any error: none (statuses stay as the adults set them).
+ */
+export async function loadUnitAuto(learnerId: string): Promise<{ curriculum_id: string; unit_code: string; at: string }[]> {
+  try {
+    const db = await createUserClient();
+    const { data, error } = await db.rpc("eng_unit_auto", { p_learner: learnerId });
+    if (error || !Array.isArray(data)) return [];
+    return data as { curriculum_id: string; unit_code: string; at: string }[];
+  } catch {
+    return [];
+  }
+}
+
 /** Every curriculum of one child with the version in use, its units, points and unit events (RLS: adults of that child only). */
 export async function loadCurriculumCards(learnerId: string): Promise<CurriculumCard[]> {
   const db = await createUserClient();
@@ -35,7 +50,7 @@ export async function loadCurriculumCards(learnerId: string): Promise<Curriculum
     q("curriculum_unit_points", "version_id, code, tag_key, ord"),
     q("curriculum_unit_events", "id, curriculum_id, unit_code, status, created_at"),
   ]);
-  return buildCards({ curricula, versions, units, points, events });
+  return buildCards({ curricula, versions, units, points, events, auto: await loadUnitAuto(learnerId) });
 }
 
 /** "Unit đã dạy hôm nay" of the session note. [] when 0026 is not applied yet (the session note must still open). */

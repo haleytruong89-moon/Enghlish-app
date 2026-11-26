@@ -34,9 +34,10 @@ export default async function CurriculumUnitsPage({ params }: { params: Promise<
         <div className="mt-2">
           <CoverageBar done={card.progress.done} total={card.progress.total} pct={card.progress.pct} testId="units-coverage" />
         </div>
+        <p className="mt-3 rounded-xl border border-line bg-white px-4 py-3 text-sm text-muted" data-testid="units-auto-rule">{curriculumCopy.autoRule}</p>
         <WorkUnitProposal curriculumId={card.id} proposals={proposals} />
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <UnitStatusTable curriculumId={card.id} units={card.current.units} statusOf={card.progress.statusOf} />
+          <UnitStatusTable curriculumId={card.id} units={card.current.units} statusOf={card.progress.statusOf} autoOf={card.progress.autoOf} />
           <aside className="mt-4 h-fit rounded-2xl border border-line bg-white p-4 text-sm lg:sticky lg:top-4">
             <h2 className="font-semibold">{curriculumCopy.historyTitle}</h2>
             {recent.length === 0 ? <p className="text-muted">{curriculumCopy.historyNone}</p> : null}

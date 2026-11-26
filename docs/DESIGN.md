@@ -693,3 +693,10 @@ Spec `docs/superpowers/specs/2026-11-22-gia-su-so-tay-design.md` (bản 0.2, ph�
 - Giao bài (`/assign`) và Tạo bài từ đề không còn danh sách đã giao; Giao bài hiện "Bản nháp đang soạn" (`eng_studio_drafts`: chưa giao, chưa bỏ, chưa bị thay).
 - `lib/assigned/duplicates.ts`: tên bài so sánh không phân biệt hoa thường / dấu cách / dấu phân cách; chỉ là cảnh báo, không chặn.
 
+
+### 19.37. Tiến độ tự chạy (L2, migration 0044)
+
+- **Luật** (DOMAIN §5.1 bản 0.11): bài con nộp đặt Unit "Chưa bắt đầu" thành "Đang học" (app đặt); "Đã học" chỉ người lớn; không bao giờ hạ; người lớn đổi sau bài nộp thì thắng tới bài nộp mới.
+- **SQL (0044, chỉ hàm).** `eng_unit_auto_events(learner)` (nội bộ, không ai gọi trực tiếp): mỗi Unit của giáo trình đã duyệt (không bỏ qua) có bài nộp → lúc nộp mới nhất, chỉ khi trạng thái người lớn tới lúc đó là rỗng / "Chưa bắt đầu". Unit của bài: `studio_assignment_units`, `assignment_units`, hoặc "Unit N" trong tên bài Studio không gắn Unit → mã `UN` của giáo trình chính (`eng_roadmap_main_id`; cùng luật `unitKeyOf`). `eng_unit_auto(learner)` cho người lớn (authenticated, `eng_is_staff_of`, ngoài phạm vi = rỗng). `eng_my_roadmap()` = 0031 + gộp sự kiện tự chạy.
+- **App.** `curriculumProgress(units, events, auto)` + `mergeAutoEvents` (thuần; kiểm lại luật "chỉ lên"); `autoOf` → nhãn "App đặt theo bài nộp · dd/mm" trên Trạng thái Unit; Lộ trình (`parseRoadmap(raw, auto)`) và mọi nơi dùng thẻ giáo trình đi theo. Trước 0044: `loadUnitAuto` trả rỗng, mọi thứ như cũ.
+- **Thẻ "có thể Đã học"** (`unit_ready`, `lib/results/actions.ts`): Unit sách đang "Đang học", không còn bài giao chưa nộp, không còn câu chờ, ≥ 4 câu đã chấm, lần làm đầu ≥ 60 % → thẻ ở Việc nên làm với nút "Đánh dấu Đã học" (gọi `POST /api/curricula/:id/unit-events` sẵn có; chỉ thầy/cô thấy nút). Không phải thẻ "Đã làm / Bỏ qua" (0043 không có loại này).

@@ -2193,3 +2193,16 @@ Nhánh `feature/viec-nen-lam-danh-dau` (trên nhánh của PR-A). **Có SQL: `00
 **Cách thử trên preview:** đăng nhập thầy/cô của "Nguyên (thử)" có bài Studio đã nộp → Bàn làm việc → một thẻ "Chữa bài cùng con" → **✓ Đã làm** → thẻ biến mất, dòng "Đã xử lý 1 việc…" hiện → bấm Xem → thấy trong "Đã xử lý". Thử **Bỏ qua** không ghi lý do (nút xám), ghi lý do → lưu. Đăng nhập phụ huynh: thấy cùng danh sách, không có nút.
 
 **Sau rà soát (26/11) đã sửa:** thẻ chỉ ẩn bài mà thầy/cô **đã thấy** lúc bấm (bài con nộp trong lúc trang đang mở vẫn làm thẻ hiện lại); bài còn chờ chấm hết câu không làm thẻ Unit / mục kiến thức hiện lại; bài nhiều phần giữ khóa theo phần khi các phần khác đang được chấm; cùng mã bấm cho một việc khác bị từ chối (`client_id_reused`) và hai lần bấm cùng lúc không đụng nhau (khóa dòng của em); "7 ngày qua" = hôm nay và 6 ngày trước (giờ Việt Nam).
+
+## L2 · Tiến độ tự chạy (26/11/2026)
+
+Nhánh `feature/l2-tien-do-tu-chay`. **Có SQL: `0044_unit_progress_auto.sql`** (chỉ thêm hàm, không bảng mới; cần 0043). Không AI. Phụ huynh duyệt cách B 26/11 08:40 ("ok"): bản phác https://claude.ai/artifact/Jtag5Rp1ESBRn7rMvRd1E9. Kế hoạch `docs/superpowers/plans/2026-11-26-l2-tien-do-tu-chay.md`; luật DOMAIN §5.1 bản 0.11; thiết kế DESIGN §19.37.
+
+**Có gì:**
+- Con nộp bài của một Unit "Chưa bắt đầu" → Unit tự thành **"Đang học"**, ghi "App đặt theo bài nộp · dd/mm" trên Trạng thái Unit. "Đang học đến", Lộ trình và **núi Hành trình của con** đi theo. Bài Studio không gắn Unit thì lấy "Unit N" trong tên bài.
+- "Đã học" vẫn do thầy/cô bấm: thẻ mới **"U15 có thể đánh dấu Đã học"** ở Việc nên làm khi mọi bài của Unit đã nộp + chấm hết + lần làm đầu ≥ 60 %, nút "Đánh dấu Đã học" một lần.
+- Không bao giờ hạ; thầy/cô đổi thì thầy/cô thắng (tới khi con nộp bài mới của Unit đó). Độ phủ chỉ đếm "Đã học" do người lớn đặt.
+
+**SQL cần phụ huynh áp:** sau khi gộp, GitHub → Actions → "Apply database migrations" → `APPLY` (áp 0043 trước nếu chưa; workflow áp lần lượt cả hai). Chưa áp 0044: mọi thứ như cũ.
+
+**Cách thử:** đăng nhập thầy/cô của "Nguyên (thử)" (giáo trình có U14, U15…), cho em nộp một bài tên "… Unit 15 …" → Giáo trình → Trạng thái Unit: U15 "Đang học" kèm nhãn app đặt; chấm hết bài (≥ 60 %) → Bàn làm việc có thẻ "U15 có thể đánh dấu Đã học" → bấm; đăng nhập "Nguyên (thử)" → Hành trình lên U15.

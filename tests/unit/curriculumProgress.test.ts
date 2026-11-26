@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { curriculumProgress, proposeInProgress, type ProgressUnit, type UnitEventRow } from "@/lib/curriculum/progress";
+import { curriculumProgress, mergeAutoEvents, proposeInProgress, type ProgressUnit, type UnitEventRow } from "@/lib/curriculum/progress";
 
 /** Exactly the three examples of docs/DOMAIN.md §5.1. */
 const units = (codes: number[]): ProgressUnit[] => codes.map((n, i) => ({ code: `U${n}`, ord: i + 1, title: `Unit ${n}`, skipped: false }));
@@ -39,5 +39,30 @@ describe("đang học đến + độ phủ (DOMAIN §5.1)", () => {
   it("the session note proposes 'Đang học' only for chosen units that have not started", () => {
     const p = curriculumProgress(units(range(1, 26)), destinationEvents());
     expect(proposeInProgress(["U12", "U13", "U14"], p.statusOf)).toEqual(["U14"]);
+  });
+});
+
+describe("L2 (0044): 'Đang học' from work the child sent", () => {
+  const U = [13, 14, 15, 16].map((n) => ({ code: `U${n}`, ord: n, title: `Unit ${n}`, skipped: false }));
+  const ev = (unitCode: string, status: "not_started" | "in_progress" | "done" | "skipped", at: string, id = `${unitCode}-${at}`) => ({ unitCode, status, at, id });
+  it("work sent of a unit not started makes it Đang học (and the 'đang học đến' moves); coverage counts only Đã học", () => {
+    const p = curriculumProgress(U, [ev("U13", "done", "2026-11-20T00:00:00Z"), ev("U14", "done", "2026-11-20T00:00:00Z")], [{ unitCode: "U15", at: "2026-11-24T04:53:00Z" }]);
+    expect(p.statusOf.U15).toBe("in_progress");
+    expect(p.current?.code).toBe("U15");
+    expect(p.done).toBe(2);
+    expect(p.autoOf).toEqual({ U15: "2026-11-24T04:53:00Z" });
+  });
+  it("never down, never over the adult: done / in progress / skipped before the work stay; an adult change after the work wins", () => {
+    const events = [ev("U13", "done", "2026-11-20T00:00:00Z"), ev("U14", "not_started", "2026-11-25T00:00:00Z")];
+    const p = curriculumProgress(U, events, [{ unitCode: "U13", at: "2026-11-24T00:00:00Z" }, { unitCode: "U14", at: "2026-11-24T00:00:00Z" }]);
+    expect(p.statusOf.U13).toBe("done");
+    expect(p.statusOf.U14).toBe("not_started"); // the adult set it back after the work
+    expect(p.autoOf).toEqual({});
+    expect(mergeAutoEvents([ev("U16", "skipped", "2026-11-01T00:00:00Z")], [{ unitCode: "U16", at: "2026-11-24T00:00:00Z" }])).toHaveLength(1);
+  });
+  it("new work after the adult set it back brings Đang học again", () => {
+    const p = curriculumProgress(U, [ev("U14", "not_started", "2026-11-25T00:00:00Z")], [{ unitCode: "U14", at: "2026-11-26T01:00:00Z" }]);
+    expect(p.statusOf.U14).toBe("in_progress");
+    expect(p.autoOf.U14).toBe("2026-11-26T01:00:00Z");
   });
 });

@@ -24,10 +24,11 @@ export const RESULT_RULES = {
   recentDays: 21,
   /** The desk shows at most this many cards, with at most this many of each kind, so every kind of action can be seen. */
   maxCards: 6,
-  deskCaps: { grade: 1, fix_together: 2, unit_review: 1, practise: 1, praise: 1 } as Readonly<Record<"grade" | "fix_together" | "unit_review" | "practise" | "praise", number>>,
+  deskCaps: { grade: 1, fix_together: 2, unit_review: 1, unit_ready: 1, practise: 1, praise: 1 } as Readonly<Record<"grade" | "fix_together" | "unit_review" | "unit_ready" | "practise" | "praise", number>>,
 } as const;
 
-export type ActionKind = "grade" | "fix_together" | "practise" | "unit_review" | "praise";
+/** "unit_ready" (L2, 26/11): every test of a Unit sent and graded, first attempts at or above the threshold → the tutor may mark it Đã học. */
+export type ActionKind = "grade" | "fix_together" | "practise" | "unit_review" | "unit_ready" | "praise";
 export type ActionTone = "red" | "amber" | "info" | "good";
 export type ActionCard = {
   key: string;
@@ -46,6 +47,8 @@ export type ActionCard = {
     pendingItems?: number;
     feedbackMissing?: number;
     oldestDays?: number;
+    /** unit_ready: the curriculum the Unit belongs to (the button marks it Đã học there). */
+    curriculumId?: string;
   };
   href: string;
   /** When the newest submission behind the card was sent (ISO). A card marked done / skipped comes back only for newer work. */
@@ -62,10 +65,16 @@ export type ActionInput = {
   works: readonly WorkScore[];
   units: readonly UnitScore[];
   tags: readonly TagAgg[];
+  /**
+   * L2: the status of each book Unit (as the Giáo trình page shows it, the app's "Đang học" included) and its curriculum; tests of each
+   * Unit not sent yet. Without them no "unit_ready" card.
+   */
+  unitStatus?: Readonly<Record<string, { curriculumId: string; status: string }>>;
+  unsent?: Readonly<Record<string, number>>;
 };
 
 const TONE_ORDER: Record<ActionTone, number> = { red: 0, amber: 1, info: 2, good: 3 };
-const KIND_ORDER: Record<ActionKind, number> = { grade: 0, fix_together: 1, unit_review: 2, practise: 3, praise: 4 };
+const KIND_ORDER: Record<ActionKind, number> = { grade: 0, fix_together: 1, unit_review: 2, unit_ready: 3, practise: 4, praise: 5 };
 
 export function waitTone(days: number): ActionTone {
   return days >= RESULT_RULES.waitRedDays ? "red" : days >= RESULT_RULES.waitAmberDays ? "amber" : "info";
@@ -139,6 +148,19 @@ export function buildActions(i: ActionInput, opts: ActionOptions = DESK_OPTIONS)
   for (const u of [...i.units].sort((a, b) => (ratio(a.tally) ?? 1) - (ratio(b.tally) ?? 1))) {
     if (!/^U\d+$/.test(u.key) || u.tally.decided < R.minItems || (ratio(u.tally) ?? 1) >= R.unitReviewBelow) continue;
     cards.push({ key: `unit-${u.key}`, kind: "unit_review", tone: "amber", facts: { unit: u.key, correct: u.tally.correct, decided: u.tally.decided, percent: pct(u.tally) ?? 0, works: u.works }, href: sessionHref, evidenceAt: u.lastAt });
+  }
+
+  // 3b. L2: a Unit whose tests are all sent and graded, first attempts at or above the threshold, still "Đang học" → the tutor may mark it
+  // Đã học (one click). The app never marks it itself (DOMAIN §5.1).
+  for (const u of i.units) {
+    const st = i.unitStatus?.[u.key];
+    if (!st || st.status !== "in_progress" || !/^U\d+$/.test(u.key)) continue;
+    if ((i.unsent?.[u.key] ?? 0) > 0 || u.tally.pending > 0 || u.tally.decided < R.minItems || (ratio(u.tally) ?? 0) < R.unitReviewBelow) continue;
+    cards.push({
+      key: `ready-${u.key}`, kind: "unit_ready", tone: "info",
+      facts: { unit: u.key, correct: u.tally.correct, decided: u.tally.decided, percent: pct(u.tally) ?? 0, works: u.works, curriculumId: st.curriculumId },
+      href: `${base}/curricula/${st.curriculumId}`, evidenceAt: u.lastAt,
+    });
   }
 
   // 4. More practice on a knowledge item weak across ≥ 2 tests.

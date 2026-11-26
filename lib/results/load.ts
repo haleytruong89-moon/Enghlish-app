@@ -1,10 +1,11 @@
 import "server-only";
 import { createUserClient } from "@/lib/supabase/server";
 import type { StudioAssignedRow } from "@/lib/studio/assigned";
+import { loadCurriculumCards } from "@/lib/curriculum/load";
 import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
 import { buildActions, DESK_OPTIONS, isDecidable, PAGE_OPTIONS, RESULT_RULES, type ActionCard } from "./actions";
 import { handledList, handledPredicate, type CardDecision, type HandledItem } from "./decisions";
-import { byTag, byUnit, scoreItems, scoreWork, type AutoChecks, type ItemMeta, type TagAgg, type UnitScore, type WorkScore } from "./score";
+import { byTag, byUnit, scoreItems, scoreWork, unitKeyOf, type AutoChecks, type ItemMeta, type TagAgg, type UnitScore, type WorkScore } from "./score";
 
 /**
  * `actions` = the few cards of the desk (capped by kind); `allActions` = every card (the Results page, the session page); both leave out
@@ -120,7 +121,17 @@ export async function loadResults(learnerId: string, todayIso: string, studioRow
   const counted = works.filter((w) => w.counted);
   const units = byUnit(counted, RESULT_RULES.minItems);
   const tags = byTag(counted);
-  const input = { learnerId, works, units, tags };
+  // L2: Unit statuses (the app's "Đang học" included) and tests of each Unit not sent yet, for the "có thể Đã học" card. Fail soft.
+  const cards = await loadCurriculumCards(learnerId).catch(() => []);
+  const unitStatus: Record<string, { curriculumId: string; status: string }> = {};
+  for (const c of cards) for (const [code, status] of Object.entries(c.progress?.statusOf ?? {})) unitStatus[code] ??= { curriculumId: c.id, status };
+  const unsent: Record<string, number> = {};
+  for (const r of rows) {
+    if (r.firstAttemptId || r.status === "skipped") continue;
+    const k = unitKeyOf(r.units, r.title);
+    if (k) unsent[k] = (unsent[k] ?? 0) + 1;
+  }
+  const input = { learnerId, works, units, tags, unitStatus, unsent };
   const isHandled = handledPredicate(marks.rows);
   // Every card (no limit), to tell which marked cards newer work has brought back.
   const handled = handledList(marks.rows, buildActions(input, { ...PAGE_OPTIONS, limit: Number.MAX_SAFE_INTEGER }), todayIso);

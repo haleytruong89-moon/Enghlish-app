@@ -6,9 +6,16 @@ import { curriculumCopy } from "@/lib/copy/vi";
 import { curriculumErrorText, sendJson } from "@/lib/curriculum/client";
 import type { CardUnit } from "@/lib/curriculum/shape";
 import { UNIT_STATUSES, type UnitStatus } from "@/lib/curriculum/types";
+import { ddmm } from "@/lib/student/week";
+
+const vnDay = (at: string) => new Date(Date.parse(at) + 7 * 3_600_000).toISOString().slice(0, 10);
 
 /** Unit statuses of the version in use: one row per unit, 4 buttons. Each click = one new event (old events stay; DOMAIN §8). */
-export function UnitStatusTable({ curriculumId, units, statusOf }: { curriculumId: string; units: CardUnit[]; statusOf: Record<string, UnitStatus> }) {
+export function UnitStatusTable({ curriculumId, units, statusOf, autoOf = {} }: {
+  curriculumId: string; units: CardUnit[]; statusOf: Record<string, UnitStatus>;
+  /** L2: units "Đang học" because the child sent work (when): labelled "app đặt theo bài nộp". */
+  autoOf?: Record<string, string>;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -33,6 +40,11 @@ export function UnitStatusTable({ curriculumId, units, statusOf }: { curriculumI
           <span className="min-w-0 flex-1 text-[15px]">
             <b>{u.code}</b> · {u.title}
             {u.skipped ? <span className="ml-2 rounded-full bg-line px-2 py-0.5 text-xs">{curriculumCopy.skippedBadge}</span> : null}
+            {autoOf[u.code] ? (
+              <span className="ml-2 rounded-full bg-[#e4ebf5] px-2 py-0.5 text-xs font-semibold text-[#1f3f6e]" data-testid={`unit-${u.code}-auto`}>
+                {curriculumCopy.autoBadge(ddmm(vnDay(autoOf[u.code]!)))}
+              </span>
+            ) : null}
           </span>
           <div className="flex flex-wrap gap-1" role="group" aria-label={`${u.code} · ${u.title}`}>
             {UNIT_STATUSES.map((s) => (

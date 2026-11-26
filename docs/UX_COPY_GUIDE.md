@@ -394,3 +394,8 @@ Khác với kế hoạch: câu giới thiệu "Mỗi điều là một việc {t
 - `assignWaysCopy.followBanner` "Muốn xem con làm đến đâu, bài nào quá hạn?", `followLink` "Mở Bài đã giao →", `draftsTitle` "Bản nháp đang soạn · n", `draftsHelp`.
 - `studioAssignedCopy.duplicateWarning` (cảnh báo giao trùng, không chặn); `openWorkToFeedback` "Xem bài và góp ý", `openWorkFed` "Xem bài · đã góp ý", `feedbackGiven` "đã góp ý", `noFeedbackYet` "chưa góp ý" (thay `openWorkFeedback`).
 
+
+## L2 · Tiến độ tự chạy (26/11/2026)
+
+- Nhãn trên Unit do app đặt: **"App đặt theo bài nộp · dd/mm"**. Dòng luật ở đầu trang Trạng thái Unit: con nộp bài → app đặt "Đang học"; "Đã học" do thầy/cô bấm; app không tự hạ; người lớn đổi thì người lớn thắng.
+- Thẻ Việc nên làm: **"U15 có thể đánh dấu Đã học"**, dòng giải thích ghi số bài, "đã chấm hết", tỉ lệ lần làm đầu và câu "App không tự đặt Đã học". Nút: **"Đánh dấu Đã học"**, liên kết "Xem Trạng thái Unit". Con không thấy thẻ này, không thấy số.
