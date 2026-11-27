@@ -445,3 +445,6 @@ Khác với kế hoạch: câu giới thiệu "Mỗi điều là một việc {t
 - `tourCopy`: nút "Hướng dẫn"; mỗi bước một tiêu đề + 1–2 câu nói **việc gì làm ở đó**, không giải thích kỹ thuật; nhắc con không thấy điểm / bài chưa duyệt.
 - `tourCopy.start`: "Bắt đầu với {tên}", 6 việc dạng động từ ("Xác nhận…", "Duyệt…", "Đặt…", "Giao…", "Chấm và góp ý…", "Ghi…"), "Làm ngay →", "Chưa đọc được" khi không đọc được dữ liệu.
 
+## Hướng dẫn dùng AI (27/11/2026)
+- `aiGuideCopy`: nút "Cách dùng AI"; thanh 3 bước "Tải đề + đáp án → Duyệt nháp → Giao" + một dòng việc cần làm theo trạng thái; trang "Hướng dẫn dùng AI soạn đề" chia mục ngắn, câu mệnh lệnh nhẹ, luôn nói rõ "AI chỉ soạn nháp, con chỉ thấy khi đã duyệt và giao".
+

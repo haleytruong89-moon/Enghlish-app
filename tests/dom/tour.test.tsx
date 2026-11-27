@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Tour } from "@/components/tour/Tour";
+import { GuidedTour } from "@/components/tour/GuidedTour";
+import { AI_TOUR_SEEN_KEY, aiTourSteps } from "@/lib/tour/aiSteps";
 import { StartChecklist } from "@/components/tour/StartChecklist";
 import { tourCopy } from "@/lib/copy/vi";
 import { TOUR_SEEN_KEY } from "@/lib/tour/steps";
@@ -41,6 +43,12 @@ describe("27/11 · Hướng dẫn (tour)", () => {
       spy.mockRestore();
     }
   });
+  it("switching child on the same page: the tour names the new child (steps follow the caller)", () => {
+    const { rerender } = render(<Tour alias="An" autoStart={false} />);
+    rerender(<Tour alias="Nguyên" autoStart={false} />);
+    fireEvent.click(screen.getByTestId("tour-open"));
+    expect(screen.getByTestId("tour-step-welcome").textContent).toContain("Nguyên");
+  });
   it("Escape and 'Bỏ qua' close it and remember it", () => {
     render(<Tour alias="An" autoStart={false} />);
     fireEvent.click(screen.getByTestId("tour-open"));
@@ -75,6 +83,30 @@ describe("27/11 · Hướng dẫn (tour)", () => {
     } finally {
       delete (window.navigator as { webdriver?: boolean }).webdriver;
     }
+  });
+});
+
+describe("27/11 · Cách dùng AI (second tour)", () => {
+  const mount = () => render(<GuidedTour steps={aiTourSteps(true)} seenKey={AI_TOUR_SEEN_KEY} afterSeen={TOUR_SEEN_KEY} autoStart openText="Cách dùng AI" openLabel="x" openTestId="ai-tour-open" />);
+  it("never opens by itself before the app tour was seen (two tours never open at once); after it, once", () => {
+    vi.useFakeTimers();
+    mount();
+    act(() => vi.advanceTimersByTime(500));
+    expect(screen.queryByTestId("tour")).toBeNull();
+    cleanup();
+    window.localStorage.setItem(TOUR_SEEN_KEY, "1");
+    mount();
+    act(() => vi.advanceTimersByTime(500));
+    expect(screen.getByTestId("tour-step-ai-intro")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("tour-skip"));
+    expect(window.localStorage.getItem(AI_TOUR_SEEN_KEY)).toBe("1");
+  });
+  it("its button opens it; Duyệt nháp is told in the middle (no place on this page)", () => {
+    mount();
+    fireEvent.click(screen.getByTestId("ai-tour-open"));
+    for (let k = 0; k < 5; k += 1) fireEvent.click(screen.getByTestId("tour-next"));
+    expect(screen.getByTestId("tour-step-ai-review")).toBeTruthy();
+    expect(screen.queryByTestId("tour-highlight")).toBeNull();
   });
 });
 

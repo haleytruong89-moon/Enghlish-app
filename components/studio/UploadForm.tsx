@@ -59,13 +59,15 @@ export function UploadForm({ learnerId, aiAllowed, aiReason, prefill, unitChoice
           {prefill.units.length > 0 ? prefillCopy.units(formatRange(prefill.units)) : ""}
         </p>
       ) : null}
+      <div className="flex flex-col gap-4" data-testid="tour-ai-name">
       <label className="flex flex-col gap-1 text-sm font-semibold">
         {studioCopy.titleLabel}
         <input value={title} onChange={(e) => { setTitle(e.target.value); setTitleTouched(true); }} maxLength={160} placeholder={studioCopy.titlePlaceholder} data-testid="studio-title" className="min-h-11 rounded-lg border border-line px-3 font-normal" />
       </label>
       <UnitTitlePicker learnerId={learnerId} choices={unitChoices} initialCodes={prefill?.units ?? []} maxLength={160} onTitle={(t) => { if (!titleTouched) setTitle(t); }} />
+      </div>
       {(["test", "key"] as const).map((which) => (
-        <div key={which} className="flex flex-col gap-1 text-sm font-semibold">
+        <div key={which} className="flex flex-col gap-1 text-sm font-semibold" data-testid={`tour-ai-${which}`}>
           {which === "test" ? studioCopy.testFile : studioCopy.keyFile}
           <PdfPagePicker
             flow="studio"

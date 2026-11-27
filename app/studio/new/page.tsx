@@ -9,7 +9,11 @@ import { DiscardedDrafts } from "@/components/studio/DiscardedDrafts";
 import { DraftList } from "@/components/studio/DraftList";
 import { ImportForm } from "@/components/studio/ImportForm";
 import { UploadForm } from "@/components/studio/UploadForm";
-import { assignWaysCopy, learnerWithTrack, reviewPage, studioCopy } from "@/lib/copy/vi";
+import { StudioSteps } from "@/components/studio/StudioSteps";
+import { GuidedTour } from "@/components/tour/GuidedTour";
+import { AI_TOUR_SEEN_KEY, aiTourSteps } from "@/lib/tour/aiSteps";
+import { TOUR_SEEN_KEY } from "@/lib/tour/steps";
+import { aiGuideCopy, assignWaysCopy, learnerWithTrack, reviewPage, studioCopy } from "@/lib/copy/vi";
 import { authorizeLearnerPage } from "@/lib/review/access";
 import { loadUnitChoices } from "@/lib/curriculum/load";
 import { loadDiscardedDrafts, loadDraftList, loadStudioGate } from "@/lib/studio/load";
@@ -41,6 +45,9 @@ export default async function StudioNewPage({ searchParams }: { searchParams: Pr
           {studioCopy.learnerLabel} {learnerWithTrack(l.alias, l.trackId)}
         </p>
         <WaysStrip learnerId={l.id} current="studio" prefill={prefill} />
+        {/* 27/11: the three steps + "Cách dùng AI" (opens by itself once for a tutor on this device). */}
+        <StudioSteps stage="upload" learnerId={l.id}
+          aside={<GuidedTour steps={aiTourSteps(gate.allowed)} seenKey={AI_TOUR_SEEN_KEY} afterSeen={TOUR_SEEN_KEY} autoStart={shell.role === "tutor"} openText={aiGuideCopy.open} openLabel={aiGuideCopy.openLabel} openTestId="ai-tour-open" />} />
         <p className="mt-3 text-[15px]">{studioCopy.newIntro}</p>
         <UploadForm learnerId={l.id} aiAllowed={gate.allowed} aiReason={gate.reason} prefill={prefill} unitChoices={unitChoices} />
         <ImportForm learnerId={l.id} />

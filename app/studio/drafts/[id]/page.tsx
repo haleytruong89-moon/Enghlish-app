@@ -17,6 +17,7 @@ import { aiFailedText } from "@/lib/studio/view";
 import { loadStudioAssigned } from "@/lib/studio/assignedLoad";
 import { loadAssignments } from "@/lib/practice/load";
 import { isDuplicate, openTitles } from "@/lib/assigned/duplicates";
+import { StudioSteps, type StudioStage } from "@/components/studio/StudioSteps";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,10 @@ export default async function DraftPage({ params }: { params: Promise<{ id: stri
       ])
     : [[], null, []];
   const duplicate = approved && isDuplicate(draft.title, openTitles(studio, practice));
+  // 27/11: where the tutor is in "① Tải đề → ② Duyệt nháp → ③ Giao".
+  const stage: StudioStage | null =
+    draft.status === "extracting" ? "extracting" : draft.status === "draft" ? "draft" : draft.status === "ai_failed" ? "failed"
+      : draft.status === "approved" ? (draft.assigned.length > 0 ? "assigned" : "approved") : null;
   return (
     <StaffShell shell={shell}>
       <div className="mx-auto max-w-6xl" data-testid="studio-draft" data-status={draft.status}>
@@ -45,6 +50,7 @@ export default async function DraftPage({ params }: { params: Promise<{ id: stri
           {studioCopy.newTitle}
         </Link>
         <h1 className="mt-2 text-2xl font-bold">{draft.status === "approved" ? draft.title : studioCopy.reviewTitle}</h1>
+        {stage ? <StudioSteps stage={stage} learnerId={draft.learnerId} /> : null}
         {draft.status === "extracting" ? <ExtractWaiting draftId={draft.id} /> : null}
         {draft.status === "ai_failed" ? (
           <section role="alert" data-testid="ai-failed" className="mt-4 rounded-2xl border border-[#E9C46A] bg-[#FBF1DC] p-4 text-[#6B4600]">

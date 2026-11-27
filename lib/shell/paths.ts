@@ -36,6 +36,7 @@ const RULES: readonly Rule[] = [
   { re: lp("/notes(/month/[^/]+)?"), section: "sessions", child: null, screen: S.notes },
   // Bài tập
   { re: lp("/assign"), section: "work", child: null, screen: S.assign, ...same((to) => `${L(to)}/assign`) },
+  { re: lp("/help/ai"), section: "work", child: null, screen: S.aiGuide, ...same((to) => `${L(to)}/help/ai`) },
   { re: lp("/assigned"), section: "work", child: null, screen: S.assigned },
   { re: lp("/finish(/[^/]+)?"), section: "work", child: null, screen: S.finish, ...same((to) => `${L(to)}/finish`) },
   { re: /^\/studio\/new$/, section: "work", child: null, screen: S.studioNew, ...same((to) => `/studio/new${learnerQuery(to)}`) },
