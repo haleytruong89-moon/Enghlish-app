@@ -14,7 +14,9 @@ export function aiTourSteps(aiAllowed: boolean): TourStep[] {
     { key: "ai-name", target: "tour-ai-name", title: s.name.title, body: s.name.body },
     { key: "ai-test", target: "tour-ai-test", title: s.test.title, body: s.test.body },
     { key: "ai-key", target: "tour-ai-key", title: s.key.title, body: s.key.body },
-    { key: "ai-start", target: aiAllowed ? "studio-start-ai" : "studio-manual", title: s.start.title, body: s.start.body },
+    aiAllowed
+      ? { key: "ai-start", target: "studio-start-ai", title: s.start.title, body: s.start.body }
+      : { key: "ai-start", target: "studio-manual", title: s.startManual.title, body: s.startManual.body },
     { key: "ai-review", target: "-", title: s.review.title, body: s.review.body },
     { key: "ai-give", target: "-", title: s.give.title, body: s.give.body },
     { key: "ai-help", target: "ai-guide-link", title: s.help.title, body: s.help.body },

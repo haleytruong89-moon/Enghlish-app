@@ -20,10 +20,20 @@ describe("27/11 · Cách dùng AI: the tour points at places Tạo bài từ đ�
     for (const s of steps.filter((x) => x.target !== "-")) expect(form + bar, s.key).toContain(`data-testid="${s.target}"`);
     expect(steps.filter((x) => x.target === "-").map((x) => x.key)).toEqual(["ai-review", "ai-give"]);
   });
+  it("the guide never says the Unit picked at upload is kept: Units are ticked when giving", () => {
+    expect(aiGuideCopy.steps.name.body).toContain("chỉ để đặt tên");
+    expect(aiGuideCopy.steps.give.body).toContain("Unit của bài");
+    expect(aiGuideCopy.bar.approved).toContain("Unit của bài");
+  });
+  it("later steps have no empty screen-reader text", () => {
+    const h = renderToStaticMarkup(createElement(StudioSteps, { stage: "upload", learnerId: L }));
+    expect(h).not.toContain("()");
+  });
   it("AI off (no consent / over the cap): the start step points at “Soạn tay”", () => {
     const form = renderToStaticMarkup(createElement(UploadForm, { learnerId: L, aiAllowed: false, aiReason: "consent" as never }));
     const start = aiTourSteps(false).find((s) => s.key === "ai-start")!;
     expect(start.target).toBe("studio-manual");
+    expect(start.title).toBe(aiGuideCopy.steps.startManual.title);
     expect(form).toContain('data-testid="studio-manual"');
   });
   it("the app tour's Giao bài step tells where the AI help is", () => {

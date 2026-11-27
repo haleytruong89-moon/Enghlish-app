@@ -43,6 +43,12 @@ describe("27/11 · Hướng dẫn (tour)", () => {
       spy.mockRestore();
     }
   });
+  it("switching child on the same page: the tour names the new child (steps follow the caller)", () => {
+    const { rerender } = render(<Tour alias="An" autoStart={false} />);
+    rerender(<Tour alias="Nguyên" autoStart={false} />);
+    fireEvent.click(screen.getByTestId("tour-open"));
+    expect(screen.getByTestId("tour-step-welcome").textContent).toContain("Nguyên");
+  });
   it("Escape and 'Bỏ qua' close it and remember it", () => {
     render(<Tour alias="An" autoStart={false} />);
     fireEvent.click(screen.getByTestId("tour-open"));

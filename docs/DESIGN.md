@@ -756,4 +756,4 @@ Thiết kế: `docs/superpowers/specs/2026-11-26-ia-huong-b-design.md`.
 - `GuidedTour` (chung): `steps`, `seenKey`, `autoStart`, `afterSeen` (chỉ tự mở khi tour kia đã xem). `Tour` (thanh trên) = `GuidedTour` + `tourSteps`.
 - `aiTourSteps(aiAllowed)` trỏ `studio-steps`, `tour-ai-name`, `tour-ai-test`, `tour-ai-key`, `studio-start-ai` / `studio-manual`, `ai-guide-link`; target `-` = hiện giữa màn hình.
 - `StudioSteps({ stage })`: `upload` (Tạo bài từ đề) · `extracting` / `draft` / `failed` · `approved` (chưa giao) / `assigned` (trang Duyệt đề).
-- `/learners/[id]/help/ai`: trang đọc, quyền `practice:write` (thầy/cô của em, phụ huynh); chữ ở `aiGuideCopy.page`.
+- `/learners/[id]/help/ai`: trang đọc, quyền `studio:read` (thầy/cô của em, phụ huynh), mục "Bài tập" sáng trên cột trái (`lib/shell/paths.ts`); chữ ở `aiGuideCopy.page`. Unit chọn lúc tải đề chỉ để đặt tên; "Unit của bài" chọn lúc Giao (trang hướng dẫn nói rõ).

@@ -44,8 +44,8 @@ export function GuidedTour({ steps: given, seenKey, autoStart, afterSeen, openTe
   /** Open by itself only once this other tour was seen (two tours never open at once on a new device). */
   afterSeen?: string;
 }) {
-  // A caller may build the list on every render: keep the first one (steps change only with a new page / name).
-  const [steps] = useState(given);
+  // The steps follow the caller (another child's name, AI on / off); no effect depends on the array itself, only on the target string.
+  const steps = given;
   const [cardH, setCardH] = useState(260);
   const [i, setI] = useState<number | null>(null);
   const [box, setBox] = useState<Box | null>(null);

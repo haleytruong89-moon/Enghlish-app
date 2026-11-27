@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { GuardedLink as Link } from "@/components/ui/GuardedLink";
 import { aiGuideCopy } from "@/lib/copy/vi";
 
 export type StudioStage = "upload" | "extracting" | "draft" | "failed" | "approved" | "assigned";
@@ -6,7 +6,7 @@ const STEP: Record<StudioStage, 1 | 2 | 3 | 4> = { upload: 1, extracting: 2, dra
 
 /**
  * 27/11: "① Tải đề + đáp án → ② Duyệt nháp → ③ Giao" on Tạo bài từ đề and on the draft page, the step being done in bold, one line of
- * what to do now, and the link to the page "Hướng dẫn dùng AI". Server-rendered, no state.
+ * what to do now, and the link to the page "Hướng dẫn dùng AI" (a GuardedLink: the draft editor may have unsaved edits).
  */
 export function StudioSteps({ stage, learnerId, aside }: { stage: StudioStage; learnerId: string; aside?: React.ReactNode }) {
   const c = aiGuideCopy.bar;
@@ -22,9 +22,9 @@ export function StudioSteps({ stage, learnerId, aside }: { stage: StudioStage; l
               <span aria-hidden="true" className={`flex size-7 items-center justify-center rounded-full text-sm font-bold ${state === "done" ? "bg-accent text-white" : state === "now" ? "border-2 border-accent bg-[#eef5f1] text-accent" : "border border-line text-muted"}`}>
                 {state === "done" ? "✓" : n}
               </span>
-              <span className={state === "now" ? "font-bold text-[#1f4439]" : state === "done" ? "text-muted" : "text-muted"}>
+              <span className={state === "now" ? "font-bold text-[#1f4439]" : "text-muted"}>
                 {name}
-                <span className="sr-only"> ({state === "done" ? c.done : state === "now" ? c.now : ""})</span>
+                {state === "later" ? null : <span className="sr-only"> ({state === "done" ? c.done : c.now})</span>}
               </span>
               {n < 3 ? <span aria-hidden="true" className="px-1 text-muted">→</span> : null}
             </li>

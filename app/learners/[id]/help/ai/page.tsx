@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 /** 27/11 "Hướng dẫn dùng AI soạn đề": a page to read (tutor or parent of the child). Text only, from `aiGuideCopy.page`. */
 export default async function AiGuidePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { learner } = await requireLearnerPage(id, "practice:write");
+  const { learner } = await requireLearnerPage(id, "studio:read");
   const c = aiGuideCopy.page;
   return (
     <article className="mx-auto flex max-w-3xl flex-col gap-5" data-testid="ai-guide">

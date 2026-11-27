@@ -2597,6 +2597,7 @@ export const appFeedback = {
     settingsAi: "Cài đặt AI",
     studioNew: "Tạo bài từ đề",
     studioDraft: "Duyệt đề",
+    aiGuide: "Hướng dẫn dùng AI",
     notes: "Ghi buổi học",
     notesNew: "Ghi buổi học mới",
     targets: "Kỹ năng đang theo dõi",
@@ -4108,12 +4109,13 @@ export const aiGuideCopy = {
   guideLink: "Đọc hướng dẫn dùng AI →",
   steps: {
     intro: { title: "Soạn đề bằng AI · 3 bước", body: "① Tải đề + đáp án → ② Duyệt nháp → ③ Giao. AI chỉ soạn nháp: con chưa thấy gì cho tới khi thầy/cô duyệt và giao." },
-    name: { title: "Chọn Unit, đặt tên", body: "Chọn Unit của đề (nếu có): app tự đặt tên bài và biết bài luyện mục kiến thức nào. Đề không theo Unit thì gõ tên." },
-    test: { title: "Tải file đề", body: "PDF hoặc Word .docx, tối đa 15 MB. Đề dài: mỗi lần chọn khoảng 3–6 trang (app cho chọn trang ngay khi tải PDF)." },
+    name: { title: "Đặt tên bài", body: "Gõ tên, hoặc bấm Unit của đề để app tự đặt tên. (Unit chọn ở đây chỉ để đặt tên; Unit của bài chọn ở bước Giao.)" },
+    test: { title: "Tải file đề", body: `PDF hoặc Word .docx, tối đa 15 MB. Đề dài: mỗi lần chọn khoảng ${PAGE_LIMITS.studio.recommend} trang (app cho chọn trang ngay khi tải PDF).` },
     key: { title: "Tải file đáp án", body: "Có đáp án thì AI điền sẵn để app tự chấm. Không có cũng được: thầy/cô nhập đáp án ở bước duyệt." },
     start: { title: "Cho AI đọc đề", body: "AI đọc trong khoảng 1–2 phút; có thể rời trang, bản nháp chờ ở Bài tập › Bản nháp. Không muốn dùng AI: bấm “Soạn tay”." },
-    review: { title: "Bước 2 · Duyệt nháp", body: "Xem từng câu. Câu có cờ “Cần xem” là chỗ AI chưa chắc: sửa câu hỏi / đáp án rồi bấm “Đã xem ✓”. Xong bấm “Lưu”, rồi “Duyệt”; duyệt rồi đề khóa lại." },
-    give: { title: "Bước 3 · Giao", body: "Sau khi duyệt: chọn ngày bắt đầu và hạn nộp, bấm “Giao”. Từ lúc đó con mới thấy bài; app tự chấm câu có đáp án, thầy/cô chấm câu viết." },
+    startManual: { title: "Soạn tay", body: "AI đang tắt cho em này (chưa đồng ý dùng AI hoặc đã hết trần tháng; xem khung vàng phía trên). Bấm “Soạn tay” để bắt đầu từ bản nháp trống." },
+    review: { title: "Bước 2 · Duyệt nháp", body: "Xem từng câu. Câu có cờ “Cần xem” là chỗ AI chưa chắc: sửa câu hỏi / đáp án rồi bấm “Đã xem ✓”. Xong bấm “Duyệt” (app tự lưu); duyệt rồi đề khóa lại." },
+    give: { title: "Bước 3 · Giao", body: "Sau khi duyệt: chọn “Ngày làm”, “Hạn nộp” và tick “Unit của bài” (để Giáo trình biết con học tới đâu), rồi bấm “Giao bài”. Từ lúc đó con mới thấy bài; app tự chấm câu có đáp án, thầy/cô chấm câu viết." },
     help: { title: "Khi vướng", body: "Nút “Đọc hướng dẫn dùng AI” mở trang mẹo: cho AI đọc tốt, khi AI báo lỗi thì làm gì, chi phí, cách soạn không cần AI." },
   },
   bar: {
@@ -4121,11 +4123,11 @@ export const aiGuideCopy = {
     names: ["Tải đề + đáp án", "Duyệt nháp", "Giao"] as const,
     done: "xong",
     now: "đang làm",
-    upload: "Bước 1: chọn Unit, tải đề và đáp án, rồi bấm “Cho AI đọc đề”. Con chưa thấy gì.",
+    upload: "Bước 1: đặt tên, tải đề và đáp án, rồi bấm “Cho AI đọc đề”. Con chưa thấy gì.",
     extracting: "AI đang đọc đề (thường 1–2 phút). Bạn có thể rời trang; bản nháp chờ ở Bài tập › Bản nháp.",
-    draft: "Bước 2: xem từng câu, sửa câu hỏi / đáp án; câu có cờ “Cần xem” xem trước. Xong bấm “Lưu” rồi “Duyệt”.",
-    failed: "AI chưa đọc được đề này. Soạn tay ở bảng dưới, hoặc bỏ nháp và tải file rõ hơn / ít trang hơn.",
-    approved: "Bước 3: chọn ngày bắt đầu, hạn nộp rồi bấm “Giao”. Từ lúc đó con mới thấy bài.",
+    draft: "Bước 2: xem từng câu, sửa câu hỏi / đáp án; câu có cờ “Cần xem” xem trước. Xong bấm “Duyệt” (app tự lưu).",
+    failed: "AI chưa đọc được đề này: lý do ghi ở khung vàng phía trên. Soạn tay ở bảng dưới, hoặc bỏ nháp và tải lại.",
+    approved: "Bước 3: chọn “Ngày làm”, “Hạn nộp”, tick “Unit của bài”, rồi bấm “Giao bài”. Từ lúc đó con mới thấy bài.",
     assigned: "Đã giao. Khi con nộp, nút Chấm bài có số.",
   },
   page: {
@@ -4134,22 +4136,22 @@ export const aiGuideCopy = {
     back: "‹ Về Tạo bài từ đề",
     sections: [
       { h: "AI làm gì, không làm gì", items: [
-        "AI chỉ đọc đề và đáp án thầy/cô tải lên, rồi soạn bản nháp; AI không đọc thông tin của con.",
+        "AI đọc đề và đáp án thầy/cô tải lên, rồi soạn bản nháp; AI không nhận tên hay thông tin cá nhân của con.",
         "AI không tự giao bài, không tự chấm mức của con. Con chỉ thấy bài sau khi thầy/cô duyệt và giao.",
       ] },
       { h: "3 bước", items: [
-        "① Tải đề + đáp án (trang Giao bài › “Đề + đáp án → bài trên app”), chọn Unit, bấm “Cho AI đọc đề”.",
-        "② Duyệt nháp: sửa câu, sửa đáp án, xem các câu có cờ “Cần xem”, bấm “Lưu” rồi “Duyệt”.",
-        "③ Giao: chọn ngày bắt đầu, hạn nộp, bấm “Giao”. Bài nằm ở Bài tập › Con đang làm.",
+        "① Tải đề + đáp án (Giao bài › Tạo bài mới › “Đề + đáp án → bài trên app”), đặt tên, bấm “Cho AI đọc đề”.",
+        "② Duyệt nháp: sửa câu, sửa đáp án, xem các câu có cờ “Cần xem”, bấm “Duyệt” (app tự lưu; muốn dừng giữa chừng thì “Lưu nháp”).",
+        "③ Giao: chọn “Ngày làm”, “Hạn nộp”, tick “Unit của bài”, bấm “Giao bài”. Bài nằm ở Bài tập › Con đang làm.",
       ] },
       { h: "Để AI đọc tốt", items: [
         "File rõ nét: PDF in ra từ máy tốt hơn ảnh chụp. Không nhận .doc cũ hay ảnh rời: lưu sang PDF hoặc .docx trước.",
-        "Mỗi lần khoảng 3–6 trang đề; đề dài thì chia thành nhiều bài (khi tải PDF app cho chọn trang).",
+        `Mỗi lần khoảng ${PAGE_LIMITS.studio.recommend} trang đề; đề dài thì chia thành nhiều bài (khi tải PDF app cho chọn trang).`,
         "Đáp án theo đúng thứ tự câu của đề; đáp án nằm cuối sách thì chọn đúng trang đó.",
       ] },
       { h: "Khi duyệt nháp", items: [
         "Câu có cờ “Cần xem”: AI chưa chắc (thiếu đáp án, đề mờ…). Sửa xong bấm “Đã xem ✓”.",
-        "Câu viết / nói tự do không có đáp án sẵn: app để thầy/cô chấm khi con nộp.",
+        "Câu viết tự do không có đáp án sẵn: app để thầy/cô chấm khi con nộp. Câu nghe / nói thì để “Chỉ làm trên giấy”.",
         "Số câu tự đánh lại; xóa phần nào không cần. “Bỏ bản nháp” không mất hẳn: còn ở mục Bản nháp đã bỏ, khôi phục được.",
       ] },
       { h: "Khi AI báo lỗi", items: [
@@ -4158,7 +4160,7 @@ export const aiGuideCopy = {
         "Lỗi lặp lại: bấm “Góp ý về app”, gửi kèm ảnh màn hình.",
       ] },
       { h: "Chi phí", items: [
-        "Mỗi lần AI đọc tốn một khoản nhỏ, ghi ở khung bên phải trang duyệt.",
+        "Mỗi lần AI đọc tốn một khoản nhỏ, ghi ở trang duyệt sau khi duyệt xong (khung bên phải; trên iPad dọc thì ở dưới).",
         "Phụ huynh đặt trần mỗi tháng ở Cài đặt AI; hết trần thì AI tạm dừng, vẫn soạn tay được.",
       ] },
       { h: "Không cần AI", items: [
