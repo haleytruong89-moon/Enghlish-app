@@ -745,3 +745,8 @@ Thiết kế: `docs/superpowers/specs/2026-11-26-ia-huong-b-design.md`.
 
 - `isRemovedCurriculum(statuses)`: có ít nhất một phiên bản và mọi phiên bản `discarded` → `buildCards` bỏ khỏi danh sách (mọi nơi dùng `loadCurriculumCards`: Giáo trình, Ghi buổi, Giao theo Unit, Bàn làm việc, trang tháng, Tiến bộ, Bài tập › Bản nháp). Hệ quả: "Bỏ nháp" giáo trình chưa từng được duyệt cũng làm nó rời danh sách (chữ xác nhận đã nói rõ).
 - `components/curriculum/RemoveCurriculumButton.tsx` trên thẻ có phiên bản `ai_failed` và chưa có bản đang dùng (không hiện lúc AI đang đọc, không hiện cho nháp soạn tay): `POST /api/curricula/versions/:id/discard` (đã có; thầy/cô hoặc phụ huynh, `eng_discard_curriculum_draft`), hỏi lại bằng `curriculumCopy.removeConfirm`.
+
+### 19.41. Tour + "Bắt đầu với …" (không SQL)
+
+- `Tour` (client, trong `StaffShell` thanh trên): bước = `tourSteps(alias)` trỏ tới `data-testid` có sẵn của khung (`quick-*`, `nav-*`). Tự mở khi `role === "tutor"`, chưa có `localStorage["eos.tour.v1.seen"]` và không phải `navigator.webdriver`; đóng (Xong / Bỏ qua / Esc) thì ghi nhớ. Đổi nội dung lớn → tăng `TOUR_VERSION` để mọi người thấy lại.
+- `startChecklist(learnerId, facts)` (thuần) từ `DeskData`: `profile`, `curricula`, `assigned` (tab của Bài tập), `today.practice`, `sessions`. `null` = chưa đọc được (không tính là xong). `startCardVisible` = còn việc chưa xong hoặc chưa biết.

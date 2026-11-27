@@ -162,3 +162,22 @@ test.describe("workdesk shell", () => {
     await expect(page.getByTestId("feedback-link-phone")).toBeVisible();
   });
 });
+
+test.describe("27/11 · Hướng dẫn + Bắt đầu với …", () => {
+  test("the tutor opens the tour from the top bar, walks it, and Hôm nay shows the first six things with links", async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await loginAs(page, "tutorNguyen");
+    // Under automation the tour never opens by itself (it would cover the page); the button opens it.
+    await expect(page.getByTestId("tour")).toHaveCount(0);
+    await page.getByTestId("tour-open").click();
+    await expect(page.getByTestId("tour-step-welcome")).toBeVisible();
+    await page.getByTestId("tour-next").click();
+    await expect(page.getByTestId("tour-step-grade")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("tour")).toHaveCount(0);
+    // Other specs run in parallel on the same test child and may finish all six things (then the card is rightly gone); when it is
+    // there it has its six items. What each item reads is covered by tests/unit/tourChecklist.test.ts.
+    const start = page.getByTestId("start-checklist");
+    if (await start.isVisible()) await expect(start.locator('[data-testid^="start-"][data-done]')).toHaveCount(6);
+  });
+});

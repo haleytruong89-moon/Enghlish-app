@@ -5,6 +5,7 @@ import type { ShellData } from "@/lib/shell/shell";
 import { LearnerSwitcher } from "./LearnerSwitcher";
 import { PhoneFeedbackLink } from "./PhoneFeedbackLink";
 import { SidebarNav } from "./SidebarNav";
+import { Tour } from "@/components/tour/Tour";
 
 /** Staff pages only (tutor, parent). Students never get this shell (their pages do not import it). */
 export function StaffShell({ shell, children }: { shell: ShellData; children: React.ReactNode }) {
@@ -23,6 +24,8 @@ export function StaffShell({ shell, children }: { shell: ShellData; children: Re
         ) : null}
         <div className="ml-auto flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           <span className="hidden text-sm text-muted sm:inline">{shell.displayName}</span>
+          {/* 27/11: the tour opens by itself once for a tutor on a new device; the button opens it again for anyone. */}
+          {shell.current ? <Tour alias={shell.current.alias} autoStart={shell.role === "tutor"} /> : null}
           <PhoneFeedbackLink learnerId={learnerId} />
           <Link href="/account/password" data-testid="change-password-link" className="inline-flex min-h-11 items-center px-2 text-sm font-medium text-accent underline">
             {account.changePassword}

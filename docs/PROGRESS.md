@@ -2445,3 +2445,14 @@ Nhánh `feature/tags-oxford-discover-3`. **Có SQL: `0047_seed_tags_oxford_disco
 Thứ tự: Unit → Review / Progress Test → Unit đã học / bỏ qua → các bộ bài đọc (mỗi bộ xếp theo số buổi) → Bài không theo Unit. `lib/assigned/draftGroups.ts` (`sessionOf`, `seriesOf`).
 
 Sau rà soát: chuẩn hóa chữ (NFC, khoảng trắng, hoa/thường) để một bộ không bị tách; "Buổi n/m" chỉ tính khi n ≤ m ≤ 40 (ngày dạng "Buổi 27/11" không bị nhầm; ngày có ngày ≤ tháng như "3/12" vẫn có thể nhầm); một buổi trong bộ có nhắc Unit vẫn ở trong bộ, còn bộ đặt tên theo Unit ("Unit 15 · Buổi 1/2") thì về nhóm Unit đó; ẩn mũi tên mặc định của Safari để iPad không hiện hai mũi tên.
+
+## Hướng dẫn dùng app (tour) + "Bắt đầu với …" (27/11/2026)
+
+**Không có SQL**, không AI. Phụ huynh chọn làm cả A và B (27/11).
+
+| Phần | Nội dung |
+|---|---|
+| **A. Tour** (`components/tour/Tour.tsx`, `lib/tour/steps.ts`) | 10 bước, tô sáng đúng chỗ trên cột trái: Chào → Chấm bài → Giao bài → Ghi buổi học → Hôm nay → Bài tập → Buổi học → Tiến bộ → Kế hoạch → "Bắt đầu từ đây". Tự mở **một lần** khi thầy/cô mở app trên máy mới (nhớ trên máy, không SQL); nút **"? Hướng dẫn"** ở thanh trên để mở lại (cả phụ huynh). Phím ←/→, Esc; "Bỏ qua hướng dẫn". Trên điện thoại, chỗ nào bị gập thì thẻ hiện giữa màn hình. Không tự mở khi chạy kiểm thử tự động (`navigator.webdriver`). |
+| **B. "Bắt đầu với An / Nguyên"** ở Hôm nay (`lib/tour/checklist.ts`, `components/tour/StartChecklist.tsx`) | 6 việc, **tự đánh dấu ✓ từ dữ liệu thật**: ① Xác nhận cấp khởi điểm (không còn mảng "giả định") · ② Duyệt mục lục giáo trình (có bản đang dùng) · ③ Đặt Unit đang học (một Unit "Đang học" hoặc "Đã học") · ④ Giao bài đầu tiên (bài Studio hoặc bài link / PDF) · ⑤ Chấm và góp ý bài đầu tiên (thẻ "Đã xong" của Bài tập > 0) · ⑥ Ghi buổi học đầu tiên (có buổi do thầy/cô ghi). Việc chưa làm có "Làm ngay →". Không đọc được dữ liệu thì ghi "Chưa đọc được", không đánh dấu. Đủ 6 việc thì thẻ tự biến mất; "Ẩn thẻ này" ẩn trên máy đó. Nằm ngay dưới khung bài chờ chấm. Phụ huynh xem được nhưng không có nút (việc của thầy/cô). |
+
+Sau rà soát: sửa lỗi tour chạy vòng lặp khi mở (trang bị lỗi trên trình duyệt thật); ⑥ chỉ tính buổi **do thầy/cô ghi**; ③ không tính Unit app tự đặt từ bài con nộp; ④ không tính bài đã gỡ, không đọc được danh sách thì ghi "Chưa đọc được"; ⑤ đổi tên "Chấm xong bài đầu tiên" (thẻ Đã xong gồm cả bài link do người lớn ghi điểm nhanh); viền vàng tô sáng hiện đúng; tour hiện trên toàn trang (portal), thẻ không tràn đáy màn hình.
