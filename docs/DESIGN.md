@@ -750,3 +750,10 @@ Thiết kế: `docs/superpowers/specs/2026-11-26-ia-huong-b-design.md`.
 
 - `Tour` (client, trong `StaffShell` thanh trên): bước = `tourSteps(alias)` trỏ tới `data-testid` có sẵn của khung (`quick-*`, `nav-*`). Tự mở khi `role === "tutor"`, chưa có `localStorage["eos.tour.v1.seen"]` và không phải `navigator.webdriver`; đóng (Xong / Bỏ qua / Esc) thì ghi nhớ. Đổi nội dung lớn → tăng `TOUR_VERSION` để mọi người thấy lại.
 - `startChecklist(learnerId, facts)` (thuần) từ `DeskData`: `profile`, `curricula`, `assigned` (tab của Bài tập), `today.practice`, `sessions`. `null` = chưa đọc được (không tính là xong). `startCardVisible` = còn việc chưa xong hoặc chưa biết.
+
+### 19.42. Hướng dẫn dùng AI soạn đề (không SQL)
+
+- `GuidedTour` (chung): `steps`, `seenKey`, `autoStart`, `afterSeen` (chỉ tự mở khi tour kia đã xem). `Tour` (thanh trên) = `GuidedTour` + `tourSteps`.
+- `aiTourSteps(aiAllowed)` trỏ `studio-steps`, `tour-ai-name`, `tour-ai-test`, `tour-ai-key`, `studio-start-ai` / `studio-manual`, `ai-guide-link`; target `-` = hiện giữa màn hình.
+- `StudioSteps({ stage })`: `upload` (Tạo bài từ đề) · `extracting` / `draft` / `failed` · `approved` (chưa giao) / `assigned` (trang Duyệt đề).
+- `/learners/[id]/help/ai`: trang đọc, quyền `practice:write` (thầy/cô của em, phụ huynh); chữ ở `aiGuideCopy.page`.

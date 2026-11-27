@@ -289,3 +289,18 @@ test.describe("Bài đã giao: Gỡ bài (24/11)", () => {
     await expect(page.locator(`a[href="/activities/${fresh}"]`)).not.toHaveCount(0);
   });
 });
+
+test("27/11 · Cách dùng AI: the 3-step bar, the AI tour from its button, and the guide page", async ({ page }) => {
+  await loginAs(page, "tutorNguyen");
+  await page.goto(`/studio/new?learner=${LEARNER_IDS.nguyen}`);
+  await expect(page.getByTestId("studio-steps")).toHaveAttribute("data-stage", "upload");
+  await expect(page.getByTestId("studio-step-1")).toHaveAttribute("aria-current", "step");
+  await page.getByTestId("ai-tour-open").click();
+  await expect(page.getByTestId("tour-step-ai-intro")).toBeVisible();
+  await page.getByTestId("tour-next").click();
+  await expect(page.getByTestId("tour-step-ai-name")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByTestId("ai-guide-link").click();
+  await expect(page).toHaveURL(new RegExp(`/learners/${LEARNER_IDS.nguyen}/help/ai$`));
+  await expect(page.getByTestId("ai-guide")).toBeVisible();
+});

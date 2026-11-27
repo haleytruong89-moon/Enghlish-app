@@ -4072,7 +4072,7 @@ export const tourCopy = {
   steps: {
     welcome: { title: "Chào thầy/cô!", body: (alias: string) => `Một phút để xem app giúp gì khi dạy ${alias}: chấm bài, giao bài, ghi buổi học và theo dõi tiến bộ. Bấm “Tiếp ›”.` },
     grade: { title: "Chấm bài", body: "Nút này đỏ lên và có số khi con nộp bài đang chờ chấm. Bấm là mở bài cũ nhất; chấm xong có “Bài sau ›”. Con chỉ nhận góp ý khi thầy/cô gửi." },
-    assign: { title: "Giao bài", body: "Bốn cách giao. Nên dùng “Tạo bài từ đề”: tải đề PDF/Word kèm đáp án, AI soạn nháp, thầy/cô duyệt rồi giao. Con chưa thấy bài khi chưa duyệt." },
+    assign: { title: "Giao bài", body: "Bốn cách giao. Nên dùng “Tạo bài từ đề”: tải đề PDF/Word kèm đáp án, AI soạn nháp, thầy/cô duyệt rồi giao. Con chưa thấy bài khi chưa duyệt. Trang đó có nút “? Cách dùng AI”." },
     note: { title: "Ghi buổi học", body: "Sau mỗi buổi, khoảng 1 phút: ngày, Unit đã dạy, lời nhắn cho con. Phần còn lại không bắt buộc. Buổi nghỉ, học bù cũng ghi ở đây." },
     desk: { title: "Hôm nay", body: "Việc nên làm hôm nay: phần con làm sai nhiều cần chữa cùng con, bài quá hạn, mục cần hỏi lại. Mỗi thẻ có nút mở thẳng chỗ cần làm." },
     work: { title: "Bài tập", body: "Mọi bài đã giao, theo 4 thẻ: Cần chấm · Con đang làm · Đã xong · Bản nháp. Bản nháp xếp theo Unit, Unit “Kế tiếp” ở đầu." },
@@ -4100,3 +4100,72 @@ export const tourCopy = {
     },
   },
 } as const;
+
+/** 27/11: help with "Tạo bài từ đề" (AI soạn nháp → duyệt → giao): a tour on the page, a 3-step bar, a page to read. */
+export const aiGuideCopy = {
+  open: "Cách dùng AI",
+  openLabel: "Xem hướng dẫn soạn đề bằng AI",
+  guideLink: "Đọc hướng dẫn dùng AI →",
+  steps: {
+    intro: { title: "Soạn đề bằng AI · 3 bước", body: "① Tải đề + đáp án → ② Duyệt nháp → ③ Giao. AI chỉ soạn nháp: con chưa thấy gì cho tới khi thầy/cô duyệt và giao." },
+    name: { title: "Chọn Unit, đặt tên", body: "Chọn Unit của đề (nếu có): app tự đặt tên bài và biết bài luyện mục kiến thức nào. Đề không theo Unit thì gõ tên." },
+    test: { title: "Tải file đề", body: "PDF hoặc Word .docx, tối đa 15 MB. Đề dài: mỗi lần chọn khoảng 3–6 trang (app cho chọn trang ngay khi tải PDF)." },
+    key: { title: "Tải file đáp án", body: "Có đáp án thì AI điền sẵn để app tự chấm. Không có cũng được: thầy/cô nhập đáp án ở bước duyệt." },
+    start: { title: "Cho AI đọc đề", body: "AI đọc trong khoảng 1–2 phút; có thể rời trang, bản nháp chờ ở Bài tập › Bản nháp. Không muốn dùng AI: bấm “Soạn tay”." },
+    review: { title: "Bước 2 · Duyệt nháp", body: "Xem từng câu. Câu có cờ “Cần xem” là chỗ AI chưa chắc: sửa câu hỏi / đáp án rồi bấm “Đã xem ✓”. Xong bấm “Lưu”, rồi “Duyệt”; duyệt rồi đề khóa lại." },
+    give: { title: "Bước 3 · Giao", body: "Sau khi duyệt: chọn ngày bắt đầu và hạn nộp, bấm “Giao”. Từ lúc đó con mới thấy bài; app tự chấm câu có đáp án, thầy/cô chấm câu viết." },
+    help: { title: "Khi vướng", body: "Nút “Đọc hướng dẫn dùng AI” mở trang mẹo: cho AI đọc tốt, khi AI báo lỗi thì làm gì, chi phí, cách soạn không cần AI." },
+  },
+  bar: {
+    label: "Các bước soạn đề bằng AI",
+    names: ["Tải đề + đáp án", "Duyệt nháp", "Giao"] as const,
+    done: "xong",
+    now: "đang làm",
+    upload: "Bước 1: chọn Unit, tải đề và đáp án, rồi bấm “Cho AI đọc đề”. Con chưa thấy gì.",
+    extracting: "AI đang đọc đề (thường 1–2 phút). Bạn có thể rời trang; bản nháp chờ ở Bài tập › Bản nháp.",
+    draft: "Bước 2: xem từng câu, sửa câu hỏi / đáp án; câu có cờ “Cần xem” xem trước. Xong bấm “Lưu” rồi “Duyệt”.",
+    failed: "AI chưa đọc được đề này. Soạn tay ở bảng dưới, hoặc bỏ nháp và tải file rõ hơn / ít trang hơn.",
+    approved: "Bước 3: chọn ngày bắt đầu, hạn nộp rồi bấm “Giao”. Từ lúc đó con mới thấy bài.",
+    assigned: "Đã giao. Khi con nộp, nút Chấm bài có số.",
+  },
+  page: {
+    title: "Hướng dẫn dùng AI soạn đề",
+    intro: "AI giúp biến đề PDF / Word của thầy/cô thành bài con làm trên app, app tự chấm. Mọi thứ AI soạn là nháp: thầy/cô duyệt rồi mới giao.",
+    back: "‹ Về Tạo bài từ đề",
+    sections: [
+      { h: "AI làm gì, không làm gì", items: [
+        "AI chỉ đọc đề và đáp án thầy/cô tải lên, rồi soạn bản nháp; AI không đọc thông tin của con.",
+        "AI không tự giao bài, không tự chấm mức của con. Con chỉ thấy bài sau khi thầy/cô duyệt và giao.",
+      ] },
+      { h: "3 bước", items: [
+        "① Tải đề + đáp án (trang Giao bài › “Đề + đáp án → bài trên app”), chọn Unit, bấm “Cho AI đọc đề”.",
+        "② Duyệt nháp: sửa câu, sửa đáp án, xem các câu có cờ “Cần xem”, bấm “Lưu” rồi “Duyệt”.",
+        "③ Giao: chọn ngày bắt đầu, hạn nộp, bấm “Giao”. Bài nằm ở Bài tập › Con đang làm.",
+      ] },
+      { h: "Để AI đọc tốt", items: [
+        "File rõ nét: PDF in ra từ máy tốt hơn ảnh chụp. Không nhận .doc cũ hay ảnh rời: lưu sang PDF hoặc .docx trước.",
+        "Mỗi lần khoảng 3–6 trang đề; đề dài thì chia thành nhiều bài (khi tải PDF app cho chọn trang).",
+        "Đáp án theo đúng thứ tự câu của đề; đáp án nằm cuối sách thì chọn đúng trang đó.",
+      ] },
+      { h: "Khi duyệt nháp", items: [
+        "Câu có cờ “Cần xem”: AI chưa chắc (thiếu đáp án, đề mờ…). Sửa xong bấm “Đã xem ✓”.",
+        "Câu viết / nói tự do không có đáp án sẵn: app để thầy/cô chấm khi con nộp.",
+        "Số câu tự đánh lại; xóa phần nào không cần. “Bỏ bản nháp” không mất hẳn: còn ở mục Bản nháp đã bỏ, khôi phục được.",
+      ] },
+      { h: "Khi AI báo lỗi", items: [
+        "Đọc câu báo lỗi trên trang. “Hết hạn mức”: báo phụ huynh. File quá dài: chọn ít trang hơn.",
+        "“AI chưa đọc được”: soạn tay ngay ở bảng dưới, hoặc bỏ nháp và tải file rõ hơn.",
+        "Lỗi lặp lại: bấm “Góp ý về app”, gửi kèm ảnh màn hình.",
+      ] },
+      { h: "Chi phí", items: [
+        "Mỗi lần AI đọc tốn một khoản nhỏ, ghi ở khung bên phải trang duyệt.",
+        "Phụ huynh đặt trần mỗi tháng ở Cài đặt AI; hết trần thì AI tạm dừng, vẫn soạn tay được.",
+      ] },
+      { h: "Không cần AI", items: [
+        "“Soạn tay”: bắt đầu từ bản nháp trống và tự nhập câu.",
+        "“Giao bằng link” hoặc “PDF để con tải về”: con làm ngoài app rồi nộp ảnh.",
+      ] },
+    ],
+  },
+} as const;
+

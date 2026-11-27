@@ -2456,3 +2456,15 @@ Sau rà soát: chuẩn hóa chữ (NFC, khoảng trắng, hoa/thường) để m
 | **B. "Bắt đầu với An / Nguyên"** ở Hôm nay (`lib/tour/checklist.ts`, `components/tour/StartChecklist.tsx`) | 6 việc, **tự đánh dấu ✓ từ dữ liệu thật**: ① Xác nhận cấp khởi điểm (không còn mảng "giả định") · ② Duyệt mục lục giáo trình (có bản đang dùng) · ③ Đặt Unit đang học (một Unit "Đang học" hoặc "Đã học") · ④ Giao bài đầu tiên (bài Studio hoặc bài link / PDF) · ⑤ Chấm và góp ý bài đầu tiên (thẻ "Đã xong" của Bài tập > 0) · ⑥ Ghi buổi học đầu tiên (có buổi do thầy/cô ghi). Việc chưa làm có "Làm ngay →". Không đọc được dữ liệu thì ghi "Chưa đọc được", không đánh dấu. Đủ 6 việc thì thẻ tự biến mất; "Ẩn thẻ này" ẩn trên máy đó. Nằm ngay dưới khung bài chờ chấm. Phụ huynh xem được nhưng không có nút (việc của thầy/cô). |
 
 Sau rà soát: sửa lỗi tour chạy vòng lặp khi mở (trang bị lỗi trên trình duyệt thật); ⑥ chỉ tính buổi **do thầy/cô ghi**; ③ không tính Unit app tự đặt từ bài con nộp; ④ không tính bài đã gỡ, không đọc được danh sách thì ghi "Chưa đọc được"; ⑤ đổi tên "Chấm xong bài đầu tiên" (thẻ Đã xong gồm cả bài link do người lớn ghi điểm nhanh); viền vàng tô sáng hiện đúng; tour hiện trên toàn trang (portal), thẻ không tràn đáy màn hình.
+
+## Hướng dẫn dùng AI soạn đề (27/11/2026)
+
+**Không có SQL**, không AI mới. Phụ huynh: cô còn vướng dùng AI soạn đề, giao bài; duyệt làm cả 3 lớp cho đủ 6 bước (27/11). Dữ liệu 14 ngày: cô An chưa tự tạo bài bằng AI; nháp của Nguyên phần lớn là bài nhập sẵn. Hạn mức khóa AI: phụ huynh đã kiểm, còn.
+
+| Lớp | Nội dung |
+|---|---|
+| Tour "Cách dùng AI" (8 bước) trên **Tạo bài từ đề** | Chào (3 bước) → Chọn Unit, đặt tên → Tải file đề → Tải file đáp án → Cho AI đọc đề (AI tắt thì trỏ "Soạn tay") → Duyệt nháp → Giao (hai bước này ở trang khác nên hiện giữa màn hình) → Khi vướng. Tự mở **một lần** cho thầy/cô, **chỉ sau khi đã xem tour chung** (không mở hai tour cùng lúc); nút "? Cách dùng AI" mở lại. |
+| Thanh 3 bước | "① Tải đề + đáp án → ② Duyệt nháp → ③ Giao" trên Tạo bài từ đề và trang Duyệt đề; bước đang làm tô đậm, một dòng việc cần làm (AI đang đọc / sửa câu "Cần xem" / chọn hạn rồi Giao / AI chưa đọc được thì làm gì). |
+| Trang **"Hướng dẫn dùng AI soạn đề"** `/learners/[id]/help/ai` | AI làm gì / không làm gì · 3 bước · để AI đọc tốt · khi duyệt nháp · khi AI báo lỗi · chi phí · không cần AI. Mở từ "Đọc hướng dẫn dùng AI →" trên thanh 3 bước. |
+
+Tour chung: bước "Giao bài" nhắc nút "? Cách dùng AI". `GuidedTour` dùng chung cho cả hai tour (`components/tour/GuidedTour.tsx`).
