@@ -175,9 +175,9 @@ test.describe("27/11 · Hướng dẫn + Bắt đầu với …", () => {
     await expect(page.getByTestId("tour-step-grade")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("tour")).toHaveCount(0);
+    // Other specs run in parallel on the same test child and may finish all six things (then the card is rightly gone); when it is
+    // there it has its six items. What each item reads is covered by tests/unit/tourChecklist.test.ts.
     const start = page.getByTestId("start-checklist");
-    if (await start.count()) {
-      await expect(start.locator('[data-testid^="start-"][data-done]')).toHaveCount(6);
-    }
+    if (await start.isVisible()) await expect(start.locator('[data-testid^="start-"][data-done]')).toHaveCount(6);
   });
 });

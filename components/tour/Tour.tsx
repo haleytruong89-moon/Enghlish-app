@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { tourCopy as c } from "@/lib/copy/vi";
 import { TOUR_SEEN_KEY, tourSteps } from "@/lib/tour/steps";
 
@@ -38,7 +39,8 @@ const CARD_W = 340;
  * (`navigator.webdriver`), so browser tests are not blocked by it; they open it with the button.
  */
 export function Tour({ alias, autoStart }: { alias: string; autoStart: boolean }) {
-  const steps = tourSteps(alias);
+  const steps = useMemo(() => tourSteps(alias), [alias]);
+  const [cardH, setCardH] = useState(260);
   const [i, setI] = useState<number | null>(null);
   const [box, setBox] = useState<Box | null>(null);
   const card = useRef<HTMLDivElement>(null);
@@ -58,11 +60,17 @@ export function Tour({ alias, autoStart }: { alias: string; autoStart: boolean }
   }, []);
 
   const step = i === null ? null : steps[i]!;
+  const target = step?.target ?? null;
   useLayoutEffect(() => {
-    if (!step) return;
-    const el = document.querySelector<HTMLElement>(`[data-testid="${step.target}"]`);
+    if (!target) return;
+    const el = document.querySelector<HTMLElement>(`[data-testid="${target}"]`);
     el?.scrollIntoView?.({ block: "nearest" });
-    const place = () => setBox(boxOf(step.target));
+    // Only a real move updates the state (a new object every time would render forever).
+    const place = () => {
+      const b = boxOf(target);
+      setBox((old) => (old && b && old.top === b.top && old.left === b.left && old.width === b.width && old.height === b.height) || (!old && !b) ? old : b);
+      if (card.current) setCardH(card.current.offsetHeight || 260);
+    };
     place();
     window.addEventListener("resize", place);
     window.addEventListener("scroll", place, true);
@@ -70,7 +78,7 @@ export function Tour({ alias, autoStart }: { alias: string; autoStart: boolean }
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
-  }, [step]);
+  }, [target]);
 
   useEffect(() => {
     if (i === null) return;
@@ -97,8 +105,9 @@ export function Tour({ alias, autoStart }: { alias: string; autoStart: boolean }
   let pos: React.CSSProperties = { top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
   if (box) {
     const right = box.left + box.width + 16;
-    if (right + CARD_W <= vw - 8) pos = { top: Math.max(8, Math.min(box.top, vh - 260)), left: right };
-    else pos = { top: Math.min(box.top + box.height + 12, vh - 260), left: Math.max(8, Math.min(box.left, vw - CARD_W - 8)) };
+    const maxTop = Math.max(8, vh - cardH - 8);
+    if (right + CARD_W <= vw - 8) pos = { top: Math.max(8, Math.min(box.top, maxTop)), left: right };
+    else pos = { top: Math.max(8, Math.min(box.top + box.height + 12, maxTop)), left: Math.max(8, Math.min(box.left, vw - CARD_W - 8)) };
   }
 
   return (
@@ -107,12 +116,12 @@ export function Tour({ alias, autoStart }: { alias: string; autoStart: boolean }
         className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-accent bg-white px-3 text-sm font-semibold text-accent hover:bg-[#eef5f1]">
         <span aria-hidden="true">?</span> {c.open}
       </button>
-      {step ? (
+      {step && typeof document !== "undefined" ? createPortal(
         <div className="fixed inset-0 z-50 print:hidden" data-testid="tour">
           {/* The dim layer is the highlight's shadow, so the highlighted place stays bright; without a place, a plain dim layer. */}
           {box ? (
-            <div aria-hidden="true" className="pointer-events-none fixed rounded-xl ring-4 ring-[#f2b705] transition-all"
-              style={{ top: box.top - 4, left: box.left - 4, width: box.width + 8, height: box.height + 8, boxShadow: "0 0 0 9999px rgba(20,30,25,0.55)" }} />
+            <div aria-hidden="true" className="pointer-events-none fixed rounded-xl transition-all" data-testid="tour-highlight"
+              style={{ top: box.top - 4, left: box.left - 4, width: box.width + 8, height: box.height + 8, boxShadow: "0 0 0 4px #f2b705, 0 0 0 9999px rgba(20,30,25,0.55)" }} />
           ) : (
             <div aria-hidden="true" className="fixed inset-0 bg-[rgba(20,30,25,0.55)]" />
           )}
@@ -135,7 +144,8 @@ export function Tour({ alias, autoStart }: { alias: string; autoStart: boolean }
               </span>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </>
   );

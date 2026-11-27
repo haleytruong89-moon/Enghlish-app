@@ -9,7 +9,7 @@ const L = "b0000000-0000-4000-8000-000000000001";
 const profile = (assumed: boolean) => ({ domains: [{ status: assumed ? "assumed" : "confirmed" }] }) as unknown as LevelProfile;
 const card = (approved: boolean, statuses: string[] = []): CurriculumCard =>
   ({ id: "c1", title: "GS6", levelNote: null, current: approved ? { versionId: "v", version: 1, units: [] } : null, progress: approved ? { statusOf: Object.fromEntries(statuses.map((s, i) => [`U${i + 1}`, s])) } : null, open: null, events: [] }) as unknown as CurriculumCard;
-const none: StartFacts = { profile: profile(true), curricula: [], assigned: { need: 0, doing: 0, done: 0, removed: 0 }, practiceGiven: 0, sessions: [] };
+const none: StartFacts = { profile: profile(true), curricula: [], assigned: { need: 0, doing: 0, done: 0, removed: 0 }, linkGiven: 0, sessions: [] };
 const byKey = (f: StartFacts) => Object.fromEntries(startChecklist(L, f).map((i) => [i.key, i.done]));
 
 describe("27/11 · Bắt đầu với …: ticked from what is in the app", () => {
@@ -21,8 +21,8 @@ describe("27/11 · Bắt đầu với …: ticked from what is in the app", () =
   });
   it("each fact ticks its item", () => {
     const f: StartFacts = {
-      profile: profile(false), curricula: [card(true, ["done", "in_progress"])], assigned: { need: 1, doing: 0, done: 2, removed: 0 }, practiceGiven: 0,
-      sessions: [{ day: "2026-11-20" }] as unknown as StartFacts["sessions"],
+      profile: profile(false), curricula: [card(true, ["done", "in_progress"])], assigned: { need: 1, doing: 0, done: 2, removed: 0 }, linkGiven: 0,
+      sessions: [{ date: "2026-11-20", sessions: 1 }] as unknown as StartFacts["sessions"],
     };
     expect(byKey(f)).toEqual({ levels: true, curriculum: true, unit: true, assign: true, feedback: true, session: true });
     expect(startCardVisible(startChecklist(L, f))).toBe(false);
@@ -31,11 +31,18 @@ describe("27/11 · Bắt đầu với …: ticked from what is in the app", () =
     expect(byKey({ ...none, curricula: [card(true, ["not_started", "not_started"])] }).unit).toBe(false);
     expect(byKey({ ...none, curricula: [card(false)] }).curriculum).toBe(false);
   });
-  it("link / PDF work given also counts as 'Giao bài đầu tiên'", () => {
-    expect(byKey({ ...none, practiceGiven: 1 }).assign).toBe(true);
+  it("Giao bài: from Bài tập's tabs (a retracted work does not count); Studio list unreadable → link work decides only when > 0", () => {
+    expect(byKey({ ...none, assigned: { need: 0, doing: 0, done: 0, removed: 3 } }).assign).toBe(false);
+    expect(byKey({ ...none, assigned: null, linkGiven: 1 }).assign).toBe(true);
+    expect(byKey({ ...none, assigned: null, linkGiven: 0 }).assign).toBeNull();
+  });
+  it("a parent-only day does not tick 'Ghi buổi học'; a Unit set by the app from the child's work does not tick 'Đặt Unit đang học'", () => {
+    expect(byKey({ ...none, sessions: [{ date: "2026-11-20", sessions: 0 }] as unknown as StartFacts["sessions"] }).session).toBe(false);
+    const auto = { ...card(true, ["in_progress"]), progress: { statusOf: { U1: "in_progress" }, autoOf: { U1: "2026-11-24" } } } as unknown as CurriculumCard;
+    expect(byKey({ ...none, curricula: [auto] }).unit).toBe(false);
   });
   it("a fact that could not be read is unknown (never 'done', never 'to do'), and keeps the card", () => {
-    const items = startChecklist(L, { profile: null, curricula: null, assigned: null, practiceGiven: null, sessions: null });
+    const items = startChecklist(L, { profile: null, curricula: null, assigned: null, linkGiven: null, sessions: null });
     expect(items.every((i) => i.done === null)).toBe(true);
     expect(startCardVisible(items)).toBe(true);
   });

@@ -34,7 +34,7 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
     studioOverdue: data.studioOverdue ?? null,
     studioOverdueFacts: data.studioOverdueFacts ?? null,
   });
-  const start = startChecklist(id, { profile: data.profile, curricula: data.curricula, assigned: data.assigned, practiceGiven: data.today ? data.today.practice.length : null, sessions: data.sessions });
+  const start = startChecklist(id, { profile: data.profile, curricula: data.curricula, assigned: data.assigned, linkGiven: data.today ? (data.today.assignments ?? data.today.practice).length : null, sessions: data.sessions });
   return (
     <div className="flex flex-col gap-5" data-testid="today-page">
       {/* Hands the numbers this page already has to the left column (Chấm bài = Cần chấm of Bài tập; same buildBoard). */}
@@ -57,7 +57,7 @@ export function DeskView({ shell, learner, data, todayIso }: { shell: ShellData;
       ) : null}
       <DeskInbox learnerId={id} pending={data.pending} need={data.assigned ? data.assigned.need : null} needAttempts={data.needAttempts ?? null} />
       {/* 27/11: after the waiting work (the daily first look), before the rest; gone when all six are done. */}
-      {startCardVisible(start) ? <StartChecklist learnerId={id} alias={learner.alias} items={start} /> : null}
+      {startCardVisible(start) ? <StartChecklist learnerId={id} alias={learner.alias} items={start} canAct={!parent} /> : null}
       <DeskAlerts learnerId={id} items={alerts} />
       {data.goal ? (
         <GoalBox

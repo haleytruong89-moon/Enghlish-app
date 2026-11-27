@@ -36,9 +36,10 @@ function setHidden(learnerId: string, on: boolean) {
 
 /**
  * 27/11 "Bắt đầu với …" on Hôm nay: six first things to do for a child, each ticked from what is in the app (`startChecklist`). The page
- * leaves it out when all six are done. "Ẩn thẻ này" hides it on this device only (light convenience, no SQL).
+ * leaves it out when all six are done. "Ẩn thẻ này" hides it on this device only (light convenience, no SQL). The parent sees it
+ * read-only (most items are the tutor's: confirming levels, approving a book, logging a session).
  */
-export function StartChecklist({ learnerId, alias, items }: { learnerId: string; alias: string; items: StartItem[] }) {
+export function StartChecklist({ learnerId, alias, items, canAct = true }: { learnerId: string; alias: string; items: StartItem[]; canAct?: boolean }) {
   const hidden = useSyncExternalStore(subscribe, () => readHidden(learnerId), () => false);
   if (hidden) {
     return (
@@ -55,7 +56,7 @@ export function StartChecklist({ learnerId, alias, items }: { learnerId: string;
         <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-[#6B4600]" data-testid="start-progress">{c.progress(done, items.length)}</span>
         <button type="button" onClick={() => setHidden(learnerId, true)} data-testid="start-hide" className="ml-auto min-h-11 px-1 text-sm text-muted underline">{c.hide}</button>
       </div>
-      <p className="text-sm text-muted">{c.hint}</p>
+      <p className="text-sm text-muted">{canAct ? c.hint : c.hintParent}</p>
       <ol className="mt-2 flex flex-col gap-1">
         {items.map((it, n) => {
           const t = c.items[it.key];
@@ -72,7 +73,7 @@ export function StartChecklist({ learnerId, alias, items }: { learnerId: string;
                 </span>
                 {it.done ? null : <span className="text-sm text-muted">{it.done === null ? c.unknown : t.line}</span>}
               </span>
-              {it.done === false ? (
+              {it.done === false && canAct ? (
                 <Link href={it.href} data-testid={`start-do-${it.key}`} className="inline-flex min-h-11 items-center rounded-xl border-2 border-accent bg-white px-3 text-sm font-bold text-accent no-underline hover:bg-[#eef5f1]">
                   {c.doIt}
                 </Link>
