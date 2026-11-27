@@ -1,0 +1,26 @@
+{
+  "track": "A",
+  "note": "Oxford Discover 3 (Unit 1–18) grammar and word-study tags for Track A (An), read from the Scope and Sequence of the Student Book; the parent approved the list on 27/11/2026. Seed tags of migration 0047 with a skill-map group (SM-1 is published, so no leaf). Keys are fixed for ever: exercise files prepared outside the app use them.",
+  "tags": [
+    {"key": "tinh-tu-ed-ing", "label_vi": "Tính từ đuôi -ed / -ing (bored / boring)", "group_vi": "Ngữ pháp", "group_key": "gr-compare-prep"},
+    {"key": "trat-tu-tinh-tu", "label_vi": "Trật tự tính từ (a big blue sky)", "group_vi": "Ngữ pháp", "group_key": "gr-compare-prep"},
+    {"key": "luong-tu-a-few-a-little", "label_vi": "Lượng từ a few / a little", "group_vi": "Ngữ pháp", "group_key": "gr-noun-det"},
+    {"key": "so-sanh-bang-as-as", "label_vi": "So sánh bằng: as … as / not as … as", "group_vi": "Ngữ pháp", "group_key": "gr-compare-prep"},
+    {"key": "too-either", "label_vi": "Too / either (cũng vậy, cũng không)", "group_vi": "Ngữ pháp", "group_key": "gr-clause"},
+    {"key": "hoa-hop-chu-ngu-ghep", "label_vi": "Chủ ngữ ghép + động từ (My desk and my chair are…)", "group_vi": "Ngữ pháp", "group_key": "gr-clause"},
+    {"key": "so-sanh-trang-tu", "label_vi": "So sánh hơn / nhất của trạng từ (faster, the most carefully)", "group_vi": "Ngữ pháp", "group_key": "gr-compare-prep"},
+    {"key": "cau-before-after", "label_vi": "Câu với before / after", "group_vi": "Ngữ pháp", "group_key": "gr-clause"},
+    {"key": "tu-chi-don-vi", "label_vi": "Từ chỉ đơn vị (a bag of, a cup of)", "group_vi": "Ngữ pháp", "group_key": "gr-noun-det"},
+    {"key": "trang-tu-trinh-tu", "label_vi": "Trạng từ chỉ trình tự (first, then, finally)", "group_vi": "Ngữ pháp", "group_key": "gr-clause"},
+    {"key": "tinh-tu-gioi-tu", "label_vi": "Tính từ + giới từ (curious about, good at)", "group_vi": "Ngữ pháp", "group_key": "gr-compare-prep"},
+    {"key": "gioi-tu-chuyen-dong", "label_vi": "Giới từ chỉ chuyển động (up, down, across, into)", "group_vi": "Ngữ pháp", "group_key": "gr-compare-prep"},
+    {"key": "want-need-have-to", "label_vi": "Want to / need to / have to", "group_vi": "Ngữ pháp", "group_key": "gr-modal"},
+    {"key": "cau-although", "label_vi": "Câu với although", "group_vi": "Ngữ pháp", "group_key": "gr-clause"},
+    {"key": "cum-dong-tu-get", "label_vi": "Cụm động từ với get (get up, get on…)", "group_vi": "Từ vựng", "group_key": "vo-colloc-idiom"},
+    {"key": "cum-dong-tu-look", "label_vi": "Cụm động từ với look (look for, look after…)", "group_vi": "Từ vựng", "group_key": "vo-colloc-idiom"},
+    {"key": "dong-nghia-trai-nghia", "label_vi": "Từ đồng nghĩa / trái nghĩa", "group_vi": "Từ vựng", "group_key": "vo-context"},
+    {"key": "tien-to-re", "label_vi": "Tiền tố re- (redo, reuse)", "group_vi": "Từ vựng", "group_key": "vo-word-form"},
+    {"key": "hau-to-ful-less", "label_vi": "Hậu tố -ful / -less (careful, careless)", "group_vi": "Từ vựng", "group_key": "vo-word-form"},
+    {"key": "danh-tu-ghep", "label_vi": "Danh từ ghép (bookshelf, sunflower)", "group_vi": "Từ vựng", "group_key": "vo-word-form"}
+  ]
+}

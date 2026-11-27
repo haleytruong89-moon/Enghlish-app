@@ -249,7 +249,7 @@ describe("W2 curriculum (migration 0026)", () => {
   describe("4c. Global Success 6 tags of Track A (0045, 0046)", () => {
     it("44 seed tags with a group are placed in An's map (not in Nguyên's, not loose); a second run adds nothing", async () => {
       const count = "select count(*)::int as n from english.error_tags where track_id = 'A' and origin = 'seed' and family_id is null and group_key is null and retired_at is null and seed_group_key ~ '^(gr|vo|sp)-' and key not in ('phat-am')";
-      expect(await q1(count)).toEqual([{ n: 44 }]);
+      expect(await q1(count)).toEqual([{ n: 64 }]); // 44 Global Success 6 tags (0045, 0046) + 20 Oxford Discover 3 tags (0047)
       type Map = { domains: { key: string; groups: { key: string; leaves: { ref_key: string; custom: boolean }[] }[] }[]; unassigned: { ref_key: string }[] };
       const an = await svc<Map>("select english.eng_skill_map($1) as r", [AN()]);
       const grp = (m: Map, d: string, g: string) => m.domains.find((x) => x.key === d)!.groups.find((x) => x.key === g)!.leaves.map((l) => l.ref_key);
@@ -271,7 +271,32 @@ describe("W2 curriculum (migration 0026)", () => {
       for (const f of ["0045_seed_tags_global_success_6_tap_1.sql", "0046_seed_tags_global_success_6_tap_2.sql"]) {
         await db.client.query(readFileSync(path.join(MIGRATIONS_DIR, f), "utf8"));
       }
-      expect(await q1(count)).toEqual([{ n: 44 }]);
+      expect(await q1(count)).toEqual([{ n: 64 }]);
+    });
+  });
+
+  describe("4d. Oxford Discover 3 tags of Track A (0047)", () => {
+    it("20 seed tags with a group are placed in An's map (not in Nguyên's, not loose); a second run adds nothing", async () => {
+      const od3 = (JSON.parse(readFileSync(path.join("content", "tags", "od3_A.json"), "utf8")) as { tags: { key: string }[] }).tags.map((t) => t.key);
+      expect(od3).toHaveLength(20);
+      const count = `select count(*)::int as n from english.error_tags where track_id = 'A' and origin = 'seed' and family_id is null and retired_at is null and seed_group_key is not null and key = any($1)`;
+      expect(await q1(count, [od3])).toEqual([{ n: 20 }]);
+      type Map = { domains: { key: string; groups: { key: string; leaves: { ref_key: string }[] }[] }[]; unassigned: { ref_key: string }[] };
+      const an = await svc<Map>("select english.eng_skill_map($1) as r", [AN()]);
+      const grp = (m: Map, d: string, g: string) => m.domains.find((x) => x.key === d)!.groups.find((x) => x.key === g)!.leaves.map((l) => l.ref_key);
+      expect(grp(an, "grammar", "gr-compare-prep")).toEqual(expect.arrayContaining(["tinh-tu-ed-ing", "so-sanh-bang-as-as", "gioi-tu-chuyen-dong"]));
+      expect(grp(an, "grammar", "gr-clause")).toEqual(expect.arrayContaining(["too-either", "cau-although", "cau-before-after"]));
+      expect(grp(an, "grammar", "gr-modal")).toContain("want-need-have-to");
+      expect(grp(an, "vocab", "vo-word-form")).toEqual(expect.arrayContaining(["tien-to-re", "hau-to-ful-less", "danh-tu-ghep"]));
+      expect(grp(an, "vocab", "vo-colloc-idiom")).toEqual(expect.arrayContaining(["cum-dong-tu-get", "cum-dong-tu-look"]));
+      expect(grp(an, "vocab", "vo-context")).toContain("dong-nghia-trai-nghia");
+      const all = an.domains.flatMap((d) => d.groups.flatMap((g) => g.leaves.map((l) => l.ref_key)));
+      for (const k of od3) expect(all, k).toContain(k);
+      expect(an.unassigned.some((l) => od3.includes(l.ref_key))).toBe(false);
+      const ng = await svc<Map>("select english.eng_skill_map($1) as r", [NG()]);
+      expect(ng.domains.flatMap((d) => d.groups.flatMap((g) => g.leaves)).some((l) => od3.includes(l.ref_key))).toBe(false);
+      await db.client.query(readFileSync(path.join(MIGRATIONS_DIR, "0047_seed_tags_oxford_discover_3.sql"), "utf8"));
+      expect(await q1(count, [od3])).toEqual([{ n: 20 }]);
     });
   });
 
