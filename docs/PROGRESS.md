@@ -2432,6 +2432,20 @@ Nhánh `feature/tags-oxford-discover-3`. **Có SQL: `0047_seed_tags_oxford_disco
 
 **Sau khi áp:** cô mở thẻ Oxford Discover, bấm "Nạp mục lục", chọn file Scope and Sequence 4 trang, rồi duyệt bản mới 18 Unit. Bản cũ 8 Unit tự lưu thành lịch sử. Bản cũ chưa có tiến độ, chưa gắn bài giao hay mốc nào, nên không mất gì.
 
+## Bản nháp: nhóm theo bộ bài đọc + dấu mở nhóm (27/11/2026)
+
+**Không có SQL**, không AI. Phụ huynh báo (ảnh Bài tập › Bản nháp của An): nhóm "Bài khác" không có dấu mở ra nên cô sẽ không bấm, và tên nhóm tối nghĩa. Phụ huynh duyệt "ok".
+
+| Trước | Sau |
+|---|---|
+| Nhóm đóng chỉ có tên + "3 bài" | Mũi tên ▸ (mở thì xoay ▾), chữ xanh "Xem n bài" bên phải, khi mở là "Thu gọn"; cả dòng bấm được |
+| Bài không có số Unit gom vào "Bài khác" | Bài dạng "… · Buổi n/m" gom theo **tên bộ** ("Đọc · L1 · In the Sky"), xếp theo số buổi; bài lẻ vào **"Bài không theo Unit"** + dòng "Bài đọc, ôn tập… không gắn với Unit nào trong sách" |
+| Tiêu đề "Bản nháp theo Unit · n" | "Bản nháp chưa duyệt · n" |
+
+Thứ tự: Unit → Review / Progress Test → Unit đã học / bỏ qua → các bộ bài đọc (mỗi bộ xếp theo số buổi) → Bài không theo Unit. `lib/assigned/draftGroups.ts` (`sessionOf`, `seriesOf`).
+
+Sau rà soát: chuẩn hóa chữ (NFC, khoảng trắng, hoa/thường) để một bộ không bị tách; "Buổi n/m" chỉ tính khi n ≤ m ≤ 40 (ngày dạng "Buổi 27/11" không bị nhầm; ngày có ngày ≤ tháng như "3/12" vẫn có thể nhầm); một buổi trong bộ có nhắc Unit vẫn ở trong bộ, còn bộ đặt tên theo Unit ("Unit 15 · Buổi 1/2") thì về nhóm Unit đó; ẩn mũi tên mặc định của Safari để iPad không hiện hai mũi tên.
+
 ## Hướng dẫn dùng app (tour) + "Bắt đầu với …" (27/11/2026)
 
 **Không có SQL**, không AI. Phụ huynh chọn làm cả A và B (27/11).

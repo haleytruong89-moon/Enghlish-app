@@ -36,7 +36,7 @@ export function WorkList({ works }: { works: WorkScore[] }) {
         <li key={w.instanceId} data-testid={`results-work-${w.instanceId}`} className="rounded-xl border border-line bg-white">
           {hasBody ? (
           <details className="group">
-            <summary className={`${ROW} cursor-pointer list-none`}>
+            <summary className={`${ROW} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
               <span aria-hidden="true" className="text-muted transition-transform group-open:rotate-90">▸</span>
               {head}
             </summary>
