@@ -2205,11 +2205,11 @@ export const assignedBoardCopy = {
   practiceList: "Bài link / PDF",
   topicLink: "Bài chủ đề đã giao →",
   draftGroup: (key: string) =>
-    key === "other" ? "Bài không theo Unit" : key === "review" ? "Review và Progress Test" : key.startsWith("series:") ? key.slice("series:".length) : /^U\d+$/.test(key) ? `Unit ${key.slice(1)}` : key,
+    key === "other" ? "Bài không theo Unit" : key === "review" ? "Review và Progress Test" : /^U\d+$/.test(key) ? `Unit ${key.slice(1)}` : key,
   /** 27/11: under "Bài không theo Unit", so the tutor knows what is in it. */
-  draftOtherHint: "Bài đọc, ôn tập… không gắn với Unit nào trong sách",
+  draftOtherHint: "Bài ôn tập, bài lẻ… không gắn với Unit nào trong sách",
   draftOpen: (n: number) => `Xem ${n} bài`,
-  draftClose: "Thu gọn",
+  draftClose: (n: number) => `Thu gọn · ${n} bài`,
   readyTitle: (n: number) => `Sẵn sàng giao · ${n}`,
   readyBadge: "đã duyệt, chưa giao",
   readyHint: "Bấm “Giao →” để chọn ngày giao cho con.",

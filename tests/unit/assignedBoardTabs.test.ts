@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { BoardTabs } from "@/components/assigned/BoardTabs";
 import { DraftGroups } from "@/components/assigned/DraftGroups";
 import { assignedBoardCopy as c } from "@/lib/copy/vi";
-import { groupDraftsByUnit, SERIES, seriesOf, type DraftGroup } from "@/lib/assigned/draftGroups";
+import { groupDraftsByUnit, SERIES, seriesOf, sessionOf, type DraftGroup } from "@/lib/assigned/draftGroups";
 
 const counts = { need: 2, doing: 3, done: 1, removed: 4, drafts: 7 };
 
@@ -78,10 +78,23 @@ describe("27/11: drafts with no Unit — one group per reading series; a closed 
     const groups = groupDraftsByUnit([
       d("o", "Ôn tập"), d("s4", "Đọc · L1 · In the Sky · Buổi 4/4 · Moon"), d("u", "Unit 4 · A"), d("s3", "Đọc · L1 · In the Sky · Buổi 3/4 · Stars"), d("r", "Review 2"),
     ], null);
-    expect(groups.map((g) => g.key)).toEqual(["U4", "review", `${SERIES}Đọc · L1 · In the Sky`, "other"]);
+    expect(groups.map((g) => g.key)).toEqual(["U4", "review", `${SERIES}đọc · l1 · in the sky`, "other"]);
     expect(groups[2]!.drafts.map((x) => x.id)).toEqual(["s3", "s4"]);
-    expect(c.draftGroup(groups[2]!.key)).toBe("Đọc · L1 · In the Sky");
+    expect(groups[2]!.label).toBe("Đọc · L1 · In the Sky");
     expect(c.draftGroup("other")).toBe("Bài không theo Unit");
+  });
+  it("NFD, case and spacing do not split a series; sessions go by number (2 before 10)", () => {
+    const groups = groupDraftsByUnit([
+      d("a", "Đọc · L2 · Water · Buổi 10/12"), d("b", "Đọc  ·  L2 · water · Buổi 2/12".normalize("NFD")), d("c", "Đọc · L2 · Water · Buổi 1/12"),
+    ], null);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]!.drafts.map((x) => x.id)).toEqual(["c", "b", "a"]);
+  });
+  it("a d/m date is not a session; a series named by a Unit stays with the Unit; a session naming a Unit stays in its series", () => {
+    expect(sessionOf("Ôn tập · Buổi 27/11")).toBeNull();
+    expect(sessionOf("Ôn tập · Buổi 15/12")).toBeNull();
+    const groups = groupDraftsByUnit([d("u", "Unit 15 · Buổi 1/2"), d("s", "Đọc · L1 · In the Sky · Buổi 2/4 · Unit 3 words"), d("t", "Đọc · L1 · In the Sky · Buổi 1/4")], null);
+    expect(groups.map((g) => [g.key, g.drafts.map((x) => x.id)])).toEqual([["U15", ["u"]], [`${SERIES}đọc · l1 · in the sky`, ["t", "s"]]]);
   });
   it("a closed group has ▸ and 'Xem n bài'; the no-Unit group says what is in it", () => {
     const h = renderToStaticMarkup(createElement(DraftGroups, { board: { ready: [], groups: groupDraftsByUnit([d("o", "Ôn tập"), d("p", "Bài tập 16/11")], null) } }));

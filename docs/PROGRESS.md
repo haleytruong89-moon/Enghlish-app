@@ -2442,4 +2442,6 @@ Nhánh `feature/tags-oxford-discover-3`. **Có SQL: `0047_seed_tags_oxford_disco
 | Bài không có số Unit gom vào "Bài khác" | Bài dạng "… · Buổi n/m" gom theo **tên bộ** ("Đọc · L1 · In the Sky"), xếp theo số buổi; bài lẻ vào **"Bài không theo Unit"** + dòng "Bài đọc, ôn tập… không gắn với Unit nào trong sách" |
 | Tiêu đề "Bản nháp theo Unit · n" | "Bản nháp chưa duyệt · n" |
 
-Thứ tự: Unit → Review / Progress Test → Unit đã học / bỏ qua → các bộ bài đọc → Bài không theo Unit. `lib/assigned/draftGroups.ts` (`seriesOf`).
+Thứ tự: Unit → Review / Progress Test → Unit đã học / bỏ qua → các bộ bài đọc (mỗi bộ xếp theo số buổi) → Bài không theo Unit. `lib/assigned/draftGroups.ts` (`sessionOf`, `seriesOf`).
+
+Sau rà soát: chuẩn hóa chữ (NFC, khoảng trắng, hoa/thường) để một bộ không bị tách; "Buổi n/m" chỉ tính khi n ≤ m ≤ 40 (ngày dạng "Buổi 27/11" không bị nhầm; ngày có ngày ≤ tháng như "3/12" vẫn có thể nhầm); một buổi trong bộ có nhắc Unit vẫn ở trong bộ, còn bộ đặt tên theo Unit ("Unit 15 · Buổi 1/2") thì về nhóm Unit đó; ẩn mũi tên mặc định của Safari để iPad không hiện hai mũi tên.
