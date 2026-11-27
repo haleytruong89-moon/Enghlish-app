@@ -429,7 +429,7 @@ Khác với kế hoạch: câu giới thiệu "Mỗi điều là một việc {t
 ## Hướng B v2 (26/11/2026 tối) — bản nháp theo Unit
 
 - Khối đầu: "Sẵn sàng giao · n", nhãn "đã duyệt, chưa giao". Nút "Giao →"; nhãn cho trình đọc màn hình: "Giao bài “tên bài”".
-- Nhóm: "Unit 15", "Review và Progress Test", "Bài khác". Nút trên mỗi dòng: "Duyệt" (bản nháp), "Mở" (AI đang đọc / chưa đọc được).
+- Nhóm: "Unit 15", "Review và Progress Test", tên bộ bài đọc theo buổi ("Đọc · L1 · In the Sky"), "Bài không theo Unit" (+ dòng "Bài ôn tập, bài lẻ… không gắn với Unit nào trong sách"). Tiêu đề khu: "Bản nháp chưa duyệt · n". Nhóm đóng có ▸ + "Xem n bài"; mở ra là "Thu gọn · n bài" (27/11). Nút trên mỗi dòng: "Duyệt" (bản nháp), "Mở" (AI đang đọc / chưa đọc được).
 - Giao bài: "Tạo bài mới", "+ Tạo bài mới (4 cách)".
 
 ## Bản 3 (26/11/2026 tối) — hàng chờ chấm, mở bài để chữa, Ghi buổi
