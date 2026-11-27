@@ -2431,3 +2431,12 @@ Nhánh `feature/tags-oxford-discover-3`. **Có SQL: `0047_seed_tags_oxford_disco
 **SQL cần phụ huynh áp:** GitHub → Actions → "Apply database migrations" → gõ `APPLY`. Không sửa 0047 sau khi áp.
 
 **Sau khi áp:** cô mở thẻ Oxford Discover, bấm "Nạp mục lục", chọn file Scope and Sequence 4 trang, rồi duyệt bản mới 18 Unit. Bản cũ 8 Unit tự lưu thành lịch sử. Bản cũ chưa có tiến độ, chưa gắn bài giao hay mốc nào, nên không mất gì.
+
+## Hướng dẫn dùng app (tour) + "Bắt đầu với …" (27/11/2026)
+
+**Không có SQL**, không AI. Phụ huynh chọn làm cả A và B (27/11).
+
+| Phần | Nội dung |
+|---|---|
+| **A. Tour** (`components/tour/Tour.tsx`, `lib/tour/steps.ts`) | 10 bước, tô sáng đúng chỗ trên cột trái: Chào → Chấm bài → Giao bài → Ghi buổi học → Hôm nay → Bài tập → Buổi học → Tiến bộ → Kế hoạch → "Bắt đầu từ đây". Tự mở **một lần** khi thầy/cô mở app trên máy mới (nhớ trên máy, không SQL); nút **"? Hướng dẫn"** ở thanh trên để mở lại (cả phụ huynh). Phím ←/→, Esc; "Bỏ qua hướng dẫn". Trên điện thoại, chỗ nào bị gập thì thẻ hiện giữa màn hình. Không tự mở khi chạy kiểm thử tự động (`navigator.webdriver`). |
+| **B. "Bắt đầu với An / Nguyên"** ở Hôm nay (`lib/tour/checklist.ts`, `components/tour/StartChecklist.tsx`) | 6 việc, **tự đánh dấu ✓ từ dữ liệu thật**: ① Xác nhận cấp khởi điểm (không còn mảng "giả định") · ② Duyệt mục lục giáo trình (có bản đang dùng) · ③ Đặt Unit đang học (một Unit "Đang học" hoặc "Đã học") · ④ Giao bài đầu tiên (bài Studio hoặc bài link / PDF) · ⑤ Chấm và góp ý bài đầu tiên (thẻ "Đã xong" của Bài tập > 0) · ⑥ Ghi buổi học đầu tiên (có buổi do thầy/cô ghi). Việc chưa làm có "Làm ngay →". Không đọc được dữ liệu thì ghi "Chưa đọc được", không đánh dấu. Đủ 6 việc thì thẻ tự biến mất; "Ẩn thẻ này" ẩn trên máy đó. Nằm ngay dưới khung bài chờ chấm. |

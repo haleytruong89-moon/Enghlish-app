@@ -4055,3 +4055,44 @@ export const finishCopy = {
     stillWaiting: (n: number) => `Còn ${n} câu chờ: chấm nốt rồi bấm Xong.`,
   },
 } as const;
+
+/** 27/11: the tour of the adult pages + "Bắt đầu với …" on Hôm nay (parent: "tour khi cô mở app, theo các việc cô cần làm"). */
+export const tourCopy = {
+  open: "Hướng dẫn",
+  openLabel: "Xem lại hướng dẫn dùng app",
+  dialogLabel: "Hướng dẫn dùng app",
+  stepOf: (i: number, n: number) => `Bước ${i} / ${n}`,
+  prev: "‹ Trước",
+  next: "Tiếp ›",
+  done: "Xong",
+  skip: "Bỏ qua hướng dẫn",
+  steps: {
+    welcome: { title: "Chào thầy/cô!", body: (alias: string) => `Một phút để xem app giúp gì khi dạy ${alias}: chấm bài, giao bài, ghi buổi học và theo dõi tiến bộ. Bấm “Tiếp ›”.` },
+    grade: { title: "Chấm bài", body: "Nút đỏ, có số bài con đã nộp đang chờ. Bấm là mở bài cũ nhất; chấm xong có “Bài sau ›”. Con chỉ nhận góp ý khi thầy/cô gửi." },
+    assign: { title: "Giao bài", body: "Bốn cách giao. Nên dùng “Tạo bài từ đề”: tải đề PDF/Word kèm đáp án, AI soạn nháp, thầy/cô duyệt rồi giao. Con chưa thấy bài khi chưa duyệt." },
+    note: { title: "Ghi buổi học", body: "Sau mỗi buổi, khoảng 1 phút: ngày, Unit đã dạy, lời nhắn cho con. Phần còn lại không bắt buộc. Buổi nghỉ, học bù cũng ghi ở đây." },
+    desk: { title: "Hôm nay", body: "Việc nên làm hôm nay: phần con làm sai nhiều cần chữa cùng con, bài quá hạn, mục cần hỏi lại. Mỗi thẻ có nút mở thẳng chỗ cần làm." },
+    work: { title: "Bài tập", body: "Mọi bài đã giao, theo 4 thẻ: Cần chấm · Con đang làm · Đã xong · Bản nháp. Bản nháp xếp theo Unit, Unit “Kế tiếp” ở đầu." },
+    sessions: { title: "Buổi học", body: "Các buổi đã ghi, buổi nghỉ, học bù và số buổi trong tháng (để in hoặc gửi phụ huynh)." },
+    progress: { title: "Tiến bộ", body: "Biểu đồ đúng lần đầu theo từng bài, Unit gần nhất, mục còn yếu / đã vững. Con không thấy điểm." },
+    plan: { title: "Kế hoạch", body: "Giáo trình (sách con học, Unit đang học) và Lộ trình (các mốc). Đặt đúng Unit đang học thì app gợi ý bài kế tiếp." },
+    start: { title: "Bắt đầu từ đây", body: (alias: string) => `Ở trang Hôm nay có thẻ “Bắt đầu với ${alias}”: 6 việc đầu tiên, app tự đánh dấu ✓ khi thầy/cô làm xong. Muốn xem lại hướng dẫn này: nút “Hướng dẫn” ở trên cùng.` },
+  },
+  start: {
+    title: (alias: string) => `Bắt đầu với ${alias}`,
+    hint: "6 việc đầu tiên. App tự đánh dấu ✓ khi việc đã có trong app.",
+    progress: (done: number, n: number) => `Xong ${done} / ${n}`,
+    hide: "Ẩn thẻ này",
+    show: "Hiện lại thẻ “Bắt đầu”",
+    doIt: "Làm ngay →",
+    unknown: "Chưa đọc được",
+    items: {
+      levels: { title: "Xác nhận cấp khởi điểm", line: "Xem 7 mảng và bấm “Xác nhận cấp 7 mảng” (chỉ thầy/cô của em)." },
+      curriculum: { title: "Duyệt mục lục giáo trình", line: "Tải trang mục lục sách con học; AI đọc, thầy/cô duyệt Unit." },
+      unit: { title: "Đặt Unit đang học", line: "Ở Trạng thái Unit, chọn Unit con đang học để app gợi ý bài kế tiếp." },
+      assign: { title: "Giao bài đầu tiên", line: "Nên dùng “Tạo bài từ đề”: đề + đáp án → AI soạn nháp → duyệt → giao." },
+      feedback: { title: "Chấm và góp ý bài đầu tiên", line: "Khi con nộp, nút đỏ Chấm bài có số. Gửi lời khen + điều cần sửa." },
+      session: { title: "Ghi buổi học đầu tiên", line: "Sau buổi học: ngày, Unit đã dạy, lời nhắn cho con." },
+    },
+  },
+} as const;

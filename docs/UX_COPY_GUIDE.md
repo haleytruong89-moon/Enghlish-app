@@ -440,3 +440,8 @@ Khác với kế hoạch: câu giới thiệu "Mỗi điều là một việc {t
 ## Q5 (26/11/2026) — Ghi buổi còn 3 ô
 - `sessionNotePage.moreTitle` "Thêm chi tiết (không bắt buộc)"; `moreLine(kind, skills, weak, parentNote)` nói đang chọn gì, không nói "điểm".
 - `makeupHint(n)` + `makeupHintButton` "Đánh dấu học bù"; `recheckCount(n)`; `curriculumCopy.taughtNow` "đang học" trên chip Unit; `sessionKindCopy.regularSession` "Buổi thường".
+
+## Tour + "Bắt đầu với …" (27/11/2026)
+- `tourCopy`: nút "Hướng dẫn"; mỗi bước một tiêu đề + 1–2 câu nói **việc gì làm ở đó**, không giải thích kỹ thuật; nhắc con không thấy điểm / bài chưa duyệt.
+- `tourCopy.start`: "Bắt đầu với {tên}", 6 việc dạng động từ ("Xác nhận…", "Duyệt…", "Đặt…", "Giao…", "Chấm và góp ý…", "Ghi…"), "Làm ngay →", "Chưa đọc được" khi không đọc được dữ liệu.
+

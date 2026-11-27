@@ -51,7 +51,9 @@ describe("Hôm nay (was Bàn làm việc)", () => {
     expect(h).not.toContain('data-testid="desk-inbox-row-d"');
     expect(h).toContain(pendingCopy.deskMore(1));
     expect(h).toContain(`href="/learners/${L}/inbox"`);
-    expect(h.slice(h.indexOf('data-testid="desk-inbox"'), h.indexOf(`data-testid="attention-${L}"`))).not.toMatch(/<button\b/);
+    // The box itself (the "Bắt đầu với …" card that follows it has its own "Ẩn thẻ này" button).
+    const end = h.indexOf('data-testid="start-checklist"') > 0 ? h.indexOf('data-testid="start-checklist"') : h.indexOf(`data-testid="attention-${L}"`);
+    expect(h.slice(h.indexOf('data-testid="desk-inbox"'), end)).not.toMatch(/<button\b/);
   });
   it("W4a: the parent sees one line about a milestone confirmed this week; the tutor does not; a vanished Unit is an alert", () => {
     const d = data({ roadmap: { orphans: 2, recentTitle: "Progress Test 1", proposals: 0 } });
