@@ -21,12 +21,18 @@ function DraftRow({ d }: { d: DraftListItem }) {
 
 function Group({ g }: { g: DraftGroup }) {
   return (
-    <details open={g.next} data-testid={`draft-group-${g.key}`} className={`rounded-2xl border bg-white ${g.next ? "border-2 border-accent" : "border-line"}`}>
-      <summary className="flex min-h-12 cursor-pointer flex-wrap items-center gap-2 px-4 py-2">
-        <b className={g.closed ? "text-muted" : ""}>{c.draftGroup(g.key)}</b>
+    <details open={g.next} data-testid={`draft-group-${g.key}`} className={`group rounded-2xl border bg-white ${g.next ? "border-2 border-accent" : "border-line"}`}>
+      {/* 27/11: a visible ▸ and "Xem n bài" so a closed group reads as something to open (the native marker is hidden by flex). */}
+      <summary className="flex min-h-12 cursor-pointer list-none flex-wrap items-center gap-2 px-4 py-2 hover:bg-[#f2f7f4]">
+        <span aria-hidden="true" className="text-accent transition-transform group-open:rotate-90">▸</span>
+        <span className="flex min-w-0 flex-col">
+          <b className={g.closed ? "text-muted" : ""}>{c.draftGroup(g.key)}</b>
+          {g.key === "other" ? <span className="text-xs text-muted" data-testid="draft-other-hint">{c.draftOtherHint}</span> : null}
+        </span>
         {g.next ? <span data-testid="draft-next" className="rounded-full bg-accent px-2.5 py-0.5 text-xs font-bold text-white">{c.draftNext}</span> : null}
         {g.status ? <span className="text-sm text-muted">{c.unitStatus[g.status]}</span> : null}
-        <span className="ml-auto text-sm text-muted">{c.draftCount(g.drafts.length)}</span>
+        <span className="ml-auto text-sm font-semibold text-accent underline group-open:hidden" data-testid={`draft-group-open-${g.key}`}>{c.draftOpen(g.drafts.length)}</span>
+        <span className="ml-auto hidden text-sm text-muted group-open:inline">{c.draftClose}</span>
       </summary>
       <ul className="flex flex-col gap-0.5 border-t border-line px-2 py-2">{g.drafts.map((d) => <DraftRow key={d.id} d={d} />)}</ul>
     </details>

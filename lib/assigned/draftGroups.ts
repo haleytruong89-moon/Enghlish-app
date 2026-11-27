@@ -2,7 +2,8 @@
  * Bản nháp (Giao bài and Bài tập › Bản nháp, hướng B v2 26/11): the Studio drafts not given yet. Pure.
  * One order for everything, from the main curriculum's Unit statuses:
  *   "Kế tiếp" (the first Unit by number, not "Đã học" / "Bỏ qua", among ALL open drafts) → the other open Units → Review and
- *   Progress Test (in book order) → Units already "Đã học" / "Bỏ qua" → titles with no Unit.
+ *   Progress Test (in book order) → Units already "Đã học" / "Bỏ qua" → series with no Unit ("Đọc · L1 · In the Sky · Buổi 3/4":
+ *   one group per series, 27/11) → titles with no Unit ("Bài không theo Unit").
  * "Sẵn sàng giao" (approved, not given) comes first in that order; the rest are grouped by Unit in that order.
  * Unknown statuses (no main curriculum, or unreadable): Unit order only, nothing claimed as "Kế tiếp".
  */
@@ -25,7 +26,18 @@ const REVIEW = "review";
 const isUnit = (k: string | null): k is string => k !== null && /^U\d+$/.test(k);
 const byTitle = (a: DraftListItem, b: DraftListItem) => a.title.localeCompare(b.title, "vi", { numeric: true }) || a.id.localeCompare(b.id);
 const keyOf = (d: DraftListItem) => unitKeyOf([], d.title);
-const groupKey = (k: string | null) => (k === null ? OTHER : isUnit(k) ? k : REVIEW);
+/** "Đọc · L1 · In the Sky · Buổi 3/4 · Stars" → "Đọc · L1 · In the Sky": the series a numbered session belongs to. */
+export function seriesOf(title: string): string | null {
+  const m = /^(.+?)\s*·\s*Buổi\s*\d+\s*\/\s*\d+/i.exec(title.trim());
+  return m ? m[1]!.trim() : null;
+}
+export const SERIES = "series:";
+const groupKey = (d: DraftListItem) => {
+  const k = keyOf(d);
+  if (k !== null) return isUnit(k) ? k : REVIEW;
+  const s = seriesOf(d.title);
+  return s ? `${SERIES}${s}` : OTHER;
+};
 const closedIn = (statusOf: StatusOf, k: string) => statusOf?.[k] === "done" || statusOf?.[k] === "skipped";
 
 /**
@@ -52,7 +64,7 @@ function nextUnit(drafts: readonly DraftListItem[], statusOf: StatusOf): string 
 /** [band, position] in the one order above. */
 function rank(d: DraftListItem, statusOf: StatusOf, next: string | null): [number, number] {
   const k = keyOf(d);
-  if (k === null) return [4, 0];
+  if (k === null) return [seriesOf(d.title) ? 4 : 5, 0];
   if (!isUnit(k)) return [2, reviewPosition(d.title)];
   if (k === next) return [0, 0];
   return [closedIn(statusOf, k) ? 3 : 1, unitOrder(k)];
@@ -67,7 +79,7 @@ export function groupDraftsByUnit(drafts: readonly DraftListItem[], statusOf: St
   const sorted = [...drafts].sort(compare(statusOf, next));
   const groups = new Map<string, DraftListItem[]>();
   for (const d of sorted) {
-    const k = groupKey(keyOf(d));
+    const k = groupKey(d);
     groups.set(k, [...(groups.get(k) ?? []), d]);
   }
   // Map keeps insertion order = the order of each group's first draft, which follows the bands.

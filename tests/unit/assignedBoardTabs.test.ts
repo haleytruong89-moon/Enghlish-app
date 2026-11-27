@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { BoardTabs } from "@/components/assigned/BoardTabs";
 import { DraftGroups } from "@/components/assigned/DraftGroups";
 import { assignedBoardCopy as c } from "@/lib/copy/vi";
-import type { DraftGroup } from "@/lib/assigned/draftGroups";
+import { groupDraftsByUnit, SERIES, seriesOf, type DraftGroup } from "@/lib/assigned/draftGroups";
 
 const counts = { need: 2, doing: 3, done: 1, removed: 4, drafts: 7 };
 
@@ -63,5 +63,31 @@ describe("Bản nháp (Giao bài + Bài tập, v2): Sẵn sàng giao first, then
   });
   it("nothing to show: the empty line", () => {
     expect(renderToStaticMarkup(createElement(DraftGroups, { board: { ready: [], groups: [] } }))).toContain(c.empty.drafts);
+  });
+});
+
+describe("27/11: drafts with no Unit — one group per reading series; a closed group shows it opens", () => {
+  const d = (id: string, title: string) => ({ id, title, status: "draft" as const, updatedAt: "2026-11-27T00:00:00Z", templateId: null, templateVersion: null, superseded: false, assigned: 0 });
+  it("seriesOf takes the part before '· Buổi n/m'", () => {
+    expect(seriesOf("Đọc · L1 · In the Sky · Buổi 3/4 · Stars, Planets")).toBe("Đọc · L1 · In the Sky");
+    expect(seriesOf("Đọc · L1 · In the Sky · buổi 4 / 4")).toBe("Đọc · L1 · In the Sky");
+    expect(seriesOf("Ôn tập")).toBeNull();
+    expect(seriesOf("Unit 15 · Part 2")).toBeNull();
+  });
+  it("series after Units and Review, sessions in order, then 'Bài không theo Unit' last", () => {
+    const groups = groupDraftsByUnit([
+      d("o", "Ôn tập"), d("s4", "Đọc · L1 · In the Sky · Buổi 4/4 · Moon"), d("u", "Unit 4 · A"), d("s3", "Đọc · L1 · In the Sky · Buổi 3/4 · Stars"), d("r", "Review 2"),
+    ], null);
+    expect(groups.map((g) => g.key)).toEqual(["U4", "review", `${SERIES}Đọc · L1 · In the Sky`, "other"]);
+    expect(groups[2]!.drafts.map((x) => x.id)).toEqual(["s3", "s4"]);
+    expect(c.draftGroup(groups[2]!.key)).toBe("Đọc · L1 · In the Sky");
+    expect(c.draftGroup("other")).toBe("Bài không theo Unit");
+  });
+  it("a closed group has ▸ and 'Xem n bài'; the no-Unit group says what is in it", () => {
+    const h = renderToStaticMarkup(createElement(DraftGroups, { board: { ready: [], groups: groupDraftsByUnit([d("o", "Ôn tập"), d("p", "Bài tập 16/11")], null) } }));
+    expect(h).toContain("▸");
+    expect(h).toMatch(/data-testid="draft-group-open-other"[^>]*>Xem 2 bài</);
+    expect(h).toContain(c.draftOtherHint);
+    expect(h).not.toContain("Bài khác");
   });
 });
